@@ -353,13 +353,28 @@ and changes in decoded network/operator fields; missing fields are not changes. 
 explain parked, overdue and backup states without additional Karma polling. Fleet retains the
 current observed backup start, the last completed period and cumulative backup time. An open
 period includes silence until holita is observed again; it does not prove continuous traffic.
+Backup-history collection requires `FLEET_ERM_HEALTH_ENABLED=true` in Fleet; its default is off
+so the development watcher cannot start the new collector before deployment. When off,
+`routingHealth` is unavailable and existing routing detection continues.
 
 `sendErmDeviceCommand(input: { deviceId, action })` accepts only REQUEST_LOCATION,
 READ_STATUS, READ_VERSION, READ_ACCESSORIES, READ_EDATA_DIAGNOSTICS and READ_EDATA_FAULTS.
 It verifies the Device through Fleet with the caller's session and active Branch, then uses
-the gateway's internal API. No free-text command or parameter write is exposed.
-The recorded command outcome is not proof of a configuration change. Public parameter writes,
-durable offline delivery and operator audit remain in the [ERM roadmap](../todo/erm-roadmap.md).
+the gateway's internal API. This mutation has no free-text command or parameter write.
+The recorded command outcome is not proof of a configuration change. Durable offline delivery
+and operator audit remain in the [ERM roadmap](../todo/erm-roadmap.md).
+
+The Device's **Parameters → Device settings** editor starts background controlled workflows
+through `startErmEdataChange` (read, one interval, one definition or globals `302`) and
+`startErmParameterChange` (one catalog parameter through `04`). Writes require
+`ERM_CONFIGURATION_WRITES_ENABLED=true` in the API process; reads remain available when off.
+Every write workflow captures a fresh parameter snapshot, then reads its exact target baseline,
+writes, independently reads back and restores the exact baseline on a mismatch or when requested.
+Globals compare every written byte, including bytes 11–13. Only one snapshot, setting workflow
+or operator read can run per unit in the API process. Routing and protected parameters remain
+refused. Unit rejections, including unsupported event-description writes, appear in the run's
+steps and failure reason. A persisted `UNCERTAIN` write is never replayed; inspect the evidence
+and run a fresh eData read before making a new decision. The run list shows the latest 20 runs.
 
 Operators signed in to a Fleet Device's active Branch can call
 `startErmParameterSnapshot(input: { deviceId })` while the unit is connected in primary mode,

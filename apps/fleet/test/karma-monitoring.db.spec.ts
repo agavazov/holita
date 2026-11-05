@@ -42,11 +42,13 @@ describe('Karma monitoring persistence and scope', () => {
   const originalDispatchFlag = process.env.FLEET_DEVICE_OPERATIONS_ENABLED;
   const originalTelemetryFlag = process.env.FLEET_ERM_TELEMETRY_ENABLED;
   const originalRecoveryFlag = process.env.FLEET_ERM_RECOVERY_ENABLED;
+  const originalHealthFlag = process.env.FLEET_ERM_HEALTH_ENABLED;
   beforeAll(async () => {
     process.env.FLEET_KARMA_MONITORING_ENABLED = 'false';
     process.env.FLEET_DEVICE_OPERATIONS_ENABLED = 'false';
     process.env.FLEET_ERM_TELEMETRY_ENABLED = 'false';
     process.env.FLEET_ERM_RECOVERY_ENABLED = 'false';
+    process.env.FLEET_ERM_HEALTH_ENABLED = 'true';
     database = await createTestDatabase();
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
@@ -88,6 +90,11 @@ describe('Karma monitoring persistence and scope', () => {
       delete process.env.FLEET_ERM_RECOVERY_ENABLED;
     } else {
       process.env.FLEET_ERM_RECOVERY_ENABLED = originalRecoveryFlag;
+    }
+    if (originalHealthFlag === undefined) {
+      delete process.env.FLEET_ERM_HEALTH_ENABLED;
+    } else {
+      process.env.FLEET_ERM_HEALTH_ENABLED = originalHealthFlag;
     }
     try {
       await app?.close();
@@ -522,6 +529,31 @@ describe('Karma monitoring persistence and scope', () => {
         },
       },
     });
+    process.env.FLEET_ERM_HEALTH_ENABLED = 'false';
+    expect(await query(healthQuery, { id: device.id })).toEqual({
+      data: { fleetDevice: { routingHealth: null } },
+    });
+    await repository.saveRouting(
+      scope,
+      '70',
+      { routing: 'HOLITA', routingAheadPolls: 0, routingAheadSince: null },
+      null,
+      now,
+    );
+    expect(await routingTruck()).toMatchObject({
+      routing: 'HOLITA',
+      backupSince: firstAheadAt,
+      lastBackupEndedAt: null,
+      backupSeconds: 0,
+    });
+    await repository.saveRouting(
+      scope,
+      '70',
+      { routing: 'KARMA_BACKUP', routingAheadPolls: 2, routingAheadSince: firstAheadAt },
+      null,
+      now,
+    );
+    process.env.FLEET_ERM_HEALTH_ENABLED = 'true';
     const parkedAt = new Date(now.getTime() - 11 * 60_000);
     await repository.updateTruck(scope, '70', { ignitionOffAt: parkedAt });
     const recovery = await repository.beginRecovery(scope, await routingTruck(), now);

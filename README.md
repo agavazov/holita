@@ -4,7 +4,7 @@ holita is a strict TypeScript npm-workspaces repository with Nx tasks and six ho
 applications: Angular admin, native Apollo Router gateway and NestJS core, fleet, karma-client and erm-server services.
 The admin uses the holita [design system](docs/admin-design-system.md) on PrimeNG and
 Bulgarian/English catalogs.
-Its modules are Vehicles, Devices, shared Karma truck data and reference views, and read-only ERM device-server inspection. Core provides Branch discovery; Gateway
+Its modules are Vehicles, Devices, shared Karma truck data and reference views, and ERM device-server inspection and controlled settings. Core provides Branch discovery; Gateway
 exposes their schema-first federated GraphQL API. PostgreSQL is the only container.
 
 Documentation separates [Discocan fleet telemetry](docs/discocan/README.md) from
@@ -19,7 +19,7 @@ independent of the admin and sample-data seed.
 
 ERM Server receives raw StarLink device TCP traffic, mirrors it to Karma and records connections,
 frames, decoded events and commands in its own database plus private JSON Lines captures. Its
-read-only subgraph supplies the admin's ERM Server pages. It runs independently of the
+Fleet-scoped subgraph supplies the admin's ERM Server pages. It runs independently of the
 web/API applications; see [ERM Server setup](docs/discocan/development.md#erm-device-server).
 
 ## Run locally

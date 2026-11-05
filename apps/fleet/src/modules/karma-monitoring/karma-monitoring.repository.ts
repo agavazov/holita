@@ -4,6 +4,7 @@ import { literalContains, nullsLast, prismaDirection } from '../../database/sear
 import { Prisma, type KarmaMonitoringTruck } from '../../generated/prisma/client.js';
 import type { UpdateFleetKarmaMonitoringSettingsInput } from '../../generated/graphql/types.js';
 import type { FleetScope, SortDirection } from '../../validation.js';
+import { ermHealthEnabled } from './karma-monitoring.config.js';
 
 export const monitoringDefaults: UpdateFleetKarmaMonitoringSettingsInput = {
   enabled: false,
@@ -83,6 +84,7 @@ export class KarmaMonitoringRepository {
     now: Date,
   ) {
     await this.prisma.client.$transaction(async (tx) => {
+      const healthEnabled = ermHealthEnabled();
       const previous = await tx.karmaMonitoringTruck.findUnique({
         where: { tenantId_branchId_karmaCarId: { ...scope, karmaCarId } },
       });
@@ -103,12 +105,16 @@ export class KarmaMonitoringRepository {
         where: { ...scope, karmaCarId },
         data: {
           ...data,
-          backupSince: closingBackup ? null : backupSince,
-          ...(closingBackup
+          ...(healthEnabled
             ? {
-                lastBackupStartedAt: backupSince,
-                lastBackupEndedAt: now,
-                backupSeconds: previous.backupSeconds + closedSeconds,
+                backupSince: closingBackup ? null : backupSince,
+                ...(closingBackup
+                  ? {
+                      lastBackupStartedAt: backupSince,
+                      lastBackupEndedAt: now,
+                      backupSeconds: previous.backupSeconds + closedSeconds,
+                    }
+                  : {}),
               }
             : {}),
           ...(data.routing === 'HOLITA' ? { recoveryBlocked: false } : {}),

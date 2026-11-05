@@ -30,6 +30,8 @@ import { LiveDevicesService } from '../src/modules/telemetry/live-devices.servic
 import { FleetClient } from '../src/modules/telemetry/fleet.client.js';
 import { ParameterSnapshotsRepository } from '../src/modules/telemetry/parameter-snapshots.repository.js';
 import { ParameterSnapshotsService } from '../src/modules/telemetry/parameter-snapshots.service.js';
+import { ConfigurationChangesService } from '../src/modules/telemetry/configuration-changes.service.js';
+import { UnitWorkflowsService } from '../src/modules/telemetry/unit-workflows.service.js';
 import { parameterCatalog } from '../src/starlink/parameter-catalog.js';
 import {
   assembleEdataConfiguration,
@@ -68,10 +70,12 @@ it('persists captured connection lifecycle and raw frames through the production
   let boundary: Server | undefined;
   let releaseSnapshotBatch: (() => void) | undefined;
   let snapshotService: ParameterSnapshotsService | undefined;
+  let configurationService: ConfigurationChangesService | undefined;
   const previousGatewayUrl = process.env.ERM_GATEWAY_URL;
   const previousFleetUrl = process.env.FLEET_GRAPHQL_URL;
   const previousInternalToken = process.env.ERM_INTERNAL_TOKEN;
   const previousTelemetryToken = process.env.ERM_TELEMETRY_TOKEN;
+  const previousConfigurationWrites = process.env.ERM_CONFIGURATION_WRITES_ENABLED;
   try {
     const reviewDirectory = fileURLToPath(new URL('../../../.references/review/', import.meta.url));
     await mkdir(reviewDirectory, { recursive: true });
@@ -86,6 +90,7 @@ it('persists captured connection lifecycle and raw frames through the production
         TelemetryService,
         LiveDevicesService,
         FleetClient,
+        UnitWorkflowsService,
         InternalTelemetryGuard,
         { provide: DevicesService, useValue: { listUnits: () => [] } },
         { provide: PrismaService, useValue: { client: database.client, schema: database.schema } },
@@ -666,6 +671,7 @@ it('persists captured connection lifecycle and raw frames through the production
           mismatch?: boolean;
           uncertain?: boolean;
           unread?: boolean;
+          rejected?: boolean;
           writes: number;
           commands: ReturnType<typeof validateCommand>[];
         }
@@ -767,11 +773,10 @@ it('persists captured connection lifecycle and raw frames through the production
           });
           if (command.fields[3] === '302') {
             fixture.globalsWrites = (fixture.globalsWrites ?? 0) + 1;
-            const normalized = `${payload.slice(0, 22)}000000${payload.slice(28)}`;
             fixture.globals =
               fixture.globalsMismatch && fixture.globalsWrites === 1
-                ? `${normalized.slice(0, -2)}FF`
-                : normalized;
+                ? `${payload.slice(0, -2)}FF`
+                : payload;
           } else if (command.fields[3] === '303') {
             const extra = ['19', '0', '410', '0', '1', '1', '1001', fixture.globals ?? ''];
             await database.client.ermFrame.create({
@@ -846,10 +851,10 @@ it('persists captured connection lifecycle and raw frames through the production
           );
           return;
         }
-        if (parameterGateway) {
+        if (parameterGateway && (command.command === '03' || command.command === '04')) {
           const fixture = parameterGateway;
           fixture.commands.push(command);
-          if (command.command === '04') {
+          if (command.command === '04' && !fixture.rejected) {
             fixture.writes++;
             fixture.value =
               fixture.mismatch && fixture.writes === 1 ? '999' : (command.fields[1] ?? '');
@@ -865,10 +870,14 @@ it('persists captured connection lifecycle and raw frames through the production
                 : fixture.unread
                   ? '02'
                   : command.command === '04'
-                    ? '01'
+                    ? fixture.rejected
+                      ? '02'
+                      : '01'
                     : null,
               fields:
-                command.command === '03' && !fixture.unread ? ['0774', `"${fixture.value}"`] : [],
+                command.command === '03' && !fixture.unread
+                  ? [command.fields[0], `"${fixture.value}"`]
+                  : [],
             }),
           );
           return;
@@ -936,6 +945,7 @@ it('persists captured connection lifecycle and raw frames through the production
       module.get(TelemetryRepository),
       new LiveDevicesService(),
       new FleetClient(),
+      module.get(UnitWorkflowsService),
     );
     await expect(
       api.sendDeviceCommand({ deviceId, action: 'READ_STATUS' }, unauthenticated),
@@ -1139,9 +1149,19 @@ it('persists captured connection lifecycle and raw frames through the production
       snapshotRepository,
       new LiveDevicesService(),
       new FleetClient(),
+      module.get(UnitWorkflowsService),
     );
     const snapshots = snapshotService;
-    const resolver = new ErmDeviceResolver(api, snapshots);
+    process.env.ERM_CONFIGURATION_WRITES_ENABLED = 'false';
+    configurationService = new ConfigurationChangesService(
+      module.get(PrismaService),
+      new LiveDevicesService(),
+      new FleetClient(),
+      snapshots,
+      module.get(UnitWorkflowsService),
+    );
+    const configurations = configurationService;
+    const resolver = new ErmDeviceResolver(api, snapshots, configurations);
     const eventResolver = new ErmEventResolver();
     const schema = buildSubgraphSchema([
       {
@@ -1180,6 +1200,13 @@ it('persists captured connection lifecycle and raw frames through the production
               args: FleetDeviceErmParameterSnapshotsArgs,
               ctx: RequestContext,
             ) => resolver.parameterSnapshots(ref, args, ctx),
+            ermConfigurationChanges: (ref: DeviceReference, _args: unknown, ctx: RequestContext) =>
+              resolver.configurationChanges(ref, ctx),
+            ermConfigurationWritesEnabled: (
+              _ref: DeviceReference,
+              _args: unknown,
+              ctx: RequestContext,
+            ) => resolver.configurationWritesEnabled(ctx),
           },
           ErmEvent: {
             name: (parent: { eventId: string | null }, args: ErmEventNameArgs) =>
@@ -1551,6 +1578,12 @@ it('persists captured connection lifecycle and raw frames through the production
           .map((parameter) => String(parameter).padStart(4, '0')),
       });
       await expect(snapshots.start(deviceId, scopedContext)).rejects.toMatchObject({ status: 409 });
+      await expect(
+        configurations.startEdata({ deviceId, read: true }, scopedContext),
+      ).rejects.toMatchObject({ status: 409 });
+      await expect(
+        api.sendDeviceCommand({ deviceId, action: 'READ_STATUS' }, scopedContext),
+      ).rejects.toMatchObject({ status: 409 });
       releaseSnapshotBatch?.();
       await snapshots.onModuleDestroy();
     } finally {
@@ -2074,7 +2107,7 @@ it('persists captured connection lifecycle and raw frames through the production
     const globalsBefore =
       '03E903E8010208000101000000000003130100000303010000000000000000000000000000000000000000000000000000';
     const globalsWritten = `${globalsBefore.slice(0, 22)}010101${globalsBefore.slice(28, 36)}01${globalsBefore.slice(38)}`;
-    const globalsExpected = `${globalsWritten.slice(0, 22)}000000${globalsWritten.slice(28)}`;
+    const globalsExpected = globalsWritten;
     expect(() =>
       validateCommand({
         command: '30',
@@ -2096,7 +2129,7 @@ it('persists captured connection lifecycle and raw frames through the production
         mismatch: false,
         restoreAfter: true,
         status: 'RESTORED',
-        writes: [globalsWritten, `${globalsBefore.slice(0, 22)}010101${globalsBefore.slice(28)}`],
+        writes: [globalsWritten, globalsBefore],
       },
       {
         name: 'mismatch restores',
@@ -2104,7 +2137,7 @@ it('persists captured connection lifecycle and raw frames through the production
         mismatch: true,
         restoreAfter: false,
         status: 'RESTORED',
-        writes: [globalsWritten, `${globalsBefore.slice(0, 22)}010101${globalsBefore.slice(28)}`],
+        writes: [globalsWritten, globalsBefore],
       },
       {
         name: 'no-op',
@@ -2193,6 +2226,14 @@ it('persists captured connection lifecycle and raw frames through the production
       { name: 'parameter no-op', value: '120', status: 'VERIFIED', commands: ['03'] },
       { name: 'parameter unread', value: '60', unread: true, status: 'FAILED', commands: ['03'] },
       {
+        name: 'parameter rejected',
+        parameter: '1302',
+        value: '60',
+        rejected: true,
+        status: 'FAILED',
+        commands: ['03', '04'],
+      },
+      {
         name: 'parameter uncertain',
         value: '60',
         uncertain: true,
@@ -2204,7 +2245,12 @@ it('persists captured connection lifecycle and raw frames through the production
       parameterGateway = { ...scenario, commands: [], writes: 0 };
       const change = await runParameterChange(
         database.client,
-        { unitId, parameter: '0774', value: '120', restoreAfter: scenario.restoreAfter ?? false },
+        {
+          unitId,
+          parameter: scenario.parameter ?? '0774',
+          value: '120',
+          restoreAfter: scenario.restoreAfter ?? false,
+        },
         configurationRuntime,
       );
       expect({ name: scenario.name, status: change.status }).toEqual({
@@ -2222,7 +2268,18 @@ it('persists captured connection lifecycle and raw frames through the production
           ]),
         );
       }
+      if (scenario.rejected) {
+        expect(change.failureReason).toContain('rejected by the unit (result 02)');
+        expect(parameterGateway.value).toBe('60');
+      }
     }
+    const blockedParameter = await runParameterChange(
+      database.client,
+      { unitId, parameter: '0774', value: '121' },
+      configurationRuntime,
+    );
+    expect(blockedParameter.status).toBe('REFUSED');
+    expect(blockedParameter.failureReason).toContain('UNCERTAIN');
     parameterGateway = undefined;
 
     // Retire only the test fixture's parameter ambiguity before testing the eData barrier.
@@ -2230,6 +2287,108 @@ it('persists captured connection lifecycle and raw frames through the production
       where: { unitId, status: 'UNCERTAIN' },
       data: { status: 'READ' },
     });
+    await expect(
+      configurations.startParameter({ deviceId, parameter: '0774', value: '120' }, unauthenticated),
+    ).rejects.toMatchObject({ status: 401 });
+    await expect(
+      configurations.startParameter(
+        { deviceId, parameter: '0774', value: '120' },
+        { ...scopedContext, branchId: randomUUID() },
+      ),
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(
+      configurations.startParameter({ deviceId, parameter: '0774', value: '120' }, scopedContext),
+    ).rejects.toMatchObject({ status: 403 });
+    process.env.ERM_CONFIGURATION_WRITES_ENABLED = 'true';
+    for (const parameter of ['0049', '0050', '0051', '0052', '0053', '0054', '0059', '0593']) {
+      await expect(
+        configurations.startParameter({ deviceId, parameter, value: '1' }, scopedContext),
+      ).rejects.toMatchObject({ status: 400 });
+    }
+    parameterGateway = { value: '60', commands: [], writes: 0 };
+    const beforeSnapshots = await database.client.ermParameterSnapshot.count({ where: { unitId } });
+    const startedConfiguration = await configurations.startParameter(
+      { deviceId, parameter: '0774', value: '120' },
+      scopedContext,
+    );
+    expect(startedConfiguration).toMatchObject({ status: 'RUNNING', finishedAt: null });
+    await configurations.onModuleDestroy();
+    expect(await database.client.ermParameterSnapshot.count({ where: { unitId } })).toBe(
+      beforeSnapshots + 1,
+    );
+    const storedConfiguration = await database.client.ermConfigurationChange.findUniqueOrThrow({
+      where: { id: startedConfiguration.id },
+    });
+    expect(storedConfiguration).toMatchObject({
+      status: 'VERIFIED',
+      intended: '120',
+      finishedAt: expect.any(Date),
+    });
+    expect(storedConfiguration.steps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'parameter-snapshot',
+          outcome: 'COMPLETE',
+          payload: expect.any(String),
+        }),
+      ]),
+    );
+    expect(parameterGateway.commands.map(({ command }) => command)).toEqual(['03', '04', '03']);
+    parameterGateway = undefined;
+    const configurationContract = await graphql({
+      schema,
+      source: `query($representations: [_Any!]!) { _entities(representations: $representations) {
+        ... on FleetDevice { ermConfigurationWritesEnabled ermConfigurationChanges {
+          id status startedAt finishedAt parameter failureReason baseline intended steps
+        } }
+      } }`,
+      variableValues: {
+        representations: [{ __typename: 'FleetDevice', id: deviceId, imei: unitId }],
+      },
+      contextValue: { ...scopedContext },
+    });
+    expect(configurationContract.errors).toBeUndefined();
+    expect(configurationContract.data?.['_entities']).toMatchObject([
+      {
+        ermConfigurationWritesEnabled: true,
+        ermConfigurationChanges: expect.arrayContaining([
+          expect.objectContaining({
+            id: storedConfiguration.id,
+            status: 'VERIFIED',
+            intended: '120',
+            baseline: { parameter: '0774', value: '60' },
+            steps: storedConfiguration.steps,
+          }),
+        ]),
+      },
+    ]);
+    const historyUnitId = '123456789012345';
+    await database.client.ermConfigurationChange.createMany({
+      data: Array.from({ length: 21 }, (_, parameter) => ({
+        unitId: historyUnitId,
+        parameter,
+        status: 'READ' as const,
+        startedAt: new Date(Date.UTC(2020, 0, 1, 0, 0, parameter)),
+        finishedAt: new Date(Date.UTC(2020, 0, 1, 0, 0, parameter)),
+        baseline: {},
+        steps: [],
+      })),
+    });
+    const configurationRequest = deviceTelemetryRequest([unitId, historyUnitId]);
+    const [unitChanges, otherChanges] = await Promise.all([
+      configurations.deviceChanges(
+        { ...reference(), telemetryRequest: configurationRequest },
+        scopedContext,
+      ),
+      configurations.deviceChanges(
+        { ...reference(historyUnitId), telemetryRequest: configurationRequest },
+        scopedContext,
+      ),
+    ]);
+    expect(unitChanges.some(({ id }) => id === startedConfiguration.id)).toBe(true);
+    expect(otherChanges.map(({ parameter }) => parameter)).toEqual(
+      Array.from({ length: 20 }, (_, index) => 20 - index),
+    );
     configurationGateway = {
       definitions: [firstDefinition, secondDefinition],
       commands: [],
@@ -2248,9 +2407,39 @@ it('persists captured connection lifecycle and raw frames through the production
       `02${changedDefinition}`,
     ]);
     expect(configurationGateway.definitions).toEqual([firstDefinition, secondDefinition]);
+    const interruptedChanges = await database.client.ermConfigurationChange.createManyAndReturn({
+      data: (['RUNNING', 'UNCERTAIN'] as const).map((status) => ({
+        unitId: '123456789012345',
+        status,
+        baseline: {},
+        steps: [],
+      })),
+    });
+    await configurations.onModuleInit();
+    expect(
+      await database.client.ermConfigurationChange.findMany({
+        where: { id: { in: interruptedChanges.map(({ id }) => id) } },
+        orderBy: { status: 'asc' },
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ status: 'FAILED', finishedAt: expect.any(Date) }),
+        expect.objectContaining({
+          status: 'UNCERTAIN',
+          finishedAt: expect.any(Date),
+          failureReason: expect.stringContaining('operator review'),
+        }),
+      ]),
+    );
   } finally {
     releaseSnapshotBatch?.();
+    await configurationService?.onModuleDestroy();
     await snapshotService?.onModuleDestroy();
+    if (previousConfigurationWrites === undefined) {
+      delete process.env.ERM_CONFIGURATION_WRITES_ENABLED;
+    } else {
+      process.env.ERM_CONFIGURATION_WRITES_ENABLED = previousConfigurationWrites;
+    }
     if (previousGatewayUrl === undefined) {
       delete process.env.ERM_GATEWAY_URL;
     } else {

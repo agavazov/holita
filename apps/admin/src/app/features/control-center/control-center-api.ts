@@ -8,6 +8,11 @@ import { AdminConfig } from '../../core/config/admin-config';
 import { graphqlOptions } from '../../core/graphql/graphql-options';
 import type { Language } from '../../i18n/messages';
 import {
+  AdminControlCenterConfigurationChangesDocument,
+  AdminControlCenterStartEdataChangeDocument,
+  AdminControlCenterStartParameterChangeDocument,
+  type StartErmEdataChangeInput,
+  type StartErmParameterChangeInput,
   AdminControlCenterDevicesDocument,
   AdminControlCenterDeviceDocument,
   AdminControlCenterEventsDocument,
@@ -122,6 +127,40 @@ export class ControlCenterApi implements OnDestroy {
       pollInterval: 5_000,
       skipPollAttempt: () => document.hidden || skipPoll(),
     });
+  }
+
+  watchConfigurationChanges(id: string, skipPoll: () => boolean) {
+    return this.client().watchQuery({
+      query: AdminControlCenterConfigurationChangesDocument,
+      variables: { id },
+      fetchPolicy: 'network-only',
+      pollInterval: 5_000,
+      skipPollAttempt: () => document.hidden || skipPoll(),
+    });
+  }
+  async startEdataChange(input: StartErmEdataChangeInput) {
+    const result = await firstValueFrom(
+      this.client().mutate({
+        mutation: AdminControlCenterStartEdataChangeDocument,
+        variables: { input },
+      }),
+    );
+    if (!result.data?.startErmEdataChange) {
+      throw new Error('Missing configuration change result.');
+    }
+    return result.data.startErmEdataChange;
+  }
+  async startParameterChange(input: StartErmParameterChangeInput) {
+    const result = await firstValueFrom(
+      this.client().mutate({
+        mutation: AdminControlCenterStartParameterChangeDocument,
+        variables: { input },
+      }),
+    );
+    if (!result.data?.startErmParameterChange) {
+      throw new Error('Missing configuration change result.');
+    }
+    return result.data.startErmParameterChange;
   }
 
   async startSnapshot(deviceId: string) {

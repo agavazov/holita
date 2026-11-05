@@ -2,6 +2,8 @@ import { BadRequestException } from '@nestjs/common';
 import type { DeviceCommand } from '../devices/command.js';
 import type { ErmConfigurationChangeStatus, PrismaClient } from '../../generated/prisma/client.js';
 import type { EdataConfiguration } from '../../starlink/edata-configuration.js';
+import { Prisma } from '../../generated/prisma/client.js';
+import { sqlRows, sqlText } from '../../database/sql.js';
 
 export interface EdataChangeStep {
   name: string;
@@ -27,11 +29,49 @@ export class EdataChangeRepository {
       data: {
         unitId,
         parameter,
-        status: 'FAILED',
-        failureReason: 'Operation did not finish',
+        status: 'RUNNING',
         baseline: {},
         steps: [],
       },
+    });
+  }
+
+  async interruptUnfinished(finishedAt: Date, id?: string): Promise<void> {
+    const where = { finishedAt: null, ...(id === undefined ? {} : { id }) };
+    await this.client.ermConfigurationChange.updateMany({
+      where: { ...where, status: 'RUNNING' },
+      data: {
+        status: 'FAILED',
+        finishedAt,
+        failureReason: 'Configuration operation was interrupted before completion',
+      },
+    });
+    await this.client.ermConfigurationChange.updateMany({
+      where: { ...where, status: 'UNCERTAIN' },
+      data: {
+        finishedAt,
+        failureReason:
+          'Configuration submission was interrupted; operator review and a fresh read are required',
+      },
+    });
+  }
+
+  async history(unitIds: string[], schema: string) {
+    const table = Prisma.raw(`"${schema.replaceAll('"', '""')}"."ermConfigurationChange"`);
+    const selected = sqlRows(
+      await this.client.$queryRaw(Prisma.sql`
+      SELECT history.id::text AS id
+      FROM unnest(${unitIds}::text[]) AS units("unitId")
+      CROSS JOIN LATERAL (
+        SELECT id FROM ${table}
+        WHERE "unitId" = units."unitId"
+        ORDER BY "startedAt" DESC, id DESC LIMIT 20
+      ) history
+    `),
+    );
+    return this.client.ermConfigurationChange.findMany({
+      where: { id: { in: selected.map((row) => sqlText(row, 'id')) } },
+      orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
     });
   }
 

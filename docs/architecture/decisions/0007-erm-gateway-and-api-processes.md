@@ -34,6 +34,13 @@ active Branch before contacting the gateway. It accepts only REQUEST_LOCATION, R
 READ_VERSION, READ_ACCESSORIES, READ_EDATA_DIAGNOSTICS and READ_EDATA_FAULTS. The internal machine
 token stays server-side; the public API has no free-text command or arbitrary parameter write.
 
+The API also exposes controlled `startErmEdataChange` and `startErmParameterChange` workflows.
+Writes default off behind `ERM_CONFIGURATION_WRITES_ENABLED`. They verify the scoped Device
+through Fleet, require primary mode, capture a fresh parameter snapshot and use the existing
+baseline/write/readback/restoration routines. One API unit lock is shared with snapshots and
+operator reads. Configuration history records steps and uncertainty; an ambiguous write is
+never replayed. Globals verification and restoration compare the exact written/baseline bytes.
+
 This refines ADR 0006's single-process, provider-only read API. It uses the existing database
 and internal HTTP boundary without adding another infrastructure service.
 
@@ -47,6 +54,6 @@ Fleet authorization is mandatory before Branch-visible history or operator comma
 header alone grants no access. Device read requests still send real commands and retain their
 recorded outcomes. Queue acceptance or a reply is not configuration/measurement verification.
 
-Durable offline delivery, named-operator audit, parameter snapshots/writes,
+Durable offline delivery, named-operator audit,
 shutdown close records, standalone operation without Karma and production deployment
 remain in the [ERM roadmap](../../todo/erm-roadmap.md).

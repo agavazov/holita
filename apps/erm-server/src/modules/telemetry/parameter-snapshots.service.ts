@@ -21,6 +21,7 @@ import {
 } from './parameter-snapshots.repository.js';
 import type { DeviceReference } from './telemetry.service.js';
 import { deviceTelemetryQueries, telemetryPage, telemetryQuery } from './telemetry-query.js';
+import { UnitWorkflowsService } from './unit-workflows.service.js';
 
 const snapshotParameters = [...parameterCatalog.keys()].filter(
   (parameter) => parameter >= 1 && parameter <= 9999 && (parameter < 49 || parameter > 54),
@@ -68,13 +69,13 @@ function snapshotView(snapshot: StoredParameterSnapshot): ErmParameterSnapshot {
 @Injectable()
 export class ParameterSnapshotsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ParameterSnapshotsService.name);
-  private readonly runningUnits = new Set<string>();
   private readonly jobs = new Set<Promise<void>>();
 
   constructor(
     private readonly repository: ParameterSnapshotsRepository,
     private readonly devices: LiveDevicesService,
     private readonly fleet: FleetClient,
+    private readonly workflows: UnitWorkflowsService = new UnitWorkflowsService(),
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -89,15 +90,12 @@ export class ParameterSnapshotsService implements OnModuleInit, OnModuleDestroy 
     requireTenant(context);
     const unitId = await this.fleet.deviceImei(deviceId, context);
     await this.requirePrimary(unitId);
-    if (this.runningUnits.has(unitId)) {
-      throw new ConflictException('A parameter snapshot is already running for this unit');
-    }
-    this.runningUnits.add(unitId);
+    this.workflows.acquire(unitId);
     let snapshot: StoredParameterSnapshot;
     try {
       snapshot = await this.repository.create(unitId, snapshotParameters.length, new Date());
     } catch (error) {
-      this.runningUnits.delete(unitId);
+      this.workflows.release(unitId);
       throw error;
     }
     const job = this.run(snapshot.id, unitId)
@@ -105,11 +103,19 @@ export class ParameterSnapshotsService implements OnModuleInit, OnModuleDestroy 
         this.logger.error('Parameter snapshot status could not be persisted');
       })
       .finally(() => {
-        this.runningUnits.delete(unitId);
+        this.workflows.release(unitId);
         this.jobs.delete(job);
       });
     this.jobs.add(job);
     return snapshotView(snapshot);
+  }
+
+  /** The configuration caller holds the shared unit lock while this snapshot is captured. */
+  async captureForConfiguration(unitId: string) {
+    await this.requirePrimary(unitId);
+    const snapshot = await this.repository.create(unitId, snapshotParameters.length, new Date());
+    await this.run(snapshot.id, unitId);
+    return { id: snapshot.id, complete: await this.repository.isComplete(snapshot.id) };
   }
 
   async deviceSnapshots(

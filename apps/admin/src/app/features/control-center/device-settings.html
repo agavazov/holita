@@ -1,0 +1,163 @@
+<section class="app-card" [attr.aria-label]="text().title">
+  <h2>{{ text().title }}</h2>
+  <p class="app-muted">{{ text().hint }}</p>
+  @if (!primary()) {
+    <p-message severity="warn">{{ text().primaryRequired }}</p-message>
+  }
+  @if (!writesEnabled()) {
+    <p-message severity="info">{{ text().writesDisabled }}</p-message>
+  }
+  @if (error(); as error) {
+    <p-message severity="error">{{ error }}</p-message>
+  }
+  <form [formGroup]="form" (ngSubmit)="submit()" class="app-form-section">
+    <div class="app-form-grid">
+      <holita-form-field [label]="text().operation" controlId="erm-settings-mode">
+        <p-select
+          inputId="erm-settings-mode"
+          formControlName="mode"
+          [options]="modes()"
+          optionLabel="label"
+          optionValue="value"
+        />
+      </holita-form-field>
+      @switch (mode()) {
+        @case ('INTERVAL') {
+          <holita-form-field [label]="text().parameterId" controlId="erm-settings-id">
+            <input
+              pInputText
+              id="erm-settings-id"
+              formControlName="parameterId"
+              type="number"
+              min="0"
+              max="65535"
+              required
+            />
+          </holita-form-field>
+          <holita-form-field [label]="text().interval" controlId="erm-settings-interval">
+            <input
+              pInputText
+              id="erm-settings-interval"
+              formControlName="intervalSeconds"
+              type="number"
+              min="0"
+              max="65000"
+              required
+            />
+          </holita-form-field>
+        }
+        @case ('ADD_DEFINITION') {
+          <holita-form-field
+            [label]="text().definition"
+            controlId="erm-settings-definition"
+            [hint]="text().definitionHint"
+          >
+            <input
+              pInputText
+              id="erm-settings-definition"
+              formControlName="definitionHex"
+              pattern="[0-9A-Fa-f]{44}"
+              required
+            />
+          </holita-form-field>
+        }
+        @case ('GLOBALS') {
+          <holita-form-field
+            [label]="text().globals"
+            controlId="erm-settings-globals"
+            [hint]="text().globalsHint"
+          >
+            <input
+              pInputText
+              id="erm-settings-globals"
+              formControlName="globalsHex"
+              pattern="[0-9A-Fa-f]{98}"
+              required
+            />
+          </holita-form-field>
+        }
+        @case ('PARAMETER') {
+          <holita-form-field [label]="text().parameter" controlId="erm-settings-parameter">
+            <input
+              pInputText
+              id="erm-settings-parameter"
+              formControlName="parameter"
+              pattern="[0-9]{4}"
+              required
+            />
+          </holita-form-field>
+          <holita-form-field [label]="text().value" controlId="erm-settings-value">
+            <input pInputText id="erm-settings-value" formControlName="value" />
+          </holita-form-field>
+        }
+      }
+      @if (mode() !== 'READ_EDATA') {
+        <div class="app-inline">
+          <p-checkbox
+            inputId="erm-settings-restore"
+            formControlName="restoreAfter"
+            [binary]="true"
+          />
+          <label for="erm-settings-restore">{{ text().restoreAfter }}</label>
+        </div>
+      }
+    </div>
+    <button
+      pButton
+      type="submit"
+      [disabled]="
+        !primary() ||
+        running() ||
+        submitting() ||
+        form.invalid ||
+        (mode() !== 'READ_EDATA' && !writesEnabled())
+      "
+      [loading]="submitting()"
+    >
+      {{ text().start }}
+    </button>
+  </form>
+  <p-confirmdialog [pt]="confirmPt()" />
+</section>
+<section class="app-card" [attr.aria-label]="text().history">
+  <h2>{{ text().history }}</h2>
+  <button
+    pButton
+    type="button"
+    severity="secondary"
+    [outlined]="true"
+    [loading]="loading()"
+    (click)="refreshHistory()"
+  >
+    {{ text().refresh }}
+  </button>
+  @for (run of runs(); track run.id) {
+    <details [open]="run.finishedAt === null">
+      <summary>
+        {{ date(run.startedAt) }} ·
+        <p-tag [value]="text().states[run.status]" [severity]="severity(run.status)" />
+      </summary>
+      @if (run.failureReason) {
+        <p-message severity="warn">{{ run.failureReason }}</p-message>
+      }
+      <ol>
+        @for (step of steps(run.steps); track $index) {
+          <li>
+            {{ stepLabel(step.name) }}: {{ step.outcome }} · {{ date(step.time) }}
+            @if (step.payload) {
+              <pre class="control-center__frame">{{ step.payload }}</pre>
+            }
+          </li>
+        }
+      </ol>
+      <details>
+        <summary>{{ text().evidence }}</summary>
+        <pre class="control-center__frame">{{ run.baseline | json }}</pre>
+        <pre class="control-center__frame">{{ run.intended ?? '—' }}</pre>
+      </details>
+      <p class="app-muted">{{ date(run.finishedAt) }}</p>
+    </details>
+  } @empty {
+    <p class="app-muted">{{ loading() ? text().loading : text().empty }}</p>
+  }
+</section>

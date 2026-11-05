@@ -22,6 +22,7 @@ import { displayText } from './display-text.js';
 import { deviceTelemetryQueries, telemetryPage, telemetryQuery } from './telemetry-query.js';
 import { TelemetryRepository } from './telemetry.repository.js';
 import { edataParameterLabel } from './edata-catalog.js';
+import { UnitWorkflowsService } from './unit-workflows.service.js';
 
 // Fleet's telemetry feed carries only the eData reports it imports, in the shapes agreed for
 // ADR 0008; any other report, or a value outside those shapes, is null.
@@ -172,6 +173,7 @@ export class TelemetryService {
     private readonly repository: TelemetryRepository,
     private readonly devices: LiveDevicesService,
     private readonly fleet: FleetClient,
+    private readonly workflows: UnitWorkflowsService = new UnitWorkflowsService(),
   ) {}
 
   async internalEvents(imei: string, after?: unknown, limit?: unknown) {
@@ -435,20 +437,25 @@ export class TelemetryService {
   async sendDeviceCommand(input: SendErmDeviceCommandInput, context: RequestContext) {
     requireTenant(context);
     const unitId = await this.fleet.deviceImei(input.deviceId, context);
-    const { id } = await this.devices.sendCommand(
-      unitId,
-      validateCommand(deviceActions[input.action]),
-    );
-    // The gateway records asynchronously; wait briefly for its queued command outcome.
-    for (let attempt = 0; attempt < 20; attempt++) {
-      const command = await this.repository.command(id);
-      if (command && (command.status !== 'SENT' || attempt === 19)) {
-        return commandView(command);
+    this.workflows.acquire(unitId);
+    try {
+      const { id } = await this.devices.sendCommand(
+        unitId,
+        validateCommand(deviceActions[input.action]),
+      );
+      // The gateway records asynchronously; wait briefly for its queued command outcome.
+      for (let attempt = 0; attempt < 20; attempt++) {
+        const command = await this.repository.command(id);
+        if (command && (command.status !== 'SENT' || attempt === 19)) {
+          return commandView(command);
+        }
+        await setTimeout(100);
       }
-      await setTimeout(100);
+      throw new ServiceUnavailableException(
+        'ERM command was sent but its record is not available yet; check command history',
+      );
+    } finally {
+      this.workflows.release(unitId);
     }
-    throw new ServiceUnavailableException(
-      'ERM command was sent but its record is not available yet; check command history',
-    );
   }
 }

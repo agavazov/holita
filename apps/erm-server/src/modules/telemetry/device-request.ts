@@ -4,6 +4,7 @@ import type {
   ErmFramesPage,
   ErmUnitState,
   ErmParameterSnapshotsPage,
+  ErmConfigurationChange,
 } from '../../generated/graphql/types.js';
 
 export interface DeviceTelemetryRequest {
@@ -13,6 +14,7 @@ export interface DeviceTelemetryRequest {
   frames: Map<string, Promise<Map<string, ErmFramesPage>>>;
   commands: Map<string, Promise<Map<string, ErmCommandsPage>>>;
   snapshots: Map<string, Promise<Map<string, ErmParameterSnapshotsPage>>>;
+  configurationChanges?: Promise<Map<string, ErmConfigurationChange[]>>;
 }
 
 export function deviceTelemetryRequest(unitIds: string[]): DeviceTelemetryRequest {

@@ -496,6 +496,12 @@
                 }
 
                 @case ('parameters') {
+                  <holita-device-settings
+                    [deviceId]="recordId()"
+                    [language]="language()"
+                    [target]="unitName()"
+                    [primary]="canSend()"
+                  />
                   @if (state()) {
                     <section
                       class="app-card control-center__panel"

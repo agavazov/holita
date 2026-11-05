@@ -18,18 +18,38 @@ import type {
   ErmEventNameArgs,
   MutationStartErmParameterSnapshotArgs,
   FleetDeviceErmParameterSnapshotsArgs,
+  MutationStartErmEdataChangeArgs,
+  MutationStartErmParameterChangeArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { TelemetryService, type DeviceReference } from './telemetry.service.js';
 import { eventName } from '../../starlink/event-catalog.js';
 import { ParameterSnapshotsService } from './parameter-snapshots.service.js';
+import { ConfigurationChangesService } from './configuration-changes.service.js';
 
 @Resolver()
 export class TelemetryResolver {
   constructor(
     private readonly telemetry: TelemetryService,
     private readonly snapshots: ParameterSnapshotsService,
+    private readonly configurations: ConfigurationChangesService,
   ) {}
+
+  @Mutation('startErmEdataChange')
+  startEdataChange(
+    @Args() args: MutationStartErmEdataChangeArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.configurations.startEdata(args.input, context);
+  }
+
+  @Mutation('startErmParameterChange')
+  startParameterChange(
+    @Args() args: MutationStartErmParameterChangeArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.configurations.startParameter(args.input, context);
+  }
 
   @Mutation('startErmParameterSnapshot')
   startParameterSnapshot(
@@ -53,7 +73,18 @@ export class ErmDeviceResolver {
   constructor(
     private readonly telemetry: TelemetryService,
     private readonly snapshots: ParameterSnapshotsService,
+    private readonly configurations: ConfigurationChangesService,
   ) {}
+
+  @ResolveField('ermConfigurationChanges')
+  configurationChanges(@Parent() device: DeviceReference, @Context() context: RequestContext) {
+    return this.configurations.deviceChanges(device, context);
+  }
+
+  @ResolveField('ermConfigurationWritesEnabled')
+  configurationWritesEnabled(@Context() context: RequestContext) {
+    return this.configurations.writesEnabled(context);
+  }
 
   @ResolveReference()
   reference(

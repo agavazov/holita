@@ -63,6 +63,14 @@ export class ParameterSnapshotsRepository {
     });
   }
 
+  async isComplete(id: string): Promise<boolean> {
+    const snapshot = await this.prisma.client.ermParameterSnapshot.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+    return snapshot?.status === 'COMPLETE';
+  }
+
   async fail(id: string, reason: string, finishedAt: Date): Promise<void> {
     await this.prisma.client.ermParameterSnapshot.update({
       where: { id },

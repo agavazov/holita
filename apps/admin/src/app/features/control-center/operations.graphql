@@ -301,3 +301,34 @@ mutation AdminControlCenterSendCommand($input: SendErmDeviceCommandInput!) {
     responseText
   }
 }
+
+fragment AdminControlCenterConfigurationChangeFields on ErmConfigurationChange {
+  id
+  parameter
+  status
+  startedAt
+  finishedAt
+  failureReason
+  baseline
+  intended
+  steps
+}
+query AdminControlCenterConfigurationChanges($id: ID!) {
+  fleetDevice(id: $id) {
+    id
+    ermConfigurationWritesEnabled
+    ermConfigurationChanges {
+      ...AdminControlCenterConfigurationChangeFields
+    }
+  }
+}
+mutation AdminControlCenterStartEdataChange($input: StartErmEdataChangeInput!) {
+  startErmEdataChange(input: $input) {
+    ...AdminControlCenterConfigurationChangeFields
+  }
+}
+mutation AdminControlCenterStartParameterChange($input: StartErmParameterChangeInput!) {
+  startErmParameterChange(input: $input) {
+    ...AdminControlCenterConfigurationChangeFields
+  }
+}

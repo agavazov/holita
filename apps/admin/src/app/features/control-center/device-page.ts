@@ -58,6 +58,7 @@ import { toneSeverity } from '../../ui/tones';
 import { deviceModelLabel } from '../fleet/devices/i18n/messages';
 import { ControlCenterApi } from './control-center-api';
 import { SmsPage } from './sms-page';
+import { DeviceSettings } from './device-settings';
 import {
   controlCenterText,
   deviceLabel,
@@ -140,6 +141,7 @@ function unconfirmed(error: unknown): boolean {
     FleetLastReport,
     FleetFaults,
     SmsPage,
+    DeviceSettings,
   ],
   providers: [ControlCenterApi, ConfirmationService],
   templateUrl: './device-page.html',

@@ -43,6 +43,43 @@ enum ErmParameterSnapshotStatus {
   COMPLETE
   FAILED
 }
+enum ErmConfigurationChangeStatus {
+  RUNNING
+  READ
+  VERIFIED
+  MISMATCH
+  RESTORED
+  RESTORE_FAILED
+  UNCERTAIN
+  REFUSED
+  FAILED
+}
+input StartErmEdataChangeInput {
+  deviceId: ID!
+  read: Boolean
+  parameterId: Int
+  intervalSeconds: Int
+  definitionHex: String
+  globalsHex: String
+  restoreAfter: Boolean = false
+}
+input StartErmParameterChangeInput {
+  deviceId: ID!
+  parameter: String!
+  value: String!
+  restoreAfter: Boolean = false
+}
+type ErmConfigurationChange {
+  id: ID!
+  parameter: Int
+  status: ErmConfigurationChangeStatus!
+  startedAt: String!
+  finishedAt: String
+  failureReason: String
+  baseline: ErmJSON!
+  intended: String
+  steps: ErmJSON!
+}
 "Event groups of the StarLink event catalog."
 enum ErmEventCategory {
   "Periodic and on-change location reports."
@@ -315,10 +352,18 @@ type FleetDevice @key(fields: "id") {
   "Parameter snapshot history, including unmasked secret values, for this Branch's Device."
   ermParameterSnapshots(input: ErmDevicePageInput): ErmParameterSnapshotsPage!
     @requires(fields: "imei")
+  "Newest twenty controlled configuration runs for this Device."
+  ermConfigurationChanges: [ErmConfigurationChange!]! @requires(fields: "imei")
+  "Deployment switch for controlled configuration writes; reads remain available."
+  ermConfigurationWritesEnabled: Boolean! @requires(fields: "imei")
 }
 type Mutation {
   "Sends an allowlisted read to the unit of a Fleet Device in the active Branch and returns the recorded command."
   sendErmDeviceCommand(input: SendErmDeviceCommandInput!): ErmCommand!
   "Starts a background parameter snapshot after checking the Device's active Branch and primary connection."
   startErmParameterSnapshot(input: StartErmParameterSnapshotInput!): ErmParameterSnapshot!
+  "Starts a controlled eData read or single change after verifying the Device's Branch and primary connection."
+  startErmEdataChange(input: StartErmEdataChangeInput!): ErmConfigurationChange!
+  "Starts a single guarded 04 parameter change with snapshot, baseline and readback."
+  startErmParameterChange(input: StartErmParameterChangeInput!): ErmConfigurationChange!
 }

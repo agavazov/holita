@@ -78,7 +78,8 @@ reopen them as roadmap tasks.
   device-confirmation semantics. Demo Tenant selection is not operator authorization.
 - **Parameter writes:** snapshots with titles and diffs run as background jobs and passed L1 on a
   Tracker and a Scout on 2026-11-03. Single-record eData changes (`live-api/edata-change.js`)
-  passed L1 on CB5640XP on 2026-11-04. Remaining: the same controlled workflow for `04`/`46`
+  passed L1 on CB5640XP on 2026-11-04. The admin now exposes guarded `04` and eData workflows with a fresh parameter
+  snapshot and exact readback/restoration. Remaining: the same controlled workflow for `46`
   parameter writes. For each write require an exact-target complete baseline, fresh preflight, one scoped change,
   independent whole-set readback and explicit restoration. Never automatically replay an
   ambiguous submission. Restoring an existing definition differs from deleting a new ID;

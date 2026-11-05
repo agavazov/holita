@@ -32,6 +32,7 @@ enum ErmParameterSnapshotStatus {
 }
 
 enum ErmConfigurationChangeStatus {
+  RUNNING @map("running")
   READ @map("read")
   VERIFIED @map("verified")
   MISMATCH @map("mismatch")

@@ -58,6 +58,7 @@ import { deviceConditions } from './device-filter.js';
 import { deviceStatus } from './device-state.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { ermTelemetryEnabled } from '../erm-telemetry/erm-telemetry.jobs.js';
+import { ermHealthEnabled } from '../karma-monitoring/karma-monitoring.config.js';
 
 export type DeviceResult = Omit<FleetDevice, 'branch'>;
 type StoredDevice = Omit<
@@ -199,13 +200,17 @@ export class DevicesService {
       return new Map();
     }
     const now = this.clock.now();
+    const healthEnabled = ermHealthEnabled();
     return new Map(
       (await this.devices.routing(scope, imeis)).map((truck) => [
         truck.karmaDeviceId,
         {
           routing: truck.routing,
           routingHealth:
-            truck.routing === null && truck.backupSince === null && truck.lastBackupEndedAt === null
+            !healthEnabled ||
+            (truck.routing === null &&
+              truck.backupSince === null &&
+              truck.lastBackupEndedAt === null)
               ? null
               : {
                   backupSince: truck.backupSince,

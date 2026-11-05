@@ -1,4 +1,5 @@
 import {
+  AdminControlCenterConfigurationChangesDocument,
   AdminControlCenterDeviceDocument,
   AdminControlCenterEventsDocument,
   type AdminControlCenterDeviceQuery,
@@ -341,5 +342,14 @@ graphqlFixture(AdminControlCenterDevicesDocument, () => ({
         devices: [],
       },
     ],
+  },
+}));
+
+graphqlFixture(AdminControlCenterConfigurationChangesDocument, () => ({
+  fleetDevice: {
+    __typename: 'FleetDevice',
+    id: fixtureDevice.id,
+    ermConfigurationWritesEnabled: false,
+    ermConfigurationChanges: [],
   },
 }));

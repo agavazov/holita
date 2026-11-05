@@ -32,6 +32,8 @@ interface ChangeRuntime {
   pollIntervalMs?: number;
   readTimeoutMs?: number;
   log?: (message: string) => void;
+  changeId?: string;
+  initialSteps?: EdataChangeStep[];
 }
 
 export function validateParameterChangeOptions(options: ParameterChangeOptions): void {
@@ -135,8 +137,11 @@ async function runConfigurationChange(
     'value' in options
       ? Number(options.parameter)
       : (options.parameter ?? (options.add ? Number.parseInt(options.add.slice(0, 4), 16) : null));
-  const change = await repository.create(options.unitId, parameter);
-  const steps: EdataChangeStep[] = [];
+  const change =
+    runtime.changeId === undefined
+      ? await repository.create(options.unitId, parameter)
+      : { id: runtime.changeId };
+  const steps: EdataChangeStep[] = [...(runtime.initialSteps ?? [])];
   let phase = 'connected';
   let session: { connectedSince: string; peer: string } | undefined;
 
@@ -250,7 +255,7 @@ async function runConfigurationChange(
         result.status === 'answered'
           ? result.resultCode === '01'
             ? 'ANSWERED 01'
-            : 'ANSWERED REJECTED'
+            : `ANSWERED REJECTED ${result.resultCode ?? 'unknown'}`
           : result.status.toUpperCase(),
     });
     if (result.status !== 'answered') {
@@ -260,7 +265,10 @@ async function runConfigurationChange(
       );
     }
     if (result.resultCode !== '01') {
-      throw new Stopped('FAILED', `${name} was rejected by the unit`);
+      throw new Stopped(
+        'FAILED',
+        `${name} was rejected by the unit (result ${result.resultCode ?? 'unknown'})`,
+      );
     }
   }
 
@@ -295,6 +303,9 @@ async function runConfigurationChange(
   }
 
   try {
+    if (!('read' in options && options.read) && (await repository.needsFreshRead(options.unitId))) {
+      throw new Stopped('REFUSED', 'A previous submission is UNCERTAIN; take a fresh eData read');
+    }
     if ('value' in options) {
       const parameterOptions = options;
       const target =
@@ -386,9 +397,6 @@ async function runConfigurationChange(
         restored === baseline ? null : 'Parameter restoration differs from the baseline',
       );
     }
-    if (!options.read && (await repository.needsFreshRead(options.unitId))) {
-      throw new Stopped('REFUSED', 'A previous submission is UNCERTAIN; take a fresh --read');
-    }
     await requirePrimary();
     await record({
       name: phase,
@@ -399,8 +407,7 @@ async function runConfigurationChange(
     if (options.globals !== undefined) {
       const { value: baseline } = await readGlobals('before');
       const intended = options.globals.toUpperCase();
-      // ERM's 302 export carries write-only 01 01 01 at bytes 11–13; 410 returns zeroes.
-      const expected = `${intended.slice(0, 22)}000000${intended.slice(28)}`;
+      const expected = intended;
       await repository.save(change.id, steps, { baseline: { globals: baseline }, intended });
       await valueStep('written', intended);
       await valueStep('expected', expected);
@@ -422,7 +429,7 @@ async function runConfigurationChange(
       if (verified && !options.restoreAfter) {
         return await finish('VERIFIED');
       }
-      const restore = `${baseline.slice(0, 22)}${intended.slice(22, 28)}${baseline.slice(28)}`;
+      const restore = baseline;
       await valueStep('restore-written', restore);
       await write('restore', {
         command: '30',

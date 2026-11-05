@@ -12,6 +12,8 @@ import { InternalTelemetryController } from './internal-telemetry.controller.js'
 import { InternalTelemetryGuard } from './internal-telemetry.guard.js';
 import { ParameterSnapshotsRepository } from './parameter-snapshots.repository.js';
 import { ParameterSnapshotsService } from './parameter-snapshots.service.js';
+import { ConfigurationChangesService } from './configuration-changes.service.js';
+import { UnitWorkflowsService } from './unit-workflows.service.js';
 
 @Module({
   imports: [DatabaseModule, ...(ermRole() === 'api' ? [] : [DevicesModule])],
@@ -27,6 +29,8 @@ import { ParameterSnapshotsService } from './parameter-snapshots.service.js';
     InternalTelemetryGuard,
     ParameterSnapshotsRepository,
     ParameterSnapshotsService,
+    ConfigurationChangesService,
+    UnitWorkflowsService,
   ],
 })
 export class TelemetryModule {}
