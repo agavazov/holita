@@ -71,6 +71,31 @@ type FleetStatusSampleSeries {
   truncated: Boolean!
 }
 
+"A dated raw eData 405 observation; catalog names and units are reference labels, not a conversion."
+type FleetVehicleEdataMeasurement {
+  id: ID!
+  vehicleId: ID!
+  deviceImei: String!
+  source: FleetDataSource!
+  recordedAt: DateTime!
+  receivedAt: DateTime!
+  parameterId: Int!
+  parameterType: Int!
+  valueSize: Int!
+  valueHex: String!
+  name: String
+  unit: String
+}
+
+type FleetVehicleEdataMeasurementSeries {
+  vehicleId: ID!
+  from: DateTime!
+  to: DateTime!
+  "Ascending by recordedAt, then id; at most 2,000 rows (the newest are kept)."
+  items: [FleetVehicleEdataMeasurement!]!
+  truncated: Boolean!
+}
+
 type FleetDataClock {
   asOf: DateTime
   businessDate: Date!
@@ -86,6 +111,13 @@ input RecordFleetOdometerReadingInput {
 extend type Query {
   fleetDataClock: FleetDataClock!
   fleetVehicleSamples(vehicleId: ID!, from: DateTime!, to: DateTime!): FleetStatusSampleSeries!
+  fleetVehicleEdataMeasurements(
+    vehicleId: ID!
+    from: DateTime!
+    to: DateTime!
+    "Only these reported parameter IDs; every ID when omitted."
+    parameterIds: [Int!]
+  ): FleetVehicleEdataMeasurementSeries!
 }
 
 extend type Mutation {

@@ -92,8 +92,9 @@ reopen them as roadmap tasks.
 - **Remaining binary/framing gaps:** identify `$SLB` tag `27` (seen only while parked); handle configuration-session `E0 00` pairs without corrupting the following
   frame. Non-routing replies inside `$SLC` still reach Karma (routing reads are refused).
 - **Own telemetry and diagnostics:** Fleet imports holita events as samples and trips, `419` fault
-  records as `DIAGNOSTIC_TROUBLE_CODE` and `411` CAN errors per ADR 0008. Remaining: `405`
-  measurements in Fleet and CB1147TP's real `419` faults verified through holita. Establish fault lifecycle/completeness
+  records as `DIAGNOSTIC_TROUBLE_CODE` and `411` CAN errors per ADR 0008. Raw `405` observations now have scoped Vehicle history and a chart. Remaining: verify physical
+  byte order, signedness and calibration before displaying physical values; decide whether to
+  backfill reports before the existing import cursors; verify CB1147TP's real `419` faults through holita. Establish fault lifecycle/completeness
   before continuous fault-state tracking or notifications; missing telemetry or an empty logger is
   not confirmed ECU clearance.
 - **Broader command coverage:** prove each supported family at its permitted test level, including
@@ -200,8 +201,6 @@ Ask Karma separately whether this account's automatic 0049/0050 rewrite can be d
 ## Owner decisions and resources
 
 - Approve the production host/deployment arrangement.
-- Decide whether Karma Client may queue the backup recovery `98` automatically (parked units only,
-  one fixed configuration port, at most once per unit every two hours).
 - Provide a second host for failover.
 - Choose who sends the ERM questions and owns follow-ups; no correspondence is sent by this plan.
 - Arrange a person at a parked truck for each L2 test and the CB6721TE installer recovery if needed.

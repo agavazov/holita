@@ -406,7 +406,7 @@ node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/edata-chan
 node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/edata-change.js --unit "$IMEI" --add "$DEFINITION" --restore-after
 ```
 
-The same operator tool accepts `--unit "$IMEI" --globals "$GLOBALS" [--restore-after]` for one approved 98-hex globals payload, normalizing only bytes 11–13 on readback and restoring the baseline after a mismatch; `302` is available only from its recorded workflow submission, outside the generic command allowlist.
+The same operator tool accepts `--unit "$IMEI" --globals "$GLOBALS" [--restore-after]` for one approved 98-hex globals payload, comparing the exact written bytes on readback and restoring the exact baseline after a mismatch; `302` is available only from its recorded workflow submission, outside the generic command allowlist.
 For a reversible single-parameter change, run `node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/parameter-change.js --unit "$IMEI" --parameter 0774 --value "$VALUE" --restore-after` after taking the unit's snapshot: routing 0049–0054 and protected catalog parameters are refused, and an unconfirmed write is recorded UNCERTAIN, read back once and never retried or restored automatically.
 
 ### Internal unit and command API
@@ -587,3 +587,13 @@ the existing status poll. Acceptance means Karma queued the request, not that th
 the Device page shows the attempt and the recovery session outcome separately. An uncertain
 submission is retained and never automatically replayed. Check the next ordinary primary
 connection; unexpected settings or missing replies need an operator.
+
+### Vehicle eData history
+
+After applying Fleet's additive measurement migration, enable
+`FLEET_ERM_EDATA_MEASUREMENTS_ENABLED=true` alongside `FLEET_ERM_TELEMETRY_ENABLED` to store new
+`405` observations. The existing import cursor continues; earlier reports are not backfilled.
+The vehicle profile shows the last 24 hours of selected IDs as raw observation dots, exact latest
+hex and catalog labels. Catalog units do not establish byte order or physical calibration; verify
+those against a known unit before treating the chart as RPM, fuel or temperature. Missing reports
+stay gaps. The import contract is in [ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md).

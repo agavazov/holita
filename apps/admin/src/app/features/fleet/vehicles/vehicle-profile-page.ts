@@ -28,6 +28,7 @@ import type {
   AdminVehicleProfileTripsQuery,
   AdminVehicleProfileAlertsQuery,
   AdminVehicleDeviceEventsQuery,
+  AdminVehicleEdataMeasurementsQuery,
   AdminVehicleProfileServiceQuery,
 } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
@@ -43,7 +44,7 @@ import { serviceTaskRow } from '../maintenance/service-task-mapping';
 import { tripRow } from '../trips/trip-mapping';
 import { vehiclesText } from './i18n/messages';
 import { VehicleProfileApi } from './vehicle-profile-api';
-import { vehicleDistance, vehicleProfile } from './vehicle-profile-mapping';
+import { vehicleDistance, vehicleEdataCharts, vehicleProfile } from './vehicle-profile-mapping';
 import {
   profileBackParams,
   profilePage,
@@ -78,6 +79,13 @@ const samePage = (left: ProfilePage, right: ProfilePage) =>
       [backFragment]="fragment()"
       [errorText]="failure()"
       [distance]="distance()"
+      [edataCharts]="edataCharts()"
+      [edataFrom]="edataFrom()"
+      [edataTo]="edataTo()"
+      [edataLoading]="edataLoading()"
+      [edataError]="edataFailure()"
+      [edataTruncated]="edataData()?.truncated ?? false"
+      (retryEdata)="retryEdata.next()"
       [nextServiceTask]="nextService()"
       [tab]="tab()"
       (tabChange)="changeTab($event)"
@@ -223,6 +231,20 @@ export class VehicleProfilePage implements OnInit {
   protected readonly deviceEventFailure = computed(() =>
     requestError(this.deviceEventError(), vehiclesText(this.language()).table.errorText),
   );
+  protected readonly retryEdata = new Subject<void>();
+  protected readonly edataData = signal<
+    AdminVehicleEdataMeasurementsQuery['fleetVehicleEdataMeasurements'] | null
+  >(null);
+  protected readonly edataLoading = signal(true);
+  private readonly edataError = signal<unknown>(null);
+  protected readonly edataCharts = computed(() => vehicleEdataCharts(this.edataData()));
+  protected readonly edataFrom = computed(() => this.edataData()?.from ?? '');
+  protected readonly edataTo = computed(() => this.edataData()?.to ?? '');
+  protected readonly edataFailure = computed(() =>
+    this.edataError() === null
+      ? null
+      : requestError(this.edataError(), vehiclesText(this.language()).profile.edata.error),
+  );
   protected readonly retryService = new Subject<void>();
   protected readonly failure = computed(() =>
     requestError(this.error(), vehiclesText(this.language()).profile.errorText),
@@ -351,6 +373,7 @@ export class VehicleProfilePage implements OnInit {
             this.loadTrips(id);
             this.loadAlerts(id);
             this.loadDeviceEvents(id);
+            this.loadEdata(id, result.data.fleetDataClock.asOf);
             this.loadService(id);
           }
         }
@@ -502,6 +525,38 @@ export class VehicleProfilePage implements OnInit {
         this.deviceEventError.set(result.error ?? null);
         if (result.dataState === 'complete' && !result.loading && !result.error) {
           this.deviceEventData.set(result.data.fleetEvents);
+        }
+      });
+  }
+
+  private loadEdata(id: string, asOf: string | null): void {
+    if (asOf === null) {
+      this.edataLoading.set(false);
+      return;
+    }
+    const from = new Date(Date.parse(asOf) - 24 * 60 * 60 * 1000).toISOString();
+    const to = new Date(Date.parse(asOf) + 1).toISOString();
+    this.retryEdata
+      .pipe(
+        startWith(undefined),
+        switchMap(() => {
+          this.edataLoading.set(true);
+          this.edataError.set(null);
+          return this.api.watchEdataMeasurements(id, from, to).valueChanges.pipe(
+            catchError((error: unknown) => {
+              this.edataLoading.set(false);
+              this.edataError.set(error);
+              return EMPTY;
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((result) => {
+        this.edataLoading.set(result.loading);
+        this.edataError.set(result.error ?? null);
+        if (result.dataState === 'complete' && !result.loading && !result.error) {
+          this.edataData.set(result.data.fleetVehicleEdataMeasurements);
         }
       });
   }

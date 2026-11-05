@@ -30,6 +30,45 @@ function feedEdata(value: unknown) {
   if (typeof value !== 'object' || value === null || !('type' in value)) {
     return null;
   }
+  if (value.type === 405) {
+    if (!('parameters' in value) || !Array.isArray(value.parameters)) {
+      return null;
+    }
+    const parameters: unknown[] = value.parameters;
+    const measurements = [];
+    for (const parameter of parameters) {
+      if (
+        typeof parameter !== 'object' ||
+        parameter === null ||
+        !('parameter' in parameter) ||
+        typeof parameter.parameter !== 'number' ||
+        !Number.isInteger(parameter.parameter) ||
+        parameter.parameter < 0 ||
+        parameter.parameter > 65535 ||
+        !('type' in parameter) ||
+        typeof parameter.type !== 'number' ||
+        !Number.isInteger(parameter.type) ||
+        parameter.type < 0 ||
+        parameter.type > 255 ||
+        !('valueSize' in parameter) ||
+        typeof parameter.valueSize !== 'number' ||
+        ![1, 2, 4].includes(parameter.valueSize) ||
+        !('valueHex' in parameter) ||
+        typeof parameter.valueHex !== 'string' ||
+        parameter.valueHex.length !== parameter.valueSize * 2 ||
+        !/^[0-9a-f]+$/i.test(parameter.valueHex)
+      ) {
+        return null;
+      }
+      measurements.push({
+        parameterId: parameter.parameter,
+        parameterType: parameter.type,
+        valueSize: parameter.valueSize,
+        valueHex: parameter.valueHex,
+      });
+    }
+    return { report: '405', measurements };
+  }
   if (
     value.type === 411 &&
     'communicationMask' in value &&

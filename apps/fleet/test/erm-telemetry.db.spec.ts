@@ -59,6 +59,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
     [
       'FLEET_ENABLED',
       'FLEET_ERM_TELEMETRY_ENABLED',
+      'FLEET_ERM_EDATA_MEASUREMENTS_ENABLED',
       'ERM_TELEMETRY_URL',
       'ERM_TELEMETRY_TOKEN',
     ].map((key) => [key, process.env[key]]),
@@ -107,6 +108,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
     }
     process.env.FLEET_ENABLED = 'true';
     process.env.FLEET_ERM_TELEMETRY_ENABLED = 'true';
+    process.env.FLEET_ERM_EDATA_MEASUREMENTS_ENABLED = 'true';
     process.env.ERM_TELEMETRY_URL = `http://127.0.0.1:${String(address.port)}`;
     process.env.ERM_TELEMETRY_TOKEN = token;
     database = await createTestDatabase();
@@ -206,6 +208,39 @@ describe('ERM telemetry import with PostgreSQL', () => {
         createdAt: installedAt,
       },
     });
+    const catalog = await database.client.edataCatalog.create({
+      data: {
+        sourceSha256: '01dd13e50c55fdf84078ce298bde72320d55bee458baa4c0d2a06fca7c0ca1a0',
+        extractorVersion: '1.0.0',
+        schemaVersion: 1,
+        packageLabel: 'v9.56',
+        contentSha256: 'a'.repeat(64),
+        metadata: {},
+      },
+    });
+    await database.client.edataCatalogSource.create({
+      data: { catalogId: catalog.id, key: 'monitor', kind: 'monitor', evidence: {} },
+    });
+    await database.client.edataCatalogParameter.createMany({
+      data: [
+        { key: 'engine-1', parameterId: 1, name: 'Engine Speed (RPM)', category: '1' },
+        { key: 'engine-2', parameterId: 1, name: 'Engine Speed (RPM)', category: '2' },
+        { key: 'coolant', parameterId: 539, name: 'Engine Coolant Temperature (c)', category: '1' },
+      ].map((parameter) => ({
+        ...parameter,
+        catalogId: catalog.id,
+        sourceKey: 'monitor',
+        details: {},
+      })),
+    });
+    const edataMeasurements = {
+      report: '405',
+      measurements: [
+        { parameterId: 1, parameterType: 0, valueSize: 2, valueHex: '0aBc' },
+        { parameterId: 539, parameterType: 1, valueSize: 1, valueHex: '00' },
+        { parameterId: 65000, parameterType: 255, valueSize: 4, valueHex: 'ffffffff' },
+      ],
+    };
     const faultReport = {
       report: '419',
       faults: [
@@ -223,7 +258,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
       ignition: 2,
     };
     events.set(deviceA.imei, [
-      { ...event('1', -20, true), receivedAt: at(-1).toISOString(), edata: faultReport },
+      { ...event('1', -20, true), receivedAt: at(-1).toISOString(), edata: edataMeasurements },
       { ...event('2', 0, null), ignitionOn: true },
       {
         ...event('3', 0, false),
@@ -239,9 +274,23 @@ describe('ERM telemetry import with PostgreSQL', () => {
         odometerKm: 101,
         edata: { ...diagnostics, canError: false },
       },
-      { ...event('5', 300, false), receivedAt: at(120).toISOString(), edata: faultReport },
-      { ...event('6', 180, true), ignitionOn: false, speedKmh: 5, odometerKm: 110 },
-      { ...event('7', 240, true), speedKmh: 401, odometerKm: 111 },
+      { ...event('5', 300, false), receivedAt: at(120).toISOString(), edata: edataMeasurements },
+      {
+        ...event('6', 180, true),
+        ignitionOn: false,
+        speedKmh: 5,
+        odometerKm: 110,
+        edata: edataMeasurements,
+      },
+      {
+        ...event('7', 240, true),
+        speedKmh: 401,
+        odometerKm: 111,
+        edata: {
+          report: '405',
+          measurements: [{ parameterId: 1, parameterType: 0, valueSize: 2, valueHex: '0000' }],
+        },
+      },
       {
         ...event('8', 300, null),
         latitude: 91,
@@ -252,16 +301,132 @@ describe('ERM telemetry import with PostgreSQL', () => {
         backupVoltage: 10.01,
         edata: diagnostics,
       },
-      { ...event('9', 360, false), eventTime: null, edata: faultReport },
+      { ...event('9', 360, false), eventTime: null, edata: edataMeasurements },
       { ...event('11', 300, null), edata: { report: '999', faults: 'ignored' } },
     ]);
-    events.set(stock.imei, [{ ...event('10', 30, true), edata: faultReport }]);
+    events.set(stock.imei, [{ ...event('10', 30, true), edata: edataMeasurements }]);
     events.set(deviceB.imei, [
       { ...event('19', -20, true), receivedAt: at(-1).toISOString() },
-      { ...event('20', 60, true), odometerKm: 500 },
+      { ...event('20', 60, true), odometerKm: 500, edata: edataMeasurements },
     ]);
 
     await jobs.tick();
+    const measurementRows = () =>
+      database.client.vehicleEdataMeasurement.findMany({
+        where: scopeA,
+        orderBy: [{ parameterId: 'asc' }, { recordedAt: 'asc' }],
+      });
+    const importedMeasurements = await measurementRows();
+    expect(importedMeasurements).toMatchObject([
+      {
+        ...scopeA,
+        vehicleId: vehicleA.id,
+        deviceImei: deviceA.imei,
+        source: 'ERM',
+        sourceEventId: 6n,
+        recordedAt: at(180),
+        receivedAt: at(190),
+        parameterId: 1,
+        parameterType: 0,
+        valueSize: 2,
+        valueHex: '0aBc',
+        name: 'Engine Speed (RPM)',
+        unit: 'RPM',
+      },
+      {
+        ...scopeA,
+        vehicleId: vehicleA.id,
+        deviceImei: deviceA.imei,
+        source: 'ERM',
+        sourceEventId: 7n,
+        recordedAt: at(240),
+        receivedAt: at(250),
+        parameterId: 1,
+        parameterType: 0,
+        valueSize: 2,
+        valueHex: '0000',
+        name: 'Engine Speed (RPM)',
+        unit: 'RPM',
+      },
+      {
+        ...scopeA,
+        vehicleId: vehicleA.id,
+        deviceImei: deviceA.imei,
+        source: 'ERM',
+        sourceEventId: 6n,
+        recordedAt: at(180),
+        receivedAt: at(190),
+        parameterId: 539,
+        parameterType: 1,
+        valueSize: 1,
+        valueHex: '00',
+        name: 'Engine Coolant Temperature (c)',
+        unit: 'c',
+      },
+      {
+        ...scopeA,
+        vehicleId: vehicleA.id,
+        deviceImei: deviceA.imei,
+        source: 'ERM',
+        sourceEventId: 6n,
+        recordedAt: at(180),
+        receivedAt: at(190),
+        parameterId: 65000,
+        parameterType: 255,
+        valueSize: 4,
+        valueHex: 'ffffffff',
+        name: null,
+        unit: null,
+      },
+    ]);
+    expect(await database.client.vehicleEdataMeasurement.count({ where: scopeB })).toBe(3);
+    expect(
+      await database.client.vehicleEdataMeasurement.count({ where: { deviceImei: stock.imei } }),
+    ).toBe(0);
+    async function measurements(selectedScope = scopeA, vehicleId = vehicleA.id) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${issueDemoToken(selectedScope.tenantId)}`,
+          'x-branch-id': selectedScope.branchId,
+        },
+        body: JSON.stringify({
+          query:
+            'query($id:ID!,$from:DateTime!,$to:DateTime!){fleetVehicleEdataMeasurements(vehicleId:$id,from:$from,to:$to,parameterIds:[1]){truncated items{recordedAt valueHex name unit}}}',
+          variables: { id: vehicleId, from: installedAt.toISOString(), to: at(360).toISOString() },
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const body: unknown = await response.json();
+      return body;
+    }
+    expect(await measurements()).toEqual({
+      data: {
+        fleetVehicleEdataMeasurements: {
+          truncated: false,
+          items: [
+            {
+              recordedAt: at(180).toISOString(),
+              valueHex: '0aBc',
+              name: 'Engine Speed (RPM)',
+              unit: 'RPM',
+            },
+            {
+              recordedAt: at(240).toISOString(),
+              valueHex: '0000',
+              name: 'Engine Speed (RPM)',
+              unit: 'RPM',
+            },
+          ],
+        },
+      },
+    });
+    for (const selectedScope of [scopeB, { ...scopeA, branchId: scopeB.branchId }]) {
+      expect(await measurements(selectedScope)).toMatchObject({
+        errors: [{ extensions: { code: 'NOT_FOUND' } }],
+      });
+    }
     const samples = await database.client.vehicleStatusSample.findMany({
       where: scopeA,
       orderBy: { recordedAt: 'asc' },
@@ -451,6 +616,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
     expect(await database.client.vehicleStatusSample.count()).toBe(6);
     expect(await tripRows()).toEqual(initialTrips);
     expect(await fleetEvents()).toEqual(initialEvents);
+    expect(await measurementRows()).toEqual(importedMeasurements);
     await database.client.fleetErmCursor.update({
       where: { ...scopeA, deviceId: deviceA.id },
       data: { lastEventId: 0n },
@@ -459,6 +625,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
     expect(await database.client.vehicleStatusSample.count()).toBe(6);
     expect(await tripRows()).toEqual(initialTrips);
     expect(await fleetEvents()).toEqual(initialEvents);
+    expect(await measurementRows()).toEqual(importedMeasurements);
     events.get(deviceA.imei)?.push({
       ...event('21', 120, false),
       receivedAt: at(420).toISOString(),

@@ -91,6 +91,7 @@ web/API restarts.
 | Karma Client (deprecated, view-only) | 11014                 |
 | ERM gateway HTTP                     | 11015, loopback       |
 | ERM api HTTP                         | 11017, loopback       |
+| ERM read-only recovery TCP           | 11510                 |
 | ERM gateway TCP                      | 11500, all interfaces |
 | PostgreSQL                           | 11084                 |
 | ERM relay                            | 11500, all interfaces |
@@ -195,6 +196,8 @@ it does not load `apps/gateway/.env`. Defaults are:
 | ADMIN_ORIGIN             | http://127.0.0.1:11000         |
 
 ERM Server is the fourth subgraph, served by `ERM_ROLE=api` on HTTP 11017. The independent
+`ERM_ROLE=recovery` process serves the read-only configuration listener on TCP 11510 and
+needs its own user unit and ERM database access. It has no HTTP endpoint. The
 `ERM_ROLE=gateway` process keeps device TCP sessions on 11500 and its internal API on 11015;
 `npm run dev` and `npm run kill` continue to exclude it. Set its shared `DEMO_AUTH_ENABLED` and
 `DEMO_AUTH_SECRET` consistently with the other subgraphs. After adding or changing its endpoint,

@@ -44,13 +44,17 @@ adds `GET /internal/telemetry/units/:imei/events?after=<id>&limit=<1-500>`:
   returned id, or `after` for an empty page, which is also the answer for an IMEI without events.
   Each device event has `id`, `eventId`, `eventTime`, `receivedAt` (frame receipt), `latitude`,
   `longitude`, `speedKmh`, `heading`, `odometerKm`, `engineOn`, `ignitionOn`, `mainVoltage`,
-  `backupVoltage` and `edata`: the decoded eData `411` or `419` payload of StarLink event 33, or
+  `backupVoltage` and `edata`: the decoded eData `405`, `411` or `419` payload of StarLink event 33, or
   null. Raw frames, `fields` and commands stay out;
+- `edata` for a `405` report is `{report: "405", measurements: [{parameterId, parameterType,
+valueSize, valueHex}]}`. IDs are 0–65535, types 0–255, sizes 1/2/4 bytes and hex contains
+  exactly twice that many digits. Unknown IDs and types remain raw observations; malformed
+  reports have null `edata`. This contract preserves bytes, without physical conversion;
 - serves only events received at least 10 seconds before the request. A unit's events are written
   in its connection's queue order, but a reconnect overlap can commit ids out of order; the delay
   keeps the cursor from skipping them.
 
-**Cursor and idempotency.** Fleet keeps one cursor per Device in a new scoped `fleetErmCursor` row
+**Cursor and idempotency.** Fleet keeps one cursor per Device in a scoped `fleetErmCursor` row
 (`tenantId`, `branchId`, `deviceId`, `lastEventId`) that is deleted with its Device. One transaction
 per page inserts the samples, updates trips and advances the cursor, so a failed tick changes
 nothing and the next tick repeats it. Samples insert with `ON CONFLICT DO NOTHING` on their unique
@@ -76,6 +80,23 @@ most 10 pages per Device, and an unreachable endpoint leaves every cursor unchan
   fault state until the fault lifecycle and completeness are established, and a hand-written
   partial unique index makes replays idempotent. Other ERM event IDs map to `FleetEventKind` only
   after the ERM roadmap verifies them; until then the federated ERM history shows them.
+
+- With `FLEET_ERM_EDATA_MEASUREMENTS_ENABLED=true` (default off), each `405` item also becomes
+  a `VehicleEdataMeasurement` of the Device's Vehicle, in the same scoped page transaction.
+  It stores source event ID, IMEI, unit/receipt times, catalog ID, type, size and exact hex.
+  The reviewed Simple eData catalog supplies a name and unit when known; those labels are
+  snapshots, not conversion rules. A unique Tenant/Branch/IMEI/source-event/parameter key
+  prevents duplicate measurements even after Vehicle reassignment. Stock, installation-time
+  and invalid-clock rules above still apply. Existing cursors are not rewound when enabled;
+  importing earlier reports requires a separate deliberate backfill.
+
+**Measurement query and chart.** `fleetVehicleEdataMeasurements(vehicleId, from, to, parameterIds)`
+requires verified Tenant/Branch access to the Vehicle, a range of at most seven days, and returns
+`{vehicleId, from, to, items, truncated}`. It returns the newest 2,000 matching measurements in
+ascending time order. The vehicle profile shows IDs 1, 3 and 539 over the last 24 hours of the
+Branch data clock. Dots represent raw unsigned hex-byte magnitudes, with exact latest hex and
+catalog labels. There is no interpolation or verified physical byte order, scale or signedness;
+catalog units are reference labels only. Missing observations stay gaps.
 
 **Two clocks.** ERM samples are device samples: their unit time sets the Branch data clock (`asOf`),
 and `receivedAt` keeps erm-server's receipt time. Fleet never stamps them with `FleetClock.now()`;
@@ -115,5 +136,5 @@ The demo dataset uses the owner's Branch scope. Never load it into a Branch that
 because demo and live samples would share one data clock. The federated `FleetDevice.erm*` history
 is not yet bounded by registration time; that remains ERM roadmap work.
 
-Implementation follows in two parts: erm-server adds the endpoint and token; Fleet adds the source
-value, the cursor table, the job and trip derivation.
+The endpoint, cursor, job and trip derivation are implemented. The measurement collector is a
+separate deployment flag and does not change the existing sample import when disabled.

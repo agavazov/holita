@@ -8,6 +8,7 @@ import {
   AdminVehicleProfileTripsDocument,
   AdminVehicleProfileAlertsDocument,
   AdminVehicleDeviceEventsDocument,
+  AdminVehicleEdataMeasurementsDocument,
   AdminVehicleProfileServiceDocument,
   AdminVehicleOdometerDocument,
   AdminRecordOdometerDocument,
@@ -84,6 +85,14 @@ export class VehicleProfileApi implements OnDestroy {
     return this.client().watchQuery({
       query: AdminVehicleDeviceEventsDocument,
       variables: { vehicleId },
+      fetchPolicy: 'network-only',
+    });
+  }
+
+  watchEdataMeasurements(vehicleId: string, from: string, to: string) {
+    return this.client().watchQuery({
+      query: AdminVehicleEdataMeasurementsDocument,
+      variables: { vehicleId, from, to },
       fetchPolicy: 'network-only',
     });
   }

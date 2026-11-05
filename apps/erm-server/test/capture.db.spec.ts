@@ -1869,6 +1869,39 @@ it('persists captured connection lifecycle and raw frames through the production
         },
       },
     });
+    const fourthTelemetryEvent = await database.client.ermEvent.create({
+      data: {
+        frameId: telemetryFrame.id,
+        unitId: telemetryUnitId,
+        eventId: '33',
+        fields: {
+          edata: {
+            type: 405,
+            parameters: [
+              { parameter: 1, type: 0, valueSize: 1, valueHex: 'FF' },
+              { parameter: 188, type: 1, valueSize: 2, valueHex: 'aBcD' },
+              { parameter: 65535, type: 255, valueSize: 4, valueHex: 'FFFFFFFF' },
+            ],
+          },
+        },
+      },
+    });
+    const fifthTelemetryEvent = await database.client.ermEvent.create({
+      data: {
+        frameId: telemetryFrame.id,
+        unitId: telemetryUnitId,
+        eventId: '33',
+        fields: {
+          edata: {
+            type: 405,
+            parameters: [
+              { parameter: 1, type: 0, valueSize: 1, valueHex: 'FF' },
+              { parameter: 188, type: 1, valueSize: 2, valueHex: 'FF' },
+            ],
+          },
+        },
+      },
+    });
     const delayedFrame = await database.client.ermFrame.create({
       data: {
         connectionId: stored.id,
@@ -1889,8 +1922,10 @@ it('persists captured connection lifecycle and raw frames through the production
         String(firstTelemetryEvent.id),
         String(secondTelemetryEvent.id),
         String(thirdTelemetryEvent.id),
+        String(fourthTelemetryEvent.id),
+        String(fifthTelemetryEvent.id),
       ]);
-      expect(exported.next).toBe(String(thirdTelemetryEvent.id));
+      expect(exported.next).toBe(String(fifthTelemetryEvent.id));
       expect(exported.events[0]).toEqual({
         id: String(firstTelemetryEvent.id),
         eventId: '04',
@@ -1930,10 +1965,19 @@ it('persists captured connection lifecycle and raw frames through the production
           { spn: 1247, fmi: 11, status: 'ADDED' },
         ],
       });
+      expect(exported.events[3]?.edata).toEqual({
+        report: '405',
+        measurements: [
+          { parameterId: 1, parameterType: 0, valueSize: 1, valueHex: 'FF' },
+          { parameterId: 188, parameterType: 1, valueSize: 2, valueHex: 'aBcD' },
+          { parameterId: 65535, parameterType: 255, valueSize: 4, valueHex: 'FFFFFFFF' },
+        ],
+      });
+      expect(exported.events[4]?.edata).toBeNull();
       expect(
         await telemetryController.events(telemetryUnitId, String(firstTelemetryEvent.id), '1'),
       ).toEqual({ events: [exported.events[1]], next: String(secondTelemetryEvent.id) });
-      const after = String(thirdTelemetryEvent.id);
+      const after = String(fifthTelemetryEvent.id);
       expect(await telemetryController.events(telemetryUnitId, after, undefined)).toEqual({
         events: [],
         next: after,

@@ -2,6 +2,15 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 
 export type ErmTelemetryEdata =
   | {
+      report: '405';
+      measurements: {
+        parameterId: number;
+        parameterType: number;
+        valueSize: number;
+        valueHex: string;
+      }[];
+    }
+  | {
       report: '411';
       can: boolean;
       j1708: boolean;
@@ -85,6 +94,38 @@ function telemetryEdata(value: unknown): ErmTelemetryEdata | null {
   }
   if (!record(value)) {
     throw unavailable();
+  }
+  if (value.report === '405') {
+    if (!Array.isArray(value.measurements)) {
+      throw unavailable();
+    }
+    return {
+      report: value.report,
+      measurements: value.measurements.map((measurement: unknown) => {
+        if (
+          !record(measurement) ||
+          !integer(measurement.parameterId) ||
+          measurement.parameterId < 0 ||
+          measurement.parameterId > 65535 ||
+          !integer(measurement.parameterType) ||
+          measurement.parameterType < 0 ||
+          measurement.parameterType > 255 ||
+          !integer(measurement.valueSize) ||
+          ![1, 2, 4].includes(measurement.valueSize) ||
+          typeof measurement.valueHex !== 'string' ||
+          measurement.valueHex.length !== 2 * measurement.valueSize ||
+          !/^[0-9a-f]+$/i.test(measurement.valueHex)
+        ) {
+          throw unavailable();
+        }
+        return {
+          parameterId: measurement.parameterId,
+          parameterType: measurement.parameterType,
+          valueSize: measurement.valueSize,
+          valueHex: measurement.valueHex,
+        };
+      }),
+    };
   }
   if (value.report === '411') {
     if (

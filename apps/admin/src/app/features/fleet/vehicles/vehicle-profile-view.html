@@ -219,6 +219,47 @@
                 <holita-column-series [label]="text().distanceChart" [points]="distancePoints()" />
               </section>
               <section class="app-card">
+                <h2 class="app-card__title app-card__header">{{ text().edata.heading }}</h2>
+                <p class="app-muted">{{ text().edata.note }}</p>
+                @if (edataLoading()) {
+                  <p role="status">{{ text().edata.loading }}</p>
+                } @else if (edataError(); as error) {
+                  <p role="alert">{{ error }}</p>
+                  <button pButton type="button" severity="secondary" (click)="retryEdata.emit()">
+                    {{ text().retry }}
+                  </button>
+                } @else {
+                  @if (edataTruncated()) {
+                    <p class="app-muted">{{ text().edata.truncated }}</p>
+                  }
+                  @for (chart of edataCharts(); track chart.id) {
+                    <h3>{{ chart.label }} · ID {{ chart.id }}</h3>
+                    <p class="app-mono">
+                      0x{{ chart.lastHex }} · {{ chart.lastAt | holitaDateTime }}
+                    </p>
+                    @if (chart.catalogUnit) {
+                      <p class="app-muted">
+                        {{ text().edata.catalogUnit }}: {{ chart.catalogUnit }}
+                      </p>
+                    }
+                    <holita-sparkline
+                      [label]="chart.label"
+                      [points]="chart.points"
+                      [from]="edataStart()"
+                      [to]="edataEnd()"
+                      [unit]="text().edata.raw"
+                    />
+                  } @empty {
+                    <p>{{ text().edata.empty }}</p>
+                  }
+                  @if (edataCharts().length) {
+                    <p class="app-muted">
+                      {{ edataFrom() | holitaDateTime }} — {{ edataTo() | holitaDateTime }}
+                    </p>
+                  }
+                }
+              </section>
+              <section class="app-card">
                 <h2 class="app-card__title app-card__header">{{ text().notes }}</h2>
                 <p class="vehicle-profile__notes">{{ vehicle.notes || text().noNotes }}</p>
               </section>

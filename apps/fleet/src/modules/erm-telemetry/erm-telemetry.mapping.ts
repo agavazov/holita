@@ -6,6 +6,47 @@ export type ErmTelemetryDevice = Pick<
   'id' | 'tenantId' | 'branchId' | 'imei' | 'vehicleId' | 'installedAt' | 'createdAt'
 >;
 
+export function ermEdataMeasurementsEnabled(): boolean {
+  const value = process.env.FLEET_ERM_EDATA_MEASUREMENTS_ENABLED ?? 'false';
+  if (value !== 'true' && value !== 'false') {
+    throw new Error('FLEET_ERM_EDATA_MEASUREMENTS_ENABLED must be true or false');
+  }
+  return value === 'true' && process.env.FLEET_ENABLED !== 'false';
+}
+
+export function ermEdataMeasurements(
+  device: ErmTelemetryDevice,
+  events: ErmTelemetryEvent[],
+  labels: ReadonlyMap<number, { name: string | null; unit: string | null }>,
+): Prisma.VehicleEdataMeasurementCreateManyInput[] {
+  if (device.vehicleId === null) {
+    return [];
+  }
+  const since = device.installedAt ?? device.createdAt;
+  const measurements: Prisma.VehicleEdataMeasurementCreateManyInput[] = [];
+  for (const event of events) {
+    if (!importableEvent(event, since) || event.edata?.report !== '405') {
+      continue;
+    }
+    for (const measurement of event.edata.measurements) {
+      measurements.push({
+        tenantId: device.tenantId,
+        branchId: device.branchId,
+        vehicleId: device.vehicleId,
+        deviceImei: device.imei,
+        source: 'ERM',
+        sourceEventId: event.id,
+        recordedAt: event.eventTime,
+        receivedAt: event.receivedAt,
+        ...measurement,
+        name: labels.get(measurement.parameterId)?.name ?? null,
+        unit: labels.get(measurement.parameterId)?.unit ?? null,
+      });
+    }
+  }
+  return measurements;
+}
+
 function inRange(value: number | null, minimum: number, maximum: number): number | null {
   return value !== null && value >= minimum && value <= maximum ? value : null;
 }
@@ -116,7 +157,7 @@ export function ermFleetEvents(
               : 'eData 419: the fault logger deleted this fault; this does not prove a repair.',
         });
       }
-    } else if (edata.canError) {
+    } else if (edata.report === '411' && edata.canError) {
       fleetEvents.push({
         ...common,
         kind: 'CAN_ERROR',

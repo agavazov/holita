@@ -3,7 +3,13 @@ import { PrismaService } from '../../database/prisma.service.js';
 import type { Prisma, VehicleStatusSample } from '../../generated/prisma/client.js';
 import type { ErmTelemetryPage } from '../../integrations/erm/erm-telemetry.client.js';
 import type { FleetScope } from '../../validation.js';
-import { ermFleetEvents, ermSamples, type ErmTelemetryDevice } from './erm-telemetry.mapping.js';
+import {
+  ermFleetEvents,
+  ermSamples,
+  ermEdataMeasurements,
+  ermEdataMeasurementsEnabled,
+  type ErmTelemetryDevice,
+} from './erm-telemetry.mapping.js';
 
 @Injectable()
 export class ErmTelemetryRepository {
@@ -53,6 +59,27 @@ export class ErmTelemetryRepository {
       if (events.length > 0) {
         await transaction.fleetEvent.createMany({ data: events, skipDuplicates: true });
       }
+      if (ermEdataMeasurementsEnabled()) {
+        const parameterIds = [
+          ...new Set(
+            page.events.flatMap((event) =>
+              event.edata?.report === '405'
+                ? event.edata.measurements.map((item) => item.parameterId)
+                : [],
+            ),
+          ),
+        ];
+        if (device.vehicleId !== null && parameterIds.length > 0) {
+          const labels = await this.measurementLabels(transaction, parameterIds);
+          const measurements = ermEdataMeasurements(device, page.events, labels);
+          if (measurements.length > 0) {
+            await transaction.vehicleEdataMeasurement.createMany({
+              data: measurements,
+              skipDuplicates: true,
+            });
+          }
+        }
+      }
       const cursor = await transaction.fleetErmCursor.findUnique({
         where: { ...scope, deviceId: device.id },
         select: { lastReceivedAt: true },
@@ -68,6 +95,79 @@ export class ErmTelemetryRepository {
         update: { lastEventId: page.next, lastReceivedAt },
       });
     });
+  }
+
+  private async measurementLabels(transaction: Prisma.TransactionClient, parameterIds: number[]) {
+    const catalog = await transaction.edataCatalog.findFirst({
+      where: {
+        sourceSha256: '01dd13e50c55fdf84078ce298bde72320d55bee458baa4c0d2a06fca7c0ca1a0',
+        extractorVersion: '1.0.0',
+        schemaVersion: 1,
+      },
+      select: { id: true },
+    });
+    const rows =
+      catalog === null
+        ? []
+        : await transaction.edataCatalogParameter.findMany({
+            where: {
+              catalogId: catalog.id,
+              sourceKey: 'monitor',
+              parameterId: { in: parameterIds },
+            },
+            select: { parameterId: true, name: true },
+          });
+    const names = new Map<number, Set<string>>();
+    for (const row of rows) {
+      const candidates = names.get(row.parameterId) ?? new Set<string>();
+      candidates.add(row.name);
+      names.set(row.parameterId, candidates);
+    }
+    const units = new Set([
+      '%',
+      'RPM',
+      'rpm',
+      'kph',
+      'km/h',
+      'km',
+      'meters',
+      'mm',
+      'L',
+      'L/h',
+      'kg',
+      'kg/h',
+      'g',
+      'g/l',
+      'c',
+      'F',
+      'V',
+      'v',
+      'A',
+      'bar',
+      'kPa',
+      'kpa',
+      'MPa',
+      'Nm',
+      'kw',
+      'kWh',
+      'KWh',
+      'kwh',
+      'Wh',
+      'kWh/100km',
+      'watt/hour',
+      'seconds',
+      'sec',
+      'ms',
+      'minutes',
+    ]);
+    return new Map(
+      parameterIds.map((parameterId) => {
+        const candidates = names.get(parameterId);
+        const name = candidates?.size === 1 ? ([...candidates][0] ?? null) : null;
+        const suffix = name === null ? undefined : /\(([^()]*)\)$/.exec(name)?.[1];
+        return [parameterId, { name, unit: suffix && units.has(suffix) ? suffix : null }];
+      }),
+    );
   }
 
   private async updateTrips(

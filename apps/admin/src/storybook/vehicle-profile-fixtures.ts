@@ -3,6 +3,7 @@ import {
   AdminVehicleProfileTripsDocument,
   AdminVehicleProfileAlertsDocument,
   AdminVehicleDeviceEventsDocument,
+  AdminVehicleEdataMeasurementsDocument,
   AdminVehicleProfileServiceDocument,
   AdminVehicleOdometerDocument,
   AdminRecordOdometerDocument,
@@ -141,3 +142,62 @@ graphqlFixture(
     };
   },
 );
+
+graphqlFixture(AdminVehicleEdataMeasurementsDocument, (variables) => ({
+  fleetVehicleEdataMeasurements: {
+    __typename: 'FleetVehicleEdataMeasurementSeries',
+    from: variables.requiredString('from'),
+    to: variables.requiredString('to'),
+    truncated: false,
+    items: [
+      {
+        id: 'edata-1',
+        recordedAt: '2026-10-18T04:00:00.000Z',
+        parameterId: 1,
+        valueHex: '0120',
+        name: 'Engine Speed',
+        unit: 'RPM',
+      },
+      {
+        id: 'edata-2',
+        recordedAt: '2026-10-18T06:00:00.000Z',
+        parameterId: 1,
+        valueHex: '0240',
+        name: 'Engine Speed',
+        unit: 'RPM',
+      },
+      {
+        id: 'edata-3',
+        recordedAt: '2026-10-18T04:00:00.000Z',
+        parameterId: 3,
+        valueHex: '40',
+        name: 'Fuel Level',
+        unit: 'L',
+      },
+      {
+        id: 'edata-4',
+        recordedAt: '2026-10-18T06:00:00.000Z',
+        parameterId: 3,
+        valueHex: '3F',
+        name: 'Fuel Level',
+        unit: 'L',
+      },
+      {
+        id: 'edata-5',
+        recordedAt: '2026-10-18T04:00:00.000Z',
+        parameterId: 539,
+        valueHex: '0050',
+        name: 'Engine Coolant Temperature',
+        unit: 'c',
+      },
+      {
+        id: 'edata-6',
+        recordedAt: '2026-10-18T06:00:00.000Z',
+        parameterId: 539,
+        valueHex: '0052',
+        name: 'Engine Coolant Temperature',
+        unit: 'c',
+      },
+    ].map((item) => ({ __typename: 'FleetVehicleEdataMeasurement', ...item })),
+  },
+}));

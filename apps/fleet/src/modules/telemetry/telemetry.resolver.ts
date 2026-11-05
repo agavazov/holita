@@ -4,6 +4,7 @@ import { FleetEnabledGuard } from '../../fleet-enabled.guard.js';
 import type {
   MutationRecordFleetOdometerReadingArgs,
   QueryFleetVehicleSamplesArgs,
+  QueryFleetVehicleEdataMeasurementsArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { TelemetryService } from './telemetry.service.js';
@@ -24,6 +25,14 @@ export class TelemetryResolver {
     @Context() context: RequestContext,
   ) {
     return this.telemetryService.samples(context, args);
+  }
+
+  @Query('fleetVehicleEdataMeasurements')
+  fleetVehicleEdataMeasurements(
+    @Args() args: QueryFleetVehicleEdataMeasurementsArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.telemetryService.edataMeasurements(context, args);
   }
 
   @Mutation('recordFleetOdometerReading')

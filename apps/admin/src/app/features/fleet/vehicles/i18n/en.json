@@ -153,7 +153,17 @@
     "errorText": "The vehicle could not be loaded.",
     "retry": "Try again",
     "devices": "Devices",
-    "noDevice": "No device"
+    "noDevice": "No device",
+    "edata": {
+      "heading": "eData observations · last 24 h",
+      "note": "Dots show raw hex-byte magnitudes for engine speed, fuel level and coolant temperature IDs. No interpolation; byte order, scale and physical units are not yet verified.",
+      "loading": "Loading measurements…",
+      "error": "Measurements could not be loaded.",
+      "truncated": "Only the newest 2,000 observations in this range are shown.",
+      "catalogUnit": "Catalog unit (reference only)",
+      "raw": "raw",
+      "empty": "No imported observations for these IDs in this period."
+    }
   },
   "odometer": {
     "title": "Record odometer · {plate}",

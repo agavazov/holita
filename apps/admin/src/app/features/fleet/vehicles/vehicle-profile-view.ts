@@ -6,6 +6,7 @@ import { TableModule } from 'primeng/table';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { Tag } from 'primeng/tag';
 import { ColumnSeries, type SeriesPoint } from '../../../ui/charts/column-series';
+import { Sparkline, type SparkPoint } from '../../../ui/charts/sparkline';
 import { EmptyState } from '../../../ui/empty-state/empty-state';
 import {
   FormatDateOnlyPipe,
@@ -52,6 +53,15 @@ export interface VehicleProfile extends VehicleRow {
   readonly createdAt: string;
 }
 
+export interface EdataChart {
+  readonly id: number;
+  readonly label: string;
+  readonly catalogUnit: string | null;
+  readonly lastHex: string;
+  readonly lastAt: string;
+  readonly points: readonly SparkPoint[];
+}
+
 export type VehicleProfileState = 'loading' | 'ready' | 'not-found' | 'error';
 
 /** A dated eData report: a trouble code the fault logger added or cleared, or a CAN error. */
@@ -88,6 +98,7 @@ function listView(rows: readonly unknown[]): TableView {
     TabPanel,
     Tag,
     ColumnSeries,
+    Sparkline,
     EmptyState,
     FormatDateOnlyPipe,
     FormatDateTimePipe,
@@ -117,6 +128,15 @@ export class VehicleProfileView {
   readonly backLabel = input<string | null>(null);
   readonly errorText = input<string | null>(null);
   readonly distance = input<readonly SeriesPoint[]>([]);
+  readonly edataCharts = input<readonly EdataChart[]>([]);
+  readonly edataFrom = input('');
+  readonly edataTo = input('');
+  protected readonly edataStart = computed(() => Date.parse(this.edataFrom()));
+  protected readonly edataEnd = computed(() => Date.parse(this.edataTo()));
+  readonly edataLoading = input(false);
+  readonly edataError = input<string | null>(null);
+  readonly edataTruncated = input(false);
+  readonly retryEdata = output();
   readonly trips = input<readonly TripRow[]>([]);
   readonly alerts = input<readonly AlertRow[]>([]);
   readonly service = input<readonly ServiceTaskRow[]>([]);

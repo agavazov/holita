@@ -51,14 +51,14 @@ pages and Storybook examples. Storybook fixtures and sample pages stay in `src/s
 and outside application output. `core/` contains only admin-local authentication,
 configuration and GraphQL transport. Feature clients and caches retain their mounted view lifetime; neither route grouping nor shared login makes business clients global.
 
-| Application  | Responsibility                                                                                                              | Local port                               |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| admin        | Standalone Angular, PrimeNG with the holita design system, Branch discovery, Fleet CRUD, Karma truck data and account views | 11000                                    |
-| gateway      | Native Apollo Router federation, `/graphql`; `/health` on 11016                                                             | 11010                                    |
-| core         | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                               | 11011                                    |
-| fleet        | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database           | 11013                                    |
-| karma-client | Authenticated, shared Karma truck data and account views; no database                                                       | 11014                                    |
-| erm-server   | StarLink gateway, owning database and separate GraphQL API/control process                                                  | 11015 gateway HTTP; 11500 TCP; 11017 API |
+| Application  | Responsibility                                                                                                              | Local port                                                   |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| admin        | Standalone Angular, PrimeNG with the holita design system, Branch discovery, Fleet CRUD, Karma truck data and account views | 11000                                                        |
+| gateway      | Native Apollo Router federation, `/graphql`; `/health` on 11016                                                             | 11010                                                        |
+| core         | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                               | 11011                                                        |
+| fleet        | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database           | 11013                                                        |
+| karma-client | Authenticated, shared Karma truck data and account views; no database                                                       | 11014                                                        |
+| erm-server   | StarLink gateway, owning database, separate GraphQL API/control and read-only recovery processes                            | 11015 gateway HTTP; 11500 TCP; 11017 API; 11510 recovery TCP |
 
 ```mermaid
 flowchart LR

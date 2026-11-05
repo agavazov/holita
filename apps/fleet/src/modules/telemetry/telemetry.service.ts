@@ -6,6 +6,8 @@ import type {
   FleetStatusSampleSeries,
   FleetVehicleState,
   QueryFleetVehicleSamplesArgs,
+  QueryFleetVehicleEdataMeasurementsArgs,
+  FleetVehicleEdataMeasurementSeries,
   RecordFleetOdometerReadingInput,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
@@ -13,6 +15,7 @@ import { CoreClient } from '../../integrations/core/core.client.js';
 import {
   dateTime,
   finite,
+  integer,
   type FleetScope,
   invalid,
   requireScope,
@@ -114,6 +117,50 @@ export class TelemetryService {
       from,
       to,
       items: rows.slice(0, MAX_SERIES_SAMPLES).reverse().map(toSample),
+      truncated: rows.length > MAX_SERIES_SAMPLES,
+    };
+  }
+
+  async edataMeasurements(
+    context: RequestContext,
+    args: QueryFleetVehicleEdataMeasurementsArgs,
+  ): Promise<FleetVehicleEdataMeasurementSeries> {
+    const scope = requireScope(context);
+    const vehicleId = uuid(args.vehicleId, 'vehicleId');
+    const from = dateTime(args.from, 'from');
+    const to = dateTime(args.to, 'to');
+    if (to.getTime() <= from.getTime()) {
+      invalid('to', 'Use an end after the start.', 'INVALID_RANGE');
+    }
+    if (to.getTime() - from.getTime() > MAX_SERIES_DAYS * DAY_MS) {
+      invalid('to', `Use a period of at most ${String(MAX_SERIES_DAYS)} days.`, 'OUT_OF_RANGE');
+    }
+    if (
+      args.parameterIds !== null &&
+      args.parameterIds !== undefined &&
+      args.parameterIds.length > 100
+    ) {
+      invalid('parameterIds', 'Choose at most 100 parameter IDs.', 'TOO_MANY_ITEMS');
+    }
+    const parameterIds =
+      args.parameterIds == null
+        ? undefined
+        : [...new Set(args.parameterIds.map((value) => integer(value, 'parameterIds', 0, 65535)))];
+    if (!(await this.telemetry.findVehicle(scope, vehicleId))) {
+      throw new NotFoundException('Vehicle not found');
+    }
+    const rows = await this.telemetry.edataMeasurements(
+      scope,
+      vehicleId,
+      { from, to },
+      parameterIds,
+      MAX_SERIES_SAMPLES + 1,
+    );
+    return {
+      vehicleId,
+      from,
+      to,
+      items: rows.slice(0, MAX_SERIES_SAMPLES).reverse(),
       truncated: rows.length > MAX_SERIES_SAMPLES,
     };
   }

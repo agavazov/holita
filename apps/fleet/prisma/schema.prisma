@@ -231,6 +231,7 @@ model Vehicle {
   currentDriver Driver? @relation(fields: [tenantId, branchId, currentDriverId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
   devices Device[]
   statusSamples VehicleStatusSample[]
+  edataMeasurements VehicleEdataMeasurement[]
   trips Trip[]
   events FleetEvent[]
   serviceTasks ServiceTask[]
@@ -807,4 +808,28 @@ model KarmaRecoveryAttempt {
   @@index([tenantId, branchId, deviceImei, requestedAt(sort: Desc)])
   @@index([tenantId, branchId, karmaCarId, requestedAt(sort: Desc)])
   @@map("karmaRecoveryAttempt")
+}
+
+// Raw 405 observations retain their source event identity; catalog labels never imply conversion.
+model VehicleEdataMeasurement {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  vehicleId String @db.Uuid
+  deviceImei String @db.VarChar(15)
+  source FleetDataSource @default(ERM)
+  sourceEventId BigInt
+  recordedAt DateTime @db.Timestamptz(3)
+  receivedAt DateTime @db.Timestamptz(3)
+  parameterId Int
+  parameterType Int
+  valueSize Int
+  valueHex String @db.VarChar(8)
+  name String?
+  unit String?
+  vehicle Vehicle @relation(fields: [tenantId, branchId, vehicleId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([tenantId, branchId, deviceImei, sourceEventId, parameterId], map: "vehicleEdataMeasurementErmKey")
+  @@index([tenantId, branchId, vehicleId, recordedAt(sort: Desc)], map: "vehicleEdataMeasurementVehicleTimeIdx")
+  @@map("vehicleEdataMeasurement")
 }

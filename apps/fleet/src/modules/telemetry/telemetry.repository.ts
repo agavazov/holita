@@ -174,6 +174,40 @@ export class TelemetryRepository {
     });
   }
 
+  edataMeasurements(
+    scope: FleetScope,
+    vehicleId: string,
+    period: { from: Date; to: Date },
+    parameterIds: number[] | undefined,
+    take: number,
+  ) {
+    return this.prisma.client.vehicleEdataMeasurement.findMany({
+      where: {
+        tenantId: scope.tenantId,
+        branchId: scope.branchId,
+        vehicleId,
+        recordedAt: { gte: period.from, lt: period.to },
+        ...(parameterIds === undefined ? {} : { parameterId: { in: parameterIds } }),
+      },
+      orderBy: [{ recordedAt: 'desc' }, { id: 'desc' }],
+      take,
+      select: {
+        id: true,
+        vehicleId: true,
+        deviceImei: true,
+        source: true,
+        recordedAt: true,
+        receivedAt: true,
+        parameterId: true,
+        parameterType: true,
+        valueSize: true,
+        valueHex: true,
+        name: true,
+        unit: true,
+      },
+    });
+  }
+
   findVehicle(scope: FleetScope, id: string) {
     return this.prisma.client.vehicle.findUnique({
       where: { id, tenantId: scope.tenantId, branchId: scope.branchId },

@@ -1,6 +1,7 @@
 import type {
   AdminVehicleProfileFragment,
   AdminVehicleProfileQuery,
+  AdminVehicleEdataMeasurementsQuery,
   AdminVehicleDetailsFragment,
 } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
@@ -9,7 +10,7 @@ import { formatNumber } from '../../../ui/format/format';
 import { fleetFieldErrors } from '../field-errors';
 import type { OdometerField, PreviousOdometerReading } from './odometer-drawer';
 import { vehicleRow } from './vehicle-mapping';
-import type { VehicleProfile } from './vehicle-profile-view';
+import type { EdataChart, VehicleProfile } from './vehicle-profile-view';
 
 export function vehicleProfile(vehicle: AdminVehicleProfileFragment): VehicleProfile {
   return {
@@ -64,4 +65,30 @@ export function odometerFieldErrors(
   language: Language = 'en',
 ): Partial<Record<OdometerField, string>> {
   return fleetFieldErrors(error, ['odometerKm', 'recordedAt'], language);
+}
+
+/** Plot hex-byte magnitudes only; physical calibration and byte order remain unverified. */
+export function vehicleEdataCharts(
+  series: AdminVehicleEdataMeasurementsQuery['fleetVehicleEdataMeasurements'] | null,
+): readonly EdataChart[] {
+  return [1, 3, 539].flatMap((id) => {
+    const items = series?.items.filter((item) => item.parameterId === id) ?? [];
+    const latest = items.at(-1);
+    return latest
+      ? [
+          {
+            id,
+            label: latest.name ?? `ID ${String(id)}`,
+            catalogUnit: latest.unit,
+            lastHex: latest.valueHex,
+            lastAt: latest.recordedAt,
+            // Every report is a discrete observation; absence never becomes a continuous line.
+            points: items.flatMap((item) => [
+              { at: Date.parse(item.recordedAt), value: Number.parseInt(item.valueHex, 16) },
+              { at: Date.parse(item.recordedAt), value: null },
+            ]),
+          },
+        ]
+      : [];
+  });
 }
