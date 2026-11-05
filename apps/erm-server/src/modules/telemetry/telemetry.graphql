@@ -184,6 +184,21 @@ type ErmEdataMeasurement {
   "Report event time, or frame receipt time when the report has no time."
   observedAt: String!
 }
+"A complete-device-frame gap, clipped to the last 24 hours."
+type ErmDataGap {
+  from: String!
+  to: String!
+  durationSeconds: Int!
+  "Reporting interval known when the gap began."
+  expectedIntervalSeconds: Int!
+}
+"A network-change event or a change to an observed network/operator field."
+type ErmNetworkChange {
+  "Frame receipt time."
+  at: String!
+  networkType: String
+  operatorCode: String
+}
 "Frame freshness, connection history and upstream routing activity."
 type ErmUnitHealth {
   "Seconds since the latest complete device frame; null when none was received."
@@ -192,6 +207,11 @@ type ErmUnitHealth {
   expectedIntervalSeconds: Int!
   "No frame has arrived within twice the expected reporting interval."
   overdue: Boolean!
+  "Receipt gaps longer than twice the known reporting interval, including an ongoing gap."
+  gapsLast24h: [ErmDataGap!]!
+  "Event 23 or an observed network/operator value change; missing fields do not count."
+  networkChangesLast24h: Int!
+  latestNetworkChange: ErmNetworkChange
   "Reason for the latest closed device connection."
   lastCloseReason: String
   "Time of the latest closed device connection."

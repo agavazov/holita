@@ -8,7 +8,11 @@ import {
   sqlInteger,
 } from '../../database/sql.js';
 import { Prisma } from '../../generated/prisma/client.js';
-import type { ErmEventCategory } from '../../generated/graphql/types.js';
+import type {
+  ErmDataGap,
+  ErmEventCategory,
+  ErmNetworkChange,
+} from '../../generated/graphql/types.js';
 import { parseFrame } from '../../starlink/protocol.js';
 import { categoryEventIds, starlinkEvents } from '../../starlink/event-catalog.js';
 import type { TelemetryQuery } from './telemetry-query.js';
@@ -19,6 +23,22 @@ function nullableNumber(row: Record<string, unknown>, key: string): number | nul
     return value;
   }
   throw new Error(`Invalid ERM database number: ${key}`);
+}
+
+function nullableBoolean(row: Record<string, unknown>, key: string): boolean | null {
+  const value = row[key];
+  if (value === null || typeof value === 'boolean') {
+    return value;
+  }
+  throw new Error(`Invalid ERM database boolean: ${key}`);
+}
+
+function reportingInterval(
+  ignitionOn: boolean | null,
+  engineOn: boolean | null,
+  speedKmh: number | null,
+): number {
+  return (ignitionOn ?? engineOn) === true || (speedKmh ?? 0) > 0 ? 300 : 3600;
 }
 
 @Injectable()
@@ -81,7 +101,10 @@ export class TelemetryRepository {
         n.count AS "alarmsLast24h", mv.id::text AS "mainVoltageEventId",
         bv.id::text AS "backupVoltageEventId", sq.id::text AS "signalQualityEventId",
         fw.id::text AS "firmwareCommandId", closed."closeReason" AS "lastCloseReason",
-        closed."closedAt" AS "lastClosedAt", uc.count AS "upstreamClosesLast24h"
+        closed."closedAt" AS "lastClosedAt", uc.count AS "upstreamClosesLast24h",
+        known_ignition.value AS "initialIgnitionOn", known_engine.value AS "initialEngineOn",
+        known_speed.value AS "initialSpeedKmh",
+        known_network.value AS "initialNetworkType", known_operator.value AS "initialOperatorCode"
       FROM jsonb_array_elements_text(${JSON.stringify(unitIds)}::jsonb) u("unitId")
       LEFT JOIN LATERAL (
         SELECT id FROM ${this.table('ermConnection')}
@@ -165,6 +188,46 @@ export class TelemetryRepository {
               AND "closeReason" LIKE 'upstream%')
         )::integer AS count
       ) uc ON true
+      LEFT JOIN LATERAL (
+        SELECT event."engineOn" AS value
+        FROM ${this.table('ermEvent')} event
+        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+        WHERE event."unitId" = u."unitId" AND frame.direction = 'device' AND NOT frame.partial
+          AND frame."receivedAt" < ${since} AND event."engineOn" IS NOT NULL
+        ORDER BY frame."receivedAt" DESC, frame.id DESC, event.id DESC LIMIT 1
+      ) known_engine ON true
+      LEFT JOIN LATERAL (
+        SELECT event.fields ->> '#IGN#' = '1' AS value
+        FROM ${this.table('ermEvent')} event
+        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+        WHERE event."unitId" = u."unitId" AND frame.direction = 'device' AND NOT frame.partial
+          AND frame."receivedAt" < ${since} AND event.fields ->> '#IGN#' IN ('0', '1')
+        ORDER BY frame."receivedAt" DESC, frame.id DESC, event.id DESC LIMIT 1
+      ) known_ignition ON true
+      LEFT JOIN LATERAL (
+        SELECT event."speedKmh" AS value
+        FROM ${this.table('ermEvent')} event
+        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+        WHERE event."unitId" = u."unitId" AND frame.direction = 'device' AND NOT frame.partial
+          AND frame."receivedAt" < ${since} AND event."speedKmh" IS NOT NULL
+        ORDER BY frame."receivedAt" DESC, frame.id DESC, event.id DESC LIMIT 1
+      ) known_speed ON true
+      LEFT JOIN LATERAL (
+        SELECT nullif(event.fields ->> '#NT#', '') AS value
+        FROM ${this.table('ermEvent')} event
+        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+        WHERE event."unitId" = u."unitId" AND frame.direction = 'device' AND NOT frame.partial
+          AND frame."receivedAt" < ${since} AND nullif(event.fields ->> '#NT#', '') IS NOT NULL
+        ORDER BY frame."receivedAt" DESC, frame.id DESC, event.id DESC LIMIT 1
+      ) known_network ON true
+      LEFT JOIN LATERAL (
+        SELECT nullif(event.fields ->> '#NC#', '') AS value
+        FROM ${this.table('ermEvent')} event
+        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+        WHERE event."unitId" = u."unitId" AND frame.direction = 'device' AND NOT frame.partial
+          AND frame."receivedAt" < ${since} AND nullif(event.fields ->> '#NC#', '') IS NOT NULL
+        ORDER BY frame."receivedAt" DESC, frame.id DESC, event.id DESC LIMIT 1
+      ) known_operator ON true
     `),
     ).map((row) => ({
       unitId: sqlText(row, 'unitId'),
@@ -181,50 +244,61 @@ export class TelemetryRepository {
       lastCloseReason: sqlNullableText(row, 'lastCloseReason'),
       lastClosedAt: sqlNullableDate(row, 'lastClosedAt'),
       upstreamClosesLast24h: sqlInteger(row, 'upstreamClosesLast24h'),
+      initialEngineOn: nullableBoolean(row, 'initialEngineOn'),
+      initialIgnitionOn: nullableBoolean(row, 'initialIgnitionOn'),
+      initialSpeedKmh: nullableNumber(row, 'initialSpeedKmh'),
+      initialNetworkType: sqlNullableText(row, 'initialNetworkType'),
+      initialOperatorCode: sqlNullableText(row, 'initialOperatorCode'),
     }));
-    const [selectedEvents, firmwareCommands, upstreamFrames, edataRows, recoverySessions] =
-      await Promise.all([
-        this.prisma.client.ermEvent.findMany({
-          where: {
-            id: {
-              in: rows.flatMap((row) =>
-                [
-                  row.latestEventId,
-                  row.lastPositionId,
-                  row.latestAlarmId,
-                  row.mainVoltageEventId,
-                  row.backupVoltageEventId,
-                  row.signalQualityEventId,
-                ].flatMap((id) => (id === null ? [] : [BigInt(id)])),
-              ),
-            },
+    const [
+      selectedEvents,
+      firmwareCommands,
+      upstreamFrames,
+      edataRows,
+      recoverySessions,
+      healthRows,
+    ] = await Promise.all([
+      this.prisma.client.ermEvent.findMany({
+        where: {
+          id: {
+            in: rows.flatMap((row) =>
+              [
+                row.latestEventId,
+                row.lastPositionId,
+                row.latestAlarmId,
+                row.mainVoltageEventId,
+                row.backupVoltageEventId,
+                row.signalQualityEventId,
+              ].flatMap((id) => (id === null ? [] : [BigInt(id)])),
+            ),
           },
-          include: { frame: { select: { receivedAt: true } } },
-        }),
-        this.prisma.client.ermCommand.findMany({
-          where: {
-            id: {
-              in: rows.flatMap((row) =>
-                row.firmwareCommandId === null ? [] : [row.firmwareCommandId],
-              ),
-            },
+        },
+        include: { frame: { select: { receivedAt: true } } },
+      }),
+      this.prisma.client.ermCommand.findMany({
+        where: {
+          id: {
+            in: rows.flatMap((row) =>
+              row.firmwareCommandId === null ? [] : [row.firmwareCommandId],
+            ),
           },
-        }),
-        this.prisma.client.ermFrame.findMany({
-          where: {
-            direction: 'UPSTREAM',
-            command: { in: ['04', '46'] },
-            partial: false,
-            receivedAt: { lte: snapshot },
-            OR: [
-              { unitId: { in: unitIds } },
-              { unitId: null, connection: { unitId: { in: unitIds } } },
-            ],
-          },
-          include: { connection: { select: { unitId: true } } },
-          orderBy: [{ receivedAt: 'desc' }, { id: 'desc' }],
-        }),
-        this.prisma.client.$queryRaw(Prisma.sql`
+        },
+      }),
+      this.prisma.client.ermFrame.findMany({
+        where: {
+          direction: 'UPSTREAM',
+          command: { in: ['04', '46'] },
+          partial: false,
+          receivedAt: { lte: snapshot },
+          OR: [
+            { unitId: { in: unitIds } },
+            { unitId: null, connection: { unitId: { in: unitIds } } },
+          ],
+        },
+        include: { connection: { select: { unitId: true } } },
+        orderBy: [{ receivedAt: 'desc' }, { id: 'desc' }],
+      }),
+      this.prisma.client.$queryRaw(Prisma.sql`
         SELECT DISTINCT ON (event."unitId", parameter.parameter)
           event."unitId", parameter.parameter AS "parameterId", parameter.type AS "parameterType",
           parameter."valueSize", parameter."valueHex",
@@ -238,12 +312,50 @@ export class TelemetryRepository {
         ORDER BY event."unitId", parameter.parameter,
           coalesce(event."eventTime", frame."receivedAt") DESC, event.id DESC
       `),
-        this.prisma.client.ermRecoverySession.findMany({
-          where: { unitId: { in: unitIds }, finishedAt: { lte: snapshot } },
-          distinct: ['unitId'],
-          orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
-        }),
-      ]);
+      this.prisma.client.ermRecoverySession.findMany({
+        where: { unitId: { in: unitIds }, finishedAt: { lte: snapshot } },
+        distinct: ['unitId'],
+        orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
+      }),
+      this.prisma.client.$queryRaw(Prisma.sql`
+          SELECT u."unitId", frame.id::text AS "frameId", frame."receivedAt",
+            event."eventId", event."engineOn", event."speedKmh",
+            CASE event.fields ->> '#IGN#' WHEN '1' THEN true WHEN '0' THEN false END AS "ignitionOn",
+            nullif(event.fields ->> '#NT#', '') AS "networkType",
+            nullif(event.fields ->> '#NC#', '') AS "operatorCode"
+          FROM jsonb_array_elements_text(${JSON.stringify(unitIds)}::jsonb) u("unitId")
+          CROSS JOIN LATERAL (
+            SELECT id, "receivedAt" FROM ${this.table('ermFrame')}
+            WHERE "unitId" = u."unitId" AND direction = 'device' AND NOT partial
+              AND "receivedAt" >= ${since} AND "receivedAt" <= ${snapshot}
+            UNION ALL
+            (SELECT id, "receivedAt" FROM ${this.table('ermFrame')}
+              WHERE "unitId" = u."unitId" AND direction = 'device' AND NOT partial
+                AND "receivedAt" < ${since}
+              ORDER BY "receivedAt" DESC, id DESC LIMIT 1)
+          ) frame
+          LEFT JOIN ${this.table('ermEvent')} event
+            ON event."frameId" = frame.id AND event."unitId" = u."unitId"
+          ORDER BY u."unitId", frame."receivedAt", frame.id, event.id
+        `),
+    ]);
+    const healthObservations = sqlRows(healthRows).map((row) => {
+      const receivedAt = sqlNullableDate(row, 'receivedAt');
+      if (receivedAt === null) {
+        throw new Error('Invalid ERM health database row');
+      }
+      return {
+        unitId: sqlText(row, 'unitId'),
+        frameId: sqlText(row, 'frameId'),
+        receivedAt,
+        eventId: sqlNullableText(row, 'eventId'),
+        engineOn: nullableBoolean(row, 'engineOn'),
+        ignitionOn: nullableBoolean(row, 'ignitionOn'),
+        speedKmh: nullableNumber(row, 'speedKmh'),
+        networkType: sqlNullableText(row, 'networkType'),
+        operatorCode: sqlNullableText(row, 'operatorCode'),
+      };
+    });
     const edataMeasurements = sqlRows(edataRows).map((row) => {
       const observedAt = sqlNullableDate(row, 'observedAt');
       if (observedAt === null) {
@@ -279,8 +391,68 @@ export class TelemetryRepository {
       const writes = routingWrites.filter(
         (frame) => (frame.unitId ?? frame.connection.unitId) === row.unitId,
       );
+      const gapsLast24h: ErmDataGap[] = [];
+      let engineOn = row.initialEngineOn;
+      let ignitionOn = row.initialIgnitionOn;
+      let speedKmh = row.initialSpeedKmh;
+      let expectedIntervalSeconds = reportingInterval(ignitionOn, engineOn, speedKmh);
+      let previousFrameId: string | null = null;
+      let previousFrameAt: Date | null = null;
+      let networkType = row.initialNetworkType;
+      let operatorCode = row.initialOperatorCode;
+      let networkChangesLast24h = 0;
+      let latestNetworkChange: ErmNetworkChange | null = null;
+      const gapUntil = (to: Date) => {
+        if (
+          previousFrameAt === null ||
+          to.getTime() - previousFrameAt.getTime() <= 2 * expectedIntervalSeconds * 1000
+        ) {
+          return;
+        }
+        const from = new Date(Math.max(previousFrameAt.getTime(), since.getTime()));
+        gapsLast24h.push({
+          from: from.toISOString(),
+          to: to.toISOString(),
+          durationSeconds: Math.floor((to.getTime() - from.getTime()) / 1000),
+          expectedIntervalSeconds,
+        });
+      };
+      for (const observation of healthObservations.filter((entry) => entry.unitId === row.unitId)) {
+        if (observation.frameId !== previousFrameId) {
+          gapUntil(observation.receivedAt);
+          previousFrameId = observation.frameId;
+          previousFrameAt = observation.receivedAt;
+        }
+        engineOn = observation.engineOn ?? engineOn;
+        ignitionOn = observation.ignitionOn ?? ignitionOn;
+        speedKmh = observation.speedKmh ?? speedKmh;
+        expectedIntervalSeconds = reportingInterval(ignitionOn, engineOn, speedKmh);
+        const changed =
+          Number(observation.eventId) === 23 ||
+          (observation.networkType !== null &&
+            networkType !== null &&
+            observation.networkType !== networkType) ||
+          (observation.operatorCode !== null &&
+            operatorCode !== null &&
+            observation.operatorCode !== operatorCode);
+        networkType = observation.networkType ?? networkType;
+        operatorCode = observation.operatorCode ?? operatorCode;
+        if (changed && observation.receivedAt >= since) {
+          networkChangesLast24h++;
+          latestNetworkChange = {
+            at: observation.receivedAt.toISOString(),
+            networkType,
+            operatorCode,
+          };
+        }
+      }
+      gapUntil(snapshot);
       return {
         ...row,
+        expectedIntervalSeconds,
+        gapsLast24h,
+        networkChangesLast24h,
+        latestNetworkChange,
         recovery: recoverySessions.find((session) => session.unitId === row.unitId) ?? null,
         latestEvent: events.get(row.latestEventId ?? '') ?? null,
         lastPosition: events.get(row.lastPositionId ?? '') ?? null,

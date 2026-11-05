@@ -28,5 +28,19 @@
     "DIAGNOSTIC_TROUBLE_CODE": "Диагностичен код за неизправност",
     "CAN_ERROR": "CAN грешка",
     "CAN_DISCONNECTED": "Прекъсната CAN връзка"
-  }
+  },
+  "closeReasons": {
+    "device closed": "Устройството затвори връзката",
+    "read ETIMEDOUT": "Времето за изчакване на връзката изтече",
+    "read ECONNRESET": "Връзката беше прекъсната",
+    "server stopped": "Сървърът за устройства спря",
+    "replaced by a newer connection": "Заменена с по-нова връзка",
+    "upstream closed": "Karma затвори връзката към сървъра",
+    "left open by a previous process": "Предишният сървърен процес приключи без запис за затваряне"
+  },
+  "backupSince": "На резервния сървър от {time}",
+  "parkedNext": "Паркиран, следващ отчет около {time}",
+  "gap": "Без данни {duration}",
+  "deviceError": "Грешка във връзката с устройството",
+  "upstreamError": "Грешка във връзката с Karma"
 }

@@ -67,6 +67,7 @@ export const fixtureLiveDevice: WithTypename<
   lastReportedAt: fixtureDevice.lastReportedAt,
   diagnostics: { __typename: 'FleetDeviceDiagnosticSummary', count: 0, latest: null },
   routing: 'HOLITA',
+  routingHealth: null,
   ermState: {
     __typename: 'ErmUnitState',
     online: true,
@@ -90,7 +91,13 @@ export const fixtureLiveDevice: WithTypename<
     },
     lastFrameAt: '2026-10-20T08:00:00.000Z',
     alarmsLast24h: 2,
-    health: { __typename: 'ErmUnitHealth', overdue: false },
+    health: {
+      __typename: 'ErmUnitHealth',
+      overdue: false,
+      lastFrameAgeSeconds: 5,
+      expectedIntervalSeconds: 300,
+      lastCloseReason: null,
+    },
   },
 };
 graphqlFixture(AdminDevicesLiveDocument, () => ({

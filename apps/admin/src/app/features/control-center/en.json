@@ -316,13 +316,6 @@
     "DEMO": "Demo"
   },
   "firstVehicles": "Showing {shown} of {total} trucks.",
-  "closeReasons": {
-    "device closed": "Device closed the connection",
-    "read ETIMEDOUT": "The connection timed out",
-    "read ECONNRESET": "The connection was reset",
-    "server stopped": "The device server stopped",
-    "replaced by a newer connection": "Replaced by a newer connection"
-  },
   "device": "Device",
   "attentionReasons": {
     "overdue": "Expected report is overdue",
@@ -340,5 +333,11 @@
     "FAILED": "Recovery request failed",
     "ALREADY_HOLITA": "Primary already points to holita; nothing written",
     "NEEDS_OPERATOR": "Recovery needs an operator"
-  }
+  },
+  "gaps24h": "{count} gaps in 24 h · {duration}",
+  "networkChanges24h": "{count} network changes in 24 h",
+  "backupTime": "Time on backup: {duration}",
+  "lastBackupPeriod": "Last backup period",
+  "latestNetworkChange": "Last network change",
+  "networkEvidence": "Network {network}, operator {operator} · {time}"
 }

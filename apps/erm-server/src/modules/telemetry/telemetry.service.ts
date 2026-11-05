@@ -285,8 +285,7 @@ export class TelemetryService {
                 0,
                 Math.floor((snapshot.getTime() - new Date(lastFrameAt).getTime()) / 1000),
               );
-        const expectedIntervalSeconds =
-          row.latestEvent?.engineOn === true || (row.latestEvent?.speedKmh ?? 0) > 0 ? 300 : 3600;
+        const expectedIntervalSeconds = row.expectedIntervalSeconds;
         return [
           row.unitId,
           !unit && row.connectionId === null && row.recovery === null
@@ -329,6 +328,9 @@ export class TelemetryService {
                 health: {
                   lastFrameAgeSeconds,
                   expectedIntervalSeconds,
+                  gapsLast24h: row.gapsLast24h,
+                  networkChangesLast24h: row.networkChangesLast24h,
+                  latestNetworkChange: row.latestNetworkChange,
                   overdue:
                     lastFrameAgeSeconds === null ||
                     lastFrameAgeSeconds > 2 * expectedIntervalSeconds,

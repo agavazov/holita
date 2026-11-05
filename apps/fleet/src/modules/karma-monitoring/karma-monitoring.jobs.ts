@@ -168,6 +168,7 @@ export class KarmaMonitoringJobs {
         truck.karmaCarId,
         { routing, routingAheadPolls, routingAheadSince },
         event,
+        now,
       );
     }
   }

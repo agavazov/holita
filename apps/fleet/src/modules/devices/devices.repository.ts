@@ -179,6 +179,10 @@ export class DevicesRepository {
       select: {
         karmaDeviceId: true,
         routing: true,
+        backupSince: true,
+        lastBackupStartedAt: true,
+        lastBackupEndedAt: true,
+        backupSeconds: true,
         recoveryAttempts: {
           where: scope,
           orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],

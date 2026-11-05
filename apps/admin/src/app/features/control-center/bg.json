@@ -316,13 +316,6 @@
     "DEMO": "Демо"
   },
   "firstVehicles": "Показани са {shown} от {total} камиона.",
-  "closeReasons": {
-    "device closed": "Устройството затвори връзката",
-    "read ETIMEDOUT": "Времето за изчакване на връзката изтече",
-    "read ECONNRESET": "Връзката беше прекъсната",
-    "server stopped": "Сървърът за устройства спря",
-    "replaced by a newer connection": "Заменена с по-нова връзка"
-  },
   "device": "Устройство",
   "attentionReasons": {
     "overdue": "Очакваните данни закъсняват",
@@ -340,5 +333,11 @@
     "FAILED": "Неуспешна заявка за връщане",
     "ALREADY_HOLITA": "Основният сървър вече е holita; няма записани промени",
     "NEEDS_OPERATOR": "Необходима е намеса на оператор"
-  }
+  },
+  "gaps24h": "{count} прекъсвания за 24 ч. · {duration}",
+  "networkChanges24h": "{count} промени на мрежата за 24 ч.",
+  "backupTime": "Време на резервния сървър: {duration}",
+  "lastBackupPeriod": "Последен период на резервния сървър",
+  "latestNetworkChange": "Последна промяна на мрежата",
+  "networkEvidence": "Мрежа {network}, оператор {operator} · {time}"
 }

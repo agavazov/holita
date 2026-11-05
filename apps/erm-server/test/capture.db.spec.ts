@@ -11,6 +11,7 @@ import { createServer, type Server } from 'node:http';
 import { GraphQLError, graphql, parse, print, type GraphQLResolveInfo } from 'graphql';
 import { buildSubgraphSchema } from '@apollo/subgraph';
 import { PrismaService } from '../src/database/prisma.service.js';
+import type { Prisma } from '../src/generated/prisma/client.js';
 import type { CaptureRecord } from '../src/modules/devices/capture-record.js';
 import { DeviceCaptureService } from '../src/modules/devices/device-capture.service.js';
 import { DevicesRepository } from '../src/modules/devices/devices.repository.js';
@@ -1229,7 +1230,7 @@ it('persists captured connection lifecycle and raw frames through the production
           },
           health: {
             lastFrameAgeSeconds: expect.any(Number),
-            expectedIntervalSeconds: 3600,
+            expectedIntervalSeconds: 300,
             overdue: false,
             lastCloseReason: 'device closed',
             lastClosedAt: resentStored.closedAt?.toISOString(),
@@ -1344,6 +1345,167 @@ it('persists captured connection lifecycle and raw frames through the production
         ]),
       );
     }
+
+    // Health uses receipt gaps and carries known state through frames without status fields.
+    const healthSnapshot = new Date();
+    const healthSince = new Date(healthSnapshot.getTime() - 24 * 60 * 60_000);
+    const healthUnitId = '862129080366699';
+    const healthConnection = await database.client.ermConnection.create({
+      data: { unitId: healthUnitId, peer, upstream, openedAt: healthSince },
+    });
+    const atMinute = (minute: number) => new Date(healthSince.getTime() + minute * 60_000);
+    const healthFixtures: {
+      minute: number;
+      direction?: 'DEVICE' | 'UPSTREAM';
+      partial?: boolean;
+      event?: {
+        eventId?: string;
+        engineOn?: boolean;
+        speedKmh?: number;
+        fields: Prisma.InputJsonObject;
+      };
+    }[] = [
+      {
+        minute: -30,
+        event: { engineOn: true, speedKmh: 20, fields: { '#NT#': '7', '#NC#': '28401' } },
+      },
+      { minute: -25, event: { speedKmh: 0, fields: {} } },
+      { minute: -20 },
+      { minute: 1 },
+      { minute: 4, event: { speedKmh: 0, fields: {} } },
+      { minute: 20, event: { eventId: '23', fields: { '#NT#': '8' } } },
+      { minute: 21, event: { eventId: '23', fields: {} } },
+      { minute: 24, event: { fields: { '#NT#': null, '#NC#': '28403' } } },
+      { minute: 30, event: { engineOn: true, speedKmh: 0, fields: { '#IGN#': '0' } } },
+      {
+        minute: 31,
+        partial: true,
+        event: { engineOn: true, fields: { '#IGN#': '1', '#NT#': '9' } },
+      },
+      { minute: 32, direction: 'UPSTREAM' },
+      { minute: 180, event: { fields: {} } },
+    ];
+    for (const fixture of healthFixtures) {
+      await database.client.ermFrame.create({
+        data: {
+          connectionId: healthConnection.id,
+          unitId: healthUnitId,
+          direction: fixture.direction ?? 'DEVICE',
+          partial: fixture.partial ?? false,
+          receivedAt: atMinute(fixture.minute),
+          checksum: 'ABSENT',
+          raw: Buffer.from('$health-fixture'),
+          ...(fixture.event === undefined
+            ? {}
+            : {
+                events: { create: [{ ...fixture.event, unitId: healthUnitId }] },
+              }),
+        },
+      });
+    }
+    const otherHealthUnitId = '862129080366698';
+    await database.client.ermConnection.create({
+      data: {
+        unitId: otherHealthUnitId,
+        peer,
+        upstream,
+        frames: {
+          create: [
+            {
+              unitId: otherHealthUnitId,
+              direction: 'DEVICE',
+              receivedAt: new Date(healthSnapshot.getTime() - 60_000),
+              checksum: 'ABSENT',
+              raw: Buffer.from('$other-health-fixture'),
+              events: {
+                create: [{ unitId: otherHealthUnitId, fields: { '#NT#': '99', '#NC#': '99999' } }],
+              },
+            },
+          ],
+        },
+      },
+    });
+    const healthStates = await module
+      .get(TelemetryRepository)
+      .deviceStates([healthUnitId, otherHealthUnitId], healthSnapshot);
+    expect(healthStates.find((entry) => entry.unitId === healthUnitId)).toMatchObject({
+      expectedIntervalSeconds: 3600,
+      gapsLast24h: [
+        {
+          from: atMinute(0).toISOString(),
+          to: atMinute(1).toISOString(),
+          durationSeconds: 60,
+          expectedIntervalSeconds: 300,
+        },
+        {
+          from: atMinute(4).toISOString(),
+          to: atMinute(20).toISOString(),
+          durationSeconds: 960,
+          expectedIntervalSeconds: 300,
+        },
+        {
+          from: atMinute(30).toISOString(),
+          to: atMinute(180).toISOString(),
+          durationSeconds: 9000,
+          expectedIntervalSeconds: 3600,
+        },
+        {
+          from: atMinute(180).toISOString(),
+          to: healthSnapshot.toISOString(),
+          durationSeconds: 75600,
+          expectedIntervalSeconds: 3600,
+        },
+      ],
+      networkChangesLast24h: 3,
+      latestNetworkChange: {
+        at: atMinute(24).toISOString(),
+        networkType: '8',
+        operatorCode: '28403',
+      },
+    });
+    expect(healthStates.find((entry) => entry.unitId === otherHealthUnitId)).toMatchObject({
+      expectedIntervalSeconds: 3600,
+      gapsLast24h: [],
+      networkChangesLast24h: 0,
+      latestNetworkChange: null,
+    });
+    const healthContract = await graphql({
+      schema,
+      source: `query($representations: [_Any!]!) { _entities(representations: $representations) { ... on FleetDevice {
+        ermState { health {
+          expectedIntervalSeconds gapsLast24h { from to durationSeconds expectedIntervalSeconds }
+          networkChangesLast24h latestNetworkChange { at networkType operatorCode }
+        } }
+      } } }`,
+      variableValues: {
+        representations: [{ __typename: 'FleetDevice', id: 'health', imei: healthUnitId }],
+      },
+      contextValue: { ...scopedContext },
+    });
+    expect(healthContract.errors).toBeUndefined();
+    expect(healthContract.data?.['_entities']).toMatchObject([
+      {
+        ermState: {
+          health: {
+            expectedIntervalSeconds: 3600,
+            gapsLast24h: expect.arrayContaining([
+              {
+                from: atMinute(4).toISOString(),
+                to: atMinute(20).toISOString(),
+                durationSeconds: 960,
+                expectedIntervalSeconds: 300,
+              },
+            ]),
+            networkChangesLast24h: 3,
+            latestNetworkChange: {
+              at: atMinute(24).toISOString(),
+              networkType: '8',
+              operatorCode: '28403',
+            },
+          },
+        },
+      },
+    ]);
 
     // Snapshot jobs keep their gateway reads sequential and preserve unsupported/missing values.
     gatewayStatus = 200;

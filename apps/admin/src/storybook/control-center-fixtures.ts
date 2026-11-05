@@ -107,6 +107,7 @@ const detailDevice: WithTypename<AdminControlCenterDeviceQuery['fleetDevice']> =
       source: 'ERM',
     },
   },
+  routingHealth: null,
   latestRecoveryAttempt: null,
   ermState: {
     __typename: 'ErmUnitState',
@@ -152,6 +153,9 @@ const detailDevice: WithTypename<AdminControlCenterDeviceQuery['fleetDevice']> =
     recovery: null,
     health: {
       __typename: 'ErmUnitHealth',
+      gapsLast24h: [],
+      networkChangesLast24h: 0,
+      latestNetworkChange: null,
       lastFrameAgeSeconds: 5,
       expectedIntervalSeconds: 300,
       overdue: false,
@@ -257,7 +261,13 @@ const normalDashboardDevice = {
       nameEn: 'Diagnostic report',
       nameBg: 'Диагностичен отчет',
     },
-    health: { overdue: false, karmaRoutingWritesLast24h: 0 },
+    health: {
+      overdue: false,
+      karmaRoutingWritesLast24h: 0,
+      lastFrameAgeSeconds: 5,
+      expectedIntervalSeconds: 300,
+      lastCloseReason: 'device closed',
+    },
   },
 } satisfies DashboardDevice;
 const overdueDashboardDevice = {
@@ -273,7 +283,13 @@ const overdueDashboardDevice = {
   routing: 'KARMA_BACKUP',
   ermState: {
     ...normalDashboardDevice.ermState,
-    health: { overdue: true, karmaRoutingWritesLast24h: 0 },
+    health: {
+      overdue: true,
+      karmaRoutingWritesLast24h: 0,
+      lastFrameAgeSeconds: 8100,
+      expectedIntervalSeconds: 300,
+      lastCloseReason: 'device closed',
+    },
   },
 } satisfies DashboardDevice;
 const neverDashboardDevice = {

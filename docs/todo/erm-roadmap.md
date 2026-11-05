@@ -95,9 +95,6 @@ reopen them as roadmap tasks.
   measurements in Fleet and CB1147TP's real `419` faults verified through holita. Establish fault lifecycle/completeness
   before continuous fault-state tracking or notifications; missing telemetry or an empty logger is
   not confirmed ECU clearance.
-- **Unit health:** silence (`overdue`), Karma upstream closes and Karma routing writes are detected,
-  the admin compares Karma's last data with holita's, and Fleet detects units on their Karma
-  backup. Remaining: gap and network-change detection and the units' backup-fallback timing.
 - **Broader command coverage:** prove each supported family at its permitted test level, including
   result codes and unlock-required `98`. The operator mutation stays limited to its six reads;
   new operations need their own explicit authorization and contract.

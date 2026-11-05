@@ -47,6 +47,8 @@ type FleetDevice @key(fields: "id") {
   status: FleetDeviceStatus!
   "Compares the latest data Karma and holita received, not the unit's configuration; null when the unit never reported to holita or Fleet's ERM import is disabled."
   routing: FleetDeviceRouting
+  "Observed backup periods retained by Fleet monitoring; null without a routing observation."
+  routingHealth: FleetDeviceRoutingHealth
   "Latest automatic recovery intent and Karma queue outcome; acceptance does not confirm a device session."
   latestRecoveryAttempt: FleetRecoveryAttempt
   model: FleetDeviceModel
@@ -74,6 +76,16 @@ enum FleetRecoveryAttemptStatus {
   ACCEPTED
   UNCERTAIN
   FAILED
+}
+
+type FleetDeviceRoutingHealth {
+  "Start of the open observed backup period, retained until holita is observed again."
+  backupSince: DateTime
+  "Latest completed observed backup period."
+  lastBackupStartedAt: DateTime
+  lastBackupEndedAt: DateTime
+  "Accumulated observed backup time, including the current open period."
+  backupSeconds: Int!
 }
 
 type FleetRecoveryAttempt {

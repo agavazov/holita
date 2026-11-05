@@ -729,6 +729,10 @@ model KarmaMonitoringTruck {
   routing FleetDeviceRouting?
   routingAheadPolls Int @default(0)
   routingAheadSince DateTime? @db.Timestamptz(3)
+  backupSince DateTime? @db.Timestamptz(3)
+  lastBackupStartedAt DateTime? @db.Timestamptz(3)
+  lastBackupEndedAt DateTime? @db.Timestamptz(3)
+  backupSeconds Int @default(0)
   online Boolean @default(false)
   onlineSince DateTime? @db.Timestamptz(3)
   noDataSince DateTime? @db.Timestamptz(3)

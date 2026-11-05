@@ -466,6 +466,10 @@ describe('Karma monitoring persistence and scope', () => {
       routing: 'KARMA_BACKUP',
       routingAheadPolls: 2,
       routingAheadSince: firstAheadAt,
+      backupSince: firstAheadAt,
+      lastBackupStartedAt: null,
+      lastBackupEndedAt: null,
+      backupSeconds: 0,
     });
     expect(await backupEvents()).toMatchObject([
       {
@@ -501,6 +505,20 @@ describe('Karma monitoring persistence and scope', () => {
             { id: device.id, routing: 'KARMA_BACKUP' },
             { id: neverReported.id, routing: null },
           ],
+        },
+      },
+    });
+    const healthQuery =
+      'query($id:ID!){fleetDevice(id:$id){routingHealth{backupSince lastBackupStartedAt lastBackupEndedAt backupSeconds}}}';
+    expect(await query(healthQuery, { id: device.id })).toEqual({
+      data: {
+        fleetDevice: {
+          routingHealth: {
+            backupSince: firstAheadAt.toISOString(),
+            lastBackupStartedAt: null,
+            lastBackupEndedAt: null,
+            backupSeconds: 60,
+          },
         },
       },
     });
@@ -576,6 +594,22 @@ describe('Karma monitoring persistence and scope', () => {
         },
       },
     });
+    for (const routing of ['SILENT', null] as const) {
+      await repository.saveRouting(
+        scope,
+        '70',
+        { routing, routingAheadPolls: 0, routingAheadSince: null },
+        null,
+        now,
+      );
+      expect(await routingTruck()).toMatchObject({
+        routing,
+        backupSince: firstAheadAt,
+        backupSeconds: 0,
+        lastBackupStartedAt: null,
+        lastBackupEndedAt: null,
+      });
+    }
     process.env.FLEET_ERM_TELEMETRY_ENABLED = 'true';
     await database.client.fleetErmCursor.update({
       where: { ...scope, deviceId: device.id },
@@ -587,6 +621,22 @@ describe('Karma monitoring persistence and scope', () => {
       recoveryBlocked: false,
       routingAheadPolls: 0,
       routingAheadSince: null,
+      backupSince: null,
+      lastBackupStartedAt: firstAheadAt,
+      lastBackupEndedAt: now,
+      backupSeconds: 60,
+    });
+    expect(await query(healthQuery, { id: device.id })).toEqual({
+      data: {
+        fleetDevice: {
+          routingHealth: {
+            backupSince: null,
+            lastBackupStartedAt: firstAheadAt.toISOString(),
+            lastBackupEndedAt: now.toISOString(),
+            backupSeconds: 60,
+          },
+        },
+      },
     });
     await poll(now, new Date(now.getTime() + 71 * 60_000));
     expect(await routingTruck()).toMatchObject({
@@ -600,11 +650,19 @@ describe('Karma monitoring persistence and scope', () => {
         await database.client.karmaMonitoringTruck.findUniqueOrThrow({
           where: { tenantId_branchId_karmaCarId: { ...selected, karmaCarId: '70' } },
         }),
-      ).toMatchObject({ routing: null, routingAheadPolls: 0, routingAheadSince: null });
+      ).toMatchObject({
+        routing: null,
+        routingAheadPolls: 0,
+        routingAheadSince: null,
+        backupSince: null,
+        lastBackupStartedAt: null,
+        lastBackupEndedAt: null,
+        backupSeconds: 0,
+      });
       expect(await database.client.fleetEvent.count({ where: selected })).toBe(0);
-      expect(
-        await query('query($id:ID!){fleetDevice(id:$id){routing}}', { id: device.id }, selected),
-      ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+      expect(await query(healthQuery, { id: device.id }, selected)).toMatchObject({
+        errors: [{ extensions: { code: 'NOT_FOUND' } }],
+      });
     }
   });
 

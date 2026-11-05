@@ -203,6 +203,7 @@ graphqlFixture(AdminVehiclesLiveDocument, (): WithTypename<AdminVehiclesLiveQuer
             vehicleId: fixtureVehicle.id,
             status: 'ONLINE',
             routing: 'HOLITA',
+            routingHealth: null,
             lastReportedAt: at,
             diagnostics: { __typename: 'FleetDeviceDiagnosticSummary', count: 0, latest: null },
             ermState: {
@@ -222,7 +223,13 @@ graphqlFixture(AdminVehiclesLiveDocument, (): WithTypename<AdminVehiclesLiveQuer
                 engineOn: true,
                 ignitionOn: true,
               },
-              health: { __typename: 'ErmUnitHealth', overdue: false },
+              health: {
+                __typename: 'ErmUnitHealth',
+                overdue: false,
+                lastFrameAgeSeconds: 5,
+                expectedIntervalSeconds: 300,
+                lastCloseReason: null,
+              },
             },
           },
         ],

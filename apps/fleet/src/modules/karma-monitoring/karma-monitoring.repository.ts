@@ -80,14 +80,39 @@ export class KarmaMonitoringRepository {
     karmaCarId: string,
     data: Pick<KarmaMonitoringTruck, 'routing' | 'routingAheadPolls' | 'routingAheadSince'>,
     event: Omit<Prisma.FleetEventCreateManyInput, 'tenantId' | 'branchId'> | null,
+    now: Date,
   ) {
     await this.prisma.client.$transaction(async (tx) => {
+      const previous = await tx.karmaMonitoringTruck.findUnique({
+        where: { tenantId_branchId_karmaCarId: { ...scope, karmaCarId } },
+      });
+      if (previous === null) {
+        return;
+      }
+      const enteringBackup = data.routing === 'KARMA_BACKUP' && previous.backupSince === null;
+      const closingBackup = data.routing === 'HOLITA' && previous.backupSince !== null;
+      const backupSince = enteringBackup ? (data.routingAheadSince ?? now) : previous.backupSince;
+      const closedSeconds =
+        closingBackup && backupSince !== null
+          ? Math.max(0, Math.floor((now.getTime() - backupSince.getTime()) / 1000))
+          : 0;
       if (event !== null) {
         await tx.fleetEvent.createMany({ data: [{ ...event, ...scope }], skipDuplicates: true });
       }
       await tx.karmaMonitoringTruck.updateMany({
         where: { ...scope, karmaCarId },
-        data: { ...data, ...(data.routing === 'HOLITA' ? { recoveryBlocked: false } : {}) },
+        data: {
+          ...data,
+          backupSince: closingBackup ? null : backupSince,
+          ...(closingBackup
+            ? {
+                lastBackupStartedAt: backupSince,
+                lastBackupEndedAt: now,
+                backupSeconds: previous.backupSeconds + closedSeconds,
+              }
+            : {}),
+          ...(data.routing === 'HOLITA' ? { recoveryBlocked: false } : {}),
+        },
       });
     });
   }

@@ -4,6 +4,9 @@ fragment AdminFleetLiveDevice on FleetDevice {
   vehicleId
   status
   routing
+  routingHealth {
+    backupSince
+  }
   lastReportedAt
   diagnostics {
     count
@@ -37,6 +40,9 @@ fragment AdminFleetLiveDevice on FleetDevice {
     alarmsLast24h
     health {
       overdue
+      lastFrameAgeSeconds
+      expectedIntervalSeconds
+      lastCloseReason
     }
   }
 }

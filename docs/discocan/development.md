@@ -337,13 +337,22 @@ query DeviceControlCenter($id: ID!) {
 }
 ```
 
-`ermState` is null for units that have never connected. Categories are POSITION, STATUS,
+`ermState` is null when the unit has neither an ordinary connection nor a recorded recovery
+session. Categories are POSITION, STATUS,
 ALARM, EDATA and OTHER; severities are INFO, WARNING and CRITICAL. Names accept BG/EN and
 are null for unknown event IDs. History uses 25/50/100-item newest-first cursor pages; pass
 `nextCursor` for the same device/filter. Raw fields remain evidence, not inferred meanings.
 ERM data is available only through these Fleet Device fields with the caller's verified Tenant
 and active Branch. The provider queries `ermUnits`, `ermEvents`, `ermFrames` and `ermCommands`
 are no longer exposed.
+
+The Device health line shows receipt-time gaps in the last 24 hours (more than twice the
+estimated reporting interval), mobile-network changes and the last close reason. Expected
+intervals are estimates: five minutes driving and one hour parked. Network changes use event 23
+and changes in decoded network/operator fields; missing fields are not changes. Shared lists
+explain parked, overdue and backup states without additional Karma polling. Fleet retains the
+current observed backup start, the last completed period and cumulative backup time. An open
+period includes silence until holita is observed again; it does not prove continuous traffic.
 
 `sendErmDeviceCommand(input: { deviceId, action })` accepts only REQUEST_LOCATION,
 READ_STATUS, READ_VERSION, READ_ACCESSORIES, READ_EDATA_DIAGNOSTICS and READ_EDATA_FAULTS.

@@ -81,6 +81,25 @@ export function formatDateTime(
   return language === 'bg' ? `${day}.${month}.${year} ${time}` : `${day} ${month} ${year}, ${time}`;
 }
 
+/** Hours and minutes in the Branch time zone; absent values show "—". */
+export function formatTime(
+  iso: string | null | undefined,
+  language: Language,
+  timeZone: string,
+): string {
+  const date = validDate(iso);
+  if (!date) {
+    return emptyValue;
+  }
+  const { hour = '', minute = '' } = parts(date, language, {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
+  return `${hour}:${minute}`;
+}
+
 /** A calendar date (`YYYY-MM-DD`) without time-zone conversion. */
 export function formatDateOnly(text: string | null | undefined, language: Language): string {
   const match = text ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(text) : null;

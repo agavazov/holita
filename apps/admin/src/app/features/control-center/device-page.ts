@@ -43,6 +43,7 @@ import { confirmAction, confirmDialogPt } from '../../ui/confirm';
 import { EmptyState } from '../../ui/empty-state/empty-state';
 import { injectFleetFormat } from '../../ui/format/fleet-format';
 import { FleetConnection } from '../../ui/fleet-live/fleet-connection';
+import { fleetCloseReason } from '../../ui/fleet-live/fleet-live';
 import { FleetNow } from '../../ui/fleet-live/fleet-now';
 import { FleetLastReport } from '../../ui/fleet-live/fleet-last-report';
 import { FleetFaults } from '../../ui/fleet-live/fleet-faults';
@@ -202,6 +203,30 @@ export class DevicePage implements OnInit {
       ? interpolate(this.text().lastData, { time: this.date(karma.lastDataAt) })
       : this.text().notInKarma;
     return routing ? `${this.text().routing[routing]} · ${lastData}` : lastData;
+  });
+  readonly healthLine = computed(() => {
+    const health = this.state()?.health;
+    if (!health) {
+      return emptyValue;
+    }
+    const gaps = health.gapsLast24h;
+    const parts = [
+      this.format(this.text().gaps24h, {
+        count: gaps.length,
+        duration: this.duration(gaps.reduce((total, gap) => total + gap.durationSeconds, 0)),
+      }),
+      this.format(this.text().networkChanges24h, { count: health.networkChangesLast24h }),
+    ];
+    const routing = this.device()?.routingHealth;
+    if (routing) {
+      parts.push(
+        this.format(this.text().backupTime, { duration: this.duration(routing.backupSeconds) }),
+      );
+    }
+    if (health.lastCloseReason) {
+      parts.push(this.closeReason(health.lastCloseReason));
+    }
+    return parts.join(' · ');
   });
   readonly title = computed(() => {
     const device = this.device();
@@ -446,8 +471,7 @@ export class DevicePage implements OnInit {
     return formatDateTime(value, this.language(), this.units.preferences().timeZone, true);
   }
   closeReason(value: string | null | undefined): string {
-    const reasons: Readonly<Record<string, string>> = this.text().closeReasons;
-    return value === null || value === undefined ? emptyValue : (reasons[value] ?? value);
+    return fleetCloseReason(value, this.language());
   }
   number(value: number | null | undefined, fraction = 1): string {
     return formatNumber(value, this.language(), { fraction });

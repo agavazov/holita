@@ -13,6 +13,7 @@ import type {
   FleetDevice,
   FleetDevicePage,
   FleetDeviceRouting,
+  FleetDeviceRoutingHealth,
   FleetRecoveryAttempt,
   FleetDeviceSortField,
   FleetDeviceActionResult,
@@ -61,7 +62,12 @@ import { ermTelemetryEnabled } from '../erm-telemetry/erm-telemetry.jobs.js';
 export type DeviceResult = Omit<FleetDevice, 'branch'>;
 type StoredDevice = Omit<
   DeviceResult,
-  'lastReportedAt' | 'status' | 'routing' | 'latestRecoveryAttempt' | 'diagnostics'
+  | 'lastReportedAt'
+  | 'status'
+  | 'routing'
+  | 'routingHealth'
+  | 'latestRecoveryAttempt'
+  | 'diagnostics'
 >;
 
 const DEVICE_MODELS = Object.values(FleetDeviceModel);
@@ -178,6 +184,7 @@ export class DevicesService {
       string,
       {
         routing: FleetDeviceRouting | null;
+        routingHealth: FleetDeviceRoutingHealth | null;
         latestRecoveryAttempt: FleetRecoveryAttempt | null;
       }
     >
@@ -191,11 +198,28 @@ export class DevicesService {
     if (!imeis.length) {
       return new Map();
     }
+    const now = this.clock.now();
     return new Map(
       (await this.devices.routing(scope, imeis)).map((truck) => [
         truck.karmaDeviceId,
         {
           routing: truck.routing,
+          routingHealth:
+            truck.routing === null && truck.backupSince === null && truck.lastBackupEndedAt === null
+              ? null
+              : {
+                  backupSince: truck.backupSince,
+                  lastBackupStartedAt: truck.lastBackupStartedAt,
+                  lastBackupEndedAt: truck.lastBackupEndedAt,
+                  backupSeconds:
+                    truck.backupSeconds +
+                    (truck.backupSince === null
+                      ? 0
+                      : Math.max(
+                          0,
+                          Math.floor((now.getTime() - truck.backupSince.getTime()) / 1000),
+                        )),
+                },
           latestRecoveryAttempt: truck.recoveryAttempts[0] ?? null,
         },
       ]),
@@ -270,6 +294,7 @@ export class DevicesService {
         status: row.status,
         lastReportedAt: row.lastReportedAt,
         routing: routing.get(row.imei)?.routing ?? null,
+        routingHealth: routing.get(row.imei)?.routingHealth ?? null,
         latestRecoveryAttempt: routing.get(row.imei)?.latestRecoveryAttempt ?? null,
         diagnostics:
           row.vehicleId === null
@@ -462,6 +487,7 @@ export class DevicesService {
       return {
         ...toDevice(row),
         routing: routing.get(row.imei)?.routing ?? null,
+        routingHealth: routing.get(row.imei)?.routingHealth ?? null,
         latestRecoveryAttempt: routing.get(row.imei)?.latestRecoveryAttempt ?? null,
         lastReportedAt,
         status: deviceStatus(row.vehicleId, lastReportedAt, asOf, settings.notReportingHours),

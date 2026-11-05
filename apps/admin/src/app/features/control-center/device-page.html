@@ -98,6 +98,8 @@
       </section>
     }
 
+    <p class="app-muted">{{ healthLine() }}</p>
+
     <p-tabs [value]="tab()" (valueChange)="selectTab($event)">
       <p-tablist>
         @for (value of tabs; track value) {
@@ -288,6 +290,29 @@
                               }
                             </dd>
                           </div>
+                          @if (state.health.latestNetworkChange; as change) {
+                            <div>
+                              <dt>{{ text().latestNetworkChange }}</dt>
+                              <dd>
+                                {{
+                                  format(text().networkEvidence, {
+                                    network: change.networkType ?? '—',
+                                    operator: change.operatorCode ?? '—',
+                                    time: date(change.at),
+                                  })
+                                }}
+                              </dd>
+                            </div>
+                          }
+                          @if (device.routingHealth; as routing) {
+                            <div>
+                              <dt>{{ text().lastBackupPeriod }}</dt>
+                              <dd>
+                                {{ date(routing.lastBackupStartedAt) }} –
+                                {{ date(routing.lastBackupEndedAt) }}
+                              </dd>
+                            </div>
+                          }
                           <div>
                             <dt>{{ text().lastClose }}</dt>
                             <dd [title]="state.health.lastCloseReason ?? ''">

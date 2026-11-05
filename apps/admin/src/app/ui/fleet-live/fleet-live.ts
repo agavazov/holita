@@ -16,3 +16,19 @@ export function hasFleetFaults(device: FleetLiveDevice): boolean {
     (device.diagnostics.count > 0 || device.ermState?.latestAlarm?.severity === 'CRITICAL')
   );
 }
+
+/** Stable close reasons translated for both compact lists and the Device profile. */
+export function fleetCloseReason(value: string | null | undefined, language: Language): string {
+  if (!value) {
+    return '—';
+  }
+  const text = fleetLiveText(language);
+  if (value.startsWith('device error:')) {
+    return text.deviceError;
+  }
+  if (value.startsWith('upstream error:')) {
+    return text.upstreamError;
+  }
+  const reasons: Readonly<Record<string, string>> = text.closeReasons;
+  return reasons[value] ?? value;
+}

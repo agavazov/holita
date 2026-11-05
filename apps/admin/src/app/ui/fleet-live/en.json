@@ -28,5 +28,19 @@
     "DIAGNOSTIC_TROUBLE_CODE": "Diagnostic trouble code",
     "CAN_ERROR": "CAN error",
     "CAN_DISCONNECTED": "CAN disconnected"
-  }
+  },
+  "closeReasons": {
+    "device closed": "Device closed the connection",
+    "read ETIMEDOUT": "The connection timed out",
+    "read ECONNRESET": "The connection was reset",
+    "server stopped": "The device server stopped",
+    "replaced by a newer connection": "Replaced by a newer connection",
+    "upstream closed": "Karma closed the upstream connection",
+    "left open by a previous process": "The previous server process ended without a close record"
+  },
+  "backupSince": "On backup since {time}",
+  "parkedNext": "Parked, next report expected ~{time}",
+  "gap": "Gap {duration}",
+  "deviceError": "Device connection error",
+  "upstreamError": "Karma connection error"
 }
