@@ -50,6 +50,11 @@ const deviceProfileRoute: UrlMatcher = (segments) => {
 export const fleetRoutes: Routes = [
   { matcher: legacyFleetRoute, canMatch: [redirectLegacyAdminUrl], children: [] },
   {
+    path: ':branchId/fleet/notifications',
+    loadComponent: () =>
+      import('../notifications/notifications-page').then((module) => module.NotificationsPage),
+  },
+  {
     matcher: deviceProfileRoute,
     data: { resource: 'control-center' },
     loadComponent: () =>

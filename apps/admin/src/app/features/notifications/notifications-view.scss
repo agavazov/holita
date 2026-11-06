@@ -1,0 +1,50 @@
+@use 'breakpoints' as bp;
+
+.notifications__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--p-app-space-3);
+
+  > p-select {
+    flex: 0 1 13rem;
+    min-inline-size: 10rem;
+  }
+}
+
+.notifications__search {
+  display: grid;
+  flex: 1 1 20rem;
+  gap: var(--p-app-space-2);
+}
+
+.notifications__unread > :first-child {
+  font-weight: 700;
+}
+
+.notifications__links {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--p-app-space-3);
+  row-gap: var(--p-app-space-1);
+  line-height: 1.2;
+
+  > a {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@include bp.below(sm) {
+  .notifications__search {
+    flex-basis: 100%;
+  }
+
+  .notifications__filters > p-select {
+    flex: 1 1 10rem;
+    min-inline-size: 0;
+  }
+}

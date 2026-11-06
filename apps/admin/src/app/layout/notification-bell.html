@@ -1,0 +1,125 @@
+<button
+  #trigger
+  type="button"
+  class="app-icon-button app-topbar__bell"
+  aria-haspopup="dialog"
+  [attr.aria-expanded]="popup.overlayVisible()"
+  [attr.aria-label]="label()"
+  (click)="toggle($event)"
+>
+  <svg data-p-icon="bell" aria-hidden="true"></svg>
+  @if (unreadCount()) {
+    <span class="app-topbar__badge" aria-hidden="true">{{ count() }}</span>
+  }
+</button>
+<p-popover
+  #popup
+  appendTo="body"
+  [ariaLabel]="text().title"
+  [pt]="{ root: { 'aria-modal': false } }"
+  (onShow)="focusClose()"
+>
+  <section
+    class="notification-bell"
+    tabindex="-1"
+    [attr.aria-busy]="loading() || busy()"
+    (keydown.escape)="close()"
+  >
+    <div class="notification-bell__header">
+      <h2 class="notification-bell__heading">{{ text().title }}</h2>
+      <button
+        #closeButton
+        type="button"
+        class="app-icon-button"
+        [attr.aria-label]="text().close"
+        (click)="close()"
+      >
+        <svg data-p-icon="times" aria-hidden="true"></svg>
+      </button>
+    </div>
+    @if (!readAllowed()) {
+      <p class="notification-bell__notice">{{ text().demo }}</p>
+    }
+    @if (error(); as error) {
+      <div class="notification-bell__error" role="alert">
+        <p>{{ error }}</p>
+        <button pButton type="button" size="small" [text]="true" (click)="retry.emit()">
+          {{ text().retry }}
+        </button>
+      </div>
+    }
+    @if (loading()) {
+      <p class="notification-bell__notice" role="status">{{ text().loading }}</p>
+    }
+    @if (items().length) {
+      <ul class="notification-bell__list">
+        @for (item of items(); track item.id) {
+          <li>
+            <button
+              type="button"
+              class="notification-bell__item"
+              [class.notification-bell__item--unread]="item.unread"
+              (click)="open(item.id)"
+            >
+              <span
+                [class]="'app-icon-well app-icon-well--' + (item.tone ?? 'info')"
+                aria-hidden="true"
+              >
+                @switch (item.category) {
+                  @case ('alert') {
+                    <svg data-p-icon="exclamation-triangle"></svg>
+                  }
+                  @case ('device') {
+                    <svg data-p-icon="wrench"></svg>
+                  }
+                  @case ('command') {
+                    <svg data-p-icon="send"></svg>
+                  }
+                  @default {
+                    <svg data-p-icon="bell"></svg>
+                  }
+                }
+              </span>
+              <span class="notification-bell__body">
+                <span class="notification-bell__sentence">{{ item.title }}</span>
+                @if (item.detail) {
+                  <span class="notification-bell__detail">{{ item.detail }}</span>
+                }
+                <time
+                  class="notification-bell__time"
+                  [attr.datetime]="item.at"
+                  [title]="item.atTitle ?? item.at"
+                >
+                  {{ item.relative }}
+                </time>
+              </span>
+              @if (item.unread) {
+                <span class="app-dot app-dot--info" aria-hidden="true"></span>
+                <span class="app-visually-hidden">{{ text().unread }}</span>
+              }
+            </button>
+          </li>
+        }
+      </ul>
+    } @else if (!loading() && !error()) {
+      <p class="notification-bell__empty">{{ text().empty }}</p>
+    }
+    <div class="notification-bell__footer">
+      <button
+        pButton
+        type="button"
+        size="small"
+        [text]="true"
+        [disabled]="!readAllowed() || !unreadCount() || busy()"
+        (click)="markAllRead.emit()"
+      >
+        {{ text().markAllRead }}
+      </button>
+      @if (seeAllLink(); as link) {
+        <a pButton size="small" [text]="true" [routerLink]="link" (click)="close()">{{
+          text().seeAll
+        }}</a>
+      }
+    </div>
+  </section>
+</p-popover>

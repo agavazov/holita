@@ -1,4 +1,13 @@
-import { Component, computed, effect, inject, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, NavigationEnd, RouterOutlet, UrlSegment } from '@angular/router';
 import { filter } from 'rxjs';
@@ -12,12 +21,22 @@ import { AdminConfig } from '../core/config/admin-config';
 import { requestError } from '../core/graphql/request-error';
 import { Login } from '../features/auth/login';
 import { BranchContext } from '../features/branches/branch-context';
+import {
+  NotificationsApi,
+  type NotificationsConnection,
+} from '../features/notifications/notifications-api';
+import {
+  notificationRow,
+  notificationTone,
+} from '../features/notifications/notification-presentation';
+import type { AdminNotificationsQuery } from '../../generated/graphql/operations';
 import { messages, readLanguage, type Language } from '../i18n/messages';
 import { AdminShell } from '../layout/admin-shell';
-import type { LanguageOption } from '../layout/admin-topbar';
+import type { LanguageOption, ShellNotification } from '../layout/admin-topbar';
 import { navigationContext } from '../layout/navigation';
 import { PageRecord } from '../layout/page-record';
 import { UI_LANGUAGE } from '../ui/ui-language';
+import { formatUtcInstant } from '../ui/format/format';
 import type { LeavableDrawer } from '../ui/drawer/leave-drawer.guard';
 import { adminNavigation } from './admin-navigation';
 import { pageMetadata } from './page-metadata';
@@ -38,9 +57,11 @@ function hasLeaveGuard(component: unknown): component is LeavableDrawer {
   providers: [
     BranchContext,
     MessageService,
+    NotificationsApi,
     { provide: UI_LANGUAGE, useFactory: () => inject(AdminWorkspace).language },
   ],
   templateUrl: './admin-workspace.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminWorkspace {
   readonly session = inject(DemoSession);
@@ -51,6 +72,40 @@ export class AdminWorkspace {
   private readonly primeNG = inject(PrimeNG);
   private readonly pageRecord = inject(PageRecord);
   private readonly operationMessages = inject(MessageService);
+  private readonly notificationApi = inject(NotificationsApi);
+  private readonly sessionToken = computed(() => this.session.current()?.token ?? null);
+  readonly notificationConnection = signal<NotificationsConnection | null>(null);
+  private readonly notificationPage = signal<AdminNotificationsQuery['notifications'] | null>(null);
+  readonly notificationsLoading = signal(false);
+  private readonly notificationError = signal<unknown>(null);
+  readonly notificationsBusy = signal(false);
+  readonly notificationsReadAllowed = computed(() => this.session.user() !== null);
+  readonly notificationUnreadCount = computed(() => this.notificationPage()?.unreadCount ?? 0);
+  readonly notificationFailure = computed(() =>
+    this.notificationError()
+      ? requestError(this.notificationError(), this.text().networkError)
+      : null,
+  );
+  readonly notificationSeeAllLink = computed(() => {
+    const branch = this.branches.selectedId();
+    return branch ? ['/', this.language(), branch, 'fleet', 'notifications'] : null;
+  });
+  readonly bellNotifications = computed<readonly ShellNotification[] | null>(() => {
+    const connection = this.notificationConnection();
+    if (!connection) {
+      return null;
+    }
+    return (this.notificationPage()?.items ?? []).map((item) => ({
+      id: item.id,
+      title: notificationRow(item, connection.language, connection.branchId).sentence,
+      at: item.occurredAt,
+      atTitle: formatUtcInstant(item.occurredAt),
+      unread: item.readAt === null,
+      category:
+        item.category === 'ALERT' ? 'alert' : item.category === 'DEVICE' ? 'device' : 'command',
+      tone: notificationTone(item.severity),
+    }));
+  });
   private readonly outlet = viewChild(RouterOutlet);
   private readonly params = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
@@ -92,6 +147,47 @@ export class AdminWorkspace {
   });
 
   constructor() {
+    effect((onCleanup) => {
+      const token = this.sessionToken();
+      const branchId = this.branches.selectedId();
+      const language = this.language();
+      this.notificationConnection.set(null);
+      this.notificationPage.set(null);
+      this.notificationError.set(null);
+      this.notificationsBusy.set(false);
+      if (!token || !branchId || !this.fleetEnabled) {
+        this.notificationsLoading.set(false);
+        return;
+      }
+      const connection = untracked(() => this.notificationApi.connect(branchId, language));
+      this.notificationConnection.set(connection);
+      this.notificationsLoading.set(true);
+      const query = connection.watch({ offset: 0, limit: 5 }, true);
+      const subscription = query.valueChanges.subscribe({
+        next: (result) => {
+          this.notificationsLoading.set(result.loading);
+          this.notificationError.set(result.error ?? null);
+          if (result.dataState === 'complete' && !result.error) {
+            this.notificationPage.set(result.data.notifications);
+          }
+        },
+        error: (error: unknown) => {
+          this.notificationsLoading.set(false);
+          this.notificationError.set(error);
+        },
+      });
+      const visible = () => {
+        if (!document.hidden) {
+          connection.refresh();
+        }
+      };
+      document.addEventListener('visibilitychange', visible);
+      onCleanup(() => {
+        document.removeEventListener('visibilitychange', visible);
+        subscription.unsubscribe();
+        connection.close();
+      });
+    });
     effect(() => {
       this.session.current();
       this.language();
@@ -120,6 +216,58 @@ export class AdminWorkspace {
         : text.signIn;
       document.title = page ? `${page} · holita` : 'holita';
     });
+  }
+
+  async markNotificationsRead(id?: string): Promise<void> {
+    const connection = this.notificationConnection();
+    if (!connection || !this.notificationsReadAllowed() || this.notificationsBusy()) {
+      return;
+    }
+    this.notificationsBusy.set(true);
+    try {
+      if (id) {
+        await connection.markRead(id);
+      } else {
+        await connection.markAllRead();
+      }
+    } catch (error: unknown) {
+      if (this.notificationConnection() === connection) {
+        this.operationMessages.add({
+          severity: 'error',
+          summary: requestError(error, this.text().networkError),
+          sticky: true,
+        });
+      }
+    } finally {
+      if (this.notificationConnection() === connection) {
+        this.notificationsBusy.set(false);
+      }
+    }
+  }
+
+  openNotification(id: string): void {
+    const connection = this.notificationConnection();
+    const item = this.notificationPage()?.items.find((notification) => notification.id === id);
+    if (!connection || !item) {
+      return;
+    }
+    const row = notificationRow(item, connection.language, connection.branchId);
+    if (item.readAt === null) {
+      void this.markNotificationsRead(id);
+    }
+    const target = row.sourceLink ?? row.links[0];
+    if (target) {
+      void this.router.navigateByUrl(target.url);
+    } else {
+      const link = this.notificationSeeAllLink();
+      if (link) {
+        void this.router.navigate(link);
+      }
+    }
+  }
+
+  refreshNotifications(): void {
+    this.notificationConnection()?.refresh();
   }
 
   async logout(): Promise<void> {

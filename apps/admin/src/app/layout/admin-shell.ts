@@ -81,13 +81,19 @@ export class AdminShell {
   readonly account = input<ShellAccount | null>(null);
   /** The bell's notifications; null hides the bell. */
   readonly notifications = input<readonly ShellNotification[] | null>(null);
-  readonly notificationsUnavailable = input(false);
+  readonly notificationUnreadCount = input(0);
+  readonly notificationsLoading = input(false);
+  readonly notificationsError = input<string | null>(null);
+  readonly notificationsReadAllowed = input(true);
+  readonly notificationsBusy = input(false);
+  readonly notificationSeeAllLink = input<readonly string[] | null>(null);
   readonly navigation = input<readonly NavGroup[]>([]);
   readonly context = input<PageContext | null>(null);
   readonly signOut = output();
   readonly branchSelected = output<string>();
   readonly notificationOpen = output<string>();
   readonly notificationsRead = output();
+  readonly notificationsRetry = output();
 
   readonly appearance = inject(Appearance);
   readonly mobile = below('lg');

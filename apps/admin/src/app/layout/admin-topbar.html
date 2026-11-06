@@ -116,21 +116,20 @@
       }}</span>
     </holita-menu-button>
   }
-  @if (notifications() || notificationsUnavailable()) {
-    <holita-menu-button
-      buttonClass="app-topbar__bell"
-      menuClass="app-menu-wide app-menu-scroll"
-      [header]="notificationHeader()"
-      [options]="notificationOptions()"
-      (opened)="refreshNow()"
-      (choose)="chooseNotification($event.id)"
-    >
-      <svg data-p-icon="bell" aria-hidden="true"></svg>
-      <span class="app-visually-hidden">{{ bellLabel() }}</span>
-      @if (unreadCount()) {
-        <span class="app-topbar__badge" aria-hidden="true">{{ unreadCount() }}</span>
-      }
-    </holita-menu-button>
+  @if (notifications(); as notifications) {
+    <holita-notification-bell
+      [language]="language()"
+      [notifications]="notifications"
+      [unreadCount]="notificationUnreadCount()"
+      [loading]="notificationsLoading()"
+      [error]="notificationsError()"
+      [readAllowed]="notificationsReadAllowed()"
+      [busy]="notificationsBusy()"
+      [seeAllLink]="notificationSeeAllLink()"
+      (notificationOpen)="notificationOpen.emit($event)"
+      (markAllRead)="notificationsRead.emit()"
+      (retry)="notificationsRetry.emit()"
+    />
   }
   <holita-menu-button
     buttonClass="app-topbar__account"

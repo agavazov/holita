@@ -1,0 +1,15 @@
+<holita-notifications-view
+  [rows]="preferences.settings() ? rows() : []"
+  [total]="page()?.total ?? 0"
+  [unreadCount]="page()?.unreadCount ?? 0"
+  [loading]="loading() || preferences.loading()"
+  [errorText]="preferencesFailure() ?? (error() ? failure() : null)"
+  [busy]="workspace.notificationsBusy()"
+  [readAllowed]="workspace.notificationsReadAllowed()"
+  [state]="state()"
+  [searchError]="searchError()"
+  (stateChange)="changeState($event)"
+  (markRead)="workspace.markNotificationsRead($event)"
+  (markAllRead)="workspace.markNotificationsRead()"
+  (retry)="preferences.settings() ? refresh() : preferences.retry()"
+/>

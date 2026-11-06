@@ -1,0 +1,72 @@
+{
+  "title": "Notifications",
+  "hint": "Review recent notifications for this fleet and open the related record.",
+  "demo": "Demo sessions can view this feed. Sign in with a user account to save read state.",
+  "search": "Search source references",
+  "readState": "Read state",
+  "all": "All",
+  "unread": "Unread",
+  "read": "Read",
+  "category": "Category",
+  "allCategories": "All categories",
+  "markRead": "Mark read",
+  "markAllRead": "Mark all read",
+  "table": {
+    "heading": "Fleet notifications",
+    "notification": "Notification",
+    "source": "Source",
+    "target": "Related records",
+    "occurred": "Occurred",
+    "actions": "Actions",
+    "emptyTitle": "No notifications",
+    "emptyDescription": "Recent alert changes, recorded device evidence and command outcomes will appear here.",
+    "errorText": "The notifications could not be loaded.",
+    "recorded": "Recorded evidence"
+  },
+  "categories": {
+    "ALERT": "Alert",
+    "DEVICE": "Device",
+    "COMMAND": "Command"
+  },
+  "sources": {
+    "FLEET_ALERT": "Fleet alert",
+    "DIAGNOSTIC": "Device diagnostic",
+    "ALARM": "Device alarm",
+    "COMMAND": "Device command"
+  },
+  "severities": {
+    "INFO": "Information",
+    "WARNING": "Warning",
+    "CRITICAL": "Critical"
+  },
+  "targets": {
+    "vehicle": "Vehicle",
+    "device": "Device",
+    "alert": "Alert",
+    "command": "Command"
+  },
+  "wording": {
+    "alert": "{event}: alert {transition}.",
+    "unknownEvent": "Fleet event",
+    "unknownTransition": "updated",
+    "transitions": {
+      "OPEN": "opened",
+      "ACKNOWLEDGED": "acknowledged",
+      "RESOLVED": "resolved",
+      "REOPENED": "reopened"
+    },
+    "recordedFault": "Recorded device fault {code} ({status}).",
+    "diagnosticStatuses": {
+      "ADDED": "reported as added",
+      "DELETED": "reported as deleted"
+    },
+    "unknownDiagnosticStatus": "recorded observation",
+    "recordedCanError": "A CAN error was recorded by the device.",
+    "recordedDiagnostic": "A device diagnostic was recorded{code}.",
+    "recordedAlarm": "A device alarm was recorded{code}.",
+    "codeSuffix": " (code {code})",
+    "command": "{command}: {outcome}{reason}.",
+    "reasonSuffix": "; {reason}",
+    "unknownNotification": "A fleet notification was recorded."
+  }
+}

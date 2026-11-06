@@ -1,0 +1,12 @@
+{
+  "title": "Notifications",
+  "unreadCount": "Notifications, unread: {count}",
+  "unread": "Unread",
+  "close": "Close notifications",
+  "demo": "Demo sessions can review notifications. Sign in to keep track of what you have read.",
+  "retry": "Retry",
+  "loading": "Refreshing notifications…",
+  "empty": "No notifications for this fleet.",
+  "markAllRead": "Mark all as read",
+  "seeAll": "See all"
+}

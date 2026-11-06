@@ -1,0 +1,56 @@
+fragment AdminNotification on FleetNotification {
+  id
+  branchId
+  sourceKind
+  sourceKey
+  category
+  severity
+  occurredAt
+  createdAt
+  wordingKey
+  parameters {
+    eventKind
+    alertStatus
+    transition
+    troubleCode
+    diagnosticStatus
+    alarmCode
+    commandKind
+    commandStatus
+    reasonCode
+  }
+  vehicleId
+  deviceId
+  alertId
+  ermEventId
+  commandRequestId
+  readAt
+}
+
+query AdminNotifications(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $filter: FleetNotificationFilter
+  $sort: FleetNotificationSort
+) {
+  notifications(offset: $offset, limit: $limit, search: $search, filter: $filter, sort: $sort) {
+    items {
+      ...AdminNotification
+    }
+    total
+    offset
+    limit
+    unreadCount
+  }
+}
+
+mutation AdminMarkNotificationRead($id: ID!) {
+  markNotificationRead(id: $id) {
+    ...AdminNotification
+  }
+}
+
+mutation AdminMarkAllNotificationsRead {
+  markAllNotificationsRead
+}

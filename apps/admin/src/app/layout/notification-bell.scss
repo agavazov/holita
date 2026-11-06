@@ -1,0 +1,106 @@
+:host {
+  display: inline-flex;
+}
+
+.notification-bell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-app-space-3);
+  inline-size: min(25rem, calc(100vw - var(--p-app-space-8)));
+}
+
+.notification-bell__header,
+.notification-bell__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p-app-space-2);
+}
+
+.notification-bell__heading {
+  margin: 0;
+  font-size: var(--p-app-text-md);
+  font-weight: 700;
+}
+
+.notification-bell__notice,
+.notification-bell__empty,
+.notification-bell__error p {
+  margin: 0;
+  font-size: var(--p-app-text-sm);
+  color: var(--p-text-muted-color);
+}
+
+.notification-bell__error {
+  display: flex;
+  align-items: center;
+  gap: var(--p-app-space-2);
+}
+
+.notification-bell__error p {
+  color: var(--p-app-tone-danger-color);
+}
+
+.notification-bell__list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-block-size: min(28rem, 60dvh);
+  overflow-y: auto;
+}
+
+.notification-bell__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--p-app-space-3);
+  inline-size: 100%;
+  padding: var(--p-app-space-3) var(--p-app-space-2);
+  border: 0;
+  border-radius: var(--p-app-radius-control);
+  background: transparent;
+  color: var(--p-text-color);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.notification-bell__item:hover {
+  background: var(--p-content-hover-background);
+}
+
+.notification-bell__item--unread .notification-bell__sentence {
+  font-weight: 700;
+}
+
+.notification-bell__item .app-icon-well {
+  flex: 0 0 auto;
+}
+
+.notification-bell__item .app-dot {
+  flex-shrink: 0;
+  margin-block-start: var(--p-app-space-2);
+}
+
+.notification-bell__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--p-app-space-1);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--p-app-text-sm);
+}
+
+.notification-bell__detail,
+.notification-bell__time {
+  color: var(--p-text-muted-color);
+  font-size: var(--p-app-text-xs);
+}
+
+.notification-bell__footer {
+  flex-wrap: wrap;
+  padding-block-start: var(--p-app-space-2);
+  border-block-start: 1px solid var(--p-app-panel-border-color);
+}

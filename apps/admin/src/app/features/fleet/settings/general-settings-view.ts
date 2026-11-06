@@ -23,6 +23,8 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Tag } from 'primeng/tag';
+import bg from './general-settings-view.bg.json';
+import en from './general-settings-view.en.json';
 import { map, timer } from 'rxjs';
 import type { FleetDisplayPreferences } from '../../../ui/format/fleet-format';
 import {
@@ -128,6 +130,9 @@ export class GeneralSettingsView {
   private readonly catalog = computed(() => settingsText(this.language()));
   protected readonly eyebrow = computed(() => this.catalog().eyebrow);
   protected readonly text = computed(() => this.catalog().general);
+  protected readonly notificationHint = computed(
+    () => ({ bg, en })[this.language()].notificationsHint,
+  );
   protected readonly confirmPt = computed(() => confirmDialogPt(this.language()));
   protected readonly description = computed(() => this.text().description);
   protected readonly dateFormats = supportedDateFormats.map((value) => ({

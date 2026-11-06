@@ -1,0 +1,169 @@
+import type { AdminNotificationFragment } from '../../../generated/graphql/operations';
+import type { Language } from '../../i18n/messages';
+import type { StatusTone } from '../../theme/status-tones';
+import { interpolate } from '../../ui/i18n/messages';
+import { alertsText } from '../fleet/alerts/i18n/messages';
+import { commandText } from '../fleet/commands/command-presentation';
+import { notificationsText } from './i18n/messages';
+
+export interface NotificationLink {
+  readonly kind: 'vehicle' | 'device' | 'alert' | 'command';
+  readonly label: string;
+  readonly title: string;
+  readonly url: string;
+}
+
+export interface NotificationRow {
+  readonly id: string;
+  readonly sentence: string;
+  readonly sourceKey: string;
+  readonly sourceKind: AdminNotificationFragment['sourceKind'];
+  readonly category: AdminNotificationFragment['category'];
+  readonly severity: AdminNotificationFragment['severity'];
+  readonly occurredAt: string;
+  readonly unread: boolean;
+  readonly links: readonly NotificationLink[];
+  readonly sourceLink: { readonly label: string; readonly url: string } | null;
+}
+
+function translated(
+  catalog: Readonly<Record<string, string>>,
+  code: string | null | undefined,
+  fallback: string,
+): string {
+  return Object.entries(catalog).find(([key]) => key === code)?.[1] ?? fallback;
+}
+
+function clause(value: string): string {
+  return value.replace(/[.!?]+$/u, '');
+}
+
+/** Wording describes the source fact; recorded diagnostics never imply a current fault. */
+export function notificationSentence(
+  notification: AdminNotificationFragment,
+  language: Language,
+): string {
+  const text = notificationsText(language).wording;
+  const parameters = notification.parameters;
+  switch (notification.sourceKind) {
+    case 'FLEET_ALERT':
+      return interpolate(text.alert, {
+        event: translated(alertsText(language).kinds, parameters.eventKind, text.unknownEvent),
+        transition: translated(
+          text.transitions,
+          parameters.transition ?? parameters.alertStatus,
+          text.unknownTransition,
+        ),
+      });
+    case 'DIAGNOSTIC':
+      if (parameters.troubleCode) {
+        return interpolate(text.recordedFault, {
+          code: parameters.troubleCode,
+          status: translated(
+            text.diagnosticStatuses,
+            parameters.diagnosticStatus,
+            text.unknownDiagnosticStatus,
+          ),
+        });
+      }
+      if (parameters.eventKind === 'CAN_ERROR') {
+        return text.recordedCanError;
+      }
+      return interpolate(text.recordedDiagnostic, {
+        code: parameters.alarmCode
+          ? interpolate(text.codeSuffix, { code: parameters.alarmCode })
+          : '',
+      });
+    case 'ALARM':
+      return interpolate(text.recordedAlarm, {
+        code: parameters.alarmCode
+          ? interpolate(text.codeSuffix, { code: parameters.alarmCode })
+          : '',
+      });
+    case 'COMMAND': {
+      const commands = commandText[language];
+      return interpolate(text.command, {
+        command: translated(commands.purposes, parameters.commandKind, commands.unknownPurpose),
+        outcome: clause(
+          translated(commands.outcomes, parameters.commandStatus, commands.unknownOutcome),
+        ),
+        reason: parameters.reasonCode
+          ? interpolate(text.reasonSuffix, {
+              reason: clause(
+                translated(commands.reasons, parameters.reasonCode, commands.unknownReason),
+              ),
+            })
+          : '',
+      });
+    }
+  }
+}
+
+export function notificationTone(severity: NotificationRow['severity']): StatusTone {
+  return severity === 'CRITICAL' ? 'danger' : severity === 'WARNING' ? 'warn' : 'info';
+}
+
+export function notificationIcon(category: NotificationRow['category']) {
+  return category === 'ALERT'
+    ? 'exclamation-triangle'
+    : category === 'DEVICE'
+      ? 'microchip'
+      : 'send';
+}
+
+export function notificationRow(
+  notification: AdminNotificationFragment,
+  language: Language,
+  branchId: string,
+): NotificationRow {
+  const text = notificationsText(language);
+  const base = `/${language}/${branchId}/fleet`;
+  const links: NotificationLink[] = [];
+  function add(kind: NotificationLink['kind'], id: string, url: string): void {
+    links.push({ kind, label: text.targets[kind], title: `${text.targets[kind]} ${id}`, url });
+  }
+  if (notification.vehicleId) {
+    add('vehicle', notification.vehicleId, `${base}/vehicles/${notification.vehicleId}/overview`);
+  }
+  if (notification.deviceId) {
+    add('device', notification.deviceId, `${base}/devices/${notification.deviceId}/overview`);
+  }
+  if (notification.alertId) {
+    add('alert', notification.alertId, `${base}/dashboard/problems/${notification.alertId}`);
+  }
+  if (notification.deviceId && notification.commandRequestId) {
+    add(
+      'command',
+      notification.commandRequestId,
+      `${base}/devices/${notification.deviceId}/commands?request=${encodeURIComponent(notification.commandRequestId)}`,
+    );
+  }
+  const primary = links.find((link) =>
+    notification.sourceKind === 'FLEET_ALERT'
+      ? link.kind === 'alert'
+      : notification.sourceKind === 'COMMAND'
+        ? link.kind === 'command'
+        : link.kind === 'device',
+  );
+  return {
+    id: notification.id,
+    sentence: notificationSentence(notification, language),
+    sourceKey: notification.sourceKey,
+    sourceKind: notification.sourceKind,
+    category: notification.category,
+    severity: notification.severity,
+    occurredAt: notification.occurredAt,
+    unread: notification.readAt === null,
+    links,
+    sourceLink: primary
+      ? {
+          label: text.sources[notification.sourceKind],
+          url:
+            (notification.sourceKind === 'DIAGNOSTIC' || notification.sourceKind === 'ALARM') &&
+            notification.deviceId
+              ? `${base}/devices/${notification.deviceId}/problems`
+              : primary.url,
+        }
+      : null,
+  };
+}

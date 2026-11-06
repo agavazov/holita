@@ -37,22 +37,25 @@ const account: ShellAccount = {
 const notifications: readonly ShellNotification[] = [
   {
     id: 'alert-a002',
-    title: 'Engine fault code P0299 · CA 1260 TE',
-    detail: 'Turbocharger underboost reported by the engine ECU.',
+    title: 'Device 359632100000001 recorded fault code P0299 for CA 1260 TE.',
+    category: 'device',
+    tone: 'warn',
     at: '2026-10-18T02:43:41.189Z',
     unread: true,
   },
   {
-    id: 'task-s001',
-    title: 'Oil and filter change overdue · CA 1038 TE',
-    detail: 'Plan the workshop visit.',
+    id: 'alert-a003',
+    title: 'Critical alert “Low oil pressure” opened for CA 1038 TE.',
+    category: 'alert',
+    tone: 'danger',
     at: '2026-10-18T05:25:00.000Z',
     unread: true,
   },
   {
-    id: 'devices-offline',
-    title: '6 trackers offline',
-    detail: 'No connection for more than 48 hours.',
+    id: 'command-c001',
+    title: 'The current-data command for device 359632100000001 was confirmed.',
+    category: 'command',
+    tone: 'success',
     at: '2026-10-18T01:00:00.000Z',
     unread: false,
   },
@@ -89,6 +92,8 @@ const rows = [
       [tenantName]="tenant"
       [account]="account"
       [notifications]="notifications()"
+      [notificationUnreadCount]="2"
+      [notificationSeeAllLink]="['/', language(), branchId, 'fleet', 'notifications']"
       [navigation]="navigation()"
       [context]="context()"
     >
