@@ -20,6 +20,7 @@ import { PageRecord } from '../layout/page-record';
 import { UI_LANGUAGE } from '../ui/ui-language';
 import type { LeavableDrawer } from '../ui/drawer/leave-drawer.guard';
 import { adminNavigation } from './admin-navigation';
+import { pageMetadata } from './page-metadata';
 import { primeNgTranslation } from './primeng-translation';
 
 function hasLeaveGuard(component: unknown): component is LeavableDrawer {
@@ -75,14 +76,15 @@ export class AdminWorkspace {
     adminNavigation(this.language(), this.branches.selectedId(), this.fleetEnabled),
   );
   /**
-   * The topbar context: the navigation item whose link is the longest prefix of the path, and the
-   * record a record page registered.
+   * Explicit page metadata, falling back to the sidebar destination, and the record a page
+   * registered.
    */
   readonly context = computed(() => {
     this.navigationEnd();
     const primary = this.router.parseUrl(this.router.url).root.children['primary'];
     const path = `/${(primary?.segments ?? []).map((segment) => segment.path).join('/')}`;
-    const context = navigationContext(this.navigation(), path);
+    const context =
+      pageMetadata(this.language(), path) ?? navigationContext(this.navigation(), path);
     const pageLink = this.pageRecord.pageLink();
     return context
       ? { ...context, ...(pageLink ? { pageLink } : {}), record: this.pageRecord.label() }
@@ -110,7 +112,12 @@ export class AdminWorkspace {
     });
     effect(() => {
       const text = this.text();
-      const page = this.session.current() ? this.context()?.page : text.signIn;
+      const context = this.context();
+      const page = this.session.current()
+        ? [context?.tab, context?.record, context?.title ?? context?.page]
+            .filter(Boolean)
+            .join(' · ')
+        : text.signIn;
       document.title = page ? `${page} · holita` : 'holita';
     });
   }

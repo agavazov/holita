@@ -130,15 +130,20 @@ The shell imports no business features and fetches no business data. The workspa
 navigation, Branch/language/account context and page title. Navigation has no business-count badges.
 The document title is `<page> · holita`; login uses the localized Sign in title.
 
+- The sidebar lists Dashboard, Vehicles, Devices, Drivers and Maintenance, then Settings with
+  General and Vehicle groups. Users appears only when its page is available. Dashboard opens
+  Overview; its Problems and Trips tabs keep Dashboard selected. Device detail belongs to Devices.
 - Desktop navigation collapses to a rail, persisted as `holita.admin.sidebar`. Rail links retain
   accessible names/group labels and hover/focus tooltips. The footer identifies holita and Tenant.
 - Below 1024px, a modal drawer takes focus on Close, traps focus and closes on Escape, backdrop,
   navigation or reaching desktop width. Return focus to the menu button. Resizing preserves drafts.
 - Keep the topbar one row, with Branch, language and account menus. Branch switching keeps the
-  supported business section and clears record/list context; language switching keeps URL context.
+  supported section/tab and clears record/list context; language switching keeps URL context.
   No Branch disables its menu with truthful loading/empty/unknown text.
-- Breadcrumb groups are labels, pages are links when a record is open, and the final crumb uses
-  `aria-current="page"`. Record pages register names/contextual return URLs with `injectPageRecord`.
+- Page metadata supplies Dashboard tab and Device titles/breadcrumbs and reserves account/feed
+  destinations without adding unavailable pages or links. Breadcrumb groups are labels, pages are
+  links when a record is open, and the final crumb uses `aria-current="page"`. Record pages register
+  names/contextual return URLs with `injectPageRecord`.
   Long labels truncate with full text available. Page heading remains when narrow screens hide crumbs.
 - Provide skip link, header, main, labelled navigation and group headings. Active links carry
   `aria-current`. Decorative icons are hidden from assistive technology. A page change focuses its

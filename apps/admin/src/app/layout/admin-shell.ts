@@ -96,7 +96,9 @@ export class AdminShell {
   protected readonly text = computed(() => messages[this.language()]);
   protected readonly homeLink = computed(() => {
     const branch = this.branchId();
-    return branch ? ['/', this.language(), branch, 'fleet'] : ['/', this.language()];
+    return branch
+      ? ['/', this.language(), branch, 'fleet', 'dashboard', 'overview']
+      : ['/', this.language()];
   });
   protected readonly menuExpanded = computed(() =>
     this.mobile() ? this.mobileOpen() : !this.rail(),

@@ -1,50 +1,30 @@
 import { messages, type Language } from '../i18n/messages';
 import type { NavGroup } from '../layout/navigation';
 
-/**
- * The sidebar navigation: Control center, Fleet and Settings (with a selected Branch and Fleet
- * enabled).
- */
+/** Branch navigation: primary Fleet sections and the implemented Settings pages. */
 export function adminNavigation(
   language: Language,
   branchId: string | null,
   fleetEnabled: boolean,
 ): NavGroup[] {
   const text = messages[language];
-  const groups: NavGroup[] = [];
-  if (fleetEnabled && branchId) {
-    const fleet = ['/', language, branchId, 'fleet'];
-    groups.push({
-      id: 'control-center',
-      label: text.controlCenter,
+  if (!fleetEnabled || !branchId) {
+    return [];
+  }
+  const fleet = ['/', language, branchId, 'fleet'];
+  return [
+    {
+      id: 'main',
+      label: text.navigation,
+      headingHidden: true,
       items: [
         {
-          id: 'control-center-dashboard',
+          id: 'dashboard',
           label: text.dashboard,
           icon: 'th-large',
-          link: ['/', language, branchId, 'control-center'],
+          link: [...fleet, 'dashboard', 'overview'],
+          activePrefix: [...fleet, 'dashboard'],
         },
-        {
-          id: 'sms-commands',
-          label: text.smsCommands,
-          icon: 'envelope',
-          link: ['/', language, branchId, 'control-center', 'sms'],
-        },
-      ],
-    });
-    groups.push({
-      id: 'monitoring',
-      label: text.monitoring,
-      items: [
-        { id: 'overview', label: text.overview, icon: 'th-large', link: [...fleet, 'overview'] },
-        { id: 'alerts', label: text.alerts, icon: 'bell', link: [...fleet, 'alerts'] },
-        { id: 'trips', label: text.tripLog, icon: 'directions', link: [...fleet, 'trips'] },
-      ],
-    });
-    groups.push({
-      id: 'fleet',
-      label: text.fleet,
-      items: [
         { id: 'vehicles', label: text.vehicles, icon: 'truck', link: [...fleet, 'vehicles'] },
         { id: 'devices', label: text.devices, icon: 'mobile', link: [...fleet, 'devices'] },
         { id: 'drivers', label: text.drivers, icon: 'id-card', link: [...fleet, 'drivers'] },
@@ -55,25 +35,24 @@ export function adminNavigation(
           link: [...fleet, 'maintenance'],
         },
       ],
-    });
-    groups.push({
+    },
+    {
       id: 'settings',
       label: text.settings,
       items: [
-        {
-          id: 'vehicle-groups',
-          label: text.vehicleGroups,
-          icon: 'tags',
-          link: [...fleet, 'settings', 'groups'],
-        },
         {
           id: 'general',
           label: text.settingsGeneral,
           icon: 'info-circle',
           link: [...fleet, 'settings', 'general'],
         },
+        {
+          id: 'vehicle-groups',
+          label: text.vehicleGroups,
+          icon: 'tags',
+          link: [...fleet, 'settings', 'groups'],
+        },
       ],
-    });
-  }
-  return groups;
+    },
+  ];
 }

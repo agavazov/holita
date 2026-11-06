@@ -23,26 +23,32 @@ export interface NavItem {
   readonly label: string;
   readonly icon: NavIconName;
   readonly link: readonly string[];
+  /** Match a parent path while linking to a default child, such as Dashboard's Overview tab. */
+  readonly activePrefix?: readonly string[];
 }
 
 export interface NavGroup {
   readonly id: string;
   readonly label: string;
+  /** A flat set of primary destinations, without a visible group heading. */
+  readonly headingHidden?: boolean;
   /** Small tag after the group label (e.g. "temporary"). */
   readonly note?: string;
   readonly items: readonly NavItem[];
 }
 
 /**
- * The page shown in the topbar breadcrumb: navigation group › item › record. The group is a
- * label (navigation groups are not pages); the item links back to its list when a record page
- * registered its name (`injectPageRecord`).
+ * The page shown in the topbar breadcrumb: optional group › page › record › optional tab. The
+ * group is a label; the page links back to its list when a record page registered its name
+ * (`injectPageRecord`). Explicit page metadata may also supply the document title.
  */
 export interface PageContext {
   readonly group: string;
   readonly page: string;
+  readonly title?: string;
   readonly pageLink?: readonly string[] | UrlTree;
   readonly record?: string | null;
+  readonly tab?: string;
 }
 
 function linkPath(link: readonly string[]): string {
@@ -55,19 +61,21 @@ export function navigationContext(
   path: string,
 ): PageContext | null {
   path = path.split(/[?#]/, 1)[0] ?? path;
-  // The device page retains its original URL while belonging to Fleet's Devices workspace.
-  path = path.replace(/^(\/[^/]+\/[^/]+)\/control-center\/devices(?=\/|$)/, '$1/fleet/devices');
   let match: { readonly length: number; readonly context: PageContext } | null = null;
   for (const group of navigation) {
     for (const item of group.items) {
-      const prefix = linkPath(item.link);
+      const prefix = linkPath(item.activePrefix ?? item.link);
       if (
         (path === prefix || path.startsWith(`${prefix}/`)) &&
         prefix.length > (match?.length ?? -1)
       ) {
         match = {
           length: prefix.length,
-          context: { group: group.label, page: item.label, pageLink: item.link },
+          context: {
+            group: group.headingHidden ? '' : group.label,
+            page: item.label,
+            pageLink: item.link,
+          },
         };
       }
     }

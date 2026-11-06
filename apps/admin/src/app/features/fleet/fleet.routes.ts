@@ -1,4 +1,5 @@
-import type { Routes, UrlMatcher } from '@angular/router';
+import { UrlSegment, type Routes, type UrlMatcher } from '@angular/router';
+import { legacyFleetRoute, redirectLegacyAdminUrl } from '../../workspace/legacy-admin-redirect';
 import { leaveDrawer } from '../../ui/drawer/leave-drawer.guard';
 
 const vehicleProfileRoute: UrlMatcher = (segments) => {
@@ -9,20 +10,53 @@ const vehicleProfileRoute: UrlMatcher = (segments) => {
     vehicles?.path !== 'vehicles' ||
     !recordId ||
     !tab ||
-    !['overview', 'trips', 'alerts', 'service'].includes(tab.path)
+    !['overview', 'trips', 'problems', 'maintenance'].includes(tab.path)
   ) {
     return null;
   }
-  return { consumed: segments.slice(0, 5), posParams: { branchId, recordId, tab } };
+  const retainedTab =
+    tab.path === 'problems' ? 'alerts' : tab.path === 'maintenance' ? 'service' : tab.path;
+  return {
+    consumed: segments.slice(0, 5),
+    posParams: { branchId, recordId, tab: new UrlSegment(retainedTab, tab.parameters) },
+  };
+};
+
+const deviceProfileRoute: UrlMatcher = (segments) => {
+  const [branchId, fleet, devices, recordId, tab, detail] = segments;
+  if (!branchId || fleet?.path !== 'fleet' || devices?.path !== 'devices' || !recordId || !tab) {
+    return null;
+  }
+  const retainedTab =
+    tab.path === 'problems'
+      ? 'alarms'
+      : tab.path === 'sms-commands'
+        ? 'sms'
+        : tab.path === 'technical-details' &&
+            (detail?.path === 'events' || detail?.path === 'frames')
+          ? detail.path
+          : ['overview', 'commands', 'parameters'].includes(tab.path)
+            ? tab.path
+            : null;
+  if (!retainedTab || recordId.path === 'new') {
+    return null;
+  }
+  return {
+    consumed: segments.slice(0, tab.path === 'technical-details' ? 6 : 5),
+    posParams: { branchId, recordId, tab: new UrlSegment(retainedTab, tab.parameters) },
+  };
 };
 
 export const fleetRoutes: Routes = [
+  { matcher: legacyFleetRoute, canMatch: [redirectLegacyAdminUrl], children: [] },
   {
-    path: ':branchId/fleet/devices/:recordId/diagnostics',
-    pathMatch: 'full',
-    redirectTo: ':branchId/control-center/devices/:recordId/alarms',
+    matcher: deviceProfileRoute,
+    data: { resource: 'control-center' },
+    loadComponent: () =>
+      import('../control-center/control-center-workspace').then(
+        (module) => module.ControlCenterWorkspace,
+      ),
   },
-  { path: ':branchId/fleet', pathMatch: 'full', redirectTo: ':branchId/fleet/overview' },
   {
     path: ':branchId/fleet/settings/general',
     data: { resource: 'general' },
@@ -159,9 +193,10 @@ export const fleetRoutes: Routes = [
     ],
   },
   {
-    path: ':branchId/fleet/trips',
-    data: { resource: 'trips', editor: false },
-    loadComponent: () => import('./fleet-workspace').then((module) => module.FleetWorkspace),
+    path: ':branchId/fleet/dashboard/trips',
+    data: { resource: 'trips', dashboardTab: 'trips', editor: false },
+    loadComponent: () =>
+      import('../../workspace/dashboard-workspace').then((module) => module.DashboardWorkspace),
     children: [
       {
         path: ':recordId',
@@ -173,14 +208,16 @@ export const fleetRoutes: Routes = [
     ],
   },
   {
-    path: ':branchId/fleet/overview',
-    data: { resource: 'overview', editor: false },
-    loadComponent: () => import('./fleet-workspace').then((module) => module.FleetWorkspace),
+    path: ':branchId/fleet/dashboard/overview',
+    data: { resource: 'overview', dashboardTab: 'overview', editor: false },
+    loadComponent: () =>
+      import('../../workspace/dashboard-workspace').then((module) => module.DashboardWorkspace),
   },
   {
-    path: ':branchId/fleet/alerts',
-    data: { resource: 'alerts', editor: false },
-    loadComponent: () => import('./fleet-workspace').then((module) => module.FleetWorkspace),
+    path: ':branchId/fleet/dashboard/problems',
+    data: { resource: 'alerts', dashboardTab: 'problems', editor: false },
+    loadComponent: () =>
+      import('../../workspace/dashboard-workspace').then((module) => module.DashboardWorkspace),
     children: [
       {
         path: ':recordId',
@@ -240,7 +277,8 @@ export const fleetRoutes: Routes = [
   {
     path: ':branchId/fleet/devices',
     data: { resource: 'devices', editor: false },
-    loadComponent: () => import('./fleet-workspace').then((module) => module.FleetWorkspace),
+    loadComponent: () =>
+      import('../../workspace/devices-workspace').then((module) => module.DevicesWorkspace),
     children: [
       {
         path: 'new',
@@ -258,10 +296,4 @@ export const fleetRoutes: Routes = [
       },
     ],
   },
-  {
-    path: ':branchId/fleet/devices/:recordId',
-    pathMatch: 'full',
-    redirectTo: ':branchId/control-center/devices/:recordId/overview',
-  },
-  { path: ':branchId/reference', redirectTo: ':branchId/fleet' },
 ];

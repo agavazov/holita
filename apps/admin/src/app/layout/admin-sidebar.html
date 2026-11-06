@@ -9,7 +9,11 @@
 <nav class="app-nav" [attr.aria-label]="text().navigation">
   @for (group of navigation(); track group.id) {
     <div class="app-nav__group" role="group" [attr.aria-labelledby]="idPrefix() + '-' + group.id">
-      <h2 class="app-nav__label" [id]="idPrefix() + '-' + group.id">
+      <h2
+        [class.app-nav__label]="!group.headingHidden"
+        [class.app-visually-hidden]="group.headingHidden"
+        [id]="idPrefix() + '-' + group.id"
+      >
         <span [class.app-visually-hidden]="rail()">{{ group.label }}</span>
         @if (group.note && !rail()) {
           <span class="app-nav__note">{{ group.note }}</span>

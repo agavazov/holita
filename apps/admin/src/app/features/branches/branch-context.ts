@@ -86,8 +86,10 @@ export class BranchContext {
         const branch =
           branches.find((branch) => branch.id === this.session.branchId()) ?? branches[0];
         if (branch) {
-          void this.router.navigate(['/', language, branch.id, 'fleet', 'overview'], {
+          void this.router.navigate(['/', language, branch.id, 'fleet', 'dashboard', 'overview'], {
             replaceUrl: true,
+            queryParamsHandling: 'preserve',
+            preserveFragment: true,
           });
         }
       }
@@ -101,13 +103,10 @@ export class BranchContext {
     },
     language: Language,
   ): Promise<void> {
-    const destination = this.router.createUrlTree([
-      '/',
-      language,
-      selection.branchId,
-      'fleet',
-      'overview',
-    ]);
+    const destination = this.router.createUrlTree(
+      ['/', language, selection.branchId, 'fleet', 'dashboard', 'overview'],
+      { queryParamsHandling: 'preserve', preserveFragment: true },
+    );
     if (
       this.router.url === this.router.serializeUrl(destination) ||
       (await this.router.navigateByUrl(destination))
@@ -146,28 +145,20 @@ export class BranchContext {
     }
     const section = this.route.firstChild?.snapshot.url;
     const resource = section?.[2]?.path;
-    const fleet =
-      this.fleetEnabled &&
-      section?.[1]?.path === 'fleet' &&
-      (resource === 'vehicles' ||
-        resource === 'devices' ||
-        resource === 'alerts' ||
-        resource === 'overview' ||
-        resource === 'trips' ||
-        resource === 'drivers' ||
-        resource === 'maintenance');
-    const settingsPage = section?.[3]?.path;
-    const settings =
-      this.fleetEnabled &&
-      section?.[1]?.path === 'fleet' &&
-      resource === 'settings' &&
-      (settingsPage === 'groups' || settingsPage === 'general');
-    void this.router.navigate([
-      '/',
-      language,
-      id,
-      'fleet',
-      ...(settings ? ['settings', settingsPage] : [fleet ? resource : 'overview']),
-    ]);
+    const tab = section?.[3]?.path;
+    let destination = ['dashboard', 'overview'];
+    if (this.fleetEnabled && section?.[1]?.path === 'fleet') {
+      if (resource === 'dashboard' && tab && ['overview', 'problems', 'trips'].includes(tab)) {
+        destination = ['dashboard', tab];
+      } else if (resource === 'settings' && (tab === 'groups' || tab === 'general')) {
+        destination = ['settings', tab];
+      } else if (
+        resource &&
+        ['vehicles', 'devices', 'drivers', 'maintenance', 'notifications'].includes(resource)
+      ) {
+        destination = [resource];
+      }
+    }
+    void this.router.navigate(['/', language, id, 'fleet', ...destination]);
   }
 }

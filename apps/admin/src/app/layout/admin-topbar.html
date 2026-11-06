@@ -19,17 +19,21 @@
   @if (context(); as context) {
     <nav [attr.aria-label]="text().breadcrumb">
       <ol class="app-breadcrumb">
-        <!-- The navigation group is a label, not a page, so it is never a link. -->
-        <li class="app-breadcrumb__group">
-          <span class="app-breadcrumb__text" [title]="context.group">{{ context.group }}</span>
-        </li>
-        @if (context.record && context.pageLink) {
+        @if (context.group) {
+          <!-- The navigation group is a label, not a page, so it is never a link. -->
+          <li class="app-breadcrumb__group">
+            <span class="app-breadcrumb__text" [title]="context.group">{{ context.group }}</span>
+          </li>
+        }
+        @if ((context.record || context.tab) && context.pageLink) {
           <li class="app-breadcrumb__ancestor">
-            <svg
-              data-p-icon="chevron-right"
-              class="app-breadcrumb__separator"
-              aria-hidden="true"
-            ></svg>
+            @if (context.group) {
+              <svg
+                data-p-icon="chevron-right"
+                class="app-breadcrumb__separator"
+                aria-hidden="true"
+              ></svg>
+            }
             <a
               class="app-breadcrumb__text"
               [routerLink]="context.pageLink"
@@ -37,25 +41,47 @@
               >{{ context.page }}</a
             >
           </li>
-          <li class="app-breadcrumb__current">
-            <svg
-              data-p-icon="chevron-right"
-              class="app-breadcrumb__separator"
-              aria-hidden="true"
-            ></svg>
-            <span class="app-breadcrumb__text" aria-current="page" [title]="context.record">{{
-              context.record
-            }}</span>
-          </li>
+          @if (context.record) {
+            <li [class]="context.tab ? 'app-breadcrumb__ancestor' : 'app-breadcrumb__current'">
+              <svg
+                data-p-icon="chevron-right"
+                class="app-breadcrumb__separator"
+                aria-hidden="true"
+              ></svg>
+              <span
+                class="app-breadcrumb__text"
+                [attr.aria-current]="context.tab ? null : 'page'"
+                [title]="context.record"
+                >{{ context.record }}</span
+              >
+            </li>
+          }
         } @else {
+          <li [class]="context.tab ? 'app-breadcrumb__ancestor' : 'app-breadcrumb__current'">
+            @if (context.group) {
+              <svg
+                data-p-icon="chevron-right"
+                class="app-breadcrumb__separator"
+                aria-hidden="true"
+              ></svg>
+            }
+            <span
+              class="app-breadcrumb__text"
+              [attr.aria-current]="context.tab ? null : 'page'"
+              [title]="context.page"
+              >{{ context.page }}</span
+            >
+          </li>
+        }
+        @if (context.tab) {
           <li class="app-breadcrumb__current">
             <svg
               data-p-icon="chevron-right"
               class="app-breadcrumb__separator"
               aria-hidden="true"
             ></svg>
-            <span class="app-breadcrumb__text" aria-current="page" [title]="context.page">{{
-              context.page
+            <span class="app-breadcrumb__text" aria-current="page" [title]="context.tab">{{
+              context.tab
             }}</span>
           </li>
         }

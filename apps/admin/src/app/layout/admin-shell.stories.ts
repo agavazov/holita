@@ -12,6 +12,7 @@ import { PageHeader } from '../ui/page-header/page-header';
 import { TablePanel } from '../ui/table-panel/table-panel';
 import { UI_LANGUAGE } from '../ui/ui-language';
 import { adminNavigation } from '../workspace/admin-navigation';
+import { pageMetadata } from '../workspace/page-metadata';
 import { AdminShell } from './admin-shell';
 import type { LanguageOption, ShellAccount, ShellNotification } from './admin-topbar';
 import { navigationContext } from './navigation';
@@ -141,7 +142,9 @@ const rows = [
 class ShellPreview {
   /** Very long Branch, page and record names: everything stays on one line with an ellipsis. */
   readonly longNames = input(false);
-  readonly devicesPage = input(false);
+  readonly section = input<'vehicles' | 'devices' | 'dashboard/problems' | 'settings/general'>(
+    'vehicles',
+  );
   readonly language = inject(UI_LANGUAGE);
   readonly branches = computed(() =>
     this.longNames()
@@ -159,9 +162,13 @@ class ShellPreview {
   readonly rows = rows;
   readonly languages = languages;
   readonly navigation = computed(() => adminNavigation(this.language(), defaultBranchId, true));
+  private readonly path = computed(
+    () => `/${this.language()}/${defaultBranchId}/fleet/${this.section()}`,
+  );
   readonly context = computed(() => {
-    const path = this.devicesPage() ? `${defaultBranchId}/fleet/devices` : vehicles;
-    const context = navigationContext(this.navigation(), `/${this.language()}/${path}`);
+    const context =
+      pageMetadata(this.language(), this.path()) ??
+      navigationContext(this.navigation(), this.path());
     if (!context || !this.longNames()) {
       return context;
     }
@@ -177,8 +184,7 @@ class ShellPreview {
   constructor() {
     // Only the router state matters (the active navigation item); there is no routed outlet.
     effect(() => {
-      const path = this.devicesPage() ? `${defaultBranchId}/fleet/devices` : vehicles;
-      void this.router.navigateByUrl(`/${this.language()}/${path}`);
+      void this.router.navigateByUrl(this.path());
     });
   }
 }
@@ -210,11 +216,27 @@ export const Desktop: Story = {
   render: preview,
 };
 
-export const DevicesNavigation: Story = {
-  name: 'Fleet devices navigation',
+export const DashboardNavigation: Story = {
+  name: 'Dashboard tabs keep Dashboard selected',
   render: () => ({
     moduleMetadata: { imports: [ShellPreview] },
-    template: '<holita-shell-preview [devicesPage]="true" />',
+    template: '<holita-shell-preview section="dashboard/problems" />',
+  }),
+};
+
+export const DevicesNavigation: Story = {
+  name: 'Devices navigation',
+  render: () => ({
+    moduleMetadata: { imports: [ShellPreview] },
+    template: '<holita-shell-preview section="devices" />',
+  }),
+};
+
+export const SettingsNavigation: Story = {
+  name: 'Settings navigation',
+  render: () => ({
+    moduleMetadata: { imports: [ShellPreview] },
+    template: '<holita-shell-preview section="settings/general" />',
   }),
 };
 
