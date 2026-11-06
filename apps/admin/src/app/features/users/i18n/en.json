@@ -1,0 +1,54 @@
+{
+  "eyebrow": "Settings",
+  "title": "Users",
+  "guidance": "Manage the people who can sign in to this organization.",
+  "scope": "Users belong to the organization and have the same access to every fleet. Every user can manage other users.",
+  "heading": "Organization users",
+  "new": "Create user",
+  "name": "Name",
+  "email": "Email",
+  "status": "Status",
+  "lastSignIn": "Last sign-in",
+  "active": "Active",
+  "inactive": "Inactive",
+  "neverSignedIn": "Never signed in",
+  "actionsColumn": "User actions",
+  "emptyTitle": "No users",
+  "emptyDescription": "Create a user to give someone access to this organization.",
+  "errorText": "Users could not be loaded. Try again.",
+  "preferencesError": "The selected fleet's date preferences could not be loaded. Retry to show the users with the correct dates.",
+  "editLabel": "Edit {name}",
+  "created": "{name} was created.",
+  "saved": "{name} was saved.",
+  "deactivated": "{name} was deactivated.",
+  "reactivated": "{name} was reactivated.",
+  "actions": {
+    "edit": "Edit",
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
+    "confirmDeactivate": {
+      "title": "Deactivate this user?",
+      "detail": "The user will be signed out and will no longer be able to sign in. You can reactivate them later. Deactivating your own account also signs you out.",
+      "accept": "Deactivate"
+    },
+    "confirmReactivate": {
+      "title": "Reactivate this user?",
+      "detail": "The user will be able to sign in with their existing password and will have the same access as everyone else.",
+      "accept": "Reactivate"
+    }
+  },
+  "drawer": {
+    "createTitle": "Create user",
+    "editTitle": "Edit {name}",
+    "editFallback": "Edit user",
+    "guidance": "Set the name and email used for this person's account.",
+    "password": "Initial password",
+    "passwordHint": "Use 12–128 characters. Share this password securely; the user can change it in Profile.",
+    "emailInUse": "This email is already in use.",
+    "passwordLength": "Use a password of 12–128 characters.",
+    "saveError": "The user could not be saved. Check the form and try again.",
+    "cancel": "Cancel",
+    "create": "Create user",
+    "save": "Save changes"
+  }
+}

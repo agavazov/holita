@@ -9,7 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Bars } from '@primeicons/angular/bars';
 import { Bell } from '@primeicons/angular/bell';
 import { ChevronRight } from '@primeicons/angular/chevron-right';
@@ -20,6 +20,7 @@ import { formatNumber, formatRelative } from '../ui/format/format';
 import { interpolate } from '../ui/i18n/messages';
 import { MenuButton, type MenuOption } from '../ui/menu-button/menu-button';
 import type { PageContext } from './navigation';
+import { ACCOUNT_MENU_CONTEXT } from './account-menu-context';
 
 /** One entry of the interface-language menu, labelled in its own language. */
 export interface LanguageOption {
@@ -80,6 +81,8 @@ export class AdminTopbar {
   readonly signOut = output();
 
   protected readonly appearance = inject(Appearance);
+  private readonly accountContext = inject(ACCOUNT_MENU_CONTEXT, { optional: true });
+  private readonly router = inject(Router);
   private readonly clock = inject(WALL_CLOCK);
   /** The reference of the notifications' relative times, refreshed whenever the bell opens. */
   private readonly now = signal(this.clock());
@@ -155,14 +158,14 @@ export class AdminTopbar {
         : { title: this.text().noNotifications },
   );
   protected readonly accountName = computed(
-    () => this.account()?.name ?? this.tenantName() ?? 'holita',
+    () => this.account()?.name ?? this.accountContext?.()?.name ?? this.tenantName() ?? 'holita',
   );
   protected readonly accountLabel = computed(() =>
     interpolate(this.text().account, { name: this.accountName() }),
   );
   protected readonly accountHeader = computed(() => ({
     title: this.accountName(),
-    detail: this.account()?.detail ?? null,
+    detail: this.account()?.detail ?? this.accountContext?.()?.detail ?? null,
   }));
   protected readonly initials = computed(() =>
     this.accountName()
@@ -174,6 +177,11 @@ export class AdminTopbar {
       .toLocaleUpperCase(this.language()),
   );
   protected readonly accountOptions = computed<readonly MenuOption[]>(() => [
+    {
+      id: 'profile',
+      label: this.text().profile,
+      link: this.router.createUrlTree(['/', this.language(), 'profile']),
+    },
     {
       id: 'theme',
       label: this.appearance.dark() ? this.text().lightTheme : this.text().darkTheme,

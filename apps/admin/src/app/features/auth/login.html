@@ -1,103 +1,229 @@
 <div class="login-layout">
-  <div class="login-actions">
-    <a
-      pButton
-      severity="secondary"
-      [text]="true"
-      [routerLink]="languageUrl()"
-      [attr.lang]="language() === 'bg' ? 'en' : 'bg'"
-    >
-      {{ language() === 'bg' ? 'English' : 'Български' }}
-    </a>
-    <button
-      pButton
-      type="button"
-      severity="secondary"
-      [text]="true"
-      [attr.aria-label]="appearance.dark() ? text().lightTheme : text().darkTheme"
-      (click)="appearance.toggle()"
-    >
-      @if (appearance.dark()) {
-        <svg data-p-icon="sun" size="20" aria-hidden="true"></svg>
-      } @else {
-        <svg data-p-icon="moon" size="20" aria-hidden="true"></svg>
-      }
-    </button>
-  </div>
-  <main class="login-container">
-    <div class="login-frame">
-      <section class="login-card" aria-labelledby="login-title">
-        <div class="login-brand" aria-hidden="true">
-          <span class="holita-mark">h</span>
-          <span class="login-wordmark">holita</span>
-        </div>
-        <h1 id="login-title">{{ text().demoLogin }}</h1>
-        <p class="login-description">{{ text().demoLoginDescription }}</p>
-        <form [formGroup]="form" (ngSubmit)="login()">
-          <div class="login-field">
-            <label for="login-tenant">{{ text().tenant }}</label>
-            <p-select
-              inputId="login-tenant"
-              [options]="tenants()"
-              optionLabel="name"
-              optionValue="id"
-              [formControl]="tenantControl"
-              [placeholder]="text().chooseTenant"
-              [ariaLabel]="text().tenant"
-              [loading]="tenantsLoading()"
-              appendTo="body"
-            />
-          </div>
-          <div class="login-field">
-            <label for="login-branch">{{ text().activeBranch }}</label>
-            <p-select
-              inputId="login-branch"
-              [options]="branches()"
-              optionLabel="name"
-              optionValue="id"
-              [formControl]="branchControl"
-              [placeholder]="text().chooseBranch"
-              [ariaLabel]="text().activeBranch"
-              [loading]="branchesLoading()"
-              appendTo="body"
-            />
+  <aside class="login-hero" aria-labelledby="hero-title">
+    <div class="login-brand" aria-label="holita">
+      <span class="holita-mark" aria-hidden="true">h</span><span>holita</span>
+    </div>
+    <div class="login-hero__message">
+      <span class="login-eyebrow">holita</span>
+      <h2 id="hero-title">{{ text().heroTitle }}</h2>
+      <p>{{ text().heroDescription }}</p>
+    </div>
+  </aside>
+  <div class="login-main">
+    <div class="login-actions">
+      <a
+        pButton
+        severity="secondary"
+        [text]="true"
+        [routerLink]="languageUrl()"
+        [attr.lang]="language() === 'bg' ? 'en' : 'bg'"
+        >{{ language() === 'bg' ? 'English' : 'Български' }}</a
+      >
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [text]="true"
+        [attr.aria-label]="appearance.dark() ? text().lightTheme : text().darkTheme"
+        (click)="appearance.toggle()"
+      >
+        @if (appearance.dark()) {
+          <svg data-p-icon="sun" size="20" aria-hidden="true"></svg>
+        } @else {
+          <svg data-p-icon="moon" size="20" aria-hidden="true"></svg>
+        }
+      </button>
+    </div>
+    <main class="login-container">
+      <section class="login-card app-card" aria-labelledby="login-title">
+        <h1 id="login-title" tabindex="-1">
+          {{ prepared() ? text().chooseBranch : text().title }}
+        </h1>
+        <p class="app-muted">{{ text().hint }}</p>
+        @if (session.notice(); as notice) {
+          <p-message [severity]="notice === 'passwordChanged' ? 'success' : 'warn'">{{
+            text()[notice]
+          }}</p-message>
+          @if (notice === 'signOutFailed') {
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [disabled]="session.signingOut()"
+              (click)="session.retrySignOut()"
+            >
+              {{ text().retrySignOut }}
+            </button>
+          }
+        }
+        @if (session.signingOut()) {
+          <p role="status">{{ text().signingOut }}</p>
+        }
+        @if (failure(); as error) {
+          <p-message severity="error">{{ text()[error] }}</p-message>
+        }
+        @if (prepared(); as account) {
+          <div class="app-stack">
+            <strong>{{ account.tenant.name }}</strong>
+            <p class="app-muted">{{ text().branchHint }}</p>
           </div>
           @if (branchesLoading()) {
             <p role="status">{{ text().loadingBranches }}</p>
-          }
-          @if (!tenantsLoading() && tenants().length === 0 && !tenantError()) {
-            <p>{{ text().emptyTenants }}</p>
-          }
-          @if (
-            tenantControl.value && !branchesLoading() && branches().length === 0 && !branchError()
-          ) {
+          } @else if (!branches().length && !failure()) {
             <p>{{ text().emptyBranches }}</p>
+            <button pButton type="button" [disabled]="submitted()" (click)="openProfile()">
+              {{ text().continueAccount }}
+            </button>
           }
-          @if (tenantError() || branchError()) {
-            <p-message severity="error">{{ failure() }}</p-message>
-            <button pButton type="button" severity="secondary" (click)="retry()">
+          @if (branches().length) {
+            <holita-form-field
+              controlId="login-branch"
+              [label]="text().chooseBranch"
+              [required]="true"
+            >
+              <p-select
+                inputId="login-branch"
+                [options]="branches()"
+                optionLabel="name"
+                optionValue="id"
+                [formControl]="branchControl"
+                [placeholder]="text().chooseBranch"
+                [ariaLabel]="text().chooseBranch"
+                [disabled]="branchesLoading() || submitted()"
+                appendTo="body"
+              />
+            </holita-form-field>
+            <button
+              pButton
+              type="button"
+              [disabled]="!branchControl.value || branchesLoading() || submitted() || !!failure()"
+              (click)="enter()"
+            >
+              {{ text().continue }}
+            </button>
+          }
+          @if (failure() || (!branchesLoading() && !branches().length)) {
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [disabled]="branchesLoading()"
+              (click)="retry()"
+            >
               {{ text().retry }}
             </button>
           }
           <button
             pButton
-            type="submit"
-            [disabled]="
-              !branchControl.value ||
-              branchesLoading() ||
-              tenantsLoading() ||
-              !!branchError() ||
-              submitted()
-            "
-            data-testid="demo-login"
+            type="button"
+            severity="secondary"
+            [text]="true"
+            [disabled]="submitted()"
+            (click)="back()"
           >
-            {{ text().signIn }}
+            {{ text().back }}
           </button>
-        </form>
+        } @else {
+          <form
+            class="app-form-section"
+            [formGroup]="form"
+            (ngSubmit)="login()"
+            [attr.aria-busy]="busy()"
+          >
+            <holita-form-field
+              controlId="login-email"
+              [label]="text().email"
+              [error]="fieldError('email')"
+              [required]="true"
+            >
+              <input
+                pInputText
+                id="login-email"
+                type="email"
+                formControlName="email"
+                autocomplete="username"
+                maxlength="254"
+                [invalid]="!!fieldError('email')"
+                [attr.aria-invalid]="!!fieldError('email')"
+                [attr.aria-describedby]="fieldError('email') ? 'login-email-error' : null"
+              />
+            </holita-form-field>
+            <holita-form-field
+              controlId="login-password"
+              [label]="text().password"
+              [error]="fieldError('password')"
+              [required]="true"
+            >
+              <input
+                pInputText
+                id="login-password"
+                type="password"
+                formControlName="password"
+                autocomplete="current-password"
+                [invalid]="!!fieldError('password')"
+                [attr.aria-invalid]="!!fieldError('password')"
+                [attr.aria-describedby]="fieldError('password') ? 'login-password-error' : null"
+              />
+            </holita-form-field>
+            <button pButton type="submit" [disabled]="busy() || session.signingOut()">
+              {{ busy() ? text().signingIn : text().signIn }}
+            </button>
+          </form>
+          @if (demoAvailable) {
+            @if (!demoOpen()) {
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [text]="true"
+                [disabled]="busy()"
+                (click)="openDemo()"
+              >
+                {{ text().demo }}
+              </button>
+            } @else {
+              <section class="app-form-section" aria-labelledby="demo-title">
+                <h2 id="demo-title">{{ text().demo }}</h2>
+                <p class="app-muted">{{ text().demoHint }}</p>
+                <holita-form-field controlId="login-tenant" [label]="text().tenant">
+                  <p-select
+                    inputId="login-tenant"
+                    [options]="tenants()"
+                    optionLabel="name"
+                    optionValue="id"
+                    [formControl]="tenantControl"
+                    [placeholder]="text().chooseTenant"
+                    [ariaLabel]="text().tenant"
+                    [loading]="tenantsLoading()"
+                    appendTo="body"
+                  />
+                </holita-form-field>
+                @if (!tenantsLoading() && !tenants().length && !failure()) {
+                  <p>{{ text().emptyTenants }}</p>
+                }
+                @if (failure() === 'tenants') {
+                  <button pButton type="button" severity="secondary" (click)="retry()">
+                    {{ text().retry }}
+                  </button>
+                }
+                <button
+                  pButton
+                  type="button"
+                  severity="secondary"
+                  [disabled]="!tenantControl.value || busy() || tenantsLoading()"
+                  data-testid="demo-login"
+                  (click)="demoLogin()"
+                >
+                  {{ text().demoSignIn }}
+                </button>
+              </section>
+            }
+          }
+        }
         @if (appearance.persistenceFailed()) {
           <p-message severity="warn">{{ text().themePersistenceError }}</p-message>
         }
       </section>
-    </div>
-  </main>
+    </main>
+  </div>
 </div>

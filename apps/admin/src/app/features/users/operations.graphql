@@ -1,0 +1,43 @@
+fragment AdminUserDetails on User {
+  id
+  tenant {
+    id
+    name
+  }
+  name
+  email
+  active
+  lastSignInAt
+  createdAt
+  updatedAt
+}
+
+query AdminUsers {
+  users {
+    ...AdminUserDetails
+  }
+}
+
+mutation AdminCreateUser($name: String!, $email: String!, $password: String!) {
+  createUser(name: $name, email: $email, password: $password) {
+    ...AdminUserDetails
+  }
+}
+
+mutation AdminUpdateUser($id: ID!, $name: String!, $email: String!) {
+  updateUser(id: $id, name: $name, email: $email) {
+    ...AdminUserDetails
+  }
+}
+
+mutation AdminDeactivateUser($id: ID!) {
+  deactivateUser(id: $id) {
+    ...AdminUserDetails
+  }
+}
+
+mutation AdminReactivateUser($id: ID!) {
+  reactivateUser(id: $id) {
+    ...AdminUserDetails
+  }
+}

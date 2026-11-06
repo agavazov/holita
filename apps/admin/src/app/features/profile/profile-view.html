@@ -1,0 +1,164 @@
+<holita-page-header [title]="text().title" [description]="text().description" />
+
+@if (state() === 'error') {
+  <holita-empty-state kind="error" [title]="text().loadError" [description]="loadError()">
+    <button emptyActions pButton type="button" (click)="retry.emit()">{{ text().retry }}</button>
+  </holita-empty-state>
+} @else if (state() === 'loading' || !user()) {
+  <p role="status">{{ text().loading }}</p>
+} @else {
+  <form
+    #identityElement
+    class="app-card app-settings-section"
+    [formGroup]="form"
+    (ngSubmit)="submitIdentity()"
+  >
+    <header>
+      <h2>{{ text().identity }}</h2>
+      <p>{{ text().identityHint }}</p>
+    </header>
+    <div class="app-form-section">
+      @if (saveError(); as error) {
+        <p-message severity="error" role="alert">{{ error }}</p-message>
+      }
+      @if (saved()) {
+        <p-message severity="success" role="status">{{ text().saved }}</p-message>
+      }
+      <div class="app-form-grid">
+        <holita-form-field
+          [label]="text().name"
+          controlId="profile-name"
+          [required]="true"
+          [error]="errorOf('name')"
+        >
+          <input
+            pInputText
+            id="profile-name"
+            formControlName="name"
+            autocomplete="name"
+            [invalid]="!!errorOf('name')"
+            [attr.aria-invalid]="errorOf('name') ? 'true' : null"
+            aria-describedby="profile-name-hint profile-name-error"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="text().email"
+          controlId="profile-email"
+          [required]="true"
+          [error]="errorOf('email')"
+        >
+          <input
+            pInputText
+            id="profile-email"
+            type="email"
+            formControlName="email"
+            autocomplete="email"
+            [invalid]="!!errorOf('email')"
+            [attr.aria-invalid]="errorOf('email') ? 'true' : null"
+            aria-describedby="profile-email-hint profile-email-error"
+          />
+        </holita-form-field>
+      </div>
+      <div class="app-inline">
+        <button pButton type="submit" [loading]="saving()" [disabled]="busy()">
+          {{ text().save }}
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <form
+    #passwordElement
+    class="app-card app-settings-section"
+    [formGroup]="passwords"
+    (ngSubmit)="submitPassword()"
+  >
+    <header>
+      <h2>{{ text().password }}</h2>
+      <p>{{ text().passwordHint }}</p>
+    </header>
+    <div class="app-form-section">
+      @if (passwordError(); as error) {
+        <p-message severity="error" role="alert">{{ error }}</p-message>
+      }
+      <div class="app-form-grid">
+        <holita-form-field
+          class="app-form-grid--wide"
+          [label]="text().currentPassword"
+          controlId="profile-currentPassword"
+          [required]="true"
+          [error]="passwordErrorOf('currentPassword')"
+        >
+          <input
+            pInputText
+            id="profile-currentPassword"
+            type="password"
+            formControlName="currentPassword"
+            autocomplete="current-password"
+            [invalid]="!!passwordErrorOf('currentPassword')"
+            [attr.aria-invalid]="passwordErrorOf('currentPassword') ? 'true' : null"
+            aria-describedby="profile-currentPassword-hint profile-currentPassword-error"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="text().newPassword"
+          controlId="profile-newPassword"
+          [required]="true"
+          [hint]="text().passwordRequirements"
+          [error]="passwordErrorOf('newPassword')"
+        >
+          <input
+            pInputText
+            id="profile-newPassword"
+            type="password"
+            formControlName="newPassword"
+            autocomplete="new-password"
+            [invalid]="!!passwordErrorOf('newPassword')"
+            [attr.aria-invalid]="passwordErrorOf('newPassword') ? 'true' : null"
+            aria-describedby="profile-newPassword-hint profile-newPassword-error"
+          />
+        </holita-form-field>
+        <holita-form-field
+          [label]="text().confirmPassword"
+          controlId="profile-confirmPassword"
+          [required]="true"
+          [error]="passwordErrorOf('confirmPassword')"
+        >
+          <input
+            pInputText
+            id="profile-confirmPassword"
+            type="password"
+            formControlName="confirmPassword"
+            autocomplete="new-password"
+            [invalid]="!!passwordErrorOf('confirmPassword')"
+            [attr.aria-invalid]="passwordErrorOf('confirmPassword') ? 'true' : null"
+            aria-describedby="profile-confirmPassword-hint profile-confirmPassword-error"
+          />
+        </holita-form-field>
+      </div>
+      <div class="app-inline">
+        <button pButton type="submit" [loading]="changingPassword()" [disabled]="busy()">
+          {{ text().changePassword }}
+        </button>
+      </div>
+    </div>
+  </form>
+
+  @if (dirty()) {
+    <div class="app-save-bar" role="region" [attr.aria-label]="text().unsaved">
+      <span>{{ text().unsaved }}</span>
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="busy()"
+        (click)="discard()"
+      >
+        {{ text().discard }}
+      </button>
+    </div>
+  }
+}
+
+<p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />

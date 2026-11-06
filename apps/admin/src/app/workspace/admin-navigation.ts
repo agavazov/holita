@@ -8,8 +8,15 @@ export function adminNavigation(
   fleetEnabled: boolean,
 ): NavGroup[] {
   const text = messages[language];
+  const users: NavGroup = {
+    id: 'settings',
+    label: text.settings,
+    items: [
+      { id: 'users', label: text.users, icon: 'users', link: ['/', language, 'settings', 'users'] },
+    ],
+  };
   if (!fleetEnabled || !branchId) {
-    return [];
+    return [users];
   }
   const fleet = ['/', language, branchId, 'fleet'];
   return [
@@ -52,6 +59,7 @@ export function adminNavigation(
           icon: 'tags',
           link: [...fleet, 'settings', 'groups'],
         },
+        ...users.items,
       ],
     },
   ];

@@ -1,0 +1,111 @@
+<holita-page-header
+  [eyebrow]="text().eyebrow"
+  [title]="text().title"
+  [description]="text().guidance"
+  [count]="view().kind === 'rows' || view().kind === 'rows-error' ? rows().length : null"
+>
+  <button headerActions pButton type="button" [disabled]="busy()" (click)="create.emit()">
+    {{ text().new }}
+  </button>
+</holita-page-header>
+
+<p-message severity="info">{{ text().scope }}</p-message>
+
+<holita-table-panel
+  #panel
+  mode="local"
+  [heading]="text().heading"
+  [total]="rows().length"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
+  [view]="view()"
+  [errorText]="errorText() ?? text().errorText"
+  [busy]="busy()"
+  [actionContext]="actionContext()"
+  [emptyTitle]="text().emptyTitle"
+  [emptyDescription]="text().emptyDescription"
+  [actions]="actions()"
+  (action)="action.emit($event)"
+  (retry)="retry.emit()"
+>
+  <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  <p-table
+    class="app-responsive-table"
+    [value]="tableRows()"
+    dataKey="id"
+    [rowTrackBy]="trackById"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': tableMinWidth }"
+    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().heading } }"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+          <col [style.width]="column.width" [class]="column.className ?? ''" />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity">{{ text().name }}</th>
+        <th scope="col">{{ text().email }}</th>
+        <th scope="col">{{ text().status }}</th>
+        <th scope="col" class="app-col-secondary">{{ text().lastSignIn }}</th>
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ text().actionsColumn }}</span>
+        </th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
+        <td class="app-col-identity">
+          <span class="app-cell-identity">
+            <button
+              type="button"
+              class="app-link app-cell-truncate"
+              [title]="row.name"
+              [attr.aria-label]="editLabel(row)"
+              (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
+            >
+              {{ row.name }}
+            </button>
+          </span>
+          <span class="app-table-mobile-actions">
+            <holita-row-actions
+              [actions]="actions()"
+              [record]="recordOf(row)"
+              (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
+            />
+          </span>
+        </td>
+        <td>
+          <span class="app-cell-truncate" [title]="row.email">{{ row.email }}</span>
+        </td>
+        <td>
+          <span class="app-cell-status">
+            <p-tag
+              [value]="row.active ? text().active : text().inactive"
+              [severity]="severity(row.active ? 'success' : 'neutral')"
+            />
+          </span>
+        </td>
+        <td class="app-col-secondary">
+          @let signIn = format.dateTimeCell(row.lastSignInAt);
+          <span
+            class="app-cell-date"
+            [title]="row.lastSignInAt ? signIn.title : text().neverSignedIn"
+          >
+            {{ signIn.text }}
+          </span>
+        </td>
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <holita-row-actions
+            [actions]="actions()"
+            [record]="recordOf(row)"
+            (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
+          />
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</holita-table-panel>

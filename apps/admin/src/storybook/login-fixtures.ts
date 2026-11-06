@@ -2,9 +2,10 @@ import {
   AdminBranchesDocument,
   AdminDemoLoginDocument,
   AdminTenantsDocument,
+  AdminSignInDocument,
 } from '../generated/graphql/operations';
 import { fixtureError, graphqlFixture } from './graphql-fixtures';
-import { fixtureBranches, fixtureTenant, fixtureToken } from './session-fixtures';
+import { fixtureAccount, fixtureBranches, fixtureTenant, fixtureToken } from './session-fixtures';
 
 export const loginTenants = [
   fixtureTenant,
@@ -17,8 +18,25 @@ export const loginTenants = [
 
 /** Registers only the real Login's operations; cleanup restores shared Branch discovery. */
 export function loginFixtures(
-  options: { readonly emptyTenants?: boolean; readonly emptyBranches?: boolean } = {},
+  options: {
+    readonly emptyTenants?: boolean;
+    readonly emptyBranches?: boolean;
+    readonly invalidCredentials?: boolean;
+  } = {},
 ): () => void {
+  graphqlFixture(AdminSignInDocument, () => {
+    if (options.invalidCredentials) {
+      throw fixtureError('UNAUTHENTICATED', 'Invalid email or password');
+    }
+    return {
+      signIn: {
+        token: fixtureToken,
+        expiresAt: '2100-01-01T00:00:00.000Z',
+        tenant: fixtureTenant,
+        user: fixtureAccount,
+      },
+    };
+  });
   graphqlFixture(AdminTenantsDocument, () => ({
     tenants: options.emptyTenants ? [] : [...loginTenants],
   }));
@@ -30,7 +48,7 @@ export function loginFixtures(
     return {
       demoLogin: {
         __typename: 'DemoSession',
-        token: fixtureToken.replace(fixtureTenant.id, tenant.id),
+        token: `holita-demo.${tenant.id}.4102444800.${'storybook_fixture_signature_'.padEnd(43, '0')}`,
         tenant,
       },
     };

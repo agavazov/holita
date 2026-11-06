@@ -47,6 +47,9 @@ export const subgraphs = [
 export const operationPaths = [
   'apps/admin/src/app/ui/fleet-live/operations.graphql',
   'apps/admin/src/app/features/branches/operations.graphql',
+  'apps/admin/src/app/features/auth/operations.graphql',
+  'apps/admin/src/app/features/profile/operations.graphql',
+  'apps/admin/src/app/features/users/operations.graphql',
   'apps/admin/src/app/features/fleet/vehicles/operations.graphql',
   'apps/admin/src/app/features/fleet/vehicle-groups/operations.graphql',
   'apps/admin/src/app/features/fleet/alerts/operations.graphql',

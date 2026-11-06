@@ -1,0 +1,37 @@
+fragment AdminAccount on User {
+  id
+  name
+  email
+  active
+  lastSignInAt
+  createdAt
+  updatedAt
+  tenant {
+    id
+    name
+  }
+}
+
+mutation AdminSignIn($email: String!, $password: String!) {
+  signIn(email: $email, password: $password) {
+    token
+    expiresAt
+    tenant {
+      id
+      name
+    }
+    user {
+      ...AdminAccount
+    }
+  }
+}
+
+query AdminMe {
+  me {
+    ...AdminAccount
+  }
+}
+
+mutation AdminSignOut {
+  signOut
+}

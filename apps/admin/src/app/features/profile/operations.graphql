@@ -1,0 +1,35 @@
+query AdminProfile {
+  me {
+    id
+    name
+    email
+    active
+    lastSignInAt
+    createdAt
+    updatedAt
+    tenant {
+      id
+      name
+    }
+  }
+}
+
+mutation AdminUpdateProfile($name: String!, $email: String!) {
+  updateProfile(name: $name, email: $email) {
+    id
+    name
+    email
+    active
+    lastSignInAt
+    createdAt
+    updatedAt
+    tenant {
+      id
+      name
+    }
+  }
+}
+
+mutation AdminChangePassword($currentPassword: String!, $newPassword: String!) {
+  changePassword(currentPassword: $currentPassword, newPassword: $newPassword)
+}
