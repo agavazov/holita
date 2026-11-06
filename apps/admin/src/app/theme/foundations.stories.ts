@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { ButtonDirective } from 'primeng/button';
@@ -25,9 +25,35 @@ const appColorTokens = [
   'panel-background',
   'panel-border-color',
   'panel-header-background',
+  'panel-accent-background',
+  'panel-accent-color',
+  'accent-background',
+  'accent-color',
+  'accent-solid',
+  'hero-background',
+  'hero-color',
+  'sidebar-background',
+  'sidebar-color',
+  'sidebar-muted-color',
+  'sidebar-group-color',
+  'sidebar-footer-color',
+  'sidebar-border-color',
+  'sidebar-focus-color',
+  'sidebar-drawer-background',
+  'sidebar-drawer-color',
+  'sidebar-item-color',
+  'sidebar-item-muted-color',
+  'sidebar-item-icon-color',
   'sidebar-item-hover-background',
   'sidebar-item-active-background',
+  'sidebar-item-active-color',
+  'sidebar-item-active-icon-color',
   'sidebar-item-indicator',
+  'plate-background',
+  'plate-color',
+  'plate-border-color',
+  'plate-band-background',
+  'plate-band-color',
 ];
 const semanticColorTokens = [
   'primary-color',
@@ -44,9 +70,10 @@ const semanticColorTokens = [
 
 @Component({
   selector: 'holita-foundation-colors',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @for (scheme of schemes; track scheme) {
-      <section class="scheme" [class.app-dark]="scheme === 'dark'">
+      <section class="scheme" [style.color-scheme]="scheme">
         <h2>{{ scheme === 'dark' ? 'Dark' : 'Light' }}</h2>
         <h3>App tokens (--p-app-*)</h3>
         <div class="grid">
@@ -86,6 +113,7 @@ const semanticColorTokens = [
         <thead>
           <tr>
             <th scope="col">Pair</th>
+            <th scope="col">Sample</th>
             <th scope="col">Ratio</th>
             <th scope="col">Minimum</th>
           </tr>
@@ -94,8 +122,18 @@ const semanticColorTokens = [
           @for (item of checks; track item.name) {
             <tr>
               <th scope="row">{{ item.name }}</th>
+              <td>
+                <span
+                  class="pair"
+                  [style.background]="item.background"
+                  [style.color]="item.foreground"
+                  >Aa</span
+                >
+              </td>
               <td class="app-num">{{ item.ratio.toFixed(2) }}</td>
-              <td class="app-num">{{ item.minimum }}</td>
+              <td class="app-num">
+                {{ item.minimum }} {{ item.ratio >= item.minimum ? 'Pass' : 'Fail' }}
+              </td>
             </tr>
           }
         </tbody>
@@ -105,7 +143,7 @@ const semanticColorTokens = [
   styles: `
     :host {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
       gap: 1rem;
       padding: 1.5rem;
     }
@@ -122,6 +160,7 @@ const semanticColorTokens = [
     }
     .checks {
       grid-column: 1 / -1;
+      overflow: auto;
     }
     h3 {
       margin-block-start: 0.5rem;
@@ -159,6 +198,14 @@ const semanticColorTokens = [
       padding: 0.125rem 0.25rem;
       color: transparent;
     }
+    .pair {
+      display: inline-grid;
+      place-items: center;
+      min-inline-size: 3rem;
+      padding: var(--p-app-space-1) var(--p-app-space-2);
+      border-radius: var(--p-app-radius-control);
+      font-weight: 700;
+    }
     table {
       border-collapse: collapse;
       font-size: var(--p-app-text-sm);
@@ -180,7 +227,11 @@ class FoundationColors {
       `tone-${tone}-background`,
       `tone-${tone}-solid`,
     ]),
-    ...categorySlots.map((slot) => `category-${slot}`),
+    ...categorySlots.flatMap((slot) => [
+      `category-${slot}`,
+      `category-${slot}-background`,
+      `category-${slot}-color`,
+    ]),
   ];
   readonly semanticTokens = semanticColorTokens;
   readonly steps = paletteSteps;
@@ -191,6 +242,7 @@ class FoundationColors {
 
 @Component({
   selector: 'holita-foundation-brands',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @for (brand of brands; track brand.name) {
       <section>
@@ -286,6 +338,7 @@ class FoundationBrands {
 
 @Component({
   selector: 'holita-foundation-typography',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section>
       <p class="eyebrow">Eyebrow · text.xs</p>
@@ -335,6 +388,7 @@ class FoundationTypography {}
 
 @Component({
   selector: 'holita-foundation-density',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, ButtonDirective, InputText, Select, TableModule],
   template: `
     <section>
@@ -423,6 +477,7 @@ class FoundationDensity {
 
 @Component({
   selector: 'holita-foundation-shapes',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section>
       @for (radius of radii; track radius) {
@@ -466,6 +521,7 @@ class FoundationShapes {
 
 @Component({
   selector: 'holita-foundation-tones',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section>
       @for (tone of tones; track tone) {
@@ -512,12 +568,18 @@ class FoundationTones {
 
 @Component({
   selector: 'holita-foundation-categories',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section>
       @for (slot of slots; track slot) {
         <div class="category">
           <span class="swatch" [style.background]="'var(--p-app-category-' + slot + ')'"></span>
-          <span><span [class]="'app-dot app-dot--' + slot"></span> Group {{ slot }}</span>
+          <span
+            class="label"
+            [style.background]="'var(--p-app-category-' + slot + '-background)'"
+            [style.color]="'var(--p-app-category-' + slot + '-color)'"
+            ><span [class]="'app-dot app-dot--' + slot"></span> Group {{ slot }}</span
+          >
         </div>
       }
     </section>
@@ -543,6 +605,10 @@ class FoundationTones {
       block-size: 2rem;
       border-radius: var(--p-app-radius-control);
     }
+    .label {
+      padding: var(--p-app-space-2);
+      border-radius: var(--p-app-radius-control);
+    }
   `,
 })
 class FoundationCategories {
@@ -551,6 +617,7 @@ class FoundationCategories {
 
 @Component({
   selector: 'holita-foundation-breakpoints',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section>
       @for (name of names; track name) {

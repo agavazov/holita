@@ -107,6 +107,55 @@ export function brandContrastChecks(brand: Brand): readonly ContrastCheck[] {
     check('Form border on surface 50', formBorder, surface(50), 3),
     check('Dark: form border on surface 950', surface(500), surface(950), 3),
     check('Dark: form border on surface 900', surface(500), surface(900), 3),
+    check('Frame text: surface 700 on surface 50', surface(700), surface(50), 4.5),
+    check('Dark frame text: surface 0 on surface 950', white, surface(950), 4.5),
+    check('Panel text: surface 700 on surface 0', surface(700), white, 4.5),
+    check('Dark panel text: surface 0 on surface 900', white, surface(900), 4.5),
+    check('Panel header: surface 500 on surface 50', surface(500), surface(50), 4.5),
+    check('Dark panel header: surface 400 on surface 800', surface(400), surface(800), 4.5),
+    check('Sidebar text/drawer: surface 0 on surface 900', white, surface(900), 4.5),
+    check('Dark sidebar text/drawer: surface 100 on surface 950', surface(100), surface(950), 4.5),
+    check('Sidebar item: surface 100 on surface 900', surface(100), surface(900), 4.5),
+    check('Dark sidebar item: surface 100 on surface 950', surface(100), surface(950), 4.5),
+    check('Sidebar item hover: surface 100 on surface 800', surface(100), surface(800), 4.5),
+    check('Sidebar icon/group/footer: surface 300 on surface 900', surface(300), surface(900), 4.5),
+    check('Sidebar icon hover: surface 300 on surface 800', surface(300), surface(800), 4.5),
+    check(
+      'Dark sidebar icon/group/footer: surface 400 on surface 950',
+      surface(400),
+      surface(950),
+      4.5,
+    ),
+    check('Dark sidebar icon hover: surface 400 on surface 800', surface(400), surface(800), 4.5),
+    check('Sidebar selected text/icon/indicator: white on primary 700', white, primary(700), 4.5),
+    check(
+      'Dark sidebar selected text/icon/indicator: surface 950 on primary 400',
+      surface(950),
+      primary(400),
+      4.5,
+    ),
+    // A positive outline offset places the focus ring on the sidebar, including selected items.
+    check('Sidebar outer focus: white on surface 900', white, surface(900), 3),
+    check('Dark sidebar outer focus: white on surface 950', white, surface(950), 3),
+    check('Sidebar hover outer focus: white on surface 800', white, surface(800), 3),
+    check('Panel accent: primary 800 on primary 50', primary(800), primary(50), 4.5),
+    check('Dark panel accent: primary 200 on primary 950', primary(200), primary(950), 4.5),
+    check('Teal accent: 800 on 50', primitiveHex('teal', 800), primitiveHex('teal', 50), 4.5),
+    check(
+      'Dark teal accent: 200 on 950',
+      primitiveHex('teal', 200),
+      primitiveHex('teal', 950),
+      4.5,
+    ),
+    check('Teal solid accent on panel', primitiveHex('teal', 700), white, 3),
+    check('Dark teal solid accent on panel', primitiveHex('teal', 400), surface(900), 3),
+    check('Hero primary endpoint: white on primary 700', white, primary(700), 4.5),
+    check('Hero teal endpoint: white on teal 800', white, primitiveHex('teal', 800), 4.5),
+    check('Dark hero primary endpoint: white on primary 900', white, primary(900), 4.5),
+    check('Dark hero teal endpoint: white on teal 950', white, primitiveHex('teal', 950), 4.5),
+    check('Plate characters: surface 950 on white (both schemes)', surface(950), white, 4.5),
+    check('Plate outline: surface 500 on white (both schemes)', surface(500), white, 3),
+    check('Plate EU band: white on blue 700 (both schemes)', white, primitiveHex('blue', 700), 4.5),
   ];
 }
 
@@ -126,6 +175,18 @@ export function toneContrastChecks(brand: Brand): readonly ContrastCheck[] {
     checks.push(
       check(`Tag ${tone}: 800 on 100`, hex(800), hex(100), 4.5),
       check(`Dark tag ${tone}: 200 on tint`, hex(200), darkTint, 4.5),
+      check(
+        `Dark ${tone} icon well on frame: 200 on tint over surface 950`,
+        hex(200),
+        mixSrgb(hex(400), surface(950), 0.16),
+        4.5,
+      ),
+      check(
+        `Dark ${tone} problem header: 200 on tint over surface 800`,
+        hex(200),
+        mixSrgb(hex(400), surface(800), 0.16),
+        4.5,
+      ),
       check(`Solid ${tone} mark on surface 0`, hex(600), white, 3),
       check(`Dark solid ${tone} mark on surface 900`, hex(400), surface(900), 3),
       check(`Message ${tone}: 700 on 50`, hex(700), hex(50), 4.5),
@@ -151,14 +212,14 @@ export function toneContrastChecks(brand: Brand): readonly ContrastCheck[] {
     check('Dark solid neutral mark on surface 900', surface(400), surface(900), 3),
     // The topbar unread badge: frame background text on the danger solid mark.
     check(
-      'Unread badge: surface 0 on danger 600',
-      white,
+      'Unread badge: frame surface 50 on danger 600',
+      surface(50),
       primitiveHex(statusTones.danger, 600),
       4.5,
     ),
     check(
-      'Dark unread badge: surface 900 on danger 400',
-      surface(900),
+      'Dark unread badge: frame surface 950 on danger 400',
+      surface(950),
       primitiveHex(statusTones.danger, 400),
       4.5,
     ),
@@ -178,6 +239,20 @@ export function toneContrastChecks(brand: Brand): readonly ContrastCheck[] {
     checks.push(
       check(`Category ${slot} on surface 0`, primitiveHex(family, light), white, 3),
       check(`Dark category ${slot} on surface 900`, primitiveHex(family, 400), surface(900), 3),
+      check(
+        `Category ${slot} label: 800 on 100`,
+        primitiveHex(family, 800),
+        primitiveHex(family, 100),
+        4.5,
+      ),
+      ...([800, 900, 950] as const).map((step) =>
+        check(
+          `Dark category ${slot} label: 200 on tint over surface ${String(step)}`,
+          primitiveHex(family, 200),
+          mixSrgb(primitiveHex(family, 400), surface(step), 0.16),
+          4.5,
+        ),
+      ),
     );
   }
   return checks;

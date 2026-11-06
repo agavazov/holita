@@ -5,6 +5,7 @@ import bg from './bg.json';
 
 /** Null means no installed device; undefined means the live request is unavailable. */
 export type FleetLiveDevice = AdminFleetLiveDeviceFragment | null | undefined;
+export type FleetLiveMode = 'table' | 'record';
 const catalogs: Record<Language, typeof en> = { en, bg };
 export function fleetLiveText(language: Language) {
   return catalogs[language];

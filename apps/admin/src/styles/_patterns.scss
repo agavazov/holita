@@ -89,6 +89,9 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
 
   // Panel surface for cards, KPI strips and table panels.
   .app-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p-app-space-3);
     min-inline-size: 0;
     padding: var(--p-app-panel-padding);
     background: var(--p-app-panel-background);
@@ -97,11 +100,36 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
   }
 
   // A page view (`host: { class: 'app-view' }`): header, KPIs, filters and panels stacked.
-  .app-view {
+  .app-view,
+  .app-tab-content {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
     gap: var(--p-app-stack-gap);
     min-inline-size: 0;
+  }
+
+  // Stretch siblings inside a card; app-stack is reserved for start-aligned content.
+  .app-card__body {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--p-app-space-3);
+    min-inline-size: 0;
+  }
+
+  .app-card--accent {
+    background: var(--p-app-panel-accent-background);
+    color: var(--p-app-panel-accent-color);
+
+    :is(h2, h3, .app-card__title) {
+      color: inherit;
+    }
+
+    .app-link {
+      color: inherit;
+      text-decoration: underline;
+    }
   }
 
   // Route-backed sections: real links with an underline and a non-colour current-page cue.
@@ -229,6 +257,7 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     flex-direction: column;
     align-items: flex-start;
     gap: var(--p-app-space-3);
+    min-inline-size: 0;
   }
 
   .app-card__header {
@@ -236,7 +265,7 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     align-items: center;
     justify-content: space-between;
     gap: var(--p-app-space-3);
-    margin-block-end: var(--p-app-space-3);
+    min-inline-size: 0;
   }
 
   .app-card__title {
@@ -425,11 +454,60 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     .app-dot--#{$tone} {
       background: var(--p-app-tone-#{$tone}-solid);
     }
+
+    .app-problem-panel--#{$tone},
+    .app-icon-well--#{$tone} {
+      --app-tone-background: var(--p-app-tone-#{$tone}-background);
+      --app-tone-color: var(--p-app-tone-#{$tone}-color);
+      --app-tone-solid: var(--p-app-tone-#{$tone}-solid);
+    }
   }
 
   @each $slot in $categories {
     .app-dot--#{$slot} {
       background: var(--p-app-category-#{$slot});
+    }
+
+    .app-icon-well--#{$slot} {
+      --app-tone-background: var(--p-app-category-#{$slot}-background);
+      --app-tone-color: var(--p-app-category-#{$slot}-color);
+    }
+  }
+
+  .app-icon-well {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    inline-size: var(--p-app-control-height);
+    block-size: var(--p-app-control-height);
+    border-radius: var(--p-app-radius-control);
+    background: var(--app-tone-background, var(--p-app-accent-background));
+    color: var(--app-tone-color, var(--p-app-accent-color));
+
+    > svg {
+      inline-size: 1rem;
+      block-size: 1rem;
+    }
+  }
+
+  .app-problem-panel {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--p-app-space-3);
+    min-inline-size: 0;
+    padding: var(--p-app-space-4);
+    border-inline-start: 3px solid var(--app-tone-solid, var(--p-app-tone-info-solid));
+    border-radius: var(--p-app-radius-control);
+    background: var(--app-tone-background, var(--p-app-tone-info-background));
+    color: var(--app-tone-color, var(--p-app-tone-info-color));
+
+    :is(h2, h3, .app-card__title) {
+      color: inherit;
+    }
+
+    .app-link {
+      color: inherit;
+      text-decoration: underline;
     }
   }
 
@@ -449,6 +527,48 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     letter-spacing: 0;
   }
 
+  // Compact EU-style plate, usable on records, table identities and map popups.
+  // data-country is optional; supply the actual registration country when it is known.
+  .app-plate {
+    display: inline-flex;
+    align-items: stretch;
+    flex: none;
+    max-inline-size: 100%;
+    overflow: hidden;
+    border: 1px solid var(--p-app-plate-border-color);
+    border-radius: var(--p-app-radius-tag);
+    background: var(--p-app-plate-background);
+    color: var(--p-app-plate-color);
+    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    font-size: var(--p-app-text-base);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+    white-space: nowrap;
+    vertical-align: middle;
+
+    &::before {
+      content: attr(data-country);
+      display: grid;
+      place-items: center;
+      flex: none;
+      min-inline-size: 1.1rem;
+      margin-inline-end: var(--p-app-space-2);
+      padding-inline: var(--p-app-space-1);
+      background: var(--p-app-plate-band-background);
+      color: var(--p-app-plate-band-color);
+      font-family: var(--p-app-font-family);
+      font-size: var(--p-app-text-xs);
+      letter-spacing: 0;
+    }
+
+    &::after {
+      content: '';
+      flex: none;
+      inline-size: var(--p-app-space-2);
+    }
+  }
+
   .app-muted {
     color: var(--p-text-muted-color);
   }
@@ -460,6 +580,94 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  // Opt in after defining explicit columns; old lists keep their intrinsic geometry until migrated.
+  .app-table-fixed .p-datatable-table,
+  table.app-table-fixed {
+    table-layout: fixed;
+    min-inline-size: var(--app-table-min-width, 100%);
+  }
+
+  .app-cell-identity {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p-app-space-1);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    block-size: calc(var(--p-app-space-8) + var(--p-app-space-1));
+    overflow: hidden;
+    line-height: 1.2;
+
+    > * {
+      min-inline-size: 0;
+      max-inline-size: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    > :nth-child(2) {
+      color: var(--p-text-muted-color);
+      font-size: var(--p-app-text-sm);
+    }
+
+    .app-plate {
+      align-self: flex-start;
+      color: var(--p-app-plate-color);
+      font-size: var(--p-app-text-table);
+      line-height: 1.1;
+    }
+  }
+
+  .app-cell-status,
+  .app-cell-problems {
+    display: flex;
+    align-items: center;
+    gap: var(--p-app-space-2);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+
+    > :is(span, a, button) {
+      min-inline-size: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    > p-tag {
+      flex: none;
+      max-inline-size: 100%;
+    }
+
+    .p-tag {
+      max-inline-size: 100%;
+      overflow: hidden;
+    }
+
+    .p-tag-label {
+      min-inline-size: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .app-cell-date,
+  .app-cell-number {
+    overflow: hidden;
+    font-variant-numeric: var(--p-app-font-numeric);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-cell-number {
+    text-align: end;
+  }
+
+  :is(.app-cell-date, .app-cell-number):not(td):not(th) {
+    display: block;
+    max-inline-size: 100%;
   }
 
   // Popup menus (MenuButton `menuClass`): a capped, scrolling list and a wider panel.
@@ -593,6 +801,7 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
         background: var(--p-content-background);
 
         > .app-cell-stack,
+        > .app-cell-identity,
         > .app-table-identity {
           inline-size: 8.5rem;
           min-inline-size: 8.5rem;
@@ -602,9 +811,18 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
 
         .app-link,
         .content-link {
+          display: -webkit-box;
+          overflow: hidden;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
           white-space: normal;
           overflow-wrap: anywhere;
           text-align: start;
+        }
+
+        .app-cell-identity .app-link {
+          display: block;
+          white-space: nowrap;
         }
       }
 
@@ -617,8 +835,9 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
         display: block;
         font-size: var(--p-app-text-sm);
         color: var(--p-text-muted-color);
-        white-space: normal;
-        overflow-wrap: anywhere;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .app-table-mobile-actions {
@@ -657,5 +876,38 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     margin-block-start: var(--p-app-space-1);
     overflow-wrap: anywhere;
     white-space: pre-line;
+  }
+
+  // TablePanel confirmation content is displayed in an overlay appended to the body.
+  .table-panel__confirm {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p-app-space-3);
+    min-inline-size: 0;
+    inline-size: 100%;
+  }
+
+  .table-panel__confirm-records {
+    max-block-size: min(16rem, 40dvh);
+    overflow-y: auto;
+    margin: 0;
+    padding: var(--p-app-space-2) var(--p-app-space-3);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-app-radius-control);
+    list-style: none;
+
+    > li {
+      padding-block: var(--p-app-space-1);
+      overflow: hidden;
+      font-weight: 600;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .table-panel__confirm-count,
+  .table-panel__confirm-skipped {
+    font-weight: 400;
+    color: var(--p-text-muted-color);
   }
 }

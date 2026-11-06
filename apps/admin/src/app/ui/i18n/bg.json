@@ -75,7 +75,12 @@
     "pageReport": "{first}–{last} от {totalRecords}",
     "rowActions": "Действия за {name}",
     "confirmRecords": "Записи: {count}",
-    "skippedRecords": "Избрани записи, за които действието не важи, остават непроменени: {count}."
+    "skippedRecords": "Избрани записи, за които действието не важи, остават непроменени: {count}.",
+    "previousPage": "Предишна",
+    "nextPage": "Следваща",
+    "cursorPage": "Страница {page}",
+    "pagination": "Страници на таблицата",
+    "localCount": "{count} записа"
   },
   "menu": {
     "current": "текущ избор"

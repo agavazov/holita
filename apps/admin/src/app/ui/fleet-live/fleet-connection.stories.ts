@@ -11,7 +11,7 @@ const meta: Meta<FleetConnection> = {
 };
 export default meta;
 type Story = StoryObj<FleetConnection>;
-export const Online: Story = { args: { device: fixtureLiveDevice } };
+export const Live: Story = { args: { device: fixtureLiveDevice } };
 export const WithoutDevice: Story = { args: { device: null } };
 export const Unavailable: Story = { args: { device: undefined } };
 export const Backup: Story = {
@@ -35,3 +35,23 @@ export const NeverConnected: Story = {
   args: { device: { ...fixtureLiveDevice, ermState: null, lastReportedAt: null } },
 };
 export const WithoutTruck: Story = { args: { device: { ...fixtureLiveDevice, vehicleId: null } } };
+
+export const ConnectedWithReportingGap: Story = {
+  args: {
+    mode: 'table',
+    device: {
+      ...fixtureLiveDevice,
+      ermState: fixtureLiveDevice.ermState
+        ? {
+            ...fixtureLiveDevice.ermState,
+            online: true,
+            health: {
+              ...fixtureLiveDevice.ermState.health,
+              overdue: true,
+              lastFrameAgeSeconds: 1800,
+            },
+          }
+        : null,
+    },
+  },
+};

@@ -1,0 +1,39 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.live-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--p-app-space-1);
+  min-inline-size: 0;
+}
+
+:host([data-mode='table']) {
+  .live-cell {
+    flex-direction: row;
+    align-items: center;
+    block-size: 2rem;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .live-cell__text {
+    min-inline-size: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  p-tag,
+  .app-icon-button {
+    flex-shrink: 0;
+  }
+
+  .app-icon-button {
+    inline-size: 2rem;
+    block-size: 2rem;
+  }
+}

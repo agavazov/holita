@@ -1,10 +1,15 @@
 <div class="kpi-tile__head">
+  <span class="kpi-tile__icon app-icon-well" aria-hidden="true"
+    ><ng-content select="[kpiIcon]"
+  /></span>
   @if (link(); as link) {
-    <a class="kpi-tile__label kpi-tile__link" [routerLink]="link" [queryParams]="queryParams()">{{
-      label()
-    }}</a>
+    <a class="kpi-tile__label kpi-tile__link" [routerLink]="link" [queryParams]="queryParams()">
+      <span class="kpi-tile__label-text">{{ label() }}</span>
+    </a>
   } @else {
-    <span class="kpi-tile__label">{{ label() }}</span>
+    <span class="kpi-tile__label"
+      ><span class="kpi-tile__label-text">{{ label() }}</span></span
+    >
   }
   @if (explanation(); as explanation) {
     <button
@@ -20,42 +25,45 @@
     </p-popover>
   }
 </div>
-@if (busy()) {
-  <div class="kpi-tile__skeleton">
-    <p-skeleton width="55%" height="1.75rem" />
-    <p-skeleton width="35%" height="0.75rem" />
-  </div>
-} @else {
-  <p class="kpi-tile__value">
+<div class="kpi-tile__value">
+  @if (busy()) {
+    <p-skeleton width="8rem" height="1.75rem" />
+  } @else {
     <span class="app-num">{{ displayValue() }}</span>
     @if (unit() && value() !== null) {
       <span class="kpi-tile__unit">{{ unit() }}</span>
     }
-  </p>
-  @if (secondary() || delta()) {
-    <div class="kpi-tile__meta">
-      @if (delta(); as delta) {
-        <span class="kpi-tile__delta" [attr.data-sentiment]="delta.sentiment">
-          @switch (delta.trend) {
-            @case ('up') {
-              <svg data-p-icon="arrow-up-right" aria-hidden="true"></svg>
-            }
-            @case ('down') {
-              <svg data-p-icon="arrow-down-right" aria-hidden="true"></svg>
-            }
-            @default {
-              <svg data-p-icon="minus" aria-hidden="true"></svg>
-            }
+  }
+</div>
+<div class="kpi-tile__meta">
+  @if (busy()) {
+    <p-skeleton width="6rem" height="0.75rem" />
+  } @else {
+    @if (delta(); as delta) {
+      <span class="kpi-tile__delta" [attr.data-sentiment]="delta.sentiment">
+        @switch (delta.trend) {
+          @case ('up') {
+            <svg data-p-icon="arrow-up-right" aria-hidden="true"></svg>
           }
-          {{ delta.text }}
-        </span>
-      }
-      @if (secondary(); as secondary) {
-        <span class="kpi-tile__secondary">{{ secondary }}</span>
-      }
-    </div>
+          @case ('down') {
+            <svg data-p-icon="arrow-down-right" aria-hidden="true"></svg>
+          }
+          @default {
+            <svg data-p-icon="minus" aria-hidden="true"></svg>
+          }
+        }
+        {{ delta.text }}
+      </span>
+    }
+    @if (secondary(); as secondary) {
+      <span class="kpi-tile__secondary" [attr.title]="secondary">{{ secondary }}</span>
+    }
   }
-  @if (footnote(); as footnote) {
-    <p class="kpi-tile__footnote">{{ footnote }}</p>
+</div>
+<p class="kpi-tile__footnote" [attr.title]="footnote()">
+  @if (busy()) {
+    <p-skeleton width="4rem" height="0.625rem" />
+  } @else {
+    {{ footnote() }}
   }
-}
+</p>

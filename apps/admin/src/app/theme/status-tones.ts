@@ -77,18 +77,16 @@ function categoryToken(slot: CategorySlot): string {
   return `light-dark({${family}.${String(light)}}, {${family}.400})`;
 }
 
-/** `extend.app.category.*`. */
-export function appCategoryTokens(): Readonly<Record<CategorySlot, string>> {
-  return {
-    c1: categoryToken('c1'),
-    c2: categoryToken('c2'),
-    c3: categoryToken('c3'),
-    c4: categoryToken('c4'),
-    c5: categoryToken('c5'),
-    c6: categoryToken('c6'),
-    c7: categoryToken('c7'),
-    c8: categoryToken('c8'),
-  };
+/** Solids keep their existing names; paired tints support icon wells and category labels. */
+export function appCategoryTokens(): Readonly<Record<string, string>> {
+  const tokens: Record<string, string> = {};
+  for (const slot of categorySlots) {
+    const { family } = categoryPalette[slot];
+    tokens[slot] = categoryToken(slot);
+    tokens[`${slot}Background`] = `light-dark({${family}.100}, ${tint(family)})`;
+    tokens[`${slot}Color`] = `light-dark({${family}.800}, {${family}.200})`;
+  }
+  return tokens;
 }
 
 function tagTone(family: string) {

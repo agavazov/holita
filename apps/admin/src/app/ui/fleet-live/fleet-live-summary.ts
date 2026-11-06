@@ -39,6 +39,7 @@ import { fleetLiveText, hasFleetFaults, type FleetLiveDevice } from './fleet-liv
     <p class="app-muted">{{ text().summaryScope }}</p>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'app-view' },
 })
 export class FleetLiveSummary {
   readonly devices = input.required<readonly FleetLiveDevice[]>();

@@ -20,6 +20,7 @@ import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Message } from 'primeng/message';
 import { Paginator, type PaginatorState } from 'primeng/paginator';
 import { Skeleton } from 'primeng/skeleton';
+import { TableModule } from 'primeng/table';
 import { confirmAction, confirmDialogPt } from '../confirm';
 import { EmptyState } from '../empty-state/empty-state';
 import { formatNumber, localeOf } from '../format/format';
@@ -33,6 +34,32 @@ export interface TablePage {
   readonly pageSize: number;
   readonly total: number;
 }
+
+export type TableMode = 'offset' | 'cursor' | 'local';
+
+/** Cursor history supplies its real navigation state; the concrete view keeps the cursor stack. */
+export interface TableCursorPage {
+  readonly page: number;
+  readonly hasPrevious: boolean;
+  readonly hasNext: boolean;
+}
+
+/** Reuse these definitions in the projected table's colgroup. Widths include a CSS unit. */
+export interface TableColumn {
+  readonly id: string;
+  readonly label: string;
+  readonly width: string;
+  readonly kind?:
+    'identity' | 'text' | 'status' | 'date' | 'number' | 'problems' | 'actions' | 'check';
+  readonly className?: string;
+}
+
+const fallbackColumns: readonly TableColumn[] = [
+  { id: 'check', label: '', width: '3rem', kind: 'check' },
+  { id: 'identity', label: '', width: '35%', kind: 'identity' },
+  { id: 'value', label: '', width: '25%' },
+  { id: 'detail', label: '', width: '40%' },
+];
 
 interface PendingConfirm {
   readonly detail: string | null;
@@ -50,11 +77,21 @@ let nextId = 0;
  */
 @Component({
   selector: 'holita-table-panel',
-  imports: [ButtonDirective, ConfirmDialog, Message, Paginator, Skeleton, EmptyState, Times],
+  imports: [
+    ButtonDirective,
+    ConfirmDialog,
+    Message,
+    Paginator,
+    Skeleton,
+    TableModule,
+    EmptyState,
+    Times,
+  ],
   providers: [ConfirmationService],
   templateUrl: './table-panel.html',
   styleUrl: './table-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[style.--app-table-min-width]': 'tableMinWidth()' },
 })
 export class TablePanel<A extends string = string> {
   readonly heading = input.required<string>();
@@ -73,6 +110,10 @@ export class TablePanel<A extends string = string> {
   readonly selection = input<readonly ListRecord<A>[]>([]);
   readonly selectionProgress = input<string | null>(null);
   readonly page = input<TablePage | null>(null);
+  readonly mode = input<TableMode>('offset');
+  readonly cursorPage = input<TableCursorPage | null>(null);
+  readonly columns = input<readonly TableColumn[]>([]);
+  readonly tableMinWidth = input('100%');
   readonly pageSizes = input<readonly number[]>([10, 20, 50, 100]);
   readonly skeletonRows = input<number | null>(null);
   readonly action = output<ListActionRequest<A>>();
@@ -80,6 +121,7 @@ export class TablePanel<A extends string = string> {
   readonly clearFilters = output();
   readonly clearSelection = output();
   readonly pageChange = output<{ page: number; pageSize: number }>();
+  readonly cursorChange = output<'previous' | 'next'>();
 
   protected readonly id = `table-panel-${String(nextId++)}`;
   private readonly language = inject(UI_LANGUAGE);
@@ -99,7 +141,7 @@ export class TablePanel<A extends string = string> {
   protected readonly totalText = computed(() => {
     const total = this.total();
     const kind = this.view().kind;
-    if (total === null || kind === 'loading' || kind === 'error') {
+    if (this.mode() === 'cursor' || total === null || kind === 'loading' || kind === 'error') {
       return null;
     }
     return formatNumber(total, this.language());
@@ -110,6 +152,25 @@ export class TablePanel<A extends string = string> {
   protected readonly skeletons = computed(() => {
     const count = this.skeletonRows() ?? Math.min(this.page()?.pageSize ?? 8, 8);
     return Array.from({ length: count }, (_, index) => index);
+  });
+  protected readonly loadingColumns = computed(() =>
+    this.columns().length ? this.columns() : fallbackColumns,
+  );
+  protected readonly hasActionColumn = computed(() =>
+    this.columns().some((column) => column.kind === 'actions'),
+  );
+  protected readonly cursorPageText = computed(() =>
+    interpolate(this.text().table.cursorPage, {
+      page: formatNumber(this.cursorPage()?.page ?? 1, this.language()),
+    }),
+  );
+  protected readonly localCountText = computed(() => {
+    const total = this.total();
+    return total === null
+      ? null
+      : interpolate(this.text().table.localCount, {
+          count: formatNumber(total, this.language()),
+        });
   });
   protected readonly selectionText = computed(() =>
     interpolate(this.text().table.selected, {
@@ -139,10 +200,19 @@ export class TablePanel<A extends string = string> {
     const page = this.page();
     return page ? (page.page - 1) * page.pageSize : 0;
   });
-  /** The footer and its paginator whenever rows are shown; none for empty or unmatched lists. */
+  /** Every mode uses the same footer; cursor pages never manufacture a total. */
   protected readonly showFooter = computed(() => {
+    if (!this.showTable() && this.view().kind !== 'loading') {
+      return false;
+    }
+    if (this.mode() === 'cursor') {
+      return this.cursorPage() !== null;
+    }
+    if (this.mode() === 'local') {
+      return true;
+    }
     const page = this.page();
-    return !!page && page.total > 0 && this.showTable();
+    return !!page && (page.total > 0 || this.view().kind === 'loading');
   });
   /** Page links and first/last only when the rows do not fit on one page. */
   protected readonly multiPage = computed(() => {

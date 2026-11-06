@@ -11,19 +11,19 @@
     0 -1px 0 var(--p-app-panel-border-color);
 }
 
-:host([data-tone])::before {
+:host([data-tone])::before,
+:host([data-category])::before {
   content: '';
   position: absolute;
   inset-block: var(--p-app-space-3);
   inset-inline-start: 0;
   inline-size: 3px;
-  border-radius: 0 3px 3px 0;
+  border-radius: var(--p-app-radius-tag);
+  background: var(--app-tone-color);
 }
 
-@each $tone in success, info, warn, danger, neutral, accent {
-  :host([data-tone='#{$tone}'])::before {
-    background: var(--p-app-tone-#{$tone}-solid);
-  }
+.kpi-tile__icon:empty {
+  display: none;
 }
 
 :host(.kpi-tile--link:hover) {
@@ -33,9 +33,9 @@
 .kpi-tile__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--p-app-space-2);
-  min-block-size: 1.75rem;
+  min-block-size: 2.5rem;
 }
 
 .kpi-tile__label {
@@ -44,7 +44,15 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--p-text-muted-color);
-  overflow-wrap: anywhere;
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.kpi-tile__label-text {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .kpi-tile__link {
@@ -82,6 +90,9 @@
   font-size: var(--p-app-text-kpi);
   font-weight: 600;
   line-height: 1.2;
+  min-block-size: calc(var(--p-app-text-kpi) * 1.2);
+  overflow: hidden;
+  white-space: nowrap;
   letter-spacing: -0.01em;
   color: var(--p-text-color);
 }
@@ -95,7 +106,9 @@
 
 .kpi-tile__meta {
   display: flex;
-  flex-wrap: wrap;
+  min-block-size: 1.4rem;
+  overflow: hidden;
+  white-space: nowrap;
   align-items: center;
   gap: var(--p-app-space-1) var(--p-app-space-2);
   font-size: var(--p-app-text-sm);
@@ -103,10 +116,14 @@
 
 .kpi-tile__secondary,
 .kpi-tile__footnote {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--p-text-muted-color);
 }
 
 .kpi-tile__footnote {
+  min-block-size: 1.2rem;
   font-size: var(--p-app-text-xs);
 }
 
@@ -129,11 +146,4 @@
   &[data-sentiment='bad'] {
     color: var(--p-app-tone-danger-color);
   }
-}
-
-.kpi-tile__skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: var(--p-app-space-2);
-  padding-block: var(--p-app-space-1);
 }

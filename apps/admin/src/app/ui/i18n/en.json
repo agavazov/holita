@@ -75,7 +75,12 @@
     "pageReport": "{first}–{last} of {totalRecords}",
     "rowActions": "Actions for {name}",
     "confirmRecords": "Records: {count}",
-    "skippedRecords": "Selected records it does not apply to are left unchanged: {count}."
+    "skippedRecords": "Selected records it does not apply to are left unchanged: {count}.",
+    "previousPage": "Previous",
+    "nextPage": "Next",
+    "cursorPage": "Page {page}",
+    "pagination": "Table pagination",
+    "localCount": "{count} records"
   },
   "menu": {
     "current": "current choice"

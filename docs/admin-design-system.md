@@ -42,7 +42,7 @@ Layer order is `holita-reset, primeng, holita`; keep Sass and `holitaThemeOption
 | ------------------ | ------- | ------- | ------------------------------ | ----------------------------- |
 | `cobalt` (default) | blue    | slate   | 600 / 700 / 800                | 400 / 300 / 200               |
 | `ember`            | orange  | zinc    | 700 / 800 / 900                | 400 / 300 / 200               |
-| `pine`             | teal    | stone   | 600 / 700 / 800                | 400 / 300 / 200               |
+| `pine`             | teal    | stone   | 700 / 800 / 900                | 400 / 300 / 200               |
 
 Brands reference Aura palette steps, not copied hex values. New names belong in the choice
 unions/arrays and brand records; a new palette extends the palette union. Changed color pairs
@@ -65,24 +65,31 @@ accessibility audit. Use canvas-muted tokens on canvas backgrounds, not panel mu
 
 ### Tokens (`--p-app-*`)
 
-| Group         | Use                                                                                         |
-| ------------- | ------------------------------------------------------------------------------------------- |
-| Typography    | Local Cyrillic-capable Lato, `font-numeric`, `text-xs/sm/table/base/md/lg/title/kpi`        |
-| Space/shape   | `space-1/2/3/4/5/6/8/10`, `radius-frame/panel/control/tag`, `shadow-floating`               |
-| Surfaces      | `canvas-*`, `frame-*`, `panel-*`; panel headers and muted text use their own contrast pairs |
-| Shell         | `sidebar-*`, `topbar-height`, `content-max-width`, `gutter`, `gutter-narrow`                |
-| Layout        | `stack-gap`, `control-height`, `row-height`, `drawer-width-md/lg`, `kpi-min-width`          |
-| Status/series | `tone-<name>-color/background/solid`, `category-c1` through `category-c8`                   |
+| Group         | Use                                                                                                                                                       |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Typography    | Local Cyrillic-capable Lato, `font-numeric`, `text-xs/sm/table/base/md/lg/title/kpi`                                                                      |
+| Space/shape   | `space-1/2/3/4/5/6/8/10`, `radius-frame/panel/control/tag`, `shadow-floating`                                                                             |
+| Surfaces      | `canvas-*`, `frame-*`, `panel-*`; tinted workspace, white/dark panels and `panel-accent-*`                                                                |
+| Shell         | `sidebar-*` includes dark surfaces, items/icons, groups, footer, focus and mobile drawer; `topbar-height`, `content-max-width`, `gutter`, `gutter-narrow` |
+| Layout        | `stack-gap`, `control-height`, `row-height`, `drawer-width-md/lg`, `kpi-min-width`                                                                        |
+| Status/series | `tone-<name>-color/background/solid`, category solids `category-c1` through `category-c8` and each slot’s `-background`/`-color` pair                     |
+| Accent/plate  | Teal `accent-background/color/solid`, `hero-background/color`, `plate-background/color/border-color/band-background/band-color`                           |
 
 Define tokens under `extend.app` in `theme/holita-preset.ts`; nested paths become kebab-case
 CSS properties. Reference Aura/holita tokens centrally. Shadows are for floating surfaces.
 Table column titles use the DataTable density token, not `text-xs`.
 
+The canvas uses neutral 100/950 and the frame 50/950; panels use 0/900 with 50/800 headers
+(light/dark). Sidebar tokens cover the desktop rail and mobile drawer together. Use the hero
+gradient only for the sign-in side panel and dashboard header band, with `hero-color` text.
+Other lead panels use `panel-accent-background/color`; the teal accent remains informational.
+
 ### Status tones and categories
 
 Status families are success/green, info/sky, warn/amber and danger/red, plus neutral and accent.
 Use `toneSeverity` for `p-tag`; neutral maps to secondary and accent to the default primary.
-Vehicle groups and chart series use category slots, never arbitrary feature colors.
+Vehicle groups and chart series use category slots, never arbitrary feature colors. Each slot
+provides a solid graphic colour and a measured text/tint pair for icon wells and labels.
 Color always accompanies text or another accessible signal. Charts retain hidden native data
 tables; sparkline names state range and last value. Null is a gap, zero a real value.
 
@@ -154,26 +161,33 @@ Use components only for repeated structure/state/behavior. Single PrimeNG contro
 Components are standalone and OnPush, with signal inputs/outputs, `holita-` selectors and BG/EN
 texts. Source files define full signatures; the table identifies which pattern to use.
 
-| Pattern                                                           | Use and required behavior                                                                                       |
-| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `holita-page-header`                                              | One page `h1` with `id="page-title"`, optional count/back link and action/meta slots                            |
-| `holita-kpi-strip` / `holita-kpi-tile`                            | Named group, truthful loading/error, preformatted values; null shows “—” and has no unit                        |
-| `holita-filter-builder`                                           | Quick search and independent AND conditions; bounds/errors stay visible; incomplete/invalid drafts cannot apply |
-| `holita-table-panel`                                              | Heading/focus target, rows/loading/empty/error/refresh states, paging, selection and shared actions             |
-| `holita-row-actions`                                              | Named row menu; send choices through `TablePanel.run`; destructive actions last                                 |
-| `holita-menu-button`                                              | Accessible popup actions/navigation; real anchors for routes, current-choice labels and disabled/danger states  |
-| `holita-route-drawer`                                             | Loading/missing/error/ready states, labelled Close, sticky footer, dirty/pending guards                         |
-| `holita-form-field`                                               | Label/control/hint/error association, required state and Unicode counter                                        |
-| `holita-empty-state`                                              | Empty/no-results/error/missing/disabled/no-telemetry/done; alert only for errors/missing records                |
-| `holita-column-series`, `holita-stacked-bars`, `holita-sparkline` | Accessible chart/table alternatives, null gaps and preserved zero values                                        |
+| Pattern                                                           | Use and required behavior                                                                                                     |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `holita-page-header`                                              | One page `h1` with `id="page-title"`, optional count/back link and action/meta slots                                          |
+| `holita-kpi-strip` / `holita-kpi-tile`                            | Named group, optional icon/category/status tint and record link; stable loading tracks; null shows “—” without a unit         |
+| `holita-filter-builder`                                           | Quick search and independent AND conditions; bounds/errors stay visible; incomplete/invalid drafts cannot apply               |
+| `holita-table-panel`                                              | Shared offset/cursor/local geometry, column skeletons, retained refresh/stale rows, empty/error states, selection and actions |
+| `holita-row-actions`                                              | Named row menu; send choices through `TablePanel.run`; destructive actions last                                               |
+| `holita-menu-button`                                              | Accessible popup actions/navigation; real anchors for routes, current-choice labels and disabled/danger states                |
+| `holita-route-drawer`                                             | Loading/missing/error/ready states, labelled Close, sticky footer, dirty/pending guards                                       |
+| `holita-form-field`                                               | Label/control/hint/error association, required state and Unicode counter                                                      |
+| `holita-empty-state`                                              | Empty/no-results/error/missing/disabled/no-telemetry/done; alert only for errors/missing records                              |
+| `holita-column-series`, `holita-stacked-bars`, `holita-sparkline` | Accessible chart/table alternatives, null gaps and preserved zero values                                                      |
 
 Use `.app-view`, `.app-card`/`.app-card-grid`, `.app-stack`, `.app-settings-section` and
-`.app-save-bar` for page layout. Forms use `.app-form-section`/`.app-form-grid`; facts use
+`.app-save-bar` for page layout. Cards separate direct children with a token gap;
+`.app-card__body` stretches inner siblings and `.app-tab-content` provides the same outer stack
+as `.app-view`. Use `.app-stack` only when children should align to the start. A card has no
+outer margin. Use `.app-card--accent` for a contextual lead panel,
+`.app-icon-well--<tone|c1…c8>` with `.app-icon-well` for a tinted icon, and
+`.app-problem-panel--<tone>` with `.app-problem-panel` for a concise status block. Forms use `.app-form-section`/`.app-form-grid`; facts use
 `<dl class="app-facts">`. Context navigation uses real `.app-route-nav__link` anchors and
 `aria-current`. Do not recreate shared cards, menus, value meters or form layouts in a feature.
 
 Numbers use `.app-num`, technical values `.app-mono`, statuses `p-tag`/`toneSeverity` and labelled
-dots. Format through `ui/format`; preserve null and zero. Fleet read values use
+dots. `.app-plate` renders a bounded monospace licence plate with an EU band; set `data-country`
+only when the actual registration country is known. It works in lists, details and map popups.
+Format through `ui/format`; preserve null and zero. Fleet read values use
 `injectFleetFormat`; explicitly labelled canonical inputs/filters keep canonical units. Odometer
 entry converts the configured display unit back to km while preserving an unchanged baseline.
 Use shared zoned-time helpers for instants, with valid gap/overlap handling; date-only values
@@ -191,12 +205,37 @@ or actions. Keep source identity, retrieval and event clocks, gaps and missing f
 
 ### Table conventions
 
-Project a lazy `p-table` with `lazyLoadOnInit=false`, `dataKey="id"`, scrollable content and no
-competing empty-message template. Bind sort state and map lazy events through shared
+Every list/sub-table projects a `p-table` into TablePanel. The default `mode="offset"` keeps the
+existing `page`/`pageChange` contract. Cursor history uses `mode="cursor"`,
+`cursorPage={page, hasPrevious, hasNext}` and `cursorChange` (`previous`/`next`); the concrete host
+owns its cursor stack and never invents a total. Finite arrays use `mode="local"` with the actual
+`total`; `page` is optional when local paging is useful. No mode fetches data.
+
+Pass explicit `columns: readonly TableColumn[]` (`id`, `label`, `width`, optional `kind` and
+`className`) and `tableMinWidth` to the panel. Reuse those widths in the projected table's
+`#colgroup` and set the same minimum width on `p-table`. The panel opts into fixed layout and
+uses those definitions for its first-read skeleton header/rows. Column kinds are `identity`,
+`text`, `status`, `date`, `number`, `problems`, `actions` and `check`; class names retain mobile
+column visibility. Existing callers remain compatible until their feature package supplies columns.
+
+Offset lists retain `lazyLoadOnInit=false`, `dataKey="id"`, scrollable content and no competing
+empty-message template. Bind supported sort state and map lazy events through
 `listQuery.sorted`/`injectSortReady`; `p-sort-icon` is the indicator. Use `trackById` to retain
 focused row menus on refresh. Selection checkboxes need explicit accessible names.
 
-Cells stay on one line; long text truncates with full text in `title`. Numbers align at the end.
+Use `view={kind: 'loading'}` for the first read; keep existing rows with `view={kind: 'rows'}`
+and `busy=true` during later reads. A later failure uses `rows-error`, retaining rows with inline Retry. First-load failures, empty and filtered-empty
+states remain distinct. The loading table uses the same column definitions, density row height
+and minimum width as loaded content.
+
+Use `.app-cell-identity` for at most two truncated identity lines, `.app-cell-status` for a
+bounded tag/short label, `.app-cell-date` for an instant, `.app-cell-number` for end-aligned
+numbers and `.app-cell-problems` for severity/count plus a link. Simple cells remain CSS/markup.
+Keep full values in `title` or the record; no full fault blocks, raw JSON, expanding details or
+extra error rows in business cells. Fleet live components support `mode="table"` for compact
+bounded summaries and retain their detailed record mode. Connected, Reporting and Live describe
+different facts; GPS position age remains separate from frame arrival.
+
 The scroll container is a keyboard tab stop. Secondary columns hide below md but remain in details.
 Freeze the final action column right. Below sm, pin the bounded identity cell and its mobile
 row menu, hide the separate action column and keep remaining columns horizontally scrollable.

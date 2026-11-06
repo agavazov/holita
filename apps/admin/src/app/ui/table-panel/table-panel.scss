@@ -97,22 +97,11 @@
   background: var(--p-app-tone-danger-background);
 }
 
-.table-panel__skeleton {
-  display: flex;
-  flex-direction: column;
-}
-
-.table-panel__skeleton-row {
+.table-panel__cursor {
   display: flex;
   align-items: center;
-  gap: var(--p-app-space-5);
-  min-block-size: var(--p-app-row-height);
-  padding-inline: var(--p-app-panel-padding);
-  border-block-end: 1px solid var(--p-app-panel-border-color);
-
-  &:last-child {
-    border-block-end: 0;
-  }
+  gap: var(--p-app-space-2);
+  min-block-size: var(--p-paginator-nav-button-height);
 }
 
 .table-panel__table {
@@ -183,41 +172,8 @@
 }
 
 .table-panel__footer {
+  min-block-size: calc(var(--p-paginator-nav-button-height) + var(--p-app-space-6));
   padding: var(--p-app-space-1) var(--p-app-space-2);
   padding-left: var(--p-app-panel-padding);
   border-block-start: 1px solid var(--p-app-panel-border-color);
-}
-
-// The confirmation renders in the dialog appended to the body; the template is this component's,
-// so these styles reach it.
-.table-panel__confirm {
-  display: flex;
-  flex-direction: column;
-  gap: var(--p-app-space-3);
-  min-inline-size: 0;
-  inline-size: 100%;
-}
-
-.table-panel__confirm-records {
-  max-block-size: min(16rem, 40dvh);
-  overflow-y: auto;
-  margin: 0;
-  padding: var(--p-app-space-2) var(--p-app-space-3);
-  border: 1px solid var(--p-content-border-color);
-  border-radius: var(--p-app-radius-control);
-  list-style: none;
-
-  > li {
-    padding-block: var(--p-app-space-1);
-    overflow: hidden;
-    font-weight: 600;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-.table-panel__confirm-count,
-.table-panel__confirm-skipped {
-  font-weight: 400;
-  color: var(--p-text-muted-color);
 }

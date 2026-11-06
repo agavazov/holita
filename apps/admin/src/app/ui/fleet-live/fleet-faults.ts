@@ -7,47 +7,71 @@ import { formatDateTime, formatNumber } from '../format/format';
 import { interpolate } from '../i18n/messages';
 import { toneSeverity, type StatusTone } from '../tones';
 import { UI_LANGUAGE } from '../ui-language';
-import { fleetLiveText, type FleetLiveDevice } from './fleet-live';
+import { fleetLiveText, type FleetLiveDevice, type FleetLiveMode } from './fleet-live';
 
 @Component({
   selector: 'holita-fleet-faults',
   imports: [RouterLink, ExternalLink, Tag],
   template: `
-    <span class="faults">
-      <span class="fault-values">
-        @if (device()?.ermState; as state) {
-          @if (state.alarmsLast24h > 0) {
-            <p-tag [value]="alarmCount()" [severity]="toneSeverity(alarmTone(state))" />
-            @if (state.latestAlarm; as alarm) {
-              <span class="app-muted" [attr.title]="date(alarm.eventTime)">{{
-                (language() === 'bg' ? alarm.nameBg : alarm.nameEn) ?? text().unknownEvent
-              }}</span>
+    @if (mode() === 'table') {
+      <span class="live-cell">
+        <span class="live-cell__text" [attr.title]="compactTitle()">
+          @if (compactSummary(); as summary) {
+            <p-tag [value]="summary" [severity]="toneSeverity(compactTone())" />
+          } @else {
+            <span class="app-muted">—</span>
+          }
+        </span>
+        @if (link(); as link) {
+          <a
+            class="app-icon-button"
+            [routerLink]="link"
+            [attr.aria-label]="text().diagnostics"
+            [attr.title]="text().diagnostics"
+          >
+            <svg data-p-icon="external-link" aria-hidden="true"></svg>
+          </a>
+        }
+      </span>
+    } @else {
+      <span class="faults">
+        <span class="fault-values">
+          @if (device()?.ermState; as state) {
+            @if (state.alarmsLast24h > 0) {
+              <p-tag [value]="alarmCount()" [severity]="toneSeverity(alarmTone(state))" />
+              @if (state.latestAlarm; as alarm) {
+                <span class="app-muted" [attr.title]="date(alarm.eventTime)">{{
+                  (language() === 'bg' ? alarm.nameBg : alarm.nameEn) ?? text().unknownEvent
+                }}</span>
+              }
+            } @else {
+              <span class="app-muted">—</span>
             }
           } @else {
             <span class="app-muted">—</span>
           }
-        } @else {
-          <span class="app-muted">—</span>
-        }
-        @if (device()?.diagnostics.count) {
-          <p-tag
-            [value]="recorded()"
-            [severity]="toneSeverity('danger')"
-            [attr.title]="faultTitle()"
-          />
+          @if (device()?.diagnostics.count) {
+            <p-tag
+              [value]="recorded()"
+              [severity]="toneSeverity('danger')"
+              [attr.title]="faultTitle()"
+            />
+          }
+        </span>
+        @if (link(); as link) {
+          <a
+            class="app-icon-button"
+            [routerLink]="link"
+            [attr.aria-label]="text().diagnostics"
+            [attr.title]="text().diagnostics"
+            ><svg data-p-icon="external-link" aria-hidden="true"></svg
+          ></a>
         }
       </span>
-      @if (link(); as link) {
-        <a
-          class="app-icon-button"
-          [routerLink]="link"
-          [attr.aria-label]="text().diagnostics"
-          [attr.title]="text().diagnostics"
-          ><svg data-p-icon="external-link" aria-hidden="true"></svg
-        ></a>
-      }
-    </span>
+    }
   `,
+  styleUrl: './fleet-live.scss',
+  host: { '[attr.data-mode]': 'mode()' },
   styles: `
     :host {
       display: block;
@@ -71,6 +95,7 @@ import { fleetLiveText, type FleetLiveDevice } from './fleet-live';
 })
 export class FleetFaults {
   readonly device = input.required<FleetLiveDevice>();
+  readonly mode = input<FleetLiveMode>('record');
   readonly link = input<readonly string[] | null>(null);
   protected readonly language = inject(UI_LANGUAGE);
   private readonly units = injectFleetFormat();
@@ -86,6 +111,35 @@ export class FleetFaults {
       count: formatNumber(this.device()?.diagnostics.count, this.language()),
     }),
   );
+  protected readonly compactSummary = computed(() => {
+    const device = this.device();
+    const values: string[] = [];
+    if (device?.ermState?.alarmsLast24h) {
+      values.push(
+        interpolate(this.text().alarmsShort, {
+          count: formatNumber(device.ermState.alarmsLast24h, this.language()),
+        }),
+      );
+    }
+    if (device?.diagnostics.count) {
+      values.push(this.recorded());
+    }
+    return values.join(' · ');
+  });
+  protected readonly compactTone = computed<StatusTone>(() => {
+    if (this.device()?.diagnostics.count) {
+      return 'danger';
+    }
+    const state = this.device()?.ermState;
+    return state ? this.alarmTone(state) : 'neutral';
+  });
+  protected readonly compactTitle = computed(() => {
+    const device = this.device();
+    if (device === undefined) {
+      return this.text().unavailable;
+    }
+    return [this.compactSummary(), this.faultTitle()].filter(Boolean).join(' · ');
+  });
   protected readonly faultTitle = computed(() => {
     const fault = this.device()?.diagnostics.latest;
     return fault

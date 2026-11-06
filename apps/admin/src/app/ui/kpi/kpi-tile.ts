@@ -6,7 +6,7 @@ import { InfoCircle } from '@primeicons/angular/info-circle';
 import { Minus } from '@primeicons/angular/minus';
 import { Popover } from 'primeng/popover';
 import { Skeleton } from 'primeng/skeleton';
-import type { StatusTone } from '../../theme/status-tones';
+import type { CategorySlot, StatusTone } from '../../theme/status-tones';
 import { emptyValue } from '../format/format';
 import { uiMessages } from '../i18n/messages';
 import { UI_LANGUAGE } from '../ui-language';
@@ -27,7 +27,10 @@ export interface KpiDelta {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[class.kpi-tile--link]': '!!link()',
+    '[class]': "'app-icon-well--' + (category() ?? tone() ?? 'accent')",
     '[attr.data-tone]': 'tone()',
+    '[attr.data-category]': 'category()',
+    '[attr.aria-busy]': 'busy() || null',
   },
 })
 export class KpiTile {
@@ -38,6 +41,7 @@ export class KpiTile {
   readonly footnote = input<string | null>(null);
   readonly delta = input<KpiDelta | null>(null);
   readonly tone = input<StatusTone | null>(null);
+  readonly category = input<CategorySlot | null>(null);
   readonly explanation = input<string | null>(null);
   readonly link = input<readonly string[] | null>(null);
   readonly queryParams = input<Params | null>(null);

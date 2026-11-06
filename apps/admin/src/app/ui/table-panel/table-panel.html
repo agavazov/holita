@@ -1,7 +1,8 @@
 <section
   class="table-panel"
+  [class.app-table-fixed]="columns().length > 0"
   [attr.aria-labelledby]="id + '-heading'"
-  [attr.aria-busy]="busy() || null"
+  [attr.aria-busy]="busy() || view().kind === 'loading' || null"
 >
   <div class="table-panel__header">
     @if (headingLevel() === 3) {
@@ -30,14 +31,75 @@
   @switch (view().kind) {
     @case ('loading') {
       <div class="table-panel__skeleton" role="status" [attr.aria-label]="text().loading">
-        @for (row of skeletons(); track row) {
-          <div class="table-panel__skeleton-row">
-            <p-skeleton width="1.25rem" height="1rem" />
-            <p-skeleton width="28%" height="0.875rem" />
-            <p-skeleton width="18%" height="0.875rem" />
-            <p-skeleton width="22%" height="0.875rem" />
-          </div>
-        }
+        <p-table
+          class="app-responsive-table app-table-fixed"
+          [value]="skeletons()"
+          [scrollable]="true"
+          [tableStyle]="{ 'min-width': tableMinWidth() }"
+          [pt]="{ tableContainer: { tabindex: '-1' } }"
+          aria-hidden="true"
+        >
+          <ng-template #colgroup>
+            <colgroup>
+              @for (column of loadingColumns(); track column.id) {
+                <col [style.width]="column.width" [class]="column.className ?? ''" />
+              }
+            </colgroup>
+          </ng-template>
+          <ng-template #header>
+            @if (columns().length) {
+              <tr>
+                @for (column of columns(); track column.id) {
+                  <th
+                    scope="col"
+                    [class]="column.className ?? ''"
+                    pFrozenColumn
+                    [frozen]="column.kind === 'actions'"
+                    alignFrozen="right"
+                  >
+                    @if (column.kind === 'check' || column.kind === 'actions') {
+                      <span class="app-visually-hidden">{{ column.label }}</span>
+                    } @else {
+                      {{ column.label }}
+                    }
+                  </th>
+                }
+              </tr>
+            }
+          </ng-template>
+          <ng-template #body>
+            <tr>
+              @for (column of loadingColumns(); track column.id) {
+                <td
+                  [class]="column.className ?? ''"
+                  pFrozenColumn
+                  [frozen]="column.kind === 'actions'"
+                  alignFrozen="right"
+                >
+                  <span class="app-cell-identity">
+                    <p-skeleton
+                      [width]="
+                        column.kind === 'check' || column.kind === 'actions' ? '1.25rem' : '75%'
+                      "
+                      height="0.875rem"
+                    />
+                    @if (column.kind === 'identity') {
+                      <p-skeleton width="50%" height="0.75rem" />
+                    }
+                  </span>
+                  @if (column.kind === 'identity' && hasActionColumn()) {
+                    <div class="app-table-mobile-actions">
+                      <p-skeleton
+                        width="var(--p-app-control-height)"
+                        height="var(--p-app-control-height)"
+                      />
+                    </div>
+                  }
+                </td>
+              }
+            </tr>
+          </ng-template>
+        </p-table>
       </div>
     }
     @case ('empty') {
@@ -101,25 +163,59 @@
   <div class="table-panel__table" [hidden]="!showTable()">
     <ng-content />
   </div>
-  @if (showFooter() && page(); as current) {
+  @if (showFooter()) {
     <div class="table-panel__footer">
       <div class="table-panel__footer-start">
-        <ng-content select="[panelFooter]" />
+        <span [hidden]="view().kind === 'loading'"><ng-content select="[panelFooter]" /></span>
       </div>
-      <p-paginator
-        [rows]="current.pageSize"
-        [first]="first()"
-        [totalRecords]="current.total"
-        [rowsPerPageOptions]="pageSizeOptions()"
-        [showPageLinks]="multiPage()"
-        [showFirstLastIcon]="multiPage()"
-        [showCurrentPageReport]="true"
-        [currentPageReportTemplate]="text().table.pageReport"
-        [locale]="locale()"
-        [alwaysShow]="true"
-        appendTo="body"
-        (onPageChange)="changePage($event)"
-      />
+      @if (view().kind === 'loading') {
+        <p-skeleton width="14rem" height="1rem" aria-hidden="true" />
+      } @else if (mode() === 'cursor') {
+        @if (cursorPage(); as current) {
+          <nav class="table-panel__cursor" [attr.aria-label]="text().table.pagination">
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              size="small"
+              [text]="true"
+              [disabled]="busy() || !current.hasPrevious"
+              (click)="cursorChange.emit('previous')"
+            >
+              {{ text().table.previousPage }}
+            </button>
+            <span class="app-num" aria-live="polite">{{ cursorPageText() }}</span>
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              size="small"
+              [text]="true"
+              [disabled]="busy() || !current.hasNext"
+              (click)="cursorChange.emit('next')"
+            >
+              {{ text().table.nextPage }}
+            </button>
+          </nav>
+        }
+      } @else if (page(); as current) {
+        <p-paginator
+          [rows]="current.pageSize"
+          [first]="first()"
+          [totalRecords]="current.total"
+          [rowsPerPageOptions]="pageSizeOptions()"
+          [showPageLinks]="multiPage()"
+          [showFirstLastIcon]="multiPage()"
+          [showCurrentPageReport]="true"
+          [currentPageReportTemplate]="text().table.pageReport"
+          [locale]="locale()"
+          [alwaysShow]="true"
+          appendTo="body"
+          (onPageChange)="changePage($event)"
+        />
+      } @else if (mode() === 'local') {
+        <span class="app-num table-panel__footer-start">{{ localCountText() }}</span>
+      }
     </div>
   }
 </section>

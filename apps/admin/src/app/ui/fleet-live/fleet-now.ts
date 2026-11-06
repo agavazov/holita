@@ -3,24 +3,29 @@ import { injectFleetFormat } from '../format/fleet-format';
 import { formatDateTime } from '../format/format';
 import { interpolate } from '../i18n/messages';
 import { UI_LANGUAGE } from '../ui-language';
-import { fleetLiveText, type FleetLiveDevice } from './fleet-live';
+import { fleetLiveText, type FleetLiveDevice, type FleetLiveMode } from './fleet-live';
 
 @Component({
   selector: 'holita-fleet-now',
   template: `
-    <span class="app-cell-stack">
-      <span [attr.title]="exact()">{{ activity() }}</span>
-      @if (event(); as event) {
-        <span class="app-muted">{{
-          (language() === 'bg' ? event.nameBg : event.nameEn) ?? text().unknownEvent
-        }}</span>
+    <span class="live-cell">
+      <span class="live-cell__text" [attr.title]="exact()">{{ activity() }}</span>
+      @if (mode() === 'record') {
+        @if (event(); as event) {
+          <span class="app-muted">{{
+            (language() === 'bg' ? event.nameBg : event.nameEn) ?? text().unknownEvent
+          }}</span>
+        }
       }
     </span>
   `,
+  styleUrl: './fleet-live.scss',
+  host: { '[attr.data-mode]': 'mode()' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FleetNow {
   readonly device = input.required<FleetLiveDevice>();
+  readonly mode = input<FleetLiveMode>('record');
   protected readonly language = inject(UI_LANGUAGE);
   private readonly units = injectFleetFormat();
   protected readonly text = computed(() => fleetLiveText(this.language()));
