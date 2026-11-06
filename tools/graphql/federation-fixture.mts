@@ -304,10 +304,11 @@ async function createUserSession(
   const connection = new pg.Client({ connectionString: databaseUrl });
   await connection.connect();
   try {
+    // Like the first user from the Core setup command, the bootstrap user administers its Tenant.
     await connection.query(
       `INSERT INTO ${pg.escapeIdentifier(schemaName)}."user"
-       ("id", "tenantId", "email", "name", "passwordHash", "updatedAt")
-       VALUES ($1, $2, $3, 'Federation user', $4, CURRENT_TIMESTAMP)`,
+       ("id", "tenantId", "email", "name", "passwordHash", "role", "updatedAt")
+       VALUES ($1, $2, $3, 'Federation user', $4, 'administrator', CURRENT_TIMESTAMP)`,
       [userId, tenantId, email, passwordHash],
     );
   } finally {

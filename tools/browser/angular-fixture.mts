@@ -67,7 +67,7 @@ async function createAccount(
     headers: { 'content-type': 'application/json', authorization: `Bearer ${bootstrap.token}` },
     body: JSON.stringify({
       query:
-        'mutation($email:String!,$password:String!){createUser(name:"Browser user",email:$email,password:$password){id}}',
+        'mutation($email:String!,$password:String!){createUser(name:"Browser user",email:$email,password:$password,role:ADMINISTRATOR){id}}',
       variables: { email, password },
     }),
   });
