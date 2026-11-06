@@ -63,11 +63,12 @@ export class KarmaService implements OnModuleInit, OnModuleDestroy {
     private readonly fleet: FleetClient,
   ) {}
 
-  async onModuleInit(): Promise<void> {
+  onModuleInit(): void {
     if (ermRole() !== 'api' || !karmaEnabled()) {
       return;
     }
-    await this.tick();
+    // Karma reads can take tens of seconds; the api must not wait for them to start serving.
+    void this.tick();
     this.timer = setInterval(() => {
       void this.tick();
     }, POLL_INTERVAL);

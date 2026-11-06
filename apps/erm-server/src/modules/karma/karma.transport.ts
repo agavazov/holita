@@ -88,7 +88,7 @@ export class KarmaTransport {
     queueId: string | null;
   }> {
     const config = this.config();
-    const signal = AbortSignal.timeout(8000);
+    const signal = AbortSignal.timeout(30_000);
     let session: string;
     try {
       session = await this.authenticate(config, signal);
@@ -130,7 +130,8 @@ export class KarmaTransport {
 
   private async read(path: 'cars' | 'events', parameters: URLSearchParams): Promise<unknown> {
     const config = this.config();
-    const signal = AbortSignal.timeout(8000);
+    // Karma events reads took 7–29 s on 2026-11-06.
+    const signal = AbortSignal.timeout(60_000);
     try {
       for (let attempt = 0; attempt < 2; attempt++) {
         const session = await this.authenticate(config, signal);
