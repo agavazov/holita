@@ -8,13 +8,13 @@ import type {
   FleetDevice,
   ErmUnitState,
 } from '../../generated/graphql/types.js';
-import type { ErmEvent, ErmFrame, ErmCommand } from '../../generated/prisma/client.js';
+import type { ErmEvent, ErmCommand } from '../../generated/prisma/client.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { parseFrame } from '../../starlink/protocol.js';
 import { eventClassification } from '../../starlink/event-catalog.js';
 import { LiveDevicesService, type LiveUnit } from './live-devices.service.js';
 import { deviceTelemetryRequest, type DeviceTelemetryRequest } from './device-request.js';
-import { displayText } from './display-text.js';
+import { commandView, frameView } from './command-evidence.js';
 import { deviceTelemetryQueries, telemetryPage, telemetryQuery } from './telemetry-query.js';
 import { TelemetryRepository } from './telemetry.repository.js';
 import { edataParameterLabel } from './edata-catalog.js';
@@ -134,29 +134,9 @@ function eventView(event: ErmEvent) {
     ignitionOn: storedIgnition(event.fields),
     id: String(event.id),
     frameId: String(event.frameId),
-    eventTime: event.eventTime?.toISOString() ?? null,
-    positionTime: event.positionTime?.toISOString() ?? null,
     latitude: event.latitude?.toNumber() ?? null,
     longitude: event.longitude?.toNumber() ?? null,
     ...eventClassification(event.eventId),
-  };
-}
-
-function frameView(frame: ErmFrame) {
-  return {
-    ...frame,
-    id: String(frame.id),
-    receivedAt: frame.receivedAt.toISOString(),
-    displayText: displayText(frame.raw),
-  };
-}
-
-function commandView(command: ErmCommand) {
-  return {
-    ...command,
-    sentAt: command.sentAt.toISOString(),
-    answeredAt: command.answeredAt?.toISOString() ?? null,
-    responseText: command.response === null ? null : displayText(command.response),
   };
 }
 
@@ -166,7 +146,7 @@ function numericReading(
 ) {
   return event === null || value === null || value === undefined
     ? null
-    : { value, observedAt: (event.eventTime ?? event.frame.receivedAt).toISOString() };
+    : { value, observedAt: event.eventTime ?? event.frame.receivedAt };
 }
 
 function signalQuality(event: ErmEvent | null): number | null {
@@ -186,7 +166,7 @@ function firmwareReading(command: ErmCommand | null) {
   for (const field of frame?.fields ?? []) {
     const match = /(?:^|;)VER=([^;]*)/.exec(field.toString('latin1'));
     if (match?.[1] !== undefined) {
-      return { value: match[1], observedAt: command.answeredAt.toISOString() };
+      return { value: match[1], observedAt: command.answeredAt };
     }
   }
   return null;
@@ -333,14 +313,11 @@ export class TelemetryService {
     return new Map(
       rows.map((row): [string, ErmUnitState | null] => {
         const unit = connected.get(row.unitId);
-        const lastFrameAt = unit?.lastFrameAt ?? row.lastFrameAt?.toISOString() ?? null;
+        const lastFrameAt = unit ? new Date(unit.lastFrameAt) : row.lastFrameAt;
         const lastFrameAgeSeconds =
           lastFrameAt === null
             ? null
-            : Math.max(
-                0,
-                Math.floor((snapshot.getTime() - new Date(lastFrameAt).getTime()) / 1000),
-              );
+            : Math.max(0, Math.floor((snapshot.getTime() - lastFrameAt.getTime()) / 1000));
         const expectedIntervalSeconds = row.expectedIntervalSeconds;
         return [
           row.unitId,
@@ -350,16 +327,9 @@ export class TelemetryService {
                 unitId: row.unitId,
                 online: unit !== undefined,
                 mode: unit?.mode === 'primary' ? 'PRIMARY' : unit ? 'MIRROR' : null,
-                connectedSince: unit?.connectedSince ?? null,
+                connectedSince: unit ? new Date(unit.connectedSince) : null,
                 lastFrameAt,
-                recovery:
-                  row.recovery === null
-                    ? null
-                    : {
-                        ...row.recovery,
-                        startedAt: row.recovery.startedAt.toISOString(),
-                        finishedAt: row.recovery.finishedAt.toISOString(),
-                      },
+                recovery: row.recovery,
                 latestEvent: row.latestEvent ? eventView(row.latestEvent) : null,
                 lastPosition: row.lastPosition ? eventView(row.lastPosition) : null,
                 latestAlarm: row.latestAlarm ? eventView(row.latestAlarm) : null,
@@ -391,7 +361,7 @@ export class TelemetryService {
                     lastFrameAgeSeconds === null ||
                     lastFrameAgeSeconds > 2 * expectedIntervalSeconds,
                   lastCloseReason: row.lastCloseReason,
-                  lastClosedAt: row.lastClosedAt?.toISOString() ?? null,
+                  lastClosedAt: row.lastClosedAt,
                   upstreamClosesLast24h: row.upstreamClosesLast24h,
                   karmaRoutingWritesLast24h: row.karmaRoutingWritesLast24h,
                   latestKarmaRoutingWrite: row.latestKarmaRoutingWrite

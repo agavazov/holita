@@ -10,11 +10,9 @@ import {
 import { requireTenant } from '../../auth/demo-auth.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import type {
-  ErmConfigurationChange,
   StartErmEdataChangeInput,
   StartErmParameterChangeInput,
 } from '../../generated/graphql/types.js';
-import type { ErmConfigurationChange as StoredChange } from '../../generated/prisma/client.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import {
   runEdataChange,
@@ -31,6 +29,8 @@ import { ParameterSnapshotsService } from './parameter-snapshots.service.js';
 import type { DeviceReference } from './telemetry.service.js';
 import { UnitWorkflowsService } from './unit-workflows.service.js';
 import { auditId, operatorAudit, operatorScope, type OperatorAudit } from './operator-audit.js';
+import { commandView } from './command-evidence.js';
+import { configurationChangeView } from './configuration-change-view.js';
 
 export function configurationWritesEnabled(): boolean {
   const value = process.env.ERM_CONFIGURATION_WRITES_ENABLED ?? 'false';
@@ -38,14 +38,6 @@ export function configurationWritesEnabled(): boolean {
     throw new Error('ERM_CONFIGURATION_WRITES_ENABLED must be true or false');
   }
   return value === 'true';
-}
-
-function changeView(change: StoredChange): ErmConfigurationChange {
-  return {
-    ...change,
-    startedAt: change.startedAt.toISOString(),
-    finishedAt: change.finishedAt?.toISOString() ?? null,
-  };
 }
 
 @Injectable()
@@ -125,15 +117,22 @@ export class ConfigurationChangesService implements OnModuleInit, OnModuleDestro
     const deviceIds = request.deviceIds.length ? request.deviceIds : [auditId(device.id)];
     request.configurationChanges ??= this.repository
       .history(scope, deviceIds, this.prisma.schema)
-      .then(
-        (changes) =>
-          new Map(
-            deviceIds.map((deviceId) => [
-              deviceId,
-              changes.filter((change) => change.deviceId === deviceId).map(changeView),
-            ]),
-          ),
-      );
+      .then(async (changes) => {
+        const commands = new Map(
+          (await this.repository.commands(changes)).map((command) => [
+            command.id,
+            commandView(command),
+          ]),
+        );
+        return new Map(
+          deviceIds.map((deviceId) => [
+            deviceId,
+            changes
+              .filter((change) => change.deviceId === deviceId)
+              .map((change) => configurationChangeView(change, commands)),
+          ]),
+        );
+      });
     return (await request.configurationChanges).get(device.id) ?? [];
   }
 
@@ -196,7 +195,7 @@ export class ConfigurationChangesService implements OnModuleInit, OnModuleDestro
           this.jobs.delete(job);
         });
       this.jobs.add(job);
-      return changeView(change);
+      return configurationChangeView(change);
     } catch (error) {
       this.workflows.release(options.unitId);
       throw error;

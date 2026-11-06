@@ -1,6 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
 import type { DeviceCommand } from '../devices/command.js';
-import type { ErmConfigurationChangeStatus, PrismaClient } from '../../generated/prisma/client.js';
+import type {
+  ErmConfigurationChange,
+  ErmConfigurationChangeStatus,
+  PrismaClient,
+} from '../../generated/prisma/client.js';
 import type { EdataConfiguration } from '../../starlink/edata-configuration.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { sqlRows, sqlText } from '../../database/sql.js';
@@ -81,6 +85,22 @@ export class EdataChangeRepository {
       },
       orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
     });
+  }
+
+  commands(changes: readonly ErmConfigurationChange[]) {
+    const references = changes.flatMap((change) =>
+      Array.isArray(change.steps)
+        ? change.steps.flatMap((step) =>
+            typeof step === 'object' &&
+            step !== null &&
+            !Array.isArray(step) &&
+            typeof step['commandId'] === 'string'
+              ? [{ id: step['commandId'], unitId: change.unitId }]
+              : [],
+          )
+        : [],
+    );
+    return this.client.ermCommand.findMany({ where: { OR: references } });
   }
 
   save(

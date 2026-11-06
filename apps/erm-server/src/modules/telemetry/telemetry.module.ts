@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module.js';
+import { DateTimeScalar } from '../../graphql/scalars.js';
 import { DevicesModule } from '../devices/devices.module.js';
 import { TelemetryRepository } from './telemetry.repository.js';
 import { TelemetryResolver } from './telemetry.resolver.js';
@@ -21,6 +22,7 @@ import { CommandRequestsService } from './command-requests.service.js';
   imports: [DatabaseModule, ...(ermRole() === 'api' ? [] : [DevicesModule])],
   controllers: [InternalTelemetryController],
   providers: [
+    DateTimeScalar,
     TelemetryRepository,
     TelemetryService,
     TelemetryResolver,

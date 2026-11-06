@@ -8,7 +8,14 @@ import net from 'node:net';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer, type Server } from 'node:http';
-import { GraphQLError, graphql, parse, print, type GraphQLResolveInfo } from 'graphql';
+import {
+  GraphQLError,
+  GraphQLScalarType,
+  graphql,
+  parse,
+  print,
+  type GraphQLResolveInfo,
+} from 'graphql';
 import { buildSubgraphSchema } from '@apollo/subgraph';
 import { PrismaService } from '../src/database/prisma.service.js';
 import type { Prisma } from '../src/generated/prisma/client.js';
@@ -20,7 +27,12 @@ import {
   type RecoveryResult,
 } from '../src/modules/recovery/recovery-listener.js';
 import { RecoveryRepository } from '../src/modules/recovery/recovery.repository.js';
-import { FrameSplitter, parseFrame, type ParsedFrame } from '../src/starlink/index.js';
+import {
+  buildServerFrame,
+  FrameSplitter,
+  parseFrame,
+  type ParsedFrame,
+} from '../src/starlink/index.js';
 import { redecodeFrames } from '../src/modules/devices/redecode.js';
 import { DEFAULT_EVENT_STRUCTURE } from '../src/starlink/event.js';
 import { DevicesService } from '../src/modules/devices/devices.service.js';
@@ -46,11 +58,13 @@ import { InternalTelemetryGuard } from '../src/modules/telemetry/internal-teleme
 import {
   ErmDeviceResolver,
   ErmEventResolver,
+  TelemetryResolver,
 } from '../src/modules/telemetry/telemetry.resolver.js';
 import type { DeviceReference } from '../src/modules/telemetry/telemetry.service.js';
 import type {
   ErmDeviceAction,
   ErmEventNameArgs,
+  QueryErmCommandRequestArgs,
   FleetDeviceErmEventsArgs,
   FleetDeviceErmFramesArgs,
   FleetDeviceErmCommandsArgs,
@@ -58,6 +72,7 @@ import type {
 } from '../src/generated/graphql/types.js';
 import type { RequestContext } from '../src/graphql/request-context.js';
 import { formatGraphqlError } from '../src/graphql/errors.js';
+import { DateTimeScalar } from '../src/graphql/scalars.js';
 import { ErmFleetDeviceDocument } from '../src/generated/graphql/fleet-operations.js';
 import { TelemetryRepository } from '../src/modules/telemetry/telemetry.repository.js';
 import { TelemetryService } from '../src/modules/telemetry/telemetry.service.js';
@@ -539,8 +554,8 @@ it('persists captured connection lifecycle and raw frames through the production
         engineOn: true,
         fields: { '#EDT#': '261103142530' },
       },
-      mainVoltage: { value: 12.2, observedAt: '2026-11-03T14:25:30.000Z' },
-      backupVoltage: { value: 3.6, observedAt: '2026-11-03T14:25:30.000Z' },
+      mainVoltage: { value: 12.2, observedAt: new Date('2026-11-03T14:25:30.000Z') },
+      backupVoltage: { value: 3.6, observedAt: new Date('2026-11-03T14:25:30.000Z') },
       signalQuality: null,
       firmwareVersion: null,
     });
@@ -784,6 +799,15 @@ it('persists captured connection lifecycle and raw frames through the production
               where: { id: submittingRequestId },
             }),
           ).toMatchObject({ status: 'SUBMITTING', submittedAt: expect.any(Date) });
+          expect(await requests.find(submittingRequestId, scopedContext)).toMatchObject({
+            status: 'SUBMITTING',
+            outcomeCode: 'SUBMITTING',
+            submittingAt: expect.any(Date),
+            sentAt: null,
+            transportCommand: null,
+            sentFrame: null,
+            receivedFrameHex: null,
+          });
           submittingRequestId = undefined;
         }
         if (configurationGateway && command.command === '30') {
@@ -938,17 +962,53 @@ it('persists captured connection lifecycle and raw frames through the production
             fields = [command.fields[0] ?? '', '"single,reply"'];
           }
         }
+        if (command.command === '05' && queueOutcome === 'answered') {
+          resultCode = '01';
+        }
+        const commandReference = String(900001000 + sent.length);
+        const acknowledgementBody = `SLU${unitId},02,8063,${commandReference},${resultCode ?? ''}`;
+        const acknowledgementChecksum = [...Buffer.from(acknowledgementBody)].reduce(
+          (total, byte) => total + byte,
+          0,
+        );
+        const acknowledgementResponse =
+          queueOutcome === 'answered' && resultCode !== null
+            ? Buffer.from(
+                `$${acknowledgementBody}*${(acknowledgementChecksum % 256).toString(16).toUpperCase().padStart(2, '0')}`,
+              )
+            : null;
         const recorded = await database.client.ermCommand.create({
           data: {
             connectionId: stored.id,
             unitId,
-            reference: String(900001000 + sent.length),
+            reference: commandReference,
             ...command,
             sentAt: new Date(),
             status: queueOutcome === 'answered' ? 'ANSWERED' : 'TIMEOUT',
             answeredAt: queueOutcome === 'answered' ? new Date() : null,
+            resultCode,
+            response: acknowledgementResponse,
           },
         });
+        if (command.command === '05') {
+          await database.client.ermFrame.create({
+            data: {
+              connectionId: stored.id,
+              unitId,
+              direction: 'HOLITA',
+              receivedAt: recorded.sentAt,
+              command: command.command,
+              reference: recorded.reference,
+              checksum: 'OK',
+              raw: buildServerFrame(
+                unitId,
+                command.command,
+                recorded.reference,
+                command.fields,
+              ).subarray(0, -2),
+            },
+          });
+        }
         res.end(
           JSON.stringify({
             id: recorded.id,
@@ -1029,13 +1089,25 @@ it('persists captured connection lifecycle and raw frames through the production
       ['READ_EDATA_DIAGNOSTICS', '30', ['19', '0', '19', '306', '0', '1', '1', '']],
       ['READ_EDATA_FAULTS', '30', ['19', '0', '19', '301', '0', '1', '1', '19']],
     ];
+    let acknowledgedRequestId = '';
     for (const [action, command, fields] of actions) {
       const queued = await api.sendDeviceCommand({ deviceId, action }, scopedContext);
       expect(queued).toMatchObject({
         status: 'QUEUED',
         actorId: `demo-tenant:${tenantId}`,
         intent: action,
+        actionCode: action,
+        displayParameters: { expiresInSeconds: 7200 },
+        requestedAt: expect.any(Date),
+        queuedAt: queued.createdAt,
+        outcomeCode: 'WAITING_TO_SEND',
+        reasonCode: null,
         submittedAt: null,
+        sentAt: null,
+        transportCommand: null,
+        sentFrame: null,
+        receivedFrameHex: null,
+        configurationVerification: null,
       });
       submittingRequestId = queued.id;
       await requests.tick();
@@ -1049,6 +1121,9 @@ it('persists captured connection lifecycle and raw frames through the production
           ? null
           : await database.client.ermCommand.findUnique({ where: { id: recorded.commandId } }),
       ).not.toBeNull();
+      if (action === 'REQUEST_LOCATION') {
+        acknowledgedRequestId = queued.id;
+      }
     }
     gatewayStatus = 404;
     const refusedQueue = await api.sendDeviceCommand(
@@ -1385,6 +1460,8 @@ it('persists captured connection lifecycle and raw frames through the production
     const configurations = configurationService;
     const resolver = new ErmDeviceResolver(api, snapshots, configurations, requests);
     const eventResolver = new ErmEventResolver();
+    const telemetryResolver = new TelemetryResolver(api, snapshots, configurations, requests);
+    const dateTime = new DateTimeScalar();
     const schema = buildSubgraphSchema([
       {
         typeDefs: parse(
@@ -1394,6 +1471,19 @@ it('persists captured connection lifecycle and raw frames through the production
           ),
         ),
         resolvers: {
+          DateTime: new GraphQLScalarType({
+            name: 'DateTime',
+            serialize: (value) => dateTime.serialize(value),
+            parseValue: (value) => dateTime.parseValue(value),
+            parseLiteral: (node) => dateTime.parseLiteral(node),
+          }),
+          Query: {
+            ermCommandRequest: (
+              _parent: unknown,
+              args: QueryErmCommandRequestArgs,
+              ctx: RequestContext,
+            ) => telemetryResolver.commandRequest(args, ctx),
+          },
           FleetDevice: {
             __resolveReference: (
               ref: Pick<DeviceReference, 'id' | 'imei'>,
@@ -1439,6 +1529,65 @@ it('persists captured connection lifecycle and raw frames through the production
         },
       },
     ]);
+    const requestSource = `query($id: ID!) { ermCommandRequest(id: $id) {
+      id status actionCode requestedAt queuedAt submittingAt sentAt answeredAt outcomeCode reasonCode
+      displayParameters { expiresInSeconds requestedFields }
+      transportCommand { id reference sentAt answeredAt responseHex acknowledgement {
+        commandId commandReference replyReference resultCode receivedAt
+      } }
+      sentFrame { rawHex receivedAt }
+      receivedFrameHex configurationVerification { id }
+    } }`;
+    const acknowledgedRequest = await requests.find(acknowledgedRequestId, scopedContext);
+    expect(acknowledgedRequest?.receivedFrameHex).not.toBeNull();
+    const requestContract = await graphql({
+      schema,
+      source: requestSource,
+      variableValues: { id: acknowledgedRequestId },
+      contextValue: scopedContext,
+    });
+    expect(requestContract.errors).toBeUndefined();
+    expect(requestContract.data?.['ermCommandRequest']).toMatchObject({
+      id: acknowledgedRequestId,
+      status: 'ANSWERED',
+      actionCode: 'REQUEST_LOCATION',
+      outcomeCode: 'ACKNOWLEDGED',
+      reasonCode: null,
+      displayParameters: { expiresInSeconds: 7200, requestedFields: [] },
+      requestedAt: acknowledgedRequest?.createdAt.toISOString(),
+      sentAt: acknowledgedRequest?.sentAt?.toISOString(),
+      answeredAt: acknowledgedRequest?.answeredAt?.toISOString(),
+      transportCommand: {
+        id: acknowledgedRequest?.commandId,
+        reference: '900001001',
+        acknowledgement: {
+          commandReference: '900001001',
+          commandId: acknowledgedRequest?.commandId,
+          replyReference: '8063',
+          resultCode: '01',
+          receivedAt: acknowledgedRequest?.answeredAt?.toISOString(),
+        },
+      },
+      sentFrame: {
+        rawHex: buildServerFrame(unitId, '05', '900001001', []).subarray(0, -2).toString('hex'),
+        receivedAt: acknowledgedRequest?.sentAt?.toISOString(),
+      },
+      receivedFrameHex: acknowledgedRequest?.receivedFrameHex,
+      configurationVerification: null,
+    });
+    for (const foreignScope of [
+      { tenantId: randomUUID(), branchId },
+      { tenantId, branchId: randomUUID() },
+    ]) {
+      const denied = await graphql({
+        schema,
+        source: requestSource,
+        variableValues: { id: acknowledgedRequestId },
+        contextValue: { ...scopedContext, ...foreignScope },
+      });
+      expect(denied.errors).toBeUndefined();
+      expect(denied.data?.['ermCommandRequest']).toBeNull();
+    }
     const source = `query($representations: [_Any!]!) { _entities(representations: $representations) { ... on FleetDevice {
       id ermState {
         online mode lastFrameAt latestEvent { eventId category } lastPosition { id } alarmsLast24h latestAlarm { eventId category name(language: BG) }
@@ -1684,33 +1833,33 @@ it('persists captured connection lifecycle and raw frames through the production
       expectedIntervalSeconds: 3600,
       gapsLast24h: [
         {
-          from: atMinute(0).toISOString(),
-          to: atMinute(1).toISOString(),
+          from: atMinute(0),
+          to: atMinute(1),
           durationSeconds: 60,
           expectedIntervalSeconds: 300,
         },
         {
-          from: atMinute(4).toISOString(),
-          to: atMinute(20).toISOString(),
+          from: atMinute(4),
+          to: atMinute(20),
           durationSeconds: 960,
           expectedIntervalSeconds: 300,
         },
         {
-          from: atMinute(30).toISOString(),
-          to: atMinute(180).toISOString(),
+          from: atMinute(30),
+          to: atMinute(180),
           durationSeconds: 9000,
           expectedIntervalSeconds: 3600,
         },
         {
-          from: atMinute(180).toISOString(),
-          to: healthSnapshot.toISOString(),
+          from: atMinute(180),
+          to: healthSnapshot,
           durationSeconds: 75600,
           expectedIntervalSeconds: 3600,
         },
       ],
       networkChangesLast24h: 3,
       latestNetworkChange: {
-        at: atMinute(24).toISOString(),
+        at: atMinute(24),
         networkType: '8',
         operatorCode: '28403',
       },
@@ -1875,7 +2024,7 @@ it('persists captured connection lifecycle and raw frames through the production
       parameterCount: snapshotParameters.length,
       readCount: snapshotParameters.length,
       failureReason: null,
-      finishedAt: expect.any(String),
+      finishedAt: expect.any(Date),
       values: expect.arrayContaining([
         { parameter: 1, title: 'Unit ID selection', value: 'read-0001', resultCode: null },
         { parameter: 2, title: 'High communication rate', value: 'read-0002', resultCode: null },

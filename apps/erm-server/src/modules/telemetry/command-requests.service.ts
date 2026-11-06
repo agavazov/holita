@@ -12,26 +12,16 @@ import type {
   SendErmDeviceCommandInput,
   CancelErmDeviceCommandInput,
 } from '../../generated/graphql/types.js';
-import type { ErmCommandRequest as StoredRequest } from '../../generated/prisma/client.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { validateCommand } from '../devices/command.js';
 import { CommandRequestsRepository } from './command-requests.repository.js';
+import { commandRequestView } from './command-request-view.js';
 import { deviceActions } from './device-actions.js';
 import { FleetClient } from './fleet.client.js';
 import { LiveDevicesService } from './live-devices.service.js';
 import { auditId, operatorAudit, operatorScope } from './operator-audit.js';
 import type { DeviceReference } from './telemetry.service.js';
 import { UnitWorkflowsService } from './unit-workflows.service.js';
-
-function requestView(request: StoredRequest): ErmCommandRequest {
-  return {
-    ...request,
-    createdAt: request.createdAt.toISOString(),
-    expiresAt: request.expiresAt.toISOString(),
-    submittedAt: request.submittedAt?.toISOString() ?? null,
-    completedAt: request.completedAt?.toISOString() ?? null,
-  };
-}
 
 @Injectable()
 export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
@@ -83,7 +73,7 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
       createdAt,
       new Date(createdAt.getTime() + seconds * 1000),
     );
-    return requestView(request);
+    return commandRequestView(request);
   }
 
   async cancel(
@@ -105,21 +95,32 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
     if (!cancelled) {
       throw new NotFoundException('Command request was not found in the active Branch');
     }
-    return requestView(cancelled);
+    return commandRequestView(cancelled);
+  }
+
+  async find(id: string, context: RequestContext): Promise<ErmCommandRequest | null> {
+    const scope = operatorScope(context);
+    const request = await this.repository.findById(scope, auditId(id));
+    if (!request) {
+      return null;
+    }
+    await this.fleet.deviceImei(request.deviceId, context);
+    return commandRequestView(request, await this.repository.related(scope, [request]));
   }
 
   async deviceRequests(device: DeviceReference, context: RequestContext) {
     const scope = operatorScope(context);
     const request = device.telemetryRequest;
     const deviceIds = request.deviceIds.length ? request.deviceIds : [auditId(device.id)];
-    request.commandRequests ??= this.repository
-      .history(scope, deviceIds)
-      .then(
-        (rows) =>
-          new Map(
-            deviceIds.map((id) => [id, rows.filter((row) => row.deviceId === id).map(requestView)]),
-          ),
+    request.commandRequests ??= this.repository.history(scope, deviceIds).then(async (rows) => {
+      const related = await this.repository.related(scope, rows);
+      return new Map(
+        deviceIds.map((id) => [
+          id,
+          rows.filter((row) => row.deviceId === id).map((row) => commandRequestView(row, related)),
+        ]),
       );
+    });
     return (await request.commandRequests).get(device.id) ?? [];
   }
 

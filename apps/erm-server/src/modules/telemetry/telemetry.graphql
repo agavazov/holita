@@ -2,6 +2,7 @@ extend schema
   @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key", "@external", "@requires"])
 
 scalar ErmJSON
+scalar DateTime
 
 enum ErmSessionMode {
   MIRROR
@@ -39,15 +40,59 @@ type ErmCommandRequest {
   actorId: String!
   intent: String!
   action: ErmDeviceAction!
+  "Stable code for purpose translation; intent remains the operator's original text."
+  actionCode: String!
+  displayParameters: ErmCommandDisplayParameters!
+  requestedAt: DateTime!
+  queuedAt: DateTime!
+  submittingAt: DateTime
+  sentAt: DateTime
+  answeredAt: DateTime
+  failedAt: DateTime
+  expiredAt: DateTime
+  cancelledAt: DateTime
+  uncertainAt: DateTime
+  "A transport acknowledgement is not independent verification of execution."
+  outcomeCode: String!
+  reasonCode: String
+  transportCommand: ErmCommand
+  "Related verification only when a stored configuration step references this transport command."
+  configurationVerification: ErmConfigurationChange
+  "Exact captured outbound frame; null when unavailable."
+  sentFrame: ErmFrame
+  "Exact transport response bytes, encoded as hexadecimal; responseText remains readable evidence."
+  receivedFrameHex: String
   status: ErmCommandRequestStatus!
-  createdAt: String!
-  expiresAt: String!
-  submittedAt: String
-  completedAt: String
+  createdAt: DateTime!
+  expiresAt: DateTime!
+  submittedAt: DateTime
+  completedAt: DateTime
   commandId: ID
   resultCode: String
   responseText: String
   failureReason: String
+}
+"Display facts for the six existing allowlisted read actions; no arbitrary protocol input."
+type ErmCommandDisplayParameters {
+  expiresInSeconds: Int!
+  requestedFields: [ErmCommandDisplayField!]!
+}
+enum ErmCommandDisplayField {
+  IGNITION
+  ENGINE
+  VIN
+  MAIN_VOLTAGE
+  SIGNAL_QUALITY
+  JAMMING
+  FIRMWARE_VERSION
+}
+"A confirmation linked by the original transport command reference."
+type ErmCommandAcknowledgement {
+  commandId: ID!
+  commandReference: String!
+  replyReference: String!
+  resultCode: String!
+  receivedAt: DateTime!
 }
 input CancelErmDeviceCommandInput {
   deviceId: ID!
@@ -60,8 +105,8 @@ enum ErmRecoveryOutcome {
 "Result of a read-only configuration session on the fixed recovery listener."
 type ErmRecoverySession {
   id: ID!
-  startedAt: String!
-  finishedAt: String!
+  startedAt: DateTime!
+  finishedAt: DateTime!
   outcome: ErmRecoveryOutcome!
   reason: String!
   primaryHost: String
@@ -106,12 +151,24 @@ type ErmConfigurationChange {
   intent: String
   parameter: Int
   status: ErmConfigurationChangeStatus!
-  startedAt: String!
-  finishedAt: String
+  startedAt: DateTime!
+  finishedAt: DateTime
   failureReason: String
   baseline: ErmJSON!
   intended: String
   steps: ErmJSON!
+  stepDetails: [ErmConfigurationStep!]!
+}
+"Typed view of a retained verification step; raw steps are kept for compatibility."
+type ErmConfigurationStep {
+  name: String!
+  at: DateTime!
+  outcome: String!
+  outcomeCode: String!
+  commandId: ID
+  transportCommand: ErmCommand
+  payload: String
+  configuration: ErmJSON
 }
 "Event groups of the StarLink event catalog."
 enum ErmEventCategory {
@@ -195,8 +252,8 @@ type ErmParameterSnapshot {
   actorId: String
   intent: String
   status: ErmParameterSnapshotStatus!
-  startedAt: String!
-  finishedAt: String
+  startedAt: DateTime!
+  finishedAt: DateTime
   "Number of catalog parameters planned for this snapshot."
   parameterCount: Int!
   "Number of parameters with a stored value or read outcome."
@@ -212,8 +269,8 @@ type ErmEvent {
   frameId: ID!
   unitId: ID!
   eventId: String
-  eventTime: String
-  positionTime: String
+  eventTime: DateTime
+  positionTime: DateTime
   latitude: Float
   longitude: Float
   speedKmh: Float
@@ -237,14 +294,14 @@ type ErmReading {
   "Observed numeric value."
   value: Float!
   "Event time, or the frame receipt time when the event has no time."
-  observedAt: String!
+  observedAt: DateTime!
 }
 "A text unit reading and the time its command was answered."
 type ErmTextReading {
   "Observed text value."
   value: String!
   "Time the command response was received."
-  observedAt: String!
+  observedAt: DateTime!
 }
 "Latest reported bytes for one parameter from eData 405; no physical conversion is assumed."
 type ErmEdataMeasurement {
@@ -257,12 +314,12 @@ type ErmEdataMeasurement {
   valueSize: Int!
   valueHex: String!
   "Report event time, or frame receipt time when the report has no time."
-  observedAt: String!
+  observedAt: DateTime!
 }
 "A complete-device-frame gap, clipped to the last 24 hours."
 type ErmDataGap {
-  from: String!
-  to: String!
+  from: DateTime!
+  to: DateTime!
   durationSeconds: Int!
   "Reporting interval known when the gap began."
   expectedIntervalSeconds: Int!
@@ -270,7 +327,7 @@ type ErmDataGap {
 "A network-change event or a change to an observed network/operator field."
 type ErmNetworkChange {
   "Frame receipt time."
-  at: String!
+  at: DateTime!
   networkType: String
   operatorCode: String
 }
@@ -290,7 +347,7 @@ type ErmUnitHealth {
   "Reason for the latest closed device connection."
   lastCloseReason: String
   "Time of the latest closed device connection."
-  lastClosedAt: String
+  lastClosedAt: DateTime
   "Upstream disconnects recorded during the last 24 hours."
   upstreamClosesLast24h: Int!
   "Upstream 04/46 frames writing routing parameters 0049–0054 during the last 24 hours."
@@ -304,8 +361,8 @@ type ErmUnitState {
   "The unit has an open connection to holita now."
   online: Boolean!
   mode: ErmSessionMode
-  connectedSince: String
-  lastFrameAt: String
+  connectedSince: DateTime
+  lastFrameAt: DateTime
   "Latest completed read-only backup recovery session; queue acceptance alone is not recovery."
   recovery: ErmRecoverySession
   "Latest decoded event with a position."
@@ -333,14 +390,17 @@ type ErmFrame {
   connectionId: ID!
   unitId: ID
   direction: ErmFrameDirection!
-  receivedAt: String!
+  receivedAt: DateTime!
   command: String
   reference: String
   checksum: ErmFrameChecksum!
   partial: Boolean!
   displayText: String!
+  rawHex: String!
 }
 type ErmCommand {
+  acknowledgement: ErmCommandAcknowledgement
+  responseHex: String
   id: ID!
   unitId: ID!
   connectionId: ID!
@@ -348,8 +408,8 @@ type ErmCommand {
   command: String!
   fields: [String!]!
   status: ErmCommandState!
-  sentAt: String!
-  answeredAt: String
+  sentAt: DateTime!
+  answeredAt: DateTime
   resultCode: String
   responseText: String
 }
@@ -396,6 +456,10 @@ type FleetDevice @key(fields: "id") {
   ermConfigurationWritesEnabled: Boolean! @requires(fields: "imei")
   "Newest fifty command requests of the verified Tenant and active Branch for this Device."
   ermCommandRequests: [ErmCommandRequest!]! @requires(fields: "imei")
+}
+type Query {
+  "One durable request in the verified Tenant and active Branch, suitable for pending-state polling."
+  ermCommandRequest(id: ID!): ErmCommandRequest
 }
 type Mutation {
   "Queues an allowlisted read for the Device's next primary connection, with expiry and no ambiguous replay."

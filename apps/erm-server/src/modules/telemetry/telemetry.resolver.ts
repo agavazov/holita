@@ -4,6 +4,7 @@ import {
   Info,
   Mutation,
   Parent,
+  Query,
   ResolveField,
   ResolveReference,
   Resolver,
@@ -11,6 +12,7 @@ import {
 import type { GraphQLResolveInfo } from 'graphql';
 import type {
   MutationSendErmDeviceCommandArgs,
+  QueryErmCommandRequestArgs,
   FleetDevice,
   FleetDeviceErmEventsArgs,
   FleetDeviceErmFramesArgs,
@@ -37,6 +39,11 @@ export class TelemetryResolver {
     private readonly configurations: ConfigurationChangesService,
     private readonly commandRequests: CommandRequestsService,
   ) {}
+
+  @Query('ermCommandRequest')
+  commandRequest(@Args() args: QueryErmCommandRequestArgs, @Context() context: RequestContext) {
+    return this.commandRequests.find(args.id, context);
+  }
 
   @Mutation('cancelErmDeviceCommand')
   cancelDeviceCommand(

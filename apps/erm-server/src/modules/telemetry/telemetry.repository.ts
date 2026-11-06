@@ -367,7 +367,7 @@ export class TelemetryRepository {
         parameterType: sqlInteger(row, 'parameterType'),
         valueSize: sqlInteger(row, 'valueSize'),
         valueHex: sqlText(row, 'valueHex'),
-        observedAt: observedAt.toISOString(),
+        observedAt,
       };
     });
     const events = new Map(selectedEvents.map((event) => [String(event.id), event]));
@@ -411,8 +411,8 @@ export class TelemetryRepository {
         }
         const from = new Date(Math.max(previousFrameAt.getTime(), since.getTime()));
         gapsLast24h.push({
-          from: from.toISOString(),
-          to: to.toISOString(),
+          from,
+          to,
           durationSeconds: Math.floor((to.getTime() - from.getTime()) / 1000),
           expectedIntervalSeconds,
         });
@@ -440,7 +440,7 @@ export class TelemetryRepository {
         if (changed && observation.receivedAt >= since) {
           networkChangesLast24h++;
           latestNetworkChange = {
-            at: observation.receivedAt.toISOString(),
+            at: observation.receivedAt,
             networkType,
             operatorCode,
           };

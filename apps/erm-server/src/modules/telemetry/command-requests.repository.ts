@@ -1,9 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
-import { Prisma, type ErmCommandRequestStatus } from '../../generated/prisma/client.js';
-import type { ErmDeviceAction } from '../../generated/graphql/types.js';
+import {
+  Prisma,
+  type ErmCommandRequest,
+  type ErmCommandRequestStatus,
+} from '../../generated/prisma/client.js';
+import type {
+  ErmDeviceAction,
+  ErmCommand,
+  ErmFrame,
+  ErmConfigurationChange,
+} from '../../generated/graphql/types.js';
 import { sqlRows, sqlText } from '../../database/sql.js';
 import type { OperatorAudit, OperatorScope } from './operator-audit.js';
+import { commandView, frameView } from './command-evidence.js';
+import { configurationChangeView } from './configuration-change-view.js';
+import { EdataChangeRepository } from './edata-change.repository.js';
+
+export interface CommandRequestRelations {
+  commands: Map<string, ErmCommand>;
+  frames: Map<string, ErmFrame | null>;
+  configurations: Map<string, ErmConfigurationChange | null>;
+}
 
 @Injectable()
 export class CommandRequestsRepository {
@@ -100,6 +118,96 @@ export class CommandRequestsRepository {
 
   find(scope: OperatorScope, deviceId: string, id: string) {
     return this.prisma.client.ermCommandRequest.findFirst({ where: { ...scope, deviceId, id } });
+  }
+
+  findById(scope: OperatorScope, id: string) {
+    return this.prisma.client.ermCommandRequest.findFirst({ where: { ...scope, id } });
+  }
+
+  async related(
+    scope: OperatorScope,
+    requests: ErmCommandRequest[],
+  ): Promise<CommandRequestRelations> {
+    const linked = requests.filter(
+      (request): request is ErmCommandRequest & { commandId: string } =>
+        request.tenantId === scope.tenantId &&
+        request.branchId === scope.branchId &&
+        request.commandId !== null,
+    );
+    if (!linked.length) {
+      return { commands: new Map(), frames: new Map(), configurations: new Map() };
+    }
+    const commands = await this.prisma.client.ermCommand.findMany({
+      where: {
+        OR: linked.map((request) => ({ id: request.commandId, unitId: request.unitId })),
+      },
+    });
+    const frames = commands.length
+      ? await this.prisma.client.ermFrame.findMany({
+          where: {
+            direction: 'HOLITA',
+            partial: false,
+            OR: commands.map((command) => ({
+              unitId: command.unitId,
+              connectionId: command.connectionId,
+              reference: command.reference,
+              command: command.command,
+            })),
+          },
+          orderBy: { receivedAt: 'asc' },
+        })
+      : [];
+    const configurations = await this.prisma.client.ermConfigurationChange.findMany({
+      where: {
+        ...scope,
+        actorId: { not: null },
+        OR: linked.map((request) => ({
+          deviceId: request.deviceId,
+          unitId: request.unitId,
+          steps: { array_contains: [{ commandId: request.commandId }] },
+        })),
+      },
+      orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
+    });
+    const stepCommands = await new EdataChangeRepository(this.prisma.client).commands(
+      configurations,
+    );
+    const commandViews = new Map(
+      [...commands, ...stepCommands].map((command) => [command.id, commandView(command)]),
+    );
+    return {
+      commands: commandViews,
+      frames: new Map(
+        commands.map((command) => {
+          const frame = frames.find(
+            (frame) =>
+              frame.unitId === command.unitId &&
+              frame.connectionId === command.connectionId &&
+              frame.reference === command.reference &&
+              frame.command === command.command,
+          );
+          return [command.id, frame ? frameView(frame) : null];
+        }),
+      ),
+      configurations: new Map(
+        linked.map((request) => {
+          const change = configurations.find(
+            (change) =>
+              change.deviceId === request.deviceId &&
+              change.unitId === request.unitId &&
+              Array.isArray(change.steps) &&
+              change.steps.some(
+                (step) =>
+                  typeof step === 'object' &&
+                  step !== null &&
+                  !Array.isArray(step) &&
+                  step['commandId'] === request.commandId,
+              ),
+          );
+          return [request.id, change ? configurationChangeView(change, commandViews) : null];
+        }),
+      ),
+    };
   }
 
   async history(scope: OperatorScope, deviceIds: string[]) {
