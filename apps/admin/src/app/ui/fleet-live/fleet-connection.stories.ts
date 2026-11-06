@@ -25,7 +25,11 @@ export const Overdue: Story = {
         ? {
             ...fixtureLiveDevice.ermState,
             online: false,
-            health: { ...fixtureLiveDevice.ermState.health, overdue: true },
+            health: {
+              ...fixtureLiveDevice.ermState.health,
+              overdue: true,
+              lastFrameAgeSeconds: 1800,
+            },
           }
         : null,
     },

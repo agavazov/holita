@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -34,6 +35,7 @@ import { settingsText } from './settings/i18n/messages';
 
 @Component({
   imports: [
+    NgTemplateOutlet,
     Message,
     ButtonDirective,
     DevicesPage,

@@ -63,7 +63,7 @@
   <p-table
     class="app-responsive-table"
     [value]="tableRows()"
-    [tableStyle]="{ 'min-width': tableMinWidth, 'table-layout': 'fixed' }"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)', 'table-layout': 'fixed' }"
     dataKey="id"
     [rowTrackBy]="trackById"
     [lazy]="true"
@@ -78,7 +78,14 @@
     <ng-template #colgroup>
       <colgroup>
         @for (column of columns(); track column.id) {
-          <col [style.width]="column.width" [class]="column.className" />
+          <col
+            [style.width]="
+              column.className === 'app-col-identity'
+                ? 'var(--app-table-identity-width, ' + column.width + ')'
+                : column.width
+            "
+            [class]="column.className"
+          />
         }
       </colgroup>
     </ng-template>

@@ -194,6 +194,7 @@ export class DevicePage implements OnInit {
         position: mapCoordinates(position?.latitude, position?.longitude),
         positionAt: position?.positionTime ?? position?.eventTime ?? null,
         heading: position?.heading ?? null,
+        speedKph: position?.speedKmh ?? null,
         status: {
           label: live
             ? this.text().detail.live

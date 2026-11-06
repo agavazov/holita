@@ -175,12 +175,19 @@ function recordOf(row: DemoRow): ListRecord<DemoAction> {
         [scrollable]="true"
         [lazy]="mode() === 'offset'"
         [lazyLoadOnInit]="false"
-        [tableStyle]="{ 'min-width': '76.25rem' }"
+        [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
       >
         <ng-template #colgroup>
           <colgroup>
             @for (column of columns; track column.id) {
-              <col [style.width]="column.width" [class]="column.className ?? ''" />
+              <col
+                [style.width]="
+                  column.className === 'app-col-identity'
+                    ? 'var(--app-table-identity-width, ' + column.width + ')'
+                    : column.width
+                "
+                [class]="column.className ?? ''"
+              />
             }
           </colgroup>
         </ng-template>

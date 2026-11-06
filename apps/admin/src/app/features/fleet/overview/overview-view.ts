@@ -175,6 +175,7 @@ export class OverviewView {
           : null,
         positionAt: record.position?.recordedAt ?? null,
         heading: record.position?.headingDeg ?? null,
+        moving: record.activity === 'MOVING',
         href: '/' + [...this.links().vehicles.slice(1), record.vehicle.id, 'overview'].join('/'),
       };
     }),

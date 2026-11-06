@@ -56,8 +56,8 @@ export const IdentityAndActions: Story = {
     template: `
       <div class="app-view">
         <holita-table-panel #panel heading="Responsive cells" mode="local" [total]="rows.length" [view]="{kind: 'rows'}" [columns]="columns" tableMinWidth="88.25rem" [actions]="actions" (action)="chosen = 'View ' + $event.ids.join(', ')">
-          <p-table class="app-responsive-table" [value]="rows" [scrollable]="true" dataKey="id" [tableStyle]="{ 'min-width': '88.25rem' }">
-            <ng-template #colgroup><colgroup>@for (column of columns; track column.id) { <col [style.width]="column.width" [class]="column.className ?? ''" /> }</colgroup></ng-template>
+          <p-table class="app-responsive-table" [value]="rows" [scrollable]="true" dataKey="id" [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }">
+            <ng-template #colgroup><colgroup>@for (column of columns; track column.id) { <col [style.width]="column.className === 'app-col-identity' ? 'var(--app-table-identity-width, ' + column.width + ')' : column.width" [class]="column.className ?? ''" /> }</colgroup></ng-template>
             <ng-template #header>
               <tr>
                 @for (column of columns; track column.id) {

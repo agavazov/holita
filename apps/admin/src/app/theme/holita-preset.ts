@@ -294,6 +294,10 @@ function componentTokens(brand: Brand, density: Density) {
     datatable,
     drawer,
     message: messageToneTokens(),
+    tabs: {
+      tab: { borderWidth: '0 0 1px 0', activeBorderColor: '{primary.color}' },
+      activeBar: { height: '0' },
+    },
     tag,
     toast: { ...toastToneTokens(), summary: { fontWeight: '600' } },
     togglebutton,

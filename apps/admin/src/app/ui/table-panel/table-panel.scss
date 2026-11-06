@@ -3,6 +3,12 @@
 :host {
   display: block;
   min-inline-size: 0;
+  --app-table-responsive-min-width: var(--app-table-min-width);
+
+  @include bp.below(sm) {
+    --app-table-responsive-min-width: 0;
+    --app-table-identity-width: 10.5rem;
+  }
 }
 
 .table-panel {

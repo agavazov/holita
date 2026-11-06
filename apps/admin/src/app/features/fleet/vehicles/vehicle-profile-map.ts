@@ -34,6 +34,7 @@ export function vehicleMapRecords(
       position: position ? { latitude: position.latitude, longitude: position.longitude } : null,
       positionAt: position?.recordedAt ?? null,
       heading: position?.headingDeg ?? null,
+      speedKph: position?.speedKph ?? null,
     },
   ];
 }

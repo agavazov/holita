@@ -17,7 +17,7 @@
         '/' +
         scope.recordId
     ) {
-      @if (!preferences.settings()) {
+      <ng-template #preferencesState>
         <section class="app-card">
           <h1>{{ workspace.text().fleet }}</h1>
           @if (preferences.loading()) {
@@ -31,13 +31,25 @@
             </div>
           }
         </section>
+      </ng-template>
+      @if (scope.resource === 'general' || scope.resource === 'groups') {
+        <holita-settings-tabs
+          [current]="scope.resource === 'general' ? 'general' : 'vehicle-groups'"
+        >
+          @if (preferences.settings()) {
+            @if (scope.resource === 'general') {
+              <holita-general-settings-page [branch]="scope.branch" [language]="scope.language" />
+            } @else {
+              <holita-vehicle-groups-page [branch]="scope.branch" [language]="scope.language" />
+            }
+          } @else {
+            <ng-container [ngTemplateOutlet]="preferencesState" />
+          }
+        </holita-settings-tabs>
+      } @else if (!preferences.settings()) {
+        <ng-container [ngTemplateOutlet]="preferencesState" />
       } @else {
         @switch (scope.resource) {
-          @case ('general') {
-            <holita-settings-tabs current="general">
-              <holita-general-settings-page [branch]="scope.branch" [language]="scope.language" />
-            </holita-settings-tabs>
-          }
           @case ('vehicle-profile') {
             <holita-vehicle-profile-page [branch]="scope.branch" [language]="scope.language" />
           }
@@ -58,11 +70,6 @@
           }
           @case ('alerts') {
             <holita-alerts-page [branch]="scope.branch" [language]="scope.language" />
-          }
-          @case ('groups') {
-            <holita-settings-tabs current="vehicle-groups">
-              <holita-vehicle-groups-page [branch]="scope.branch" [language]="scope.language" />
-            </holita-settings-tabs>
           }
           @case ('devices') {
             <holita-devices-list-page [branch]="scope.branch" [language]="scope.language" />

@@ -9,10 +9,6 @@ command/SMS workflows and shared presentation belong to
   and narrow layouts, including delayed/live tables, maps, charts, account pages and notifications.
   Keep this review separate from automated checks; report any concrete defects in the existing
   [presentation backlog](admin-design-system.md).
-- Select and configure a managed OSM-compatible raster tile provider and its required attribution
-  before client demos. The runtime configuration is documented in
-  [development](../development.md#ports-and-environment); the community OSM tiles remain the
-  development/internal-demo default.
 
 Other production/release prerequisites remain in the
 [presentation and release backlog](admin-design-system.md#release-decisions).
