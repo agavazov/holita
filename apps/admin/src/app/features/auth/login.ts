@@ -7,6 +7,7 @@ import {
   inject,
   input,
   isDevMode,
+  linkedSignal,
   output,
   signal,
   untracked,
@@ -74,7 +75,11 @@ export class Login {
   );
   readonly tenants = signal<AdminTenantsQuery['tenants']>([]);
   readonly branches = signal<AdminBranchesQuery['branches']>([]);
-  readonly prepared = signal<AccountSession | null>(null);
+  private readonly sessionToken = computed(() => this.session.current()?.token ?? null);
+  readonly prepared = linkedSignal({
+    source: this.sessionToken,
+    computation: () => this.session.current(),
+  });
   readonly busy = signal(false);
   readonly branchesLoading = signal(false);
   readonly tenantsLoading = signal(false);
@@ -90,6 +95,22 @@ export class Login {
   private destroyed = false;
 
   constructor() {
+    effect(() => {
+      const token = this.sessionToken();
+      untracked(() => {
+        const current = this.session.current();
+        if (token?.startsWith('holita-session.') && current) {
+          this.loadBranches(current, this.language());
+        } else if (!token) {
+          this.closeBranches?.();
+          this.closeBranches = undefined;
+          this.branches.set([]);
+          this.branchesLoading.set(false);
+          this.failure.set(null);
+          this.form.enable();
+        }
+      });
+    });
     let previousLanguage: Language | undefined;
     effect(() => {
       const language = this.language();
@@ -116,12 +137,6 @@ export class Login {
       this.revision++;
       this.closeBranches?.();
       this.closeTenants?.();
-      const session = this.prepared();
-      if (session && !this.submitted() && session.token.startsWith('holita-session.')) {
-        void this.auth
-          .signOut({ tenantId: session.tenant.id, token: session.token })
-          .catch(() => undefined);
-      }
     });
   }
 
@@ -158,8 +173,7 @@ export class Login {
         return;
       }
       this.form.controls.password.reset();
-      this.prepared.set(session);
-      this.loadBranches(session, language);
+      this.session.start(session);
     } catch (error: unknown) {
       if (!this.destroyed && revision === this.revision) {
         this.failure.set(isUnauthenticated(error) ? 'credentials' : 'network');
@@ -252,9 +266,7 @@ export class Login {
     this.failure.set(null);
     this.form.enable();
     if (session?.token.startsWith('holita-session.')) {
-      void this.auth
-        .signOut({ tenantId: session.tenant.id, token: session.token })
-        .catch(() => undefined);
+      this.session.logout();
     }
   }
 

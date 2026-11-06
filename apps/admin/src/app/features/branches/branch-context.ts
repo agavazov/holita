@@ -79,7 +79,7 @@ export class BranchContext {
     this.navigation();
     const branches = this.branches();
     const selected = this.selectedId();
-    if (this.session.current() && branches?.length) {
+    if (this.session.current() && this.session.branchId() && branches?.length) {
       if (selected) {
         this.session.selectBranch(selected);
       } else if (!this.route.firstChild && !this.defaultNavigationPaused) {

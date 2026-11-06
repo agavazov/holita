@@ -25,17 +25,18 @@ export type SessionNotice = 'expired' | 'passwordChanged' | 'signOutFailed';
 const storageKey = 'holita.admin.session';
 const legacyStorageKey = 'holita.admin.demo-session';
 
-function restoredSession(): (AccountSession & { branchId: string | null }) | 'expired' | null {
+type StoredSession = AccountSession & { branchId: string | null };
+
+function readSession(stored: string | null, allowDemo: boolean): StoredSession | 'expired' | null {
   try {
-    const stored =
-      sessionStorage.getItem(storageKey) ??
-      (isDevMode() ? sessionStorage.getItem(legacyStorageKey) : null);
     const value: unknown = JSON.parse(stored ?? 'null');
     if (
       !value ||
       typeof value !== 'object' ||
       !('token' in value) ||
       typeof value.token !== 'string' ||
+      (!value.token.startsWith('holita-session.') &&
+        !(allowDemo && value.token.startsWith('holita-demo.'))) ||
       !('tenant' in value) ||
       !value.tenant ||
       typeof value.tenant !== 'object' ||
@@ -49,7 +50,7 @@ function restoredSession(): (AccountSession & { branchId: string | null }) | 'ex
     const expiresAt =
       'expiresAt' in value && typeof value.expiresAt === 'string' ? value.expiresAt : undefined;
     const demoExpiry =
-      isDevMode() && value.token.startsWith('holita-demo.')
+      allowDemo && value.token.startsWith('holita-demo.')
         ? Number(value.token.split('.')[2]) * 1000
         : NaN;
     const expiry = expiresAt ? Date.parse(expiresAt) : demoExpiry;
@@ -69,6 +70,35 @@ function restoredSession(): (AccountSession & { branchId: string | null }) | 'ex
   } catch {
     return null;
   }
+}
+
+function restoredSession(): StoredSession | 'expired' | null {
+  let tab: StoredSession | 'expired' | null = null;
+  try {
+    tab = readSession(
+      sessionStorage.getItem(storageKey) ??
+        (isDevMode() ? sessionStorage.getItem(legacyStorageKey) : null),
+      isDevMode(),
+    );
+    if (tab && tab !== 'expired' && tab.token.startsWith('holita-demo.')) {
+      return tab;
+    }
+  } catch {
+    /* Shared storage or memory can still be available. */
+  }
+  try {
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      const session = readSession(stored, false);
+      if (session === 'expired') {
+        localStorage.removeItem(storageKey);
+      }
+      return session;
+    }
+  } catch {
+    /* Tab storage or memory can still be available. */
+  }
+  return tab;
 }
 
 export function isUnauthenticated(error: unknown): boolean {
@@ -100,7 +130,36 @@ export class DemoSession {
   private failedSignOut: Readonly<{ tenantId: string; token: string }> | null = null;
 
   constructor() {
+    if (this.restored === 'expired') {
+      this.clear();
+    } else if (this.current()?.token.startsWith('holita-session.')) {
+      // Promote real sessions from the previous tab-only storage format.
+      this.persist();
+    }
     this.scheduleExpiry();
+    const synchronize = (event: StorageEvent) => {
+      if (
+        event.storageArea !== localStorage ||
+        (event.key !== storageKey && event.key !== null) ||
+        this.current()?.token.startsWith('holita-demo.')
+      ) {
+        return;
+      }
+      const restored = readSession(event.newValue, false);
+      if (restored && restored !== 'expired') {
+        if (restored.token !== this.current()?.token) {
+          this.notice.set(null);
+          this.selectedBranch.set(restored.branchId);
+          this.state.set(restored);
+          this.scheduleExpiry();
+        }
+      } else if (this.current()?.token.startsWith('holita-session.')) {
+        this.clear();
+        this.notice.set(restored === 'expired' ? 'expired' : null);
+        this.showSignIn();
+      }
+    };
+    window.addEventListener('storage', synchronize);
     effect((onCleanup) => {
       const token = this.token();
       if (!token || !token.startsWith('holita-session.')) {
@@ -128,6 +187,7 @@ export class DemoSession {
     });
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.expiryTimer);
+      window.removeEventListener('storage', synchronize);
     });
   }
 
@@ -156,7 +216,9 @@ export class DemoSession {
   private persist(): void {
     const current = this.current();
     try {
-      sessionStorage.setItem(
+      const real = current?.token.startsWith('holita-session.');
+      const storage = real ? localStorage : sessionStorage;
+      storage.setItem(
         storageKey,
         JSON.stringify({
           token: current?.token,
@@ -165,6 +227,10 @@ export class DemoSession {
           branchId: this.branchId(),
         }),
       );
+      if (real) {
+        sessionStorage.removeItem(storageKey);
+        sessionStorage.removeItem(legacyStorageKey);
+      }
     } catch {
       /* Memory session still works. */
     }
@@ -218,14 +284,25 @@ export class DemoSession {
   end(reason: 'expired' | 'passwordChanged'): void {
     this.clear();
     this.notice.set(reason);
+    this.showSignIn();
+  }
+
+  private showSignIn(): void {
     const language = this.router.url.split('/')[1] === 'en' ? 'en' : 'bg';
     void this.router.navigate(['/', language, 'sign-in'], { replaceUrl: true });
   }
 
-  private clear(): void {
+  private clear(shared = this.current()?.token.startsWith('holita-session.') ?? false): void {
     this.state.set(null);
     this.selectedBranch.set(null);
     clearTimeout(this.expiryTimer);
+    if (shared) {
+      try {
+        localStorage.removeItem(storageKey);
+      } catch {
+        /* The current client is still retired. */
+      }
+    }
     try {
       sessionStorage.removeItem(storageKey);
       sessionStorage.removeItem(legacyStorageKey);

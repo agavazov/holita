@@ -54,7 +54,7 @@
     "options": "Device options",
     "simPhone": "SIM phone number",
     "smsPassword": "Simple SMS password",
-    "smsPasswordHint": "Parameter 0593 on the unit: 1–16 letters or digits. SMS commands shows it in plain text.",
+    "smsPasswordHint": "Parameter 0593 on the unit: 1–16 letters or digits. The SMS commands page shows it in plain text.",
     "installedAt": "Installed at",
     "installedAtHint": "Branch time zone: {timeZone}. Saved as a UTC instant.",
     "firmware": "Firmware",

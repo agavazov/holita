@@ -30,6 +30,11 @@ or password recovery. Sign-in takes email/password first, then offers that Tenan
 A single Branch opens automatically; an account with no Branches can open Profile and retry
 discovery. Profile edits name/email and changes the password; the admin signs out after a password
 change and requires the new password. The account menu also offers theme and Sign out.
+Real sessions are saved in localStorage as soon as sign-in succeeds, before fleet selection.
+Reloads and new tabs in the same browser stay signed in until expiry or sign-out. Sign-out,
+expiry and a detected server revocation clear the real session across tabs; each open tab keeps
+its current fleet when another tab changes fleets. Denied storage uses memory only.
+Sign-out honors dirty guards and retires clients; submitted writes keep their captured token.
 
 Settings → Users is Tenant-wide and requires no Branch. Only Administrators can create users,
 edit their accounts or roles, and deactivate/reactivate accounts. Nobody can change their own
@@ -73,10 +78,8 @@ Core, Fleet and ERM API use the same `DEMO_AUTH_SECRET` (at least 32 characters)
 available. Production requires explicit demo enablement and a valid secret. This development
 login deliberately permits anyone to choose any Tenant; use real user sessions for client access.
 
-Tab sessionStorage retains the unexpired real or demo session and selected Branch. Denied storage uses
-memory only. Logout honors dirty guards, retires clients and clears the tab session; expiry
-also retires it. Submitted writes keep their captured token; demo tokens have no server-side
-revocation. A rejected real session never falls back to this demo flow.
+Tab sessionStorage retains the unexpired demo session and selected Branch. Demo tokens have no
+server-side revocation. A rejected real session never falls back to this demo flow.
 
 ### Fleet demo data
 

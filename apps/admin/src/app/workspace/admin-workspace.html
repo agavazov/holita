@@ -1,5 +1,5 @@
 <holita-operation-toast />
-@if (!session.current()) {
+@if (!session.current() || (!session.branchId() && branches.required())) {
   <holita-login
     [language]="language()"
     [languageUrl]="otherLanguageUrl()"

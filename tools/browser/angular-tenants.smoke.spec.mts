@@ -46,7 +46,19 @@ test('sign-in gates deep links and business reads, survives reload, clears on lo
   await expect(page.getByRole('combobox', { name: 'Choose a fleet', exact: true })).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: /^Email/ })).toBeVisible();
   expect(business).toEqual([]);
-  await signIn(page, app.account, app.branchA.name);
+  await signIn(page, app.account);
+  await expect(page.getByRole('heading', { name: 'Choose a fleet', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('holita.admin.session') !== null)).toBe(
+    true,
+  );
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Choose a fleet', exact: true })).toBeVisible();
+  const sibling = await page.context().newPage();
+  await sibling.goto(`${app.url}/en/sign-in`);
+  await expect(sibling.getByRole('heading', { name: 'Choose a fleet', exact: true })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Choose a fleet', exact: true }).click();
+  await page.getByRole('option', { name: app.branchA.name, exact: true }).click();
+  await page.getByRole('button', { name: 'Open Dashboard', exact: true }).click();
   await expect(page).toHaveURL(
     `${app.url}/en/${app.branchA.id}/fleet/dashboard/overview?search=old`,
   );
@@ -58,7 +70,14 @@ test('sign-in gates deep links and business reads, survives reload, clears on lo
   await expect(firstTenantVehicle).toBeVisible();
   await page.reload();
   await expect(firstTenantVehicle).toBeVisible();
+  await sibling.goto(`${app.url}/en/${app.branchA.id}/fleet/vehicles`);
+  await expect(
+    sibling.getByRole('button', { name: 'Open FIRST-TENANT', exact: true }),
+  ).toBeVisible();
   await signOut(page);
+  await expect(sibling.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
+  await sibling.close();
+  expect(await page.evaluate(() => localStorage.getItem('holita.admin.session'))).toBeNull();
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.getItem('holita.admin.session'))).toBeNull();
   const isolationAccount = await app.createAccount('01000000-0000-4000-8000-000000000002');
@@ -74,7 +93,7 @@ test('sign-in gates deep links and business reads, survives reload, clears on lo
   await expect(page.getByText('No vehicles yet', { exact: true })).toBeVisible();
   await expect(firstTenantVehicle).toHaveCount(0);
   const restored: unknown = await page.evaluate(() => {
-    const session: unknown = JSON.parse(sessionStorage.getItem('holita.admin.session') ?? 'null');
+    const session: unknown = JSON.parse(localStorage.getItem('holita.admin.session') ?? 'null');
     return session;
   });
   expect(restored).toHaveProperty('tenant.id', '01000000-0000-4000-8000-000000000002');

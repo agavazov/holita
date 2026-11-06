@@ -37,7 +37,7 @@ export const fixtureAccount = {
 
 /** Seeds the stored session before the application bootstraps. */
 export function seedSession(branchId: string | null): void {
-  sessionStorage.setItem(
+  localStorage.setItem(
     'holita.admin.session',
     JSON.stringify({
       token: fixtureToken,
@@ -49,6 +49,7 @@ export function seedSession(branchId: string | null): void {
 }
 
 export function clearSession(): void {
+  localStorage.removeItem('holita.admin.session');
   sessionStorage.removeItem('holita.admin.session');
   sessionStorage.removeItem('holita.admin.demo-session');
 }

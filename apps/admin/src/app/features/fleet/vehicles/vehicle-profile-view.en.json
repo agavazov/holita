@@ -28,7 +28,7 @@
   "viewProblems": "View problems",
   "problemKpi": "Need attention",
   "problems": {
-    "heading": "Problems of this vehicle",
+    "heading": "Vehicle problems",
     "empty": "No problems in this period",
     "note": "Recorded evidence is historical; it does not establish a current unresolved fault. Only Fleet alerts can be acknowledged or resolved.",
     "period": "Recorded evidence period",

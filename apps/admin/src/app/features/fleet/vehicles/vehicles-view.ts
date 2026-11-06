@@ -171,11 +171,11 @@ export class VehiclesView {
     {
       id: 'vehicle',
       label: this.text().table.vehicle,
-      width: '19rem',
+      width: '17rem',
       kind: 'identity',
       className: 'app-col-identity',
     },
-    { id: 'activity', label: this.listText().activity, width: '18rem', kind: 'status' },
+    { id: 'activity', label: this.listText().activity, width: '20rem', kind: 'status' },
     { id: 'latest', label: this.listText().latest, width: '16rem', kind: 'date' },
     { id: 'problems', label: this.listText().problems, width: '12rem', kind: 'problems' },
     {

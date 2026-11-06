@@ -36,7 +36,7 @@ export class SignInPage {
       this.primeNG.setTranslation(primeNgTranslation(language, this.primeNG.translation.aria));
     });
     effect(() => {
-      if (this.session.current()) {
+      if (this.session.current() && this.session.branchId()) {
         const branchId = this.session.branchId();
         void this.router.navigate(
           branchId

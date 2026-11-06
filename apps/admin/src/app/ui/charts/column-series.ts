@@ -73,7 +73,7 @@ export class ColumnSeries {
   protected readonly bars = computed(() => {
     const points = this.points();
     const max = Math.max(0, ...points.map((point) => point.value ?? 0));
-    const every = Math.max(1, Math.ceil(points.length / 7));
+    const every = Math.max(1, Math.ceil(points.length / 3));
     const last = points.length - 1;
     return points.map((point, index) => ({
       key: point.key,
@@ -81,7 +81,7 @@ export class ColumnSeries {
       valueText: point.valueText,
       height: point.value === null ? null : max > 0 ? (Math.max(point.value, 0) / max) * 100 : 0,
       highlight: this.highlightLast() && index === last,
-      // Counted back from the latest bar, so the newest label is always shown and never crowded.
+      // Three labels fit the narrow overview card; count back so the newest is always shown.
       showLabel: (last - index) % every === 0,
     }));
   });

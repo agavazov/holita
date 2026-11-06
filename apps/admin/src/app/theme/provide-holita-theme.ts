@@ -1,5 +1,6 @@
 import type { EnvironmentProviders } from '@angular/core';
 import { providePrimeNG } from 'primeng/config';
+import { tabListPt } from '../ui/tabs';
 import { holitaPreset } from './holita-preset';
 import type { ThemeChoice } from './theme-choice';
 
@@ -24,7 +25,7 @@ export function provideHolitaTheme(choice: ThemeChoice, license?: string): Envir
   return providePrimeNG({
     ripple: false,
     theme: holitaTheme(choice),
-    pt: { table: { tableContainer: { tabindex: '0' } } },
+    pt: { table: { tableContainer: { tabindex: '0' } }, tabList: tabListPt },
     ...(license ? { license } : {}),
   });
 }

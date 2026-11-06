@@ -58,3 +58,11 @@
   color: var(--p-text-muted-color);
   white-space: nowrap;
 }
+
+.column-series__tick:first-child {
+  justify-content: start;
+}
+
+.column-series__tick:last-child {
+  justify-content: end;
+}
