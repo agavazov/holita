@@ -1,38 +1,46 @@
 import type { FleetRecordLinks } from '../fleet-record-links';
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  linkedSignal,
+  output,
+} from '@angular/core';
 import { RouterLink, type Params } from '@angular/router';
+import { ChartLine } from '@primeicons/angular/chart-line';
+import { ExclamationTriangle } from '@primeicons/angular/exclamation-triangle';
+import { Gauge } from '@primeicons/angular/gauge';
+import { Wrench } from '@primeicons/angular/wrench';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { Tag } from 'primeng/tag';
 import { ColumnSeries, type SeriesPoint } from '../../../ui/charts/column-series';
-import { Sparkline, type SparkPoint } from '../../../ui/charts/sparkline';
 import { EmptyState } from '../../../ui/empty-state/empty-state';
 import {
-  FormatDateOnlyPipe,
-  FormatDateTimePipe,
   FormatDurationPipe,
   FormatMoneyPipe,
   FormatNumberPipe,
   FormatRelativePipe,
 } from '../../../ui/format/format.pipes';
-import { formatDateOnly } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
+import { trackById } from '../../../ui/list/list-actions';
+import {
+  LocationMap,
+  type LocationMapRecord,
+  type LocationMapTrack,
+} from '../../../ui/location-map/location-map';
 import { PageHeader } from '../../../ui/page-header/page-header';
-import { TablePanel, type TablePage } from '../../../ui/table-panel/table-panel';
+import { TablePanel, type TableColumn, type TablePage } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import {
-  type AlertRow,
-  type AlertSeverityCode,
-  type AlertStatusCode,
-  alertStatusTones,
-  severityTones,
-} from '../alerts/alerts-view';
+import { type AlertSeverityCode, severityTones } from '../alerts/alerts-view';
 import { alertsText } from '../alerts/i18n/messages';
 import { scoreTone } from '../drivers/drivers-view';
 import { maintenanceText } from '../maintenance/i18n/messages';
@@ -41,7 +49,11 @@ import { tripsText } from '../trips/i18n/messages';
 import { type TripRow, worstTone } from '../trips/trips-view';
 import { vehiclesText } from './i18n/messages';
 import type { VehicleFuelType } from './vehicle-drawer';
+import { vehicleLastReport, vehicleLiveStatus } from './vehicle-live';
+import type { VehicleProblem, VehicleProblemCounts } from './vehicle-profile-v2-model';
 import type { VehicleRow } from './vehicles-view';
+import bg from './vehicle-profile-view.bg.json';
+import en from './vehicle-profile-view.en.json';
 
 /** The vehicle record of the profile page: the list row plus specification and live data. */
 export interface VehicleProfile extends VehicleRow {
@@ -50,45 +62,53 @@ export interface VehicleProfile extends VehicleRow {
   readonly fuelType: VehicleFuelType | null;
   readonly tankL: number | null;
   readonly speedKph: number | null;
+  readonly latitude: number | null;
+  readonly longitude: number | null;
+  readonly headingDeg: number | null;
   readonly createdAt: string;
 }
 
-export interface EdataChart {
+/** Counts of unverified raw observations, without assigning physical meaning to their values. */
+export interface EdataObservation {
   readonly id: number;
   readonly label: string;
-  readonly catalogUnit: string | null;
-  readonly lastHex: string;
+  readonly count: number;
   readonly lastAt: string;
-  readonly points: readonly SparkPoint[];
 }
 
 export type VehicleProfileState = 'loading' | 'ready' | 'not-found' | 'error';
-
-/** A dated eData report: a trouble code the fault logger added or cleared, or a CAN error. */
-export interface DeviceEventRow {
-  readonly id: string;
-  readonly occurredAt: string;
-  readonly label: string;
-  readonly state: 'added' | 'cleared' | 'reported';
-}
-export const vehicleProfileTabs = ['overview', 'trips', 'alerts', 'service'] as const;
+export const vehicleProfileTabs = [
+  'overview',
+  'problems',
+  'trips',
+  'maintenance',
+  'commands',
+] as const;
 export type VehicleProfileTab = (typeof vehicleProfileTabs)[number];
 
 const statusTones = { ACTIVE: 'success', IN_WORKSHOP: 'warn', INACTIVE: 'neutral' } as const;
+const problemStateTones = {
+  OPEN: 'danger',
+  ACKNOWLEDGED: 'warn',
+  RECORDED: 'neutral',
+  FAILED: 'danger',
+  UNCERTAIN: 'warn',
+  EXPIRED: 'neutral',
+} as const;
 
 function listView(rows: readonly unknown[]): TableView {
   return { kind: rows.length ? 'rows' : 'empty' };
 }
 
-/**
- * The full-page record: header with Edit, KPIs and tabs (overview, trips, alerts, service).
- * Presentation only: the host loads the vehicle and its related lists, opens the drawers and
- * keeps the selected tab.
- */
+/** Vehicle record presentation. The routed adapter owns fetching, paging and business drawers. */
 @Component({
   selector: 'holita-vehicle-profile-view',
   imports: [
     RouterLink,
+    ChartLine,
+    ExclamationTriangle,
+    Gauge,
+    Wrench,
     ButtonDirective,
     TableModule,
     Tabs,
@@ -98,16 +118,14 @@ function listView(rows: readonly unknown[]): TableView {
     TabPanel,
     Tag,
     ColumnSeries,
-    Sparkline,
     EmptyState,
-    FormatDateOnlyPipe,
-    FormatDateTimePipe,
     FormatDurationPipe,
     FormatMoneyPipe,
     FormatNumberPipe,
     FormatRelativePipe,
     KpiStrip,
     KpiTile,
+    LocationMap,
     PageHeader,
     TablePanel,
   ],
@@ -128,39 +146,41 @@ export class VehicleProfileView {
   readonly backLabel = input<string | null>(null);
   readonly errorText = input<string | null>(null);
   readonly distance = input<readonly SeriesPoint[]>([]);
-  readonly edataCharts = input<readonly EdataChart[]>([]);
+  readonly mapRecords = input<readonly LocationMapRecord[]>([]);
+  readonly mapAsOf = input<string | null>(null);
+  readonly mapUpdatedAt = input<string | null>(null);
+  readonly mapDataAsOf = input<string | null>(null);
+  readonly mapSpeedKph = input<number | null>(null);
+  readonly track = input<LocationMapTrack | null>(null);
+  readonly trackLoading = input(false);
+  readonly trackError = input<string | null>(null);
+  readonly retryTrack = output();
+  readonly edataObservations = input<readonly EdataObservation[]>([]);
   readonly edataFrom = input('');
   readonly edataTo = input('');
-  protected readonly edataStart = computed(() => Date.parse(this.edataFrom()));
-  protected readonly edataEnd = computed(() => Date.parse(this.edataTo()));
   readonly edataLoading = input(false);
   readonly edataError = input<string | null>(null);
   readonly edataTruncated = input(false);
   readonly retryEdata = output();
   readonly trips = input<readonly TripRow[]>([]);
-  readonly alerts = input<readonly AlertRow[]>([]);
+  readonly problems = input<readonly VehicleProblem[]>([]);
+  readonly problemCounts = input<VehicleProblemCounts | null>(null);
   readonly service = input<readonly ServiceTaskRow[]>([]);
-  /** Undefined keeps the standalone sample's presentation fallback; live hosts pass exact nextService. */
   readonly nextServiceTask = input<ServiceTaskRow | null | undefined>(undefined);
   readonly tripPage = input<TablePage | null>(null);
-  readonly alertPage = input<TablePage | null>(null);
+  readonly problemPage = input<TablePage | null>(null);
   readonly servicePage = input<TablePage | null>(null);
   readonly tripState = input<TableView | null>(null);
-  readonly alertState = input<TableView | null>(null);
+  readonly problemState = input<TableView | null>(null);
   readonly serviceState = input<TableView | null>(null);
   readonly tripError = input<string | null>(null);
-  readonly alertError = input<string | null>(null);
+  readonly problemError = input<string | null>(null);
   readonly serviceError = input<string | null>(null);
   readonly tripPageChange = output<{ page: number; pageSize: number }>();
-  readonly alertPageChange = output<{ page: number; pageSize: number }>();
+  readonly problemPageChange = output<{ page: number; pageSize: number }>();
   readonly servicePageChange = output<{ page: number; pageSize: number }>();
   readonly retryTrips = output();
-  readonly retryAlerts = output();
-  readonly deviceEvents = input<readonly DeviceEventRow[]>([]);
-  readonly deviceEventTotal = input<number | null>(null);
-  readonly deviceEventState = input<TableView | null>(null);
-  readonly deviceEventError = input<string | null>(null);
-  readonly retryDeviceEvents = output();
+  readonly retryProblems = output();
   readonly retryService = output();
   readonly tab = input<VehicleProfileTab>('overview');
   readonly tabChange = output<VehicleProfileTab>();
@@ -172,19 +192,21 @@ export class VehicleProfileView {
   readonly openService = output<string>();
 
   protected readonly units = injectFleetFormat();
-  private readonly language = inject(UI_LANGUAGE);
+  protected readonly language = inject(UI_LANGUAGE);
   private readonly vehicles = computed(() => vehiclesText(this.language()));
   protected readonly text = computed(() => this.vehicles().profile);
+  protected readonly v2 = computed(() => (this.language() === 'bg' ? bg : en));
   protected readonly staleFuelText = computed(() => this.vehicles().table.staleFuel);
   protected readonly tripText = computed(() => {
     const table = tripsText(this.language()).table;
     return { ...table, distance: interpolate(table.distance, { unit: this.units.distanceUnit() }) };
   });
   private readonly alertCatalog = computed(() => alertsText(this.language()));
-  protected readonly alertCatalogTable = computed(() => this.alertCatalog().table);
   private readonly maintenance = computed(() => maintenanceText(this.language()));
   protected readonly serviceTable = computed(() => this.maintenance().table);
-
+  protected readonly profileTabs = vehicleProfileTabs;
+  protected readonly trackById = trackById;
+  protected readonly toneSeverity = toneSeverity;
   protected readonly description = computed(() => {
     const vehicle = this.vehicle();
     if (!vehicle) {
@@ -195,7 +217,26 @@ export class VehicleProfileView {
       .filter(Boolean)
       .join(' · ');
   });
-  protected readonly openAlerts = computed(() => this.vehicle()?.openAlerts ?? 0);
+  protected readonly liveDevices = computed(
+    () => this.vehicle()?.liveDevices ?? this.vehicle()?.devices.map(() => undefined) ?? [],
+  );
+  protected readonly liveStatus = computed(() =>
+    vehicleLiveStatus(this.liveDevices(), this.language()),
+  );
+  protected readonly lastReport = computed(
+    () => vehicleLastReport(this.liveDevices()) ?? this.vehicle()?.lastReportedAt ?? null,
+  );
+  protected readonly positionAt = computed(() => this.mapRecords()[0]?.positionAt ?? null);
+  protected readonly heading = computed(() => this.mapRecords()[0]?.heading ?? null);
+  protected readonly problemSummary = computed(() => {
+    const counts = this.problemCounts();
+    return counts
+      ? interpolate(this.v2().problemSummary, {
+          attention: counts.requiringAttention,
+          recorded: counts.recorded,
+        })
+      : this.v2().viewProblems;
+  });
   protected readonly distanceTotal = computed(() => {
     const values = this.distance().flatMap((point) => (point.value === null ? [] : [point.value]));
     return values.length ? values.reduce((sum, value) => sum + value, 0) : null;
@@ -215,10 +256,13 @@ export class VehicleProfileView {
     if (!task) {
       return { value: this.text().kpis.noService, footnote: null, tone: null };
     }
-    const due = task.dueOn ? formatDateOnly(task.dueOn, this.language()) : null;
     return {
       value: task.kind,
-      footnote: due ?? (task.dueKm === null ? null : this.units.distance(task.dueKm, true, 0)),
+      footnote: task.dueOn
+        ? this.units.dateOnly(task.dueOn)
+        : task.dueKm === null
+          ? null
+          : this.units.distance(task.dueKm, true, 0),
       tone:
         task.urgency === 'OVERDUE'
           ? ('danger' as const)
@@ -228,28 +272,71 @@ export class VehicleProfileView {
     };
   });
   protected readonly tripView = computed(() => this.tripState() ?? listView(this.trips()));
-  protected readonly alertView = computed(() => this.alertState() ?? listView(this.alerts()));
+  protected readonly problemView = computed(() => this.problemState() ?? listView(this.problems()));
   protected readonly serviceView = computed(() => this.serviceState() ?? listView(this.service()));
-  /** PrimeNG's table takes mutable arrays. */
-  protected readonly tripRows = computed(() => [...this.trips()]);
-  protected readonly alertRows = computed(() => [...this.alerts()]);
-  protected readonly deviceEventView = computed(
-    () => this.deviceEventState() ?? listView(this.deviceEvents()),
+  protected readonly edataView = computed<TableView>(() =>
+    this.edataLoading()
+      ? { kind: 'loading' }
+      : this.edataError()
+        ? { kind: 'error' }
+        : listView(this.edataObservations()),
   );
-  protected readonly deviceEventRows = computed(() => [...this.deviceEvents()]);
-  protected deviceLink(id: string): readonly string[] {
-    return [...this.deviceLinkBase(), id, 'overview'];
+  protected readonly tripRows = computed(() => [...this.trips()]);
+  protected readonly problemRows = computed(() => [...this.problems()]);
+  protected readonly serviceRows = computed(() => [...this.service()]);
+  protected readonly edataRows = computed(() => [...this.edataObservations()]);
+  protected readonly selectedDeviceId = linkedSignal<VehicleProfile | null, string>({
+    source: this.vehicle,
+    computation: (vehicle, previous) =>
+      previous &&
+      vehicle &&
+      vehicle.id === previous.source?.id &&
+      vehicle.devices.some((device) => device.id === previous.value)
+        ? previous.value
+        : '',
+  });
+  protected readonly selectedDevice = computed(() =>
+    this.vehicle()?.devices.find((device) => device.id === this.selectedDeviceId()),
+  );
+  protected readonly tripColumns = computed<readonly TableColumn[]>(() => [
+    { id: 'started', label: this.tripText().started, width: '12rem', kind: 'date' },
+    { id: 'route', label: this.tripText().route, width: '19rem', kind: 'identity' },
+    { id: 'distance', label: this.tripText().distance, width: '8rem', kind: 'number' },
+    { id: 'duration', label: this.tripText().duration, width: '8rem', kind: 'number' },
+    { id: 'score', label: this.tripText().score, width: '7rem', kind: 'number' },
+    { id: 'events', label: this.tripText().events, width: '10rem', kind: 'status' },
+  ]);
+  protected readonly problemColumns = computed<readonly TableColumn[]>(() => [
+    { id: 'severity', label: this.v2().problems.severity, width: '8rem', kind: 'status' },
+    { id: 'problem', label: this.v2().problems.problem, width: '22rem', kind: 'identity' },
+    { id: 'source', label: this.v2().problems.source, width: '10rem' },
+    { id: 'state', label: this.v2().problems.state, width: '10rem', kind: 'status' },
+    { id: 'occurred', label: this.v2().problems.occurred, width: '12rem', kind: 'date' },
+  ]);
+  protected readonly serviceColumns = computed<readonly TableColumn[]>(() => [
+    { id: 'task', label: this.serviceTable().task, width: '20rem', kind: 'identity' },
+    { id: 'due', label: this.serviceTable().due, width: '16rem', kind: 'date' },
+    { id: 'urgency', label: this.serviceTable().urgency, width: '11rem', kind: 'status' },
+    { id: 'cost', label: this.serviceTable().cost, width: '9rem', kind: 'number' },
+  ]);
+  protected readonly edataColumns = computed<readonly TableColumn[]>(() => [
+    { id: 'observation', label: this.v2().edata.observation, width: '20rem', kind: 'identity' },
+    { id: 'count', label: this.v2().edata.count, width: '9rem', kind: 'number' },
+    { id: 'latest', label: this.v2().edata.latest, width: '13rem', kind: 'date' },
+  ]);
+
+  protected deviceLink(id: string, tab = 'overview'): readonly string[] {
+    return [...this.deviceLinkBase(), id, tab];
   }
 
-  protected deviceEventLabel(state: DeviceEventRow['state']): string {
-    return this.text().deviceEvents[state];
+  protected problemLink(problem: VehicleProblem): readonly string[] | null {
+    return problem.deviceId
+      ? this.deviceLink(
+          problem.deviceId,
+          problem.sourceKind === 'COMMAND' ? 'commands' : 'problems',
+        )
+      : null;
   }
-  protected readonly deviceEventLatest = computed(() => {
-    const total = this.deviceEventTotal() ?? 0;
-    const shown = this.deviceEvents().length;
-    return total > shown ? interpolate(this.text().deviceEvents.latest, { shown, total }) : null;
-  });
-  protected readonly serviceRows = computed(() => [...this.service()]);
 
   protected statusSeverity(status: keyof typeof statusTones) {
     return toneSeverity(statusTones[status]);
@@ -274,6 +361,12 @@ export class VehicleProfileView {
     }
   }
 
+  protected selectDevice(event: Event): void {
+    if (event.target instanceof HTMLSelectElement) {
+      this.selectedDeviceId.set(event.target.value);
+    }
+  }
+
   protected scoreClass(score: number): string {
     return `app-meter app-meter--${scoreTone(score)}`;
   }
@@ -294,12 +387,28 @@ export class VehicleProfileView {
     return this.alertCatalog().severities[severity];
   }
 
-  protected alertStatusSeverity(status: AlertStatusCode) {
-    return toneSeverity(alertStatusTones[status]);
+  protected problemLabel(problem: VehicleProblem): string {
+    const kind = Object.entries(this.alertCatalog().kinds).find(([code]) => code === problem.code);
+    return (
+      kind?.[1] ??
+      (problem.sourceKind === 'REPORTING_GAP'
+        ? this.v2().reportingGap
+        : problem.sourceKind === 'COMMAND'
+          ? this.v2().commandFollowUp
+          : this.problemSourceLabel(problem))
+    );
   }
 
-  protected alertStatusLabel(status: AlertStatusCode): string {
-    return this.alertCatalog().statuses[status];
+  protected problemSourceLabel(problem: VehicleProblem): string {
+    return this.v2().sources[problem.sourceKind];
+  }
+
+  protected problemStateLabel(problem: VehicleProblem): string {
+    return this.v2().states[problem.state];
+  }
+
+  protected problemStateSeverity(state: VehicleProblem['state']) {
+    return toneSeverity(problemStateTones[state]);
   }
 
   protected urgencySeverity(task: ServiceTaskRow) {
@@ -319,9 +428,8 @@ export class VehicleProfileView {
       return null;
     }
     const table = this.maintenance().table;
-    const km = this.units.distance(Math.abs(task.kmLeft), false, 0);
     return interpolate(task.kmLeft < 0 ? table.kmOver : table.kmLeft, {
-      km,
+      km: this.units.distance(Math.abs(task.kmLeft), false, 0),
       unit: this.units.distanceUnit(),
     });
   }

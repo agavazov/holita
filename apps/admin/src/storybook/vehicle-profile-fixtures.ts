@@ -5,17 +5,22 @@ import {
   AdminVehicleDeviceEventsDocument,
   AdminVehicleEdataMeasurementsDocument,
   AdminVehicleProfileServiceDocument,
+  AdminVehicleProfileProblemsDocument,
+  AdminVehicleTrackDocument,
   AdminVehicleOdometerDocument,
   AdminRecordOdometerDocument,
   type AdminVehicleProfileFragment,
   type AdminVehicleProfileServiceDetailsFragment,
   type AdminRecordOdometerMutation,
   type AdminVehicleDeviceEventsQuery,
+  type AdminVehicleProblemDetailsFragment,
+  type AdminVehicleProfileProblemsQuery,
+  type AdminVehicleTrackQuery,
 } from '../generated/graphql/operations';
 import { fixtureAlert } from './alerts-fixtures';
 import { fixtureTrip } from './trips-fixtures';
 import { fixtureServiceTask, fixtureServiceReceipt } from './maintenance-fixtures';
-import { fixtureVehicle } from './vehicles-fixtures';
+import { fixtureVehicle, fixtureVehicleLiveDevices } from './vehicles-fixtures';
 import { fixtureError, graphqlFixture, type WithTypename } from './graphql-fixtures';
 
 const at = '2026-10-18T07:00:00.000Z';
@@ -23,6 +28,7 @@ export const fixtureProfileService: WithTypename<AdminVehicleProfileServiceDetai
   fixtureServiceTask;
 export const fixtureVehicleProfile: WithTypename<AdminVehicleProfileFragment> = {
   ...fixtureVehicle,
+  devices: fixtureVehicleLiveDevices,
   nextService: fixtureProfileService,
   state: { ...fixtureVehicle.state, odometerRecordedAt: '2026-10-18T06:50:00.000Z' },
 };
@@ -115,6 +121,195 @@ graphqlFixture(AdminVehicleProfileAlertsDocument, (variables) => ({
     total: 1,
     offset: variables.int('offset', 0),
     limit: variables.int('limit', 20),
+  },
+}));
+const fixtureVehicleProblems: readonly WithTypename<AdminVehicleProblemDetailsFragment>[] = [
+  {
+    __typename: 'FleetProblem',
+    id: 'COMMAND:90000000-0000-4000-8000-000000000001',
+    sourceKind: 'COMMAND',
+    sourceId: '90000000-0000-4000-8000-000000000001',
+    severity: 'CRITICAL',
+    occurredAt: '2026-10-18T06:45:00.000Z',
+    state: 'UNCERTAIN',
+    requiringAttention: true,
+    code: 'READ_PARAMETERS',
+    details: 'The request was sent but no device confirmation was recorded.',
+    vehicleId: fixtureVehicle.id,
+    deviceId: '60000000-0000-4000-8000-000000000001',
+    deviceImei: '001234567890123',
+    alertId: null,
+    fleetEventId: null,
+    ermEventId: null,
+    commandRequestId: '90000000-0000-4000-8000-000000000001',
+  },
+  {
+    __typename: 'FleetProblem',
+    id: `FLEET_ALERT:fleet:${fixtureAlert.id}`,
+    sourceKind: 'FLEET_ALERT',
+    sourceId: `fleet:${fixtureAlert.id}`,
+    severity: fixtureAlert.severity,
+    occurredAt: fixtureAlert.occurredAt,
+    state: 'OPEN',
+    requiringAttention: true,
+    code: fixtureAlert.kind,
+    details: fixtureAlert.details,
+    vehicleId: fixtureVehicle.id,
+    deviceId: null,
+    deviceImei: null,
+    alertId: fixtureAlert.id,
+    fleetEventId: fixtureAlert.id,
+    ermEventId: null,
+    commandRequestId: null,
+  },
+  {
+    __typename: 'FleetProblem',
+    id: 'DIAGNOSTIC:fleet:70000000-0000-4000-8000-000000000101',
+    sourceKind: 'DIAGNOSTIC',
+    sourceId: 'fleet:70000000-0000-4000-8000-000000000101',
+    severity: 'WARNING',
+    occurredAt: '2026-10-18T06:15:00.000Z',
+    state: 'RECORDED',
+    requiringAttention: false,
+    code: 'DIAGNOSTIC_TROUBLE_CODE',
+    details: 'SPN 4339 FMI 7 · recorded device fault observation.',
+    vehicleId: fixtureVehicle.id,
+    deviceId: '60000000-0000-4000-8000-000000000001',
+    deviceImei: '001234567890123',
+    alertId: null,
+    fleetEventId: '70000000-0000-4000-8000-000000000101',
+    ermEventId: null,
+    commandRequestId: null,
+  },
+];
+graphqlFixture(
+  AdminVehicleProfileProblemsDocument,
+  (variables): WithTypename<AdminVehicleProfileProblemsQuery> => ({
+    fleetProblems: {
+      __typename: 'FleetProblemPage',
+      items: fixtureVehicleProblems,
+      total: fixtureVehicleProblems.length,
+      offset: variables.int('offset', 0),
+      limit: variables.int('limit', 20),
+      counts: {
+        __typename: 'FleetProblemCounts',
+        asOf: at,
+        dataAsOf: at,
+        ermAsOf: at,
+        periodFrom: '2026-10-17T07:00:00.000Z',
+        periodTo: at,
+        total: 3,
+        requiringAttention: 2,
+        recorded: 1,
+        bySeverity: [
+          {
+            __typename: 'FleetProblemSeverityCount',
+            severity: 'INFO',
+            total: 0,
+            requiringAttention: 0,
+            recorded: 0,
+          },
+          {
+            __typename: 'FleetProblemSeverityCount',
+            severity: 'WARNING',
+            total: 2,
+            requiringAttention: 1,
+            recorded: 1,
+          },
+          {
+            __typename: 'FleetProblemSeverityCount',
+            severity: 'CRITICAL',
+            total: 1,
+            requiringAttention: 1,
+            recorded: 0,
+          },
+        ],
+      },
+    },
+  }),
+);
+
+graphqlFixture(AdminVehicleTrackDocument, (variables): WithTypename<AdminVehicleTrackQuery> => ({
+  fleetVehicleSamples: {
+    __typename: 'FleetStatusSampleSeries',
+    vehicleId: fixtureVehicle.id,
+    from: variables.requiredString('from'),
+    to: variables.requiredString('to'),
+    truncated: false,
+    items: [
+      {
+        __typename: 'FleetStatusSample',
+        id: 'track-1',
+        recordedAt: '2026-10-18T06:00:00.000Z',
+        latitude: 42.68,
+        longitude: 23.28,
+      },
+      {
+        __typename: 'FleetStatusSample',
+        id: 'track-2',
+        recordedAt: '2026-10-18T06:05:00.000Z',
+        latitude: 42.685,
+        longitude: 23.29,
+      },
+      {
+        __typename: 'FleetStatusSample',
+        id: 'track-3',
+        recordedAt: '2026-10-18T06:50:00.000Z',
+        latitude: 42.69,
+        longitude: 23.31,
+      },
+      {
+        __typename: 'FleetStatusSample',
+        id: 'track-4',
+        recordedAt: '2026-10-18T06:55:00.000Z',
+        latitude: 42.695,
+        longitude: 23.315,
+      },
+      {
+        __typename: 'FleetStatusSample',
+        id: 'track-5',
+        recordedAt: at,
+        latitude: fixtureVehicle.state.latitude,
+        longitude: fixtureVehicle.state.longitude,
+      },
+    ],
+    track: {
+      __typename: 'FleetVehicleTrack',
+      asOf: at,
+      positionCount: 5,
+      firstPositionAt: '2026-10-18T06:00:00.000Z',
+      lastPositionAt: at,
+      segments: [
+        {
+          __typename: 'FleetTrackSegment',
+          from: '2026-10-18T06:00:00.000Z',
+          to: '2026-10-18T06:05:00.000Z',
+          sampleIds: ['track-1', 'track-2'],
+        },
+        {
+          __typename: 'FleetTrackSegment',
+          from: '2026-10-18T06:50:00.000Z',
+          to: at,
+          sampleIds: ['track-3', 'track-4', 'track-5'],
+        },
+      ],
+      gaps: [
+        {
+          __typename: 'FleetTrackGap',
+          from: variables.requiredString('from'),
+          to: '2026-10-18T06:00:00.000Z',
+          reason: 'OUTSIDE_SAMPLES',
+          thresholdSeconds: null,
+        },
+        {
+          __typename: 'FleetTrackGap',
+          from: '2026-10-18T06:05:00.000Z',
+          to: '2026-10-18T06:50:00.000Z',
+          reason: 'SAMPLE_GAP',
+          thresholdSeconds: 600,
+        },
+      ],
+    },
   },
 }));
 graphqlFixture(AdminVehicleProfileServiceDocument, (variables) => ({

@@ -8,9 +8,13 @@ import {
   AdminVehicleGroupsDocument,
   AdminVehiclesDocument,
   AdminVehiclesLiveDocument,
+  AdminVehicleMapDocument,
+  AdminVehiclesProblemsDocument,
+  type AdminFleetLiveDeviceFragment,
   AdminVehicleSummaryDocument,
   type AdminVehicleDetailsFragment,
   type AdminVehiclesLiveQuery,
+  type AdminVehiclesProblemsQuery,
 } from '../generated/graphql/operations';
 import {
   fixtureError,
@@ -19,6 +23,10 @@ import {
   type WithTypename,
 } from './graphql-fixtures';
 import { defaultBranchId } from './session-fixtures';
+import { Injectable } from '@angular/core';
+import { HttpResponse, type HttpEvent, type HttpRequest } from '@angular/common/http';
+import { delay, of, type Observable } from 'rxjs';
+import { FixtureHttpBackend } from './graphql-fixtures';
 
 const at = '2026-10-18T07:00:00.000Z';
 const group = {
@@ -33,6 +41,46 @@ const driver = {
   lastName: 'Petrova',
   status: 'ACTIVE',
 } as const;
+
+/** The same live snapshot is used by the list and the vehicle profile. */
+export const fixtureVehicleLiveDevices: readonly [WithTypename<AdminFleetLiveDeviceFragment>] = [
+  {
+    __typename: 'FleetDevice',
+    id: '60000000-0000-4000-8000-000000000001',
+    imei: '001234567890123',
+    vehicleId: '50000000-0000-4000-8000-000000000001',
+    status: 'ONLINE',
+    routing: 'HOLITA',
+    routingHealth: null,
+    lastReportedAt: at,
+    diagnostics: { __typename: 'FleetDeviceDiagnosticSummary', count: 0, latest: null },
+    ermState: {
+      __typename: 'ErmUnitState',
+      online: true,
+      mode: 'PRIMARY',
+      connectedSince: at,
+      lastFrameAt: at,
+      alarmsLast24h: 0,
+      latestAlarm: null,
+      latestEvent: {
+        __typename: 'ErmEvent',
+        eventTime: at,
+        nameEn: 'Position',
+        nameBg: 'Позиция',
+        speedKmh: 55,
+        engineOn: true,
+        ignitionOn: true,
+      },
+      health: {
+        __typename: 'ErmUnitHealth',
+        overdue: false,
+        lastFrameAgeSeconds: 5,
+        expectedIntervalSeconds: 300,
+        lastCloseReason: null,
+      },
+    },
+  },
+];
 
 /** One fixed contract response for stories of the real Vehicles containers. */
 export const fixtureVehicle: WithTypename<AdminVehicleDetailsFragment> = {
@@ -54,14 +102,7 @@ export const fixtureVehicle: WithTypename<AdminVehicleDetailsFragment> = {
   currentDriverId: driver.id,
   currentDriver: { ...driver, __typename: 'FleetDriverRef' },
   deviceCount: 1,
-  devices: [
-    {
-      __typename: 'FleetDevice',
-      id: '60000000-0000-4000-8000-000000000001',
-      imei: '001234567890123',
-      lastReportedAt: at,
-    },
-  ],
+  devices: fixtureVehicleLiveDevices,
   openAlertCount: 2,
   notes: 'International line\nWorkshop contact confirmed.',
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -195,45 +236,164 @@ graphqlFixture(AdminVehiclesLiveDocument, (): WithTypename<AdminVehiclesLiveQuer
       {
         __typename: 'FleetVehicle',
         id: fixtureVehicle.id,
-        devices: [
-          {
-            __typename: 'FleetDevice',
-            id: '60000000-0000-4000-8000-000000000001',
-            imei: '001234567890123',
-            vehicleId: fixtureVehicle.id,
-            status: 'ONLINE',
-            routing: 'HOLITA',
-            routingHealth: null,
-            lastReportedAt: at,
-            diagnostics: { __typename: 'FleetDeviceDiagnosticSummary', count: 0, latest: null },
-            ermState: {
-              __typename: 'ErmUnitState',
-              online: true,
-              mode: 'PRIMARY',
-              connectedSince: at,
-              lastFrameAt: at,
-              alarmsLast24h: 0,
-              latestAlarm: null,
-              latestEvent: {
-                __typename: 'ErmEvent',
-                eventTime: at,
-                nameEn: 'Position',
-                nameBg: 'Позиция',
-                speedKmh: 55,
-                engineOn: true,
-                ignitionOn: true,
-              },
-              health: {
-                __typename: 'ErmUnitHealth',
-                overdue: false,
-                lastFrameAgeSeconds: 5,
-                expectedIntervalSeconds: 300,
-                lastCloseReason: null,
-              },
-            },
-          },
-        ],
+        devices: fixtureVehicleLiveDevices,
       },
     ],
   },
 }));
+
+/** Delay only asynchronous list context, so the loaded registry stays visible before it arrives. */
+@Injectable()
+export class DelayedVehiclesLiveBackend extends FixtureHttpBackend {
+  override handle(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
+    const body = request.body;
+    const operation =
+      typeof body === 'object' && body !== null && 'operationName' in body
+        ? body.operationName
+        : null;
+    const answer = super.handle(request);
+    return operation === 'AdminVehiclesLive' ||
+      operation === 'AdminVehicleMap' ||
+      operation === 'AdminVehiclesProblems'
+      ? answer.pipe(delay(2200))
+      : answer;
+  }
+}
+
+@Injectable()
+export class EmptyVehiclesBackend extends FixtureHttpBackend {
+  override handle(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
+    const body = request.body;
+    if (
+      typeof body === 'object' &&
+      body !== null &&
+      'operationName' in body &&
+      body.operationName === 'AdminVehicles'
+    ) {
+      return of(
+        new HttpResponse({
+          status: 200,
+          body: {
+            data: {
+              fleetVehicles: {
+                __typename: 'FleetVehiclePage',
+                items: [],
+                total: 0,
+                offset: 0,
+                limit: 20,
+              },
+            },
+          },
+        }),
+      );
+    }
+    return super.handle(request);
+  }
+}
+
+graphqlFixture(AdminVehicleMapDocument, (variables) => ({
+  fleetMap: {
+    __typename: 'FleetMapPage',
+    asOf: at,
+    dataAsOf: at,
+    liveAsOf: at,
+    total: 1,
+    offset: variables.int('offset', 0),
+    limit: variables.int('limit', 100),
+    hasMore: false,
+    items: [
+      {
+        __typename: 'FleetMapVehicle',
+        vehicle: {
+          __typename: 'FleetVehicleRef',
+          id: fixtureVehicle.id,
+          licensePlate: fixtureVehicle.licensePlate,
+        },
+        position: {
+          __typename: 'FleetMapPosition',
+          latitude: 42.6977,
+          longitude: 23.3219,
+          headingDeg: 90,
+          speedKph: 55,
+          recordedAt: at,
+          ageSeconds: 5,
+        },
+        connected: true,
+        reporting: true,
+        live: true,
+      },
+    ],
+  },
+}));
+
+graphqlFixture(
+  AdminVehiclesProblemsDocument,
+  (variables): WithTypename<AdminVehiclesProblemsQuery> => ({
+    fleetProblems: {
+      __typename: 'FleetProblemPage',
+      offset: variables.int('offset', 0),
+      limit: variables.int('limit', 100),
+      total: 2,
+      items: [
+        {
+          __typename: 'FleetProblem',
+          id: 'alert:storybook-alert',
+          sourceKind: 'FLEET_ALERT',
+          sourceId: 'storybook-alert',
+          severity: 'WARNING',
+          occurredAt: at,
+          state: 'OPEN',
+          requiringAttention: true,
+          code: 'LOW_FUEL',
+          details: 'Fuel level below the configured threshold.',
+          vehicleId: fixtureVehicle.id,
+          deviceId: fixtureVehicleLiveDevices[0].id,
+          deviceImei: fixtureVehicleLiveDevices[0].imei,
+          alertId: 'storybook-alert',
+          fleetEventId: 'storybook-alert',
+          ermEventId: null,
+          commandRequestId: null,
+        },
+        {
+          __typename: 'FleetProblem',
+          id: 'diagnostic:storybook-dtc',
+          sourceKind: 'DIAGNOSTIC',
+          sourceId: 'storybook-dtc',
+          severity: 'WARNING',
+          occurredAt: at,
+          state: 'RECORDED',
+          requiringAttention: false,
+          code: 'P0100',
+          details: 'Recorded diagnostic observation; current fault state is unknown.',
+          vehicleId: fixtureVehicle.id,
+          deviceId: fixtureVehicleLiveDevices[0].id,
+          deviceImei: fixtureVehicleLiveDevices[0].imei,
+          alertId: null,
+          fleetEventId: null,
+          ermEventId: 'storybook-dtc',
+          commandRequestId: null,
+        },
+      ],
+      counts: {
+        __typename: 'FleetProblemCounts',
+        asOf: at,
+        dataAsOf: at,
+        ermAsOf: at,
+        periodFrom: '2026-10-17T07:00:00.000Z',
+        periodTo: at,
+        total: 2,
+        requiringAttention: 1,
+        recorded: 1,
+        bySeverity: [
+          {
+            __typename: 'FleetProblemSeverityCount',
+            severity: 'WARNING',
+            total: 2,
+            requiringAttention: 1,
+            recorded: 1,
+          },
+        ],
+      },
+    },
+  }),
+);

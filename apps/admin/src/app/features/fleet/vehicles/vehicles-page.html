@@ -14,7 +14,7 @@
     </button>
   </p-message>
 }
-@if (liveError()) {
+@if (liveError() || contextError()) {
   <p-message severity="warn">{{ liveFailure() }}</p-message>
 }
 <holita-vehicles-view

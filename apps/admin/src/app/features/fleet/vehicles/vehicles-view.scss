@@ -1,24 +1,27 @@
-.vehicles__alerts {
-  margin-inline-start: var(--p-app-space-1);
-  padding: 0 var(--p-app-space-1);
-  border-radius: 999px;
-  background: var(--p-app-tone-danger-background);
-  color: var(--p-app-tone-danger-color);
-  font-size: var(--p-app-text-xs);
-  font-weight: 600;
-  white-space: nowrap;
+.vehicles__activity {
+  display: flex;
+  align-items: center;
+  gap: var(--p-app-space-2);
+  block-size: 2.25rem;
+  min-inline-size: 0;
+  overflow: hidden;
+
+  > p-tag {
+    flex: none;
+    max-inline-size: 10rem;
+    overflow: hidden;
+  }
+
+  > holita-fleet-now {
+    min-inline-size: 0;
+    overflow: hidden;
+  }
 }
 
-.vehicles__fuel--low {
-  font-weight: 600;
-  color: var(--p-app-tone-danger-color);
+.vehicles__dates {
+  font-variant-numeric: var(--p-app-font-numeric);
 }
 
-.vehicles__notes {
-  --app-truncate-width: 16rem;
-}
-
-.vehicles__faults {
-  min-inline-size: 11rem;
-  white-space: normal;
+.vehicles__problems {
+  block-size: 2.25rem;
 }

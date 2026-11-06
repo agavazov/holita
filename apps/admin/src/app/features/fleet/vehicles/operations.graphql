@@ -250,6 +250,9 @@ fragment AdminVehicleProfileAlertDetails on FleetEvent {
 }
 fragment AdminVehicleProfile on FleetVehicle {
   ...AdminVehicleDetails
+  devices {
+    ...AdminFleetLiveDevice
+  }
   nextService {
     ...AdminVehicleProfileServiceDetails
   }
@@ -386,6 +389,126 @@ query AdminVehicleEdataMeasurements($vehicleId: ID!, $from: DateTime!, $to: Date
       valueHex
       name
       unit
+    }
+  }
+}
+
+fragment AdminVehicleProblemDetails on FleetProblem {
+  id
+  sourceKind
+  sourceId
+  severity
+  occurredAt
+  state
+  requiringAttention
+  code
+  details
+  vehicleId
+  deviceId
+  deviceImei
+  alertId
+  fleetEventId
+  ermEventId
+  commandRequestId
+}
+fragment AdminVehicleProblemCounts on FleetProblemCounts {
+  asOf
+  dataAsOf
+  ermAsOf
+  periodFrom
+  periodTo
+  total
+  requiringAttention
+  recorded
+  bySeverity {
+    severity
+    total
+    requiringAttention
+    recorded
+  }
+}
+query AdminVehicleProfileProblems($vehicleId: ID!, $offset: Int!, $limit: Int!) {
+  fleetProblems(offset: $offset, limit: $limit, filter: { vehicleIds: [$vehicleId] }) {
+    items {
+      ...AdminVehicleProblemDetails
+    }
+    total
+    offset
+    limit
+    counts {
+      ...AdminVehicleProblemCounts
+    }
+  }
+}
+query AdminVehiclesProblems($ids: [ID!]!, $offset: Int!, $limit: Int!) {
+  fleetProblems(offset: $offset, limit: $limit, filter: { vehicleIds: $ids }) {
+    items {
+      ...AdminVehicleProblemDetails
+    }
+    total
+    offset
+    limit
+    counts {
+      ...AdminVehicleProblemCounts
+    }
+  }
+}
+query AdminVehicleMap($offset: Int!, $limit: Int!) {
+  fleetMap(offset: $offset, limit: $limit) {
+    asOf
+    dataAsOf
+    liveAsOf
+    items {
+      vehicle {
+        id
+        licensePlate
+      }
+      position {
+        latitude
+        longitude
+        headingDeg
+        speedKph
+        recordedAt
+        ageSeconds
+      }
+      connected
+      reporting
+      live
+    }
+    total
+    offset
+    limit
+    hasMore
+  }
+}
+query AdminVehicleTrack($vehicleId: ID!, $from: DateTime!, $to: DateTime!) {
+  fleetVehicleSamples(vehicleId: $vehicleId, from: $from, to: $to) {
+    vehicleId
+    from
+    to
+    truncated
+    items {
+      id
+      recordedAt
+      latitude
+      longitude
+    }
+    track {
+      asOf
+      positionCount
+      firstPositionAt
+      lastPositionAt
+      segments {
+        from
+        to
+        sampleIds
+      }
+      gaps {
+        from
+        to
+        reason
+        thresholdSeconds
+      }
     }
   }
 }

@@ -1,4 +1,41 @@
+.vehicle-profile__summary {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vehicle-profile__devices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-app-space-2);
+}
+
 .vehicle-profile__notes {
   margin: 0;
   white-space: pre-line;
+}
+
+.vehicle-profile__technical > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.vehicle-profile__technical[open] > .app-card__body {
+  margin-block-start: var(--p-app-stack-gap);
+}
+
+.vehicle-profile__device-label {
+  font-weight: 600;
+}
+
+.vehicle-profile__device-select {
+  align-self: flex-start;
+  inline-size: min(100%, 24rem);
+  min-block-size: var(--p-app-control-height);
+  padding: var(--p-app-space-2) var(--p-app-space-3);
+  color: var(--p-select-color);
+  background: var(--p-select-background);
+  border: 1px solid var(--p-select-border-color);
+  border-radius: var(--p-app-radius-control);
 }

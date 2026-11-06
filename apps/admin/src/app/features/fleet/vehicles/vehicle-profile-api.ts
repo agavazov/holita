@@ -6,8 +6,9 @@ import { firstValueFrom } from 'rxjs';
 import {
   AdminVehicleProfileDocument,
   AdminVehicleProfileTripsDocument,
-  AdminVehicleProfileAlertsDocument,
-  AdminVehicleDeviceEventsDocument,
+  AdminVehicleProfileProblemsDocument,
+  AdminVehicleTrackDocument,
+  AdminVehicleMapDocument,
   AdminVehicleEdataMeasurementsDocument,
   AdminVehicleProfileServiceDocument,
   AdminVehicleOdometerDocument,
@@ -53,6 +54,8 @@ export class VehicleProfileApi implements OnDestroy {
       query: AdminVehicleProfileDocument,
       variables: { id },
       fetchPolicy: 'network-only',
+      pollInterval: 30_000,
+      skipPollAttempt: () => document.hidden,
     });
   }
 
@@ -72,19 +75,28 @@ export class VehicleProfileApi implements OnDestroy {
     });
   }
 
-  watchAlerts(vehicleId: string, page: number, pageSize: number) {
+  watchProblems(vehicleId: string, page: number, pageSize: number) {
     return this.client().watchQuery({
-      query: AdminVehicleProfileAlertsDocument,
+      query: AdminVehicleProfileProblemsDocument,
       variables: { vehicleId, offset: (page - 1) * pageSize, limit: pageSize },
+      fetchPolicy: 'network-only',
+      pollInterval: 30_000,
+      skipPollAttempt: () => document.hidden,
+    });
+  }
+
+  mapPage(offset: number) {
+    return this.client().query({
+      query: AdminVehicleMapDocument,
+      variables: { offset, limit: 100 },
       fetchPolicy: 'network-only',
     });
   }
 
-  /** The Vehicle's imported eData trouble codes and CAN errors, newest first. */
-  watchDeviceEvents(vehicleId: string) {
+  watchTrack(vehicleId: string, from: string, to: string) {
     return this.client().watchQuery({
-      query: AdminVehicleDeviceEventsDocument,
-      variables: { vehicleId },
+      query: AdminVehicleTrackDocument,
+      variables: { vehicleId, from, to },
       fetchPolicy: 'network-only',
     });
   }

@@ -10,6 +10,8 @@ import type { Language } from '../../../i18n/messages';
 import {
   AdminVehiclesDocument,
   AdminVehiclesLiveDocument,
+  AdminVehicleMapDocument,
+  AdminVehiclesProblemsDocument,
   AdminVehicleDocument,
   AdminCreateVehicleDocument,
   AdminUpdateVehicleDocument,
@@ -23,7 +25,16 @@ import {
   type AdminUpdateVehicleMutationVariables,
   type AdminVehicleGroupsQueryVariables,
   type AdminVehicleDriversQueryVariables,
+  type AdminVehicleMapQuery,
+  type AdminVehiclesProblemsQuery,
 } from '../../../../generated/graphql/operations';
+
+export interface VehiclesContext {
+  readonly ids: readonly string[];
+  readonly positions: readonly AdminVehicleMapQuery['fleetMap']['items'][number][];
+  readonly mapAsOf: string;
+  readonly problems: readonly AdminVehiclesProblemsQuery['fleetProblems']['items'][number][];
+}
 
 @Injectable()
 export class VehiclesApi implements OnDestroy {
@@ -71,6 +82,73 @@ export class VehiclesApi implements OnDestroy {
       pollInterval: 30_000,
       skipPollAttempt: () => document.hidden,
     });
+  }
+
+  async loadContext(ids: readonly string[]): Promise<VehiclesContext> {
+    const [map, problems] = await Promise.all([this.loadPositions(ids), this.loadProblems(ids)]);
+    return { ...map, problems, ids };
+  }
+
+  private async loadPositions(ids: readonly string[]) {
+    const apollo = this.apollo;
+    if (!apollo || this.destroyed) {
+      throw new Error('An active Vehicles workspace is required.');
+    }
+    const pending = new Set(ids);
+    const positions: AdminVehicleMapQuery['fleetMap']['items'] = [];
+    let offset = 0;
+    let mapAsOf = '';
+    while (pending.size) {
+      const result = await firstValueFrom(
+        apollo.query({
+          query: AdminVehicleMapDocument,
+          variables: { offset, limit: 100 },
+          fetchPolicy: 'network-only',
+        }),
+      );
+      if (!result.data) {
+        throw new Error('Missing fleetMap result.');
+      }
+      const page = result.data.fleetMap;
+      mapAsOf = page.asOf;
+      for (const item of page.items) {
+        if (pending.delete(item.vehicle.id)) {
+          positions.push(item);
+        }
+      }
+      if (!page.hasMore) {
+        break;
+      }
+      offset = page.offset + page.limit;
+    }
+    return { positions, mapAsOf };
+  }
+
+  private async loadProblems(ids: readonly string[]) {
+    const apollo = this.apollo;
+    if (!apollo || this.destroyed) {
+      throw new Error('An active Vehicles workspace is required.');
+    }
+    const problems: AdminVehiclesProblemsQuery['fleetProblems']['items'] = [];
+    let offset = 0;
+    let total: number;
+    do {
+      const result = await firstValueFrom(
+        apollo.query({
+          query: AdminVehiclesProblemsDocument,
+          variables: { ids: [...ids], offset, limit: 100 },
+          fetchPolicy: 'network-only',
+        }),
+      );
+      if (!result.data) {
+        throw new Error('Missing fleetProblems result.');
+      }
+      const page = result.data.fleetProblems;
+      problems.push(...page.items);
+      offset = page.offset + page.limit;
+      total = page.total;
+    } while (offset < total);
+    return problems;
   }
 
   watchSummary() {

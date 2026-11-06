@@ -1,7 +1,7 @@
 import type { ParamMap, Params } from '@angular/router';
 import { vehicleProfileTabs, type VehicleProfileTab } from './vehicle-profile-view';
 
-export const profileListTabs = ['trips', 'alerts', 'service'] as const;
+export const profileListTabs = ['trips', 'problems', 'service'] as const;
 export type ProfileListTab = (typeof profileListTabs)[number];
 export interface ProfilePage {
   readonly page: number;
@@ -10,7 +10,8 @@ export interface ProfilePage {
 const sizes: readonly number[] = [10, 20, 50, 100];
 
 export function profileTab(value: string | null): VehicleProfileTab {
-  return vehicleProfileTabs.find((tab) => tab === value) ?? 'overview';
+  const canonical = value === 'alerts' ? 'problems' : value === 'service' ? 'maintenance' : value;
+  return vehicleProfileTabs.find((tab) => tab === canonical) ?? 'overview';
 }
 
 export function profilePage(params: ParamMap, tab: ProfileListTab): ProfilePage {
@@ -33,6 +34,7 @@ export function profilePageParams(tab: ProfileListTab, value: ProfilePage): Para
 export function profileBackParams(params: ParamMap): Params {
   const ownKeys = new Set([
     'fromDriver',
+    'vehicleTab',
     ...profileListTabs.flatMap((tab) => [`${tab}Page`, `${tab}Size`]),
   ]);
   return Object.fromEntries(

@@ -6,11 +6,10 @@ import type {
 } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
 import type { SeriesPoint } from '../../../ui/charts/column-series';
-import { formatNumber } from '../../../ui/format/format';
 import { fleetFieldErrors } from '../field-errors';
 import type { OdometerField, PreviousOdometerReading } from './odometer-drawer';
 import { vehicleRow } from './vehicle-mapping';
-import type { EdataChart, VehicleProfile } from './vehicle-profile-view';
+import type { EdataObservation, VehicleProfile } from './vehicle-profile-view';
 
 export function vehicleProfile(vehicle: AdminVehicleProfileFragment): VehicleProfile {
   return {
@@ -20,24 +19,23 @@ export function vehicleProfile(vehicle: AdminVehicleProfileFragment): VehiclePro
     fuelType: vehicle.fuelType,
     tankL: vehicle.fuelTankCapacityL,
     speedKph: vehicle.state.speedKph,
+    latitude: vehicle.state.latitude,
+    longitude: vehicle.state.longitude,
+    headingDeg: vehicle.state.headingDeg,
+    liveDevices: vehicle.devices,
     createdAt: vehicle.createdAt,
   };
 }
 
 export function vehicleDistance(
   distance: AdminVehicleProfileQuery['fleetDailyDistance'],
-  language: Language,
+  dateOnly: (value: string) => string,
 ): readonly SeriesPoint[] {
-  const label = new Intl.DateTimeFormat(language, {
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'UTC',
-  });
   return distance.points.map((point) => ({
     key: point.date,
-    label: label.format(new Date(`${point.date}T12:00:00Z`)),
+    label: dateOnly(point.date),
     value: point.distanceKm,
-    valueText: `${formatNumber(point.distanceKm, language)} km`,
+    valueText: String(point.distanceKm),
   }));
 }
 
@@ -67,10 +65,10 @@ export function odometerFieldErrors(
   return fleetFieldErrors(error, ['odometerKm', 'recordedAt'], language);
 }
 
-/** Plot hex-byte magnitudes only; physical calibration and byte order remain unverified. */
-export function vehicleEdataCharts(
+/** Counts of raw observations; catalog scaling and physical units remain unverified. */
+export function vehicleEdataObservations(
   series: AdminVehicleEdataMeasurementsQuery['fleetVehicleEdataMeasurements'] | null,
-): readonly EdataChart[] {
+): readonly EdataObservation[] {
   return [1, 3, 539].flatMap((id) => {
     const items = series?.items.filter((item) => item.parameterId === id) ?? [];
     const latest = items.at(-1);
@@ -79,14 +77,8 @@ export function vehicleEdataCharts(
           {
             id,
             label: latest.name ?? `ID ${String(id)}`,
-            catalogUnit: latest.unit,
-            lastHex: latest.valueHex,
+            count: items.length,
             lastAt: latest.recordedAt,
-            // Every report is a discrete observation; absence never becomes a continuous line.
-            points: items.flatMap((item) => [
-              { at: Date.parse(item.recordedAt), value: Number.parseInt(item.valueHex, 16) },
-              { at: Date.parse(item.recordedAt), value: null },
-            ]),
           },
         ]
       : [];

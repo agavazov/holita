@@ -1,18 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FleetConnection } from '../../../ui/fleet-live/fleet-connection';
 import { FleetNow } from '../../../ui/fleet-live/fleet-now';
-import { FleetLastReport } from '../../../ui/fleet-live/fleet-last-report';
-import { FleetFaults } from '../../../ui/fleet-live/fleet-faults';
 import { FleetLiveSummary } from '../../../ui/fleet-live/fleet-live-summary';
 import { fleetLiveText, type FleetLiveDevice } from '../../../ui/fleet-live/fleet-live';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
-import type { StatusTone } from '../../../theme/status-tones';
 import type { FilterCondition, FilterField } from '../../../ui/filter-builder/filter-model';
 import { FilterBuilder } from '../../../ui/filter-builder/filter-builder';
-import { formatDateTime } from '../../../ui/format/format';
+import { formatDuration, formatNumber } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import {
   type ListAction,
@@ -25,12 +21,15 @@ import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/lis
 import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
-import { TablePanel } from '../../../ui/table-panel/table-panel';
+import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { vehiclesText } from './i18n/messages';
+import { vehicleLastReport, vehicleLiveDevice, vehicleLiveStatus } from './vehicle-live';
+import en from './vehicles-list.en.json';
+import bg from './vehicles-list.bg.json';
 
 export const vehicleStatuses = ['ACTIVE', 'IN_WORKSHOP', 'INACTIVE'] as const;
 export const vehicleActivities = [
@@ -58,6 +57,13 @@ export interface VehicleRow {
     readonly lastReportedAt: string | null;
   }[];
   readonly liveDevices?: readonly FleetLiveDevice[];
+  readonly positionAt?: string | null;
+  readonly positionAgeSeconds?: number | null;
+  readonly mapAsOf?: string | null;
+  readonly problemCount?: number;
+  readonly problemSeverity?: 'INFO' | 'WARNING' | 'CRITICAL' | null;
+  readonly problemRecorded?: number;
+  readonly problemAttention?: number;
   readonly fleetNumber: string | null;
   readonly type: VehicleTypeCode | null;
   readonly make: string;
@@ -81,12 +87,6 @@ export interface VehicleOption {
   readonly name: string;
 }
 
-const statusTones: Record<VehicleStatusCode, StatusTone> = {
-  ACTIVE: 'success',
-  IN_WORKSHOP: 'warn',
-  INACTIVE: 'neutral',
-};
-
 /**
  * The Vehicles list page: header, KPI strip, quick search and filter builder, and the table with
  * row actions and bulk actions. Presentation only: the host owns data, list state and editing.
@@ -99,10 +99,7 @@ const statusTones: Record<VehicleStatusCode, StatusTone> = {
     Tag,
     FilterBuilder,
     RouterLink,
-    FleetConnection,
     FleetNow,
-    FleetLastReport,
-    FleetFaults,
     FleetLiveSummary,
     PageHeader,
     RowActions,
@@ -153,9 +150,43 @@ export class VehiclesView {
   protected readonly description = computed(() =>
     interpolate(this.text().description, {
       branch: this.branchName(),
-      asOf: formatDateTime(this.dataAsOf(), this.language(), this.units.preferences().timeZone),
+      asOf: this.units.dateTime(this.dataAsOf()),
     }),
   );
+  protected readonly listText = computed(() => (this.language() === 'bg' ? bg : en));
+  protected readonly tableMinWidth = '83rem';
+  protected readonly columns = computed<readonly TableColumn[]>(() => [
+    {
+      id: 'check',
+      label: this.text().table.selectPage,
+      width: '3rem',
+      kind: 'check',
+      className: 'app-col-check',
+    },
+    {
+      id: 'vehicle',
+      label: this.text().table.vehicle,
+      width: '19rem',
+      kind: 'identity',
+      className: 'app-col-identity',
+    },
+    { id: 'activity', label: this.listText().activity, width: '18rem', kind: 'status' },
+    { id: 'latest', label: this.listText().latest, width: '16rem', kind: 'date' },
+    { id: 'problems', label: this.listText().problems, width: '12rem', kind: 'problems' },
+    {
+      id: 'driver',
+      label: this.text().table.driver,
+      width: '11rem',
+      className: 'app-col-secondary',
+    },
+    {
+      id: 'actions',
+      label: this.text().table.actions,
+      width: '4rem',
+      kind: 'actions',
+      className: 'app-col-actions',
+    },
+  ]);
   protected readonly fields = computed<readonly FilterField[]>(() => {
     const text = this.text();
     const options = <T extends string>(codes: readonly T[], labels: Record<T, string>) =>
@@ -314,32 +345,78 @@ export class VehiclesView {
     this.rows().map((row) => row.devices.map((_, index) => row.liveDevices?.[index])),
   );
 
-  protected deviceLink(id: string, tab = 'overview'): readonly string[] {
-    return ['/', this.language(), this.branchId(), 'control-center', 'devices', id, tab];
+  protected problemLink(id: string): readonly string[] {
+    return ['/', this.language(), this.branchId(), 'fleet', 'vehicles', id, 'problems'];
   }
 
-  protected statusSeverity(status: VehicleStatusCode) {
-    return toneSeverity(statusTones[status]);
+  protected identity(row: VehicleRow): string {
+    return (
+      [[row.make, row.model].filter(Boolean).join(' '), row.group?.name]
+        .filter(Boolean)
+        .join(' · ') || '—'
+    );
   }
 
-  protected statusLabel(status: VehicleStatusCode): string {
-    return this.text().statuses[status];
+  protected liveStatus(row: VehicleRow) {
+    return vehicleLiveStatus(
+      row.devices.map((_, index) => row.liveDevices?.[index]),
+      this.language(),
+    );
   }
 
-  protected typeLabel(type: VehicleTypeCode | null): string {
-    return type === null ? '—' : this.text().types[type];
+  protected activityDevice(row: VehicleRow): FleetLiveDevice {
+    return vehicleLiveDevice(row.liveDevices ?? []);
   }
 
-  protected fuelLow(row: VehicleRow): boolean {
-    return row.fuelStatus === 'LOW';
+  protected reportAt(row: VehicleRow): string | null {
+    return vehicleLastReport(row.liveDevices ?? []) ?? row.lastReportedAt;
   }
+
+  protected positionAge(row: VehicleRow): string {
+    return formatDuration(row.positionAgeSeconds, this.language());
+  }
+
+  protected devicesTitle(row: VehicleRow): string {
+    return interpolate(this.listText().devices, {
+      count: formatNumber(row.devices.length, this.language()),
+    });
+  }
+
+  protected problemLabel(row: VehicleRow): string {
+    if (row.problemCount === undefined) {
+      return this.listText().loadingProblems;
+    }
+    return row.problemCount
+      ? interpolate(this.listText().problemCount, {
+          severity: this.listText().severities[row.problemSeverity ?? 'INFO'],
+          count: formatNumber(row.problemCount, this.language()),
+        })
+      : this.listText().noProblems;
+  }
+
+  protected problemTitle(row: VehicleRow): string {
+    return row.problemCount === undefined
+      ? this.listText().loadingProblems
+      : interpolate(this.listText().problemScope, {
+          attention: formatNumber(row.problemAttention ?? 0, this.language()),
+          recorded: formatNumber(row.problemRecorded ?? 0, this.language()),
+        });
+  }
+
+  protected problemTone(row: VehicleRow) {
+    return toneSeverity(
+      row.problemSeverity === 'CRITICAL'
+        ? 'danger'
+        : row.problemSeverity === 'WARNING'
+          ? 'warn'
+          : 'neutral',
+    );
+  }
+
+  protected readonly toneSeverity = toneSeverity;
 
   protected label(template: string, plate: string): string {
     return interpolate(template, { plate });
-  }
-
-  protected alertsLabel(count: number): string {
-    return interpolate(this.text().table.alerts, { count });
   }
 
   protected recordOf(row: VehicleRow): ListRecord<VehicleActionId> {

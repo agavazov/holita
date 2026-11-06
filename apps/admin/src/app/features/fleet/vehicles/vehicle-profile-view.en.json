@@ -1,0 +1,81 @@
+{
+  "tabs": {
+    "overview": "Overview",
+    "problems": "Problems",
+    "trips": "Trips",
+    "maintenance": "Maintenance",
+    "commands": "Commands"
+  },
+  "hints": {
+    "overview": "See the latest position, movement and vehicle condition.",
+    "problems": "Review open alerts and recorded device faults for this vehicle.",
+    "trips": "Review this vehicle’s journeys, routes and driving events.",
+    "maintenance": "See planned work, due dates and completed service.",
+    "commands": "Choose an installed device and follow its supported commands."
+  },
+  "map": "Latest position and recorded track · last 24 hours",
+  "mapHint": "See the latest position, movement and vehicle condition.",
+  "trackLoading": "Loading the recorded track…",
+  "trackEmpty": "No recorded track is available for the last 24 hours.",
+  "factsHint": "See the latest position, movement and vehicle condition.",
+  "heading": "Measured heading",
+  "positionTime": "Position recorded",
+  "positionAge": "Position age",
+  "distanceHint": "Review this vehicle’s journeys, routes and driving events.",
+  "registryHint": "See the latest position, movement and vehicle condition.",
+  "notesHint": "See the latest position, movement and vehicle condition.",
+  "problemSummary": "{attention} need attention · {recorded} recorded",
+  "viewProblems": "View problems",
+  "problemKpi": "Need attention",
+  "problems": {
+    "heading": "Problems of this vehicle",
+    "empty": "No problems in this period",
+    "note": "Recorded evidence is historical; it does not establish a current unresolved fault. Only Fleet alerts can be acknowledged or resolved.",
+    "period": "Recorded evidence period",
+    "severity": "Severity",
+    "problem": "Problem",
+    "source": "Source",
+    "state": "State",
+    "occurred": "Occurred"
+  },
+  "sources": {
+    "FLEET_ALERT": "Fleet alert",
+    "DIAGNOSTIC": "Device diagnostic",
+    "ALARM": "Device alarm",
+    "REPORTING_GAP": "Reporting gap",
+    "COMMAND": "Command"
+  },
+  "states": {
+    "OPEN": "Open",
+    "ACKNOWLEDGED": "Acknowledged",
+    "RECORDED": "Recorded",
+    "FAILED": "Failed",
+    "UNCERTAIN": "Outcome unknown",
+    "EXPIRED": "Expired"
+  },
+  "technical": "Technical details",
+  "edata": {
+    "heading": "eData observations · last 24 h",
+    "note": "Counts of raw hexadecimal observations; byte order, scaling and physical units are unverified.",
+    "observation": "Observation",
+    "count": "Count",
+    "latest": "Latest observation",
+    "loading": "Loading observations…",
+    "empty": "No observations in this period",
+    "truncated": "Counts cover only the newest 2,000 observations in this range."
+  },
+  "commands": {
+    "heading": "Installed device",
+    "device": "Choose a device",
+    "placeholder": "Select an installed device",
+    "empty": "Install a device to use its commands.",
+    "open": "Open device commands",
+    "sms": "Open device SMS commands",
+    "selected": "Selected device",
+    "note": "Commands and SMS belong to the selected device. Its command page shows the supported actions and their outcomes."
+  },
+  "snapshotTime": "Map snapshot",
+  "telemetryTime": "Fleet telemetry clock",
+  "reportingGap": "Expected report overdue",
+  "commandFollowUp": "Command needs follow-up"
+}

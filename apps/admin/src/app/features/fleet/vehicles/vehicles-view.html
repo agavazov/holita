@@ -7,6 +7,8 @@
   <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
 </holita-page-header>
 
+<p class="app-muted">{{ listText().hint }}</p>
+
 <holita-fleet-live-summary
   [devices]="[]"
   [groups]="liveGroups()"
@@ -30,6 +32,8 @@
   [heading]="text().table.heading"
   [total]="total()"
   [view]="view()"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
   [errorText]="errorText() ?? text().table.errorText"
   [busy]="busy()"
   [actionContext]="state()"
@@ -52,8 +56,9 @@
     (sortChange)="changeSort($event)"
   />
   <p-table
-    class="app-responsive-table"
+    class="app-responsive-table app-table-fixed"
     [value]="tableRows()"
+    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().table.heading } }"
     dataKey="id"
     [rowTrackBy]="trackById"
     [lazy]="true"
@@ -64,8 +69,15 @@
     [sortOrder]="sortOrder()"
     (onLazyLoad)="sort($event)"
     [scrollable]="true"
-    tableStyleClass="vehicles__table"
+    [tableStyle]="{ 'min-width': tableMinWidth }"
   >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+          <col [style.width]="column.width" [class]="column.className ?? ''" />
+        }
+      </colgroup>
+    </ng-template>
     <ng-template #header>
       <tr>
         <th scope="col" class="app-col-check">
@@ -75,24 +87,12 @@
           <p-table-header-checkbox inputId="vehicles-select-page" />
         </th>
         <th scope="col" class="app-col-identity" pSortableColumn="plate">
-          {{ text().table.plate }} <p-sort-icon field="plate" />
+          {{ text().table.vehicle }} <p-sort-icon field="plate" />
         </th>
-        <th scope="col" class="app-table-merged-column">{{ text().table.vehicle }}</th>
-        <th scope="col" pSortableColumn="status">
-          {{ text().table.status }} <p-sort-icon field="status" />
-        </th>
-        <th scope="col">{{ text().table.device }}</th>
-        <th scope="col">{{ liveText().connection }}</th>
-        <th scope="col">{{ liveText().now }}</th>
-        <th scope="col">{{ liveText().lastReport }}</th>
-        <th scope="col" class="vehicles__faults">{{ liveText().faults }}</th>
+        <th scope="col">{{ listText().activity }}</th>
+        <th scope="col">{{ listText().latest }}</th>
+        <th scope="col">{{ listText().problems }}</th>
         <th scope="col" class="app-col-secondary">{{ text().table.driver }}</th>
-        <th scope="col" class="app-col-secondary">{{ text().table.group }}</th>
-        <th scope="col" class="app-num" pSortableColumn="odometer">
-          {{ text().table.odometer }} <p-sort-icon field="odometer" />
-        </th>
-        <th scope="col">{{ text().table.fuel }}</th>
-        <th scope="col" class="app-col-secondary">{{ text().table.notes }}</th>
         <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
           <span class="app-visually-hidden">{{ text().table.actions }}</span>
         </th>
@@ -104,10 +104,10 @@
           <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row.plate)" />
         </td>
         <td class="app-col-identity">
-          <span class="app-cell-stack">
+          <span class="app-cell-identity">
             <button
               type="button"
-              class="app-link"
+              class="app-link app-plate"
               [attr.aria-label]="
                 label(
                   profileEnabled() ? text().table.openProfile : text().table.openEditor,
@@ -124,13 +124,7 @@
             >
               {{ row.plate }}
             </button>
-            <span>
-              {{ row.fleetNumber ?? '—' }}
-              @if (row.openAlerts) {
-                <span class="vehicles__alerts">{{ alertsLabel(row.openAlerts) }}</span>
-              }
-            </span>
-            <span class="app-table-mobile-meta">{{ row.make }} {{ row.model }}</span>
+            <span [title]="identity(row)">{{ identity(row) }}</span>
           </span>
           <div class="app-table-mobile-actions">
             <holita-row-actions
@@ -140,108 +134,41 @@
             />
           </div>
         </td>
-        <td class="app-table-merged-column">
-          <span class="app-cell-stack">
-            <span>{{ row.make }} {{ row.model }}</span>
-            <span
-              >{{ typeLabel(row.type) }}
-              @if (row.year) {
-                · {{ row.year }}
-              }
-            </span>
+        <td>
+          <span class="vehicles__activity" [title]="devicesTitle(row)">
+            <p-tag
+              [value]="liveStatus(row).label"
+              [severity]="toneSeverity(liveStatus(row).tone)"
+            />
+            <holita-fleet-now mode="table" [device]="activityDevice(row)" />
           </span>
         </td>
         <td>
-          <p-tag [severity]="statusSeverity(row.status)" [value]="statusLabel(row.status)" />
-        </td>
-        <td>
-          <span class="app-cell-stack">
-            @for (device of row.devices; track device.id) {
-              <a class="app-link app-mono" [routerLink]="deviceLink(device.id)">{{
-                device.imei
-              }}</a>
-            } @empty {
-              <span class="app-muted">{{ liveText().noDevice }}</span>
-            }
+          <span class="app-cell-identity vehicles__dates">
+            <time
+              [attr.datetime]="reportAt(row)"
+              [title]="units.dateTimeCell(reportAt(row)).title"
+              >{{ units.dateTime(reportAt(row)) }}</time
+            >
+            <span [title]="units.dateTimeCell(row.positionAt).title"
+              >{{ liveText().positionAge }} · {{ positionAge(row) }}</span
+            >
           </span>
         </td>
         <td>
-          @for (device of row.devices; track device.id; let index = $index) {
-            <holita-fleet-connection [device]="row.liveDevices?.[index]" />
-          } @empty {
-            <holita-fleet-connection [device]="null" />
-          }
-        </td>
-        <td>
-          @for (device of row.devices; track device.id; let index = $index) {
-            <holita-fleet-now [device]="row.liveDevices?.[index]" />
-          } @empty {
-            <span class="app-muted">—</span>
-          }
-        </td>
-        <td>
-          @for (device of row.devices; track device.id; let index = $index) {
-            <holita-fleet-last-report
-              [device]="row.liveDevices?.[index]"
-              [reportedAt]="device.lastReportedAt"
-            />
-          } @empty {
-            <span class="app-muted">—</span>
-          }
-        </td>
-        <td class="vehicles__faults">
-          @for (device of row.devices; track device.id; let index = $index) {
-            <holita-fleet-faults
-              [device]="row.liveDevices?.[index]"
-              [link]="deviceLink(device.id, 'alarms')"
-            />
-          } @empty {
-            <span class="app-muted">—</span>
-          }
+          <a
+            class="app-link app-cell-problems vehicles__problems"
+            [routerLink]="problemLink(row.id)"
+            [attr.aria-label]="label(listText().problemsLink, row.plate)"
+            [title]="problemTitle(row)"
+          >
+            <p-tag [value]="problemLabel(row)" [severity]="problemTone(row)" />
+          </a>
         </td>
         <td class="app-col-secondary">
-          @if (row.driverName) {
-            {{ row.driverName }}
-          } @else {
-            <span class="app-muted">{{ text().table.noDriver }}</span>
-          }
-        </td>
-        <td class="app-col-secondary">
-          @if (row.group; as group) {
-            <span class="app-inline">
-              <span [class]="'app-dot app-dot--' + group.slot"></span>{{ group.name }}
-            </span>
-          } @else {
-            <span class="app-muted">{{ text().table.noGroup }}</span>
-          }
-        </td>
-        <td class="app-num">{{ units.distance(row.odometerKm, false, 0) }}</td>
-        <td>
-          @if (row.fuelPct !== null) {
-            <span class="app-meter-cell" [class.vehicles__fuel--low]="fuelLow(row)">
-              <span
-                class="app-meter"
-                [class.app-meter--danger]="fuelLow(row)"
-                [style.--app-meter-value]="row.fuelPct + '%'"
-                aria-hidden="true"
-              ></span>
-              <span>{{ row.fuelPct }} %</span>
-              @if (row.fuelStatus === 'STALE') {
-                <span class="app-muted">{{ text().table.staleFuel }}</span>
-              }
-            </span>
-          } @else {
-            <span class="app-muted">{{ text().table.noData }}</span>
-          }
-        </td>
-        <td class="app-col-secondary">
-          @if (row.notes) {
-            <span class="app-cell-truncate vehicles__notes" [title]="row.notes">{{
-              row.notes
-            }}</span>
-          } @else {
-            <span class="app-muted">—</span>
-          }
+          <span class="app-cell-truncate" [title]="row.driverName ?? text().table.noDriver">{{
+            row.driverName ?? text().table.noDriver
+          }}</span>
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
           <holita-row-actions

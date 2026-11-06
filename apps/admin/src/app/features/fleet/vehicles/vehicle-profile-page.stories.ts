@@ -12,7 +12,7 @@ import { VehicleOdometerPage } from './vehicle-odometer-page';
 import { VehicleProfilePage } from './vehicle-profile-page';
 
 const meta: Meta = {
-  title: 'Admin/Fleet/Vehicles/Vehicle profile',
+  title: 'Admin/Vehicles/Vehicle detail',
   tags: ['!autodocs'],
   parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };
@@ -42,14 +42,21 @@ function routed(tab = 'overview', child = ''): NonNullable<Story['render']> {
 export const Overview: Story = {
   render: routed(),
 };
-export const RelatedTabs: Story = {
+export const Problems: Story = {
+  render: routed('problems'),
+};
+export const Trips: Story = {
   render: routed('trips'),
 };
-export const Edit: Story = {
-  render: routed('overview', '/edit'),
+export const Maintenance: Story = {
+  render: routed('maintenance'),
 };
-export const Odometer: Story = {
-  render: routed('overview', '/odometer'),
+export const Commands: Story = {
+  render: routed('overview', '?vehicleTab=commands'),
+};
+export const Narrow: Story = {
+  globals: { viewport: { value: 'mobile375', isRotated: false } },
+  render: routed(),
 };
 export const ErrorState: Story = {
   name: 'Error',

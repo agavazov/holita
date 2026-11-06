@@ -13,7 +13,7 @@ import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { Message } from 'primeng/message';
 import { ButtonDirective } from 'primeng/button';
-import { EMPTY, catchError, distinctUntilChanged, map, switchMap } from 'rxjs';
+import { EMPTY, catchError, distinctUntilChanged, from, map, switchMap, timer } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import type {
   AdminBranchesQuery,
@@ -38,8 +38,8 @@ import {
   vehicleVariables,
   vehicleViewQuery,
 } from './vehicle-query';
-import { VehiclesApi } from './vehicles-api';
-import { VehiclesView, type VehicleActionId } from './vehicles-view';
+import { VehiclesApi, type VehiclesContext } from './vehicles-api';
+import { VehiclesView, type VehicleActionId, type VehicleRow } from './vehicles-view';
 import { vehiclesText } from './i18n/messages';
 
 @Component({
@@ -64,6 +64,8 @@ export class VehiclesPage implements OnInit {
   readonly page = signal<AdminVehiclesQuery['fleetVehicles'] | null>(null);
   readonly live = signal<AdminVehiclesLiveQuery['fleetVehicles']['items'] | null>(null);
   readonly liveError = signal<unknown>(null);
+  readonly context = signal<VehiclesContext | null>(null);
+  readonly contextError = signal<unknown>(null);
   private readonly vehicleIds = computed(() =>
     (this.page()?.items ?? []).map((vehicle) => vehicle.id),
   );
@@ -95,17 +97,43 @@ export class VehiclesPage implements OnInit {
   });
   protected readonly rows = computed(() => {
     const live = new Map(this.live()?.map((vehicle) => [vehicle.id, vehicle]));
+    const context = this.context();
+    const positions = new Map(context?.positions.map((item) => [item.vehicle.id, item]));
     return (this.page()?.items ?? [])
       .filter((vehicle) => !this.removed().has(vehicle.id))
-      .map((vehicle) => ({
-        ...vehicleRow(vehicle),
-        liveDevices: vehicle.devices.map((device) =>
-          live.get(vehicle.id)?.devices.find((value) => value.id === device.id),
-        ),
-      }));
+      .map<VehicleRow>((vehicle) => {
+        const problems = context?.ids.includes(vehicle.id)
+          ? context.problems.filter((problem) => problem.vehicleId === vehicle.id)
+          : undefined;
+        const severity = problems?.some((problem) => problem.severity === 'CRITICAL')
+          ? 'CRITICAL'
+          : problems?.some((problem) => problem.severity === 'WARNING')
+            ? 'WARNING'
+            : problems?.length
+              ? 'INFO'
+              : null;
+        const position = positions.get(vehicle.id)?.position;
+        return {
+          ...vehicleRow(vehicle),
+          positionAt: position?.recordedAt ?? null,
+          positionAgeSeconds: position?.ageSeconds ?? null,
+          mapAsOf: context?.mapAsOf ?? null,
+          ...(problems === undefined
+            ? {}
+            : {
+                problemCount: problems.length,
+                problemSeverity: severity,
+                problemRecorded: problems.filter((problem) => problem.state === 'RECORDED').length,
+                problemAttention: problems.filter((problem) => problem.requiringAttention).length,
+              }),
+          liveDevices: vehicle.devices.map((device) =>
+            live.get(vehicle.id)?.devices.find((value) => value.id === device.id),
+          ),
+        };
+      });
   });
   protected readonly liveFailure = computed(() =>
-    requestError(this.liveError(), messages[this.language()].networkError),
+    requestError(this.liveError() ?? this.contextError(), messages[this.language()].networkError),
   );
   protected readonly total = computed(() =>
     Math.max(0, (this.page()?.total ?? 0) - this.removed().size),
@@ -136,7 +164,6 @@ export class VehiclesPage implements OnInit {
         map((ids) => ids.join(',')),
         distinctUntilChanged(),
         switchMap((ids) => {
-          this.live.set(null);
           this.liveError.set(null);
           if (!ids) {
             return EMPTY;
@@ -154,9 +181,33 @@ export class VehiclesPage implements OnInit {
         this.liveError.set(result.error ?? null);
         if (result.dataState === 'complete' && !result.error) {
           this.live.set(result.data.fleetVehicles.items);
-        } else if (result.error) {
-          this.live.set(null);
         }
+      });
+    this.vehicleIdChanges
+      .pipe(
+        map((ids) => ids.join(',')),
+        distinctUntilChanged(),
+        switchMap((ids) =>
+          ids
+            ? timer(0, 30_000).pipe(
+                switchMap(() =>
+                  document.hidden
+                    ? EMPTY
+                    : from(this.api.loadContext(ids.split(','))).pipe(
+                        catchError((error: unknown) => {
+                          this.contextError.set(error);
+                          return EMPTY;
+                        }),
+                      ),
+                ),
+              )
+            : EMPTY,
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((context) => {
+        this.context.set(context);
+        this.contextError.set(null);
       });
     this.summaryQuery = this.api.watchSummary();
     this.summaryQuery.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({

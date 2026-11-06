@@ -18,6 +18,10 @@ import {
   catchError,
   combineLatest,
   distinctUntilChanged,
+  expand,
+  filter,
+  timer,
+  last,
   map,
   startWith,
   switchMap,
@@ -26,8 +30,9 @@ import type {
   AdminBranchesQuery,
   AdminVehicleProfileQuery,
   AdminVehicleProfileTripsQuery,
-  AdminVehicleProfileAlertsQuery,
-  AdminVehicleDeviceEventsQuery,
+  AdminVehicleProfileProblemsQuery,
+  AdminVehicleMapQuery,
+  AdminVehicleTrackQuery,
   AdminVehicleEdataMeasurementsQuery,
   AdminVehicleProfileServiceQuery,
 } from '../../../../generated/graphql/operations';
@@ -37,14 +42,19 @@ import { injectPageRecord } from '../../../layout/page-record';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
 import { drawerParam } from '../../../ui/drawer/drawer-route';
 import { errorCode } from '../../../ui/forms/field-errors';
+import { WALL_CLOCK } from '../../../ui/clock';
 import { tableView } from '../../../ui/table-panel/table-view';
-import { alertRow } from '../alerts/alert-mapping';
-import { alertsText } from '../alerts/i18n/messages';
 import { serviceTaskRow } from '../maintenance/service-task-mapping';
 import { tripRow } from '../trips/trip-mapping';
 import { vehiclesText } from './i18n/messages';
 import { VehicleProfileApi } from './vehicle-profile-api';
-import { vehicleDistance, vehicleEdataCharts, vehicleProfile } from './vehicle-profile-mapping';
+import {
+  vehicleDistance,
+  vehicleEdataObservations,
+  vehicleProfile,
+} from './vehicle-profile-mapping';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
+import { vehicleMapRecords, vehicleRecordedTrack } from './vehicle-profile-map';
 import {
   profileBackParams,
   profilePage,
@@ -69,7 +79,7 @@ const samePage = (left: ProfilePage, right: ProfilePage) =>
   template: `
     <holita-vehicle-profile-view
       [recordLinks]="recordLinks()"
-      [deviceLinkBase]="['/', language(), branch().id, 'control-center', 'devices']"
+      [deviceLinkBase]="['/', language(), branch().id, 'fleet', 'devices']"
       [state]="state()"
       [vehicle]="vehicle()"
       [dataAsOf]="record()?.fleetDataClock.asOf ?? ''"
@@ -79,7 +89,16 @@ const samePage = (left: ProfilePage, right: ProfilePage) =>
       [backFragment]="fragment()"
       [errorText]="failure()"
       [distance]="distance()"
-      [edataCharts]="edataCharts()"
+      [edataObservations]="edataObservations()"
+      [mapRecords]="mapRecords()"
+      [mapSpeedKph]="mapSpeedKph()"
+      [mapAsOf]="mapData()?.asOf ?? null"
+      [mapUpdatedAt]="mapData()?.liveAsOf ?? null"
+      [mapDataAsOf]="mapData()?.dataAsOf ?? null"
+      [track]="track()"
+      [trackLoading]="trackLoading()"
+      [trackError]="trackFailure()"
+      (retryTrack)="retryTrack.next()"
       [edataFrom]="edataFrom()"
       [edataTo]="edataTo()"
       [edataLoading]="edataLoading()"
@@ -98,17 +117,13 @@ const samePage = (left: ProfilePage, right: ProfilePage) =>
       [tripError]="tripFailure()"
       (tripPageChange)="changePage('trips', $event)"
       (retryTrips)="retryTrips.next()"
-      [alerts]="alerts()"
-      [alertPage]="alertPage()"
-      [alertState]="alertView()"
-      [alertError]="alertFailure()"
-      (alertPageChange)="changePage('alerts', $event)"
-      (retryAlerts)="retryAlerts.next()"
-      [deviceEvents]="deviceEvents()"
-      [deviceEventTotal]="deviceEventData()?.total ?? null"
-      [deviceEventState]="deviceEventView()"
-      [deviceEventError]="deviceEventFailure()"
-      (retryDeviceEvents)="retryDeviceEvents.next()"
+      [problems]="problems()"
+      [problemCounts]="problemData()?.counts ?? null"
+      [problemPage]="problemPage()"
+      [problemState]="problemView()"
+      [problemError]="problemFailure()"
+      (problemPageChange)="changePage('problems', $event)"
+      (retryProblems)="retryProblems.next()"
       [service]="service()"
       [servicePage]="servicePage()"
       [serviceState]="serviceView()"
@@ -148,14 +163,20 @@ export class VehicleProfilePage implements OnInit {
   readonly state = signal<VehicleProfileState>('loading');
   readonly record = signal<AdminVehicleProfileQuery | null>(null);
   readonly error = signal<unknown>(null);
-  readonly tab = computed(() => profileTab(this.params().get('tab')));
+  readonly tab = computed(() =>
+    this.queryParams().get('vehicleTab') === 'commands'
+      ? 'commands'
+      : profileTab(this.params().get('tab')),
+  );
+  private readonly units = injectFleetFormat();
+  private readonly wallClock = inject(WALL_CLOCK);
   readonly vehicle = computed(() => {
     const record = this.record();
     return record ? vehicleProfile(record.fleetVehicle) : null;
   });
   protected readonly distance = computed(() => {
     const record = this.record();
-    return record ? vehicleDistance(record.fleetDailyDistance, this.language()) : [];
+    return record ? vehicleDistance(record.fleetDailyDistance, this.units.dateOnly) : [];
   });
   protected readonly nextService = computed(() => {
     const task = this.record()?.fleetVehicle.nextService;
@@ -190,54 +211,41 @@ export class VehicleProfilePage implements OnInit {
   protected readonly profileLink = computed(() => [
     ...this.vehicleListLink(),
     drawerParam(this.route, 'recordId') ?? '',
-    this.tab(),
+    this.tab() === 'commands' ? 'overview' : this.tab(),
   ]);
   protected readonly retry = new Subject<void>();
   protected readonly retryTrips = new Subject<void>();
-  protected readonly retryAlerts = new Subject<void>();
-  protected readonly retryDeviceEvents = new Subject<void>();
-  protected readonly deviceEventData = signal<AdminVehicleDeviceEventsQuery['fleetEvents'] | null>(
-    null,
+  protected readonly retryProblems = new Subject<void>();
+  protected readonly retryTrack = new Subject<void>();
+  protected readonly mapData = signal<AdminVehicleMapQuery['fleetMap'] | null>(null);
+  private readonly mapError = signal<unknown>(null);
+  private readonly trackData = signal<AdminVehicleTrackQuery['fleetVehicleSamples'] | null>(null);
+  protected readonly trackLoading = signal(true);
+  private readonly trackError = signal<unknown>(null);
+  protected readonly mapRecords = computed(() =>
+    vehicleMapRecords(this.mapData(), this.vehicle(), this.language()),
   );
-  private readonly deviceEventLoading = signal(true);
-  private readonly deviceEventError = signal<unknown>(null);
-  /** Only holita's imported reports; a cleared trouble code arrives with INFO severity. */
-  protected readonly deviceEvents = computed(() =>
-    (this.deviceEventData()?.items ?? [])
-      .filter((event) => event.source === 'ERM')
-      .map((event) => ({
-        id: event.id,
-        occurredAt: event.occurredAt,
-        label:
-          event.kind === 'DIAGNOSTIC_TROUBLE_CODE'
-            ? (event.troubleCode ?? alertsText(this.language()).kinds.DIAGNOSTIC_TROUBLE_CODE)
-            : alertsText(this.language()).kinds[event.kind],
-        state:
-          event.kind !== 'DIAGNOSTIC_TROUBLE_CODE'
-            ? ('reported' as const)
-            : event.severity === 'INFO'
-              ? ('cleared' as const)
-              : ('added' as const),
-      })),
+  protected readonly mapSpeedKph = computed(
+    () =>
+      this.mapData()?.items.find((item) => item.vehicle.id === this.vehicle()?.id)?.position
+        ?.speedKph ?? null,
   );
-  protected readonly deviceEventView = computed(() =>
-    tableView({
-      loading: this.deviceEventLoading(),
-      error: this.deviceEventError(),
-      rows: this.deviceEventData() ? this.deviceEvents().length : null,
-      filtered: false,
-    }),
+  protected readonly track = computed(() =>
+    vehicleRecordedTrack(this.trackData(), this.language()),
   );
-  protected readonly deviceEventFailure = computed(() =>
-    requestError(this.deviceEventError(), vehiclesText(this.language()).table.errorText),
-  );
+  protected readonly trackFailure = computed(() => {
+    const error = this.mapError() ?? this.trackError();
+    return error === null
+      ? null
+      : requestError(error, vehiclesText(this.language()).table.errorText);
+  });
   protected readonly retryEdata = new Subject<void>();
   protected readonly edataData = signal<
     AdminVehicleEdataMeasurementsQuery['fleetVehicleEdataMeasurements'] | null
   >(null);
   protected readonly edataLoading = signal(true);
   private readonly edataError = signal<unknown>(null);
-  protected readonly edataCharts = computed(() => vehicleEdataCharts(this.edataData()));
+  protected readonly edataObservations = computed(() => vehicleEdataObservations(this.edataData()));
   protected readonly edataFrom = computed(() => this.edataData()?.from ?? '');
   protected readonly edataTo = computed(() => this.edataData()?.to ?? '');
   protected readonly edataFailure = computed(() =>
@@ -250,25 +258,22 @@ export class VehicleProfilePage implements OnInit {
     requestError(this.error(), vehiclesText(this.language()).profile.errorText),
   );
   private readonly tripData = signal<AdminVehicleProfileTripsQuery['fleetTrips'] | null>(null);
-  private readonly alertData = signal<AdminVehicleProfileAlertsQuery['fleetEvents'] | null>(null);
+  protected readonly problemData = signal<AdminVehicleProfileProblemsQuery['fleetProblems'] | null>(
+    null,
+  );
   private readonly serviceData = signal<
     AdminVehicleProfileServiceQuery['fleetServiceTasks'] | null
   >(null);
   private readonly tripError = signal<unknown>(null);
-  private readonly alertError = signal<unknown>(null);
+  private readonly problemError = signal<unknown>(null);
   private readonly serviceError = signal<unknown>(null);
   private readonly tripLoading = signal(true);
-  private readonly alertLoading = signal(true);
+  private readonly problemLoading = signal(true);
   private readonly serviceLoading = signal(true);
   protected readonly trips = computed(() =>
     (this.tripData()?.items ?? []).map((trip) => tripRow(trip, this.language())),
   );
-  protected readonly alerts = computed(() =>
-    (this.alertData()?.items ?? []).flatMap((event) => {
-      const row = alertRow(event, this.language());
-      return row ? [row] : [];
-    }),
-  );
+  protected readonly problems = computed(() => this.problemData()?.items ?? []);
   protected readonly service = computed(() =>
     (this.serviceData()?.items ?? []).map((task) => serviceTaskRow(task, this.language())),
   );
@@ -276,9 +281,9 @@ export class VehicleProfilePage implements OnInit {
     ...profilePage(this.queryParams(), 'trips'),
     total: this.tripData()?.total ?? 0,
   }));
-  protected readonly alertPage = computed(() => ({
-    ...profilePage(this.queryParams(), 'alerts'),
-    total: this.alertData()?.total ?? 0,
+  protected readonly problemPage = computed(() => ({
+    ...profilePage(this.queryParams(), 'problems'),
+    total: this.problemData()?.total ?? 0,
   }));
   protected readonly servicePage = computed(() => ({
     ...profilePage(this.queryParams(), 'service'),
@@ -292,11 +297,11 @@ export class VehicleProfilePage implements OnInit {
       filtered: false,
     }),
   );
-  protected readonly alertView = computed(() =>
+  protected readonly problemView = computed(() =>
     tableView({
-      loading: this.alertLoading(),
-      error: this.alertError(),
-      rows: this.alertData() ? this.alerts().length : null,
+      loading: this.problemLoading(),
+      error: this.problemError(),
+      rows: this.problemData() ? this.problems().length : null,
       filtered: false,
     }),
   );
@@ -311,8 +316,8 @@ export class VehicleProfilePage implements OnInit {
   protected readonly tripFailure = computed(() =>
     requestError(this.tripError(), vehiclesText(this.language()).table.errorText),
   );
-  protected readonly alertFailure = computed(() =>
-    requestError(this.alertError(), vehiclesText(this.language()).table.errorText),
+  protected readonly problemFailure = computed(() =>
+    requestError(this.problemError(), vehiclesText(this.language()).table.errorText),
   );
   protected readonly serviceFailure = computed(() =>
     requestError(this.serviceError(), vehiclesText(this.language()).table.errorText),
@@ -329,7 +334,7 @@ export class VehicleProfilePage implements OnInit {
         this.notifications.add({ severity: 'success', summary: message, life: 5000 });
         this.retry.next();
         this.retryTrips.next();
-        this.retryAlerts.next();
+        this.retryProblems.next();
         this.retryService.next();
       },
     };
@@ -371,9 +376,10 @@ export class VehicleProfilePage implements OnInit {
           if (!relatedStarted) {
             relatedStarted = true;
             this.loadTrips(id);
-            this.loadAlerts(id);
-            this.loadDeviceEvents(id);
-            this.loadEdata(id, result.data.fleetDataClock.asOf);
+            this.loadProblems(id);
+            this.loadMap(id);
+            this.loadTrack(id);
+            this.loadEdata(id);
             this.loadService(id);
           }
         }
@@ -382,9 +388,14 @@ export class VehicleProfilePage implements OnInit {
 
   changeTab(tab: VehicleProfileTab): void {
     void this.router.navigate(
-      [...this.vehicleListLink(), drawerParam(this.route, 'recordId'), tab],
+      [
+        ...this.vehicleListLink(),
+        drawerParam(this.route, 'recordId'),
+        tab === 'commands' ? 'overview' : tab,
+      ],
       {
-        queryParamsHandling: 'preserve',
+        queryParams: { vehicleTab: tab === 'commands' ? 'commands' : null },
+        queryParamsHandling: 'merge',
         preserveFragment: true,
       },
     );
@@ -468,25 +479,25 @@ export class VehicleProfilePage implements OnInit {
       });
   }
 
-  private loadAlerts(id: string): void {
+  private loadProblems(id: string): void {
     let previous: ProfilePage | null = null;
     const pages = this.route.queryParamMap.pipe(
-      map((params) => profilePage(params, 'alerts')),
+      map((params) => profilePage(params, 'problems')),
       distinctUntilChanged(samePage),
     );
-    combineLatest([pages, this.retryAlerts.pipe(startWith(undefined))])
+    combineLatest([pages, this.retryProblems.pipe(startWith(undefined))])
       .pipe(
         switchMap(([page]) => {
           if (previous === null || !samePage(previous, page)) {
-            this.alertData.set(null);
+            this.problemData.set(null);
           }
           previous = page;
-          this.alertLoading.set(true);
-          this.alertError.set(null);
-          return this.api.watchAlerts(id, page.page, page.pageSize).valueChanges.pipe(
+          this.problemLoading.set(true);
+          this.problemError.set(null);
+          return this.api.watchProblems(id, page.page, page.pageSize).valueChanges.pipe(
             catchError((error: unknown) => {
-              this.alertLoading.set(false);
-              this.alertError.set(error);
+              this.problemLoading.set(false);
+              this.problemError.set(error);
               return EMPTY;
             }),
           );
@@ -494,26 +505,31 @@ export class VehicleProfilePage implements OnInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((result) => {
-        this.alertLoading.set(result.loading);
-        this.alertError.set(result.error ?? null);
+        this.problemLoading.set(result.loading);
+        this.problemError.set(result.error ?? null);
         if (result.dataState === 'complete' && !result.loading && !result.error) {
-          this.alertData.set(result.data.fleetEvents);
+          this.problemData.set(result.data.fleetProblems);
           this.correctPages();
         }
       });
   }
 
-  private loadDeviceEvents(id: string): void {
-    this.retryDeviceEvents
+  private loadMap(id: string): void {
+    combineLatest([timer(0, 30_000), this.retryTrack.pipe(startWith(undefined))])
       .pipe(
-        startWith(undefined),
+        filter(() => !document.hidden),
         switchMap(() => {
-          this.deviceEventLoading.set(true);
-          this.deviceEventError.set(null);
-          return this.api.watchDeviceEvents(id).valueChanges.pipe(
+          this.mapError.set(null);
+          return this.api.mapPage(0).pipe(
+            expand((result) => {
+              const page = result.data?.fleetMap;
+              return page?.hasMore && !page.items.some((item) => item.vehicle.id === id)
+                ? this.api.mapPage(page.offset + page.limit)
+                : EMPTY;
+            }),
+            last(),
             catchError((error: unknown) => {
-              this.deviceEventLoading.set(false);
-              this.deviceEventError.set(error);
+              this.mapError.set(error);
               return EMPTY;
             }),
           );
@@ -521,21 +537,43 @@ export class VehicleProfilePage implements OnInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((result) => {
-        this.deviceEventLoading.set(result.loading);
-        this.deviceEventError.set(result.error ?? null);
-        if (result.dataState === 'complete' && !result.loading && !result.error) {
-          this.deviceEventData.set(result.data.fleetEvents);
+        if (result.data?.fleetMap) {
+          this.mapData.set(result.data.fleetMap);
         }
       });
   }
 
-  private loadEdata(id: string, asOf: string | null): void {
-    if (asOf === null) {
-      this.edataLoading.set(false);
-      return;
-    }
-    const from = new Date(Date.parse(asOf) - 24 * 60 * 60 * 1000).toISOString();
-    const to = new Date(Date.parse(asOf) + 1).toISOString();
+  private loadTrack(id: string): void {
+    combineLatest([timer(0, 30_000), this.retryTrack.pipe(startWith(undefined))])
+      .pipe(
+        filter(() => !document.hidden),
+        switchMap(() => {
+          this.trackLoading.set(true);
+          this.trackError.set(null);
+          const to = new Date(this.wallClock()).toISOString();
+          const from = new Date(Date.parse(to) - 24 * 60 * 60 * 1000).toISOString();
+          return this.api.watchTrack(id, from, to).valueChanges.pipe(
+            catchError((error: unknown) => {
+              this.trackLoading.set(false);
+              this.trackError.set(error);
+              return EMPTY;
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((result) => {
+        this.trackLoading.set(result.loading);
+        this.trackError.set(result.error ?? null);
+        if (result.dataState === 'complete' && !result.error) {
+          this.trackData.set(result.data.fleetVehicleSamples);
+        }
+      });
+  }
+
+  private loadEdata(id: string): void {
+    const to = new Date(this.wallClock()).toISOString();
+    const from = new Date(Date.parse(to) - 24 * 60 * 60 * 1000).toISOString();
     this.retryEdata
       .pipe(
         startWith(undefined),
@@ -599,12 +637,12 @@ export class VehicleProfilePage implements OnInit {
   private correctPages(): void {
     const totals: Record<ProfileListTab, number | null> = {
       trips: this.tripData()?.total ?? null,
-      alerts: this.alertData()?.total ?? null,
+      problems: this.problemData()?.total ?? null,
       service: this.serviceData()?.total ?? null,
     };
     const corrections: Record<string, string | number | null> = {};
     let changed = false;
-    for (const tab of ['trips', 'alerts', 'service'] as const) {
+    for (const tab of ['trips', 'problems', 'service'] as const) {
       const current = profilePage(this.queryParams(), tab);
       const total = totals[tab];
       const last = total === null ? current.page : Math.max(1, Math.ceil(total / current.pageSize));

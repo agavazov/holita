@@ -4,7 +4,7 @@ import { defaultFleetDisplay, FLEET_DISPLAY } from '../../../ui/format/fleet-for
 import { OdometerDrawer } from './odometer-drawer';
 
 const meta: Meta<OdometerDrawer> = {
-  title: 'Admin/Fleet/Vehicles/Odometer settings',
+  title: 'Admin/Vehicles/Odometer settings',
   component: OdometerDrawer,
   tags: ['!autodocs'],
   args: {
