@@ -33,7 +33,7 @@ export function operatorAudit(
   return {
     ...scope,
     deviceId: auditId(deviceId),
-    actorId: `demo-tenant:${scope.tenantId}`,
+    actorId: context.userId ?? `demo-tenant:${scope.tenantId}`,
     intent,
   };
 }

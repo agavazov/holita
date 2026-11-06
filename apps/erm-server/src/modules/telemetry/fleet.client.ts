@@ -11,8 +11,14 @@ import { requireTenant } from '../../auth/demo-auth.js';
 import {
   ErmFleetDeviceDocument,
   type ErmFleetDeviceQueryVariables,
+  ErmFleetDevicesDocument,
+  type ErmFleetDevicesQueryVariables,
 } from '../../generated/graphql/fleet-operations.js';
 import type { RequestContext } from '../../graphql/request-context.js';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 @Injectable()
 export class FleetClient {
@@ -58,8 +64,68 @@ export class FleetClient {
   }
 
   async deviceImei(id: string, context: RequestContext): Promise<string> {
-    requireTenant(context);
     const variables: ErmFleetDeviceQueryVariables = { id };
+    const data = await this.queryDevices(print(ErmFleetDeviceDocument), variables, context);
+    const device = data['fleetDevice'];
+    if (device === null) {
+      throw new NotFoundException('Fleet device not found in the active Branch');
+    }
+    if (
+      typeof device === 'object' &&
+      'id' in device &&
+      typeof device.id === 'string' &&
+      device.id.toLowerCase() === id.toLowerCase() &&
+      'imei' in device &&
+      typeof device.imei === 'string' &&
+      /^\d{15}$/.test(device.imei)
+    ) {
+      return device.imei;
+    }
+    throw new ServiceUnavailableException('Invalid Fleet device response');
+  }
+
+  async deviceImeis(ids: string[], context: RequestContext): Promise<Map<string, string>> {
+    const uniqueIds = [...new Set(ids)];
+    const devices = new Map<string, string>();
+    for (let offset = 0; offset < uniqueIds.length; offset += 100) {
+      const batch = uniqueIds.slice(offset, offset + 100);
+      const variables: ErmFleetDevicesQueryVariables = { ids: batch, limit: batch.length };
+      const data = await this.queryDevices(print(ErmFleetDevicesDocument), variables, context);
+      const page = data['fleetDevices'];
+      if (
+        typeof page !== 'object' ||
+        page === null ||
+        !('items' in page) ||
+        !Array.isArray(page.items)
+      ) {
+        throw new ServiceUnavailableException('Invalid Fleet devices response');
+      }
+      const items: unknown[] = page.items;
+      for (const device of items) {
+        if (
+          typeof device !== 'object' ||
+          device === null ||
+          !('id' in device) ||
+          typeof device.id !== 'string' ||
+          !batch.includes(device.id.toLowerCase()) ||
+          !('imei' in device) ||
+          typeof device.imei !== 'string' ||
+          !/^\d{15}$/.test(device.imei)
+        ) {
+          throw new ServiceUnavailableException('Invalid Fleet devices response');
+        }
+        devices.set(device.id.toLowerCase(), device.imei);
+      }
+    }
+    return devices;
+  }
+
+  private async queryDevices(
+    query: string,
+    variables: ErmFleetDeviceQueryVariables | ErmFleetDevicesQueryVariables,
+    context: RequestContext,
+  ): Promise<Record<string, unknown>> {
+    requireTenant(context);
     let value: unknown;
     try {
       const response = await fetch(
@@ -74,10 +140,7 @@ export class FleetClient {
             'x-branch-id': context.branchId ?? '',
             'x-request-id': context.requestId,
           },
-          body: JSON.stringify({
-            query: print(ErmFleetDeviceDocument),
-            variables,
-          }),
+          body: JSON.stringify({ query, variables }),
         },
       );
       if (response.status === 401) {
@@ -131,27 +194,8 @@ export class FleetClient {
         }
         throw new ServiceUnavailableException('Fleet could not verify device access');
       }
-      if (
-        'data' in value &&
-        typeof value.data === 'object' &&
-        value.data !== null &&
-        'fleetDevice' in value.data
-      ) {
-        const device = value.data.fleetDevice;
-        if (device === null) {
-          throw new NotFoundException('Fleet device not found in the active Branch');
-        }
-        if (
-          typeof device === 'object' &&
-          'id' in device &&
-          typeof device.id === 'string' &&
-          device.id.toLowerCase() === id.toLowerCase() &&
-          'imei' in device &&
-          typeof device.imei === 'string' &&
-          /^\d{15}$/.test(device.imei)
-        ) {
-          return device.imei;
-        }
+      if ('data' in value && isRecord(value.data)) {
+        return value.data;
       }
     }
     throw new ServiceUnavailableException('Invalid Fleet device response');

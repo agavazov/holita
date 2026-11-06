@@ -4,3 +4,12 @@ query ErmFleetDevice($id: ID!) {
     imei
   }
 }
+
+query ErmFleetDevices($ids: [ID!]!, $limit: Int!) {
+  fleetDevices(ids: $ids, limit: $limit) {
+    items {
+      id
+      imei
+    }
+  }
+}

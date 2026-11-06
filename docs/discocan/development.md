@@ -22,6 +22,15 @@ publish development output or Storybook serving local configuration. See
 [shared configuration](../development.md#ports-and-environment) for the environment reference.
 Keep `fleetEnabled` and backend `FLEET_ENABLED` consistent when disabling Fleet.
 
+### User sessions
+
+Fleet and ERM accept the bearer returned by Core's `signIn`. Configure `CORE_AUTH_VERIFY_URL`
+and the shared `CORE_INTERNAL_AUTH_TOKEN` in both services as described in
+[Core users and sessions](../development.md#core-users-and-sessions). Core supplies the verified
+Tenant, User and session IDs; caller identity headers are ignored. Supply `x-branch-id` for the
+selected fleet. Successful verifications are cached for five seconds, including the maximum
+delay before revocation takes effect in Fleet/ERM; failed verifications are not cached.
+
 ### Demo tenant login
 
 Tenant selection obtains a candidate token and loads that Tenant's Branches. The session
@@ -31,13 +40,14 @@ Authenticated requests carry `Authorization: Bearer <session>`; Fleet also needs
 A caller-supplied tenant header never selects identity.
 
 Core, Fleet and ERM API use the same `DEMO_AUTH_SECRET` (at least 32 characters).
-`DEMO_AUTH_ENABLED=false` disables discovery/login/sessions. Production requires explicit demo
-enablement and a valid secret. This login deliberately permits anyone to choose any Tenant;
-production needs real identity, membership, permissions and revocation.
+`DEMO_AUTH_ENABLED=false` disables demo discovery/login/sessions; real user sessions remain
+available. Production requires explicit demo enablement and a valid secret. This development
+login deliberately permits anyone to choose any Tenant; use real user sessions for client access.
 
 Tab sessionStorage retains the unexpired session and selected Branch. Denied storage uses
 memory only. Logout honors dirty guards, retires clients and clears the tab session; expiry
-also retires it. Submitted writes keep their captured token; no server-side revocation exists.
+also retires it. Submitted writes keep their captured token; demo tokens have no server-side
+revocation. A rejected real session never falls back to this demo flow.
 
 ### Fleet demo data
 
@@ -238,7 +248,8 @@ PORT=11018 ERM_DEVICE_PORT=11501 ERM_ROLE=gateway npm run start:prod --workspace
 
 Router's `ERM_SERVER_GRAPHQL_URL` points to the api process at
 `http://127.0.0.1:11017/graphql`. Run it separately with `ERM_ROLE=api` and `PORT=11017`;
-it must not open the device TCP listener. Use the same demo-session settings as Core/Fleet.
+it must not open the device TCP listener. Configure Core verification for user sessions and the
+same demo-session settings as Core/Fleet when explicitly using development demo login.
 Keep the gateway's loopback internal API and machine token private.
 
 The admin **Fleet** group keeps Vehicles and Devices together. Both lists and the **Control
@@ -368,9 +379,10 @@ mutation result, inspect the audit before making another decision.
 
 The Device page retains the latest 50 requests with intent, exact target, expiry, submission and
 completion times, wire command ID, result and uncertainty. Settings and snapshots show their
-actor and intent alongside steps and before/after evidence. The verified demo session identifies
-the Tenant only (`demo-tenant:<tenantId>`); it does not identify a named person or grant production
-operator roles. Audit history and snapshot diffs use the stored Tenant/Branch/Device scope, so
+actor and intent alongside steps and before/after evidence. New actions from real sessions record
+the verified Core `userId` as their actor. Demo sessions identify the Tenant only
+(`demo-tenant:<tenantId>`); historical demo audit rows remain unchanged. Audit history and
+snapshot diffs use the stored Tenant/Branch/Device scope, so
 unattributed legacy tool runs are not included in this operator history.
 
 The Device's **Parameters → Device settings** editor starts background controlled workflows

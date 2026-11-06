@@ -55,6 +55,10 @@ import { runEdataChange, runParameterChange } from '../src/modules/telemetry/eda
 import { EdataChangeRepository } from '../src/modules/telemetry/edata-change.repository.js';
 import { InternalTelemetryController } from '../src/modules/telemetry/internal-telemetry.controller.js';
 import { InternalTelemetryGuard } from '../src/modules/telemetry/internal-telemetry.guard.js';
+import { NotificationExportController } from '../src/modules/notification-export/notification-export.controller.js';
+import { NotificationExportRepository } from '../src/modules/notification-export/notification-export.repository.js';
+import { NotificationExportService } from '../src/modules/notification-export/notification-export.service.js';
+import type { NotificationExportItem } from '../src/modules/notification-export/notification-export.types.js';
 import {
   ErmDeviceResolver,
   ErmEventResolver,
@@ -75,7 +79,10 @@ import type {
 import type { RequestContext } from '../src/graphql/request-context.js';
 import { formatGraphqlError } from '../src/graphql/errors.js';
 import { DateTimeScalar } from '../src/graphql/scalars.js';
-import { ErmFleetDeviceDocument } from '../src/generated/graphql/fleet-operations.js';
+import {
+  ErmFleetDeviceDocument,
+  ErmFleetDevicesDocument,
+} from '../src/generated/graphql/fleet-operations.js';
 import { TelemetryRepository } from '../src/modules/telemetry/telemetry.repository.js';
 import { TelemetryService } from '../src/modules/telemetry/telemetry.service.js';
 import { deviceTelemetryRequest } from '../src/modules/telemetry/device-request.js';
@@ -101,7 +108,7 @@ it('persists captured connection lifecycle and raw frames through the production
     await mkdir(captureRoot, { recursive: true });
     captureDirectory = await mkdtemp(join(captureRoot, 'erm-server-'));
     module = await Test.createTestingModule({
-      controllers: [InternalTelemetryController],
+      controllers: [InternalTelemetryController, NotificationExportController],
       providers: [
         DeviceCaptureService,
         DevicesRepository,
@@ -114,6 +121,8 @@ it('persists captured connection lifecycle and raw frames through the production
         CommandRequestsRepository,
         CommandRequestsService,
         InternalTelemetryGuard,
+        NotificationExportRepository,
+        NotificationExportService,
         { provide: DevicesService, useValue: { listUnits: () => [] } },
         { provide: PrismaService, useValue: { client: database.client, schema: database.schema } },
       ],
@@ -664,6 +673,13 @@ it('persists captured connection lifecycle and raw frames through the production
     // Exercise the api -> Fleet scope check -> gateway contract on loopback, never on real units.
     const deviceId = randomUUID();
     const branchId = randomUUID();
+    const neverConnectedDeviceId = randomUUID();
+    const overdueDeviceId = randomUUID();
+    const healthDeviceId = randomUUID();
+    const fleetDeviceImeis = new Map([
+      [deviceId, unitId],
+      [neverConnectedDeviceId, '123456789012345'],
+    ]);
     const scopedContext = {
       ...context,
       branchId,
@@ -737,6 +753,34 @@ it('persists captured connection lifecycle and raw frames through the production
         }
         if (req.url === '/graphql') {
           fleetCalls++;
+          if (
+            typeof body === 'object' &&
+            body !== null &&
+            'query' in body &&
+            body.query === print(ErmFleetDevicesDocument) &&
+            'variables' in body &&
+            typeof body.variables === 'object' &&
+            body.variables !== null &&
+            'ids' in body.variables &&
+            Array.isArray(body.variables.ids)
+          ) {
+            const ids: unknown[] = body.variables.ids;
+            expect(body).toEqual({
+              query: print(ErmFleetDevicesDocument),
+              variables: { ids, limit: ids.length },
+            });
+            expect(ids.length).toBeLessThanOrEqual(100);
+            expect(req.headers['x-request-id']).toBe(scopedContext.requestId);
+            const inScope =
+              readDemoTenant(req.headers.authorization) === tenantId &&
+              req.headers['x-branch-id'] === branchId;
+            const items = ids.flatMap((id) => {
+              const imei = typeof id === 'string' && inScope ? fleetDeviceImeis.get(id) : undefined;
+              return imei === undefined ? [] : [{ id, imei }];
+            });
+            res.end(JSON.stringify({ data: { fleetDevices: { items } } }));
+            return;
+          }
           expect(body).toEqual({
             query: print(ErmFleetDeviceDocument),
             variables: { id: deviceId },
@@ -1047,6 +1091,7 @@ it('persists captured connection lifecycle and raw frames through the production
       module.get(TelemetryRepository),
       new LiveDevicesService(),
       requests,
+      new FleetClient(),
     );
     await expect(
       api.sendDeviceCommand({ deviceId, action: 'READ_STATUS' }, unauthenticated),
@@ -1394,6 +1439,7 @@ it('persists captured connection lifecycle and raw frames through the production
       },
     });
     const overdueUnitId = '862129080366631';
+    fleetDeviceImeis.set(overdueDeviceId, overdueUnitId);
     const lastClosedAt = new Date(now.getTime() - 3 * 60 * 60 * 1000);
     const overdueConnection = await database.client.ermConnection.create({
       data: {
@@ -1613,14 +1659,15 @@ it('persists captured connection lifecycle and raw frames through the production
       ermCommands(input: { pageSize: 25 }) { items { id } hasMore }
     } } }`;
     gatewayReads = 0;
+    const fleetCallsBeforeEntities = fleetCalls;
     const result = await graphql({
       schema,
       source,
       variableValues: {
         representations: [
           { __typename: 'FleetDevice', id: deviceId, imei: unitId },
-          { __typename: 'FleetDevice', id: 'never-connected', imei: '123456789012345' },
-          { __typename: 'FleetDevice', id: 'overdue', imei: overdueUnitId },
+          { __typename: 'FleetDevice', id: neverConnectedDeviceId, imei: '123456789012345' },
+          { __typename: 'FleetDevice', id: overdueDeviceId, imei: overdueUnitId },
         ],
       },
       contextValue: { ...scopedContext },
@@ -1664,14 +1711,14 @@ it('persists captured connection lifecycle and raw frames through the production
         ermCommands: { hasMore: true },
       },
       {
-        id: 'never-connected',
+        id: neverConnectedDeviceId,
         ermState: null,
         ermEvents: { items: [] },
         ermFrames: { items: [] },
         ermCommands: { items: [] },
       },
       {
-        id: 'overdue',
+        id: overdueDeviceId,
         ermState: {
           online: false,
           mode: null,
@@ -1693,6 +1740,37 @@ it('persists captured connection lifecycle and raw frames through the production
       },
     ]);
     expect(gatewayReads).toBe(1);
+    expect(fleetCalls - fleetCallsBeforeEntities).toBe(1);
+
+    const foreignTenantId = randomUUID();
+    for (const deniedScope of [
+      scopedContext,
+      { ...scopedContext, branchId: randomUUID() },
+      {
+        ...scopedContext,
+        tenantId: foreignTenantId,
+        authorization: `Bearer ${issueDemoToken(foreignTenantId)}`,
+      },
+    ]) {
+      const denied = await graphql({
+        schema,
+        source,
+        variableValues: {
+          representations:
+            deniedScope === scopedContext
+              ? [
+                  { __typename: 'FleetDevice', id: deviceId, imei: overdueUnitId },
+                  { __typename: 'FleetDevice', id: randomUUID(), imei: unitId },
+                ]
+              : [{ __typename: 'FleetDevice', id: deviceId, imei: unitId }],
+        },
+        contextValue: { ...deniedScope },
+      });
+      expect(denied.errors).toBeUndefined();
+      expect(denied.data?.['_entities']).toEqual(
+        deniedScope === scopedContext ? [null, null] : [null],
+      );
+    }
 
     // A cursor for one IMEI must not poison that page through another entity's field.
     for (const [field, read] of [
@@ -1729,9 +1807,9 @@ it('persists captured connection lifecycle and raw frames through the production
         }`,
         variableValues: {
           representations: [
-            { __typename: 'FleetDevice', id: 'never-connected', imei: '123456789012345' },
+            { __typename: 'FleetDevice', id: neverConnectedDeviceId, imei: '123456789012345' },
             { __typename: 'FleetDevice', id: deviceId, imei: unitId },
-            { __typename: 'FleetDevice', id: 'overdue', imei: overdueUnitId },
+            { __typename: 'FleetDevice', id: overdueDeviceId, imei: overdueUnitId },
           ],
           cursor: first.nextCursor,
         },
@@ -1763,6 +1841,7 @@ it('persists captured connection lifecycle and raw frames through the production
     const healthSnapshot = new Date();
     const healthSince = new Date(healthSnapshot.getTime() - 24 * 60 * 60_000);
     const healthUnitId = '862129080366699';
+    fleetDeviceImeis.set(healthDeviceId, healthUnitId);
     const healthConnection = await database.client.ermConnection.create({
       data: { unitId: healthUnitId, peer, upstream, openedAt: healthSince },
     });
@@ -1891,7 +1970,7 @@ it('persists captured connection lifecycle and raw frames through the production
         } }
       } } }`,
       variableValues: {
-        representations: [{ __typename: 'FleetDevice', id: 'health', imei: healthUnitId }],
+        representations: [{ __typename: 'FleetDevice', id: healthDeviceId, imei: healthUnitId }],
       },
       contextValue: { ...scopedContext },
     });
@@ -2095,7 +2174,7 @@ it('persists captured connection lifecycle and raw frames through the production
       variableValues: {
         representations: [
           { __typename: 'FleetDevice', id: deviceId, imei: unitId },
-          { __typename: 'FleetDevice', id: randomUUID(), imei: '123456789012345' },
+          { __typename: 'FleetDevice', id: neverConnectedDeviceId, imei: '123456789012345' },
         ],
       },
       contextValue: { ...scopedContext },
@@ -3139,6 +3218,135 @@ it('persists captured connection lifecycle and raw frames through the production
         });
         expect(denied.errors?.[0]?.message).toBe('Internal telemetry authentication required');
       }
+    }
+
+    const notificationExport = module.get(NotificationExportController);
+    const notificationImei = '862129080368888';
+    const notificationSince = new Date(Date.now() - 60_000);
+    const notificationAt = new Date(notificationSince.getTime() + 1000);
+    const notificationEvents = await database.client.ermEvent.createManyAndReturn({
+      data: [
+        { eventId: '33', fields: { edata: { type: 419, faults: [
+          { spn: 4339, fmi: 7, status: 1 }, { spn: 4339, fmi: 7, status: 2 },
+        ] } } },
+        { eventId: '33', fields: { edata: { type: 411, canError: 2 } } },
+        { eventId: '36', fields: {} },
+        { eventId: '02', fields: { extra: ['00', '1'] } },
+        { eventId: '01', fields: {} },
+      ].map((entry) => ({
+        frameId: fleetBatchFrame.id,
+        unitId: notificationImei,
+        eventTime: notificationAt,
+        ...entry,
+      })),
+    });
+    await database.client.ermEvent.create({
+      data: {
+        frameId: fleetBatchFrame.id,
+        unitId: notificationImei,
+        eventTime: new Date(notificationSince.getTime() - 1),
+        eventId: '36',
+        fields: {},
+      },
+    });
+    const notificationCommands = await database.client.ermCommandRequest.createManyAndReturn({
+      data: ([
+        { status: 'ANSWERED', resultCode: '01' },
+        { status: 'ANSWERED', resultCode: null },
+        { status: 'FAILED', resultCode: '02' },
+        { status: 'FAILED', resultCode: null },
+        { status: 'EXPIRED', resultCode: null },
+        { status: 'UNCERTAIN', resultCode: null },
+      ] as const).map(({ status, resultCode }) => ({
+          ...fleetBatchCommand,
+          id: randomUUID(),
+          unitId: notificationImei,
+          status,
+          resultCode,
+          completedAt: notificationAt,
+          failureReason: status === 'FAILED' ? 'Command failed' : null,
+      })),
+    });
+    for (const excluded of [
+      { tenantId: randomUUID() },
+      { branchId: randomUUID() },
+      { deviceId: randomUUID() },
+      { unitId: '862129080368889' },
+      { completedAt: new Date(notificationSince.getTime() - 1) },
+      { status: 'QUEUED' as const },
+      { status: 'CANCELLED' as const },
+    ]) {
+      await database.client.ermCommandRequest.create({
+        data: {
+          ...fleetBatchCommand,
+          id: randomUUID(),
+          unitId: notificationImei,
+          completedAt: notificationAt,
+          ...excluded,
+        },
+      });
+    }
+    const notificationQuery = {
+      tenantId,
+      branchId,
+      deviceId,
+      since: notificationSince.toISOString(),
+      limit: '2',
+    };
+    const exported: NotificationExportItem[] = [];
+    let notificationCursor: string | undefined;
+    for (;;) {
+      const page = await notificationExport.page(notificationImei, {
+        ...notificationQuery,
+        after: notificationCursor,
+      });
+      exported.push(...page.items);
+      notificationCursor = page.next;
+      if (!page.hasMore) {
+        break;
+      }
+    }
+    expect(exported).toHaveLength(11);
+    expect(new Set(exported.map((item) => item.sourceKey)).size).toBe(11);
+    expect(exported.filter((item) => item.sourceKind === 'COMMAND').map((item) => item.parameters['commandStatus']).sort()).toEqual([
+      'ACKNOWLEDGED', 'EXPIRED', 'FAILED', 'OUTCOME_UNKNOWN', 'REJECTED', 'RESPONSE_RECEIVED',
+    ]);
+    expect(exported).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        sourceKey: JSON.stringify([notificationImei, notificationAt.toISOString(), 'DIAGNOSTIC_TROUBLE_CODE', 'SPN 4339 FMI 7', 'ADDED']),
+        sourceId: String(notificationEvents.find((entry) => entry.eventId === '33')?.id),
+        severity: 'WARNING',
+        recorded: true,
+        parameters: { eventKind: 'DIAGNOSTIC_TROUBLE_CODE', troubleCode: 'SPN 4339 FMI 7', diagnosticStatus: 'ADDED', alarmCode: '33' },
+      }),
+      expect.objectContaining({
+        sourceKey: JSON.stringify([notificationImei, notificationAt.toISOString(), 'DIAGNOSTIC_TROUBLE_CODE', 'SPN 4339 FMI 7', 'DELETED']),
+        severity: 'INFO',
+        recorded: true,
+      }),
+      expect.objectContaining({
+        sourceKey: JSON.stringify([notificationImei, notificationAt.toISOString(), 'CAN_ERROR', null, null]),
+        sourceKind: 'DIAGNOSTIC',
+        recorded: true,
+      }),
+      expect.objectContaining({ sourceKind: 'ALARM', severity: 'CRITICAL', recorded: true }),
+    ]));
+    const exhausted = await notificationExport.page(notificationImei, { ...notificationQuery, after: notificationCursor });
+    expect(exhausted).toEqual({ items: [], next: notificationCursor, hasMore: false });
+    const changedCommand = notificationCommands.find((request) => request.status === 'UNCERTAIN');
+    if (changedCommand === undefined) {
+      throw new Error('Expected an uncertain command fixture');
+    }
+    await database.client.ermCommandRequest.update({
+      where: { id: changedCommand.id },
+      data: { status: 'ANSWERED', resultCode: '01', completedAt: new Date(notificationAt.getTime() + 1) },
+    });
+    const terminalUpdate = await notificationExport.page(notificationImei, { ...notificationQuery, after: notificationCursor });
+    expect(terminalUpdate.items).toEqual([
+      expect.objectContaining({ sourceKey: `erm-command:${changedCommand.id}:ACKNOWLEDGED`, parameters: { commandKind: 'READ_STATUS', commandStatus: 'ACKNOWLEDGED', reasonCode: null } }),
+    ]);
+    for (const invalidQuery of [{ tenantId: '' }, { branchId: '' }, { deviceId: '' }, { since: '2026-11-06' }, { after: 'bad-cursor' }, { limit: '0' }]) {
+      await expect(notificationExport.page(notificationImei, { ...notificationQuery, ...invalidQuery })).rejects.toThrow('Invalid notification export');
     }
   } finally {
     releaseSnapshotBatch?.();

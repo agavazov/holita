@@ -1,5 +1,5 @@
 import { spawn, execFile } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID, scryptSync } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -277,6 +277,70 @@ async function insertTenant(
   }
 }
 
+async function createUserSession(
+  databaseUrl: string,
+  schemaName: string,
+  gatewayUrl: string,
+  tenantId: string,
+) {
+  const userId = randomUUID();
+  const email = `${userId}@federation.example`;
+  const password = randomUUID();
+  const salt = randomBytes(16);
+  const key = scryptSync(password, salt, 64, {
+    N: 131072,
+    r: 8,
+    p: 1,
+    maxmem: 256 * 1024 * 1024,
+  });
+  const passwordHash = [
+    'scrypt',
+    131072,
+    8,
+    1,
+    salt.toString('base64url'),
+    key.toString('base64url'),
+  ].join('$');
+  const connection = new pg.Client({ connectionString: databaseUrl });
+  await connection.connect();
+  try {
+    await connection.query(
+      `INSERT INTO ${pg.escapeIdentifier(schemaName)}."user"
+       ("id", "tenantId", "email", "name", "passwordHash", "updatedAt")
+       VALUES ($1, $2, $3, 'Federation user', $4, CURRENT_TIMESTAMP)`,
+      [userId, tenantId, email, passwordHash],
+    );
+  } finally {
+    await connection.end();
+  }
+  const response = await fetch(gatewayUrl, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      query:
+        'mutation($email: String!, $password: String!) { signIn(email: $email, password: $password) { token user { id } tenant { id } } }',
+      variables: { email, password },
+    }),
+    signal: AbortSignal.timeout(10000),
+  });
+  const body: unknown = await response.json();
+  if (
+    !response.ok ||
+    !isRecord(body) ||
+    body.errors !== undefined ||
+    !isRecord(body.data) ||
+    !isRecord(body.data.signIn) ||
+    typeof body.data.signIn.token !== 'string' ||
+    !isRecord(body.data.signIn.user) ||
+    body.data.signIn.user.id !== userId ||
+    !isRecord(body.data.signIn.tenant) ||
+    body.data.signIn.tenant.id !== tenantId
+  ) {
+    throw new Error('Gateway user sign-in failed');
+  }
+  return { token: body.data.signIn.token, userId, tenantId };
+}
+
 async function insertErmRecords(databaseUrl: string, schemaName: string) {
   const connection = new pg.Client({ connectionString: databaseUrl });
   await connection.connect();
@@ -494,6 +558,7 @@ async function observeRequests(target: string) {
   const requests: {
     requestId: string | string[] | undefined;
     branchId: string | string[] | undefined;
+    authorization: string | undefined;
     body: string;
   }[] = [];
   async function forward(req: IncomingMessage, res: ServerResponse) {
@@ -511,6 +576,7 @@ async function observeRequests(target: string) {
     requests.push({
       requestId: req.headers['x-request-id'],
       branchId: req.headers['x-branch-id'],
+      authorization: req.headers.authorization,
       body,
     });
     if (injectedResponse) {
@@ -609,21 +675,20 @@ export async function createFederationFixture(options: { adminOrigin?: string } 
     await insertErmRecords(ermDatabase.databaseUrl, ermDatabase.schema);
     const captureDirectory = await mkdtemp(join(tmpdir(), 'holita-erm-federation-'));
     cleanup.push(() => rm(captureDirectory, { recursive: true, force: true }));
-    const ermServer = await startApplication('erm-server', {
-      ERM_DATABASE_URL: ermDatabase.url,
-      ERM_DEVICE_HOST: '127.0.0.1',
-      ERM_DEVICE_PORT: String(await availablePort()),
-      ERM_UPSTREAM: '127.0.0.1:1',
-      ERM_PRIMARY_UNITS: '',
-      ERM_INTERNAL_TOKEN: '',
-      ERM_CAPTURE_DIR: captureDirectory,
+    const internalAuthToken = randomBytes(32).toString('base64url');
+    const core = await startApplication('core', {
+      CORE_DATABASE_URL: coreDatabase.url,
+      CORE_INTERNAL_AUTH_TOKEN: internalAuthToken,
     });
-    cleanup.push(ermServer.stop);
-    const core = await startApplication('core', { CORE_DATABASE_URL: coreDatabase.url });
     cleanup.push(core.stop);
     const coreObserver = await observeRequests(core.url);
     cleanup.push(coreObserver.close);
+    const authEnv = {
+      CORE_AUTH_VERIFY_URL: new URL('/internal/auth/verify', core.url).toString(),
+      CORE_INTERNAL_AUTH_TOKEN: internalAuthToken,
+    };
     const fleetEnv = {
+      ...authEnv,
       ADMIN_ORIGINS: options.adminOrigin ?? 'http://127.0.0.1:11000',
       ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
       FLEET_DATABASE_URL: fleetDatabase.url,
@@ -635,6 +700,18 @@ export async function createFederationFixture(options: { adminOrigin?: string } 
     cleanup.push(fleet.stop);
     const fleetObserver = await observeRequests(fleet.url);
     cleanup.push(fleetObserver.close);
+    const ermServer = await startApplication('erm-server', {
+      ...authEnv,
+      ERM_DATABASE_URL: ermDatabase.url,
+      ERM_DEVICE_HOST: '127.0.0.1',
+      ERM_DEVICE_PORT: String(await availablePort()),
+      ERM_UPSTREAM: '127.0.0.1:1',
+      ERM_PRIMARY_UNITS: '',
+      ERM_INTERNAL_TOKEN: '',
+      ERM_CAPTURE_DIR: captureDirectory,
+      FLEET_GRAPHQL_URL: fleet.url,
+    });
+    cleanup.push(ermServer.stop);
     const subgraphUrls = {
       core: coreObserver.url,
       fleet: fleetObserver.url,
@@ -656,6 +733,8 @@ export async function createFederationFixture(options: { adminOrigin?: string } 
       demoSession,
       /** The readiness Tenant's Fleet Device for unit 862129080366630. */
       ermDeviceId,
+      createUserSession: (tenantId: string) =>
+        createUserSession(coreDatabase.databaseUrl, coreDatabase.schema, gateway.url, tenantId),
       /** A new signed-in Tenant per caller lets browser tests share one backend. */
       createTenant: async (name: string, branchNames: readonly string[]) => {
         const tenant = { id: randomUUID(), name };

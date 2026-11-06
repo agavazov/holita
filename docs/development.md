@@ -175,14 +175,21 @@ sign-in. User timestamps and session expiry use `DateTime`, serialized in UTC wi
 Invalid sign-in credentials share one `UNAUTHENTICATED` message. Invalid account fields return
 `BAD_USER_INPUT` with `fieldErrors`; foreign or missing user mutations return `NOT_FOUND`.
 
-For service-to-service verification, configure Core's `CORE_INTERNAL_AUTH_TOKEN` with at least
-32 characters. `POST /internal/auth/verify` accepts the user's bearer in `authorization` and the
+For service-to-service verification, configure the same private `CORE_INTERNAL_AUTH_TOKEN`
+(at least 32 characters) in Core, Fleet and ERM API's ignored `.env` files. In Fleet and ERM API,
+set `CORE_AUTH_VERIFY_URL` to Core's full verification endpoint; when omitted it defaults to
+`http://127.0.0.1:11011/internal/auth/verify`.
+`POST /internal/auth/verify` accepts the user's bearer in `authorization` and the
 internal secret in `x-core-internal-token`, with no request body. It returns HTTP 200 and exactly
 `{ tenantId, userId, sessionId }` for a valid user session, HTTP 401 for invalid internal or session
 credentials, or HTTP 503 when the internal secret is unconfigured. Identity headers such as
-`x-tenant-id` and `x-user-id` are ignored. Responses are not cacheable. Fleet/ERM adoption belongs
-to UI v2 A0b; these services do not yet accept the new user sessions. The existing explicit
-development demo login continues to work for the current admin and Tenant/Branch APIs.
+`x-tenant-id` and `x-user-id` are ignored. HTTP responses use `Cache-Control: no-store`.
+Fleet and ERM accept these sessions and cache successful identities in memory for five seconds,
+keyed by the token hash. Failed verifications are not cached; revoked sessions lose access within
+five seconds. Configure the internal secret before using real sessions in either service.
+Router propagates `authorization`, `x-branch-id` and `x-request-id`; Branch context never supplies
+Tenant identity. The explicit development demo login continues to work independently; rejected
+real sessions never fall back to demo authentication.
 
 ## Apollo Router
 

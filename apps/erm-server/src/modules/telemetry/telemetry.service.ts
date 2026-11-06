@@ -29,6 +29,7 @@ import { deviceTelemetryQueries, telemetryPage, telemetryQuery } from './telemet
 import { TelemetryRepository } from './telemetry.repository.js';
 import { edataParameterLabel } from './edata-catalog.js';
 import { CommandRequestsService } from './command-requests.service.js';
+import { FleetClient } from './fleet.client.js';
 
 // Fleet's telemetry feed carries only the eData reports it imports, in the shapes agreed for
 // ADR 0008; any other report, or a value outside those shapes, is null.
@@ -237,13 +238,14 @@ export class TelemetryService {
   private readonly liveRequests = new WeakMap<RequestContext, Promise<LiveUnit[]>>();
   private readonly deviceRequests = new WeakMap<
     RequestContext,
-    Map<string, DeviceTelemetryRequest>
+    Map<string, Promise<DeviceTelemetryRequest>>
   >();
 
   constructor(
     private readonly repository: TelemetryRepository,
     private readonly devices: LiveDevicesService,
     private readonly commandRequests: CommandRequestsService,
+    private readonly fleet: FleetClient,
   ) {}
 
   async fleetTelemetry(imeis: string[], context: RequestContext): Promise<ErmFleetTelemetry> {
@@ -371,14 +373,19 @@ export class TelemetryService {
     return request;
   }
 
-  reference(
+  async reference(
     reference: Pick<FleetDevice, 'id' | 'imei'>,
     context: RequestContext,
     info: GraphQLResolveInfo,
-  ): DeviceReference {
+  ): Promise<DeviceReference | null> {
     requireTenant(context);
-    if (!/^\d{15}$/.test(reference.imei)) {
-      throw new BadRequestException('Fleet Device representation requires its IMEI');
+    const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+    if (
+      !uuid.test(context.branchId ?? '') ||
+      !uuid.test(reference.id) ||
+      !/^\d{15}$/.test(reference.imei)
+    ) {
+      return null;
     }
     let requests = this.deviceRequests.get(context);
     if (!requests) {
@@ -392,23 +399,6 @@ export class TelemetryService {
       const node = info.fieldNodes[0];
       const args: unknown =
         field && node ? getArgumentValues(field, node, info.variableValues) : undefined;
-      const unitIds =
-        typeof args === 'object' &&
-        args !== null &&
-        'representations' in args &&
-        Array.isArray(args.representations)
-          ? args.representations.flatMap((value: unknown) =>
-              typeof value === 'object' &&
-              value !== null &&
-              '__typename' in value &&
-              value.__typename === 'FleetDevice' &&
-              'imei' in value &&
-              typeof value.imei === 'string' &&
-              /^\d{15}$/.test(value.imei)
-                ? [value.imei]
-                : [],
-            )
-          : [reference.imei];
       const representedDevices =
         typeof args === 'object' &&
         args !== null &&
@@ -421,18 +411,40 @@ export class TelemetryService {
               value.__typename === 'FleetDevice' &&
               'id' in value &&
               typeof value.id === 'string' &&
-              /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value.id) &&
+              uuid.test(value.id) &&
               'imei' in value &&
               typeof value.imei === 'string' &&
               /^\d{15}$/.test(value.imei)
                 ? [{ id: value.id.toLowerCase(), imei: value.imei }]
                 : [],
             )
-          : [{ id: reference.id, imei: reference.imei }];
-      request = deviceTelemetryRequest(unitIds, representedDevices);
+          : [{ id: reference.id.toLowerCase(), imei: reference.imei }];
+      request = this.scopedDeviceRequest(representedDevices, context);
       requests.set(key, request);
     }
-    return { ...reference, telemetryRequest: request };
+    const telemetryRequest = await request;
+    const id = reference.id.toLowerCase();
+    if (
+      !telemetryRequest.devices.some((device) => device.id === id && device.imei === reference.imei)
+    ) {
+      return null;
+    }
+    return { id, imei: reference.imei, telemetryRequest };
+  }
+
+  private async scopedDeviceRequest(
+    representedDevices: Pick<FleetDevice, 'id' | 'imei'>[],
+    context: RequestContext,
+  ): Promise<DeviceTelemetryRequest> {
+    const ownedDevices = await this.fleet.deviceImeis(
+      representedDevices.map(({ id }) => id),
+      context,
+    );
+    const devices = representedDevices.filter(({ id, imei }) => ownedDevices.get(id) === imei);
+    return deviceTelemetryRequest(
+      devices.map(({ imei }) => imei),
+      devices,
+    );
   }
 
   async deviceState(device: DeviceReference, context: RequestContext) {

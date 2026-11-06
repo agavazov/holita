@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
+import { setTimeout as delay } from 'node:timers/promises';
 import { createFederationFixture } from './federation-fixture.mjs';
 
 const discordia = '10000000-0000-4000-8000-000000000001';
@@ -67,8 +68,9 @@ describe('Fleet through the actual federation boundary', () => {
     source: string,
     headers: Record<string, string>,
     variables: Record<string, unknown> = {},
+    url = fixture.url,
   ) {
-    const response = await fetch(fixture.url, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...headers },
       body: JSON.stringify({ query: source, variables }),
@@ -125,7 +127,10 @@ describe('Fleet through the actual federation boundary', () => {
       value: {
         body: federated.body,
         forwarded: [...core, ...fleet].every(
-          (request) => request.requestId === 'router-federation' && request.branchId === discordia,
+          (request) =>
+            request.requestId === 'router-federation' &&
+            request.branchId === discordia &&
+            request.authorization === `Bearer ${token}`,
         ),
         coreEntities: core.some((request) => request.body.includes('_entities')),
         fleetReached: fleet.length > 0,
@@ -423,6 +428,132 @@ describe('Fleet through the actual federation boundary', () => {
           errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
         });
       }
+    }
+
+    const tenantId = '01000000-0000-4000-8000-000000000001';
+    const otherTenantId = '01000000-0000-4000-8000-000000000002';
+    const session = await fixture.createUserSession(tenantId);
+    const otherSession = await fixture.createUserSession(otherTenantId);
+    const sessionHeaders = {
+      authorization: `bearer ${session.token}`,
+      'x-branch-id': discordia,
+    };
+    expect(
+      (
+        await post(
+          'query($id:ID!,$deviceId:ID!){fleetVehicle(id:$id){id branch{id}} fleetDevice(id:$deviceId){id ermState{unitId}}}',
+          sessionHeaders,
+          { id, deviceId: ermDeviceId },
+        )
+      ).body,
+    ).toEqual({
+      data: {
+        fleetVehicle: { id, branch: { id: discordia } },
+        fleetDevice: { id: ermDeviceId, ermState: { unitId } },
+      },
+    });
+    const foreignHeaders = {
+      authorization: `Bearer ${otherSession.token}`,
+      'x-branch-id': discordia,
+      'x-tenant-id': tenantId,
+      'x-user-id': session.userId,
+    };
+    const otherUnitId = '862129080366631';
+    const otherDevice = await post(
+      'mutation($imei:String!){createFleetDevice(input:{imei:$imei}){id}}',
+      {
+        authorization: `Bearer ${otherSession.token}`,
+        'x-branch-id': '10000000-0000-4000-8000-000000000003',
+      },
+      { imei: otherUnitId },
+    );
+    expect(otherDevice.body.errors).toBeUndefined();
+    const otherDeviceId = record(record(otherDevice.body.data).createFleetDevice).id;
+    if (typeof otherDeviceId !== 'string') {
+      throw new Error('Missing other Tenant Device ID');
+    }
+    const ownReference = { __typename: 'FleetDevice', id: ermDeviceId, imei: unitId };
+    const otherReference = { __typename: 'FleetDevice', id: otherDeviceId, imei: otherUnitId };
+    const ownState = { ermState: { unitId } };
+    for (const [row, headers, refs, expected] of [
+      ['owned Device', sessionHeaders, [ownReference], [ownState]],
+      ['foreign Tenant', foreignHeaders, [ownReference], [null]],
+      ['foreign Branch', { ...sessionHeaders, 'x-branch-id': sandbox }, [ownReference], [null]],
+      [
+        'missing Device',
+        sessionHeaders,
+        [{ ...ownReference, id: '00000000-0000-4000-8000-000000000001' }],
+        [null],
+      ],
+      ['mismatched IMEI', sessionHeaders, [{ ...ownReference, imei: otherUnitId }], [null]],
+      ['mixed Tenant batch', sessionHeaders, [ownReference, otherReference], [ownState, null]],
+    ] satisfies [string, Record<string, string>, Record<string, string>[], unknown[]][]) {
+      const direct = await post(ermEntities, headers, { refs }, fixture.ermUrl);
+      expect({ row, body: direct.body }).toEqual({ row, body: { data: { _entities: expected } } });
+    }
+    for (const [target, source, variables] of [
+      [fixture.url, 'query($id:ID!){fleetVehicle(id:$id){id}}', { id }],
+      [fixture.url, ermSource, { id: ermDeviceId }],
+      [fixture.fleetUrl, entities, { refs: [{ __typename: 'FleetVehicle', id, tenantId }] }],
+    ] satisfies [string, string, Record<string, unknown>][]) {
+      const denied = await post(source, foreignHeaders, variables, target);
+      expect(denied.body).toMatchObject({
+        errors: [{ extensions: { code: 'NOT_FOUND' } }],
+      });
+    }
+    const queued = await post(
+      'mutation($deviceId:ID!){sendErmDeviceCommand(input:{deviceId:$deviceId,action:READ_STATUS,intent:"Session audit fixture"}){id actorId status}}',
+      sessionHeaders,
+      { deviceId: ermDeviceId },
+    );
+    expect(queued.body).toEqual({
+      data: {
+        sendErmDeviceCommand: {
+          id: expect.any(String),
+          actorId: session.userId,
+          status: 'QUEUED',
+        },
+      },
+    });
+    const requestId = record(record(queued.body.data).sendErmDeviceCommand).id;
+    for (const [headers, expected] of [
+      [sessionHeaders, { id: requestId, actorId: session.userId }],
+      [foreignHeaders, null],
+    ] satisfies [Record<string, string>, unknown][]) {
+      const persisted = await post(
+        'query($id:ID!){ermCommandRequest(id:$id){id actorId}}',
+        headers,
+        { id: requestId },
+        fixture.ermUrl,
+      );
+      expect(persisted.body).toEqual({ data: { ermCommandRequest: expected } });
+    }
+    const cancelled = await post(
+      'mutation($deviceId:ID!,$requestId:ID!){cancelErmDeviceCommand(input:{deviceId:$deviceId,requestId:$requestId}){actorId status}}',
+      sessionHeaders,
+      { deviceId: ermDeviceId, requestId },
+    );
+    expect(cancelled.body).toEqual({
+      data: { cancelErmDeviceCommand: { actorId: session.userId, status: 'CANCELLED' } },
+    });
+    expect((await post('mutation{signOut}', sessionHeaders)).body).toEqual({
+      data: { signOut: true },
+    });
+    // The successful verification cache is bounded to five seconds in each subgraph.
+    await delay(5100);
+    for (const [target, source, variables] of [
+      [fixture.url, '{fleetVehicles{total}}', {}],
+      [fixture.fleetUrl, '{fleetVehicles{total}}', {}],
+      [
+        fixture.ermUrl,
+        ermEntities,
+        { refs: [{ __typename: 'FleetDevice', id: ermDeviceId, imei: unitId }] },
+      ],
+    ] satisfies [string, string, Record<string, unknown>][]) {
+      const denied = await post(source, sessionHeaders, variables, target);
+      expect(denied.body).toMatchObject({
+        errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+      });
     }
     await query('mutation($id:ID!){deleteFleetVehicle(id:$id){id}}', { id });
   });
