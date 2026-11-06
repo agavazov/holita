@@ -21,6 +21,8 @@ dependencies belong to the [backend backlog](admin-design-system-backend.md#prov
 ## Release decisions
 
 - Decide whether to purchase an admin theme.
+- Restrict the Google Maps browser key to the admin's website addresses in Google Cloud and
+  create a production Map ID (`googleMapsMapId`) before client demos; development uses `DEMO_MAP_ID`.
 - Configure the production PrimeUI license before public release. The internal test release
   accepts the visible license notice; never hide it with CSS or JavaScript. Retain the
   local-file developer setup and exclude the local key from production/static Storybook output.
