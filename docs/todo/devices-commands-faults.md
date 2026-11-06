@@ -39,7 +39,7 @@ lamps (see [Discocan development](../discocan/development.md)). Remaining:
 
 | ID  | Package                 | Scope                                                                                                                                                                                                                                                                                                                                                         | Depends | Device level | Codex     |
 | --- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------ | --------- |
-| F1  | Warning lamps on trucks | Operations by Claude: add eData 1896, 1906 and 1910 (FMS1 brake system, engine/MIL and ABS telltales, 180 s) to CB5636XP through the guarded GraphQL workflow with writes enabled only for the run; verify their `405` values on a drive; then the other trucks one at a time                                                                                 | —       | L1, then L3  | —         |
+| F1  | Warning lamps on trucks | Operations by Claude: eData 1896, 1906 and 1910 (FMS1 brake system, engine/MIL and ABS telltales, 180 s) were added and verified on CB5636XP on 2026-11-06; verify their `405` values on its next drive, then add them to the other trucks one at a time through the guarded GraphQL workflow with writes enabled only for each run                           | —       | L1, then L3  | —         |
 | W1  | Controlled `46` writes  | ERM: enforce roles on commands, batches, retries and configuration (Operator and Engineer); fix snapshot read outcomes and per-parameter reconciliation, align `lab-session` protections, notify failed restorations; `46` with an exact baseline, preflight, one scoped change, whole-set readback and restoration; batch writes reuse it one unit at a time | —       | L0, then L1  | sol/ultra |
 | A1  | Device status workspace | Admin Devices list and Device overview: last signal, online state, Karma routing with the return button (pending and uncertain attempts), warning lamps, observed firmware, voltage and GSM signal, grouped and readable                                                                                                                                      | —       | none         | sol/ultra |
 | A2  | Command center          | Admin: Branch command queue page with cancel, retry and batches; the `46` form with a readable planned change; correct received-response state; translated errors; user roles in Users and role-aware controls                                                                                                                                                | W1      | none         | sol/ultra |
@@ -49,7 +49,7 @@ lamps (see [Discocan development](../discocan/development.md)). Remaining:
 ## Order
 
 1. **Next (backend):** W1. The admin packages wait until the UI v2 visual review is committed.
-2. **Then:** A1 and A2 on separate admin folders; F1 once the dev stack runs.
+2. **Then:** A1 and A2 on separate admin folders; F1 after CB5636XP's next drive.
 3. **Last:** F3 and A3.
 
 ERM packages share `apps/erm-server/prisma/schema.prisma` and the telemetry SDL, so only one ERM
