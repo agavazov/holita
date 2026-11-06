@@ -2,10 +2,12 @@ import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
+import { createServer, type Server } from 'node:http';
 import { AppModule } from '../src/app.module.js';
 import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
+import { ErmDashboardClient } from '../src/integrations/erm/erm-dashboard.client.js';
 import { createTestDatabase } from './test-database.js';
 
 describe('Fleet overview and daily distance with PostgreSQL', () => {
@@ -21,7 +23,80 @@ describe('Fleet overview and daily distance with PostgreSQL', () => {
   let vehicleId = '';
   let groupId = '';
   let emptyGroupId = '';
+  let ermServer: Server;
+  const originalErmUrl = process.env.ERM_TELEMETRY_URL;
+  const originalErmToken = process.env.ERM_TELEMETRY_TOKEN;
+  const testErmToken = 'overview-test-token-with-at-least-32-characters';
+  const telemetryBatches: string[][] = [];
   beforeAll(async () => {
+    process.env.ERM_TELEMETRY_TOKEN = testErmToken;
+    ermServer = createServer((request, response) => {
+      let body = '';
+      request.on('data', (chunk: Buffer) => {
+        body += chunk.toString();
+      });
+      request.on('end', () => {
+        const payload: unknown = JSON.parse(body);
+        if (
+          request.headers.authorization !== `Bearer ${testErmToken}` ||
+          typeof payload !== 'object' ||
+          payload === null ||
+          !('query' in payload) ||
+          typeof payload.query !== 'string' ||
+          !('variables' in payload) ||
+          typeof payload.variables !== 'object' ||
+          payload.variables === null ||
+          !('imeis' in payload.variables) ||
+          !Array.isArray(payload.variables.imeis)
+        ) {
+          response.writeHead(400).end();
+          return;
+        }
+        const imeis = payload.variables.imeis.filter(
+          (imei: unknown): imei is string => typeof imei === 'string',
+        );
+        response.setHeader('content-type', 'application/json');
+        if (payload.query.includes('ermFleetTelemetry')) {
+          telemetryBatches.push(imeis);
+          response.end(
+            JSON.stringify({
+              data: {
+                ermFleetTelemetry: {
+                  asOf: now.toISOString(),
+                  units: imeis.map((imei) => ({
+                    imei,
+                    connected: imei !== '000000000000001' && imei !== '100000000000100',
+                    reporting: imei.startsWith('1'),
+                    lastFrameAt: now.toISOString(),
+                    expectedIntervalSeconds: 300,
+                  })),
+                },
+              },
+            }),
+          );
+        } else {
+          response.end(
+            JSON.stringify({
+              data: {
+                ermFleetProblems: {
+                  asOf: now.toISOString(),
+                  totalCount: 0,
+                  hasMore: false,
+                  items: [],
+                  counts: [],
+                },
+              },
+            }),
+          );
+        }
+      });
+    });
+    await new Promise<void>((resolve) => ermServer.listen(0, '127.0.0.1', resolve));
+    const address = ermServer.address();
+    if (!address || typeof address === 'string') {
+      throw new Error('Missing test ERM address');
+    }
+    process.env.ERM_TELEMETRY_URL = `http://127.0.0.1:${String(address.port)}`;
     database = await createTestDatabase();
     closeDatabase = database.close;
     const module = await Test.createTestingModule({ imports: [AppModule] })
@@ -160,6 +235,25 @@ describe('Fleet overview and daily distance with PostgreSQL', () => {
       await app?.close();
     } finally {
       await closeDatabase?.();
+      await new Promise<void>((resolve, reject) =>
+        ermServer.close((error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        }),
+      );
+      if (originalErmUrl === undefined) {
+        delete process.env.ERM_TELEMETRY_URL;
+      } else {
+        process.env.ERM_TELEMETRY_URL = originalErmUrl;
+      }
+      if (originalErmToken === undefined) {
+        delete process.env.ERM_TELEMETRY_TOKEN;
+      } else {
+        process.env.ERM_TELEMETRY_TOKEN = originalErmToken;
+      }
     }
   });
   async function query(source: string, variables: Record<string, unknown> = {}, scope = branchId) {
@@ -231,5 +325,149 @@ describe('Fleet overview and daily distance with PostgreSQL', () => {
         },
       },
     });
+
+    // Exercise exact whole-Branch counts and both pages beyond the former first-100 boundary.
+    const vehicles = Array.from({ length: 101 }, (_, index) => ({
+      id: randomUUID(),
+      tenantId,
+      branchId,
+      licensePlate: `Map ${String(index)}`,
+    }));
+    await database.client.vehicle.createMany({ data: vehicles });
+    await database.client.device.createMany({
+      data: vehicles.map((vehicle, index) => ({
+        tenantId,
+        branchId,
+        vehicleId: vehicle.id,
+        imei: `100000000000${String(index).padStart(3, '0')}`,
+      })),
+    });
+    await database.client.vehicleStatusSample.createMany({
+      data: vehicles.map((vehicle, index) => ({
+        tenantId,
+        branchId,
+        vehicleId: vehicle.id,
+        deviceImei: `100000000000${String(index).padStart(3, '0')}`,
+        source: 'ERM',
+        recordedAt: asOf,
+        receivedAt: asOf,
+        ignition: false,
+        latitude: index < 100 ? 42 : null,
+        longitude: index < 100 ? 23 : null,
+      })),
+    });
+    const positionAt = new Date(asOf.getTime() - 300_000);
+    await database.client.vehicleStatusSample.create({
+      data: {
+        tenantId,
+        branchId,
+        vehicleId,
+        deviceImei: '000000000000001',
+        source: 'ERM',
+        recordedAt: positionAt,
+        receivedAt: positionAt,
+        latitude: 41,
+        longitude: 24,
+        headingDeg: 90,
+        speedKph: 35,
+      },
+    });
+    const dashboard = await query(
+      `query($from:DateTime!,$to:DateTime!){fleetDashboard(from:$from,to:$to){
+      vehicles{asOf dataAsOf liveAsOf total connected reporting live moving parked noDevice}
+      devices{total connected reporting live}
+      trips{dataAsOf from to total distanceKm distanceKnownTrips}
+    }}`,
+      { from: '2026-10-24T21:00:00.000Z', to: '2026-10-25T02:00:00.000Z' },
+    );
+    expect(dashboard).toEqual({
+      data: {
+        fleetDashboard: {
+          vehicles: {
+            asOf: now.toISOString(),
+            dataAsOf: asOf.toISOString(),
+            liveAsOf: now.toISOString(),
+            total: 104,
+            connected: 101,
+            reporting: 101,
+            live: 100,
+            moving: 1,
+            parked: 101,
+            noDevice: 1,
+          },
+          devices: { total: 103, connected: 101, reporting: 101, live: 100 },
+          trips: {
+            dataAsOf: asOf.toISOString(),
+            from: '2026-10-24T21:00:00.000Z',
+            to: '2026-10-25T02:00:00.000Z',
+            total: 3,
+            distanceKm: 30,
+            distanceKnownTrips: 2,
+          },
+        },
+      },
+    });
+    expect(telemetryBatches).toHaveLength(1);
+    expect(telemetryBatches[0]).toHaveLength(103);
+
+    const mapQuery = `query($offset:Int!){fleetMap(offset:$offset,limit:100){asOf dataAsOf total withPosition withoutPosition offset limit hasMore items{vehicle{id} position{latitude longitude headingDeg speedKph recordedAt ageSeconds} connected reporting live}}}`;
+    const pages: unknown[] = [];
+    for (const offset of [0, 100]) {
+      const page = await query(mapQuery, { offset });
+      expect(page).toMatchObject({
+        data: {
+          fleetMap: {
+            asOf: now.toISOString(),
+            dataAsOf: asOf.toISOString(),
+            total: 104,
+            withPosition: 101,
+            withoutPosition: 3,
+            offset,
+            limit: 100,
+            hasMore: offset === 0,
+          },
+        },
+      });
+      if (
+        typeof page !== 'object' ||
+        page === null ||
+        !('data' in page) ||
+        typeof page.data !== 'object' ||
+        page.data === null ||
+        !('fleetMap' in page.data) ||
+        typeof page.data.fleetMap !== 'object' ||
+        page.data.fleetMap === null ||
+        !('items' in page.data.fleetMap) ||
+        !Array.isArray(page.data.fleetMap.items)
+      ) {
+        throw new Error('Missing Fleet map page');
+      }
+      const pageItems: unknown[] = page.data.fleetMap.items;
+      pages.push(...pageItems);
+    }
+    expect(pages).toHaveLength(104);
+    expect(pages).toContainEqual({
+      vehicle: { id: vehicleId },
+      position: {
+        latitude: 41,
+        longitude: 24,
+        headingDeg: 90,
+        speedKph: 35,
+        recordedAt: positionAt.toISOString(),
+        ageSeconds: 86_700,
+      },
+      connected: false,
+      reporting: false,
+      live: false,
+    });
+    expect(await query(mapQuery, { offset: 0 }, randomUUID())).toMatchObject({
+      data: { fleetMap: { total: 0, withPosition: 0, withoutPosition: 0, items: [] } },
+    });
+    // The client itself chunks a complete registry larger than one ERM batch without truncation.
+    const complete = await new ErmDashboardClient().telemetry(
+      Array.from({ length: 501 }, (_, index) => `200000000000${String(index).padStart(3, '0')}`),
+    );
+    expect(complete.units).toHaveLength(501);
+    expect(telemetryBatches.slice(-2).map((batch) => batch.length)).toEqual([500, 1]);
   });
 });

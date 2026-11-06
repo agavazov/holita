@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { getArgumentValues, type GraphQLResolveInfo } from 'graphql';
 import { requireTenant } from '../../auth/demo-auth.js';
 import type {
@@ -7,11 +13,15 @@ import type {
   SendErmDeviceCommandInput,
   FleetDevice,
   ErmUnitState,
+  ErmFleetDiagnostic,
+  ErmFleetProblems,
+  ErmFleetTelemetry,
+  QueryErmFleetProblemsArgs,
 } from '../../generated/graphql/types.js';
 import type { ErmEvent, ErmCommand } from '../../generated/prisma/client.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { parseFrame } from '../../starlink/protocol.js';
-import { eventClassification } from '../../starlink/event-catalog.js';
+import { eventClassification, eventName } from '../../starlink/event-catalog.js';
 import { LiveDevicesService, type LiveUnit } from './live-devices.service.js';
 import { deviceTelemetryRequest, type DeviceTelemetryRequest } from './device-request.js';
 import { commandView, frameView } from './command-evidence.js';
@@ -176,6 +186,52 @@ export type DeviceReference = Pick<FleetDevice, 'id' | 'imei'> & {
   telemetryRequest: DeviceTelemetryRequest;
 };
 
+function requireInternalTelemetry(context: RequestContext): void {
+  const token = process.env.ERM_TELEMETRY_TOKEN;
+  if (!token || token.length < 32) {
+    throw new ServiceUnavailableException('Internal telemetry access is disabled');
+  }
+  const authorization = context.authorization;
+  const supplied =
+    authorization !== undefined &&
+    authorization.length <= 4096 &&
+    authorization.startsWith('Bearer ')
+      ? authorization.slice(7)
+      : '';
+  if (
+    !timingSafeEqual(
+      createHash('sha256').update(token).digest(),
+      createHash('sha256').update(supplied).digest(),
+    )
+  ) {
+    throw new UnauthorizedException('Internal telemetry authentication required');
+  }
+}
+
+function fleetUnitIds(imeis: string[]): string[] {
+  if (imeis.length > 500 || imeis.some((imei) => !/^\d{15}$/.test(imei))) {
+    throw new BadRequestException('Expected at most 500 valid telemetry IMEIs');
+  }
+  return [...new Set(imeis)];
+}
+
+function problemDiagnostics(fields: unknown): ErmFleetDiagnostic[] {
+  const edata =
+    typeof fields === 'object' && fields !== null && 'edata' in fields
+      ? feedEdata(fields.edata)
+      : null;
+  if (edata?.report === '419' && edata.faults !== undefined) {
+    return edata.faults.map((fault) => ({
+      kind: 'DIAGNOSTIC_TROUBLE_CODE',
+      troubleCode: `SPN ${String(fault.spn)} FMI ${String(fault.fmi)}`,
+      status: fault.status === 'ADDED' ? 'ADDED' : 'DELETED',
+    }));
+  }
+  return edata?.report === '411' && edata.canError === true
+    ? [{ kind: 'CAN_ERROR', troubleCode: null, status: null }]
+    : [];
+}
+
 @Injectable()
 export class TelemetryService {
   private readonly liveRequests = new WeakMap<RequestContext, Promise<LiveUnit[]>>();
@@ -189,6 +245,89 @@ export class TelemetryService {
     private readonly devices: LiveDevicesService,
     private readonly commandRequests: CommandRequestsService,
   ) {}
+
+  async fleetTelemetry(imeis: string[], context: RequestContext): Promise<ErmFleetTelemetry> {
+    requireInternalTelemetry(context);
+    const unitIds = fleetUnitIds(imeis);
+    const asOf = new Date();
+    if (!unitIds.length) {
+      return { asOf, units: [] };
+    }
+    const [rows, live] = await Promise.all([
+      this.repository.fleetUnitStates(unitIds, asOf),
+      this.liveUnits(context),
+    ]);
+    const connected = new Map(live.map((unit) => [unit.unitId, unit]));
+    return {
+      asOf,
+      units: rows.map((row) => {
+        const unit = connected.get(row.unitId);
+        const lastFrameAt = unit ? new Date(unit.lastFrameAt) : row.lastFrameAt;
+        return {
+          imei: row.unitId,
+          connected: unit !== undefined,
+          lastFrameAt,
+          expectedIntervalSeconds: row.expectedIntervalSeconds,
+          reporting:
+            lastFrameAt !== null &&
+            asOf.getTime() - lastFrameAt.getTime() <= row.expectedIntervalSeconds * 2 * 1000,
+        };
+      }),
+    };
+  }
+
+  async fleetProblems(
+    args: QueryErmFleetProblemsArgs,
+    context: RequestContext,
+  ): Promise<ErmFleetProblems> {
+    requireInternalTelemetry(context);
+    const unitIds = fleetUnitIds(args.imeis);
+    const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+    const instant = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+    const from = new Date(args.from);
+    const to = new Date(args.to);
+    const offset = args.offset ?? 0;
+    const limit = args.limit ?? 500;
+    if (
+      !uuid.test(args.tenantId) ||
+      !uuid.test(args.branchId) ||
+      !Number.isInteger(offset) ||
+      offset < 0 ||
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > 500 ||
+      !instant.test(args.from) ||
+      !instant.test(args.to) ||
+      !Number.isFinite(from.getTime()) ||
+      !Number.isFinite(to.getTime()) ||
+      from > to
+    ) {
+      throw new BadRequestException('Invalid Fleet problems scope, period or page');
+    }
+    const asOf = new Date();
+    const result = await this.repository.fleetProblems(
+      unitIds,
+      args.tenantId,
+      args.branchId,
+      from,
+      to,
+      asOf,
+      offset,
+      limit,
+    );
+    const totalCount = result.counts.reduce((total, group) => total + group.count, 0);
+    return {
+      asOf,
+      totalCount,
+      hasMore: offset + result.items.length < totalCount,
+      counts: result.counts,
+      items: result.items.map(({ fields, ...row }) => ({
+        ...row,
+        details: row.sourceKind === 'COMMAND' ? row.details : eventName(row.eventId, fields, 'EN'),
+        diagnostics: problemDiagnostics(fields),
+      })),
+    };
+  }
 
   async internalEvents(imei: string, after?: unknown, limit?: unknown) {
     const receivedBefore = new Date(Date.now() - 10_000);

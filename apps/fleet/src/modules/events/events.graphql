@@ -175,3 +175,101 @@ extend type Mutation {
   resolveFleetAlert(id: ID!, input: FleetAlertTransitionInput!): FleetEvent!
   reopenFleetAlert(id: ID!, input: FleetAlertTransitionInput!): FleetEvent!
 }
+
+enum FleetProblemSourceKind {
+  FLEET_ALERT
+  DIAGNOSTIC
+  ALARM
+  REPORTING_GAP
+  COMMAND
+}
+
+enum FleetProblemState {
+  OPEN
+  ACKNOWLEDGED
+  "Recorded evidence does not establish a currently unresolved fault."
+  RECORDED
+  FAILED
+  UNCERTAIN
+  EXPIRED
+}
+
+type FleetProblem {
+  "Stable source kind plus source identity; suitable for row selection."
+  id: ID!
+  sourceKind: FleetProblemSourceKind!
+  sourceId: ID!
+  severity: FleetEventSeverity!
+  occurredAt: DateTime!
+  state: FleetProblemState!
+  requiringAttention: Boolean!
+  code: String!
+  details: String
+  vehicleId: ID
+  vehicle: FleetVehicleRef
+  deviceId: ID
+  deviceImei: String
+  "Only this non-null field authorizes the existing alert acknowledge/resolve workflow."
+  alertId: ID
+  fleetEventId: ID
+  ermEventId: ID
+  commandRequestId: ID
+}
+
+type FleetProblemSeverityCount {
+  severity: FleetEventSeverity!
+  total: Int!
+  requiringAttention: Int!
+  recorded: Int!
+}
+
+type FleetProblemSourceCount {
+  sourceKind: FleetProblemSourceKind!
+  total: Int!
+  requiringAttention: Int!
+  recorded: Int!
+}
+
+type FleetProblemCounts {
+  "Fleet business snapshot time."
+  asOf: DateTime!
+  "Latest scoped device sample time, independent of current reporting."
+  dataAsOf: DateTime
+  "ERM snapshot time; null when the Branch has no registered devices."
+  ermAsOf: DateTime
+  periodFrom: DateTime!
+  periodTo: DateTime!
+  total: Int!
+  requiringAttention: Int!
+  "Historical fault/alarm observations, excluded from requiringAttention."
+  recorded: Int!
+  bySeverity: [FleetProblemSeverityCount!]!
+  bySource: [FleetProblemSourceCount!]!
+}
+
+input FleetProblemFilter {
+  sourceKinds: [FleetProblemSourceKind!]
+  severities: [FleetEventSeverity!]
+  states: [FleetProblemState!]
+  vehicleIds: [ID!]
+  deviceIds: [ID!]
+  requiringAttention: Boolean
+  "Recorded evidence and terminal command outcomes start here; defaults to 24h before occurredTo. At most 93 days. Current unresolved alerts and reporting gaps remain included."
+  occurredFrom: DateTime
+  "Exclusive recorded-evidence bound; defaults to the request time."
+  occurredTo: DateTime
+}
+
+type FleetProblemPage {
+  "Newest occurrence first, then stable source identity."
+  items: [FleetProblem!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+  "Counts describe the complete filtered feed, before pagination."
+  counts: FleetProblemCounts!
+}
+
+extend type Query {
+  fleetProblems(offset: Int! = 0, limit: Int! = 20, filter: FleetProblemFilter): FleetProblemPage!
+}

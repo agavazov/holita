@@ -7,6 +7,10 @@ import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
+import {
+  ErmDashboardClient,
+  type ErmProblemEvidence,
+} from '../src/integrations/erm/erm-dashboard.client.js';
 import type { Prisma } from '../src/generated/prisma/client.js';
 import { createTestDatabase } from './test-database.js';
 
@@ -25,6 +29,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
   const branchId = randomUUID(),
     otherBranchId = randomUUID();
   const events = new Map<EventKey, string>();
+  const ermEvidence: ErmProblemEvidence[] = [];
   let van: string, truck: string, driver: string, tripId: string, foreignAlert: string;
   function event(key: EventKey): string {
     const id = events.get(key);
@@ -43,6 +48,43 @@ describe('Events and alert workflow with PostgreSQL', () => {
       .useValue({ requireBranch: jest.fn<CoreClient['requireBranch']>() })
       .overrideProvider(FleetClock)
       .useValue({ now: () => now })
+      .overrideProvider(ErmDashboardClient)
+      .useValue({
+        telemetry: (imeis: readonly string[]) =>
+          Promise.resolve({
+            asOf: now,
+            units: imeis.map((imei) => ({
+              imei,
+              connected: true,
+              reporting: false,
+              lastFrameAt: hours(-2),
+              expectedIntervalSeconds: 300,
+            })),
+          }),
+        problems: (
+          scope: { tenantId: string; branchId: string },
+          imeis: readonly string[],
+          period: { from: Date; to: Date },
+          page: { offset: number; limit: number },
+        ) => {
+          const rows =
+            scope.tenantId === tenantId && scope.branchId === branchId
+              ? ermEvidence.filter(
+                  (row) =>
+                    imeis.includes(row.imei) &&
+                    row.occurredAt >= period.from &&
+                    row.occurredAt < period.to,
+                )
+              : [];
+          return Promise.resolve({
+            asOf: now,
+            totalCount: rows.length,
+            hasMore: page.offset + page.limit < rows.length,
+            items: rows.slice(page.offset, page.offset + page.limit),
+            counts: [],
+          });
+        },
+      })
       .compile();
     app = module.createNestApplication({ logger: false });
     await app.listen(0, '127.0.0.1');
@@ -353,6 +395,157 @@ describe('Events and alert workflow with PostgreSQL', () => {
     expect(await query(counts, {}, randomUUID())).toEqual({
       data: { fleetAlertCounts: { open: 0, openCritical: 0, acknowledged: 0, resolved: 0 } },
     });
+
+    // The combined feed exhausts Fleet and ERM pages, deduplicates imported evidence and keeps
+    // unresolved alerts independent of the evidence period. Only real alerts carry actions.
+    const device = await database.client.device.create({
+      data: { tenantId, branchId, vehicleId: van, imei: '862129080254620' },
+    });
+    await database.client.fleetEvent.createMany({
+      data: Array.from({ length: 101 }, (): Prisma.FleetEventCreateManyInput => ({
+        tenantId,
+        branchId,
+        vehicleId: van,
+        source: 'DEMO',
+        occurredAt: hours(-100),
+        kind: 'LOW_FUEL',
+        severity: 'WARNING',
+        alertStatus: 'OPEN',
+      })),
+    });
+    const imported = await database.client.fleetEvent.create({
+      data: {
+        tenantId,
+        branchId,
+        vehicleId: van,
+        deviceImei: device.imei,
+        source: 'ERM',
+        occurredAt: hours(-0.25),
+        kind: 'CAN_ERROR',
+        severity: 'WARNING',
+        details: 'eData 411 reported the CAN error flag.',
+      },
+    });
+    ermEvidence.push({
+      sourceKind: 'DIAGNOSTIC',
+      sourceId: '901',
+      imei: device.imei,
+      deviceId: null,
+      severity: 'WARNING',
+      occurredAt: hours(-0.25),
+      state: 'RECORDED',
+      code: 'EDATA_411',
+      details: 'CAN error flag recorded',
+      eventTime: hours(-0.25),
+      eventId: null,
+      diagnostics: [{ kind: 'CAN_ERROR', troubleCode: null, status: null }],
+    });
+    for (let index = 0; index < 501; index++) {
+      ermEvidence.push({
+        sourceKind: 'ALARM',
+        sourceId: String(1000 + index),
+        imei: device.imei,
+        deviceId: null,
+        severity: 'WARNING',
+        occurredAt: hours(-1),
+        state: 'RECORDED',
+        code: 'ALARM',
+        details: null,
+        eventTime: hours(-1),
+        eventId: '10',
+        diagnostics: [],
+      });
+    }
+    const commandId = randomUUID();
+    ermEvidence.push({
+      sourceKind: 'COMMAND',
+      sourceId: commandId,
+      imei: device.imei,
+      deviceId: device.id,
+      severity: 'WARNING',
+      occurredAt: hours(-1),
+      state: 'UNCERTAIN',
+      code: 'TIMEOUT',
+      details: null,
+      eventTime: null,
+      eventId: null,
+      diagnostics: [],
+    });
+    const problems = `query($filter:FleetProblemFilter,$offset:Int!){
+      fleetProblems(filter:$filter,offset:$offset,limit:1){
+        total offset limit items{sourceKind sourceId state requiringAttention alertId fleetEventId ermEventId commandRequestId deviceId}
+        counts{total requiringAttention recorded bySource{sourceKind total requiringAttention recorded}}
+      }
+    }`;
+    expect(await query(problems, { offset: 0 })).toMatchObject({
+      data: {
+        fleetProblems: {
+          total: 608,
+          counts: {
+            total: 608,
+            requiringAttention: 106,
+            recorded: 502,
+            bySource: [
+              { sourceKind: 'FLEET_ALERT', total: 104, requiringAttention: 104, recorded: 0 },
+              { sourceKind: 'DIAGNOSTIC', total: 1, requiringAttention: 0, recorded: 1 },
+              { sourceKind: 'ALARM', total: 501, requiringAttention: 0, recorded: 501 },
+              { sourceKind: 'REPORTING_GAP', total: 1, requiringAttention: 1, recorded: 0 },
+              { sourceKind: 'COMMAND', total: 1, requiringAttention: 1, recorded: 0 },
+            ],
+          },
+        },
+      },
+    });
+    expect(
+      await query(problems, { offset: 0, filter: { sourceKinds: ['DIAGNOSTIC'] } }),
+    ).toMatchObject({
+      data: {
+        fleetProblems: {
+          total: 1,
+          items: [
+            {
+              sourceKind: 'DIAGNOSTIC',
+              sourceId: '901',
+              state: 'RECORDED',
+              requiringAttention: false,
+              alertId: null,
+              fleetEventId: imported.id,
+              ermEventId: '901',
+              commandRequestId: null,
+              deviceId: device.id,
+            },
+          ],
+        },
+      },
+    });
+    expect(
+      await query(problems, { offset: 500, filter: { sourceKinds: ['ALARM'] } }),
+    ).toMatchObject({
+      data: { fleetProblems: { total: 501, offset: 500, items: [{ sourceKind: 'ALARM' }] } },
+    });
+    expect(
+      await query(problems, { offset: 0, filter: { sourceKinds: ['COMMAND'] } }),
+    ).toMatchObject({
+      data: {
+        fleetProblems: {
+          total: 1,
+          items: [
+            {
+              state: 'UNCERTAIN',
+              requiringAttention: true,
+              alertId: null,
+              commandRequestId: commandId,
+            },
+          ],
+        },
+      },
+    });
+    expect(await query(problems, { offset: 0 }, otherBranchId)).toMatchObject({
+      data: { fleetProblems: { total: 1, counts: { total: 1, recorded: 0 } } },
+    });
+    expect(
+      await query(problems, { offset: 0, filter: { deviceIds: [device.id] } }, otherBranchId),
+    ).toMatchObject({ data: { fleetProblems: { total: 0, items: [] } } });
   });
 
   const transition = (name: string) =>

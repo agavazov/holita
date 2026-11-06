@@ -13,6 +13,8 @@ import type { GraphQLResolveInfo } from 'graphql';
 import type {
   MutationSendErmDeviceCommandArgs,
   QueryErmCommandRequestArgs,
+  QueryErmFleetTelemetryArgs,
+  QueryErmFleetProblemsArgs,
   FleetDevice,
   FleetDeviceErmEventsArgs,
   FleetDeviceErmFramesArgs,
@@ -39,6 +41,16 @@ export class TelemetryResolver {
     private readonly configurations: ConfigurationChangesService,
     private readonly commandRequests: CommandRequestsService,
   ) {}
+
+  @Query('ermFleetTelemetry')
+  fleetTelemetry(@Args() args: QueryErmFleetTelemetryArgs, @Context() context: RequestContext) {
+    return this.telemetry.fleetTelemetry(args.imeis, context);
+  }
+
+  @Query('ermFleetProblems')
+  fleetProblems(@Args() args: QueryErmFleetProblemsArgs, @Context() context: RequestContext) {
+    return this.telemetry.fleetProblems(args, context);
+  }
 
   @Query('ermCommandRequest')
   commandRequest(@Args() args: QueryErmCommandRequestArgs, @Context() context: RequestContext) {

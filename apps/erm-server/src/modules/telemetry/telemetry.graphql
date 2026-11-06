@@ -457,7 +457,81 @@ type FleetDevice @key(fields: "id") {
   "Newest fifty command requests of the verified Tenant and active Branch for this Device."
   ermCommandRequests: [ErmCommandRequest!]! @requires(fields: "imei")
 }
+"Internal Fleet reads; the caller must verify Tenant/Branch ownership before supplying IMEIs."
+type ErmFleetTelemetry {
+  asOf: DateTime!
+  units: [ErmFleetTelemetryUnit!]!
+}
+type ErmFleetTelemetryUnit {
+  imei: String!
+  connected: Boolean!
+  lastFrameAt: DateTime
+  expectedIntervalSeconds: Int!
+  reporting: Boolean!
+}
+enum ErmFleetProblemSourceKind {
+  DIAGNOSTIC
+  ALARM
+  COMMAND
+}
+enum ErmFleetProblemState {
+  RECORDED
+  FAILED
+  UNCERTAIN
+  EXPIRED
+}
+enum ErmFleetDiagnosticKind {
+  DIAGNOSTIC_TROUBLE_CODE
+  CAN_ERROR
+}
+enum ErmFleetDiagnosticStatus {
+  ADDED
+  DELETED
+}
+type ErmFleetDiagnostic {
+  kind: ErmFleetDiagnosticKind!
+  troubleCode: String
+  status: ErmFleetDiagnosticStatus
+}
+type ErmFleetProblem {
+  sourceKind: ErmFleetProblemSourceKind!
+  sourceId: ID!
+  imei: String!
+  deviceId: ID
+  occurredAt: DateTime!
+  severity: ErmEventSeverity!
+  state: ErmFleetProblemState!
+  code: String!
+  details: String
+  eventTime: DateTime
+  eventId: String
+  diagnostics: [ErmFleetDiagnostic!]!
+}
+type ErmFleetProblemCount {
+  sourceKind: ErmFleetProblemSourceKind!
+  severity: ErmEventSeverity!
+  count: Int!
+}
+type ErmFleetProblems {
+  asOf: DateTime!
+  totalCount: Int!
+  hasMore: Boolean!
+  items: [ErmFleetProblem!]!
+  counts: [ErmFleetProblemCount!]!
+}
 type Query {
+  "Internal token only. Current sockets and expected-frame freshness, independent of Branch data clocks."
+  ermFleetTelemetry(imeis: [String!]!): ErmFleetTelemetry!
+  "Internal token only. Recorded evidence and scoped durable failures; no current-fault assertion."
+  ermFleetProblems(
+    imeis: [String!]!
+    tenantId: ID!
+    branchId: ID!
+    from: DateTime!
+    to: DateTime!
+    offset: Int = 0
+    limit: Int = 500
+  ): ErmFleetProblems!
   "One durable request in the verified Tenant and active Branch, suitable for pending-state polling."
   ermCommandRequest(id: ID!): ErmCommandRequest
 }

@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module.js';
 import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
+import type { Prisma } from '../src/generated/prisma/client.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import { createTestDatabase } from './test-database.js';
 
@@ -107,12 +108,17 @@ describe('Telemetry, data clock and odometer readings with PostgreSQL', () => {
       await closeDatabase?.();
     }
   });
-  async function query(source: string, variables: Record<string, unknown> = {}, scope = branchId) {
+  async function query(
+    source: string,
+    variables: Record<string, unknown> = {},
+    scope = branchId,
+    scopeTenant = tenantId,
+  ) {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${issueDemoToken(tenantId)}`,
+        authorization: `Bearer ${issueDemoToken(scopeTenant)}`,
         'x-branch-id': scope,
       },
       body: JSON.stringify({ query: source, variables }),
@@ -272,5 +278,150 @@ describe('Telemetry, data clock and odometer readings with PostgreSQL', () => {
       });
     }
     expect(await database.client.vehicleStatusSample.count({ where: { branchId } })).toBe(before);
+
+    // The track contract preserves every returned sample, but geometry only uses recorded positions.
+    const tracked = await database.client.vehicle.create({
+      data: { tenantId, branchId, licensePlate: 'RECORDED TRACK' },
+    });
+    const trackRows = [
+      [-400, imei, 42.69, true, 70],
+      [-398, null, null, null, null],
+      [-395, imei, 42.7, null, null],
+      [-380, imei, 42.71, false, 0],
+      [-320, imei, 42.72, false, 0],
+      [-315, imei, null, false, 0],
+      [-310, imei, 42.73, false, 0],
+      [-309, '990601000000002', 42.74, false, 0],
+      [-180, '990601000000002', 42.75, false, 0],
+    ] as const;
+    const samples = trackRows.map(
+      ([minute, deviceImei, latitude, ignition, speedKph]) =>
+        ({
+          id: randomUUID(),
+          tenantId,
+          branchId,
+          vehicleId: tracked.id,
+          deviceImei,
+          source: deviceImei === null ? 'MANUAL' : 'DEMO',
+          recordedAt: minutes(minute),
+          receivedAt: minutes(minute),
+          latitude,
+          longitude: latitude === null ? null : 23.32,
+          ignition,
+          speedKph,
+          odometerKm: deviceImei === null ? 500 : null,
+        }) satisfies Prisma.VehicleStatusSampleCreateManyInput,
+    );
+    await database.client.vehicleStatusSample.createMany({ data: samples });
+    const series = `query($id:ID!,$from:DateTime!,$to:DateTime!){
+      fleetVehicleSamples(vehicleId:$id,from:$from,to:$to){
+        from to items{id} truncated
+        track{asOf positionCount firstPositionAt lastPositionAt
+          segments{sampleIds} gaps{from to reason thresholdSeconds}}
+      }
+    }`;
+    const range = { from: minutes(-1439).toISOString(), to: minutes(1).toISOString() };
+    expect(await query(series, { id: tracked.id, ...range })).toEqual({
+      data: {
+        fleetVehicleSamples: {
+          ...range,
+          items: samples.map(({ id }) => ({ id })),
+          truncated: false,
+          track: {
+            asOf: asOf.toISOString(),
+            positionCount: 7,
+            firstPositionAt: minutes(-400).toISOString(),
+            lastPositionAt: minutes(-180).toISOString(),
+            segments: [
+              { sampleIds: [samples[0]?.id, samples[2]?.id] },
+              { sampleIds: [samples[3]?.id, samples[4]?.id] },
+              { sampleIds: [samples[6]?.id] },
+              { sampleIds: [samples[7]?.id] },
+              { sampleIds: [samples[8]?.id] },
+            ],
+            gaps: [
+              [-1439, -400, 'OUTSIDE_SAMPLES', null],
+              [-395, -380, 'SAMPLE_GAP', 600],
+              [-320, -310, 'POSITION_UNAVAILABLE', null],
+              [-310, -309, 'DEVICE_CHANGED', null],
+              [-309, -180, 'SAMPLE_GAP', 7200],
+              [-180, 1, 'OUTSIDE_SAMPLES', null],
+            ].map(([from, to, reason, thresholdSeconds]) => ({
+              from: minutes(Number(from)).toISOString(),
+              to: minutes(Number(to)).toISOString(),
+              reason,
+              thresholdSeconds,
+            })),
+          },
+        },
+      },
+    });
+    for (const [scopeBranch, scopeTenant] of [
+      [otherBranchId, tenantId],
+      [branchId, otherTenantId],
+    ]) {
+      expect(
+        await query(series, { id: tracked.id, ...range }, scopeBranch, scopeTenant),
+      ).toMatchObject({ errors: [{ message: 'Vehicle not found' }] });
+    }
+
+    // A busy 24-hour track retains the newest 2,000 positions and marks omitted coverage.
+    const busy = await database.client.vehicle.create({
+      data: { tenantId, branchId, licensePlate: 'BUSY TRACK' },
+    });
+    const busySamples = Array.from(
+      { length: 2001 },
+      (_, index) =>
+        ({
+          id: randomUUID(),
+          tenantId,
+          branchId,
+          vehicleId: busy.id,
+          deviceImei: imei,
+          source: 'DEMO',
+          recordedAt: new Date(asOf.getTime() - 3_600_000 + index * 1000),
+          receivedAt: asOf,
+          latitude: 42.69,
+          longitude: 23.32,
+        }) satisfies Prisma.VehicleStatusSampleCreateManyInput,
+    );
+    await database.client.vehicleStatusSample.createMany({ data: busySamples });
+    const retained = busySamples.slice(1);
+    expect(await query(series, { id: busy.id, ...range })).toMatchObject({
+      data: {
+        fleetVehicleSamples: {
+          items: retained.map(({ id }) => ({ id })),
+          truncated: true,
+          track: {
+            asOf: asOf.toISOString(),
+            positionCount: 2000,
+            firstPositionAt: retained[0]?.recordedAt.toISOString(),
+            lastPositionAt: retained.at(-1)?.recordedAt.toISOString(),
+            segments: [{ sampleIds: retained.map(({ id }) => id) }],
+            gaps: [
+              { from: range.from, to: retained[0]?.recordedAt.toISOString(), reason: 'TRUNCATED' },
+              {
+                from: retained.at(-1)?.recordedAt.toISOString(),
+                to: range.to,
+                reason: 'OUTSIDE_SAMPLES',
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(await query(series, { id: manualOnly.id, ...range })).toMatchObject({
+      data: {
+        fleetVehicleSamples: {
+          track: {
+            positionCount: 0,
+            firstPositionAt: null,
+            lastPositionAt: null,
+            segments: [],
+            gaps: [{ ...range, reason: 'POSITION_UNAVAILABLE' }],
+          },
+        },
+      },
+    });
   });
 });

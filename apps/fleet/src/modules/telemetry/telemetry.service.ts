@@ -27,6 +27,7 @@ import {
   TelemetryRepository,
 } from './telemetry.repository.js';
 import { classifyVehicleState, NO_FACTS } from './vehicle-state.js';
+import { vehicleTrack } from './vehicle-track.js';
 import { SettingsService } from '../settings/settings.service.js';
 
 /** Most samples one series returns; the newest are kept. */
@@ -106,18 +107,19 @@ export class TelemetryService {
     if (!(await this.telemetry.findVehicle(scope, vehicleId))) {
       throw new NotFoundException('Vehicle not found');
     }
-    const rows = await this.telemetry.samples(
-      scope,
-      vehicleId,
-      { from, to },
-      MAX_SERIES_SAMPLES + 1,
-    );
+    const [rows, asOf] = await Promise.all([
+      this.telemetry.samples(scope, vehicleId, { from, to }, MAX_SERIES_SAMPLES + 1),
+      this.telemetry.asOf(scope),
+    ]);
+    const items = rows.slice(0, MAX_SERIES_SAMPLES).reverse();
+    const truncated = rows.length > MAX_SERIES_SAMPLES;
     return {
       vehicleId,
       from,
       to,
-      items: rows.slice(0, MAX_SERIES_SAMPLES).reverse().map(toSample),
-      truncated: rows.length > MAX_SERIES_SAMPLES,
+      items: items.map(toSample),
+      truncated,
+      track: vehicleTrack(items, { from, to }, truncated, asOf),
     };
   }
 

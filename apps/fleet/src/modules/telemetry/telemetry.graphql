@@ -69,6 +69,47 @@ type FleetStatusSampleSeries {
   "Ascending by recordedAt, then id; at most 2,000 rows (the newest are kept)."
   items: [FleetStatusSample!]!
   truncated: Boolean!
+  "Recorded position coverage of the returned items; never join separate segments."
+  track: FleetVehicleTrack!
+}
+
+enum FleetTrackGapReason {
+  "No coordinate pair was recorded for a device observation."
+  POSITION_UNAVAILABLE
+  "Position samples exceed the inferred activity-based sample cadence."
+  SAMPLE_GAP
+  "The reporting device changed between position samples."
+  DEVICE_CHANGED
+  "The requested interval extends beyond the available positions."
+  OUTSIDE_SAMPLES
+  "Older samples were omitted by the newest-2,000 limit."
+  TRUNCATED
+}
+
+type FleetTrackSegment {
+  from: DateTime!
+  to: DateTime!
+  "Ascending references to items with a recorded latitude/longitude pair."
+  sampleIds: [ID!]!
+}
+
+type FleetTrackGap {
+  from: DateTime!
+  to: DateTime!
+  reason: FleetTrackGapReason!
+  "For SAMPLE_GAP only: twice the inferred cadence (600s active, 7200s otherwise). This is not historical socket evidence."
+  thresholdSeconds: Int
+}
+
+type FleetVehicleTrack {
+  "Latest device sample time of the scoped Branch, independent of the requested interval."
+  asOf: DateTime
+  positionCount: Int!
+  firstPositionAt: DateTime
+  lastPositionAt: DateTime
+  "Recorded coordinates only; MANUAL odometer rows never create or interrupt a segment."
+  segments: [FleetTrackSegment!]!
+  gaps: [FleetTrackGap!]!
 }
 
 "A dated raw eData 405 observation; catalog names and units are reference labels, not a conversion."

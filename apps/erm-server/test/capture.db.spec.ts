@@ -6,7 +6,7 @@ import { once } from 'node:events';
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import net from 'node:net';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
 import { createServer, type Server } from 'node:http';
 import {
   GraphQLError,
@@ -65,6 +65,8 @@ import type {
   ErmDeviceAction,
   ErmEventNameArgs,
   QueryErmCommandRequestArgs,
+  QueryErmFleetTelemetryArgs,
+  QueryErmFleetProblemsArgs,
   FleetDeviceErmEventsArgs,
   FleetDeviceErmFramesArgs,
   FleetDeviceErmCommandsArgs,
@@ -95,9 +97,9 @@ it('persists captured connection lifecycle and raw frames through the production
   const previousTelemetryToken = process.env.ERM_TELEMETRY_TOKEN;
   const previousConfigurationWrites = process.env.ERM_CONFIGURATION_WRITES_ENABLED;
   try {
-    const reviewDirectory = fileURLToPath(new URL('../../../.references/review/', import.meta.url));
-    await mkdir(reviewDirectory, { recursive: true });
-    captureDirectory = await mkdtemp(join(reviewDirectory, 'erm-server-'));
+    const captureRoot = process.env.ERM_CAPTURE_DIR ?? tmpdir();
+    await mkdir(captureRoot, { recursive: true });
+    captureDirectory = await mkdtemp(join(captureRoot, 'erm-server-'));
     module = await Test.createTestingModule({
       controllers: [InternalTelemetryController],
       providers: [
@@ -1478,6 +1480,16 @@ it('persists captured connection lifecycle and raw frames through the production
             parseLiteral: (node) => dateTime.parseLiteral(node),
           }),
           Query: {
+            ermFleetTelemetry: (
+              _parent: unknown,
+              args: QueryErmFleetTelemetryArgs,
+              ctx: RequestContext,
+            ) => telemetryResolver.fleetTelemetry(args, ctx),
+            ermFleetProblems: (
+              _parent: unknown,
+              args: QueryErmFleetProblemsArgs,
+              ctx: RequestContext,
+            ) => telemetryResolver.fleetProblems(args, ctx),
             ermCommandRequest: (
               _parent: unknown,
               args: QueryErmCommandRequestArgs,
@@ -2924,6 +2936,210 @@ it('persists captured connection lifecycle and raw frames through the production
         }),
       ]),
     );
+    const fleetBatchTime = new Date(Date.now() - 1000);
+    const fleetBatchPeriodEnd = new Date(fleetBatchTime.getTime() + 500);
+    const fleetBatchImei = '862129080367777';
+    const fleetBatchFrame = await database.client.ermFrame.create({
+      data: {
+        connectionId: stored.id,
+        unitId: fleetBatchImei,
+        direction: 'DEVICE',
+        receivedAt: fleetBatchTime,
+        checksum: 'ABSENT',
+        raw: Buffer.from('$fleet-batch-test'),
+      },
+    });
+    const fleetBatchEvents = await database.client.ermEvent.createManyAndReturn({
+      data: Array.from({ length: 105 }, (_, index) => ({
+        frameId: fleetBatchFrame.id,
+        unitId: fleetBatchImei,
+        eventTime: fleetBatchTime,
+        eventId: index === 0 ? '33' : '02',
+        engineOn: true,
+        fields:
+          index === 0
+            ? { edata: { type: 419, faults: [{ spn: 4339, fmi: 7, status: 1 }] } }
+            : { extra: ['00', '1'] },
+      })),
+    });
+    const fleetBatchCommand = await database.client.ermCommandRequest.create({
+      data: {
+        tenantId,
+        branchId,
+        deviceId,
+        unitId: fleetBatchImei,
+        actorId: `demo-tenant:${tenantId}`,
+        intent: 'Read status',
+        action: 'READ_STATUS',
+        status: 'UNCERTAIN',
+        createdAt: fleetBatchTime,
+        completedAt: fleetBatchTime,
+        expiresAt: fleetBatchTime,
+        failureReason: 'Submission interrupted',
+      },
+    });
+    for (const scope of [
+      { tenantId: randomUUID(), branchId },
+      { tenantId, branchId: randomUUID() },
+    ]) {
+      await database.client.ermCommandRequest.create({
+        data: { ...fleetBatchCommand, ...scope, id: randomUUID() },
+      });
+    }
+    await database.client.ermCommandRequest.create({
+      data: {
+        ...fleetBatchCommand,
+        id: randomUUID(),
+        completedAt: fleetBatchPeriodEnd,
+      },
+    });
+    await database.client.ermEvent.createMany({
+      data: [new Date(fleetBatchTime.getTime() - 25 * 60 * 60 * 1000), fleetBatchPeriodEnd].map(
+        (eventTime) => ({
+          frameId: fleetBatchFrame.id,
+          unitId: fleetBatchImei,
+          eventTime,
+          eventId: '02',
+          fields: {},
+        }),
+      ),
+    });
+    const internalContext: RequestContext = {
+      requestId: 'fleet-batch-test',
+      tenantId: undefined,
+      authorization: `Bearer ${process.env.ERM_TELEMETRY_TOKEN}`,
+    };
+    const fleetBatchVariables = {
+      imeis: [fleetBatchImei],
+      tenantId,
+      branchId,
+      from: new Date(fleetBatchTime.getTime() - 60_000).toISOString(),
+      to: fleetBatchPeriodEnd.toISOString(),
+    };
+    const fleetBatchSource = `query($imeis:[String!]!,$tenantId:ID!,$branchId:ID!,
+      $from:DateTime!,$to:DateTime!,$offset:Int) {
+      ermFleetProblems(imeis:$imeis,tenantId:$tenantId,branchId:$branchId,
+        from:$from,to:$to,offset:$offset,limit:60) {
+        asOf totalCount hasMore counts {sourceKind severity count}
+        items {sourceKind sourceId imei deviceId occurredAt severity state code details eventTime eventId
+          diagnostics {kind troubleCode status}}
+      }
+    }`;
+    const batchFirst = await graphql({
+      schema,
+      source: fleetBatchSource,
+      variableValues: fleetBatchVariables,
+      contextValue: internalContext,
+    });
+    expect(batchFirst.errors).toBeUndefined();
+    expect(batchFirst.data?.['ermFleetProblems']).toMatchObject({
+      totalCount: 106,
+      hasMore: true,
+      counts: [
+        { sourceKind: 'COMMAND', severity: 'WARNING', count: 1 },
+        { sourceKind: 'DIAGNOSTIC', severity: 'WARNING', count: 105 },
+      ],
+      items: expect.arrayContaining([
+        expect.objectContaining({
+          sourceId: fleetBatchCommand.id,
+          state: 'UNCERTAIN',
+          deviceId,
+        }),
+      ]),
+    });
+    const batchSecond = await graphql({
+      schema,
+      source: fleetBatchSource,
+      variableValues: { ...fleetBatchVariables, offset: 60 },
+      contextValue: internalContext,
+    });
+    expect(batchSecond.errors).toBeUndefined();
+    expect(batchSecond.data?.['ermFleetProblems']).toMatchObject({
+      totalCount: 106,
+      hasMore: false,
+    });
+    const secondPage = batchSecond.data?.['ermFleetProblems'];
+    if (typeof secondPage !== 'object' || secondPage === null || !('items' in secondPage)) {
+      throw new Error('Expected the second Fleet evidence page');
+    }
+    expect(secondPage.items).toHaveLength(46);
+    const batchAll = await api.fleetProblems(fleetBatchVariables, internalContext);
+    expect(batchAll.items).toHaveLength(106);
+    expect(new Set(batchAll.items.map((item) => `${item.sourceKind}:${item.sourceId}`)).size).toBe(
+      106,
+    );
+    expect(batchAll.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceId: String(fleetBatchEvents.find((row) => row.eventId === '33')?.id),
+          state: 'RECORDED',
+          diagnostics: [
+            { kind: 'DIAGNOSTIC_TROUBLE_CODE', troubleCode: 'SPN 4339 FMI 7', status: 'ADDED' },
+          ],
+        }),
+      ]),
+    );
+    const fleetTelemetrySource = `query($imeis:[String!]!) {
+      ermFleetTelemetry(imeis:$imeis) {
+        asOf units {imei connected lastFrameAt expectedIntervalSeconds reporting}
+      }
+    }`;
+    const fleetBatchImeis = [
+      unitId,
+      fleetBatchImei,
+      ...Array.from({ length: 103 }, (_, index) => String(862129090000000 + index)),
+    ];
+    gatewayOnline = true;
+    const batchReadsBefore = gatewayReads;
+    const fleetCallsBefore = fleetCalls;
+    const batchTelemetry = await graphql({
+      schema,
+      source: fleetTelemetrySource,
+      variableValues: { imeis: fleetBatchImeis },
+      contextValue: { ...internalContext },
+    });
+    expect(batchTelemetry.errors).toBeUndefined();
+    const telemetryBatch = batchTelemetry.data?.['ermFleetTelemetry'];
+    if (
+      typeof telemetryBatch !== 'object' ||
+      telemetryBatch === null ||
+      !('units' in telemetryBatch)
+    ) {
+      throw new Error('Expected the complete Fleet telemetry batch');
+    }
+    expect(telemetryBatch.units).toHaveLength(105);
+    expect(batchTelemetry.data?.['ermFleetTelemetry']).toMatchObject({
+      units: expect.arrayContaining([
+        expect.objectContaining({ imei: unitId, connected: true }),
+        {
+          imei: fleetBatchImei,
+          connected: false,
+          lastFrameAt: fleetBatchTime.toISOString(),
+          expectedIntervalSeconds: 300,
+          reporting: true,
+        },
+        {
+          imei: fleetBatchImeis[2],
+          connected: false,
+          lastFrameAt: null,
+          expectedIntervalSeconds: 3600,
+          reporting: false,
+        },
+      ]),
+    });
+    expect(gatewayReads - batchReadsBefore).toBe(1);
+    expect(fleetCalls).toBe(fleetCallsBefore);
+    for (const deniedContext of [scopedContext, unauthenticated]) {
+      for (const source of [fleetBatchSource, fleetTelemetrySource]) {
+        const denied = await graphql({
+          schema,
+          source,
+          variableValues: fleetBatchVariables,
+          contextValue: deniedContext,
+        });
+        expect(denied.errors?.[0]?.message).toBe('Internal telemetry authentication required');
+      }
+    }
   } finally {
     releaseSnapshotBatch?.();
     await commandRequests?.onModuleDestroy();

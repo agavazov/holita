@@ -12,6 +12,9 @@ import type {
   ErmDataGap,
   ErmEventCategory,
   ErmNetworkChange,
+  ErmEventSeverity,
+  ErmFleetProblemSourceKind,
+  ErmFleetProblemState,
 } from '../../generated/graphql/types.js';
 import { parseFrame } from '../../starlink/protocol.js';
 import { categoryEventIds, starlinkEvents } from '../../starlink/event-catalog.js';
@@ -41,14 +44,186 @@ function reportingInterval(
   return (ignitionOn ?? engineOn) === true || (speedKmh ?? 0) > 0 ? 300 : 3600;
 }
 
+function problemSourceKind(row: Record<string, unknown>): ErmFleetProblemSourceKind {
+  const value = row['sourceKind'];
+  if (value === 'DIAGNOSTIC' || value === 'ALARM' || value === 'COMMAND') {
+    return value;
+  }
+  throw new Error('Invalid ERM problem source kind');
+}
+
+function problemSeverity(row: Record<string, unknown>): ErmEventSeverity {
+  const value = row['severity'];
+  if (value === 'INFO' || value === 'WARNING' || value === 'CRITICAL') {
+    return value;
+  }
+  throw new Error('Invalid ERM problem severity');
+}
+
+function problemState(row: Record<string, unknown>): ErmFleetProblemState {
+  const value = row['state'];
+  if (value === 'RECORDED' || value === 'FAILED' || value === 'UNCERTAIN' || value === 'EXPIRED') {
+    return value;
+  }
+  throw new Error('Invalid ERM problem state');
+}
+
 @Injectable()
 export class TelemetryRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private table(
-    name: 'ermConnection' | 'ermFrame' | 'ermEvent' | 'ermCommand' | 'ermUpstreamClose',
+    name:
+      | 'ermConnection'
+      | 'ermFrame'
+      | 'ermEvent'
+      | 'ermCommand'
+      | 'ermUpstreamClose'
+      | 'ermCommandRequest',
   ) {
     return Prisma.raw(`"${this.prisma.schema.replaceAll('"', '""')}"."${name}"`);
+  }
+
+  async fleetUnitStates(unitIds: string[], snapshot: Date) {
+    return sqlRows(
+      await this.prisma.client.$queryRaw(Prisma.sql`
+        SELECT u."unitId", frame."receivedAt" AS "lastFrameAt",
+          ignition.value AS "ignitionOn", engine.value AS "engineOn", speed.value AS "speedKmh"
+        FROM jsonb_array_elements_text(${JSON.stringify(unitIds)}::jsonb) u("unitId")
+        LEFT JOIN LATERAL (
+          SELECT "receivedAt" FROM ${this.table('ermFrame')}
+          WHERE "unitId" = u."unitId" AND direction = 'device' AND NOT partial
+            AND "receivedAt" <= ${snapshot}
+          ORDER BY "receivedAt" DESC, id DESC LIMIT 1
+        ) frame ON true
+        LEFT JOIN LATERAL (
+          SELECT (event.fields ->> '#IGN#' = '1') AS value
+          FROM ${this.table('ermEvent')} event
+          JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+          WHERE event."unitId" = u."unitId" AND frame."receivedAt" <= ${snapshot}
+            AND event.fields ->> '#IGN#' IN ('0', '1')
+          ORDER BY frame."receivedAt" DESC, event.id DESC LIMIT 1
+        ) ignition ON true
+        LEFT JOIN LATERAL (
+          SELECT event."engineOn" AS value FROM ${this.table('ermEvent')} event
+          JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+          WHERE event."unitId" = u."unitId" AND frame."receivedAt" <= ${snapshot}
+            AND event."engineOn" IS NOT NULL
+          ORDER BY frame."receivedAt" DESC, event.id DESC LIMIT 1
+        ) engine ON true
+        LEFT JOIN LATERAL (
+          SELECT event."speedKmh" AS value FROM ${this.table('ermEvent')} event
+          JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+          WHERE event."unitId" = u."unitId" AND frame."receivedAt" <= ${snapshot}
+            AND event."speedKmh" IS NOT NULL
+          ORDER BY frame."receivedAt" DESC, event.id DESC LIMIT 1
+        ) speed ON true
+      `),
+    ).map((row) => ({
+      unitId: sqlText(row, 'unitId'),
+      lastFrameAt: sqlNullableDate(row, 'lastFrameAt'),
+      expectedIntervalSeconds: reportingInterval(
+        nullableBoolean(row, 'ignitionOn'),
+        nullableBoolean(row, 'engineOn'),
+        nullableNumber(row, 'speedKmh'),
+      ),
+    }));
+  }
+
+  async fleetProblems(
+    unitIds: string[],
+    tenantId: string,
+    branchId: string,
+    from: Date,
+    to: Date,
+    snapshot: Date,
+    offset: number,
+    limit: number,
+  ) {
+    const alarms = categoryEventIds(['ALARM']);
+    const critical = [...starlinkEvents]
+      .filter(([, event]) => event.severity === 'CRITICAL')
+      .map(([id]) => id);
+    const warning = [...starlinkEvents]
+      .filter(([, event]) => event.severity === 'WARNING')
+      .map(([id]) => id);
+    const evidence = Prisma.sql`
+      WITH units AS (
+        SELECT jsonb_array_elements_text(${JSON.stringify(unitIds)}::jsonb) AS "unitId"
+      ), evidence AS (
+        SELECT CASE WHEN event."eventId" IN ('02', '70', '89')
+          OR event.fields -> 'edata' ->> 'type' IN ('411', '419')
+          THEN 'DIAGNOSTIC' ELSE 'ALARM' END AS "sourceKind",
+          event.id::text AS "sourceId", event."unitId" AS imei, NULL::text AS "deviceId",
+          coalesce(event."eventTime", frame."receivedAt") AS "occurredAt",
+          CASE WHEN event."eventId" IN (${Prisma.join(critical)}) THEN 'CRITICAL'
+            WHEN event."eventId" IN (${Prisma.join(warning)}) THEN 'WARNING'
+            WHEN event.fields -> 'edata' ->> 'type' = '411'
+              AND event.fields -> 'edata' ->> 'canError' <> '0' THEN 'WARNING'
+            WHEN event.fields -> 'edata' ->> 'type' = '419'
+              AND event.fields -> 'edata' -> 'faults' @> '[{"status":1}]'::jsonb THEN 'WARNING'
+            ELSE 'INFO' END AS severity,
+          'RECORDED' AS state, coalesce(event."eventId", 'UNKNOWN') AS code,
+          NULL::text AS details, event."eventTime", event."eventId", event.fields
+        FROM ${this.table('ermEvent')} event
+        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+        WHERE event."unitId" IN (SELECT "unitId" FROM units)
+          AND (event."eventId" IN (${Prisma.join(alarms)}, '70', '89')
+            OR event.fields -> 'edata' ->> 'type' IN ('411', '419'))
+          AND coalesce(event."eventTime", frame."receivedAt") >= ${from}
+          AND coalesce(event."eventTime", frame."receivedAt") < ${to}
+          AND frame."receivedAt" <= ${snapshot}
+        UNION ALL
+        SELECT 'COMMAND', request.id::text, request."unitId", request."deviceId"::text,
+          coalesce(request."completedAt", request."createdAt"), 'WARNING',
+          upper(request.status::text), request.action::text, request."failureReason",
+          NULL::timestamptz, NULL::text, NULL::jsonb
+        FROM ${this.table('ermCommandRequest')} request
+        WHERE request."tenantId" = ${tenantId}::uuid AND request."branchId" = ${branchId}::uuid
+          AND request."unitId" IN (SELECT "unitId" FROM units)
+          AND request.status IN ('failed', 'uncertain', 'expired')
+          AND coalesce(request."completedAt", request."createdAt") >= ${from}
+          AND coalesce(request."completedAt", request."createdAt") < ${to}
+          AND coalesce(request."completedAt", request."createdAt") <= ${snapshot}
+      )`;
+    const [selected, grouped] = await this.prisma.client.$transaction(
+      [
+        this.prisma.client.$queryRaw(Prisma.sql`${evidence}
+        SELECT * FROM evidence ORDER BY "occurredAt" DESC, "sourceKind", "sourceId"
+        LIMIT ${limit} OFFSET ${offset}`),
+        this.prisma.client.$queryRaw(Prisma.sql`${evidence}
+        SELECT "sourceKind", severity, count(*)::integer AS count FROM evidence
+        GROUP BY "sourceKind", severity ORDER BY "sourceKind", severity`),
+      ],
+      { isolationLevel: 'RepeatableRead' },
+    );
+    return {
+      items: sqlRows(selected).map((row) => {
+        const occurredAt = sqlNullableDate(row, 'occurredAt');
+        if (occurredAt === null) {
+          throw new Error('Invalid ERM problem timestamp');
+        }
+        return {
+          sourceKind: problemSourceKind(row),
+          sourceId: sqlText(row, 'sourceId'),
+          imei: sqlText(row, 'imei'),
+          deviceId: sqlNullableText(row, 'deviceId'),
+          occurredAt,
+          severity: problemSeverity(row),
+          state: problemState(row),
+          code: sqlText(row, 'code'),
+          details: sqlNullableText(row, 'details'),
+          eventTime: sqlNullableDate(row, 'eventTime'),
+          eventId: sqlNullableText(row, 'eventId'),
+          fields: row['fields'],
+        };
+      }),
+      counts: sqlRows(grouped).map((row) => ({
+        sourceKind: problemSourceKind(row),
+        severity: problemSeverity(row),
+        count: sqlInteger(row, 'count'),
+      })),
+    };
   }
 
   async internalEvents(imei: string, after: string, limit: number, receivedBefore: Date) {

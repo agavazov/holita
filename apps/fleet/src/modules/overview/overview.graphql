@@ -39,4 +39,106 @@ extend type Query {
   fleetOverview: FleetOverview!
   "1–93 calendar days in the configured Branch time zone ending at the data date, zero days included. Empty without a data clock."
   fleetDailyDistance(vehicleId: ID, days: Int! = 14): FleetDailyDistance!
+  "Whole-Branch counts, including inactive vehicles; period is [from,to), at most 93 days."
+  fleetDashboard(from: DateTime!, to: DateTime!): FleetDashboard!
+  "Every vehicle, including no-position records, ordered by ID. Continue paging until hasMore is false."
+  fleetMap(offset: Int! = 0, limit: Int! = 100): FleetMapPage!
+}
+
+type FleetDashboardVehicles {
+  "Fleet registry snapshot clock."
+  asOf: DateTime!
+  "Branch device-sample clock used for activity, independent of Live."
+  dataAsOf: DateTime
+  "ERM socket/frame observation clock; earliest batch when multiple batches are needed."
+  liveAsOf: DateTime!
+  total: Int!
+  connected: Int!
+  reporting: Int!
+  "At least one installed device is both Connected and Reporting."
+  live: Int!
+  moving: Int!
+  idle: Int!
+  parked: Int!
+  notReporting: Int!
+  asset: Int!
+  noDevice: Int!
+}
+
+type FleetDashboardDevices {
+  asOf: DateTime!
+  liveAsOf: DateTime!
+  total: Int!
+  connected: Int!
+  reporting: Int!
+  live: Int!
+}
+
+type FleetDashboardTrips {
+  asOf: DateTime!
+  dataAsOf: DateTime
+  from: DateTime!
+  to: DateTime!
+  "Trips starting in [from,to), excluding starts after the Branch data clock."
+  total: Int!
+  "Sum of known distances; null when trips exist but none has measured distance. Zero for no trips."
+  distanceKm: Float
+  distanceKnownTrips: Int!
+}
+
+type FleetDashboard {
+  vehicles: FleetDashboardVehicles!
+  devices: FleetDashboardDevices!
+  trips: FleetDashboardTrips!
+  problems: FleetProblemCounts!
+}
+
+type FleetMapPosition {
+  sampleId: ID!
+  deviceImei: String!
+  source: FleetDataSource!
+  latitude: Float!
+  longitude: Float!
+  headingDeg: Int
+  speedKph: Float
+  recordedAt: DateTime!
+  receivedAt: DateTime!
+  "Position age against the Fleet request clock; separate from frame freshness."
+  ageSeconds: Float!
+}
+
+type FleetMapDeviceStatus {
+  deviceId: ID!
+  imei: String!
+  connected: Boolean!
+  reporting: Boolean!
+  live: Boolean!
+  lastFrameAt: DateTime
+  expectedIntervalSeconds: Int!
+}
+
+type FleetMapVehicle {
+  vehicle: FleetVehicleRef!
+  "Latest device sample with both coordinates; null explicitly means no recorded position."
+  position: FleetMapPosition
+  "Activity against the Branch data clock, not the ERM frame freshness clock."
+  activity: FleetActivityStatus!
+  connected: Boolean!
+  reporting: Boolean!
+  live: Boolean!
+  devices: [FleetMapDeviceStatus!]!
+}
+
+type FleetMapPage {
+  asOf: DateTime!
+  dataAsOf: DateTime
+  liveAsOf: DateTime!
+  items: [FleetMapVehicle!]!
+  total: Int!
+  "Whole-Branch coverage, independent of the requested page."
+  withPosition: Int!
+  withoutPosition: Int!
+  offset: Int!
+  limit: Int!
+  hasMore: Boolean!
 }
