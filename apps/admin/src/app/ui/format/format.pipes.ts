@@ -8,6 +8,7 @@ import {
   formatMoneyCents,
   formatNumber,
   formatRelative,
+  formatUtcInstant,
 } from './format';
 
 /** Default for standalone examples and non-Fleet screens. */
@@ -26,15 +27,22 @@ export class FormatDateTimePipe implements PipeTransform {
   private readonly language = inject(UI_LANGUAGE);
   private readonly preferences = inject(FLEET_DISPLAY);
   transform(value: string | null | undefined, timeZone?: string, seconds = false): string {
-    return formatDateTime(value, this.language(), timeZone ?? this.preferences().timeZone, seconds);
+    return formatDateTime(
+      value,
+      this.language(),
+      timeZone ?? this.preferences().timeZone,
+      seconds,
+      this.preferences().dateFormat,
+    );
   }
 }
 
-@Pipe({ name: 'holitaDate' })
+@Pipe({ name: 'holitaDate', pure: false })
 export class FormatDateOnlyPipe implements PipeTransform {
   private readonly language = inject(UI_LANGUAGE);
+  private readonly preferences = inject(FLEET_DISPLAY);
   transform(value: string | null | undefined): string {
-    return formatDateOnly(value, this.language());
+    return formatDateOnly(value, this.language(), this.preferences().dateFormat);
   }
 }
 
@@ -62,5 +70,13 @@ export class FormatMoneyPipe implements PipeTransform {
   private readonly language = inject(UI_LANGUAGE);
   transform(cents: number | null | undefined): string {
     return formatMoneyCents(cents, this.language());
+  }
+}
+
+/** Pair with holitaDateTime on the visible label to expose the exact original UTC instant. */
+@Pipe({ name: 'holitaUtcInstant' })
+export class FormatUtcInstantPipe implements PipeTransform {
+  transform(value: string | null | undefined): string {
+    return formatUtcInstant(value);
   }
 }

@@ -26,6 +26,7 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Popover } from 'primeng/popover';
 import { Select } from 'primeng/select';
+import { injectFleetFormat } from '../format/fleet-format';
 import { fromDateOnly, toDateOnly } from '../format/zoned-time';
 import { interpolate, uiMessages } from '../i18n/messages';
 import { maxSearchLength } from '../list/list-state';
@@ -116,6 +117,7 @@ export class FilterBuilder {
   private readonly addButton = viewChild<ElementRef<HTMLButtonElement>>('addButton');
   private readonly chipButtons = viewChildren<ElementRef<HTMLButtonElement>>('chipButton');
   private readonly language = inject(UI_LANGUAGE);
+  protected readonly format = injectFleetFormat();
   private readonly injector = inject(Injector);
   protected readonly text = computed(() => uiMessages[this.language()].filters);
   protected readonly common = computed(() => uiMessages[this.language()]);
@@ -228,7 +230,11 @@ export class FilterBuilder {
     const field = this.field();
     const draft = this.draft();
     return field && draft
-      ? validationMessage(filterValueErrors(field, draft.values), this.language())
+      ? validationMessage(
+          filterValueErrors(field, draft.values),
+          this.language(),
+          this.format.preferences().dateFormat,
+        )
       : null;
   });
   /** Native hints expose bounds without InputNumber clamping invalid drafts on blur. */
@@ -253,7 +259,17 @@ export class FilterBuilder {
     this.conditions().flatMap((condition) => {
       const field = this.fields().find((candidate) => candidate.key === condition.field);
       return field
-        ? [{ id: condition.id, label: describeCondition(field, condition, this.language()) }]
+        ? [
+            {
+              id: condition.id,
+              label: describeCondition(
+                field,
+                condition,
+                this.language(),
+                this.format.preferences().dateFormat,
+              ),
+            },
+          ]
         : [];
     }),
   );

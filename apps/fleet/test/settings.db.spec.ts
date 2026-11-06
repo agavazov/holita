@@ -13,7 +13,8 @@ import { createTestDatabase } from './test-database.js';
 
 const tenantId = randomUUID();
 const now = new Date('2026-10-17T21:30:00.000Z');
-const fields = 'timeZone distanceUnit volumeUnit lowFuelPct notReportingHours speedLimitKph';
+const fields =
+  'timeZone dateFormat distanceUnit volumeUnit lowFuelPct notReportingHours speedLimitKph notificationRetentionDays';
 const read = `{fleetSettings{${fields}}}`;
 const update = `mutation($input:UpdateFleetSettingsInput!){updateFleetSettings(input:$input){${fields}}}`;
 
@@ -75,12 +76,14 @@ describe('Fleet settings persistence and scoped calculation with PostgreSQL', ()
     expect(await database.client.fleetSettings.count()).toBe(0);
     expect(requireBranch).not.toHaveBeenCalled();
     const input: UpdateFleetSettingsInput = {
-      timeZone: 'Europe/Bucharest',
+      timeZone: 'America/New_York',
+      dateFormat: 'DD_MM_YYYY',
       distanceUnit: 'MI',
       volumeUnit: 'US_GALLON',
       lowFuelPct: 50,
       notReportingHours: 168,
       speedLimitKph: 130,
+      notificationRetentionDays: 365,
     };
     expect(await query(update, { input }, savedBranch)).toEqual({
       data: { updateFleetSettings: input },
@@ -109,6 +112,44 @@ describe('Fleet settings persistence and scoped calculation with PostgreSQL', ()
     expect(
       await database.client.fleetSettings.count({ where: { tenantId, branchId: savedBranch } }),
     ).toBe(1);
+
+    // All date orders, non-European IANA zones and retention limits remain Branch preferences.
+    const preferences: Pick<
+      UpdateFleetSettingsInput,
+      'dateFormat' | 'timeZone' | 'notificationRetentionDays'
+    >[] = [
+      {
+        dateFormat: 'DD_DOT_MM_DOT_YYYY',
+        timeZone: 'Asia/Kathmandu',
+        notificationRetentionDays: 1,
+      },
+      { dateFormat: 'YYYY_MM_DD', timeZone: 'Pacific/Chatham', notificationRetentionDays: 365 },
+      { dateFormat: 'DD_MM_YYYY', timeZone: 'UTC', notificationRetentionDays: 7 },
+    ];
+    for (const preference of preferences) {
+      const configured = { ...replacement, ...preference };
+      expect(await query(update, { input: configured }, savedBranch)).toEqual({
+        data: { updateFleetSettings: configured },
+      });
+      expect(await query(read, {}, savedBranch)).toEqual({
+        data: { fleetSettings: configured },
+      });
+      expect(await query(read, {}, savedBranch, randomUUID())).toEqual({
+        data: { fleetSettings: defaultFleetSettings() },
+      });
+    }
+    for (const { path, value, code } of [
+      { path: 'notificationRetentionDays', value: 0, code: 'OUT_OF_RANGE' },
+      { path: 'notificationRetentionDays', value: 366, code: 'OUT_OF_RANGE' },
+      { path: 'timeZone', value: 'Not/AZone', code: 'UNSUPPORTED_VALUE' },
+      { path: 'timeZone', value: '+02:00', code: 'UNSUPPORTED_VALUE' },
+    ]) {
+      expect(
+        await query(update, { input: { ...replacement, [path]: value } }, savedBranch),
+      ).toMatchObject({
+        errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path, code }] } }],
+      });
+    }
 
     // A Branch that Core rejects persists nothing.
     const rejectedBranch = randomUUID();

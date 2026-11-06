@@ -4,6 +4,7 @@ import { routeAt, StoryApp, type StoryFixtures } from '../../../../storybook/sto
 import { AdminWorkspace } from '../../../workspace/admin-workspace';
 import { FleetWorkspace } from '../fleet-workspace';
 import { GeneralSettingsPage } from './general-settings-page';
+import { GeneralSettingsView, type GeneralSettings } from './general-settings-view';
 
 const meta: Meta = {
   title: 'Admin/Settings/General',
@@ -36,3 +37,28 @@ export const ReadError: Story = {
     } satisfies StoryFixtures,
   },
 };
+
+function preferences(dateFormat: GeneralSettings['dateFormat'], timeZone: string): Story {
+  const settings: GeneralSettings = {
+    name: 'Discordia',
+    timeZone,
+    dateFormat,
+    distanceUnit: 'km',
+    volumeUnit: 'l',
+    lowFuelPct: 12,
+    notReportingHours: 48,
+    speedLimitKph: 90,
+    notificationRetentionDays: 7,
+  };
+  return {
+    render: () => ({
+      props: { settings },
+      moduleMetadata: { imports: [GeneralSettingsView] },
+      template: '<holita-general-settings-view branchName="Discordia" [settings]="settings" />',
+    }),
+  };
+}
+
+export const IsoDate: Story = preferences('YYYY_MM_DD', 'Europe/Sofia');
+export const DayFirstDashes: Story = preferences('DD_MM_YYYY', 'America/New_York');
+export const DayFirstDots: Story = preferences('DD_DOT_MM_DOT_YYYY', 'Asia/Kathmandu');

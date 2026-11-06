@@ -1,5 +1,7 @@
 fragment AdminFleetSettings on FleetSettings {
   timeZone
+  dateFormat
+  notificationRetentionDays
   distanceUnit
   volumeUnit
   lowFuelPct

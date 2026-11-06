@@ -1,6 +1,11 @@
 import type { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import type { Language } from '../../i18n/messages';
-import { formatDateOnly, formatNumber } from '../format/format';
+import {
+  defaultDateFormat,
+  type FleetDateFormat,
+  formatDateOnly,
+  formatNumber,
+} from '../format/format';
 import { toDateOnly } from '../format/zoned-time';
 import { interpolate, uiMessages } from '../i18n/messages';
 
@@ -160,6 +165,7 @@ export function requireOneOf(first: string, second: string): ValidatorFn {
 export function validationMessage(
   errors: ValidationErrors | null | undefined,
   language: Language,
+  dateFormat: FleetDateFormat = defaultDateFormat,
 ): string | null {
   if (!errors) {
     return null;
@@ -174,7 +180,7 @@ export function validationMessage(
       return formatNumber(item, language, { fraction: 3 });
     }
     if (typeof item === 'string') {
-      return dateOnly.test(item) ? formatDateOnly(item, language) : item;
+      return dateOnly.test(item) ? formatDateOnly(item, language, dateFormat) : item;
     }
     return '';
   };

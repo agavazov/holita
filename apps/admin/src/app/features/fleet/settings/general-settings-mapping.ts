@@ -9,6 +9,8 @@ import type { GeneralSettings, GeneralSettingsField } from './general-settings-v
 export const generalSettingsFields = [
   'name',
   'timeZone',
+  'dateFormat',
+  'notificationRetentionDays',
   'distanceUnit',
   'volumeUnit',
   'lowFuelPct',
@@ -16,7 +18,6 @@ export const generalSettingsFields = [
   'speedLimitKph',
 ] as const satisfies readonly GeneralSettingsField[];
 
-/** Notification switches have no provider or persistence contract. */
 export function generalSettingsForm(
   settings: AdminFleetSettingsFragment,
   name: string,
@@ -24,20 +25,21 @@ export function generalSettingsForm(
   return {
     name,
     timeZone: settings.timeZone,
+    dateFormat: settings.dateFormat,
+    notificationRetentionDays: settings.notificationRetentionDays,
     distanceUnit: settings.distanceUnit === 'MI' ? 'mi' : 'km',
     volumeUnit: settings.volumeUnit === 'US_GALLON' ? 'gal' : 'l',
     lowFuelPct: settings.lowFuelPct,
     notReportingHours: settings.notReportingHours,
     speedLimitKph: settings.speedLimitKph,
-    criticalAlerts: false,
-    dailySummary: false,
-    documentReminders: false,
   };
 }
 
 export function generalSettingsInput(form: GeneralSettings): UpdateFleetSettingsInput {
   return {
     timeZone: form.timeZone,
+    dateFormat: form.dateFormat,
+    notificationRetentionDays: form.notificationRetentionDays,
     distanceUnit: form.distanceUnit === 'mi' ? 'MI' : 'KM',
     volumeUnit: form.volumeUnit === 'gal' ? 'US_GALLON' : 'LITRE',
     lowFuelPct: form.lowFuelPct,

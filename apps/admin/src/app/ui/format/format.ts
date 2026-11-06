@@ -1,8 +1,46 @@
+import type { AdminFleetSettingsFragment } from '../../../generated/graphql/operations';
 import type { Language } from '../../i18n/messages';
 import { interpolate, uiMessages } from '../i18n/messages';
 
 /** Display for an absent value; `0` is always a number. */
 export const emptyValue = '—';
+
+export type FleetDateFormat = AdminFleetSettingsFragment['dateFormat'];
+export const defaultDateFormat: FleetDateFormat = 'YYYY_MM_DD';
+export const supportedDateFormats: readonly FleetDateFormat[] = [
+  'YYYY_MM_DD',
+  'DD_MM_YYYY',
+  'DD_DOT_MM_DOT_YYYY',
+];
+
+export const dateFormatLabels: Readonly<Record<FleetDateFormat, string>> = {
+  YYYY_MM_DD: 'YYYY-MM-DD',
+  DD_MM_YYYY: 'DD-MM-YYYY',
+  DD_DOT_MM_DOT_YYYY: 'DD.MM.YYYY',
+};
+
+/** PrimeNG uses yy for a four-digit year; all picker callers share this mapping. */
+export function datePickerFormat(dateFormat: FleetDateFormat = defaultDateFormat): string {
+  return { YYYY_MM_DD: 'yy-mm-dd', DD_MM_YYYY: 'dd-mm-yy', DD_DOT_MM_DOT_YYYY: 'dd.mm.yy' }[
+    dateFormat
+  ];
+}
+
+function numericDate(
+  year: string,
+  month: string,
+  day: string,
+  dateFormat: FleetDateFormat,
+): string {
+  switch (dateFormat) {
+    case 'YYYY_MM_DD':
+      return `${year}-${month}-${day}`;
+    case 'DD_MM_YYYY':
+      return `${day}-${month}-${year}`;
+    case 'DD_DOT_MM_DOT_YYYY':
+      return `${day}.${month}.${year}`;
+  }
+}
 
 const locales: Readonly<Record<Language, string>> = { bg: 'bg-BG', en: 'en-GB' };
 
@@ -55,12 +93,13 @@ function validDate(iso: string | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/** `dd.MM.yyyy HH:mm` (bg) or `dd MMM yyyy, HH:mm` (en), optionally with seconds. */
+/** Chosen numeric date order and 24-hour Branch wall time, optionally with seconds. */
 export function formatDateTime(
   iso: string | null | undefined,
   language: Language,
   timeZone: string,
   seconds = false,
+  dateFormat: FleetDateFormat = defaultDateFormat,
 ): string {
   const date = validDate(iso);
   if (!date) {
@@ -69,7 +108,7 @@ export function formatDateTime(
   const value = parts(date, language, {
     timeZone,
     year: 'numeric',
-    month: language === 'bg' ? '2-digit' : 'short',
+    month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
@@ -78,7 +117,7 @@ export function formatDateTime(
   });
   const { day = '', month = '', year = '', hour = '', minute = '' } = value;
   const time = `${hour}:${minute}${seconds ? `:${value.second ?? ''}` : ''}`;
-  return language === 'bg' ? `${day}.${month}.${year} ${time}` : `${day} ${month} ${year}, ${time}`;
+  return `${numericDate(year, month, day, dateFormat)} ${time}`;
 }
 
 /** Hours and minutes in the Branch time zone; absent values show "—". */
@@ -101,18 +140,64 @@ export function formatTime(
 }
 
 /** A calendar date (`YYYY-MM-DD`) without time-zone conversion. */
-export function formatDateOnly(text: string | null | undefined, language: Language): string {
+export function formatDateOnly(
+  text: string | null | undefined,
+  _language: Language,
+  dateFormat: FleetDateFormat = defaultDateFormat,
+): string {
   const match = text ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(text) : null;
   if (!match) {
     return emptyValue;
   }
   const [, year = '', month = '', day = ''] = match;
-  if (language === 'bg') {
-    return `${day}.${month}.${year}`;
+  return numericDate(year, month, day, dateFormat);
+}
+
+/** Exact UTC instant for a title/tooltip, normalized with seconds and milliseconds. */
+export function formatUtcInstant(iso: string | null | undefined): string {
+  return validDate(iso)?.toISOString() ?? emptyValue;
+}
+
+/** A table/read-value label and its exact UTC title must describe the same instant. */
+export function formatDateTimeCell(
+  iso: string | null | undefined,
+  language: Language,
+  timeZone: string,
+  seconds = false,
+  dateFormat: FleetDateFormat = defaultDateFormat,
+): { readonly text: string; readonly title: string } {
+  return {
+    text: formatDateTime(iso, language, timeZone, seconds, dateFormat),
+    title: formatUtcInstant(iso),
+  };
+}
+
+/** Calendar-date range; endpoints retain their date-only meaning in every Branch zone. */
+export function formatDateRange(
+  from: string | null | undefined,
+  to: string | null | undefined,
+  language: Language,
+  dateFormat: FleetDateFormat = defaultDateFormat,
+): string {
+  if (!from && !to) {
+    return emptyValue;
   }
-  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-  const { month: name = '' } = parts(date, language, { timeZone: 'UTC', month: 'short' });
-  return `${day} ${name} ${year}`;
+  return `${formatDateOnly(from, language, dateFormat)} – ${formatDateOnly(to, language, dateFormat)}`;
+}
+
+/** Instant range in one Branch time zone, using the same numeric order at both endpoints. */
+export function formatDateTimeRange(
+  from: string | null | undefined,
+  to: string | null | undefined,
+  language: Language,
+  timeZone: string,
+  seconds = false,
+  dateFormat: FleetDateFormat = defaultDateFormat,
+): string {
+  if (!from && !to) {
+    return emptyValue;
+  }
+  return `${formatDateTime(from, language, timeZone, seconds, dateFormat)} – ${formatDateTime(to, language, timeZone, seconds, dateFormat)}`;
 }
 
 /** "преди 12 мин" / "12 min ago" relative to an explicit reference instant (telemetry: asOf). */

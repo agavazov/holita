@@ -1,6 +1,11 @@
 import type { Language } from '../../i18n/messages';
 import type { ValidationErrors } from '@angular/forms';
-import { formatDateOnly, formatNumber } from '../format/format';
+import {
+  defaultDateFormat,
+  type FleetDateFormat,
+  formatDateOnly,
+  formatNumber,
+} from '../format/format';
 import { interpolate, uiMessages } from '../i18n/messages';
 
 export type FilterFieldType = 'text' | 'enum' | 'number' | 'date' | 'boolean';
@@ -166,7 +171,12 @@ export function filterValueErrors(
   return null;
 }
 
-function formatValue(field: FilterField, value: string, language: Language): string {
+function formatValue(
+  field: FilterField,
+  value: string,
+  language: Language,
+  dateFormat: FleetDateFormat,
+): string {
   if (field.type === 'number') {
     const number = formatNumber(
       Number(value),
@@ -180,7 +190,7 @@ function formatValue(field: FilterField, value: string, language: Language): str
     return field.unit ? `${number}\u00a0${field.unit}` : number;
   }
   if (field.type === 'date') {
-    return formatDateOnly(value, language);
+    return formatDateOnly(value, language, dateFormat);
   }
   if (field.type === 'enum') {
     return field.options?.find((option) => option.value === value)?.label ?? value;
@@ -193,10 +203,11 @@ export function describeCondition(
   field: FilterField,
   condition: FilterCondition,
   language: Language,
+  dateFormat: FleetDateFormat = defaultDateFormat,
 ): string {
   const text = uiMessages[language].filters;
   const operator = text.operators[condition.operator];
-  const values = condition.values.map((value) => formatValue(field, value, language));
+  const values = condition.values.map((value) => formatValue(field, value, language, dateFormat));
   switch (operandsOf(condition.operator)) {
     case 'none':
       return field.type === 'boolean'

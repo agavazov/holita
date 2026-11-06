@@ -2,17 +2,29 @@ import { computed, inject, InjectionToken, signal, type Signal } from '@angular/
 import type { AdminFleetSettingsFragment } from '../../../generated/graphql/operations';
 import { UI_LANGUAGE } from '../ui-language';
 import { uiMessages } from '../i18n/messages';
-import { formatNumber } from './format';
+import {
+  datePickerFormat,
+  defaultDateFormat,
+  formatDateOnly,
+  formatDateRange,
+  formatDateTime,
+  formatDateTimeCell,
+  formatDateTimeRange,
+  formatNumber,
+  formatTime,
+  formatUtcInstant,
+} from './format';
 
 export type FleetDisplayPreferences = Readonly<
   Pick<
     AdminFleetSettingsFragment,
-    'timeZone' | 'distanceUnit' | 'volumeUnit' | 'lowFuelPct' | 'notReportingHours'
+    'timeZone' | 'dateFormat' | 'distanceUnit' | 'volumeUnit' | 'lowFuelPct' | 'notReportingHours'
   >
 >;
 
 export const defaultFleetDisplay: FleetDisplayPreferences = {
   timeZone: 'Europe/Sofia',
+  dateFormat: defaultDateFormat,
   distanceUnit: 'KM',
   volumeUnit: 'LITRE',
   lowFuelPct: 12,
@@ -69,6 +81,37 @@ export function injectFleetFormat() {
   }
   return {
     preferences,
+    datePickerFormat: computed(() => datePickerFormat(preferences().dateFormat)),
+    dateTime: (value: string | null | undefined, seconds = false) =>
+      formatDateTime(value, language(), preferences().timeZone, seconds, preferences().dateFormat),
+    dateOnly: (value: string | null | undefined) =>
+      formatDateOnly(value, language(), preferences().dateFormat),
+    dateRange: (from: string | null | undefined, to: string | null | undefined) =>
+      formatDateRange(from, to, language(), preferences().dateFormat),
+    dateTimeRange: (
+      from: string | null | undefined,
+      to: string | null | undefined,
+      seconds = false,
+    ) =>
+      formatDateTimeRange(
+        from,
+        to,
+        language(),
+        preferences().timeZone,
+        seconds,
+        preferences().dateFormat,
+      ),
+    dateTimeCell: (value: string | null | undefined, seconds = false) =>
+      formatDateTimeCell(
+        value,
+        language(),
+        preferences().timeZone,
+        seconds,
+        preferences().dateFormat,
+      ),
+    time: (value: string | null | undefined) =>
+      formatTime(value, language(), preferences().timeZone),
+    utc: formatUtcInstant,
     distanceUnit,
     speedUnit,
     volumeUnit,

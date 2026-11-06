@@ -38,7 +38,6 @@ import { settingsText } from './i18n/messages';
       [retainDraft]="retainDraft()"
       [saveError]="failure()"
       [fieldErrors]="fieldErrors()"
-      [notificationsUnavailable]="true"
       (save)="save($event)"
       (discarded)="discard()"
     />

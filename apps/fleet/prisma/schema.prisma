@@ -21,18 +21,27 @@ enum FleetVolumeUnit {
   @@map("fleetVolumeUnit")
 }
 
+enum FleetDateFormat {
+  YYYY_MM_DD         @map("YYYY-MM-DD")
+  DD_MM_YYYY         @map("DD-MM-YYYY")
+  DD_DOT_MM_DOT_YYYY @map("DD.MM.YYYY")
+  @@map("fleetDateFormat")
+}
+
 model FleetSettings {
-  id                String            @id @default(uuid()) @db.Uuid
-  tenantId          String            @db.Uuid
-  branchId          String            @db.Uuid
-  timeZone          String            @default("Europe/Sofia") @db.VarChar(64)
-  distanceUnit      FleetDistanceUnit @default(KM)
-  volumeUnit        FleetVolumeUnit   @default(LITRE)
-  lowFuelPct        Int               @default(12)
-  notReportingHours Int               @default(48)
-  speedLimitKph     Int               @default(90)
-  createdAt         DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime          @updatedAt @db.Timestamptz(3)
+  id                        String            @id @default(uuid()) @db.Uuid
+  tenantId                  String            @db.Uuid
+  branchId                  String            @db.Uuid
+  timeZone                  String            @default("Europe/Sofia") @db.VarChar(64)
+  dateFormat                FleetDateFormat   @default(YYYY_MM_DD)
+  distanceUnit              FleetDistanceUnit @default(KM)
+  volumeUnit                FleetVolumeUnit   @default(LITRE)
+  lowFuelPct                Int               @default(12)
+  notReportingHours         Int               @default(48)
+  speedLimitKph             Int               @default(90)
+  notificationRetentionDays Int               @default(7)
+  createdAt                 DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime          @updatedAt @db.Timestamptz(3)
 
   @@unique([tenantId, branchId])
   @@map("fleetSettings")

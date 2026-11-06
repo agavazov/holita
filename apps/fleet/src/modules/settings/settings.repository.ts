@@ -6,11 +6,13 @@ import type { FleetScope } from '../../validation.js';
 
 const settingsSelect = {
   timeZone: true,
+  dateFormat: true,
   distanceUnit: true,
   volumeUnit: true,
   lowFuelPct: true,
   notReportingHours: true,
   speedLimitKph: true,
+  notificationRetentionDays: true,
 } satisfies Prisma.FleetSettingsSelect;
 
 @Injectable()

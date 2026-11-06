@@ -242,7 +242,7 @@
             (keydown.escape)="calendarEscape($event)"
             [inputId]="id + '-value'"
             formControlName="fromDate"
-            dateFormat="yy-mm-dd"
+            [dateFormat]="format.datePickerFormat()"
             appendTo="body"
             [fluid]="true"
           />
@@ -257,7 +257,7 @@
               (keydown.escape)="calendarEscape($event)"
               [inputId]="id + '-from'"
               formControlName="fromDate"
-              dateFormat="yy-mm-dd"
+              [dateFormat]="format.datePickerFormat()"
               appendTo="body"
               [fluid]="true"
             />
@@ -269,7 +269,7 @@
               (keydown.escape)="calendarEscape($event)"
               [inputId]="id + '-to'"
               formControlName="toDate"
-              dateFormat="yy-mm-dd"
+              [dateFormat]="format.datePickerFormat()"
               appendTo="body"
               [fluid]="true"
             />

@@ -8,20 +8,32 @@ enum FleetVolumeUnit {
   US_GALLON
 }
 
+enum FleetDateFormat {
+  "YYYY-MM-DD."
+  YYYY_MM_DD
+  "DD-MM-YYYY."
+  DD_MM_YYYY
+  "DD.MM.YYYY."
+  DD_DOT_MM_DOT_YYYY
+}
+
 "Branch preferences; telemetry measurements remain stored and returned in canonical km, km/h and litres."
 type FleetSettings {
   timeZone: String!
+  dateFormat: FleetDateFormat!
   distanceUnit: FleetDistanceUnit!
   volumeUnit: FleetVolumeUnit!
   lowFuelPct: Int!
   notReportingHours: Int!
   "Stored reference only; changing it does not generate alerts or send hardware commands."
   speedLimitKph: Int!
+  notificationRetentionDays: Int!
 }
 
-"Full replacement. Supported zones: Europe/Sofia, Europe/Bucharest, Europe/Athens and Europe/Belgrade."
+"Full replacement. Time zones are validated IANA identifiers."
 input UpdateFleetSettingsInput {
   timeZone: String!
+  dateFormat: FleetDateFormat! = YYYY_MM_DD
   distanceUnit: FleetDistanceUnit!
   volumeUnit: FleetVolumeUnit!
   "1–50."
@@ -30,6 +42,8 @@ input UpdateFleetSettingsInput {
   notReportingHours: Int!
   "30–130 km/h."
   speedLimitKph: Int!
+  "1–365 days; applies to in-app notifications only, preserving telemetry and command audit."
+  notificationRetentionDays: Int! = 7
 }
 
 extend type Query {

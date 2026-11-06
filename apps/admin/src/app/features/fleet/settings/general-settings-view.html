@@ -47,21 +47,47 @@
         <holita-form-field
           [label]="text().timeZone"
           controlId="settings-timeZone"
+          [hint]="timeZoneHint()"
+          [attr.title]="previewUtc()"
           [error]="errorOf('timeZone')"
         >
           <p-select
             inputId="settings-timeZone"
             formControlName="timeZone"
-            [options]="timeZones"
+            [options]="timeZones()"
             optionLabel="label"
             optionValue="value"
+            [filter]="true"
+            filterBy="value"
+            [filterPlaceholder]="text().searchTimeZone"
+            [ariaFilterLabel]="text().searchTimeZone"
+            [fluid]="true"
             appendTo="body"
             [ariaLabel]="text().timeZone"
             [invalid]="!!errorOf('timeZone')"
             [pt]="selectPt().timeZone"
           />
         </holita-form-field>
-        <div></div>
+        <holita-form-field
+          [label]="text().dateFormat"
+          controlId="settings-dateFormat"
+          [hint]="dateFormatHint()"
+          [error]="errorOf('dateFormat')"
+          [attr.title]="previewUtc()"
+        >
+          <p-select
+            inputId="settings-dateFormat"
+            formControlName="dateFormat"
+            [options]="dateFormats"
+            [fluid]="true"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            [ariaLabel]="text().dateFormat"
+            [invalid]="!!errorOf('dateFormat')"
+            [pt]="selectPt().dateFormat"
+          />
+        </holita-form-field>
         <holita-form-field
           [label]="text().distanceUnit"
           controlId="settings-distanceUnit"
@@ -154,48 +180,22 @@
     <section class="app-card app-settings-section">
       <header>
         <h2>{{ text().notifications }}</h2>
-        @if (notificationsUnavailable()) {
-          <p-tag severity="info" [value]="text().notificationsDemoLabel" />
-          <p>{{ text().notificationsUnavailable }}</p>
-        } @else {
-          <p>{{ text().notificationsHint }}</p>
-        }
+        <p>{{ text().notificationsHint }}</p>
       </header>
       <div class="app-form-grid">
         <holita-form-field
-          class="app-form-grid--wide"
-          [label]="text().criticalAlerts"
-          controlId="settings-criticalAlerts"
-          [hint]="text().criticalAlertsHint"
+          [label]="text().notificationRetentionDays"
+          controlId="settings-notificationRetentionDays"
+          [required]="true"
+          [hint]="text().notificationRetentionHint"
+          [error]="errorOf('notificationRetentionDays')"
         >
-          <p-toggleswitch
-            inputId="settings-criticalAlerts"
-            formControlName="criticalAlerts"
-            [ariaLabel]="text().criticalAlerts"
-          />
-        </holita-form-field>
-        <holita-form-field
-          class="app-form-grid--wide"
-          [label]="text().dailySummary"
-          controlId="settings-dailySummary"
-          [hint]="text().dailySummaryHint"
-        >
-          <p-toggleswitch
-            inputId="settings-dailySummary"
-            formControlName="dailySummary"
-            [ariaLabel]="text().dailySummary"
-          />
-        </holita-form-field>
-        <holita-form-field
-          class="app-form-grid--wide"
-          [label]="text().documentReminders"
-          controlId="settings-documentReminders"
-          [hint]="text().documentRemindersHint"
-        >
-          <p-toggleswitch
-            inputId="settings-documentReminders"
-            formControlName="documentReminders"
-            [ariaLabel]="text().documentReminders"
+          <p-inputnumber
+            inputId="settings-notificationRetentionDays"
+            formControlName="notificationRetentionDays"
+            [fluid]="true"
+            [invalid]="!!errorOf('notificationRetentionDays')"
+            [pt]="numberPt().notificationRetentionDays"
           />
         </holita-form-field>
       </div>

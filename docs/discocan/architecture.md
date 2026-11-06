@@ -70,17 +70,19 @@ unknown codes retain the raw level/code.
 
 ### Branch settings
 
-`fleetSettings` returns defaults without inserting. `updateFleetSettings` replaces all six
+`fleetSettings` returns defaults without inserting. `updateFleetSettings` replaces all eight
 fields in the verified Tenant/Branch and checks the Branch through Core before upsert.
 
-| Field               | Default        | Accepted values                                                        |
-| ------------------- | -------------- | ---------------------------------------------------------------------- |
-| `timeZone`          | `Europe/Sofia` | `Europe/Sofia`, `Europe/Bucharest`, `Europe/Athens`, `Europe/Belgrade` |
-| `distanceUnit`      | `KM`           | `KM`, `MI`                                                             |
-| `volumeUnit`        | `LITRE`        | `LITRE`, `US_GALLON`                                                   |
-| `lowFuelPct`        | `12`           | Integer 1–50                                                           |
-| `notReportingHours` | `48`           | Integer 1–168                                                          |
-| `speedLimitKph`     | `90`           | Integer 30–130                                                         |
+| Field                       | Default        | Accepted values                                                                    |
+| --------------------------- | -------------- | ---------------------------------------------------------------------------------- |
+| `timeZone`                  | `Europe/Sofia` | Any valid IANA time zone                                                           |
+| `dateFormat`                | `YYYY_MM_DD`   | `YYYY_MM_DD`, `DD_MM_YYYY`, `DD_DOT_MM_DOT_YYYY` (numeric date order in the admin) |
+| `notificationRetentionDays` | `7`            | Integer 1–365                                                                      |
+| `distanceUnit`              | `KM`           | `KM`, `MI`                                                                         |
+| `volumeUnit`                | `LITRE`        | `LITRE`, `US_GALLON`                                                               |
+| `lowFuelPct`                | `12`           | Integer 1–50                                                                       |
+| `notReportingHours`         | `48`           | Integer 1–168                                                                      |
+| `speedLimitKph`             | `90`           | Integer 30–130                                                                     |
 
 `lowFuelPct` and `notReportingHours` affect server-derived facts and counts against the
 Branch data clock. `FleetClock.now()` supplies the business date in the configured zone.

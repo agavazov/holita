@@ -9,6 +9,8 @@ import { fixtureError, graphqlFixture, type WithTypename } from './graphql-fixtu
 export const fixtureFleetSettings: WithTypename<AdminFleetSettingsFragment> = {
   __typename: 'FleetSettings',
   timeZone: 'Europe/Sofia',
+  dateFormat: 'YYYY_MM_DD',
+  notificationRetentionDays: 7,
   distanceUnit: 'KM',
   volumeUnit: 'LITRE',
   lowFuelPct: 12,
@@ -23,15 +25,28 @@ graphqlFixture(AdminUpdateFleetSettingsDocument, (variables) => {
   const input = variables.object('input');
   const distanceUnit = input.string('distanceUnit');
   const volumeUnit = input.string('volumeUnit');
+  const dateFormat = input.string('dateFormat') ?? fixtureFleetSettings.dateFormat;
   if (
     (distanceUnit !== 'KM' && distanceUnit !== 'MI') ||
     (volumeUnit !== 'LITRE' && volumeUnit !== 'US_GALLON')
   ) {
     throw fixtureError('BAD_USER_INPUT', 'Unsupported units.');
   }
+  if (
+    dateFormat !== 'YYYY_MM_DD' &&
+    dateFormat !== 'DD_MM_YYYY' &&
+    dateFormat !== 'DD_DOT_MM_DOT_YYYY'
+  ) {
+    throw fixtureError('BAD_USER_INPUT', 'Unsupported date format.');
+  }
   const saved: WithTypename<AdminFleetSettingsFragment> = {
     ...fixtureFleetSettings,
     timeZone: input.requiredString('timeZone'),
+    dateFormat,
+    notificationRetentionDays: input.int(
+      'notificationRetentionDays',
+      fixtureFleetSettings.notificationRetentionDays,
+    ),
     distanceUnit,
     volumeUnit,
     lowFuelPct: input.int('lowFuelPct', fixtureFleetSettings.lowFuelPct),

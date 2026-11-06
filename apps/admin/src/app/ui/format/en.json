@@ -1,0 +1,13 @@
+{
+  "heading": "Dates and Branch time",
+  "format": "Date format",
+  "zone": "Time zone",
+  "instant": "Date and time",
+  "calendarDate": "Calendar date",
+  "range": "Date range",
+  "utc": "Exact UTC instant",
+  "editor": "Branch date and time",
+  "invalid": "Enter a valid date and time. This local time may be skipped by daylight saving time.",
+  "help": "Enter the displayed numeric format with 24-hour time. Seconds and milliseconds are preserved.",
+  "empty": "Absent value"
+}

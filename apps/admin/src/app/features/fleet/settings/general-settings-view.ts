@@ -22,8 +22,18 @@ import { InputNumber } from 'primeng/inputnumber';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
-import { ToggleSwitch } from 'primeng/toggleswitch';
 import { Tag } from 'primeng/tag';
+import { map, timer } from 'rxjs';
+import type { FleetDisplayPreferences } from '../../../ui/format/fleet-format';
+import {
+  dateFormatLabels,
+  defaultDateFormat,
+  formatDateTime,
+  formatTime,
+  formatUtcInstant,
+  supportedDateFormats,
+} from '../../../ui/format/format';
+import { WALL_CLOCK } from '../../../ui/clock';
 import { confirmDialogPt, confirmDiscard } from '../../../ui/confirm';
 import { FormField } from '../../../ui/form-field/form-field';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
@@ -38,27 +48,32 @@ import { settingsText } from './i18n/messages';
 export interface GeneralSettings {
   readonly name: string;
   readonly timeZone: string;
+  readonly dateFormat: FleetDisplayPreferences['dateFormat'];
+  readonly notificationRetentionDays: number;
   readonly distanceUnit: 'km' | 'mi';
   readonly volumeUnit: 'l' | 'gal';
   readonly lowFuelPct: number;
   readonly notReportingHours: number;
   readonly speedLimitKph: number;
-  readonly criticalAlerts: boolean;
-  readonly dailySummary: boolean;
-  readonly documentReminders: boolean;
 }
 
 export type GeneralSettingsField = keyof GeneralSettings;
 
-const numberFields = ['lowFuelPct', 'notReportingHours', 'speedLimitKph'] as const;
+const numberFields = [
+  'lowFuelPct',
+  'notReportingHours',
+  'speedLimitKph',
+  'notificationRetentionDays',
+] as const;
 const fieldOrder: readonly GeneralSettingsField[] = [
   'name',
   'timeZone',
+  'dateFormat',
   'distanceUnit',
   'volumeUnit',
   ...numberFields,
 ];
-const timeZones = ['Europe/Sofia', 'Europe/Bucharest', 'Europe/Athens', 'Europe/Belgrade'];
+const timeZones = ['UTC', ...Intl.supportedValuesOf('timeZone')];
 
 /**
  * A settings page form: titled cards with their fields, and a save bar that sticks to the bottom
@@ -74,7 +89,6 @@ const timeZones = ['Europe/Sofia', 'Europe/Bucharest', 'Europe/Athens', 'Europe/
     InputText,
     Message,
     Select,
-    ToggleSwitch,
     Tag,
     FormField,
     PageHeader,
@@ -87,7 +101,6 @@ const timeZones = ['Europe/Sofia', 'Europe/Bucharest', 'Europe/Athens', 'Europe/
 })
 export class GeneralSettingsView {
   readonly demo = input(false);
-  readonly notificationsUnavailable = input(false);
   readonly branchName = input.required<string>();
   readonly settings = input<GeneralSettings | null>(null);
   readonly state = input<'loading' | 'error' | 'ready'>('ready');
@@ -102,6 +115,10 @@ export class GeneralSettingsView {
   readonly retry = output();
 
   private readonly language = inject(UI_LANGUAGE);
+  private readonly wallClock = inject(WALL_CLOCK);
+  private readonly now = toSignal(timer(0, 30_000).pipe(map(() => this.wallClock())), {
+    initialValue: this.wallClock(),
+  });
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
   private readonly header = viewChild.required(PageHeader);
@@ -112,10 +129,11 @@ export class GeneralSettingsView {
   protected readonly eyebrow = computed(() => this.catalog().eyebrow);
   protected readonly text = computed(() => this.catalog().general);
   protected readonly confirmPt = computed(() => confirmDialogPt(this.language()));
-  protected readonly description = computed(() =>
-    interpolate(this.text().description, { branch: this.branchName() }),
-  );
-  protected readonly timeZones = timeZones.map((zone) => ({ value: zone, label: zone }));
+  protected readonly description = computed(() => this.text().description);
+  protected readonly dateFormats = supportedDateFormats.map((value) => ({
+    value,
+    label: dateFormatLabels[value],
+  }));
   protected readonly distanceUnits = computed(() => [
     { value: 'km', label: this.text().kilometres },
     { value: 'mi', label: this.text().miles },
@@ -131,6 +149,9 @@ export class GeneralSettingsView {
       validators: textValidator(80, { required: true }),
     }),
     timeZone: new FormControl('Europe/Sofia', { nonNullable: true }),
+    dateFormat: new FormControl<FleetDisplayPreferences['dateFormat']>(defaultDateFormat, {
+      nonNullable: true,
+    }),
     distanceUnit: new FormControl<'km' | 'mi'>('km', { nonNullable: true }),
     volumeUnit: new FormControl<'l' | 'gal'>('l', { nonNullable: true }),
     lowFuelPct: new FormControl<number | null>(null, integerValidator(1, 50, { required: true })),
@@ -142,12 +163,43 @@ export class GeneralSettingsView {
       null,
       integerValidator(30, 130, { required: true }),
     ),
-    criticalAlerts: new FormControl(true, { nonNullable: true }),
-    dailySummary: new FormControl(false, { nonNullable: true }),
-    documentReminders: new FormControl(true, { nonNullable: true }),
+    notificationRetentionDays: new FormControl<number | null>(
+      7,
+      integerValidator(1, 365, { required: true }),
+    ),
   });
   private readonly events = toSignal(this.form.events);
   private submitted = false;
+
+  protected readonly timeZones = computed(() => {
+    this.events();
+    const instant = new Date(this.now()).toISOString();
+    // Preserve a valid stored IANA alias even when Intl lists only its canonical name.
+    const zones = [...new Set([...timeZones, this.form.controls.timeZone.value])].sort();
+    return zones.map((zone) => ({
+      value: zone,
+      label: `${zone} · ${formatTime(instant, this.language(), zone)}`,
+    }));
+  });
+  protected readonly preview = computed(() => {
+    this.events();
+    return formatDateTime(
+      new Date(this.now()).toISOString(),
+      this.language(),
+      this.form.controls.timeZone.value,
+      false,
+      this.form.controls.dateFormat.value,
+    );
+  });
+  protected readonly previewUtc = computed(() =>
+    formatUtcInstant(new Date(this.now()).toISOString()),
+  );
+  protected readonly dateFormatHint = computed(() =>
+    interpolate(this.text().dateFormatPreview, { value: this.preview() }),
+  );
+  protected readonly timeZoneHint = computed(() =>
+    interpolate(this.text().timeZonePreview, { value: this.preview() }),
+  );
 
   protected readonly dirty = computed(() => {
     this.events();
@@ -160,12 +212,22 @@ export class GeneralSettingsView {
       !!this.errorOf('notReportingHours'),
     ),
     speedLimitKph: innerInputPt('settings-speedLimitKph', !!this.errorOf('speedLimitKph')),
+    notificationRetentionDays: innerInputPt(
+      'settings-notificationRetentionDays',
+      !!this.errorOf('notificationRetentionDays'),
+    ),
   }));
   protected readonly selectPt = computed(() => ({
     timeZone: {
       label: {
         'aria-invalid': this.errorOf('timeZone') ? 'true' : undefined,
         'aria-describedby': 'settings-timeZone-hint settings-timeZone-error',
+      },
+    },
+    dateFormat: {
+      label: {
+        'aria-invalid': this.errorOf('dateFormat') ? 'true' : undefined,
+        'aria-describedby': 'settings-dateFormat-hint settings-dateFormat-error',
       },
     },
     distanceUnit: {
@@ -194,21 +256,12 @@ export class GeneralSettingsView {
     let locked = false;
     effect(() => {
       const busy = this.saving() || this.state() !== 'ready';
-      const unavailable = this.notificationsUnavailable();
       untracked(() => {
         if (busy) {
           this.form.disable();
         } else {
           if (locked) {
             this.form.enable();
-          }
-          for (const name of ['criticalAlerts', 'dailySummary', 'documentReminders'] as const) {
-            const control = this.form.controls[name];
-            if (unavailable) {
-              control.disable();
-            } else {
-              control.enable();
-            }
           }
           if (locked) {
             afterNextRender(
@@ -294,12 +347,13 @@ export class GeneralSettingsView {
     this.submitted = true;
     this.form.markAllAsTouched();
     const value = this.form.getRawValue();
-    const { lowFuelPct, notReportingHours, speedLimitKph } = value;
+    const { lowFuelPct, notReportingHours, speedLimitKph, notificationRetentionDays } = value;
     if (
       this.form.invalid ||
       lowFuelPct === null ||
       notReportingHours === null ||
-      speedLimitKph === null
+      speedLimitKph === null ||
+      notificationRetentionDays === null
     ) {
       afterNextRender(
         () => {
@@ -315,6 +369,7 @@ export class GeneralSettingsView {
       lowFuelPct,
       notReportingHours,
       speedLimitKph,
+      notificationRetentionDays,
     });
   }
 
