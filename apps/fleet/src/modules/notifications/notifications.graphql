@@ -1,0 +1,94 @@
+enum FleetNotificationSourceKind {
+  FLEET_ALERT
+  DIAGNOSTIC
+  ALARM
+  COMMAND
+}
+
+enum FleetNotificationCategory {
+  ALERT
+  DEVICE
+  COMMAND
+}
+
+enum FleetNotificationReadState {
+  ALL
+  UNREAD
+}
+
+"Structured source codes for client wording; no translated sentences."
+type FleetNotificationParameters {
+  eventKind: String
+  alertStatus: FleetAlertStatus
+  transition: String
+  troubleCode: String
+  diagnosticStatus: String
+  alarmCode: String
+  commandKind: String
+  commandStatus: String
+  reasonCode: String
+}
+
+type FleetNotification {
+  id: ID!
+  branchId: ID!
+  sourceKind: FleetNotificationSourceKind!
+  sourceKey: String!
+  category: FleetNotificationCategory!
+  severity: FleetEventSeverity!
+  occurredAt: DateTime!
+  createdAt: DateTime!
+  "Stable translation key; DIAGNOSTIC and ALARM describe recorded evidence."
+  wordingKey: String!
+  parameters: FleetNotificationParameters!
+  vehicleId: ID
+  deviceId: ID
+  alertId: ID
+  ermEventId: ID
+  commandRequestId: ID
+  "The verified user's receipt; null for unread entries and demo sessions."
+  readAt: DateTime
+}
+
+type FleetNotificationPage {
+  items: [FleetNotification!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+  "Whole-Branch unread count for the verified user, independent of filters and pagination. Demo sessions treat every entry as unread."
+  unreadCount: Int!
+}
+
+input FleetNotificationFilter {
+  readState: FleetNotificationReadState
+  categories: [FleetNotificationCategory!]
+}
+
+enum FleetNotificationSortField {
+  OCCURRED_AT
+  CREATED_AT
+}
+
+input FleetNotificationSort {
+  field: FleetNotificationSortField! = OCCURRED_AT
+  direction: FleetSortDirection! = DESC
+}
+
+extend type Query {
+  "Retained Branch feed. Search matches canonical wording keys and source keys; default order is occurredAt DESC, id DESC."
+  notifications(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    ids: [ID!]
+    filter: FleetNotificationFilter
+    sort: FleetNotificationSort
+  ): FleetNotificationPage!
+}
+
+extend type Mutation {
+  "Idempotent per-user receipt. Requires a verified signed-in user."
+  markNotificationRead(id: ID!): FleetNotification!
+  "Marks the current Branch feed read for the verified user; returns newly created receipt count."
+  markAllNotificationsRead: Int!
+}

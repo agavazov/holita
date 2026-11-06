@@ -12,6 +12,9 @@ import {
   type ErmProblemEvidence,
 } from '../src/integrations/erm/erm-dashboard.client.js';
 import type { Prisma } from '../src/generated/prisma/client.js';
+import type { RequestContext } from '../src/graphql/request-context.js';
+import { NotificationsService } from '../src/modules/notifications/notifications.service.js';
+import { NotificationSourcesRepository } from '../src/modules/notifications/notification-sources.repository.js';
 import { createTestDatabase } from './test-database.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
@@ -615,6 +618,39 @@ describe('Events and alert workflow with PostgreSQL', () => {
       resolvedAt: null,
       remark: null,
     });
+    const projectedTransitions = ['ACKNOWLEDGED', 'RESOLVED', 'REOPENED'];
+    const projected = await database.client.fleetNotification.findMany({
+      where: {
+        tenantId,
+        branchId,
+        alertId: id,
+        sourceKind: 'FLEET_ALERT',
+        sourceKey: {
+          in: projectedTransitions.map((value) => `${id}:${value}:${now.toISOString()}`),
+        },
+      },
+    });
+    expect(projected).toHaveLength(3);
+    for (const value of projectedTransitions) {
+      expect(projected).toContainEqual(
+        expect.objectContaining({
+          tenantId,
+          branchId,
+          sourceKind: 'FLEET_ALERT',
+          sourceKey: `${id}:${value}:${now.toISOString()}`,
+          alertId: id,
+          vehicleId: van,
+          occurredAt: now,
+          wordingKey: 'fleet.alert.transition',
+          parameters: {
+            eventKind: 'SPEEDING',
+            alertStatus: value === 'REOPENED' ? 'OPEN' : value,
+            transition: value,
+            troubleCode: null,
+          },
+        }),
+      );
+    }
 
     // Informational and foreign events are missing alerts.
     for (const [row, missing, scope] of [
@@ -680,5 +716,207 @@ describe('Events and alert workflow with PostgreSQL', () => {
     expect(
       await database.client.fleetEvent.findUniqueOrThrow({ where: { id: foreignAlert } }),
     ).toMatchObject({ alertStatus: 'OPEN' });
+
+    // Notification receipts belong to one verified user and the complete Tenant/Branch scope.
+    const feedBranch = randomUUID();
+    const feedUser = randomUUID();
+    const anotherUser = randomUUID();
+    const feedScope = { tenantId, branchId: feedBranch };
+    const notificationData: Prisma.FleetNotificationCreateManyInput = {
+      ...feedScope,
+      sourceKind: 'FLEET_ALERT',
+      sourceKey: `alert:${id}:OPEN`,
+      category: 'ALERT',
+      severity: 'WARNING',
+      occurredAt: hours(-1),
+      createdAt: now,
+      wordingKey: 'fleet.alert.transition',
+      parameters: { eventKind: 'SPEEDING', alertStatus: 'OPEN', transition: 'OPEN' },
+      vehicleId: van,
+      alertId: id,
+    };
+    const first = await database.client.fleetNotification.create({ data: notificationData });
+    const second = await database.client.fleetNotification.create({
+      data: {
+        ...notificationData,
+        sourceKind: 'COMMAND',
+        sourceKey: 'command:notification-fixture:ACKNOWLEDGED',
+        category: 'COMMAND',
+        occurredAt: now,
+        wordingKey: 'notification.commandOutcome',
+        parameters: { commandKind: 'READ_STATUS', commandStatus: 'ACKNOWLEDGED' },
+        alertId: null,
+        commandRequestId: randomUUID(),
+      },
+    });
+    const foreignNotifications: string[] = [];
+    for (const foreignScope of [
+      { tenantId: randomUUID(), branchId: feedBranch },
+      { tenantId, branchId: randomUUID() },
+    ]) {
+      const foreign = await database.client.fleetNotification.create({
+        data: { ...notificationData, ...foreignScope },
+      });
+      foreignNotifications.push(foreign.id);
+    }
+    expect(
+      await database.client.fleetNotification.createMany({
+        data: notificationData,
+        skipDuplicates: true,
+      }),
+    ).toEqual({ count: 0 });
+
+    const notificationQuery = `query($filter:FleetNotificationFilter){
+      notifications(limit:1,filter:$filter){
+        total unreadCount offset limit items{id occurredAt createdAt readAt category}
+      }
+    }`;
+    expect(await query(notificationQuery, {}, feedBranch)).toEqual({
+      data: {
+        notifications: {
+          total: 2,
+          unreadCount: 2,
+          offset: 0,
+          limit: 1,
+          items: [
+            {
+              id: second.id,
+              occurredAt: now.toISOString(),
+              createdAt: now.toISOString(),
+              readAt: null,
+              category: 'COMMAND',
+            },
+          ],
+        },
+      },
+    });
+    expect(
+      await query(notificationQuery, { filter: { categories: ['ALERT'] } }, feedBranch),
+    ).toMatchObject({
+      data: { notifications: { total: 1, unreadCount: 2, items: [{ id: first.id }] } },
+    });
+    for (const mutation of [
+      'mutation($id:ID!){markNotificationRead(id:$id){id}}',
+      'mutation{markAllNotificationsRead}',
+    ]) {
+      expect(await query(mutation, { id: first.id }, feedBranch)).toMatchObject({
+        errors: [
+          {
+            message: 'Sign in with a user account to mark notifications as read.',
+            extensions: { code: 'BAD_USER_INPUT' },
+          },
+        ],
+      });
+    }
+    if (!app) {
+      throw new Error('Missing test application');
+    }
+    const notifications = app.get(NotificationsService);
+    const userContext: RequestContext = {
+      ...feedScope,
+      userId: feedUser,
+      sessionId: randomUUID(),
+      requestId: randomUUID(),
+      authorization: undefined,
+      branchChecks: new Map(),
+    };
+    const unreadArgs = { offset: 0, limit: 100, filter: { readState: 'UNREAD' } } as const;
+    for (const notificationId of foreignNotifications) {
+      await expect(notifications.markRead(userContext, notificationId)).rejects.toThrow(
+        'Notification not found',
+      );
+    }
+    for (let repeat = 0; repeat < 2; repeat++) {
+      expect(await notifications.markRead(userContext, first.id)).toMatchObject({
+        id: first.id,
+        readAt: now,
+      });
+    }
+    expect(await notifications.list(userContext, unreadArgs)).toMatchObject({
+      total: 1,
+      unreadCount: 1,
+      items: [{ id: second.id }],
+    });
+    expect(
+      await notifications.list({ ...userContext, userId: anotherUser }, unreadArgs),
+    ).toMatchObject({ total: 2, unreadCount: 2 });
+    expect(await notifications.markAllRead(userContext)).toBe(1);
+    expect(await notifications.markAllRead(userContext)).toBe(0);
+    expect(await notifications.list(userContext, unreadArgs)).toMatchObject({
+      total: 0,
+      unreadCount: 0,
+      items: [],
+    });
+    expect(await database.client.fleetNotificationReceipt.findMany()).toEqual(
+      expect.arrayContaining([
+        { ...feedScope, notificationId: first.id, userId: feedUser, readAt: now },
+        { ...feedScope, notificationId: second.id, userId: feedUser, readAt: now },
+      ]),
+    );
+    expect(
+      await database.client.fleetNotificationReceipt.count({
+        where: { notificationId: { in: foreignNotifications } },
+      }),
+    ).toBe(0);
+    expect(
+      await database.client.fleetNotificationReceipt.count({
+        where: { ...feedScope, userId: feedUser },
+      }),
+    ).toBe(2);
+
+    // Cleanup uses feed creation time and the Branch preference, never historical occurrence.
+    await database.client.fleetSettings.create({
+      data: { ...feedScope, notificationRetentionDays: 1 },
+    });
+    await database.client.fleetNotification.update({
+      where: { id: first.id, ...feedScope },
+      data: { createdAt: new Date(now.getTime() - 2 * 86_400_000) },
+    });
+    await database.client.fleetNotification.update({
+      where: { id: second.id, ...feedScope },
+      data: { occurredAt: new Date(now.getTime() - 30 * 86_400_000) },
+    });
+    expect(await app.get(NotificationSourcesRepository).cleanup(now)).toBe(1);
+    expect(
+      await database.client.fleetNotification.findMany({ where: feedScope, select: { id: true } }),
+    ).toEqual([{ id: second.id }]);
+    expect(await database.client.fleetNotificationReceipt.findMany({ where: feedScope })).toEqual([
+      { ...feedScope, notificationId: second.id, userId: feedUser, readAt: now },
+    ]);
+    expect(await database.client.fleetEvent.findUniqueOrThrow({ where: { id } })).toMatchObject({
+      id,
+      alertStatus: 'OPEN',
+    });
+
+    // Initial projection starts inside the default retention window and deduplicates reruns.
+    const initialScope = { tenantId, branchId: randomUUID() };
+    const initialVehicle = await database.client.vehicle.create({
+      data: { ...initialScope, licensePlate: 'CB NF0' },
+    });
+    const initialEvents: string[] = [];
+    for (const ageDays of [8, 1]) {
+      const initialEvent = await database.client.fleetEvent.create({
+        data: {
+          ...initialScope,
+          vehicleId: initialVehicle.id,
+          source: 'DEMO',
+          occurredAt: new Date(now.getTime() - ageDays * 86_400_000),
+          kind: 'LOW_FUEL',
+          severity: 'WARNING',
+          alertStatus: 'OPEN',
+        },
+      });
+      initialEvents.push(initialEvent.id);
+    }
+    for (let repeat = 0; repeat < 2; repeat++) {
+      await app.get(NotificationSourcesRepository).projectAlerts(now);
+      expect(
+        await database.client.fleetNotification.findMany({
+          where: initialScope,
+          select: { alertId: true },
+        }),
+      ).toEqual([{ alertId: initialEvents[1] }]);
+    }
+    expect(await database.client.fleetEvent.count({ where: initialScope })).toBe(2);
   });
 });

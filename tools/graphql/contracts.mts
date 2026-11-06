@@ -41,6 +41,7 @@ export const subgraphs = [
       'apps/fleet/src/modules/service-tasks/service-tasks.graphql',
       'apps/fleet/src/modules/overview/overview.graphql',
       'apps/fleet/src/modules/settings/settings.graphql',
+      'apps/fleet/src/modules/notifications/notifications.graphql',
     ],
   },
 ];

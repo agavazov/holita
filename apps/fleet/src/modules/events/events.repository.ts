@@ -12,6 +12,7 @@ import type {
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { FleetScope, SortDirection } from '../../validation.js';
 import type { EventConditionCriteria } from './event-filter.js';
+import { alertNotification } from '../notifications/notification-projection.js';
 
 /** Stored vehicle and driver references are loaded with every event (no per-row query). */
 const eventInclude = {
@@ -275,10 +276,22 @@ export class EventsRepository {
     expected: FleetAlertStatus,
     data: Prisma.FleetEventUpdateManyMutationInput,
   ): Promise<number> {
-    const { count } = await this.prisma.client.fleetEvent.updateMany({
-      where: { id, tenantId: scope.tenantId, branchId: scope.branchId, alertStatus: expected },
-      data,
+    return this.prisma.client.$transaction(async (transaction) => {
+      const { count } = await transaction.fleetEvent.updateMany({
+        where: { id, ...scope, alertStatus: expected },
+        data,
+      });
+      if (count) {
+        const event = await transaction.fleetEvent.findFirstOrThrow({ where: { id, ...scope } });
+        const transition = expected === 'RESOLVED' ? 'REOPENED' : event.alertStatus;
+        if (transition !== null) {
+          await transaction.fleetNotification.createMany({
+            data: [alertNotification(event, transition, event.updatedAt, event.updatedAt)],
+            skipDuplicates: true,
+          });
+        }
+      }
+      return count;
     });
-    return count;
   }
 }

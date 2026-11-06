@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { FleetClock } from '../../clock/fleet-clock.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { Prisma, VehicleStatusSample } from '../../generated/prisma/client.js';
 import type { ErmTelemetryPage } from '../../integrations/erm/erm-telemetry.client.js';
@@ -10,10 +11,15 @@ import {
   ermEdataMeasurementsEnabled,
   type ErmTelemetryDevice,
 } from './erm-telemetry.mapping.js';
+import { recordedDiagnosticNotifications } from '../notifications/notification-projection.js';
+import { notificationCutoff } from '../notifications/notification-sources.repository.js';
 
 @Injectable()
 export class ErmTelemetryRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clock: FleetClock,
+  ) {}
 
   devices() {
     // Deliberate background registry read across all Tenant/Branch scopes; page writes are scoped.
@@ -33,6 +39,7 @@ export class ErmTelemetryRepository {
 
   async importPage(device: ErmTelemetryDevice, page: ErmTelemetryPage): Promise<void> {
     const scope = { tenantId: device.tenantId, branchId: device.branchId };
+    const now = this.clock.now();
     await this.prisma.client.$transaction(async (transaction) => {
       const data = ermSamples(device, page.events);
       if (device.vehicleId !== null && data.length > 0) {
@@ -58,6 +65,33 @@ export class ErmTelemetryRepository {
       const events = ermFleetEvents(device, page.events);
       if (events.length > 0) {
         await transaction.fleetEvent.createMany({ data: events, skipDuplicates: true });
+      }
+      const settings = await transaction.fleetSettings.findUnique({
+        where: { tenantId_branchId: scope },
+        select: { notificationRetentionDays: true },
+      });
+      const cutoff = notificationCutoff(now, settings?.notificationRetentionDays ?? 7);
+      const sourceKey = `erm:${device.id}`;
+      const notificationCursor = await transaction.fleetNotificationCursor.upsert({
+        where: { tenantId_branchId_sourceKey: { ...scope, sourceKey } },
+        create: {
+          ...scope,
+          sourceKey,
+          since: device.createdAt > cutoff ? device.createdAt : cutoff,
+        },
+        update: {},
+      });
+      const notifications = recordedDiagnosticNotifications(
+        device,
+        page.events,
+        notificationCursor.since > cutoff ? notificationCursor.since : cutoff,
+        now,
+      );
+      if (notifications.length) {
+        await transaction.fleetNotification.createMany({
+          data: notifications,
+          skipDuplicates: true,
+        });
       }
       if (ermEdataMeasurementsEnabled()) {
         const parameterIds = [

@@ -17,6 +17,7 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module.js';
 import { OverviewModule } from './modules/overview/overview.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { ErmTelemetryModule } from './modules/erm-telemetry/erm-telemetry.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
 
 import { HealthController } from './health/health.controller.js';
 
@@ -33,6 +34,7 @@ const typeDefPaths = [
   'modules/service-tasks/service-tasks',
   'modules/overview/overview',
   'modules/settings/settings',
+  'modules/notifications/notifications',
 ];
 
 @Module({
@@ -63,6 +65,7 @@ const typeDefPaths = [
       formatError: formatGraphqlError,
       plugins: [graphqlDiagnostics],
     }),
+    NotificationsModule,
   ],
   controllers: [HealthController],
 })

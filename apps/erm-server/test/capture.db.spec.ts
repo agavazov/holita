@@ -3226,9 +3226,18 @@ it('persists captured connection lifecycle and raw frames through the production
     const notificationAt = new Date(notificationSince.getTime() + 1000);
     const notificationEvents = await database.client.ermEvent.createManyAndReturn({
       data: [
-        { eventId: '33', fields: { edata: { type: 419, faults: [
-          { spn: 4339, fmi: 7, status: 1 }, { spn: 4339, fmi: 7, status: 2 },
-        ] } } },
+        {
+          eventId: '33',
+          fields: {
+            edata: {
+              type: 419,
+              faults: [
+                { spn: 4339, fmi: 7, status: 1 },
+                { spn: 4339, fmi: 7, status: 2 },
+              ],
+            },
+          },
+        },
         { eventId: '33', fields: { edata: { type: 411, canError: 2 } } },
         { eventId: '36', fields: {} },
         { eventId: '02', fields: { extra: ['00', '1'] } },
@@ -3250,21 +3259,23 @@ it('persists captured connection lifecycle and raw frames through the production
       },
     });
     const notificationCommands = await database.client.ermCommandRequest.createManyAndReturn({
-      data: ([
-        { status: 'ANSWERED', resultCode: '01' },
-        { status: 'ANSWERED', resultCode: null },
-        { status: 'FAILED', resultCode: '02' },
-        { status: 'FAILED', resultCode: null },
-        { status: 'EXPIRED', resultCode: null },
-        { status: 'UNCERTAIN', resultCode: null },
-      ] as const).map(({ status, resultCode }) => ({
-          ...fleetBatchCommand,
-          id: randomUUID(),
-          unitId: notificationImei,
-          status,
-          resultCode,
-          completedAt: notificationAt,
-          failureReason: status === 'FAILED' ? 'Command failed' : null,
+      data: (
+        [
+          { status: 'ANSWERED', resultCode: '01' },
+          { status: 'ANSWERED', resultCode: null },
+          { status: 'FAILED', resultCode: '02' },
+          { status: 'FAILED', resultCode: null },
+          { status: 'EXPIRED', resultCode: null },
+          { status: 'UNCERTAIN', resultCode: null },
+        ] as const
+      ).map(({ status, resultCode }) => ({
+        ...fleetBatchCommand,
+        id: randomUUID(),
+        unitId: notificationImei,
+        status,
+        resultCode,
+        completedAt: notificationAt,
+        failureReason: status === 'FAILED' ? 'Command failed' : null,
       })),
     });
     for (const excluded of [
@@ -3308,30 +3319,68 @@ it('persists captured connection lifecycle and raw frames through the production
     }
     expect(exported).toHaveLength(11);
     expect(new Set(exported.map((item) => item.sourceKey)).size).toBe(11);
-    expect(exported.filter((item) => item.sourceKind === 'COMMAND').map((item) => item.parameters['commandStatus']).sort()).toEqual([
-      'ACKNOWLEDGED', 'EXPIRED', 'FAILED', 'OUTCOME_UNKNOWN', 'REJECTED', 'RESPONSE_RECEIVED',
+    expect(
+      exported
+        .filter((item) => item.sourceKind === 'COMMAND')
+        .map((item) => item.parameters['commandStatus'])
+        .sort(),
+    ).toEqual([
+      'ACKNOWLEDGED',
+      'EXPIRED',
+      'FAILED',
+      'OUTCOME_UNKNOWN',
+      'REJECTED',
+      'RESPONSE_RECEIVED',
     ]);
-    expect(exported).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        sourceKey: JSON.stringify([notificationImei, notificationAt.toISOString(), 'DIAGNOSTIC_TROUBLE_CODE', 'SPN 4339 FMI 7', 'ADDED']),
-        sourceId: String(notificationEvents.find((entry) => entry.eventId === '33')?.id),
-        severity: 'WARNING',
-        recorded: true,
-        parameters: { eventKind: 'DIAGNOSTIC_TROUBLE_CODE', troubleCode: 'SPN 4339 FMI 7', diagnosticStatus: 'ADDED', alarmCode: '33' },
-      }),
-      expect.objectContaining({
-        sourceKey: JSON.stringify([notificationImei, notificationAt.toISOString(), 'DIAGNOSTIC_TROUBLE_CODE', 'SPN 4339 FMI 7', 'DELETED']),
-        severity: 'INFO',
-        recorded: true,
-      }),
-      expect.objectContaining({
-        sourceKey: JSON.stringify([notificationImei, notificationAt.toISOString(), 'CAN_ERROR', null, null]),
-        sourceKind: 'DIAGNOSTIC',
-        recorded: true,
-      }),
-      expect.objectContaining({ sourceKind: 'ALARM', severity: 'CRITICAL', recorded: true }),
-    ]));
-    const exhausted = await notificationExport.page(notificationImei, { ...notificationQuery, after: notificationCursor });
+    expect(exported).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceKey: JSON.stringify([
+            notificationImei,
+            notificationAt.toISOString(),
+            'DIAGNOSTIC_TROUBLE_CODE',
+            'SPN 4339 FMI 7',
+            'ADDED',
+          ]),
+          sourceId: String(notificationEvents.find((entry) => entry.eventId === '33')?.id),
+          severity: 'WARNING',
+          recorded: true,
+          parameters: {
+            eventKind: 'DIAGNOSTIC_TROUBLE_CODE',
+            troubleCode: 'SPN 4339 FMI 7',
+            diagnosticStatus: 'ADDED',
+            alarmCode: '33',
+          },
+        }),
+        expect.objectContaining({
+          sourceKey: JSON.stringify([
+            notificationImei,
+            notificationAt.toISOString(),
+            'DIAGNOSTIC_TROUBLE_CODE',
+            'SPN 4339 FMI 7',
+            'DELETED',
+          ]),
+          severity: 'INFO',
+          recorded: true,
+        }),
+        expect.objectContaining({
+          sourceKey: JSON.stringify([
+            notificationImei,
+            notificationAt.toISOString(),
+            'CAN_ERROR',
+            null,
+            null,
+          ]),
+          sourceKind: 'DIAGNOSTIC',
+          recorded: true,
+        }),
+        expect.objectContaining({ sourceKind: 'ALARM', severity: 'CRITICAL', recorded: true }),
+      ]),
+    );
+    const exhausted = await notificationExport.page(notificationImei, {
+      ...notificationQuery,
+      after: notificationCursor,
+    });
     expect(exhausted).toEqual({ items: [], next: notificationCursor, hasMore: false });
     const changedCommand = notificationCommands.find((request) => request.status === 'UNCERTAIN');
     if (changedCommand === undefined) {
@@ -3339,14 +3388,33 @@ it('persists captured connection lifecycle and raw frames through the production
     }
     await database.client.ermCommandRequest.update({
       where: { id: changedCommand.id },
-      data: { status: 'ANSWERED', resultCode: '01', completedAt: new Date(notificationAt.getTime() + 1) },
+      data: {
+        status: 'ANSWERED',
+        resultCode: '01',
+        completedAt: new Date(notificationAt.getTime() + 1),
+      },
     });
-    const terminalUpdate = await notificationExport.page(notificationImei, { ...notificationQuery, after: notificationCursor });
+    const terminalUpdate = await notificationExport.page(notificationImei, {
+      ...notificationQuery,
+      after: notificationCursor,
+    });
     expect(terminalUpdate.items).toEqual([
-      expect.objectContaining({ sourceKey: `erm-command:${changedCommand.id}:ACKNOWLEDGED`, parameters: { commandKind: 'READ_STATUS', commandStatus: 'ACKNOWLEDGED', reasonCode: null } }),
+      expect.objectContaining({
+        sourceKey: `erm-command:${changedCommand.id}:ACKNOWLEDGED`,
+        parameters: { commandKind: 'READ_STATUS', commandStatus: 'ACKNOWLEDGED', reasonCode: null },
+      }),
     ]);
-    for (const invalidQuery of [{ tenantId: '' }, { branchId: '' }, { deviceId: '' }, { since: '2026-11-06' }, { after: 'bad-cursor' }, { limit: '0' }]) {
-      await expect(notificationExport.page(notificationImei, { ...notificationQuery, ...invalidQuery })).rejects.toThrow('Invalid notification export');
+    for (const invalidQuery of [
+      { tenantId: '' },
+      { branchId: '' },
+      { deviceId: '' },
+      { since: '2026-11-06' },
+      { after: 'bad-cursor' },
+      { limit: '0' },
+    ]) {
+      await expect(
+        notificationExport.page(notificationImei, { ...notificationQuery, ...invalidQuery }),
+      ).rejects.toThrow('Invalid notification export');
     }
   } finally {
     releaseSnapshotBatch?.();

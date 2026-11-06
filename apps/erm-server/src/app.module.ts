@@ -10,6 +10,7 @@ import { DevicesModule } from './modules/devices/devices.module.js';
 import { TelemetryModule } from './modules/telemetry/telemetry.module.js';
 import { ermRole } from './role.js';
 import { RecoveryModule } from './modules/recovery/recovery.module.js';
+import { NotificationExportModule } from './modules/notification-export/notification-export.module.js';
 
 const role = ermRole();
 
@@ -20,6 +21,7 @@ const role = ermRole();
     ...(role === 'api' || role === 'all'
       ? [
           TelemetryModule,
+          NotificationExportModule,
           GraphQLModule.forRoot<ApolloFederationDriverConfig>({
             driver: ApolloFederationDriver,
             typeDefs: readFileSync(

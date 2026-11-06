@@ -290,8 +290,10 @@ export class EventsService {
     }
     const remark =
       input.remark === undefined ? {} : { remark: optionalText(input.remark, 'remark', 1000) };
+    const now = this.clock.now();
     const changed = await this.events.transition(scope, recordId, expected, {
-      ...rule.data(this.clock.now()),
+      ...rule.data(now),
+      updatedAt: now,
       ...remark,
     });
     if (!changed) {

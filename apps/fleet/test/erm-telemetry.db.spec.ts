@@ -7,10 +7,13 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../src/app.module.js';
 import { issueDemoToken } from '../src/auth/demo-auth.js';
+import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import type { ErmTelemetryEvent } from '../src/integrations/erm/erm-telemetry.client.js';
 import { ErmTelemetryJobs } from '../src/modules/erm-telemetry/erm-telemetry.jobs.js';
+import type { ErmNotificationItem } from '../src/modules/notifications/erm-notifications.client.js';
+import { NotificationsJobs } from '../src/modules/notifications/notifications.jobs.js';
 import { createTestDatabase } from './test-database.js';
 
 const installedAt = new Date('2026-11-03T12:00:00.000Z');
@@ -26,6 +29,11 @@ type FeedEvent = Omit<
   receivedAt: string;
   ignitionOn?: boolean | null;
   edata?: unknown;
+};
+type ExportNotification = Omit<ErmNotificationItem, 'occurredAt'> & {
+  occurredAt: string;
+  target: { kind: 'DEVICE'; id: string };
+  recorded: boolean;
 };
 
 function event(id: string, seconds: number, engineOn: boolean | null): FeedEvent {
@@ -51,10 +59,14 @@ describe('ERM telemetry import with PostgreSQL', () => {
   let app: INestApplication | undefined;
   let feed: Server | undefined;
   let jobs: ErmTelemetryJobs;
+  let notificationJobs: NotificationsJobs;
   let url = '';
   const token = randomBytes(24).toString('hex');
   const events = new Map<string, ReturnType<typeof event>[]>();
   const failures = new Map<string, 'invalid' | 500>();
+  const notifications = new Map<string, { items: ExportNotification[]; next: string }>();
+  const notificationFailures = new Map<string, 'invalid' | 500>();
+  const notificationRequests = new Map<string, URL>();
   const originalEnvironment = Object.fromEntries(
     [
       'FLEET_ENABLED',
@@ -73,6 +85,27 @@ describe('ERM telemetry import with PostgreSQL', () => {
         return;
       }
       const requested = new URL(request.url ?? '/', 'http://127.0.0.1');
+      const notificationImei = /^\/internal\/notifications\/units\/(\d{15})$/.exec(
+        requested.pathname,
+      )?.[1];
+      if (notificationImei) {
+        notificationRequests.set(notificationImei, requested);
+        const page = notifications.get(notificationImei) ?? { items: [], next: 'empty' };
+        const failure = notificationFailures.get(notificationImei);
+        if (failure === 500) {
+          response.writeHead(500).end('{}');
+        } else {
+          const items = requested.searchParams.get('after') === page.next ? [] : page.items;
+          response.end(
+            JSON.stringify({
+              items: failure === 'invalid' ? [...items, { sourceId: 'invalid' }] : items,
+              next: page.next,
+              hasMore: false,
+            }),
+          );
+        }
+        return;
+      }
       const imei = /^\/internal\/telemetry\/units\/(\d{15})\/events$/.exec(requested.pathname)?.[1];
       const after = requested.searchParams.get('after') ?? '';
       const limit = Number(requested.searchParams.get('limit'));
@@ -116,12 +149,15 @@ describe('ERM telemetry import with PostgreSQL', () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PrismaService)
       .useValue({ client: database.client, schema: database.schema })
+      .overrideProvider(FleetClock)
+      .useValue({ now: () => at(600) })
       .overrideProvider(CoreClient)
       .useValue({
         requireBranch: jest.fn<CoreClient['requireBranch']>().mockResolvedValue(undefined),
       })
       .compile();
     jobs = module.get(ErmTelemetryJobs);
+    notificationJobs = module.get(NotificationsJobs);
     app = module.createNestApplication({ logger: false });
     await app.listen(0, '127.0.0.1');
     for (const cron of module.get(SchedulerRegistry).getCronJobs().values()) {
@@ -198,7 +234,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
       },
     });
     const stock = await database.client.device.create({
-      data: { ...scopeA, imei: '000000000000102', createdAt: installedAt },
+      data: { ...scopeA, imei: '000000000000102', createdAt: at(-14 * 86_400) },
     });
     const deviceB = await database.client.device.create({
       data: {
@@ -650,5 +686,149 @@ describe('ERM telemetry import with PostgreSQL', () => {
     }
     expect(await database.client.vehicleStatusSample.count()).toBe(7);
     expect(await tripRows()).toEqual(initialTrips);
+
+    const exportedDiagnostics: ExportNotification[] = (
+      [
+        ['3', 0, 'DIAGNOSTIC_TROUBLE_CODE', 'SPN 4339 FMI 7', 'ADDED', 'WARNING', '33'],
+        ['3', 0, 'DIAGNOSTIC_TROUBLE_CODE', 'SPN 1247 FMI 11', 'DELETED', 'INFO', '33'],
+        ['8', 300, 'CAN_ERROR', null, null, 'WARNING', null],
+      ] as const
+    ).map(
+      ([
+        sourceId,
+        seconds,
+        eventKind,
+        troubleCode,
+        diagnosticStatus,
+        severity,
+        alarmCode,
+      ]): ExportNotification => ({
+        sourceKind: 'DIAGNOSTIC',
+        sourceId,
+        sourceKey: JSON.stringify([
+          deviceA.imei,
+          at(seconds).toISOString(),
+          eventKind,
+          troubleCode,
+          diagnosticStatus,
+        ]),
+        occurredAt: at(seconds).toISOString(),
+        severity,
+        wordingKey: 'notification.recordedDiagnostic',
+        parameters: { eventKind, troubleCode, diagnosticStatus, alarmCode },
+        target: { kind: 'DEVICE', id: deviceA.id },
+        recorded: true,
+      }),
+    );
+    for (const diagnostic of exportedDiagnostics) {
+      expect(
+        await database.client.fleetNotification.findFirstOrThrow({
+          where: { ...scopeA, sourceKey: diagnostic.sourceKey },
+        }),
+      ).toMatchObject({
+        sourceKind: diagnostic.sourceKind,
+        parameters: diagnostic.parameters,
+        wordingKey: diagnostic.wordingKey,
+        occurredAt: new Date(diagnostic.occurredAt),
+        createdAt: at(600),
+        deviceId: deviceA.id,
+        vehicleId: vehicleA.id,
+      });
+    }
+    expect(await database.client.fleetNotification.count()).toBe(3);
+    const commandId = randomUUID();
+    const command: ExportNotification = {
+      sourceKind: 'COMMAND',
+      sourceId: commandId,
+      sourceKey: `erm-command:${commandId}:ACKNOWLEDGED`,
+      occurredAt: at(400).toISOString(),
+      severity: 'INFO',
+      wordingKey: 'notification.commandOutcome',
+      parameters: { commandKind: 'READ_STATUS', commandStatus: 'ACKNOWLEDGED', reasonCode: null },
+      target: { kind: 'DEVICE', id: deviceA.id },
+      recorded: false,
+    };
+    const alarm: ExportNotification = {
+      sourceKind: 'ALARM',
+      sourceId: '500',
+      sourceKey: 'erm-event:500',
+      occurredAt: at(450).toISOString(),
+      severity: 'WARNING',
+      wordingKey: 'notification.recordedAlarm',
+      parameters: { eventKind: 'DEVICE_ALARM', alarmCode: '51' },
+      target: { kind: 'DEVICE', id: deviceB.id },
+      recorded: true,
+    };
+    notifications.set(deviceA.imei, { items: [...exportedDiagnostics, command], next: 'page-a-1' });
+    notifications.set(deviceB.imei, { items: [alarm], next: 'page-b-1' });
+    await notificationJobs.tick();
+    const notificationCursor = (device: typeof deviceA) =>
+      database.client.fleetNotificationCursor.findUniqueOrThrow({
+        where: {
+          tenantId_branchId_sourceKey: {
+            tenantId: device.tenantId,
+            branchId: device.branchId,
+            sourceKey: `erm:${device.id}`,
+          },
+        },
+      });
+    for (const [device, since, position] of [
+      [deviceA, deviceA.createdAt, 'page-a-1'],
+      [stock, at(600 - 7 * 86_400), 'empty'],
+      [deviceB, deviceB.createdAt, 'page-b-1'],
+    ] as const) {
+      expect(await notificationCursor(device)).toMatchObject({
+        tenantId: device.tenantId,
+        branchId: device.branchId,
+        since,
+        position,
+      });
+      expect(Object.fromEntries(notificationRequests.get(device.imei)?.searchParams ?? [])).toEqual(
+        {
+          tenantId: device.tenantId,
+          branchId: device.branchId,
+          deviceId: device.id,
+          since: since.toISOString(),
+          limit: '500',
+        },
+      );
+    }
+    expect(await database.client.fleetNotification.count({ where: scopeA })).toBe(4);
+    expect(await database.client.fleetNotification.findMany({ where: scopeB })).toMatchObject([
+      { ...scopeB, sourceKey: alarm.sourceKey, deviceId: deviceB.id, vehicleId: vehicleB.id },
+    ]);
+    expect(
+      await database.client.fleetNotification.findFirstOrThrow({
+        where: { ...scopeA, commandRequestId: commandId },
+      }),
+    ).toMatchObject({ category: 'COMMAND', deviceId: deviceA.id, ermEventId: null });
+    await notificationJobs.tick();
+    expect(await database.client.fleetNotification.count()).toBe(5);
+    expect(notificationRequests.get(deviceA.imei)?.searchParams.get('after')).toBe('page-a-1');
+
+    notifications.set(deviceA.imei, {
+      items: [{ ...alarm, target: { kind: 'DEVICE', id: deviceA.id } }],
+      next: 'page-a-2',
+    });
+    notifications.set(deviceB.imei, { items: [], next: 'page-b-2' });
+    notificationFailures.set(deviceA.imei, 'invalid');
+    notificationFailures.set(deviceB.imei, 500);
+    await notificationJobs.tick();
+    expect(await notificationCursor(deviceA)).toMatchObject({ position: 'page-a-1' });
+    expect(await notificationCursor(deviceB)).toMatchObject({ position: 'page-b-1' });
+    expect(await database.client.fleetNotification.count()).toBe(5);
+    notificationFailures.clear();
+    await notificationJobs.tick();
+    expect(await notificationCursor(deviceA)).toMatchObject({ position: 'page-a-2' });
+    expect(await notificationCursor(deviceB)).toMatchObject({ position: 'page-b-2' });
+    expect(await database.client.fleetNotification.count()).toBe(6);
+    for (const selectedScope of [scopeA, scopeB]) {
+      expect(
+        await database.client.fleetNotification.count({
+          where: { ...selectedScope, sourceKey: alarm.sourceKey },
+        }),
+      ).toBe(1);
+    }
+    expect(await database.client.fleetEvent.count()).toBe(3);
   });
 });
