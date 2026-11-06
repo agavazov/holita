@@ -549,6 +549,190 @@ describe('Events and alert workflow with PostgreSQL', () => {
     expect(
       await query(problems, { offset: 0, filter: { deviceIds: [device.id] } }, otherBranchId),
     ).toMatchObject({ data: { fleetProblems: { total: 0, items: [] } } });
+
+    const reports: {
+      report: number;
+      sourceId: string;
+      at: Date;
+      raw?: boolean;
+      diagnostics: ErmProblemEvidence['diagnostics'];
+    }[] = [
+      { report: 417, sourceId: '902', at: hours(-0.2), diagnostics: [] },
+      {
+        report: 413,
+        sourceId: '903',
+        at: hours(-0.15),
+        diagnostics: [
+          { kind: 'DIAGNOSTIC_TROUBLE_CODE', troubleCode: 'P0100', status: 'ADDED' },
+          { kind: 'DIAGNOSTIC_TROUBLE_CODE', troubleCode: 'P0200', status: 'DELETED' },
+        ],
+      },
+      {
+        report: 418,
+        sourceId: '904',
+        at: hours(-0.1),
+        diagnostics: [
+          { kind: 'DIAGNOSTIC_TROUBLE_CODE', troubleCode: 'C1234', status: 'ADDED' },
+          { kind: 'DIAGNOSTIC_TROUBLE_CODE', troubleCode: 'P1234', status: 'DELETED' },
+        ],
+      },
+      {
+        report: 419,
+        sourceId: '905',
+        at: hours(-0.05),
+        diagnostics: [
+          {
+            kind: 'DIAGNOSTIC_TROUBLE_CODE',
+            troubleCode: 'SPN 4294967295 FMI 31',
+            status: 'ADDED',
+          },
+          { kind: 'DIAGNOSTIC_TROUBLE_CODE', troubleCode: 'SPN 1247 FMI 11', status: 'DELETED' },
+          {
+            kind: 'DIAGNOSTIC_TROUBLE_CODE',
+            troubleCode: 'SPN 4294967295 FMI 31',
+            status: 'ADDED',
+          },
+        ],
+      },
+      {
+        report: 419,
+        sourceId: '906',
+        at: hours(-0.05),
+        raw: false,
+        diagnostics: [
+          {
+            kind: 'DIAGNOSTIC_TROUBLE_CODE',
+            troubleCode: 'SPN 4294967295 FMI 31',
+            status: 'ADDED',
+          },
+        ],
+      },
+    ];
+    const expectedReports: Record<string, unknown>[] = [];
+    const expectedFallback: Record<string, unknown>[] = [];
+    for (const report of reports) {
+      const diagnostics =
+        report.report === 417
+          ? [{ kind: 'CAN_DISCONNECTED' as const, troubleCode: null, status: null }]
+          : report.diagnostics;
+      const storedIds: string[] = [];
+      for (const [index, diagnostic] of diagnostics.entries()) {
+        const faultCode = /^SPN (\d+) FMI (\d+)$/.exec(diagnostic.troubleCode ?? '');
+        const stored = await database.client.fleetEvent.create({
+          data: {
+            tenantId,
+            branchId,
+            vehicleId: van,
+            deviceImei: device.imei,
+            source: 'ERM',
+            sourceEventId: BigInt(report.sourceId),
+            receivedAt: asOf,
+            occurredAt: report.at,
+            kind: diagnostic.kind,
+            troubleCode: diagnostic.troubleCode,
+            severity: diagnostic.status === 'DELETED' ? 'INFO' : 'WARNING',
+            diagnosticReport: report.report,
+            diagnosticStatus:
+              diagnostic.status === 'ADDED' ? 1 : diagnostic.status === 'DELETED' ? 2 : null,
+            diagnosticSpn: faultCode ? BigInt(Number(faultCode[1])) : null,
+            diagnosticFmi: faultCode ? Number(faultCode[2]) : null,
+            diagnosticIndex: index,
+          },
+        });
+        storedIds.push(stored.id);
+      }
+      if (report.raw !== false) {
+        ermEvidence.push({
+          sourceKind: 'DIAGNOSTIC',
+          sourceId: report.sourceId,
+          imei: device.imei,
+          deviceId: null,
+          severity: 'WARNING',
+          occurredAt: report.at,
+          state: 'RECORDED',
+          code: report.report === 417 ? 'CAN_DISCONNECTED' : `EDATA_${String(report.report)}`,
+          details: null,
+          eventTime: report.at,
+          eventId: '33',
+          diagnostics: report.diagnostics,
+        });
+      }
+      const expectedDiagnostics = diagnostics.map((diagnostic) => ({
+        ...diagnostic,
+        report: report.report,
+        spn:
+          diagnostic.troubleCode === 'SPN 4294967295 FMI 31'
+            ? 4294967295
+            : diagnostic.troubleCode === 'SPN 1247 FMI 11'
+              ? 1247
+              : null,
+        fmi:
+          diagnostic.troubleCode === 'SPN 4294967295 FMI 31'
+            ? 31
+            : diagnostic.troubleCode === 'SPN 1247 FMI 11'
+              ? 11
+              : null,
+        occurredAt: report.at.toISOString(),
+        receivedAt: asOf.toISOString(),
+      }));
+      const expected = {
+        sourceKind: 'DIAGNOSTIC',
+        state: 'RECORDED',
+        requiringAttention: false,
+        alertId: null,
+        ermEventId: report.sourceId,
+        diagnostics: expectedDiagnostics,
+      };
+      expectedReports.unshift({
+        ...expected,
+        sourceId: report.raw === false ? `fleet:${String(storedIds[0])}` : report.sourceId,
+      });
+      expectedFallback.unshift({ ...expected, sourceId: `fleet:${String(storedIds[0])}` });
+    }
+    const diagnosticProblems = `query {
+      fleetProblems(filter:{sourceKinds:[DIAGNOSTIC]},limit:100){
+        total items{sourceKind sourceId state requiringAttention alertId ermEventId
+          diagnostics{kind troubleCode status report spn fmi occurredAt receivedAt}}
+      }
+    }`;
+    const canError = {
+      sourceId: '901',
+      diagnostics: [
+        expect.objectContaining({
+          kind: 'CAN_ERROR',
+          troubleCode: null,
+          status: null,
+          report: 411,
+        }),
+      ],
+    };
+    expect(await query(diagnosticProblems, {})).toMatchObject({
+      data: {
+        fleetProblems: {
+          total: 6,
+          items: expect.arrayContaining(
+            [...expectedReports, canError].map((row) => expect.objectContaining(row)),
+          ),
+        },
+      },
+    });
+    // The imported report keeps every fault and its receipt time when raw ERM history is absent.
+    for (const report of reports) {
+      const index = ermEvidence.findIndex((row) => row.sourceId === report.sourceId);
+      if (index >= 0) {
+        ermEvidence.splice(index, 1);
+      }
+    }
+    expect(await query(diagnosticProblems, {})).toMatchObject({
+      data: {
+        fleetProblems: {
+          total: 6,
+          items: expect.arrayContaining(
+            [...expectedFallback, canError].map((row) => expect.objectContaining(row)),
+          ),
+        },
+      },
+    });
   });
 
   const transition = (name: string) =>

@@ -154,7 +154,7 @@ export class TelemetryRepository {
         SELECT jsonb_array_elements_text(${JSON.stringify(unitIds)}::jsonb) AS "unitId"
       ), evidence AS (
         SELECT CASE WHEN event."eventId" IN ('02', '70', '89')
-          OR event.fields -> 'edata' ->> 'type' IN ('411', '419')
+          OR event.fields -> 'edata' ->> 'type' IN ('411', '413', '417', '418', '419')
           THEN 'DIAGNOSTIC' ELSE 'ALARM' END AS "sourceKind",
           event.id::text AS "sourceId", event."unitId" AS imei, NULL::text AS "deviceId",
           coalesce(event."eventTime", frame."receivedAt") AS "occurredAt",
@@ -162,16 +162,23 @@ export class TelemetryRepository {
             WHEN event."eventId" IN (${Prisma.join(warning)}) THEN 'WARNING'
             WHEN event.fields -> 'edata' ->> 'type' = '411'
               AND event.fields -> 'edata' ->> 'canError' <> '0' THEN 'WARNING'
-            WHEN event.fields -> 'edata' ->> 'type' = '419'
+            WHEN event.fields -> 'edata' ->> 'type' = '417' THEN 'WARNING'
+            WHEN event.fields -> 'edata' ->> 'type' IN ('413', '418', '419')
               AND event.fields -> 'edata' -> 'faults' @> '[{"status":1}]'::jsonb THEN 'WARNING'
             ELSE 'INFO' END AS severity,
-          'RECORDED' AS state, coalesce(event."eventId", 'UNKNOWN') AS code,
+          'RECORDED' AS state,
+          CASE WHEN event.fields -> 'edata' ->> 'type' = '417' THEN 'CAN_DISCONNECTED'
+            WHEN event.fields -> 'edata' ->> 'type' IN ('411', '413', '418', '419')
+              THEN 'EDATA_' || (event.fields -> 'edata' ->> 'type')
+            ELSE coalesce(event."eventId", 'UNKNOWN') END AS code,
           NULL::text AS details, event."eventTime", event."eventId", event.fields
         FROM ${this.table('ermEvent')} event
         JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
         WHERE event."unitId" IN (SELECT "unitId" FROM units)
           AND (event."eventId" IN (${Prisma.join(alarms)}, '70', '89')
-            OR event.fields -> 'edata' ->> 'type' IN ('411', '419'))
+            OR event.fields -> 'edata' ->> 'type' IN ('411', '413', '418', '419')
+            OR (event.fields -> 'edata' ->> 'type' = '417'
+              AND event.fields -> 'edata' ->> 'noCanMessages' = 'true'))
           AND coalesce(event."eventTime", frame."receivedAt") >= ${from}
           AND coalesce(event."eventTime", frame."receivedAt") < ${to}
           AND frame."receivedAt" <= ${snapshot}

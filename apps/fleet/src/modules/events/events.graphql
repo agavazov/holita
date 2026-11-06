@@ -194,6 +194,26 @@ enum FleetProblemState {
   EXPIRED
 }
 
+enum FleetDiagnosticStatus {
+  ADDED
+  DELETED
+}
+
+type FleetProblemDiagnostic {
+  kind: FleetEventKind!
+  troubleCode: String
+  "CAN Engine logger observation; does not establish the current ECU fault state."
+  status: FleetDiagnosticStatus
+  "Source eData report number."
+  report: Int
+  "SPN uses Float to retain unsigned 32-bit values beyond GraphQL Int."
+  spn: Float
+  fmi: Int
+  occurredAt: DateTime!
+  "Receipt time when retained by Fleet; null for evidence available only from ERM Problems."
+  receivedAt: DateTime
+}
+
 type FleetProblem {
   "Stable source kind plus source identity; suitable for row selection."
   id: ID!
@@ -205,6 +225,8 @@ type FleetProblem {
   requiringAttention: Boolean!
   code: String!
   details: String
+  "Every diagnostic in this recorded report, including deleted observations."
+  diagnostics: [FleetProblemDiagnostic!]!
   vehicleId: ID
   vehicle: FleetVehicleRef
   deviceId: ID

@@ -130,7 +130,11 @@ export function ermFleetEvents(
       vehicleId: device.vehicleId,
       deviceImei: device.imei,
       source: 'ERM' as const,
+      sourceEventId: event.id,
       occurredAt: event.eventTime,
+      receivedAt: event.receivedAt,
+      diagnosticReport: Number(event.edata.report),
+      diagnosticIndex: 0,
       ...position(event),
       tripId: null,
       driverId: null,
@@ -145,9 +149,13 @@ export function ermFleetEvents(
     };
     const edata = event.edata;
     if (edata.report === '419') {
-      for (const fault of edata.faults) {
+      for (const [diagnosticIndex, fault] of edata.faults.entries()) {
         fleetEvents.push({
           ...common,
+          diagnosticIndex,
+          diagnosticSpn: BigInt(fault.spn),
+          diagnosticFmi: fault.fmi,
+          diagnosticStatus: fault.status === 'ADDED' ? 1 : 2,
           kind: 'DIAGNOSTIC_TROUBLE_CODE',
           severity: fault.status === 'ADDED' ? 'WARNING' : 'INFO',
           troubleCode: `SPN ${String(fault.spn)} FMI ${String(fault.fmi)}`,
@@ -157,6 +165,29 @@ export function ermFleetEvents(
               : 'eData 419: the fault logger deleted this fault; this does not prove a repair.',
         });
       }
+    } else if (edata.report === '413' || edata.report === '418') {
+      for (const [diagnosticIndex, fault] of edata.faults.entries()) {
+        fleetEvents.push({
+          ...common,
+          diagnosticIndex,
+          diagnosticStatus: fault.status === 'ADDED' ? 1 : 2,
+          kind: 'DIAGNOSTIC_TROUBLE_CODE',
+          severity: fault.status === 'ADDED' ? 'WARNING' : 'INFO',
+          troubleCode: fault.code,
+          details:
+            fault.status === 'ADDED'
+              ? `eData ${edata.report}: the fault logger added this fault.`
+              : `eData ${edata.report}: the fault logger deleted this fault; this does not prove a repair.`,
+        });
+      }
+    } else if (edata.report === '417') {
+      fleetEvents.push({
+        ...common,
+        kind: 'CAN_DISCONNECTED',
+        severity: 'WARNING',
+        troubleCode: null,
+        details: 'eData 417 reported no CAN messages for 500 ms while ignition was on.',
+      });
     } else if (edata.report === '411' && edata.canError) {
       fleetEvents.push({
         ...common,

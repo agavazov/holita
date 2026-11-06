@@ -75,7 +75,7 @@ function feedEdata(value: unknown) {
         valueHex: parameter.valueHex,
       });
     }
-    return { report: '405', measurements };
+    return { report: '405' as const, measurements };
   }
   if (
     value.type === 411 &&
@@ -89,7 +89,7 @@ function feedEdata(value: unknown) {
     (value.ignition === 0 || value.ignition === 1 || value.ignition === 2)
   ) {
     return {
-      report: '411',
+      report: '411' as const,
       can: (value.communicationMask & 1) !== 0,
       j1708: (value.communicationMask & 2) !== 0,
       obd: (value.communicationMask & 4) !== 0,
@@ -97,6 +97,35 @@ function feedEdata(value: unknown) {
       canError: value.canError !== 0,
       ignition: value.ignition,
     };
+  }
+  if (value.type === 417) {
+    return 'noCanMessages' in value && value.noCanMessages === true
+      ? { report: '417' as const, noCanMessages: true }
+      : null;
+  }
+  if (value.type === 413 || value.type === 418) {
+    if (!('faults' in value) || !Array.isArray(value.faults)) {
+      return null;
+    }
+    const records: unknown[] = value.faults;
+    const faults = [];
+    for (const fault of records) {
+      if (
+        typeof fault !== 'object' ||
+        fault === null ||
+        !('code' in fault) ||
+        typeof fault.code !== 'string' ||
+        !('status' in fault) ||
+        (fault.status !== 1 && fault.status !== 2)
+      ) {
+        return null;
+      }
+      faults.push({
+        code: fault.code,
+        status: fault.status === 1 ? 'ADDED' : 'DELETED',
+      });
+    }
+    return { report: value.type === 413 ? ('413' as const) : ('418' as const), faults };
   }
   if (value.type !== 419 || !('faults' in value) || !Array.isArray(value.faults)) {
     return null;
@@ -122,7 +151,7 @@ function feedEdata(value: unknown) {
       status: fault.status === 1 ? 'ADDED' : 'DELETED',
     });
   }
-  return { report: '419', faults };
+  return { report: '419' as const, faults };
 }
 
 function storedIgnition(fields: ErmEvent['fields']) {
@@ -222,14 +251,21 @@ function problemDiagnostics(fields: unknown): ErmFleetDiagnostic[] {
     typeof fields === 'object' && fields !== null && 'edata' in fields
       ? feedEdata(fields.edata)
       : null;
-  if (edata?.report === '419' && edata.faults !== undefined) {
+  if (edata?.report === '419') {
     return edata.faults.map((fault) => ({
       kind: 'DIAGNOSTIC_TROUBLE_CODE',
       troubleCode: `SPN ${String(fault.spn)} FMI ${String(fault.fmi)}`,
       status: fault.status === 'ADDED' ? 'ADDED' : 'DELETED',
     }));
   }
-  return edata?.report === '411' && edata.canError === true
+  if (edata?.report === '413' || edata?.report === '418') {
+    return edata.faults.map((fault) => ({
+      kind: 'DIAGNOSTIC_TROUBLE_CODE',
+      troubleCode: fault.code,
+      status: fault.status === 'ADDED' ? 'ADDED' : 'DELETED',
+    }));
+  }
+  return edata?.report === '411' && edata.canError
     ? [{ kind: 'CAN_ERROR', troubleCode: null, status: null }]
     : [];
 }

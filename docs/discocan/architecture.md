@@ -50,7 +50,8 @@ JSON Lines captures are operational evidence, not a source for public documentat
 When `FLEET_ERM_TELEMETRY_ENABLED=true`, Fleet pulls captured events into scoped status samples
 and ignition trips, following
 [ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md). Fleet events come
-only from eData: dated `419` fault-logger transitions and `411` CAN error flags, without alert lifecycle.
+only from eData: dated `413`/`418` codes, `419` SPN/FMI fault-logger observations, `411` CAN
+error flags and `417` CAN loss, without alert lifecycle.
 
 Fleet owns the Device registry. ERM extends `FleetDevice` with `ermState`, `ermEvents`,
 `ermCommands` and `ermFrames`, resolved by its external `imei` with `@requires`. Fleet
@@ -112,9 +113,12 @@ anyone select any Tenant and is not production identity or membership authorizat
 
 `FleetVehicle` and `FleetDevice` are federation entities keyed by `id`, with `branch: Branch!`.
 `FleetVehicle.devices` exposes assigned Device entities through a scoped page batch, so Router
-can compose each device's live `ermState`. `FleetDevice.diagnostics` counts recorded DTC,
-CAN error and CAN disconnection events for the current vehicle/IMEI pair and returns the latest
-evidence; it does not assert that a historical fault is still active. Live ERM values and these
+can compose each device's live `ermState`. `FleetDevice.diagnostics` counts added DTC observations,
+recorded CAN error/disconnection evidence and latest warning lamps for the current vehicle/IMEI
+pair, excluding deleted observations. `FleetDevice.warningLamps` and `FleetVehicle.warningLamps`
+return each of the three supported FMS1 telltales with its raw value and last measurement time;
+missing measurements remain unknown. These fields do not assert that a historical fault is still
+active. Live ERM values and these
 display-only diagnostics do not drive Fleet list filtering, sorting or whole-Branch counts.
 Other record links use stored-field reference types. Derived list facts must be computed
 before filtering, sorting, paging and counting, in the same scoped snapshot as rows/totals.

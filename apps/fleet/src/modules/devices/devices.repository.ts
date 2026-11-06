@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
-import { dateOrNull, integer, oneOf, rowsOf, text } from '../../database/sql.js';
+import { date, dateOrNull, fleetTable, integer, oneOf, rowsOf, text } from '../../database/sql.js';
 import type {
   FleetDeviceSortField,
   FleetDeviceStatus,
@@ -13,6 +13,7 @@ import { vehicleDataClockSql } from '../telemetry/vehicle-facts.sql.js';
 import type { DeviceConditionCriteria } from './device-filter.js';
 import { deviceListOrderSql, deviceListRowsSql, deviceListWhereSql } from './device-list.sql.js';
 import { DEVICE_STATUSES } from './device-state.js';
+import { WARNING_LAMP_PARAMETER_IDS } from './warning-lamps.js';
 
 /** The vehicle reference is loaded with every device through the composite relation. */
 const deviceInclude = {
@@ -140,13 +141,29 @@ export class DevicesRepository {
     });
   }
 
-  async diagnostics(scope: FleetScope, pairs: readonly { vehicleId: string; imei: string }[]) {
+  async diagnostics(
+    scope: FleetScope,
+    pairs: readonly { vehicleId: string; imei: string }[],
+    deviceIds: readonly string[],
+  ) {
     const where: Prisma.FleetEventWhereInput = {
       ...scope,
-      OR: pairs.map((pair) => ({ vehicleId: pair.vehicleId, deviceImei: pair.imei })),
-      kind: { in: ['DIAGNOSTIC_TROUBLE_CODE', 'CAN_ERROR', 'CAN_DISCONNECTED'] },
+      AND: [
+        { OR: pairs.map((pair) => ({ vehicleId: pair.vehicleId, deviceImei: pair.imei })) },
+        {
+          OR: [
+            { kind: { in: ['CAN_ERROR', 'CAN_DISCONNECTED'] } },
+            {
+              kind: 'DIAGNOSTIC_TROUBLE_CODE',
+              OR: [{ diagnosticStatus: 1 }, { diagnosticStatus: null, severity: 'WARNING' }],
+            },
+          ],
+        },
+      ],
     };
-    const [counts, latest] = await this.prisma.client.$transaction(
+    const devices = fleetTable(this.prisma.schema, 'device');
+    const measurements = fleetTable(this.prisma.schema, 'vehicleEdataMeasurement');
+    const [counts, latest, rawLamps] = await this.prisma.client.$transaction(
       [
         this.prisma.client.fleetEvent.groupBy({
           by: ['vehicleId', 'deviceImei'],
@@ -167,10 +184,33 @@ export class DevicesRepository {
             source: true,
           },
         }),
+        this.prisma.client.$queryRaw(Prisma.sql`
+          SELECT d."id"::text AS "deviceId", lamp."parameterId"::int AS "parameterId",
+            lamp."valueSize"::int AS "valueSize", lamp."valueHex", lamp."recordedAt"
+          FROM ${devices} d
+          JOIN LATERAL (
+            SELECT DISTINCT ON (m."parameterId") m."parameterId", m."valueSize",
+              m."valueHex", m."recordedAt"
+            FROM ${measurements} m
+            WHERE m."tenantId" = ${scope.tenantId}::uuid AND m."branchId" = ${scope.branchId}::uuid
+              AND m."vehicleId" = d."vehicleId" AND m."deviceImei" = d."imei"
+              AND m."parameterId" = ANY(${[...WARNING_LAMP_PARAMETER_IDS]}::int[])
+            ORDER BY m."parameterId", m."recordedAt" DESC, m."receivedAt" DESC,
+              m."sourceEventId" DESC, m."id" DESC
+          ) lamp ON TRUE
+          WHERE d."tenantId" = ${scope.tenantId}::uuid AND d."branchId" = ${scope.branchId}::uuid
+            AND d."id" = ANY(${[...deviceIds]}::uuid[])`),
       ],
       { isolationLevel: 'RepeatableRead' },
     );
-    return { counts, latest };
+    const lamps = rowsOf(rawLamps, (row) => ({
+      deviceId: text(row, 'deviceId'),
+      parameterId: integer(row, 'parameterId'),
+      valueSize: integer(row, 'valueSize'),
+      valueHex: text(row, 'valueHex'),
+      recordedAt: date(row, 'recordedAt'),
+    }));
+    return { counts, latest, lamps };
   }
 
   findVehicle(scope: FleetScope, id: string) {

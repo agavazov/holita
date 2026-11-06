@@ -22,6 +22,14 @@ export type ErmTelemetryEdata =
   | {
       report: '419';
       faults: { spn: number; fmi: number; status: 'ADDED' | 'DELETED' }[];
+    }
+  | {
+      report: '413' | '418';
+      faults: { code: string; status: 'ADDED' | 'DELETED' }[];
+    }
+  | {
+      report: '417';
+      noCanMessages: true;
     };
 
 export interface ErmTelemetryEvent {
@@ -166,6 +174,32 @@ function telemetryEdata(value: unknown): ErmTelemetryEdata | null {
         return { spn: fault.spn, fmi: fault.fmi, status: fault.status };
       }),
     };
+  }
+  if (value.report === '413' || value.report === '418') {
+    if (!Array.isArray(value.faults)) {
+      throw unavailable();
+    }
+    return {
+      report: value.report,
+      faults: value.faults.map((fault: unknown) => {
+        if (
+          !record(fault) ||
+          typeof fault.code !== 'string' ||
+          fault.code.length !== 5 ||
+          Buffer.byteLength(fault.code, 'utf8') !== 5 ||
+          (fault.status !== 'ADDED' && fault.status !== 'DELETED')
+        ) {
+          throw unavailable();
+        }
+        return { code: fault.code, status: fault.status };
+      }),
+    };
+  }
+  if (value.report === '417') {
+    if (value.noCanMessages !== true) {
+      throw unavailable();
+    }
+    return { report: value.report, noCanMessages: true };
   }
   return null;
 }

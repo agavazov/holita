@@ -438,6 +438,13 @@ model FleetEvent {
   speedKph Float?
   measuredValue Float?
   thresholdValue Float?
+  sourceEventId BigInt?
+  receivedAt DateTime? @db.Timestamptz(3)
+  diagnosticReport Int? @db.SmallInt
+  diagnosticIndex Int?
+  diagnosticStatus Int? @db.SmallInt
+  diagnosticSpn BigInt?
+  diagnosticFmi Int? @db.SmallInt
   troubleCode String? @db.VarChar(32)
   details String? @db.VarChar(500)
   alertStatus FleetAlertStatus?

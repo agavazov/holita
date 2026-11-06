@@ -583,6 +583,13 @@ describe('ERM telemetry import with PostgreSQL', () => {
       [
         {
           occurredAt: at(0),
+          receivedAt: at(10),
+          sourceEventId: 3n,
+          diagnosticReport: 419,
+          diagnosticIndex: 1,
+          diagnosticStatus: 2,
+          diagnosticSpn: 1247n,
+          diagnosticFmi: 11,
           kind: 'DIAGNOSTIC_TROUBLE_CODE',
           severity: 'INFO',
           troubleCode: 'SPN 1247 FMI 11',
@@ -593,6 +600,13 @@ describe('ERM telemetry import with PostgreSQL', () => {
         },
         {
           occurredAt: at(0),
+          receivedAt: at(10),
+          sourceEventId: 3n,
+          diagnosticReport: 419,
+          diagnosticIndex: 0,
+          diagnosticStatus: 1,
+          diagnosticSpn: 4339n,
+          diagnosticFmi: 7,
           kind: 'DIAGNOSTIC_TROUBLE_CODE',
           severity: 'WARNING',
           troubleCode: 'SPN 4339 FMI 7',
@@ -603,6 +617,13 @@ describe('ERM telemetry import with PostgreSQL', () => {
         },
         {
           occurredAt: at(300),
+          receivedAt: at(310),
+          sourceEventId: 8n,
+          diagnosticReport: 411,
+          diagnosticIndex: 0,
+          diagnosticStatus: null,
+          diagnosticSpn: null,
+          diagnosticFmi: null,
           kind: 'CAN_ERROR',
           severity: 'WARNING',
           troubleCode: null,
@@ -830,5 +851,141 @@ describe('ERM telemetry import with PostgreSQL', () => {
       ).toBe(1);
     }
     expect(await database.client.fleetEvent.count()).toBe(3);
+
+    failures.clear();
+    events.get(deviceA.imei)?.push(
+      {
+        ...event('23', 300, null),
+        eventId: '33',
+        edata: {
+          report: '413',
+          faults: [
+            { code: 'P1111', status: 'ADDED' },
+            { code: 'P1111', status: 'DELETED' },
+            { code: 'P1111', status: 'ADDED' },
+          ],
+        },
+      },
+      {
+        ...event('24', 300, null),
+        eventId: '33',
+        edata: {
+          report: '418',
+          faults: [
+            { code: 'P1482', status: 'ADDED' },
+            { code: 'U0100', status: 'DELETED' },
+          ],
+        },
+      },
+      { ...event('25', 300, null), eventId: '33', edata: { report: '417', noCanMessages: true } },
+    );
+    await jobs.tick();
+    const structuredRows = () =>
+      database.client.fleetEvent.findMany({
+        where: { ...scopeA, sourceEventId: { in: [23n, 24n, 25n] } },
+        orderBy: [{ sourceEventId: 'asc' }, { diagnosticIndex: 'asc' }],
+      });
+    const structured = await structuredRows();
+    expect(structured).toMatchObject(
+      [
+        {
+          sourceEventId: 23n,
+          diagnosticReport: 413,
+          diagnosticIndex: 0,
+          diagnosticStatus: 1,
+          kind: 'DIAGNOSTIC_TROUBLE_CODE',
+          severity: 'WARNING',
+          troubleCode: 'P1111',
+        },
+        {
+          sourceEventId: 23n,
+          diagnosticReport: 413,
+          diagnosticIndex: 1,
+          diagnosticStatus: 2,
+          kind: 'DIAGNOSTIC_TROUBLE_CODE',
+          severity: 'INFO',
+          troubleCode: 'P1111',
+        },
+        {
+          sourceEventId: 23n,
+          diagnosticReport: 413,
+          diagnosticIndex: 2,
+          diagnosticStatus: 1,
+          kind: 'DIAGNOSTIC_TROUBLE_CODE',
+          severity: 'WARNING',
+          troubleCode: 'P1111',
+        },
+        {
+          sourceEventId: 24n,
+          diagnosticReport: 418,
+          diagnosticIndex: 0,
+          diagnosticStatus: 1,
+          kind: 'DIAGNOSTIC_TROUBLE_CODE',
+          severity: 'WARNING',
+          troubleCode: 'P1482',
+        },
+        {
+          sourceEventId: 24n,
+          diagnosticReport: 418,
+          diagnosticIndex: 1,
+          diagnosticStatus: 2,
+          kind: 'DIAGNOSTIC_TROUBLE_CODE',
+          severity: 'INFO',
+          troubleCode: 'U0100',
+        },
+        {
+          sourceEventId: 25n,
+          diagnosticReport: 417,
+          diagnosticIndex: 0,
+          diagnosticStatus: null,
+          kind: 'CAN_DISCONNECTED',
+          severity: 'WARNING',
+          troubleCode: null,
+        },
+      ].map((fault) => ({
+        ...scopeA,
+        source: 'ERM',
+        vehicleId: vehicleA.id,
+        deviceImei: deviceA.imei,
+        occurredAt: at(300),
+        receivedAt: at(310),
+        diagnosticSpn: null,
+        diagnosticFmi: null,
+        alertStatus: null,
+        ...fault,
+      })),
+    );
+    expect(await database.client.fleetEvent.count()).toBe(9);
+    expect(await database.client.fleetEvent.count({ where: scopeB })).toBe(0);
+    await database.client.fleetErmCursor.update({
+      where: { ...scopeA, deviceId: deviceA.id },
+      data: { lastEventId: 0n },
+    });
+    await jobs.tick();
+    expect(await structuredRows()).toEqual(structured);
+    expect(await database.client.fleetEvent.count()).toBe(9);
+    expect(await database.client.vehicleStatusSample.count()).toBe(7);
+    expect(await tripRows()).toEqual(initialTrips);
+    expect(await database.client.fleetNotification.count()).toBe(6);
+    const lastValidCursor = await database.client.fleetErmCursor.findUniqueOrThrow({
+      where: { ...scopeA, deviceId: deviceA.id },
+    });
+    expect(lastValidCursor).toMatchObject({ lastEventId: 25n, lastReceivedAt: at(420) });
+    const malformed: FeedEvent = { ...event('26', 300, null), eventId: '33' };
+    events.get(deviceA.imei)?.push(malformed);
+    for (const edata of [
+      { report: '413', faults: [{ code: 'P1111', status: 'UNKNOWN' }] },
+      { report: '418', faults: [{ code: 'P1', status: 'ADDED' }] },
+      { report: '417', noCanMessages: false },
+    ]) {
+      malformed.edata = edata;
+      await jobs.tick();
+      expect(
+        await database.client.fleetErmCursor.findUniqueOrThrow({
+          where: { ...scopeA, deviceId: deviceA.id },
+        }),
+      ).toEqual(lastValidCursor);
+      expect(await database.client.fleetEvent.count()).toBe(9);
+    }
   });
 });

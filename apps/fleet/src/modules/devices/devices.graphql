@@ -65,6 +65,8 @@ type FleetDevice @key(fields: "id") {
   "Latest sample recorded for this device on its current vehicle; null if never." # B2
   lastReportedAt: DateTime # B2
   diagnostics: FleetDeviceDiagnosticSummary!
+  "Latest stored 405 observation for each supported telltale on the current vehicle/IMEI pair; missing observations are UNKNOWN."
+  warningLamps: [FleetWarningLamp!]!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -79,10 +81,35 @@ type FleetDeviceRoutingHealth {
   backupSeconds: Int!
 }
 
-"Recorded DTC and CAN faults for the current vehicle/IMEI pair; these are historical evidence, not an active-fault assertion."
+"Added DTC and CAN observations for the current vehicle/IMEI pair plus latest warning telltales; recorded faults do not assert an active ECU fault."
 type FleetDeviceDiagnosticSummary {
+  "Added fault observations and latest RED, YELLOW or INFORMATION telltales; deleted fault observations are excluded."
   count: Int!
+  "Latest counted DTC or CAN observation, independent of warning telltales."
   latest: FleetDeviceDiagnosticFault
+}
+
+enum FleetWarningLampState {
+  UNKNOWN
+  OFF
+  RED
+  YELLOW
+  INFORMATION
+  NOT_AVAILABLE
+  RESERVED
+}
+
+"A retained FMS1 telltale observation, not a freshness or complete ECU coverage assertion."
+type FleetWarningLamp {
+  deviceId: ID!
+  "1896 brake system malfunction; 1906 engine/MIL; 1910 ABS failure."
+  parameterId: Int!
+  state: FleetWarningLampState!
+  "Exact one-byte scalar; null without a supported scalar observation."
+  value: Int
+  valueHex: String
+  "Observation time; null means no stored report for this telltale."
+  recordedAt: DateTime
 }
 
 type FleetDeviceDiagnosticFault {

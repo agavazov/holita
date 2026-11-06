@@ -57,7 +57,10 @@ import {
 import { vehicleConditions } from './vehicle-filter.js';
 
 export type VehicleResult = Omit<FleetVehicle, 'branch' | 'devices'> & { devices: DeviceResult[] };
-type StoredVehicle = Omit<VehicleResult, 'state' | 'openAlertCount' | 'nextService' | 'devices'>;
+type StoredVehicle = Omit<
+  VehicleResult,
+  'state' | 'openAlertCount' | 'nextService' | 'devices' | 'warningLamps'
+>;
 
 const VEHICLE_TYPES = Object.values(FleetVehicleType);
 const FUEL_TYPES = Object.values(FleetFuelType);
@@ -399,6 +402,9 @@ export class VehiclesService {
       openAlertCount: row.openAlertCount,
       nextService: nextServices.get(row.id) ?? null,
       devices: devices.filter((device) => device.vehicleId === row.id),
+      warningLamps: devices.flatMap((device) =>
+        device.vehicleId === row.id ? device.warningLamps : [],
+      ),
     }));
   }
 
@@ -425,6 +431,9 @@ export class VehiclesService {
         openAlertCount: openAlerts.get(row.id) ?? 0,
         nextService: nextServices.get(row.id) ?? null,
         devices: devices.filter((device) => device.vehicleId === row.id),
+        warningLamps: devices.flatMap((device) =>
+          device.vehicleId === row.id ? device.warningLamps : [],
+        ),
       };
     });
   }

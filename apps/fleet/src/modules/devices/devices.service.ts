@@ -13,6 +13,7 @@ import type {
   FleetDeviceActionResult,
   FleetDeviceSummary,
   FleetDeviceDiagnosticSummary,
+  FleetWarningLamp,
   QueryFleetDevicesArgs,
   UpdateFleetDeviceInput,
 } from '../../generated/graphql/types.js';
@@ -52,11 +53,12 @@ import { deviceConditions } from './device-filter.js';
 import { deviceStatus } from './device-state.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { ermTelemetryEnabled } from '../erm-telemetry/erm-telemetry.jobs.js';
+import { WARNING_LAMP_PARAMETER_IDS, warningLamp, warningLampCount } from './warning-lamps.js';
 
 export type DeviceResult = Omit<FleetDevice, 'branch'>;
 type StoredDevice = Omit<
   DeviceResult,
-  'lastReportedAt' | 'status' | 'routing' | 'routingHealth' | 'diagnostics'
+  'lastReportedAt' | 'status' | 'routing' | 'routingHealth' | 'diagnostics' | 'warningLamps'
 >;
 
 const DEVICE_MODELS = Object.values(FleetDeviceModel);
@@ -245,14 +247,20 @@ export class DevicesService {
   private async diagnostics(
     scope: FleetScope,
     rows: readonly DeviceRow[],
-  ): Promise<Map<string, FleetDeviceDiagnosticSummary>> {
+  ): Promise<
+    Map<string, { diagnostics: FleetDeviceDiagnosticSummary; warningLamps: FleetWarningLamp[] }>
+  > {
+    if (!rows.length) {
+      return new Map();
+    }
     const pairs = rows.flatMap((row) =>
       row.vehicleId === null ? [] : [{ vehicleId: row.vehicleId, imei: row.imei }],
     );
-    if (!pairs.length) {
-      return new Map();
-    }
-    const { counts, latest } = await this.devices.diagnostics(scope, pairs);
+    const { counts, latest, lamps } = await this.devices.diagnostics(
+      scope,
+      pairs,
+      rows.map((row) => row.id),
+    );
     const latestByPair = new Map(
       latest.flatMap((row) =>
         row.deviceImei === null
@@ -260,13 +268,35 @@ export class DevicesService {
           : [[reportingPair(row.vehicleId, row.deviceImei), row] as const],
       ),
     );
+    const countsByPair = new Map(
+      counts.flatMap((row) =>
+        row.deviceImei === null
+          ? []
+          : [[reportingPair(row.vehicleId, row.deviceImei), row._count._all] as const],
+      ),
+    );
     return new Map(
-      counts.flatMap((row) => {
-        if (row.deviceImei === null) {
-          return [];
-        }
-        const key = reportingPair(row.vehicleId, row.deviceImei);
-        return [[key, { count: row._count._all, latest: latestByPair.get(key) ?? null }] as const];
+      rows.map((row) => {
+        const warningLamps = WARNING_LAMP_PARAMETER_IDS.map((parameterId) =>
+          warningLamp(
+            row.id,
+            parameterId,
+            lamps.find((lamp) => lamp.deviceId === row.id && lamp.parameterId === parameterId),
+          ),
+        );
+        const pair = row.vehicleId === null ? null : reportingPair(row.vehicleId, row.imei);
+        return [
+          row.id,
+          {
+            diagnostics: {
+              count:
+                (pair === null ? 0 : (countsByPair.get(pair) ?? 0)) +
+                warningLampCount(warningLamps),
+              latest: pair === null ? null : (latestByPair.get(pair) ?? null),
+            },
+            warningLamps,
+          },
+        ];
       }),
     );
   }
@@ -309,13 +339,8 @@ export class DevicesService {
         lastReportedAt: row.lastReportedAt,
         routing: routing.get(row.imei)?.routing ?? null,
         routingHealth: routing.get(row.imei)?.routingHealth ?? null,
-        diagnostics:
-          row.vehicleId === null
-            ? { count: 0, latest: null }
-            : (diagnostics.get(reportingPair(row.vehicleId, row.imei)) ?? {
-                count: 0,
-                latest: null,
-              }),
+        diagnostics: diagnostics.get(row.id)?.diagnostics ?? { count: 0, latest: null },
+        warningLamps: diagnostics.get(row.id)?.warningLamps ?? [],
       })),
       total: page.total,
       offset,
@@ -504,13 +529,8 @@ export class DevicesService {
         routingHealth: routing.get(row.imei)?.routingHealth ?? null,
         lastReportedAt,
         status: deviceStatus(row.vehicleId, lastReportedAt, asOf, settings.notReportingHours),
-        diagnostics:
-          row.vehicleId === null
-            ? { count: 0, latest: null }
-            : (diagnostics.get(reportingPair(row.vehicleId, row.imei)) ?? {
-                count: 0,
-                latest: null,
-              }),
+        diagnostics: diagnostics.get(row.id)?.diagnostics ?? { count: 0, latest: null },
+        warningLamps: diagnostics.get(row.id)?.warningLamps ?? [],
       };
     });
   }

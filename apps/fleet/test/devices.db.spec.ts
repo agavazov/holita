@@ -348,6 +348,25 @@ describe('Device GraphQL with PostgreSQL', () => {
         branchId,
       ),
     ).toEqual({ data: { fleetDevices: { total: 0 } } });
+    expect(
+      await query(
+        'query($id:ID!){fleetDevice(id:$id){warningLamps{parameterId state value valueHex recordedAt}}}',
+        { id: silent.id },
+        branchId,
+      ),
+    ).toEqual({
+      data: {
+        fleetDevice: {
+          warningLamps: [1896, 1906, 1910].map((parameterId) => ({
+            parameterId,
+            state: 'UNKNOWN',
+            value: null,
+            valueHex: null,
+            recordedAt: null,
+          })),
+        },
+      },
+    });
     const summary = '{fleetDeviceSummary{dataAsOf online offline inStock}}';
     expect(await query(summary, {}, branchId)).toEqual({
       data: {
@@ -429,8 +448,24 @@ describe('Device GraphQL with PostgreSQL', () => {
           ...fault(first.id, imei, '2026-10-18T05:00:00.000Z'),
           kind: 'DIAGNOSTIC_TROUBLE_CODE',
           troubleCode: 'P0299',
+          diagnosticStatus: 1,
         },
         fault(first.id, imei, '2026-10-18T06:00:00.000Z'),
+        {
+          ...fault(first.id, imei, '2026-10-18T07:00:00.000Z'),
+          kind: 'DIAGNOSTIC_TROUBLE_CODE',
+          troubleCode: 'P0299',
+          diagnosticStatus: 2,
+          severity: 'INFO',
+          alertStatus: null,
+        },
+        {
+          ...fault(first.id, imei, '2026-10-18T07:30:00.000Z'),
+          kind: 'DIAGNOSTIC_TROUBLE_CODE',
+          troubleCode: 'SPN:4339/FMI:7',
+          severity: 'INFO',
+          alertStatus: null,
+        },
         fault(first.id, '990601000000002', '2026-10-18T06:30:00.000Z'),
         {
           ...fault(elsewhere.id, imei, '2026-10-18T07:00:00.000Z'),
@@ -451,9 +486,77 @@ describe('Device GraphQL with PostgreSQL', () => {
     ).toEqual({
       data: { fleetDevice: { vehicleId: first.id, lastReportedAt: '2026-10-18T06:00:00.000Z' } },
     });
+    const measurement = (
+      vehicleId: string,
+      deviceImei: string,
+      parameterId: number,
+      valueHex: string,
+      recordedAt: string,
+      sourceEventId: bigint,
+    ) => ({
+      tenantId,
+      branchId: pairBranch,
+      vehicleId,
+      deviceImei,
+      parameterId,
+      parameterType: 0,
+      valueSize: 1,
+      valueHex,
+      source: 'ERM' as const,
+      sourceEventId,
+      recordedAt: new Date(recordedAt),
+      receivedAt: new Date(recordedAt),
+    });
+    const lampTime = '2026-10-18T06:00:00.000Z';
+    await database.client.vehicleEdataMeasurement.createMany({
+      data: [
+        measurement(first.id, imei, 1896, '01', '2026-10-18T05:00:00.000Z', 1n),
+        measurement(first.id, imei, 1896, '00', lampTime, 2n),
+        measurement(first.id, imei, 1906, '02', lampTime, 2n),
+        measurement(first.id, imei, 1910, '03', lampTime, 2n),
+        // Neither another pair nor a later foreign-scope measurement supplies this Device's state.
+        measurement(second.id, imei, 1896, '00', '2026-10-18T08:00:00.000Z', 3n),
+        measurement(first.id, '990601000000002', 1906, '01', '2026-10-18T08:00:00.000Z', 3n),
+        {
+          ...measurement(elsewhere.id, imei, 1906, '01', '2026-10-18T08:00:00.000Z', 3n),
+          tenantId: otherTenant,
+        },
+        {
+          ...measurement(foreignVehicle.id, imei, 1910, '01', '2026-10-18T08:00:00.000Z', 3n),
+          branchId: foreignBranch,
+        },
+      ],
+    });
+    const warningLamps = 'warningLamps{deviceId parameterId state value valueHex recordedAt}';
+    const expectedLamps = [
+      {
+        deviceId: device.id,
+        parameterId: 1896,
+        state: 'OFF',
+        value: 0,
+        valueHex: '00',
+        recordedAt: lampTime,
+      },
+      {
+        deviceId: device.id,
+        parameterId: 1906,
+        state: 'YELLOW',
+        value: 2,
+        valueHex: '02',
+        recordedAt: lampTime,
+      },
+      {
+        deviceId: device.id,
+        parameterId: 1910,
+        state: 'INFORMATION',
+        value: 3,
+        valueHex: '03',
+        recordedAt: lampTime,
+      },
+    ];
     const diagnostics = 'diagnostics{count latest{kind occurredAt troubleCode source}}';
     const currentFaults = {
-      count: 2,
+      count: 4,
       latest: {
         kind: 'CAN_ERROR',
         occurredAt: '2026-10-18T06:00:00.000Z',
@@ -463,16 +566,25 @@ describe('Device GraphQL with PostgreSQL', () => {
     };
     for (const [source, expected] of [
       [
-        `query($id:ID!){fleetDevice(id:$id){${diagnostics}}}`,
-        { fleetDevice: { diagnostics: currentFaults } },
+        `query($id:ID!){fleetDevice(id:$id){${diagnostics} ${warningLamps}}}`,
+        { fleetDevice: { diagnostics: currentFaults, warningLamps: expectedLamps } },
       ],
       [
-        `query($id:ID!){fleetDevices(ids:[$id]){items{${diagnostics}}}}`,
-        { fleetDevices: { items: [{ diagnostics: currentFaults }] } },
+        `query($id:ID!){fleetDevices(ids:[$id]){items{${diagnostics} ${warningLamps}}}}`,
+        { fleetDevices: { items: [{ diagnostics: currentFaults, warningLamps: expectedLamps }] } },
       ],
       [
-        `query($id:ID!){fleetVehicles(ids:[$id]){items{devices{imei ${diagnostics}}}}}`,
-        { fleetVehicles: { items: [{ devices: [{ imei, diagnostics: currentFaults }] }] } },
+        `query($id:ID!){fleetVehicles(ids:[$id]){items{${warningLamps} devices{imei ${diagnostics} ${warningLamps}}}}}`,
+        {
+          fleetVehicles: {
+            items: [
+              {
+                warningLamps: expectedLamps,
+                devices: [{ imei, diagnostics: currentFaults, warningLamps: expectedLamps }],
+              },
+            ],
+          },
+        },
       ],
     ] satisfies [string, Record<string, unknown>][]) {
       expect(
@@ -482,6 +594,41 @@ describe('Device GraphQL with PostgreSQL', () => {
           pairBranch,
         ),
       ).toEqual({ data: expected });
+    }
+    for (const [value, state] of [
+      [0, 'OFF'],
+      [1, 'RED'],
+      [2, 'YELLOW'],
+      [3, 'INFORMATION'],
+      [4, 'RESERVED'],
+      [5, 'RESERVED'],
+      [6, 'RESERVED'],
+      [7, 'NOT_AVAILABLE'],
+    ] as const) {
+      const recordedAt = new Date(
+        new Date(lampTime).getTime() + (value + 1) * 60_000,
+      ).toISOString();
+      const valueHex = value.toString(16).padStart(2, '0');
+      await database.client.vehicleEdataMeasurement.create({
+        data: measurement(first.id, imei, 1896, valueHex, recordedAt, BigInt(value + 10)),
+      });
+      expect(
+        await query(
+          `query($id:ID!){fleetDevice(id:$id){${diagnostics} ${warningLamps}}}`,
+          { id: device.id },
+          pairBranch,
+        ),
+      ).toEqual({
+        data: {
+          fleetDevice: {
+            diagnostics: { ...currentFaults, count: 4 + ([1, 2, 3].includes(value) ? 1 : 0) },
+            warningLamps: [
+              { deviceId: device.id, parameterId: 1896, state, value, valueHex, recordedAt },
+              ...expectedLamps.slice(1),
+            ],
+          },
+        },
+      });
     }
     expect(
       await query(

@@ -248,6 +248,7 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
       },
     },
     { type: 417, payload: '', decoded: { noCanMessages: true } },
+    { type: 417, payload: '00', decoded: {} },
     {
       type: 418,
       payload: '20503134383201553031303002',
@@ -268,6 +269,17 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
         ],
       },
     },
+    {
+      type: 419,
+      payload: '21000010F30701000004DF0B02',
+      decoded: {
+        faults: [
+          { spn: 4339, fmi: 7, status: 1 },
+          { spn: 1247, fmi: 11, status: 2 },
+        ],
+      },
+    },
+    { type: 413, payload: '1911110162', decoded: {} },
     { type: 412, payload: '01020304', decoded: {} },
     { type: 419, payload: '21000010F3', decoded: {} },
     // The PDF's printed 418 example conflicts with its five-ASCII-character layout.

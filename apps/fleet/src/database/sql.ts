@@ -12,6 +12,7 @@ export type FleetTableName =
   | 'driver'
   | 'vehicleGroup'
   | 'vehicleStatusSample'
+  | 'vehicleEdataMeasurement'
   | 'trip'
   | 'fleetEvent'
   | 'fleetSettings'
@@ -23,6 +24,7 @@ const FLEET_TABLES: readonly FleetTableName[] = [
   'driver',
   'vehicleGroup',
   'vehicleStatusSample',
+  'vehicleEdataMeasurement',
   'trip',
   'fleetEvent',
   'fleetSettings',

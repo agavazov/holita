@@ -308,9 +308,11 @@ The admin **Devices** section opens one Device page with Overview, Problems, Com
 SMS commands, Parameters and Technical details (events/frames). Trips opens the currently
 assigned Vehicle's trips. Vehicle Commands selects a particular installed Device and uses the
 same readable history and details modal. Legacy Control center and diagnostics URLs redirect
-to these pages. Fleet
-diagnostic counts are historical DTC/CAN evidence for the current vehicle/IMEI pair, not active-fault
-counts; the faults tab also shows alarm and eData events, including cleared faults. Fleet owns the ten registered truck identities,
+to these pages. Fleet diagnostic counts include added DTC observations, recorded CAN evidence and
+the latest red, yellow or information warning lamps for the current vehicle/IMEI pair. Deleted
+fault observations do not increase the count. The count does not establish active ECU faults;
+the Problems rows expose every recorded fault in `diagnostics`, including deleted observations
+whose status does not prove a repair. Fleet owns the ten registered truck identities,
 including `serialNumber` and `edataModule`; ERM state is joined by IMEI. Use Branch-scoped
 Device fields for operator journeys:
 
@@ -592,11 +594,25 @@ loopback with the separate bearer `ERM_TELEMETRY_TOKEN` (at least 32 characters)
 timestamps, excluding frames received less than 10 seconds ago. `after` defaults to `0`, `limit`
 to 500, and an empty page keeps `next` equal to `after`. Raw frames, fields and commands are
 excluded. Each event also has `ignitionOn` (binary Tracker flags or an `#IGN#` token, else null) and
-`edata`: null, or a decoded eData 411 report
-(`{ report, can, j1708, obd, obdMask, canError, ignition }`) or 419 report
-(`{ report, faults: [{ spn, fmi, status: ADDED | DELETED }] }`). `ErmEvent.edata` shows every
+`edata`: null, or one of these normalized reports:
+
+- `405`: `{ report, measurements: [{ parameterId, parameterType, valueSize, valueHex }] }`.
+- `411`: `{ report, can, j1708, obd, obdMask, canError, ignition }`.
+- `413` / `418`: `{ report, faults: [{ code, status: ADDED | DELETED }] }`.
+- `417`: `{ report, noCanMessages: true }`, recorded as CAN communication loss.
+- `419`: `{ report, faults: [{ spn, fmi, status: ADDED | DELETED }] }`.
+
+Reports retain event and receipt times. `ErmEvent.edata` shows every
 decoded eData report of an External device (33) event with its raw payload. See [ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md) for
 Fleet's telemetry job.
+
+`FleetDevice.warningLamps` and `FleetVehicle.warningLamps` expose the latest stored `405`
+measurements for eData 1896 (brake system malfunction), 1906 (engine/MIL) and 1910 (ABS failure),
+with the Device, raw value and measurement time. Collection requires
+`FLEET_ERM_EDATA_MEASUREMENTS_ENABLED=true`; existing import cursors are not rewound.
+The one-byte FMS1 scalar states are `0` OFF, `1` RED, `2` YELLOW, `3` INFORMATION,
+`4`–`6` RESERVED and `7` NOT_AVAILABLE. A missing report or unsupported encoding is UNKNOWN,
+never OFF. A timestamp establishes the last observation, not continuing coverage or fault clearance.
 
 ### Development and service management
 

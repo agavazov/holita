@@ -39,7 +39,11 @@ function evidence(row: Record<string, unknown>) {
     eventTime: dateOrNull(row, 'eventTime'),
     eventId: textOrNull(row, 'eventId'),
     diagnostics: rowsOf(row.diagnostics, (diagnostic) => ({
-      kind: oneOf(diagnostic, 'kind', ['DIAGNOSTIC_TROUBLE_CODE', 'CAN_ERROR'] as const),
+      kind: oneOf(diagnostic, 'kind', [
+        'DIAGNOSTIC_TROUBLE_CODE',
+        'CAN_ERROR',
+        'CAN_DISCONNECTED',
+      ] as const),
       troubleCode: textOrNull(diagnostic, 'troubleCode'),
       status:
         diagnostic.status === null

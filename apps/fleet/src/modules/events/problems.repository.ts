@@ -42,6 +42,13 @@ export class ProblemsRepository {
             kind: true,
             severity: true,
             troubleCode: true,
+            diagnosticReport: true,
+            diagnosticStatus: true,
+            diagnosticSpn: true,
+            diagnosticFmi: true,
+            diagnosticIndex: true,
+            sourceEventId: true,
+            receivedAt: true,
             details: true,
             alertStatus: true,
             vehicle: {
@@ -54,6 +61,7 @@ export class ProblemsRepository {
               },
             },
           },
+          orderBy: [{ sourceEventId: 'asc' }, { diagnosticIndex: 'asc' }, { id: 'asc' }],
         });
         const devices = await transaction.device.findMany({
           where: { tenantId: scope.tenantId, branchId: scope.branchId },
