@@ -38,6 +38,12 @@ type ErmCommandRequest {
   deviceId: ID!
   unitId: ID!
   actorId: String!
+  cancelledByActorId: String
+  batchId: ID
+  batchIndex: Int
+  retryOfId: ID
+  waitingReason: ErmCommandWaitingReason
+  waitingSince: DateTime
   intent: String!
   action: ErmDeviceAction!
   "Stable code for purpose translation; intent remains the operator's original text."
@@ -71,6 +77,52 @@ type ErmCommandRequest {
   resultCode: String
   responseText: String
   failureReason: String
+}
+enum ErmCommandWaitingReason {
+  GATEWAY_UNAVAILABLE
+  FLEET_VERIFICATION_UNAVAILABLE
+  UNIT_NOT_CONNECTED
+}
+input ErmCommandRequestsFilter {
+  statuses: [ErmCommandRequestStatus!]
+  actions: [ErmDeviceAction!]
+  deviceIds: [ID!]
+  imeis: [String!]
+  actorId: String
+  createdFrom: DateTime
+  createdTo: DateTime
+}
+type ErmCommandRequestsPage {
+  items: [ErmCommandRequest!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+input RetryErmDeviceCommandInput {
+  requestId: ID!
+  expiresInSeconds: Int = 7200
+  intent: String
+}
+input StartErmCommandBatchInput {
+  deviceIds: [ID!]!
+  action: ErmDeviceAction!
+  expiresInSeconds: Int = 7200
+  intent: String
+}
+type ErmCommandRequestCount {
+  status: ErmCommandRequestStatus!
+  count: Int!
+}
+type ErmCommandBatch {
+  id: ID!
+  actorId: String!
+  action: ErmDeviceAction!
+  createdAt: DateTime!
+  stoppedAt: DateTime
+  stoppedByActorId: String
+  counts: [ErmCommandRequestCount!]!
+  "Requests in the selected Device order, dispatched one at a time."
+  requests: [ErmCommandRequest!]!
 }
 "Display facts for the six existing allowlisted read actions; no arbitrary protocol input."
 type ErmCommandDisplayParameters {
@@ -538,12 +590,25 @@ type Query {
   ): ErmFleetProblems!
   "One durable request in the verified Tenant and active Branch, suitable for pending-state polling."
   ermCommandRequest(id: ID!): ErmCommandRequest
+  "Newest first, scoped to the verified Tenant and active Branch; creation range is half-open."
+  ermCommandRequests(
+    offset: Int! = 0
+    limit: Int! = 20
+    filter: ErmCommandRequestsFilter
+  ): ErmCommandRequestsPage!
+  ermCommandBatch(id: ID!): ErmCommandBatch
 }
 type Mutation {
   "Queues an allowlisted read for the Device's next primary connection, with expiry and no ambiguous replay."
   sendErmDeviceCommand(input: SendErmDeviceCommandInput!): ErmCommandRequest!
   "Cancels a queued request of the verified Tenant and active Branch before submission."
   cancelErmDeviceCommand(input: CancelErmDeviceCommandInput!): ErmCommandRequest!
+  "Creates a new request after current Fleet ownership verification; never replays automatically."
+  retryErmDeviceCommand(input: RetryErmDeviceCommandInput!): ErmCommandRequest!
+  "Queues one allowlisted read per selected Branch Device in order (at most 100 unique Devices)."
+  startErmCommandBatch(input: StartErmCommandBatchInput!): ErmCommandBatch!
+  "Records the stopping actor and cancels only requests that are still queued."
+  stopErmCommandBatch(id: ID!): ErmCommandBatch!
   "Starts a background parameter snapshot after checking the Device's active Branch and primary connection."
   startErmParameterSnapshot(input: StartErmParameterSnapshotInput!): ErmParameterSnapshot!
   "Starts a controlled eData read or single change after verifying the Device's Branch and primary connection."

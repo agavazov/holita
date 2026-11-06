@@ -244,7 +244,33 @@ model ErmCommandRequest {
   resultCode String?
   responseText String?
   failureReason String?
+  cancelledByActorId String? @db.VarChar(128)
+  waitingReason String? @db.VarChar(64)
+  waitingSince DateTime? @db.Timestamptz(3)
+  retryOfId String? @db.Uuid
+  retryOf ErmCommandRequest? @relation("CommandRetries", fields: [tenantId, branchId, retryOfId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
+  retries ErmCommandRequest[] @relation("CommandRetries")
+  batchId String? @db.Uuid
+  batchIndex Int?
+  batch ErmCommandBatch? @relation(fields: [tenantId, branchId, batchId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([tenantId, branchId, id])
+  @@unique([batchId, batchIndex])
+  @@index([tenantId, branchId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([status, createdAt])
   @@index([tenantId, branchId, deviceId, createdAt(sort: Desc)])
   @@map("ermCommandRequest")
+}
+
+model ErmCommandBatch {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  actorId String @db.VarChar(128)
+  action ErmDeviceAction
+  createdAt DateTime @db.Timestamptz(3)
+  stoppedAt DateTime? @db.Timestamptz(3)
+  stoppedByActorId String? @db.VarChar(128)
+  requests ErmCommandRequest[]
+  @@unique([tenantId, branchId, id])
+  @@map("ermCommandBatch")
 }

@@ -10,6 +10,7 @@ import type {
   ErmCommand,
   ErmFrame,
   ErmConfigurationChange,
+  ErmCommandWaitingReason,
 } from '../../generated/graphql/types.js';
 import { sqlRows, sqlText } from '../../database/sql.js';
 import type { OperatorAudit, OperatorScope } from './operator-audit.js';
@@ -33,9 +34,10 @@ export class CommandRequestsRepository {
     action: ErmDeviceAction,
     createdAt: Date,
     expiresAt: Date,
+    retryOfId?: string,
   ) {
     return this.prisma.client.ermCommandRequest.create({
-      data: { ...audit, unitId, action, createdAt, expiresAt },
+      data: { ...audit, unitId, action, createdAt, expiresAt, retryOfId: retryOfId ?? null },
     });
   }
 
@@ -62,18 +64,69 @@ export class CommandRequestsRepository {
     });
   }
 
-  pending(now: Date, unitIds: string[]) {
+  async pending(now: Date, unitIds: string[]) {
+    const table = Prisma.raw(`"${this.prisma.schema.replaceAll('"', '""')}"."ermCommandRequest"`);
+    const selected = sqlRows(
+      await this.prisma.client.$queryRaw(Prisma.sql`
+      SELECT request.id::text AS id FROM ${table} request
+      WHERE request.status = 'queued' AND request."unitId" = ANY(${unitIds}::text[])
+        AND request."expiresAt" > ${now}
+        AND (request."batchId" IS NULL OR NOT EXISTS (
+          SELECT 1 FROM ${table} predecessor
+          WHERE predecessor."tenantId" = request."tenantId"
+            AND predecessor."branchId" = request."branchId"
+            AND predecessor."batchId" = request."batchId"
+            AND predecessor."batchIndex" < request."batchIndex"
+            AND predecessor.status IN ('queued', 'submitting')
+        ))
+      ORDER BY request."createdAt", request.id LIMIT 50
+    `),
+    );
     return this.prisma.client.ermCommandRequest.findMany({
-      where: { status: 'QUEUED', unitId: { in: unitIds }, expiresAt: { gt: now } },
+      where: {
+        id: { in: selected.map((row) => sqlText(row, 'id')) },
+        status: 'QUEUED',
+        unitId: { in: unitIds },
+        expiresAt: { gt: now },
+      },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-      take: 50,
+    });
+  }
+
+  // Only a changed reason moves waitingSince, so it keeps the start of the current wait.
+  async gatewayWaiting(primary: string[] | null, at: Date): Promise<void> {
+    if (primary === null) {
+      await this.prisma.client.ermCommandRequest.updateMany({
+        where: { status: 'QUEUED', ...otherReason('GATEWAY_UNAVAILABLE') },
+        data: { waitingReason: 'GATEWAY_UNAVAILABLE', waitingSince: at },
+      });
+      return;
+    }
+    await this.prisma.client.ermCommandRequest.updateMany({
+      where: { status: 'QUEUED', unitId: { notIn: primary }, ...otherReason('UNIT_NOT_CONNECTED') },
+      data: { waitingReason: 'UNIT_NOT_CONNECTED', waitingSince: at },
+    });
+    await this.prisma.client.ermCommandRequest.updateMany({
+      where: {
+        status: 'QUEUED',
+        unitId: { in: primary },
+        waitingReason: { in: ['GATEWAY_UNAVAILABLE', 'UNIT_NOT_CONNECTED'] },
+      },
+      data: { waitingReason: null, waitingSince: null },
+    });
+  }
+
+  async waiting(id: string, reason: ErmCommandWaitingReason, at: Date): Promise<void> {
+    await this.prisma.client.ermCommandRequest.updateMany({
+      where: { id, status: 'QUEUED', ...otherReason(reason) },
+      data: { waitingReason: reason, waitingSince: at },
     });
   }
 
   async claim(id: string, submittedAt: Date): Promise<boolean> {
     const changed = await this.prisma.client.ermCommandRequest.updateMany({
       where: { id, status: 'QUEUED', expiresAt: { gt: submittedAt } },
-      data: { status: 'SUBMITTING', submittedAt },
+      data: { status: 'SUBMITTING', submittedAt, waitingReason: null, waitingSince: null },
     });
     return changed.count === 1;
   }
@@ -108,10 +161,16 @@ export class CommandRequestsRepository {
     deviceId: string,
     id: string,
     completedAt: Date,
+    cancelledByActorId: string,
   ): Promise<boolean> {
     const changed = await this.prisma.client.ermCommandRequest.updateMany({
       where: { ...scope, deviceId, id, status: 'QUEUED' },
-      data: { status: 'CANCELLED', completedAt, failureReason: 'Cancelled before submission' },
+      data: {
+        status: 'CANCELLED',
+        completedAt,
+        cancelledByActorId,
+        failureReason: 'Cancelled before submission',
+      },
     });
     return changed.count === 1;
   }
@@ -122,6 +181,86 @@ export class CommandRequestsRepository {
 
   findById(scope: OperatorScope, id: string) {
     return this.prisma.client.ermCommandRequest.findFirst({ where: { ...scope, id } });
+  }
+
+  async list(
+    scope: OperatorScope,
+    query: { where: Prisma.ErmCommandRequestWhereInput; offset: number; limit: number },
+  ) {
+    const where: Prisma.ErmCommandRequestWhereInput = { AND: [scope, query.where] };
+    const [items, total] = await this.prisma.client.$transaction(
+      [
+        this.prisma.client.ermCommandRequest.findMany({
+          where,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          skip: query.offset,
+          take: query.limit,
+        }),
+        this.prisma.client.ermCommandRequest.count({ where }),
+      ],
+      { isolationLevel: 'RepeatableRead' },
+    );
+    return { items, total, offset: query.offset, limit: query.limit };
+  }
+
+  async createBatch(
+    scope: OperatorScope,
+    actorId: string,
+    targets: { deviceId: string; unitId: string }[],
+    action: ErmDeviceAction,
+    intent: string,
+    createdAt: Date,
+    expiresAt: Date,
+  ) {
+    return this.prisma.client.$transaction(async (client) => {
+      const batch = await client.ermCommandBatch.create({
+        data: { ...scope, actorId, action, createdAt },
+      });
+      await client.ermCommandRequest.createMany({
+        data: targets.map((target, batchIndex) => ({
+          ...scope,
+          ...target,
+          actorId,
+          action,
+          intent,
+          createdAt,
+          expiresAt,
+          batchId: batch.id,
+          batchIndex,
+        })),
+      });
+      return batch.id;
+    });
+  }
+
+  batch(scope: OperatorScope, id: string) {
+    return this.prisma.client.ermCommandBatch.findFirst({
+      where: { ...scope, id },
+      include: { requests: { where: scope, orderBy: { batchIndex: 'asc' } } },
+    });
+  }
+
+  async stopBatch(scope: OperatorScope, id: string, actorId: string, stoppedAt: Date) {
+    return this.prisma.client.$transaction(async (client) => {
+      const batch = await client.ermCommandBatch.findFirst({ where: { ...scope, id } });
+      if (!batch) {
+        return false;
+      }
+      await client.ermCommandBatch.updateMany({
+        where: { ...scope, id, stoppedAt: null },
+        data: { stoppedAt, stoppedByActorId: actorId },
+      });
+      await client.ermCommandRequest.updateMany({
+        where: { ...scope, batchId: id, status: 'QUEUED' },
+        data: {
+          status: 'CANCELLED',
+          completedAt: stoppedAt,
+          cancelledByActorId: actorId,
+          failureReason: 'Cancelled before submission',
+        },
+      });
+      return true;
+    });
   }
 
   async related(
@@ -231,4 +370,8 @@ export class CommandRequestsRepository {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
   }
+}
+
+function otherReason(reason: ErmCommandWaitingReason) {
+  return { OR: [{ waitingReason: null }, { waitingReason: { not: reason } }] };
 }

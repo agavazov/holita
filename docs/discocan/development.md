@@ -423,13 +423,37 @@ offline, choose expiry (default two hours, maximum 24 hours), and cancel a QUEUE
 `cancelErmDeviceCommand(input: {deviceId, requestId})`. Settings and snapshots still require a
 primary connection.
 
+The command queue API also provides Branch-wide history through
+`ermCommandRequests(offset: 0, limit: 20, filter: ...)`, returning `items`, `total`, `offset` and
+`limit`. The maximum limit is 100; rows sort by `createdAt DESC, id DESC`. Filters are `statuses`,
+`actions`, `deviceIds`, `imeis`, `actorId`, `createdFrom` (inclusive) and `createdTo` (exclusive).
+List filters accept 1–100 unique values. Every row retains its Device ID and IMEI (`unitId`),
+issuer, outcome, lifecycle times, expiry, `retryOfId`, `batchId` and `batchIndex`.
+`retryErmDeviceCommand(input: {requestId, expiresInSeconds, intent})` explicitly creates a new
+linked request from FAILED, EXPIRED, UNCERTAIN or CANCELLED, rechecking the Device's current Fleet
+ownership and IMEI. The original remains unchanged; default retry expiry is two hours.
+
+`startErmCommandBatch(input: {deviceIds, action, expiresInSeconds, intent})` verifies 1–100 unique
+Devices in the active Branch and atomically queues one permitted read per Device in the supplied
+order. `ermCommandBatch(id)` returns issuer, operation, creation and stop audit, counts for every
+request status and the ordered requests. Each batch waits for its preceding request to settle
+before advancing; an offline first Device holds later requests. Reads use the existing primary-mode,
+Fleet-target and per-unit workflow checks. `stopErmCommandBatch(id)` records `stoppedAt` and
+`stoppedByActorId` and cancels only requests still QUEUED; submitted requests retain their outcome.
+These APIs are available for the command workspace; the current admin operations remain compatible.
+
 The API worker waits for primary mode and rechecks the stored Tenant/Branch/Device/IMEI through
 Fleet before sending once. Configure the same `ERM_TELEMETRY_TOKEN` in Fleet and ERM API; the
 Fleet URL comes from `FLEET_GRAPHQL_URL`. QUEUED can become SUBMITTING, ANSWERED, FAILED, EXPIRED,
 CANCELLED or UNCERTAIN. An API restart changes interrupted SUBMITTING to UNCERTAIN. Ambiguous
 submissions are never replayed automatically. Acceptance is not delivery, a unit rejection is
 shown plainly, and a read response is not configuration verification. If the browser loses the
-mutation result, inspect the audit before making another decision.
+mutation result, inspect the audit before making another decision. A queued request exposes its
+current `waitingReason` and the start of that wait (`waitingSince`): `GATEWAY_UNAVAILABLE` for discovery
+failure, `FLEET_VERIFICATION_UNAVAILABLE` for target-verification failure, or `UNIT_NOT_CONNECTED`
+when primary discovery succeeds without that unit. These reasons do not alter submission rules.
+Command notifications retain `REPLY_TIMEOUT` and `TRANSPORT_FAILED` when linked transport evidence
+is available, as command history does.
 
 The Commands tab shows readable request purpose, target, lifecycle times, expiry and outcome.
 Queued/offline and waiting states stay visible across polls, and details expose parameters,
@@ -437,7 +461,8 @@ intent, actor, transport IDs, exact sent/received frames and configuration verif
 A device acknowledgement links to its request and means device confirmation, not proof of
 execution. Settings and snapshots show their
 actor and intent alongside steps and before/after evidence. New actions from real sessions record
-the verified Core `userId` as their actor. Demo sessions identify the Tenant only
+the verified Core `userId` as their actor, including `cancelledByActorId` on cancelled requests
+and the issuer/stopping actor on batches. Demo sessions identify the Tenant only
 (`demo-tenant:<tenantId>`); historical demo audit rows remain unchanged. Audit history and
 snapshot diffs use the stored Tenant/Branch/Device scope, so
 unattributed legacy tool runs are not included in this operator history.

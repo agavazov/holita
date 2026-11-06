@@ -1,4 +1,8 @@
-import type { ErmCommandDisplayField, ErmCommandRequest } from '../../generated/graphql/types.js';
+import type {
+  ErmCommandDisplayField,
+  ErmCommandRequest,
+  ErmCommandWaitingReason,
+} from '../../generated/graphql/types.js';
 import type { ErmCommandRequest as StoredRequest } from '../../generated/prisma/client.js';
 import type { CommandRequestRelations } from './command-requests.repository.js';
 
@@ -46,6 +50,7 @@ export function commandRequestView(
         : [];
   return {
     ...request,
+    waitingReason: waitingReason(request.waitingReason),
     actionCode: request.action,
     displayParameters: {
       expiresInSeconds: Math.round(
@@ -69,4 +74,15 @@ export function commandRequestView(
     sentFrame: request.commandId ? (related?.frames.get(request.commandId) ?? null) : null,
     receivedFrameHex: transport?.responseHex ?? null,
   };
+}
+
+function waitingReason(reason: string | null): ErmCommandWaitingReason | null {
+  switch (reason) {
+    case 'GATEWAY_UNAVAILABLE':
+    case 'FLEET_VERIFICATION_UNAVAILABLE':
+    case 'UNIT_NOT_CONNECTED':
+      return reason;
+    default:
+      return null;
+  }
 }

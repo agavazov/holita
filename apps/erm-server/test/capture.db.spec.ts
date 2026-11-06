@@ -690,6 +690,7 @@ it('persists captured connection lifecycle and raw frames through the production
     let fleetCalls = 0;
     let gatewayReads = 0;
     let gatewayOnline = true;
+    let gatewayUnavailable = false;
     let targetMatches = true;
     let targetUnavailable = false;
     let queueResultCode: string | null = null;
@@ -801,6 +802,7 @@ it('persists captured connection lifecycle and raw frames through the production
         expect(req.headers.authorization).toBe('Bearer erm-cross-service-test-token-32-characters');
         if (req.method === 'GET' && req.url === '/internal/units') {
           gatewayReads++;
+          res.statusCode = gatewayUnavailable ? 503 : 200;
           res.end(
             JSON.stringify(
               gatewayOnline
@@ -1207,21 +1209,42 @@ it('persists captured connection lifecycle and raw frames through the production
       { deviceId, action: 'READ_STATUS', intent: 'Inspect parked truck' },
       scopedContext,
     );
+    gatewayUnavailable = true;
     await requests.tick();
     expect(sent).toHaveLength(sentBeforeQueue);
-    expect(
-      await database.client.ermCommandRequest.findUnique({ where: { id: offlineQueue.id } }),
-    ).toMatchObject({ status: 'QUEUED' });
+    expect(await requests.find(offlineQueue.id, scopedContext)).toMatchObject({
+      status: 'QUEUED',
+      waitingReason: 'GATEWAY_UNAVAILABLE',
+      waitingSince: expect.any(Date),
+    });
+    gatewayUnavailable = false;
+    await requests.tick();
+    expect(sent).toHaveLength(sentBeforeQueue);
+    expect(await requests.find(offlineQueue.id, scopedContext)).toMatchObject({
+      status: 'QUEUED',
+      waitingReason: 'UNIT_NOT_CONNECTED',
+      waitingSince: expect.any(Date),
+    });
     gatewayOnline = true;
     targetUnavailable = true;
     await requests.tick();
     expect(sent).toHaveLength(sentBeforeQueue);
+    expect(await requests.find(offlineQueue.id, scopedContext)).toMatchObject({
+      status: 'QUEUED',
+      waitingReason: 'FLEET_VERIFICATION_UNAVAILABLE',
+      waitingSince: expect.any(Date),
+    });
     targetUnavailable = false;
     await requests.tick();
     expect(sent).toHaveLength(sentBeforeQueue + 1);
     expect(
       await database.client.ermCommandRequest.findUnique({ where: { id: offlineQueue.id } }),
-    ).toMatchObject({ responseText: 'IGN=0', intent: 'Inspect parked truck' });
+    ).toMatchObject({
+      responseText: 'IGN=0',
+      intent: 'Inspect parked truck',
+      waitingReason: null,
+      waitingSince: null,
+    });
     await requests.tick();
     expect(sent).toHaveLength(sentBeforeQueue + 1);
     const cancelledQueue = await requests.request(
@@ -1236,7 +1259,8 @@ it('persists captured connection lifecycle and raw frames through the production
     ).rejects.toMatchObject({ status: 404 });
     expect(
       await requests.cancel({ deviceId, requestId: cancelledQueue.id }, scopedContext),
-    ).toMatchObject({ status: 'CANCELLED' });
+    ).toMatchObject({ status: 'CANCELLED', cancelledByActorId: `demo-tenant:${tenantId}` });
+    const retrySources = [{ requestId: cancelledQueue.id, status: 'CANCELLED' }];
     await expect(
       requests.cancel({ deviceId, requestId: offlineQueue.id }, scopedContext),
     ).rejects.toMatchObject({ status: 409 });
@@ -1266,6 +1290,7 @@ it('persists captured connection lifecycle and raw frames through the production
       const after = sent.length;
       await requests.tick();
       expect(sent).toHaveLength(after);
+      retrySources.push({ requestId: queued.id, status: scenario.status });
     }
     targetMatches = true;
     queueResultCode = null;
@@ -1348,6 +1373,218 @@ it('persists captured connection lifecycle and raw frames through the production
     );
     expect(otherQueueHistory).toHaveLength(50);
     expect(otherQueueHistory[0]?.intent).toBe('Newest history row');
+    const branchQueue = await requests.list({ limit: 100 }, scopedContext);
+    expect(branchQueue.total).toBe(
+      await database.client.ermCommandRequest.count({ where: { tenantId, branchId } }),
+    );
+    expect(branchQueue.items.every(({ actorId }) => actorId === `demo-tenant:${tenantId}`)).toBe(
+      true,
+    );
+    expect(branchQueue.items.map(({ createdAt }) => createdAt.getTime())).toEqual(
+      branchQueue.items.map(({ createdAt }) => createdAt.getTime()).sort((a, b) => b - a),
+    );
+    const filteredQueue = await requests.list(
+      {
+        offset: 1,
+        limit: 1,
+        filter: {
+          statuses: ['CANCELLED'],
+          actions: ['READ_STATUS'],
+          deviceIds: [queueHistoryDeviceId],
+          imeis: ['123456789012346'],
+          actorId: `demo-tenant:${tenantId}`,
+          createdFrom: new Date(Date.UTC(2020, 0, 1, 0, 0, 49)).toISOString(),
+          createdTo: new Date(Date.UTC(2020, 0, 1, 0, 0, 51)).toISOString(),
+        },
+      },
+      scopedContext,
+    );
+    expect(filteredQueue).toMatchObject({ total: 2, offset: 1, limit: 1 });
+    expect(filteredQueue.items).toHaveLength(1);
+    expect(filteredQueue.items[0]).toMatchObject({
+      deviceId: queueHistoryDeviceId,
+      unitId: '123456789012346',
+      createdAt: new Date(Date.UTC(2020, 0, 1, 0, 0, 49)),
+    });
+    const retryActor = randomUUID();
+    const retryContext = { ...scopedContext, userId: retryActor };
+    await expect(
+      requests.retry({ requestId: offlineQueue.id }, scopedContext),
+    ).rejects.toMatchObject({ status: 409 });
+    fleetError = 'NOT_FOUND';
+    await expect(
+      requests.retry({ requestId: cancelledQueue.id }, scopedContext),
+    ).rejects.toMatchObject({ status: 404 });
+    fleetError = undefined;
+    for (const source of retrySources) {
+      const retry = await requests.retry(
+        { requestId: source.requestId, expiresInSeconds: 120, intent: 'Explicit retry' },
+        retryContext,
+      );
+      expect(retry).toMatchObject({
+        status: 'QUEUED',
+        deviceId,
+        retryOfId: source.requestId,
+        actorId: retryActor,
+        intent: 'Explicit retry',
+        displayParameters: { expiresInSeconds: 120 },
+      });
+      expect(retry.id).not.toBe(source.requestId);
+      expect(await requests.find(source.requestId, scopedContext)).toMatchObject({
+        status: source.status,
+      });
+      expect(await requests.cancel({ deviceId, requestId: retry.id }, retryContext)).toMatchObject({
+        cancelledByActorId: retryActor,
+      });
+    }
+    const batchIssuer = randomUUID();
+    const batchStopper = randomUUID();
+    const batchContext = { ...scopedContext, userId: batchIssuer };
+    for (const deviceIds of [
+      [deviceId, deviceId],
+      [deviceId, randomUUID()],
+    ]) {
+      const before = await database.client.ermCommandRequest.count();
+      await expect(
+        requests.startBatch({ deviceIds, action: 'READ_STATUS' }, batchContext),
+      ).rejects.toMatchObject({ status: deviceIds[0] === deviceIds[1] ? 400 : 404 });
+      expect(await database.client.ermCommandRequest.count()).toBe(before);
+    }
+    const blockedBatch = await requests.startBatch(
+      { deviceIds: [neverConnectedDeviceId, deviceId], action: 'READ_STATUS' },
+      batchContext,
+    );
+    expect(blockedBatch).toMatchObject({
+      actorId: batchIssuer,
+      action: 'READ_STATUS',
+      createdAt: expect.any(Date),
+      stoppedAt: null,
+      stoppedByActorId: null,
+      counts: expect.arrayContaining([{ status: 'QUEUED', count: 2 }]),
+    });
+    expect(blockedBatch.requests.map(({ deviceId }) => deviceId)).toEqual([
+      neverConnectedDeviceId,
+      deviceId,
+    ]);
+    expect(blockedBatch.requests.map(({ batchIndex }) => batchIndex)).toEqual([0, 1]);
+    expect(
+      blockedBatch.requests.every(
+        ({ batchId, actorId }) => batchId === blockedBatch.id && actorId === batchIssuer,
+      ),
+    ).toBe(true);
+    const beforeBlockedBatch = sent.length;
+    await requests.tick();
+    expect(sent).toHaveLength(beforeBlockedBatch);
+    expect((await requests.batch(blockedBatch.id, scopedContext))?.requests).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ deviceId: neverConnectedDeviceId, status: 'QUEUED' }),
+        expect.objectContaining({ deviceId, status: 'QUEUED' }),
+      ]),
+    );
+    for (const foreignScope of [
+      { tenantId: randomUUID(), branchId },
+      { tenantId, branchId: randomUUID() },
+    ]) {
+      const foreignContext = {
+        ...scopedContext,
+        ...foreignScope,
+        authorization: `Bearer ${issueDemoToken(foreignScope.tenantId)}`,
+      };
+      expect((await requests.list({}, foreignContext)).total).toBe(0);
+      expect(await requests.batch(blockedBatch.id, foreignContext)).toBeNull();
+      await expect(requests.stopBatch(blockedBatch.id, foreignContext)).rejects.toMatchObject({
+        status: 404,
+      });
+      await expect(
+        requests.retry({ requestId: cancelledQueue.id }, foreignContext),
+      ).rejects.toMatchObject({ status: 404 });
+      await expect(
+        requests.startBatch({ deviceIds: [deviceId], action: 'READ_STATUS' }, foreignContext),
+      ).rejects.toMatchObject({ status: 404 });
+    }
+    const stoppedBatch = await requests.stopBatch(blockedBatch.id, {
+      ...scopedContext,
+      userId: batchStopper,
+    });
+    expect(stoppedBatch).toMatchObject({
+      stoppedAt: expect.any(Date),
+      stoppedByActorId: batchStopper,
+      counts: expect.arrayContaining([{ status: 'CANCELLED', count: 2 }]),
+    });
+    expect(
+      stoppedBatch.requests.every(
+        ({ status, cancelledByActorId }) =>
+          status === 'CANCELLED' && cancelledByActorId === batchStopper,
+      ),
+    ).toBe(true);
+    const progressingBatch = await requests.startBatch(
+      { deviceIds: [deviceId, neverConnectedDeviceId], action: 'READ_VERSION' },
+      batchContext,
+    );
+    submittingRequestId = progressingBatch.requests[0]?.id;
+    await requests.tick();
+    expect(sent).toHaveLength(beforeBlockedBatch + 1);
+    const progressing = await requests.batch(progressingBatch.id, scopedContext);
+    expect(progressing?.requests.map(({ status }) => status)).toEqual(['ANSWERED', 'QUEUED']);
+    expect(progressing?.counts).toEqual(
+      expect.arrayContaining([
+        { status: 'ANSWERED', count: 1 },
+        { status: 'QUEUED', count: 1 },
+      ]),
+    );
+    const partlyStopped = await requests.stopBatch(progressingBatch.id, scopedContext);
+    expect(partlyStopped.requests.map(({ status }) => status)).toEqual(['ANSWERED', 'CANCELLED']);
+    expect(partlyStopped.requests[1]?.cancelledByActorId).toBe(`demo-tenant:${tenantId}`);
+    const largeBatchAt = new Date();
+    const largeBatch = await database.client.ermCommandBatch.create({
+      data: {
+        tenantId,
+        branchId,
+        actorId: batchIssuer,
+        action: 'READ_STATUS',
+        createdAt: largeBatchAt,
+      },
+    });
+    const largeBatchHead = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+    await database.client.ermCommandRequest.createMany({
+      data: Array.from({ length: 100 }, (_, batchIndex) => ({
+        id:
+          batchIndex === 0
+            ? largeBatchHead
+            : `00000000-0000-4000-8000-${String(batchIndex).padStart(12, '0')}`,
+        tenantId,
+        branchId,
+        deviceId: randomUUID(),
+        unitId,
+        actorId: batchIssuer,
+        action: 'READ_STATUS' as const,
+        intent: 'Large batch head selection',
+        createdAt: largeBatchAt,
+        expiresAt: new Date(largeBatchAt.getTime() + 3_600_000),
+        batchId: largeBatch.id,
+        batchIndex,
+      })),
+    });
+    const queueRepository = new CommandRequestsRepository(module.get(PrismaService));
+    expect(
+      (await queueRepository.pending(largeBatchAt, [unitId]))
+        .filter(({ batchId }) => batchId === largeBatch.id)
+        .map(({ id }) => id),
+    ).toEqual([largeBatchHead]);
+    await database.client.ermCommandRequest.update({
+      where: { id: largeBatchHead },
+      data: { status: 'SUBMITTING', submittedAt: largeBatchAt },
+    });
+    expect(
+      (await queueRepository.pending(largeBatchAt, [unitId])).filter(
+        ({ batchId }) => batchId === largeBatch.id,
+      ),
+    ).toHaveLength(0);
+    await database.client.ermCommandRequest.update({
+      where: { id: largeBatchHead },
+      data: { status: 'CANCELLED', completedAt: largeBatchAt, cancelledByActorId: batchStopper },
+    });
+    await requests.stopBatch(largeBatch.id, scopedContext);
 
     // Federation resolves the complete representation set, including absent units, in fixed batches.
     const now = new Date();
@@ -3423,6 +3660,39 @@ it('persists captured connection lifecycle and raw frames through the production
         failureReason: status === 'FAILED' ? 'Command failed' : null,
       })),
     });
+    const notificationTransportOutcomes: { requestId: string; reasonCode: string }[] = [];
+    for (const transport of [
+      { status: 'TIMEOUT', unitId: notificationImei, reasonCode: 'REPLY_TIMEOUT' },
+      { status: 'FAILED', unitId: notificationImei, reasonCode: 'TRANSPORT_FAILED' },
+      { status: 'TIMEOUT', unitId: '862129080368889', reasonCode: 'UNKNOWN' },
+    ] as const) {
+      const command = await database.client.ermCommand.create({
+        data: {
+          unitId: transport.unitId,
+          connectionId: stored.id,
+          reference: '000001',
+          command: '14',
+          fields: [],
+          status: transport.status,
+          sentAt: notificationAt,
+        },
+      });
+      const request = await database.client.ermCommandRequest.create({
+        data: {
+          ...fleetBatchCommand,
+          id: randomUUID(),
+          unitId: notificationImei,
+          commandId: command.id,
+          status: 'FAILED',
+          completedAt: notificationAt,
+          failureReason: 'Command failed',
+        },
+      });
+      notificationTransportOutcomes.push({
+        requestId: request.id,
+        reasonCode: transport.reasonCode,
+      });
+    }
     for (const excluded of [
       { tenantId: randomUUID() },
       { branchId: randomUUID() },
@@ -3462,8 +3732,8 @@ it('persists captured connection lifecycle and raw frames through the production
         break;
       }
     }
-    expect(exported).toHaveLength(11);
-    expect(new Set(exported.map((item) => item.sourceKey)).size).toBe(11);
+    expect(exported).toHaveLength(14);
+    expect(new Set(exported.map((item) => item.sourceKey)).size).toBe(14);
     expect(
       exported
         .filter((item) => item.sourceKind === 'COMMAND')
@@ -3473,10 +3743,22 @@ it('persists captured connection lifecycle and raw frames through the production
       'ACKNOWLEDGED',
       'EXPIRED',
       'FAILED',
+      'FAILED',
+      'FAILED',
+      'FAILED',
       'OUTCOME_UNKNOWN',
       'REJECTED',
       'RESPONSE_RECEIVED',
     ]);
+    for (const outcome of notificationTransportOutcomes) {
+      expect(exported.find((item) => item.sourceId === outcome.requestId)).toMatchObject({
+        sourceKind: 'COMMAND',
+        parameters: {
+          commandStatus: 'FAILED',
+          reasonCode: outcome.reasonCode,
+        },
+      });
+    }
     expect(exported).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

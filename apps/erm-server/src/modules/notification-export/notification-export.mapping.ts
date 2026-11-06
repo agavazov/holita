@@ -1,4 +1,5 @@
 import type { ErmCommandRequest } from '../../generated/prisma/client.js';
+import type { ErmCommand } from '../../generated/graphql/types.js';
 import { starlinkEvents } from '../../starlink/event-catalog.js';
 import { commandRequestView } from '../telemetry/command-request-view.js';
 import type { NotificationExportEvent } from './notification-export.repository.js';
@@ -85,8 +86,15 @@ export function eventNotifications(
   ];
 }
 
-export function commandNotification(request: ErmCommandRequest): NotificationExportItem {
-  const view = commandRequestView(request);
+export function commandNotification(
+  request: ErmCommandRequest,
+  commands: Map<string, ErmCommand>,
+): NotificationExportItem {
+  const view = commandRequestView(request, {
+    commands,
+    frames: new Map(),
+    configurations: new Map(),
+  });
   if (request.completedAt === null) {
     throw new Error('Terminal command notification requires completion time');
   }

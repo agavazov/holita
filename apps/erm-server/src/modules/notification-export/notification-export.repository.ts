@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { sqlNullableDate, sqlNullableText, sqlRows, sqlText } from '../../database/sql.js';
-import { Prisma } from '../../generated/prisma/client.js';
+import { Prisma, type ErmCommandRequest } from '../../generated/prisma/client.js';
 import { categoryEventIds } from '../../starlink/event-catalog.js';
+import { commandView } from '../telemetry/command-evidence.js';
 import type {
   NotificationExportCursor,
   NotificationExportScope,
@@ -85,5 +86,25 @@ export class NotificationExportRepository {
       orderBy: [{ completedAt: 'asc' }, { id: 'asc' }],
       take: limit + 1,
     });
+  }
+
+  async transportCommands(scope: NotificationExportScope, requests: ErmCommandRequest[]) {
+    const linked = requests.filter(
+      (request): request is ErmCommandRequest & { commandId: string } =>
+        request.tenantId === scope.tenantId &&
+        request.branchId === scope.branchId &&
+        request.deviceId === scope.deviceId &&
+        request.unitId === scope.imei &&
+        request.commandId !== null,
+    );
+    const commands = linked.length
+      ? await this.prisma.client.ermCommand.findMany({
+          where: {
+            unitId: scope.imei,
+            id: { in: linked.map((request) => request.commandId) },
+          },
+        })
+      : [];
+    return new Map(commands.map((command) => [command.id, commandView(command)]));
   }
 }

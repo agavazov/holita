@@ -108,6 +108,7 @@ export class NotificationExportService {
     ]);
     const events = eventRows.slice(0, limit);
     const commands = commandRows.slice(0, limit);
+    const transportCommands = await this.repository.transportCommands(scope, commands);
     const lastCommand = commands.at(-1);
     const next: NotificationExportCursor = {
       eventId: events.at(-1)?.id ?? after.eventId,
@@ -117,7 +118,7 @@ export class NotificationExportService {
     return {
       items: [
         ...events.flatMap((event) => eventNotifications(event, scope)),
-        ...commands.map(commandNotification),
+        ...commands.map((request) => commandNotification(request, transportCommands)),
       ],
       next: Buffer.from(JSON.stringify(next)).toString('base64url'),
       hasMore: eventRows.length > limit || commandRows.length > limit,

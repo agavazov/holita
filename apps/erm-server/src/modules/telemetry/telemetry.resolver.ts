@@ -12,6 +12,11 @@ import {
 import type { GraphQLResolveInfo } from 'graphql';
 import type {
   MutationSendErmDeviceCommandArgs,
+  QueryErmCommandRequestsArgs,
+  QueryErmCommandBatchArgs,
+  MutationRetryErmDeviceCommandArgs,
+  MutationStartErmCommandBatchArgs,
+  MutationStopErmCommandBatchArgs,
   QueryErmCommandRequestArgs,
   QueryErmFleetTelemetryArgs,
   QueryErmFleetProblemsArgs,
@@ -55,6 +60,43 @@ export class TelemetryResolver {
   @Query('ermCommandRequest')
   commandRequest(@Args() args: QueryErmCommandRequestArgs, @Context() context: RequestContext) {
     return this.commandRequests.find(args.id, context);
+  }
+
+  @Query('ermCommandRequests')
+  branchCommandRequests(
+    @Args() args: QueryErmCommandRequestsArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.commandRequests.list(args, context);
+  }
+
+  @Query('ermCommandBatch')
+  commandBatch(@Args() args: QueryErmCommandBatchArgs, @Context() context: RequestContext) {
+    return this.commandRequests.batch(args.id, context);
+  }
+
+  @Mutation('retryErmDeviceCommand')
+  retryDeviceCommand(
+    @Args() args: MutationRetryErmDeviceCommandArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.commandRequests.retry(args.input, context);
+  }
+
+  @Mutation('startErmCommandBatch')
+  startCommandBatch(
+    @Args() args: MutationStartErmCommandBatchArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.commandRequests.startBatch(args.input, context);
+  }
+
+  @Mutation('stopErmCommandBatch')
+  stopCommandBatch(
+    @Args() args: MutationStopErmCommandBatchArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.commandRequests.stopBatch(args.id, context);
   }
 
   @Mutation('cancelErmDeviceCommand')

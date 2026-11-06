@@ -24,6 +24,10 @@ export function operatorScope(context: RequestContext): OperatorScope {
   return { tenantId: requireTenant(context), branchId: auditId(context.branchId) };
 }
 
+export function operatorActor(context: RequestContext): string {
+  return context.userId ?? `demo-tenant:${operatorScope(context).tenantId}`;
+}
+
 export function operatorAudit(
   context: RequestContext,
   deviceId: string,
@@ -33,7 +37,7 @@ export function operatorAudit(
   return {
     ...scope,
     deviceId: auditId(deviceId),
-    actorId: context.userId ?? `demo-tenant:${scope.tenantId}`,
+    actorId: operatorActor(context),
     intent,
   };
 }
