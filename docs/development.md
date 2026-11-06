@@ -137,14 +137,25 @@ Git-ignored `apps/admin/public/config.local.json`. Local configuration overrides
 file and is excluded from production assets.
 
 The public file requires `graphqlUrl` and optionally accepts `fleetEnabled` (default `true`),
-`primeUiLicense`, `googleMapsEmbedApiKey`, `mapTileUrl` and `mapAttribution`. Tile configuration
-is public browser configuration: `mapTileUrl` is an absolute HTTP(S) URL template supporting
-`{z}`, `{x}`, `{y}` and optional `{s}`; `mapAttribution` is nonempty provider attribution HTML.
-The map defaults to `https://tile.openstreetmap.org/{z}/{x}/{y}.png` with linked
-[OpenStreetMap contributors attribution](https://www.openstreetmap.org/copyright). Configure
-a managed tile provider and its required attribution before client demos, following that
-provider's terms; the community OSM tile server is not an unlimited hosted service.
-The local file accepts only `primeUiLicense` and `googleMapsEmbedApiKey`.
+`primeUiLicense`, `googleMapsApiKey` and `googleMapsMapId`. The local file accepts only
+`primeUiLicense`, `googleMapsApiKey` and `googleMapsMapId`. Both files still accept
+`googleMapsEmbedApiKey` as a fallback when `googleMapsApiKey` is absent or empty. Existing local
+keys therefore continue to load, but their Google Cloud API restrictions must permit the
+Maps JavaScript API.
+
+All admin maps use the Google Maps JavaScript API through the official
+[`@googlemaps/js-api-loader`](https://developers.google.com/maps/documentation/javascript/load-maps-js-api#use_the_npm_js-api-loader_package).
+Without a key, the map shows a configuration notice and its accessible record list; record
+links to Google Maps still work. The browser key is public configuration. Enable billing and
+the [Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/get-api-key)
+in the owner's Google Cloud project, authorize that API on the key and restrict the key to the
+admin website origins (including the development/Storybook origins used locally). Maps Embed,
+Places and Geocoding APIs are not used.
+
+Advanced Markers require a [JavaScript map ID](https://developers.google.com/maps/documentation/javascript/advanced-markers/add-marker).
+`googleMapsMapId` is optional and defaults to `DEMO_MAP_ID` for development/testing. For deployed
+use, create a JavaScript map ID in the owner's Google Cloud project and set it explicitly.
+`mapTileUrl` and `mapAttribution` are no longer supported.
 
 ## Core users and sessions
 

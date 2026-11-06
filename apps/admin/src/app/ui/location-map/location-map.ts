@@ -5,7 +5,7 @@ import {
   Component,
   computed,
   DestroyRef,
-  type ElementRef,
+  ElementRef,
   inject,
   input,
   linkedSignal,
@@ -16,8 +16,8 @@ import {
   ViewEncapsulation,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import * as L from 'leaflet';
 import { ButtonDirective } from 'primeng/button';
+import { injectChartPalette } from '../chart-panel/chart-palette';
 import { injectFleetNow } from '../fleet-live/fleet-clock';
 import { fleetObservationIsRecent, fleetRecordedValue } from '../fleet-live/fleet-live';
 import { AdminConfig } from '../../core/config/admin-config';
@@ -31,6 +31,7 @@ import {
   type LocationMapRecord,
   type LocationMapTrack,
 } from './location-map-model';
+import { googleMapsAuthenticationFailed, loadGoogleMaps } from './google-maps';
 import bg from './bg.json';
 import en from './en.json';
 
@@ -38,7 +39,7 @@ export type { LocationMapRecord, LocationMapTrack, LocationTrackPoint } from './
 const messages: Record<Language, typeof en> = { bg, en };
 
 interface MapMarker {
-  readonly marker: L.Marker;
+  readonly marker: google.maps.marker.AdvancedMarkerElement;
   signature: string;
 }
 
@@ -47,7 +48,7 @@ interface MapMarker {
   imports: [ButtonDirective],
   templateUrl: './location-map.html',
   styleUrl: './location-map.scss',
-  // Leaflet creates its own DOM; its layout rules are scoped beneath this selector.
+  // Google Maps creates its own DOM; custom marker/popup rules stay beneath this selector.
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -62,6 +63,7 @@ export class LocationMap {
   readonly dateFormat = input<FleetDateFormat>('YYYY_MM_DD');
   readonly recordSelect = output<LocationMapRecord>();
   private readonly preferences = inject(FLEET_DISPLAY);
+  private readonly palette = injectChartPalette(inject<ElementRef<HTMLElement>>(ElementRef));
   private readonly now = injectFleetNow();
   protected readonly format = injectFleetFormat(
     computed(() => ({
@@ -90,46 +92,27 @@ export class LocationMap {
     }
     return [...statuses.values()];
   });
-  protected readonly tileFailed = signal(false);
-  private readonly ready = signal(false);
+  protected readonly mapFailed = signal(false);
+  protected readonly failed = computed(() => this.mapFailed() || googleMapsAuthenticationFailed());
+  protected readonly ready = signal(false);
   private readonly canvas = viewChild.required<ElementRef<HTMLDivElement>>('mapCanvas');
   private readonly config = inject(AdminConfig);
+  protected readonly missingKey = !this.config.googleMapsApiKey;
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
   private readonly markers = new Map<string, MapMarker>();
-  private map?: L.Map;
-  private tiles?: L.TileLayer;
-  private trackLines?: L.LayerGroup;
+  private map?: google.maps.Map;
+  private infoWindow?: google.maps.InfoWindow;
+  private markerLibrary?: google.maps.MarkerLibrary;
+  private readonly trackLines: google.maps.Polyline[] = [];
   private fitted = false;
+  private tileDeadline?: ReturnType<typeof setTimeout>;
 
   constructor() {
     afterNextRender(() => {
-      const element = this.canvas().nativeElement;
-      const map = L.map(element, {
-        zoomControl: false,
-        scrollWheelZoom: false,
-        zoomAnimation: false,
-        fadeAnimation: false,
-        markerZoomAnimation: false,
-      }).setView([0, 0], 2);
-      this.map = map;
-      map.attributionControl.setPrefix(false);
-      this.tiles = L.tileLayer(this.config.mapTileUrl, {
-        attribution: this.config.mapAttribution,
-        maxZoom: 19,
-      })
-        .on('tileerror', () => {
-          this.tileFailed.set(true);
-        })
-        .addTo(map);
-      this.trackLines = L.layerGroup().addTo(map);
-      const resize = new ResizeObserver(() => map.invalidateSize({ pan: false }));
-      resize.observe(element);
-      this.destroyRef.onDestroy(() => {
-        resize.disconnect();
-        map.remove();
-      });
-      this.ready.set(true);
+      if (!this.missingKey) {
+        void this.initializeMap();
+      }
     });
     afterRenderEffect(() => {
       if (this.ready()) {
@@ -141,13 +124,72 @@ export class LocationMap {
         this.now();
         this.refreshMarkers(records);
         this.refreshTrack(this.track());
-        if (!this.fitted && this.positioned().length) {
+        if (!this.fitted && (this.positioned().length || this.trackLines.length)) {
           this.fitFleet();
           this.fitted = true;
         }
         this.showSelection(this.selectedId());
       }
     });
+    this.destroyRef.onDestroy(() => {
+      clearTimeout(this.tileDeadline);
+      this.infoWindow?.close();
+      for (const { marker } of this.markers.values()) {
+        marker.map = null;
+      }
+      for (const line of this.trackLines) {
+        line.setMap(null);
+      }
+      if (this.map) {
+        google.maps.event.clearInstanceListeners(this.map);
+      }
+    });
+  }
+
+  private async initializeMap(): Promise<void> {
+    const key = this.config.googleMapsApiKey;
+    if (!key) {
+      return;
+    }
+    try {
+      const [maps, markers] = await loadGoogleMaps(key);
+      if (this.destroyRef.destroyed) {
+        return;
+      }
+      this.markerLibrary = markers;
+      this.map = new maps.Map(this.canvas().nativeElement, {
+        center: { lat: 0, lng: 0 },
+        zoom: 2,
+        mapId: this.config.googleMapsMapId,
+        mapTypeId: 'roadmap',
+        disableDefaultUI: true,
+        gestureHandling: 'cooperative',
+        clickableIcons: false,
+      });
+      this.infoWindow = new maps.InfoWindow({ disableAutoPan: true });
+      this.infoWindow.addListener('closeclick', () => {
+        this.selectedId.set(null);
+      });
+      this.map.addListener('bounds_changed', () => {
+        this.waitForTiles();
+      });
+      this.map.addListener('tilesloaded', () => {
+        clearTimeout(this.tileDeadline);
+        this.mapFailed.set(false);
+      });
+      this.waitForTiles();
+      this.ready.set(true);
+    } catch {
+      this.mapFailed.set(true);
+    }
+  }
+
+  /** Google exposes tilesloaded, but no tile-error event (including vector tiles). */
+  private waitForTiles(): void {
+    clearTimeout(this.tileDeadline);
+    this.tileDeadline = setTimeout(() => {
+      this.mapFailed.set(true);
+    }, 20_000);
   }
 
   protected date(value: string | null): string {
@@ -167,7 +209,12 @@ export class LocationMap {
   }
 
   protected heading(record: LocationMapRecord): number | null {
-    return this.positionIsRecent(record) ? (record.heading ?? null) : null;
+    const moving =
+      record.moving ??
+      (record.speedKph !== null && record.speedKph !== undefined && record.speedKph > 0);
+    return this.positionIsRecent(record) && moving && Number.isFinite(record.heading)
+      ? (record.heading ?? null)
+      : null;
   }
 
   private positionIsRecent(record: LocationMapRecord): boolean {
@@ -199,54 +246,68 @@ export class LocationMap {
 
   protected select(record: LocationMapRecord): void {
     this.selectedId.set(record.id);
+    const marker = this.markers.get(record.id)?.marker;
+    if (marker?.position && this.map) {
+      this.map.panTo(marker.position);
+      this.map.setZoom(16);
+    }
     this.showSelection(record.id);
     this.recordSelect.emit(record);
   }
 
   protected fitFleet(): void {
-    const points = this.positioned().flatMap((record): L.LatLngTuple[] =>
-      record.position ? [[record.position.latitude, record.position.longitude]] : [],
-    );
+    const map = this.map;
+    if (!map) {
+      return;
+    }
+    const bounds = new google.maps.LatLngBounds();
+    for (const record of this.positioned()) {
+      if (record.position) {
+        bounds.extend({ lat: record.position.latitude, lng: record.position.longitude });
+      }
+    }
     const track = this.track();
     if (track) {
       for (const segment of recordedTrackSegments(track.points)) {
-        points.push(...segment.map((point): L.LatLngTuple => [point.latitude, point.longitude]));
+        for (const point of segment) {
+          bounds.extend({ lat: point.latitude, lng: point.longitude });
+        }
       }
     }
-    if (points.length) {
-      this.map?.fitBounds(L.latLngBounds(points), {
-        padding: [32, 32],
-        maxZoom: 15,
-        animate: false,
+    if (!bounds.isEmpty()) {
+      map.fitBounds(bounds, 48);
+      google.maps.event.addListenerOnce(map, 'idle', () => {
+        if ((map.getZoom() ?? 0) > 15) {
+          map.setZoom(15);
+        }
       });
     }
   }
 
   protected zoom(delta: number): void {
     if (this.map) {
-      this.map.setZoom(this.map.getZoom() + delta, { animate: false });
+      this.map.setZoom((this.map.getZoom() ?? 2) + delta);
     }
   }
 
-  protected retryTiles(): void {
-    this.tileFailed.set(false);
-    this.tiles?.redraw();
+  protected retryMap(): void {
+    this.document.defaultView?.location.reload();
   }
 
   private refreshMarkers(records: readonly LocationMapRecord[]): void {
     const map = this.map;
-    if (!map) {
+    const library = this.markerLibrary;
+    if (!map || !library) {
       return;
     }
     const positioned = new Set<string>();
-    records.forEach((record, index) => {
+    for (const record of records) {
       const point = mapCoordinates(record.position?.latitude, record.position?.longitude);
       if (!point) {
-        return;
+        continue;
       }
       positioned.add(record.id);
       const signature = JSON.stringify([
-        index,
         this.status(record),
         this.heading(record),
         this.recordedPosition(record),
@@ -256,60 +317,63 @@ export class LocationMap {
       ]);
       let entry = this.markers.get(record.id);
       if (!entry) {
-        const marker = L.marker([point.latitude, point.longitude], {
-          icon: this.icon(record, index),
+        const marker = new library.AdvancedMarkerElement({
+          map,
+          position: { lat: point.latitude, lng: point.longitude },
           title: this.markerTitle(record),
-          keyboard: true,
-        }).bindPopup(this.popup(record), { autoPan: false, closeButton: false });
-        const select = () => {
+          gmpClickable: true,
+        });
+        marker.classList.add('location-map__marker');
+        marker.append(this.icon(record));
+        marker.addEventListener('gmp-click', () => {
           const current = untracked(this.records).find((item) => item.id === record.id);
           if (current) {
             this.select(current);
           }
-        };
-        marker.on('click', select);
-        marker.on('keypress', (event: L.LeafletKeyboardEvent) => {
-          if (event.originalEvent.key === 'Enter') {
-            select();
-          }
         });
-        marker.on('keydown', (event: L.LeafletKeyboardEvent) => {
-          if (event.originalEvent.key === ' ') {
-            event.originalEvent.preventDefault();
-            select();
-          }
-        });
-        marker.addTo(map);
         entry = { marker, signature };
         this.markers.set(record.id, entry);
       } else {
-        entry.marker.setLatLng([point.latitude, point.longitude]);
+        entry.marker.position = { lat: point.latitude, lng: point.longitude };
         if (entry.signature !== signature) {
-          entry.marker.setIcon(this.icon(record, index));
-          entry.marker.getElement()?.setAttribute('title', this.markerTitle(record));
+          entry.marker.replaceChildren(this.icon(record));
+          entry.marker.title = this.markerTitle(record);
           entry.signature = signature;
         }
-        entry.marker.setPopupContent(this.popup(record));
       }
-    });
+    }
     for (const [id, entry] of this.markers) {
       if (!positioned.has(id)) {
-        entry.marker.remove();
+        entry.marker.map = null;
         this.markers.delete(id);
       }
     }
   }
 
-  private icon(record: LocationMapRecord, index: number): L.DivIcon {
+  private icon(record: LocationMapRecord): HTMLElement {
     const content = this.document.createElement('span');
     content.className = 'location-map__pin';
     const status = this.status(record);
-    content.style.background = `var(--p-app-tone-${status.tone}-background)`;
-    content.style.color = `var(--p-app-tone-${status.tone}-color)`;
-    content.style.borderColor = `var(--p-app-tone-${status.tone}-solid)`;
-    content.textContent = String(index + 1);
+    content.style.setProperty('--pin-background', `var(--p-app-tone-${status.tone}-background)`);
+    content.style.setProperty('--pin-color', `var(--p-app-tone-${status.tone}-color)`);
+    content.style.setProperty('--pin-border', `var(--p-app-tone-${status.tone}-solid)`);
+    const svg = this.document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 44 56');
+    svg.setAttribute('aria-hidden', 'true');
+    const pin = this.document.createElementNS(svg.namespaceURI, 'path');
+    pin.setAttribute('class', 'location-map__pin-shape');
+    pin.setAttribute('d', 'M22 2C11 2 2 11 2 22c0 14 20 31 20 31s20-17 20-31C42 11 33 2 22 2Z');
+    svg.append(pin);
+    const truck = this.document.createElementNS(svg.namespaceURI, 'path');
+    truck.setAttribute('class', 'location-map__truck');
+    truck.setAttribute(
+      'd',
+      'M9 14h16v13H9ZM25 19h5l5 6v2H25M13 27a3 3 0 1 0 6 0a3 3 0 1 0-6 0M27 27a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
+    );
+    svg.append(truck);
+    content.append(svg);
     const heading = this.heading(record);
-    if (heading !== null && Number.isFinite(heading)) {
+    if (heading !== null) {
       const arrow = this.document.createElement('span');
       arrow.className = 'location-map__heading';
       arrow.textContent = '↑';
@@ -317,13 +381,7 @@ export class LocationMap {
       arrow.setAttribute('aria-hidden', 'true');
       content.append(arrow);
     }
-    return L.divIcon({
-      className: 'location-map__marker',
-      html: content,
-      iconSize: [36, 36],
-      iconAnchor: [18, 18],
-      popupAnchor: [0, -20],
-    });
+    return content;
   }
 
   private popup(record: LocationMapRecord): HTMLElement {
@@ -348,10 +406,15 @@ export class LocationMap {
       time.title = this.format.utc(record.positionAt);
     }
     popup.append(time);
-    if (record.href) {
+    const href = record.href ?? this.googleUrl(record);
+    if (href) {
       const open = this.document.createElement('a');
-      open.href = record.href;
-      open.textContent = this.text().open;
+      open.href = href;
+      open.textContent = record.href ? this.text().open : this.text().google;
+      if (!record.href) {
+        open.target = '_blank';
+        open.rel = 'noopener noreferrer';
+      }
       popup.append(open);
     }
     return popup;
@@ -359,28 +422,41 @@ export class LocationMap {
 
   private showSelection(id: string | null): void {
     for (const [markerId, { marker }] of this.markers) {
-      marker.getElement()?.classList.toggle('location-map__marker--selected', markerId === id);
-      marker.getElement()?.setAttribute('aria-pressed', String(markerId === id));
-      if (markerId === id && !marker.isPopupOpen()) {
-        marker.openPopup();
-      } else if (markerId !== id && marker.isPopupOpen()) {
-        marker.closePopup();
-      }
+      marker.classList.toggle('location-map__marker--selected', markerId === id);
+      marker.setAttribute('aria-pressed', String(markerId === id));
+      marker.zIndex = markerId === id ? 1000 : 0;
+    }
+    const marker = id ? this.markers.get(id)?.marker : undefined;
+    const record = id ? this.records().find((item) => item.id === id) : undefined;
+    if (marker && record && this.infoWindow && this.map) {
+      this.infoWindow.setContent(this.popup(record));
+      this.infoWindow.setOptions({ ariaLabel: this.markerTitle(record) });
+      this.infoWindow.open({ map: this.map, anchor: marker, shouldFocus: false });
+    } else {
+      this.infoWindow?.close();
     }
   }
 
   private refreshTrack(track: LocationMapTrack | null): void {
-    const lines = this.trackLines;
-    lines?.clearLayers();
-    if (track && lines) {
+    for (const line of this.trackLines) {
+      line.setMap(null);
+    }
+    this.trackLines.length = 0;
+    if (track && this.map) {
+      const color = this.palette.palette()?.categories[0];
+      if (!color) {
+        return;
+      }
       for (const segment of recordedTrackSegments(track.points)) {
-        L.polyline(
-          segment.map((point): L.LatLngTuple => [point.latitude, point.longitude]),
-          {
-            color: 'var(--p-app-category-c1)',
-            weight: 3,
-          },
-        ).addTo(lines);
+        this.trackLines.push(
+          new google.maps.Polyline({
+            map: this.map,
+            path: segment.map((point) => ({ lat: point.latitude, lng: point.longitude })),
+            strokeColor: color,
+            strokeWeight: 3,
+            clickable: false,
+          }),
+        );
       }
     }
   }

@@ -1,5 +1,18 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  InjectionToken,
+  input,
+} from '@angular/core';
+import {
+  applicationConfig,
+  moduleMetadata,
+  type Decorator,
+  type Meta,
+  type StoryObj,
+} from '@storybook/angular-vite';
 import { onFrame } from '../../../storybook/story-config';
 import { AdminConfig } from '../../core/config/admin-config';
 import { UI_LANGUAGE } from '../ui-language';
@@ -15,7 +28,6 @@ const storyMessages = {
     stale: 'Stale GPS',
     unknown: 'Unknown position',
     coverage: '24 h requested · two recorded intervals · one unavailable interval',
-    tileProvider: 'Synthetic unavailable tile provider',
   },
   bg: {
     title: 'Местоположение на автопарка',
@@ -25,13 +37,38 @@ const storyMessages = {
     stale: 'Остаряла GPS позиция',
     unknown: 'Неизвестна позиция',
     coverage: 'Заявени 24 ч · два записани интервала · един недостъпен интервал',
-    tileProvider: 'Примерен недостъпен доставчик на картни плочки',
   },
+};
+
+interface MapStoryConfig {
+  readonly googleMapsApiKey?: string;
+  readonly googleMapsMapId: string;
+}
+
+interface MapStoryArgs {
+  readonly googleMapsApiKey: string;
+  readonly googleMapsMapId: string;
+}
+
+const MAP_STORY_CONFIG = new InjectionToken<MapStoryConfig>('map story config');
+
+/** A restricted browser key can be supplied explicitly through the Storybook controls. */
+const withGoogleMapsConfig: Decorator<MapStoryArgs> = (story, context) => {
+  const apiKey: unknown = context.args['googleMapsApiKey'];
+  const mapId: unknown = context.args['googleMapsMapId'];
+  const config: MapStoryConfig = {
+    ...(typeof apiKey === 'string' && apiKey.trim() ? { googleMapsApiKey: apiKey.trim() } : {}),
+    googleMapsMapId: typeof mapId === 'string' && mapId.trim() ? mapId.trim() : 'DEMO_MAP_ID',
+  };
+  return applicationConfig({
+    providers: [{ provide: MAP_STORY_CONFIG, useValue: config }],
+  })(story, context);
 };
 
 @Component({
   selector: 'holita-location-map-demo',
   imports: [LocationMap],
+  providers: [{ provide: AdminConfig, useFactory: () => inject(MAP_STORY_CONFIG) }],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <holita-location-map
@@ -61,6 +98,7 @@ class LocationMapDemo {
         status: { label: text.moving, tone: 'success' },
         position: { latitude: 42.6977, longitude: 23.3219 },
         positionAt: '2026-11-06T11:59:00.000Z',
+        speedKph: 42,
         heading: 80,
         href: '#vehicle-1',
       },
@@ -72,6 +110,8 @@ class LocationMapDemo {
         status: { label: text.parked, tone: 'info' },
         position: { latitude: 42.72, longitude: 23.36 },
         positionAt: '2026-11-06T11:50:00.000Z',
+        speedKph: 0,
+        heading: 0,
         href: '#vehicle-2',
       },
       {
@@ -82,7 +122,8 @@ class LocationMapDemo {
         status: { label: text.stale, tone: 'warn' },
         position: { latitude: 42.66, longitude: 23.39 },
         positionAt: '2026-11-03T10:00:00.000Z',
-        heading: null,
+        speedKph: 42,
+        heading: 140,
         href: '#vehicle-3',
       },
       {
@@ -141,31 +182,52 @@ class LocationMapDemo {
   );
 }
 
-/** An element-scoped provider keeps the failure fixture independent of preview provider order. */
+/** The missing-key fixture remains independent of configured map stories and preview providers. */
 @Component({
-  selector: 'holita-location-map-tile-failure-demo',
+  selector: 'holita-location-map-key-missing-demo',
   imports: [LocationMapDemo],
   providers: [
     {
-      provide: AdminConfig,
-      useFactory: () => ({
-        mapTileUrl: 'http://127.0.0.1:1/{z}/{x}/{y}.png',
-        mapAttribution: storyMessages[inject(UI_LANGUAGE)()].tileProvider,
-      }),
+      provide: MAP_STORY_CONFIG,
+      useValue: { googleMapsMapId: 'DEMO_MAP_ID' } satisfies MapStoryConfig,
     },
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: '<holita-location-map-demo />',
 })
-class LocationMapTileFailureDemo {}
+class LocationMapKeyMissingDemo {}
 
-const meta: Meta = {
+const meta: Meta<MapStoryArgs> = {
   title: 'Design System/Maps',
-  decorators: [moduleMetadata({ imports: [LocationMapDemo, LocationMapTileFailureDemo] }), onFrame],
+  decorators: [
+    withGoogleMapsConfig,
+    moduleMetadata({ imports: [LocationMapDemo, LocationMapKeyMissingDemo] }),
+    onFrame,
+  ],
   tags: ['!autodocs'],
+  args: { googleMapsApiKey: '', googleMapsMapId: 'DEMO_MAP_ID' },
+  argTypes: {
+    googleMapsApiKey: {
+      control: 'text',
+      description: 'Restricted Google Maps JavaScript API browser key for this preview.',
+    },
+    googleMapsMapId: {
+      control: 'text',
+      description: 'Google Maps Map ID; DEMO_MAP_ID is for development only.',
+    },
+  },
+  parameters: {
+    holita: { now: asOf },
+    docs: {
+      description: {
+        component:
+          'Supply a restricted Google Maps JavaScript API browser key in the googleMapsApiKey control to review the live map. googleMapsMapId defaults to DEMO_MAP_ID for development. No private configuration is read by these stories. Key missing always demonstrates the accessible fallback list.',
+      },
+    },
+  },
 };
 export default meta;
-type Story = StoryObj;
+type Story = StoryObj<MapStoryArgs>;
 
 export const Many: Story = { render: () => ({ template: '<holita-location-map-demo />' }) };
 export const One: Story = {
@@ -180,8 +242,9 @@ export const Stale: Story = {
 export const HeadingAndTrack: Story = {
   render: () => ({ template: '<holita-location-map-demo mode="track" />' }),
 };
-export const TileFailure: Story = {
-  render: () => ({ template: '<holita-location-map-tile-failure-demo />' }),
+export const KeyMissing: Story = {
+  argTypes: { googleMapsApiKey: { control: false }, googleMapsMapId: { control: false } },
+  render: () => ({ template: '<holita-location-map-key-missing-demo />' }),
 };
 export const Narrow: Story = {
   globals: { viewport: { value: 'mobile375', isRotated: false } },

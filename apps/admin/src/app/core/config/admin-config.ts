@@ -3,15 +3,10 @@ import { inject, Injectable, InjectionToken } from '@angular/core';
 export interface AdminRuntimeConfig {
   graphqlUrl: string;
   primeUiLicense?: string;
-  googleMapsEmbedApiKey?: string;
-  mapTileUrl?: string;
-  mapAttribution?: string;
+  googleMapsApiKey?: string;
+  googleMapsMapId?: string;
   fleetEnabled?: boolean;
 }
-
-const defaultMapTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const defaultMapAttribution =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 export const ADMIN_RUNTIME_CONFIG = new InjectionToken<AdminRuntimeConfig>('admin runtime config', {
   providedIn: 'root',
@@ -49,7 +44,7 @@ export function readAdminConfig(value: unknown): AdminRuntimeConfig {
     throw new Error('fleetEnabled must be a boolean.');
   }
   const availability = fleet === undefined ? {} : { fleetEnabled: fleet };
-  const maps = { ...readGoogleMapsConfig(value), ...readMapTilesConfig(value) };
+  const maps = readGoogleMapsConfig(value);
   if (typeof value === 'object' && value !== null && 'primeUiLicense' in value) {
     if (typeof value.primeUiLicense !== 'string') {
       throw new Error('primeUiLicense must be a string.');
@@ -60,48 +55,48 @@ export function readAdminConfig(value: unknown): AdminRuntimeConfig {
   return { graphqlUrl, ...availability, ...maps };
 }
 
-function readMapTilesConfig(
+function readGoogleMapsConfig(
   value: unknown,
-): Pick<AdminRuntimeConfig, 'mapTileUrl' | 'mapAttribution'> {
+): Pick<AdminRuntimeConfig, 'googleMapsApiKey' | 'googleMapsMapId'> {
   if (typeof value !== 'object' || value === null) {
     return {};
   }
-  const config: Pick<AdminRuntimeConfig, 'mapTileUrl' | 'mapAttribution'> = {};
-  if ('mapTileUrl' in value) {
-    if (typeof value.mapTileUrl !== 'string' || !value.mapTileUrl.trim()) {
-      throw new Error('mapTileUrl must be a nonempty HTTP tile URL.');
+  const config: Pick<AdminRuntimeConfig, 'googleMapsApiKey' | 'googleMapsMapId'> = {};
+  if ('googleMapsEmbedApiKey' in value) {
+    if (typeof value.googleMapsEmbedApiKey !== 'string') {
+      throw new Error('googleMapsEmbedApiKey must be a string.');
     }
-    const mapTileUrl = value.mapTileUrl.trim();
-    const url = new URL(mapTileUrl.replace(/\{[xyzs]\}/g, '0'));
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.hash) {
-      throw new Error('mapTileUrl must be an HTTP tile URL without credentials or a fragment.');
+    const legacyKey = value.googleMapsEmbedApiKey.trim();
+    if (legacyKey) {
+      config.googleMapsApiKey = legacyKey;
     }
-    config.mapTileUrl = mapTileUrl;
   }
-  if ('mapAttribution' in value) {
-    if (typeof value.mapAttribution !== 'string' || !value.mapAttribution.trim()) {
-      throw new Error('mapAttribution must be a nonempty string.');
+  if ('googleMapsApiKey' in value) {
+    if (typeof value.googleMapsApiKey !== 'string') {
+      throw new Error('googleMapsApiKey must be a string.');
     }
-    config.mapAttribution = value.mapAttribution.trim();
+    const key = value.googleMapsApiKey.trim();
+    if (key) {
+      config.googleMapsApiKey = key;
+    }
+  }
+  if ('googleMapsMapId' in value) {
+    if (typeof value.googleMapsMapId !== 'string') {
+      throw new Error('googleMapsMapId must be a string.');
+    }
+    const mapId = value.googleMapsMapId.trim();
+    if (mapId) {
+      config.googleMapsMapId = mapId;
+    }
   }
   return config;
-}
-
-function readGoogleMapsConfig(value: unknown): Pick<AdminRuntimeConfig, 'googleMapsEmbedApiKey'> {
-  if (typeof value !== 'object' || value === null || !('googleMapsEmbedApiKey' in value)) {
-    return {};
-  }
-  if (typeof value.googleMapsEmbedApiKey !== 'string') {
-    throw new Error('googleMapsEmbedApiKey must be a string.');
-  }
-  const googleMapsEmbedApiKey = value.googleMapsEmbedApiKey.trim();
-  return googleMapsEmbedApiKey ? { googleMapsEmbedApiKey } : {};
 }
 
 /** Optional developer browser keys in the Git-ignored `config.local.json`. */
 export interface LocalAdminConfig {
   primeUiLicense?: string;
-  googleMapsEmbedApiKey?: string;
+  googleMapsApiKey?: string;
+  googleMapsMapId?: string;
 }
 
 export function readLocalAdminConfig(value: unknown): LocalAdminConfig {
@@ -109,7 +104,11 @@ export function readLocalAdminConfig(value: unknown): LocalAdminConfig {
     throw new Error('config.local.json must be an object.');
   }
   const unknownKey = Object.keys(value).find(
-    (key) => key !== 'primeUiLicense' && key !== 'googleMapsEmbedApiKey',
+    (key) =>
+      key !== 'primeUiLicense' &&
+      key !== 'googleMapsApiKey' &&
+      key !== 'googleMapsMapId' &&
+      key !== 'googleMapsEmbedApiKey',
   );
   if (unknownKey) {
     throw new Error(`config.local.json does not support "${unknownKey}".`);
@@ -128,7 +127,6 @@ export function readLocalAdminConfig(value: unknown): LocalAdminConfig {
 export class AdminConfig {
   readonly graphqlUrl = inject(ADMIN_RUNTIME_CONFIG).graphqlUrl;
   readonly fleetEnabled = inject(ADMIN_RUNTIME_CONFIG).fleetEnabled ?? true;
-  readonly googleMapsEmbedApiKey = inject(ADMIN_RUNTIME_CONFIG).googleMapsEmbedApiKey;
-  readonly mapTileUrl = inject(ADMIN_RUNTIME_CONFIG).mapTileUrl ?? defaultMapTileUrl;
-  readonly mapAttribution = inject(ADMIN_RUNTIME_CONFIG).mapAttribution ?? defaultMapAttribution;
+  readonly googleMapsApiKey = inject(ADMIN_RUNTIME_CONFIG).googleMapsApiKey;
+  readonly googleMapsMapId = inject(ADMIN_RUNTIME_CONFIG).googleMapsMapId ?? 'DEMO_MAP_ID';
 }

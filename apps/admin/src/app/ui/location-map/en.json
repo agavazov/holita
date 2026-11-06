@@ -9,11 +9,10 @@
   "noRecords": "No records to show.",
   "noPosition": "No recorded position",
   "noPositions": "No recorded positions. Records and actions remain available below.",
-  "tileFailure": "Map tiles are unavailable. Recorded positions, tracks and the list remain available.",
-  "retry": "Retry tiles",
+  "retry": "Reload page",
   "list": "Records and positions",
   "open": "Open",
-  "google": "Google Maps",
+  "google": "Open in Google Maps",
   "select": "Select {record}",
   "positionAge": "Position age",
   "positionTime": "Position recorded",
@@ -22,5 +21,7 @@
   "trackGaps": "Only recorded samples are joined; unavailable intervals break the line.",
   "truncated": "Track limited to the newest samples; earlier samples are omitted.",
   "position": "Position",
-  "historicalPosition": "Historical position"
+  "historicalPosition": "Historical position",
+  "configuration": "Set a Google Maps API key to show the map. Recorded positions are listed below.",
+  "mapFailure": "Google Maps is unavailable. Recorded positions and actions remain available in the list."
 }

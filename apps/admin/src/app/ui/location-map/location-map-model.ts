@@ -11,6 +11,9 @@ export interface LocationMapRecord {
   readonly positionAt: string | null;
   /** Measured bearing in degrees clockwise from north; absence never implies north. */
   readonly heading?: number | null;
+  /** Measured speed or source activity establishes motion; a bearing alone does not. */
+  readonly speedKph?: number | null;
+  readonly moving?: boolean;
   readonly href?: string | null;
 }
 

@@ -6,7 +6,7 @@
       type="button"
       severity="secondary"
       [outlined]="true"
-      [disabled]="!positioned().length"
+      [disabled]="!ready() || failed() || (!positioned().length && !track())"
       (click)="fitFleet()"
     >
       {{ text().fit }}
@@ -25,15 +25,17 @@
       {{ timeZone() }}</span
     >
   </div>
-  @if (tileFailed()) {
+  @if (missingKey) {
+    <p role="status">{{ text().configuration }}</p>
+  } @else if (failed()) {
     <p role="status">
-      {{ text().tileFailure }}
-      <button pButton type="button" severity="secondary" [text]="true" (click)="retryTiles()">
+      {{ text().mapFailure }}
+      <button pButton type="button" severity="secondary" [text]="true" (click)="retryMap()">
         {{ text().retry }}
       </button>
     </p>
   }
-  <div class="location-map__surface">
+  <div class="location-map__surface" [hidden]="missingKey || failed()">
     <div
       #mapCanvas
       class="location-map__canvas"
@@ -45,6 +47,7 @@
         pButton
         type="button"
         severity="secondary"
+        [disabled]="!ready()"
         [attr.aria-label]="text().zoomIn"
         (click)="zoom(1)"
       >
@@ -54,6 +57,7 @@
         pButton
         type="button"
         severity="secondary"
+        [disabled]="!ready()"
         [attr.aria-label]="text().zoomOut"
         (click)="zoom(-1)"
       >
@@ -87,7 +91,7 @@
       }
     </div>
   }
-  <details [open]="tileFailed() || !positioned().length">
+  <details [open]="missingKey || failed() || !positioned().length">
     <summary>{{ text().list }} ({{ records().length }})</summary>
     <ul class="location-map__list">
       @for (record of records(); track record.id; let index = $index) {
