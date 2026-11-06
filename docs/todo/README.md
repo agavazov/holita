@@ -4,6 +4,8 @@ Pending work and planned tasks, separate from implemented product documentation.
 
 - [ERM roadmap](erm-roadmap.md): fleet routing, safety/test levels, device control, recovery,
   questions for ERM, owner decisions and production deployment.
+- [Admin UI v2](ui-v2.md): approved navigation, design-system, dashboard, dates, sign-in and
+  notification plan with its work packages.
 - [Admin presentation and release](admin-design-system.md): remaining product/release decisions.
 - [Admin backend follow-ups](admin-design-system-backend.md): unresolved provider integrations.
 - [Instant tasks](_instant-tsks.md): short one-line tasks.
