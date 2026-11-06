@@ -20,6 +20,9 @@ import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { Tag } from 'primeng/tag';
 import { ColumnSeries, type SeriesPoint } from '../../../ui/charts/column-series';
 import { EmptyState } from '../../../ui/empty-state/empty-state';
+import { FleetNow } from '../../../ui/fleet-live/fleet-now';
+import { injectFleetNow } from '../../../ui/fleet-live/fleet-clock';
+import { fleetObservationIsRecent, fleetRecordedValue } from '../../../ui/fleet-live/fleet-live';
 import {
   FormatDurationPipe,
   FormatMoneyPipe,
@@ -41,6 +44,7 @@ import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
+import { formatNumber } from '../../../ui/format/format';
 import { type AlertSeverityCode, severityTones } from '../alerts/alerts-view';
 import { alertsText } from '../alerts/i18n/messages';
 import { scoreTone } from '../drivers/drivers-view';
@@ -51,7 +55,7 @@ import { type TripRow, worstTone } from '../trips/trips-view';
 import { VehicleCommandHistory } from '../commands/vehicle-command-history';
 import { vehiclesText } from './i18n/messages';
 import type { VehicleFuelType } from './vehicle-drawer';
-import { vehicleLastReport, vehicleLiveStatus } from './vehicle-live';
+import { vehicleLastReport, vehicleLiveDevice, vehicleLiveStatus } from './vehicle-live';
 import type { VehicleProblem, VehicleProblemCounts } from './vehicle-profile-v2-model';
 import type { VehicleRow } from './vehicles-view';
 import bg from './vehicle-profile-view.bg.json';
@@ -122,6 +126,7 @@ function listView(rows: readonly unknown[]): TableView {
     Tag,
     ColumnSeries,
     EmptyState,
+    FleetNow,
     FormatDurationPipe,
     FormatMoneyPipe,
     FormatNumberPipe,
@@ -197,6 +202,7 @@ export class VehicleProfileView {
   readonly openService = output<string>();
 
   protected readonly units = injectFleetFormat();
+  protected readonly now = injectFleetNow();
   protected readonly language = inject(UI_LANGUAGE);
   private readonly vehicles = computed(() => vehiclesText(this.language()));
   protected readonly text = computed(() => this.vehicles().profile);
@@ -225,6 +231,7 @@ export class VehicleProfileView {
   protected readonly liveDevices = computed(
     () => this.vehicle()?.liveDevices ?? this.vehicle()?.devices.map(() => undefined) ?? [],
   );
+  protected readonly activityDevice = computed(() => vehicleLiveDevice(this.liveDevices()));
   protected readonly liveStatus = computed(() =>
     vehicleLiveStatus(this.liveDevices(), this.language()),
   );
@@ -232,7 +239,36 @@ export class VehicleProfileView {
     () => vehicleLastReport(this.liveDevices()) ?? this.vehicle()?.lastReportedAt ?? null,
   );
   protected readonly positionAt = computed(() => this.mapRecords()[0]?.positionAt ?? null);
-  protected readonly heading = computed(() => this.mapRecords()[0]?.heading ?? null);
+  private readonly positionIsRecent = computed(() =>
+    fleetObservationIsRecent(
+      this.positionAt(),
+      this.now(),
+      this.units.preferences().notReportingHours,
+    ),
+  );
+  protected readonly speedText = computed(() => {
+    const speed = this.mapSpeedKph();
+    return this.positionIsRecent() && speed !== null
+      ? fleetRecordedValue(this.units.speed(speed), this.positionAt(), this.now(), this.language())
+      : '—';
+  });
+  protected readonly headingText = computed(() => {
+    const heading = this.mapRecords()[0]?.heading;
+    return this.positionIsRecent() && heading !== null && heading !== undefined
+      ? fleetRecordedValue(
+          `${formatNumber(heading, this.language())}°`,
+          this.positionAt(),
+          this.now(),
+          this.language(),
+        )
+      : '—';
+  });
+  protected readonly locationText = computed(() => {
+    const vehicle = this.vehicle();
+    return vehicle?.location
+      ? fleetRecordedValue(vehicle.location, vehicle.lastReportedAt, this.now(), this.language())
+      : '—';
+  });
   protected readonly problemSummary = computed(() => {
     const counts = this.problemCounts();
     return counts
@@ -349,10 +385,6 @@ export class VehicleProfileView {
 
   protected statusLabel(status: keyof typeof statusTones): string {
     return this.vehicles().statuses[status];
-  }
-
-  protected activityLabel(vehicle: VehicleProfile): string {
-    return this.vehicles().activities[vehicle.activity];
   }
 
   protected fuelTypeLabel(vehicle: VehicleProfile): string {

@@ -86,7 +86,7 @@
       <div class="app-card app-card--accent vehicle-profile__summary">
         <span class="app-inline">
           <p-tag [severity]="toneSeverity(liveStatus().tone)" [value]="liveStatus().label" />
-          <span>{{ activityLabel(vehicle) }}</span>
+          <holita-fleet-now mode="table" [device]="activityDevice()" />
         </span>
         <span class="app-cell-date" [title]="units.utc(lastReport())">
           {{ text().lastReport }}:
@@ -190,19 +190,19 @@
                   <dl class="app-facts">
                     <div>
                       <dt>{{ text().activity }}</dt>
-                      <dd>{{ activityLabel(vehicle) }}</dd>
+                      <dd><holita-fleet-now mode="table" [device]="activityDevice()" /></dd>
                     </div>
                     <div>
                       <dt>{{ text().speed }}</dt>
-                      <dd>{{ units.speed(mapSpeedKph()) }}</dd>
+                      <dd>{{ speedText() }}</dd>
                     </div>
                     <div>
                       <dt>{{ v2().heading }}</dt>
-                      <dd>{{ heading() === null ? '—' : (heading() | holitaNumber) + '°' }}</dd>
+                      <dd>{{ headingText() }}</dd>
                     </div>
                     <div>
                       <dt>{{ text().location }}</dt>
-                      <dd>{{ vehicle.location ?? '—' }}</dd>
+                      <dd>{{ locationText() }}</dd>
                     </div>
                     <div>
                       <dt>{{ v2().positionTime }}</dt>
@@ -215,7 +215,7 @@
                     <div>
                       <dt>{{ v2().positionAge }}</dt>
                       <dd [title]="units.utc(positionAt())">
-                        {{ positionAt() | holitaRelative: mapAsOf() ?? dataAsOf() }}
+                        {{ positionAt() | holitaRelative: now() }}
                       </dd>
                     </div>
                     <div>

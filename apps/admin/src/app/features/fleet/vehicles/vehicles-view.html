@@ -135,12 +135,22 @@
           </div>
         </td>
         <td>
-          <span class="vehicles__activity" [title]="devicesTitle(row)">
-            <p-tag
-              [value]="liveStatus(row).label"
-              [severity]="toneSeverity(liveStatus(row).tone)"
-            />
-            <holita-fleet-now mode="table" [device]="activityDevice(row)" />
+          <span
+            class="vehicles__activity"
+            [title]="devicesTitle(row)"
+            [attr.aria-busy]="liveLoading() && row.devices.length > 0"
+          >
+            @if (liveLoading() && row.devices.length > 0) {
+              <span class="app-visually-hidden">{{ uiText().loading }}</span>
+              <p-skeleton width="7rem" height="1.5rem" />
+              <p-skeleton width="9rem" height="1rem" />
+            } @else {
+              <p-tag
+                [value]="liveStatus(row).label"
+                [severity]="toneSeverity(liveStatus(row).tone)"
+              />
+              <holita-fleet-now mode="table" [device]="activityDevice(row)" />
+            }
           </span>
         </td>
         <td>

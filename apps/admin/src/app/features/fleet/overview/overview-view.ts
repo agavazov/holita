@@ -152,14 +152,9 @@ export class OverviewView {
   protected readonly mapRecords = computed<readonly LocationMapRecord[]>(() =>
     this.filteredVehicles().map((record): LocationMapRecord => {
       const key = record.live ? 'live' : record.connected ? 'waiting' : 'disconnected';
-      const oldPosition = (record.position?.ageSeconds ?? 0) >= 86_400;
       const label = [
         this.text().connection[key],
-        ...(!record.position
-          ? [this.text().map.noPosition]
-          : oldPosition
-            ? [this.text().map.oldPosition]
-            : []),
+        ...(!record.position ? [this.text().map.noPosition] : []),
       ].join(' · ');
       return {
         id: record.vehicle.id,
@@ -169,13 +164,11 @@ export class OverviewView {
           label,
           tone: !record.position
             ? 'neutral'
-            : oldPosition
-              ? 'warn'
-              : record.live
-                ? 'success'
-                : record.connected
-                  ? 'warn'
-                  : 'neutral',
+            : record.live
+              ? 'success'
+              : record.connected
+                ? 'warn'
+                : 'neutral',
         },
         position: record.position
           ? { latitude: record.position.latitude, longitude: record.position.longitude }

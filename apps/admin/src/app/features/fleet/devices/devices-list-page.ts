@@ -53,6 +53,7 @@ import { devicesText } from './i18n/messages';
       [deviceLinkBase]="deviceLinkBase()"
       [branchName]="branch().name"
       [rows]="rows()"
+      [liveLoading]="liveLoading()"
       [total]="total()"
       [view]="view()"
       [state]="state()"
@@ -99,6 +100,9 @@ export class DevicesPage implements OnInit {
   /** When the live state was last read; a failed refresh keeps the previous state. */
   private readonly liveAt = signal<string | null>(null);
   protected readonly liveError = signal(false);
+  protected readonly liveLoading = computed(
+    () => this.page() !== null && this.live() === null && !this.liveError(),
+  );
   private readonly units = injectFleetFormat();
   protected readonly liveFailure = computed(() => {
     const liveAt = this.liveAt();

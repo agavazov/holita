@@ -1,15 +1,17 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FleetNow } from '../../../ui/fleet-live/fleet-now';
+import { injectFleetNow } from '../../../ui/fleet-live/fleet-clock';
 import { FleetLiveSummary } from '../../../ui/fleet-live/fleet-live-summary';
 import { fleetLiveText, type FleetLiveDevice } from '../../../ui/fleet-live/fleet-live';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
+import { Skeleton } from 'primeng/skeleton';
 import { Tag } from 'primeng/tag';
 import type { FilterCondition, FilterField } from '../../../ui/filter-builder/filter-model';
 import { FilterBuilder } from '../../../ui/filter-builder/filter-builder';
-import { formatDuration, formatNumber } from '../../../ui/format/format';
-import { interpolate } from '../../../ui/i18n/messages';
+import { formatNumber, formatRelative } from '../../../ui/format/format';
+import { interpolate, uiMessages } from '../../../ui/i18n/messages';
 import {
   type ListAction,
   type ListActionRequest,
@@ -96,6 +98,7 @@ export interface VehicleOption {
   imports: [
     ButtonDirective,
     TableModule,
+    Skeleton,
     Tag,
     FilterBuilder,
     RouterLink,
@@ -124,6 +127,7 @@ export class VehiclesView {
   readonly drivers = input<readonly VehicleOption[]>([]);
   readonly selection = input<readonly ListRecord<VehicleActionId>[]>([]);
   readonly busy = input(false);
+  readonly liveLoading = input(false);
   readonly profileEnabled = input(true);
   readonly searchError = input<string | null>(null);
   readonly errorText = input<string | null>(null);
@@ -135,6 +139,7 @@ export class VehiclesView {
   readonly retry = output();
 
   protected readonly units = injectFleetFormat();
+  private readonly now = injectFleetNow();
   private readonly language = inject(UI_LANGUAGE);
   private readonly sortReady = injectSortReady();
   protected readonly text = computed(() => {
@@ -341,6 +346,7 @@ export class VehiclesView {
   });
 
   protected readonly liveText = computed(() => fleetLiveText(this.language()));
+  protected readonly uiText = computed(() => uiMessages[this.language()]);
   protected readonly liveGroups = computed(() =>
     this.rows().map((row) => row.devices.map((_, index) => row.liveDevices?.[index])),
   );
@@ -373,7 +379,7 @@ export class VehiclesView {
   }
 
   protected positionAge(row: VehicleRow): string {
-    return formatDuration(row.positionAgeSeconds, this.language());
+    return formatRelative(row.positionAt, this.now(), this.language());
   }
 
   protected devicesTitle(row: VehicleRow): string {

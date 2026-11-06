@@ -18,9 +18,11 @@ import {
 import { DOCUMENT } from '@angular/common';
 import * as L from 'leaflet';
 import { ButtonDirective } from 'primeng/button';
+import { injectFleetNow } from '../fleet-live/fleet-clock';
+import { fleetObservationIsRecent, fleetRecordedValue } from '../fleet-live/fleet-live';
 import { AdminConfig } from '../../core/config/admin-config';
 import type { Language } from '../../i18n/messages';
-import { formatNumber, formatRelative, type FleetDateFormat } from '../format/format';
+import { formatNumber, type FleetDateFormat } from '../format/format';
 import { FLEET_DISPLAY, injectFleetFormat } from '../format/fleet-format';
 import { interpolate } from '../i18n/messages';
 import { locationMap, mapCoordinates } from '../map-preview/location-map';
@@ -60,6 +62,7 @@ export class LocationMap {
   readonly dateFormat = input<FleetDateFormat>('YYYY_MM_DD');
   readonly recordSelect = output<LocationMapRecord>();
   private readonly preferences = inject(FLEET_DISPLAY);
+  private readonly now = injectFleetNow();
   protected readonly format = injectFleetFormat(
     computed(() => ({
       ...this.preferences(),
@@ -82,7 +85,8 @@ export class LocationMap {
   protected readonly legend = computed(() => {
     const statuses = new Map<string, LocationMapRecord['status']>();
     for (const record of this.records()) {
-      statuses.set(`${record.status.tone}:${record.status.label}`, record.status);
+      const status = this.status(record);
+      statuses.set(`${status.tone}:${status.label}`, status);
     }
     return [...statuses.values()];
   });
@@ -134,6 +138,7 @@ export class LocationMap {
         this.asOf();
         this.timeZone();
         this.dateFormat();
+        this.now();
         this.refreshMarkers(records);
         this.refreshTrack(this.track());
         if (!this.fitted && this.positioned().length) {
@@ -149,8 +154,32 @@ export class LocationMap {
     return this.format.dateTime(value, true);
   }
 
-  protected age(record: LocationMapRecord): string {
-    return formatRelative(record.positionAt, this.asOf(), this.language());
+  protected recordedPosition(record: LocationMapRecord): string {
+    return record.position
+      ? fleetRecordedValue(this.text().position, record.positionAt, this.now(), this.language())
+      : this.text().noPosition;
+  }
+
+  protected status(record: LocationMapRecord): LocationMapRecord['status'] {
+    return record.position && !this.positionIsRecent(record)
+      ? { label: `${record.status.label} · ${this.text().historicalPosition}`, tone: 'warn' }
+      : record.status;
+  }
+
+  protected heading(record: LocationMapRecord): number | null {
+    return this.positionIsRecent(record) ? (record.heading ?? null) : null;
+  }
+
+  private positionIsRecent(record: LocationMapRecord): boolean {
+    return fleetObservationIsRecent(
+      record.positionAt,
+      this.now(),
+      this.preferences().notReportingHours,
+    );
+  }
+
+  private markerTitle(record: LocationMapRecord): string {
+    return `${record.plate ?? record.label}: ${this.status(record).label} · ${this.recordedPosition(record)}`;
   }
 
   protected position(record: LocationMapRecord): string {
@@ -218,8 +247,9 @@ export class LocationMap {
       positioned.add(record.id);
       const signature = JSON.stringify([
         index,
-        record.status,
-        record.heading,
+        this.status(record),
+        this.heading(record),
+        this.recordedPosition(record),
         record.label,
         record.plate,
         this.language(),
@@ -228,7 +258,7 @@ export class LocationMap {
       if (!entry) {
         const marker = L.marker([point.latitude, point.longitude], {
           icon: this.icon(record, index),
-          title: `${record.plate ?? record.label}: ${record.status.label}`,
+          title: this.markerTitle(record),
           keyboard: true,
         }).bindPopup(this.popup(record), { autoPan: false, closeButton: false });
         const select = () => {
@@ -256,9 +286,7 @@ export class LocationMap {
         entry.marker.setLatLng([point.latitude, point.longitude]);
         if (entry.signature !== signature) {
           entry.marker.setIcon(this.icon(record, index));
-          entry.marker
-            .getElement()
-            ?.setAttribute('title', `${record.plate ?? record.label}: ${record.status.label}`);
+          entry.marker.getElement()?.setAttribute('title', this.markerTitle(record));
           entry.signature = signature;
         }
         entry.marker.setPopupContent(this.popup(record));
@@ -275,19 +303,17 @@ export class LocationMap {
   private icon(record: LocationMapRecord, index: number): L.DivIcon {
     const content = this.document.createElement('span');
     content.className = 'location-map__pin';
-    content.style.background = `var(--p-app-tone-${record.status.tone}-background)`;
-    content.style.color = `var(--p-app-tone-${record.status.tone}-color)`;
-    content.style.borderColor = `var(--p-app-tone-${record.status.tone}-solid)`;
+    const status = this.status(record);
+    content.style.background = `var(--p-app-tone-${status.tone}-background)`;
+    content.style.color = `var(--p-app-tone-${status.tone}-color)`;
+    content.style.borderColor = `var(--p-app-tone-${status.tone}-solid)`;
     content.textContent = String(index + 1);
-    if (
-      record.heading !== null &&
-      record.heading !== undefined &&
-      Number.isFinite(record.heading)
-    ) {
+    const heading = this.heading(record);
+    if (heading !== null && Number.isFinite(heading)) {
       const arrow = this.document.createElement('span');
       arrow.className = 'location-map__heading';
       arrow.textContent = '↑';
-      arrow.style.transform = `rotate(${String(record.heading)}deg)`;
+      arrow.style.transform = `rotate(${String(heading)}deg)`;
       arrow.setAttribute('aria-hidden', 'true');
       content.append(arrow);
     }
@@ -310,7 +336,7 @@ export class LocationMap {
       identity.dataset['country'] = record.countryCode;
     }
     popup.append(identity);
-    for (const text of [record.status.label, `${this.text().positionAge}: ${this.age(record)}`]) {
+    for (const text of [this.status(record).label, this.recordedPosition(record)]) {
       const line = this.document.createElement('p');
       line.textContent = text;
       popup.append(line);

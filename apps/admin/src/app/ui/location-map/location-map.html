@@ -106,14 +106,15 @@
               record.plate ?? record.label
             }}</span>
           </button>
-          <span>{{ record.label }} · {{ record.status.label }}</span>
+          <span>{{ record.label }} · {{ status(record).label }}</span>
           <span class="app-num">{{ position(record) }}</span>
           <span [title]="format.utc(record.positionAt)"
             >{{ text().positionTime }}: {{ date(record.positionAt) }}</span
           >
-          <span>{{ text().positionAge }}: {{ age(record) }}</span>
-          @if (record.heading !== null && record.heading !== undefined) {
-            <span>{{ text().heading }}: {{ record.heading }}°</span>
+          <span>{{ recordedPosition(record) }}</span>
+          @let recordedHeading = heading(record);
+          @if (recordedHeading !== null) {
+            <span>{{ text().heading }}: {{ recordedHeading }}°</span>
           }
           <div class="location-map__actions">
             @if (record.href) {

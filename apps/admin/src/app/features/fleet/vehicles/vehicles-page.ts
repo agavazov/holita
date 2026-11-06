@@ -64,6 +64,9 @@ export class VehiclesPage implements OnInit {
   readonly page = signal<AdminVehiclesQuery['fleetVehicles'] | null>(null);
   readonly live = signal<AdminVehiclesLiveQuery['fleetVehicles']['items'] | null>(null);
   readonly liveError = signal<unknown>(null);
+  protected readonly liveLoading = computed(
+    () => this.page() !== null && this.live() === null && !this.liveError(),
+  );
   readonly context = signal<VehiclesContext | null>(null);
   readonly contextError = signal<unknown>(null);
   private readonly vehicleIds = computed(() =>
@@ -168,6 +171,7 @@ export class VehiclesPage implements OnInit {
           if (!ids) {
             return EMPTY;
           }
+          this.live.set(null);
           return this.api.watchLive(ids.split(',')).valueChanges.pipe(
             catchError((error: unknown) => {
               this.liveError.set(error);

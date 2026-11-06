@@ -3,9 +3,10 @@ import type { FleetRecordLinks } from '../fleet-record-links';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
+import { Skeleton } from 'primeng/skeleton';
 import type { FilterCondition, FilterField } from '../../../ui/filter-builder/filter-model';
 import { FilterBuilder } from '../../../ui/filter-builder/filter-builder';
-import { interpolate } from '../../../ui/i18n/messages';
+import { interpolate, uiMessages } from '../../../ui/i18n/messages';
 import {
   type ListAction,
   type ListActionRequest,
@@ -60,6 +61,7 @@ export interface DeviceRow {
     RouterLink,
     ButtonDirective,
     TableModule,
+    Skeleton,
     FilterBuilder,
     FleetConnection,
     FleetFaults,
@@ -77,6 +79,7 @@ export class DevicesView {
   /** The device page route without the record ID and tab. */
   readonly deviceLinkBase = input<readonly string[] | null>(null);
   readonly busy = input(false);
+  readonly liveLoading = input(false);
   readonly searchError = input<string | null>(null);
   readonly errorText = input<string | null>(null);
   readonly branchName = input.required<string>();
@@ -101,6 +104,7 @@ export class DevicesView {
   }
   protected readonly text = computed(() => devicesText(this.language()));
   protected readonly liveText = computed(() => fleetLiveText(this.language()));
+  protected readonly uiText = computed(() => uiMessages[this.language()]);
   protected readonly tableMinWidth = '58rem';
   protected readonly columns = computed<readonly TableColumn[]>(() => [
     {

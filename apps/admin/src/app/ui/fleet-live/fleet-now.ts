@@ -2,7 +2,14 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { injectFleetFormat } from '../format/fleet-format';
 import { interpolate } from '../i18n/messages';
 import { UI_LANGUAGE } from '../ui-language';
-import { fleetLiveText, type FleetLiveDevice, type FleetLiveMode } from './fleet-live';
+import {
+  fleetLiveText,
+  fleetObservationIsRecent,
+  fleetRecordedValue,
+  type FleetLiveDevice,
+  type FleetLiveMode,
+} from './fleet-live';
+import { injectFleetNow } from './fleet-clock';
 
 @Component({
   selector: 'holita-fleet-now',
@@ -27,9 +34,20 @@ export class FleetNow {
   readonly mode = input<FleetLiveMode>('record');
   protected readonly language = inject(UI_LANGUAGE);
   private readonly units = injectFleetFormat();
+  private readonly now = injectFleetNow();
   protected readonly text = computed(() => fleetLiveText(this.language()));
-  protected readonly event = computed(() => this.device()?.ermState?.latestEvent);
-  protected readonly activity = computed(() => {
+  protected readonly event = computed(() => {
+    const event = this.device()?.ermState?.latestEvent;
+    return event &&
+      fleetObservationIsRecent(
+        event.eventTime,
+        this.now(),
+        this.units.preferences().notReportingHours,
+      )
+      ? event
+      : undefined;
+  });
+  private readonly observedActivity = computed(() => {
     const event = this.event(),
       text = this.text();
     if (!event) {
@@ -46,5 +64,17 @@ export class FleetNow {
     }
     return event.speedKmh === 0 || event.engineOn === false ? text.parked : text.unknownActivity;
   });
-  protected readonly exact = computed(() => this.units.dateTime(this.event()?.eventTime, true));
+  protected readonly activity = computed(() =>
+    this.event()
+      ? fleetRecordedValue(
+          this.observedActivity(),
+          this.event()?.eventTime,
+          this.now(),
+          this.language(),
+        )
+      : this.text().unknownActivity,
+  );
+  protected readonly exact = computed(
+    () => `${this.activity()} · ${this.units.utc(this.device()?.ermState?.latestEvent?.eventTime)}`,
+  );
 }

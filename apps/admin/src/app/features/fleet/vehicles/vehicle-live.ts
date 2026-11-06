@@ -55,23 +55,11 @@ export function vehicleLastReport(devices: readonly FleetLiveDevice[]): string |
   return reports.sort().at(-1) ?? null;
 }
 
-/** One compact activity cell; the vehicle profile retains the installed-device details. */
+/** Latest recorded activity among installed devices, independent of their socket traffic. */
 export function vehicleLiveDevice(devices: readonly FleetLiveDevice[]): FleetLiveDevice {
-  const rank = (device: FleetLiveDevice): number => {
-    const state = device?.ermState;
-    return state?.online && state.lastFrameAt && !state.health.overdue
-      ? 3
-      : state?.online
-        ? 2
-        : state?.lastFrameAt && !state.health.overdue
-          ? 1
-          : 0;
-  };
-  return [...devices].sort(
-    (left, right) =>
-      rank(right) - rank(left) ||
-      (right?.ermState?.latestEvent?.eventTime ?? '').localeCompare(
-        left?.ermState?.latestEvent?.eventTime ?? '',
-      ),
+  return [...devices].sort((left, right) =>
+    (right?.ermState?.latestEvent?.eventTime ?? '').localeCompare(
+      left?.ermState?.latestEvent?.eventTime ?? '',
+    ),
   )[0];
 }

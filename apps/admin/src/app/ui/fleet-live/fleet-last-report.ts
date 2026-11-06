@@ -1,10 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { interval, map } from 'rxjs';
 import { injectFleetFormat } from '../format/fleet-format';
 import { formatRelative } from '../format/format';
 import { UI_LANGUAGE } from '../ui-language';
 import { fleetLiveText, type FleetLiveDevice, type FleetLiveMode } from './fleet-live';
+import { injectFleetNow } from './fleet-clock';
 
 @Component({
   selector: 'holita-fleet-last-report',
@@ -28,9 +27,7 @@ export class FleetLastReport {
   readonly mode = input<FleetLiveMode>('record');
   /** Position age uses only the explicitly supplied position timestamp, never frame freshness. */
   readonly kind = input<'report' | 'position'>('report');
-  private readonly now = toSignal(interval(30_000).pipe(map(() => Date.now())), {
-    initialValue: Date.now(),
-  });
+  private readonly now = injectFleetNow();
   private readonly language = inject(UI_LANGUAGE);
   private readonly units = injectFleetFormat();
   protected readonly text = computed(() => fleetLiveText(this.language()));

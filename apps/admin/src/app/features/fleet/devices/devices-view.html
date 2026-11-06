@@ -144,7 +144,14 @@
             />
           </div>
         </td>
-        <td><holita-fleet-connection mode="table" [device]="row.live" /></td>
+        <td [attr.aria-busy]="liveLoading()">
+          @if (liveLoading()) {
+            <span class="app-visually-hidden">{{ uiText().loading }}</span>
+            <p-skeleton width="7rem" height="1.5rem" />
+          } @else {
+            <holita-fleet-connection mode="table" [device]="row.live" />
+          }
+        </td>
         <td class="app-cell-date">
           @let reported = reportCell(row);
           <time

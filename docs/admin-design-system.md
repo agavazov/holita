@@ -218,8 +218,11 @@ or actions. Keep source identity, retrieval and event clocks, gaps and missing f
 `holita-location-map` (`ui/location-map`) presents one record or a fleet with status text/tones,
 measured heading, a recorded track and a matching accessible list. Callers supply canonical
 positions, localized status labels, detail URLs, the data clock (`asOf`), retrieval time
-(`updatedAt`) and Branch display preferences. A missing position stays in the list. Position age
-uses the supplied data clock; connection/reporting status never refreshes an older GPS position.
+(`updatedAt`) and Branch display preferences. A missing position stays in the list. Observation
+ages advance against wall time; connection/reporting status never refreshes an older activity
+or GPS observation. Activity, speed and heading become unknown beyond the Branch not-reporting
+threshold. Retained recorded values and map positions show their age; expired map positions
+are labelled historical and omit heading arrows.
 Track points use explicit null positions or `breakBefore` to break unavailable intervals; pass the
 requested range, coverage and `truncated` disclosure from the source. Markers emit `recordSelect`.
 Refreshes retain the view and selection; Fit fleet is explicit after the first positioned read.

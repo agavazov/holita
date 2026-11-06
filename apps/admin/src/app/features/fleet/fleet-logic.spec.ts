@@ -1,5 +1,6 @@
 import { convertToParamMap } from '@angular/router';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { fleetObservationIsRecent } from '../../ui/fleet-live/fleet-live';
 import type { FilterCondition } from '../../ui/filter-builder/filter-model';
 import { uiMessages } from '../../ui/i18n/messages';
 import type { ListQuery } from '../../ui/list/list-query';
@@ -76,6 +77,21 @@ function failure(...fieldErrors: readonly { path: string; code: string }[]) {
 }
 
 describe('Fleet logic', () => {
+  it('expires recorded activity and GPS against wall time and the Branch reporting threshold', () => {
+    const recordedAt = '2026-11-05T10:00:00.000Z';
+    const rows = [
+      { ageHours: 24, threshold: 48, recent: true },
+      { ageHours: 24, threshold: 12, recent: false },
+      { ageHours: 48, threshold: 48, recent: true },
+      { ageHours: 48 + 1 / 3600, threshold: 48, recent: false },
+    ];
+    for (const row of rows) {
+      // A recent socket frame or a stopped Branch data clock does not change this observation.
+      const now = Date.parse(recordedAt) + row.ageHours * 3_600_000;
+      expect(fleetObservationIsRecent(recordedAt, now, row.threshold)).toBe(row.recent);
+    }
+  });
+
   it('maps calendar-date filters to Branch-zone half-open instants or inclusive date bounds across DST', () => {
     const alertsOn = (day: string) =>
       alertQueryState(

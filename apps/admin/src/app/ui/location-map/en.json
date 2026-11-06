@@ -15,10 +15,12 @@
   "open": "Open",
   "google": "Google Maps",
   "select": "Select {record}",
-  "positionAge": "Position age at data time",
+  "positionAge": "Position age",
   "positionTime": "Position recorded",
   "heading": "Measured heading",
   "track": "Recorded track",
   "trackGaps": "Only recorded samples are joined; unavailable intervals break the line.",
-  "truncated": "Track limited to the newest samples; earlier samples are omitted."
+  "truncated": "Track limited to the newest samples; earlier samples are omitted.",
+  "position": "Position",
+  "historicalPosition": "Historical position"
 }
