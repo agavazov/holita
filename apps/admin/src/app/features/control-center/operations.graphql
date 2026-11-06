@@ -229,6 +229,7 @@ query AdminControlCenterFrames($id: ID!, $input: ErmDevicePageInput) {
         checksum
         partial
         displayText
+        rawHex
       }
     }
   }
@@ -322,6 +323,70 @@ fragment AdminControlCenterCommandRequestFields on ErmCommandRequest {
   actorId
   intent
   action
+  actionCode
+  displayParameters {
+    expiresInSeconds
+    requestedFields
+  }
+  requestedAt
+  queuedAt
+  submittingAt
+  sentAt
+  answeredAt
+  failedAt
+  expiredAt
+  cancelledAt
+  uncertainAt
+  outcomeCode
+  reasonCode
+  transportCommand {
+    id
+    unitId
+    connectionId
+    reference
+    command
+    fields
+    status
+    sentAt
+    answeredAt
+    resultCode
+    responseText
+    responseHex
+    acknowledgement {
+      commandId
+      commandReference
+      replyReference
+      resultCode
+      receivedAt
+    }
+  }
+  configurationVerification {
+    id
+    status
+    startedAt
+    finishedAt
+    failureReason
+    stepDetails {
+      name
+      at
+      outcome
+      outcomeCode
+      commandId
+      payload
+    }
+  }
+  sentFrame {
+    id
+    direction
+    receivedAt
+    command
+    reference
+    checksum
+    partial
+    displayText
+    rawHex
+  }
+  receivedFrameHex
   status
   createdAt
   expiresAt
@@ -343,5 +408,45 @@ query AdminControlCenterCommandRequests($id: ID!) {
 mutation AdminControlCenterCancelCommand($input: CancelErmDeviceCommandInput!) {
   cancelErmDeviceCommand(input: $input) {
     ...AdminControlCenterCommandRequestFields
+  }
+}
+
+query AdminControlCenterCommandRequest($id: ID!) {
+  ermCommandRequest(id: $id) {
+    ...AdminControlCenterCommandRequestFields
+  }
+}
+query AdminControlCenterDeviceProblems($id: ID!, $offset: Int! = 0) {
+  fleetProblems(offset: $offset, limit: 20, filter: { deviceIds: [$id] }) {
+    total
+    offset
+    limit
+    counts {
+      asOf
+      dataAsOf
+      ermAsOf
+      periodFrom
+      periodTo
+      total
+      requiringAttention
+      recorded
+    }
+    items {
+      id
+      sourceKind
+      sourceId
+      severity
+      occurredAt
+      state
+      requiringAttention
+      code
+      details
+      deviceId
+      deviceImei
+      vehicleId
+      alertId
+      ermEventId
+      commandRequestId
+    }
   }
 }

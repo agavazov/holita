@@ -1,7 +1,7 @@
 {
   "eyebrow": "Fleet",
   "title": "Devices",
-  "description": "{branch} · Devices and truck assignments",
+  "description": "{branch} · Review device connections, assigned vehicles and reported problems.",
   "new": "Register device",
   "sort": {
     "installedAt": "Installed at",
@@ -12,7 +12,7 @@
   "table": {
     "heading": "Devices",
     "device": "Device",
-    "vehicle": "Truck",
+    "vehicle": "Assigned vehicle",
     "actions": "Actions",
     "selectPage": "Select all on this page",
     "selectRow": "Select {imei}",
@@ -21,7 +21,8 @@
     "notInstalled": "Without truck",
     "emptyTitle": "No devices yet",
     "emptyDescription": "Register the trackers of this branch to see their connection.",
-    "errorText": "The devices could not be loaded. Try again."
+    "errorText": "The devices could not be loaded. Try again.",
+    "problems": "Problems"
   },
   "actions": {
     "edit": "Edit",

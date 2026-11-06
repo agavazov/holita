@@ -2,6 +2,7 @@ import { JsonPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
   effect,
   inject,
@@ -11,27 +12,28 @@ import {
   untracked,
   type OnInit,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { ConfirmDialog } from 'primeng/confirmdialog';
+import { Dialog } from 'primeng/dialog';
 import { Message } from 'primeng/message';
 import { Skeleton } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
-import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { Tag } from 'primeng/tag';
 import { map, type Observable } from 'rxjs';
 import type {
   AdminControlCenterDeviceQuery,
   AdminControlCenterEventsQuery,
-  AdminControlCenterCommandsQuery,
   AdminControlCenterFramesQuery,
   AdminControlCenterSnapshotsQuery,
-  ErmCommandState,
+  AdminControlCenterDeviceProblemsQuery,
+  AdminControlCenterCommandRequestFieldsFragment,
   ErmEventCategory,
-  ErmEventSeverity,
-  ErmFrameChecksum,
   ErmFrameDirection,
+  ErmFrameChecksum,
+  ErmEventSeverity,
   ErmParameterSnapshotStatus,
 } from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
@@ -39,57 +41,52 @@ import type { Language } from '../../i18n/messages';
 import { injectPageRecord } from '../../layout/page-record';
 import { confirmAction, confirmDialogPt } from '../../ui/confirm';
 import { EmptyState } from '../../ui/empty-state/empty-state';
-import { injectFleetFormat } from '../../ui/format/fleet-format';
 import { FleetConnection } from '../../ui/fleet-live/fleet-connection';
-import { fleetCloseReason } from '../../ui/fleet-live/fleet-live';
 import { FleetNow } from '../../ui/fleet-live/fleet-now';
 import { FleetLastReport } from '../../ui/fleet-live/fleet-last-report';
-import { FleetFaults } from '../../ui/fleet-live/fleet-faults';
-import { formatDateTime, formatDuration, formatNumber, emptyValue } from '../../ui/format/format';
+import { injectFleetFormat } from '../../ui/format/fleet-format';
+import { formatDuration, formatNumber } from '../../ui/format/format';
 import { interpolate, uiMessages } from '../../ui/i18n/messages';
+import { trackById, type ListActionBase, type ListRecord } from '../../ui/list/list-actions';
+import { LocationMap, type LocationMapRecord } from '../../ui/location-map/location-map';
 import { mapCoordinates } from '../../ui/map-preview/location-map';
-import { MapPreview } from '../../ui/map-preview/map-preview';
 import { PageHeader } from '../../ui/page-header/page-header';
-import { TablePanel } from '../../ui/table-panel/table-panel';
+import { RowActions } from '../../ui/row-actions/row-actions';
+import { TablePanel, type TableColumn } from '../../ui/table-panel/table-panel';
 import { tableView } from '../../ui/table-panel/table-view';
 import { toneSeverity } from '../../ui/tones';
 import { deviceModelLabel } from '../fleet/devices/i18n/messages';
 import { ControlCenterApi } from './control-center-api';
-import { SmsPage } from './sms-page';
-import { DeviceSettings } from './device-settings';
+import { controlCenterText, ermLanguage, severityTone } from './control-center-text';
 import { DeviceCommandQueue } from './device-command-queue';
-import { controlCenterText, deviceLabel, ermLanguage, severityTone } from './control-center-text';
+import { DeviceSettings } from './device-settings';
+import { SmsPage } from './sms-page';
 
 export type DeviceTab =
-  'overview' | 'events' | 'alarms' | 'commands' | 'parameters' | 'frames' | 'sms';
-type Device = AdminControlCenterDeviceQuery['fleetDevice'];
-type Events = AdminControlCenterEventsQuery['fleetDevice']['ermEvents'];
-type Commands = AdminControlCenterCommandsQuery['fleetDevice']['ermCommands'];
-type Frames = AdminControlCenterFramesQuery['fleetDevice']['ermFrames'];
-type Snapshots = AdminControlCenterSnapshotsQuery['fleetDevice']['ermParameterSnapshots'];
-interface HistoryRead {
-  readonly loading: boolean;
-  readonly error: unknown;
-  readonly data:
-    | { readonly events: Events }
-    | { readonly commands: Commands }
-    | { readonly frames: Frames }
-    | { readonly snapshots: Snapshots }
-    | null;
-}
-
+  'overview' | 'problems' | 'commands' | 'sms-commands' | 'parameters' | 'events' | 'frames';
 export const deviceTabs: readonly DeviceTab[] = [
   'overview',
-  'events',
-  'alarms',
+  'problems',
   'commands',
+  'sms-commands',
   'parameters',
+  'events',
   'frames',
-  'sms',
 ];
-const categories: readonly ErmEventCategory[] = ['POSITION', 'STATUS', 'ALARM', 'EDATA', 'OTHER'];
-/** Fault evidence includes alarm events and decoded eData reports, including cleared faults. */
-const alarmCategories: ErmEventCategory[] = ['ALARM', 'EDATA'];
+type Device = AdminControlCenterDeviceQuery['fleetDevice'];
+type Events = AdminControlCenterEventsQuery['fleetDevice']['ermEvents'];
+type Frames = AdminControlCenterFramesQuery['fleetDevice']['ermFrames'];
+type Snapshots = AdminControlCenterSnapshotsQuery['fleetDevice']['ermParameterSnapshots'];
+type Problems = AdminControlCenterDeviceProblemsQuery['fleetProblems'];
+type Detail =
+  | { kind: 'event'; value: Events['items'][number] }
+  | { kind: 'frame'; value: Frames['items'][number] }
+  | { kind: 'snapshot'; value: Snapshots['items'][number] };
+interface HistoryRead {
+  loading: boolean;
+  error: unknown;
+  data: { events: Events } | { frames: Frames } | { snapshots: Snapshots } | null;
+}
 
 @Component({
   selector: 'holita-control-center-device',
@@ -98,26 +95,22 @@ const alarmCategories: ErmEventCategory[] = ['ALARM', 'EDATA'];
     RouterLink,
     ButtonDirective,
     ConfirmDialog,
+    Dialog,
     Message,
     Skeleton,
     TableModule,
-    Tabs,
-    TabList,
-    Tab,
-    TabPanels,
-    TabPanel,
     Tag,
     EmptyState,
-    MapPreview,
-    PageHeader,
-    TablePanel,
     FleetConnection,
     FleetNow,
     FleetLastReport,
-    FleetFaults,
-    SmsPage,
-    DeviceSettings,
+    LocationMap,
+    PageHeader,
+    RowActions,
+    TablePanel,
     DeviceCommandQueue,
+    DeviceSettings,
+    SmsPage,
   ],
   providers: [ControlCenterApi, ConfirmationService],
   templateUrl: './device-page.html',
@@ -130,211 +123,337 @@ export class DevicePage implements OnInit {
   readonly recordId = input.required<string>();
   readonly tab = input.required<DeviceTab>();
   readonly text = computed(() => controlCenterText[this.language()]);
-
-  protected modelLabel(model: string | null | undefined): string {
-    return deviceModelLabel(this.language(), model);
-  }
-  private readonly api = inject(ControlCenterApi);
-  private readonly router = inject(Router);
-  private readonly confirmation = inject(ConfirmationService);
-  private readonly notifications = inject(MessageService);
-  private readonly units = injectFleetFormat();
-  readonly tabs = deviceTabs;
-  readonly categories = categories;
+  readonly uiText = computed(() => uiMessages[this.language()]);
+  readonly fmt = injectFleetFormat();
+  readonly primaryTabs = [
+    'overview',
+    'problems',
+    'commands',
+    'sms-commands',
+    'parameters',
+    'technical-details',
+  ] as const;
+  readonly activeTab = computed(() =>
+    this.tab() === 'events' || this.tab() === 'frames' ? 'technical-details' : this.tab(),
+  );
+  readonly trackById = trackById;
   readonly toneSeverity = toneSeverity;
   readonly severityTone = severityTone;
-  readonly snapshotConfirmation = signal('');
-  readonly confirmPt = computed(() =>
-    confirmDialogPt(this.language(), 'erm-snapshot-confirm-message'),
-  );
-  readonly uiText = computed(() => uiMessages[this.language()]);
-
+  readonly categories: readonly ErmEventCategory[] = [
+    'POSITION',
+    'STATUS',
+    'ALARM',
+    'EDATA',
+    'OTHER',
+  ];
+  readonly directions: readonly ErmFrameDirection[] = ['DEVICE', 'UPSTREAM', 'HOLITA'];
+  readonly checksums: readonly ErmFrameChecksum[] = ['OK', 'MISMATCH', 'ABSENT'];
+  private readonly api = inject(ControlCenterApi);
+  private readonly destroy = inject(DestroyRef);
+  private readonly confirmation = inject(ConfirmationService);
+  private readonly notifications = inject(MessageService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly queryParams = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap,
+  });
+  readonly requestedCommand = computed(() => this.queryParams().get('request'));
   readonly device = signal<Device | null>(null);
-  /** When the shown device was read; a failed poll keeps it. */
-  readonly deviceUpdatedAt = signal<string | null>(null);
   readonly deviceLoading = signal(true);
+  readonly deviceUpdatedAt = signal<string | null>(null);
   readonly deviceError = signal<unknown>(null);
-  readonly deviceFailure = computed(() =>
+  readonly failure = computed(() =>
     requestError(this.deviceError(), this.text().deviceUnavailable),
   );
-  readonly staleFailure = computed(() =>
-    interpolate(this.text().staleDevice, {
-      error: this.deviceFailure(),
-      time: this.date(this.deviceUpdatedAt()),
-    }),
-  );
-  private readonly deviceReload = signal(0);
   readonly state = computed(() => this.device()?.ermState ?? null);
-  readonly liveDevice = computed(() =>
-    this.deviceError() && !this.state() ? undefined : this.device(),
+  readonly title = computed(
+    () => this.device()?.vehicle?.licensePlate ?? this.device()?.imei ?? this.text().devices,
   );
-  /** Fleet's routing state explains where the unit's data arrives. */
-  readonly routing = computed(() => this.device()?.routing ?? null);
-  readonly healthLine = computed(() => {
-    const health = this.state()?.health;
-    if (!health) {
-      return emptyValue;
-    }
-    const gaps = health.gapsLast24h;
-    const parts = [
-      this.format(this.text().gaps24h, {
-        count: gaps.length,
-        duration: this.duration(gaps.reduce((total, gap) => total + gap.durationSeconds, 0)),
-      }),
-      this.format(this.text().networkChanges24h, { count: health.networkChangesLast24h }),
-    ];
-    const routing = this.device()?.routingHealth;
-    if (routing) {
-      parts.push(
-        this.format(this.text().backupTime, { duration: this.duration(routing.backupSeconds) }),
-      );
-    }
-    if (health.lastCloseReason) {
-      parts.push(this.closeReason(health.lastCloseReason));
-    }
-    return parts.join(' · ');
-  });
-  readonly title = computed(() => {
-    const device = this.device();
-    return device ? deviceLabel(device) : this.text().units;
-  });
-  /** The truck and IMEI that a command goes to. */
-  readonly unitName = computed(() => {
-    const device = this.device();
-    const imei = `${this.text().imei} ${device?.imei ?? emptyValue}`;
-    return device?.vehicle ? `${device.vehicle.licensePlate} (${imei})` : imei;
-  });
-  /** holita sends commands only to units it serves as their primary server. */
+  readonly unitName = computed(() => `${this.title()} · IMEI ${this.device()?.imei ?? '—'}`);
   readonly canSend = computed(
     () => this.state()?.online === true && this.state()?.mode === 'PRIMARY',
   );
-  readonly commandsHint = computed(() => {
-    const state = this.state();
-    return !state?.online
-      ? this.text().commandsOffline
-      : state.mode !== 'PRIMARY'
-        ? this.text().commandsMirror
-        : this.text().commandsHint;
+  readonly mapRecords = computed<readonly LocationMapRecord[]>(() => {
+    const device = this.device();
+    if (!device) {
+      return [];
+    }
+    const state = device.ermState;
+    const position = state?.lastPosition;
+    const live = state?.online === true && !state.health.overdue;
+    return [
+      {
+        id: device.id,
+        label: device.imei,
+        plate: device.vehicle?.licensePlate ?? null,
+        position: mapCoordinates(position?.latitude, position?.longitude),
+        positionAt: position?.positionTime ?? position?.eventTime ?? null,
+        heading: position?.heading ?? null,
+        status: {
+          label: live
+            ? this.text().detail.live
+            : state?.online
+              ? this.text().detail.connected
+              : this.text().detail.disconnected,
+          tone: live ? 'success' : state?.online ? 'info' : 'neutral',
+        },
+      },
+    ];
   });
-  readonly position = computed(() => {
-    const event = this.state()?.lastPosition;
-    const coordinates = mapCoordinates(event?.latitude, event?.longitude);
-    return event && coordinates ? { event, coordinates } : null;
-  });
-
-  readonly category = linkedSignal<DeviceTab, ErmEventCategory | null>({
+  private readonly reload = signal(0);
+  readonly problemPage = signal(1);
+  readonly problems = signal<Problems | null>(null);
+  readonly problemsLoading = signal(true);
+  readonly problemsError = signal<unknown>(null);
+  readonly problemView = computed(() =>
+    tableView({
+      loading: this.problemsLoading() && !this.problems(),
+      error: this.problemsError(),
+      rows: this.problems()?.items.length ?? null,
+      filtered: false,
+    }),
+  );
+  readonly problemFailure = computed(() =>
+    requestError(this.problemsError(), this.text().unavailable),
+  );
+  readonly problemSummary = computed(() =>
+    this.problems()
+      ? interpolate(this.text().detail.problemSummary, {
+          attention: this.problems()?.counts.requiringAttention ?? 0,
+          recorded: this.problems()?.counts.recorded ?? 0,
+        })
+      : this.text().detail.problemsUnknown,
+  );
+  readonly category = signal<ErmEventCategory | null>(null);
+  readonly direction = signal<ErmFrameDirection | null>(null);
+  readonly checksum = signal<ErmFrameChecksum | null>(null);
+  readonly cursors = linkedSignal<DeviceTab, readonly (string | null)[]>({
     source: this.tab,
-    computation: () => null,
+    computation: () => [null],
   });
-  readonly cursor = linkedSignal<DeviceTab, string | null>({
-    source: this.tab,
-    computation: () => null,
-  });
+  readonly cursor = computed(() => this.cursors().at(-1) ?? null);
   readonly events = signal<Events | null>(null);
-  readonly commands = signal<Commands | null>(null);
   readonly frames = signal<Frames | null>(null);
   readonly snapshots = signal<Snapshots | null>(null);
-  /** The snapshots query polls only while one of them is still reading. */
-  readonly snapshotRunning = computed(
-    () => this.snapshots()?.items.some((snapshot) => snapshot.status === 'RUNNING') ?? false,
-  );
-  readonly selectedSnapshotId = linkedSignal<DeviceTab, string | null>({
-    source: this.tab,
-    computation: () => null,
-  });
-  /** The chosen snapshot, else the newest one. */
-  readonly selectedSnapshot = computed(() => {
-    const items = this.snapshots()?.items ?? [];
-    return items.find((snapshot) => snapshot.id === this.selectedSnapshotId()) ?? items[0] ?? null;
-  });
-  readonly startingSnapshot = signal(false);
+  readonly requests = signal<readonly AdminControlCenterCommandRequestFieldsFragment[]>([]);
   readonly historyLoading = signal(false);
   readonly historyError = signal<unknown>(null);
   readonly historyFailure = computed(() =>
     requestError(this.historyError(), this.text().unavailable),
   );
-  private readonly historyReload = signal(0);
-  readonly history = computed(() => {
-    const tab = this.tab();
-    return tab === 'events' || tab === 'alarms'
+  readonly history = computed(() =>
+    this.tab() === 'events'
       ? this.events()
-      : tab === 'commands'
-        ? this.commands()
-        : tab === 'frames'
-          ? this.frames()
-          : tab === 'parameters'
-            ? this.snapshots()
-            : null;
-  });
+      : this.tab() === 'frames'
+        ? this.frames()
+        : this.snapshots(),
+  );
+  readonly filteredFrames = computed(
+    () =>
+      this.frames()?.items.filter(
+        (row) =>
+          (!this.direction() || row.direction === this.direction()) &&
+          (!this.checksum() || row.checksum === this.checksum()),
+      ) ?? [],
+  );
+  readonly technicalRows = computed<(Events['items'][number] | Frames['items'][number])[]>(() =>
+    this.tab() === 'events' ? (this.events()?.items ?? []) : this.filteredFrames(),
+  );
   readonly historyView = computed(() =>
     tableView({
       loading: this.historyLoading() && !this.history(),
       error: this.historyError(),
-      rows: this.history()?.items.length ?? null,
-      filtered: this.category() !== null,
+      rows:
+        this.tab() === 'frames'
+          ? this.frames()
+            ? this.filteredFrames().length
+            : null
+          : (this.history()?.items.length ?? null),
+      filtered: !!this.category() || !!this.direction() || !!this.checksum(),
     }),
   );
+  readonly cursorPage = computed(() => ({
+    page: this.cursors().length,
+    hasPrevious: this.cursors().length > 1,
+    hasNext: !!this.history()?.hasMore,
+  }));
+  readonly detail = signal<Detail | null>(null);
+  readonly actions = computed<readonly ListActionBase<'details'>[]>(() => [
+    { id: 'details', label: this.text().detail.details },
+  ]);
+  readonly snapshotRunning = computed(
+    () => this.snapshots()?.items.some((row) => row.status === 'RUNNING') ?? false,
+  );
+  readonly startingSnapshot = signal(false);
+  readonly snapshotConfirmation = signal('');
+  readonly confirmPt = computed(() =>
+    confirmDialogPt(this.language(), 'erm-snapshot-confirm-message'),
+  );
+  readonly columns = computed<readonly TableColumn[]>(() =>
+    this.tab() === 'events'
+      ? [
+          {
+            id: 'event',
+            label: this.text().event,
+            width: '20rem',
+            kind: 'identity',
+            className: 'app-col-identity',
+          },
+          { id: 'time', label: this.text().time, width: '12rem', kind: 'date' },
+          { id: 'category', label: this.text().category, width: '9rem', kind: 'text' },
+          { id: 'severity', label: this.text().severity, width: '9rem', kind: 'status' },
+          {
+            id: 'actions',
+            label: this.text().detail.actions,
+            width: '5rem',
+            kind: 'actions',
+            className: 'app-col-actions',
+          },
+        ]
+      : this.tab() === 'frames'
+        ? [
+            {
+              id: 'frame',
+              label: this.text().frame,
+              width: '22rem',
+              kind: 'identity',
+              className: 'app-col-identity',
+            },
+            { id: 'time', label: this.text().received, width: '12rem', kind: 'date' },
+            { id: 'direction', label: this.text().direction, width: '9rem', kind: 'text' },
+            { id: 'checksum', label: this.text().checksum, width: '9rem', kind: 'status' },
+            {
+              id: 'actions',
+              label: this.text().detail.actions,
+              width: '5rem',
+              kind: 'actions',
+              className: 'app-col-actions',
+            },
+          ]
+        : [
+            {
+              id: 'time',
+              label: this.text().snapshots.startedAt,
+              width: '14rem',
+              kind: 'identity',
+              className: 'app-col-identity',
+            },
+            { id: 'status', label: this.text().status, width: '10rem', kind: 'status' },
+            { id: 'read', label: this.text().snapshots.progress, width: '9rem', kind: 'number' },
+            {
+              id: 'changes',
+              label: this.text().snapshots.changesCount,
+              width: '9rem',
+              kind: 'number',
+            },
+            {
+              id: 'actions',
+              label: this.text().detail.actions,
+              width: '5rem',
+              kind: 'actions',
+              className: 'app-col-actions',
+            },
+          ],
+  );
+  readonly problemColumns = computed<readonly TableColumn[]>(() => [
+    {
+      id: 'problem',
+      label: this.text().detail.problem,
+      width: '20rem',
+      kind: 'identity',
+      className: 'app-col-identity',
+    },
+    { id: 'time', label: this.text().time, width: '12rem', kind: 'date' },
+    { id: 'severity', label: this.text().severity, width: '9rem', kind: 'status' },
+    { id: 'status', label: this.text().status, width: '11rem', kind: 'status' },
+  ]);
+  readonly valueColumns = computed<readonly TableColumn[]>(() => [
+    {
+      id: 'parameter',
+      label: this.text().snapshots.parameter,
+      width: '18rem',
+      kind: 'identity',
+      className: 'app-col-identity',
+    },
+    { id: 'value', label: this.text().snapshots.value, width: '24rem', kind: 'text' },
+  ]);
+  readonly changeColumns = computed<readonly TableColumn[]>(() => [
+    {
+      id: 'parameter',
+      label: this.text().snapshots.parameter,
+      width: '18rem',
+      kind: 'identity',
+      className: 'app-col-identity',
+    },
+    { id: 'before', label: this.text().snapshots.before, width: '18rem', kind: 'text' },
+    { id: 'now', label: this.text().snapshots.now, width: '18rem', kind: 'text' },
+  ]);
 
   constructor() {
     injectPageRecord(() => (this.device() ? this.title() : null));
     effect((onCleanup) => {
-      this.deviceReload();
-      const id = this.recordId();
-      const language = ermLanguage(this.language());
+      this.reload();
       this.deviceLoading.set(true);
-      this.deviceError.set(null);
-      const subscription = this.api.watchDevice(id, language).valueChanges.subscribe({
-        next: (result) => {
-          this.deviceLoading.set(result.loading);
-          // A failed poll re-emits the previous data with the error; both stay visible.
-          this.deviceError.set(result.error ?? null);
-          if (result.dataState === 'complete' && (!result.error || !this.device())) {
-            this.device.set(result.data.fleetDevice);
-            this.deviceUpdatedAt.set(new Date().toISOString());
-          }
-        },
-        error: (error: unknown) => {
-          this.deviceLoading.set(false);
-          this.deviceError.set(error);
-        },
-      });
+      const sub = this.api
+        .watchDevice(this.recordId(), ermLanguage(this.language()))
+        .valueChanges.subscribe({
+          next: (result) => {
+            this.deviceLoading.set(result.loading);
+            this.deviceError.set(result.error ?? null);
+            if (result.dataState === 'complete' && !result.error) {
+              this.device.set(result.data.fleetDevice);
+              this.deviceUpdatedAt.set(new Date().toISOString());
+            }
+          },
+          error: (error: unknown) => {
+            this.deviceLoading.set(false);
+            this.deviceError.set(error);
+          },
+        });
       onCleanup(() => {
-        subscription.unsubscribe();
+        sub.unsubscribe();
       });
     });
     effect((onCleanup) => {
-      this.historyReload();
+      this.reload();
+      this.problemsLoading.set(true);
+      const sub = this.api
+        .watchDeviceProblems(this.recordId(), (this.problemPage() - 1) * 20)
+        .valueChanges.subscribe({
+          next: (result) => {
+            this.problemsLoading.set(result.loading);
+            this.problemsError.set(result.error ?? null);
+            if (result.dataState === 'complete' && !result.error) {
+              this.problems.set(result.data.fleetProblems);
+            }
+          },
+          error: (error: unknown) => {
+            this.problemsLoading.set(false);
+            this.problemsError.set(error);
+          },
+        });
+      onCleanup(() => {
+        sub.unsubscribe();
+      });
+    });
+    effect((onCleanup) => {
+      this.reload();
       const tab = this.tab();
       const id = this.recordId();
-      const language = ermLanguage(this.language());
       const cursor = this.cursor();
       const category = this.category();
-      untracked(() => {
-        this.events.set(null);
-        this.commands.set(null);
-        this.frames.set(null);
-        this.snapshots.set(null);
-        this.historyError.set(null);
-        this.historyLoading.set(tab !== 'overview' && tab !== 'sms');
-      });
-      if (tab === 'overview' || tab === 'sms') {
+      if (tab !== 'events' && tab !== 'frames' && tab !== 'parameters') {
         return;
       }
+      this.historyLoading.set(true);
+      this.historyError.set(null);
       const page = { pageSize: 50, cursor };
       const read: Observable<HistoryRead> =
-        tab === 'events' || tab === 'alarms'
+        tab === 'events'
           ? this.api
               .watchEvents({
                 id,
-                language,
-                input: {
-                  ...page,
-                  ...(tab === 'alarms'
-                    ? { categories: alarmCategories }
-                    : category
-                      ? { categories: [category] }
-                      : {}),
-                },
+                language: ermLanguage(this.language()),
+                input: { ...page, ...(category ? { categories: [category] } : {}) },
               })
               .valueChanges.pipe(
                 map((result) => ({
@@ -346,58 +465,51 @@ export class DevicePage implements OnInit {
                       : null,
                 })),
               )
-          : tab === 'commands'
-            ? this.api.watchCommands({ id, input: page }).valueChanges.pipe(
+          : tab === 'frames'
+            ? this.api.watchFrames({ id, input: page }).valueChanges.pipe(
                 map((result) => ({
                   loading: result.loading,
                   error: result.error,
                   data:
                     result.dataState === 'complete' && !result.error
-                      ? { commands: result.data.fleetDevice.ermCommands }
+                      ? { frames: result.data.fleetDevice.ermFrames }
                       : null,
                 })),
               )
-            : tab === 'parameters'
-              ? this.api
-                  .watchSnapshots(
-                    { id, input: { pageSize: 25, cursor } },
-                    () => !this.snapshotRunning(),
-                  )
-                  .valueChanges.pipe(
-                    map((result) => ({
-                      loading: result.loading,
-                      error: result.error,
-                      data:
-                        result.dataState === 'complete' && !result.error
-                          ? { snapshots: result.data.fleetDevice.ermParameterSnapshots }
-                          : null,
-                    })),
-                  )
-              : this.api.watchFrames({ id, input: page }).valueChanges.pipe(
+            : this.api
+                .watchSnapshots(
+                  { id, input: { pageSize: 25, cursor } },
+                  () => !this.snapshotRunning(),
+                )
+                .valueChanges.pipe(
                   map((result) => ({
                     loading: result.loading,
                     error: result.error,
                     data:
                       result.dataState === 'complete' && !result.error
-                        ? { frames: result.data.fleetDevice.ermFrames }
+                        ? { snapshots: result.data.fleetDevice.ermParameterSnapshots }
                         : null,
                   })),
                 );
-      const subscription = read.subscribe({
+      const sub = read.subscribe({
         next: (result) => {
           this.historyLoading.set(result.loading);
           this.historyError.set(result.error ?? null);
           if (result.data && 'events' in result.data) {
             this.events.set(result.data.events);
           }
-          if (result.data && 'commands' in result.data) {
-            this.commands.set(result.data.commands);
-          }
           if (result.data && 'frames' in result.data) {
             this.frames.set(result.data.frames);
           }
           if (result.data && 'snapshots' in result.data) {
             this.snapshots.set(result.data.snapshots);
+            const detail = untracked(this.detail);
+            if (detail?.kind === 'snapshot') {
+              const current = result.data.snapshots.items.find((row) => row.id === detail.value.id);
+              if (current) {
+                this.detail.set({ kind: 'snapshot', value: current });
+              }
+            }
           }
         },
         error: (error: unknown) => {
@@ -406,125 +518,143 @@ export class DevicePage implements OnInit {
         },
       });
       onCleanup(() => {
-        subscription.unsubscribe();
+        sub.unsubscribe();
       });
     });
+    effect((onCleanup) => {
+      this.reload();
+      if (this.tab() !== 'frames') {
+        return;
+      }
+      const sub = this.api
+        .watchCommandRequests(this.recordId(), () => true)
+        .valueChanges.subscribe({
+          next: (result) => {
+            if (result.dataState === 'complete' && !result.error) {
+              this.requests.set(result.data.fleetDevice.ermCommandRequests);
+            }
+          },
+          error: () => {
+            this.requests.set([]);
+          },
+        });
+      onCleanup(() => {
+        sub.unsubscribe();
+      });
+    });
+  }
+  private alive(): boolean {
+    return !this.destroy.destroyed;
   }
 
   ngOnInit(): void {
     this.api.initialize(this.branchId(), this.language());
   }
-
   link(...path: string[]): string[] {
     return ['/', this.language(), this.branchId(), ...path];
   }
-  deviceLink(tab: DeviceTab): string[] {
-    return this.link('control-center', 'devices', this.recordId(), tab);
-  }
-  selectTab(value: string | number | undefined): void {
-    const tab = deviceTabs.find((tab) => tab === value);
-    if (tab) {
-      void this.router.navigate(this.deviceLink(tab));
-    }
+  deviceLink(tab: DeviceTab | 'technical-details'): string[] {
+    return this.link(
+      'fleet',
+      'devices',
+      this.recordId(),
+      ...(tab === 'events' || tab === 'frames' || tab === 'technical-details'
+        ? ['technical-details', tab === 'frames' ? 'frames' : 'events']
+        : [tab]),
+    );
   }
   refresh(): void {
-    this.deviceReload.update((value) => value + 1);
-    this.historyReload.update((value) => value + 1);
+    this.reload.update((value) => value + 1);
   }
-  date(value: string | null | undefined): string {
-    return formatDateTime(value, this.language(), this.units.preferences().timeZone, true);
+  modelLabel(model: string | null | undefined): string {
+    return deviceModelLabel(this.language(), model);
   }
-  closeReason(value: string | null | undefined): string {
-    return fleetCloseReason(value, this.language());
-  }
-  number(value: number | null | undefined, fraction = 1): string {
+  number(value: number | null | undefined, fraction = 0): string {
     return formatNumber(value, this.language(), { fraction });
   }
-  /** Speed and odometer in the Branch's units; no unit next to an absent value. */
-  speed(value: number | null): string {
-    return this.units.speed(value);
+  duration(value: number | null): string {
+    return formatDuration(value, this.language());
   }
-  distance(value: number | null): string {
-    return this.units.distance(value, true, 0);
+  record(id: string, label: string): ListRecord<'details'> {
+    return { id, label, unavailable: [] };
   }
-  duration(seconds: number | null): string {
-    return formatDuration(seconds, this.language());
+  selectCategory(value: ErmEventCategory | null): void {
+    this.category.set(value);
+    this.cursors.set([null]);
   }
-  /** A unit reading with the time it was observed. */
-  reading(
-    reading: { readonly value: number; readonly observedAt: string } | null,
-    unit: 'volt' | null,
-    fraction: number,
-  ): string {
-    if (!reading) {
-      return emptyValue;
+  pageHistory(direction: 'previous' | 'next'): void {
+    if (direction === 'previous') {
+      this.cursors.update((cursors) => cursors.slice(0, -1));
+    } else {
+      const next = this.history()?.nextCursor;
+      if (next) {
+        this.cursors.update((cursors) => [...cursors, next]);
+      }
     }
-    const value = this.number(reading.value, fraction);
-    return `${unit ? `${value}\u00a0${this.uiText().units[unit]}` : value} · ${this.date(reading.observedAt)}`;
   }
-  format(template: string, values: Readonly<Record<string, string | number>>): string {
-    return interpolate(template, values);
-  }
-  voltage(value: number | null): string {
-    return value === null
-      ? emptyValue
-      : `${this.number(value, 2)}\u00a0${this.uiText().units.volt}`;
-  }
-  /** Fault records (419) and the CAN error flag (411) of a decoded eData report. */
-  edataSummary(value: unknown): string | null {
-    if (typeof value !== 'object' || value === null || !('type' in value)) {
-      return null;
+  openDetail(id: string | undefined): void {
+    if (this.tab() === 'events') {
+      const row = this.events()?.items.find((row) => row.id === id);
+      if (row) {
+        this.detail.set({ kind: 'event', value: row });
+      }
+    } else if (this.tab() === 'frames') {
+      const row = this.frames()?.items.find((row) => row.id === id);
+      if (row) {
+        this.detail.set({ kind: 'frame', value: row });
+      }
+    } else {
+      const row = this.snapshots()?.items.find((row) => row.id === id);
+      if (row) {
+        this.detail.set({ kind: 'snapshot', value: row });
+      }
     }
-    const text = this.text();
-    if (value.type === 419 && 'faults' in value && Array.isArray(value.faults)) {
-      const faults: unknown[] = value.faults;
-      const records = faults.flatMap((fault) =>
-        typeof fault === 'object' &&
-        fault !== null &&
-        'spn' in fault &&
-        typeof fault.spn === 'number' &&
-        'fmi' in fault &&
-        typeof fault.fmi === 'number'
-          ? [
-              `SPN ${String(fault.spn)} FMI ${String(fault.fmi)}${
-                'status' in fault && fault.status === 2 ? ` (${text.faultCleared})` : ''
-              }`,
-            ]
-          : [],
-      );
-      return records.length ? `${text.faults}: ${records.join(', ')}` : null;
-    }
-    return value.type === 411 &&
-      'canError' in value &&
-      typeof value.canError === 'number' &&
-      value.canError !== 0
-      ? text.edataCanError
-      : null;
   }
-  commandFields(fields: readonly string[]): string {
-    return fields.length ? ` · ${fields.join(',')}` : '';
+  frameRequest(
+    frame: Frames['items'][number],
+  ): AdminControlCenterCommandRequestFieldsFragment | undefined {
+    return this.requests().find(
+      (request) =>
+        frame.direction === 'DEVICE' &&
+        request.transportCommand?.acknowledgement?.replyReference === frame.reference &&
+        request.transportCommand.acknowledgement.receivedAt === frame.receivedAt,
+    );
   }
-  engine(value: boolean | null | undefined): string {
-    return value === null || value === undefined
-      ? emptyValue
-      : value
-        ? this.text().on
-        : this.text().off;
+  frameLabel(frame: Frames['items'][number]): string {
+    const ack = this.frameRequest(frame)?.transportCommand?.acknowledgement;
+    return ack
+      ? interpolate(this.text().detail.confirmation, {
+          reference: ack.commandReference,
+          result: ack.resultCode,
+        })
+      : this.text().detail.protocolMessage;
   }
-  mode(value: string | null | undefined): string {
-    return value === 'MIRROR'
-      ? this.text().mirror
-      : value === 'PRIMARY'
-        ? this.text().primary
-        : emptyValue;
+  problemLabel(row: Problems['items'][number]): string {
+    return this.text().detail.problemKinds[row.sourceKind];
   }
-  commandState(value: ErmCommandState): string {
-    return this.text().commandStates[value];
+  problemLink(row: Problems['items'][number]): string[] | null {
+    return row.alertId
+      ? this.link('fleet', 'dashboard', 'problems', row.alertId)
+      : row.commandRequestId
+        ? this.deviceLink('commands')
+        : null;
   }
-  direction(value: ErmFrameDirection): string {
+  parameter(value: number): string {
+    return String(value).padStart(4, '0');
+  }
+  snapshotTone(value: ErmParameterSnapshotStatus) {
+    return toneSeverity(value === 'COMPLETE' ? 'success' : value === 'RUNNING' ? 'info' : 'danger');
+  }
+  problemState(value: Problems['items'][number]['state']): string {
+    return this.text().detail.problemStates[value];
+  }
+  snapshotStatus(value: ErmParameterSnapshotStatus): string {
+    return this.text().snapshots.statuses[value];
+  }
+  directionLabel(value: ErmFrameDirection): string {
     return this.text().directions[value];
   }
-  checksum(value: ErmFrameChecksum): string {
+  checksumLabel(value: ErmFrameChecksum): string {
     return this.text().checksums[value];
   }
   categoryLabel(value: ErmEventCategory): string {
@@ -533,21 +663,6 @@ export class DevicePage implements OnInit {
   severityLabel(value: ErmEventSeverity): string {
     return this.text().severities[value];
   }
-  commandTone(value: ErmCommandState) {
-    return toneSeverity(value === 'ANSWERED' ? 'success' : value === 'SENT' ? 'info' : 'warn');
-  }
-
-  snapshotStatus(value: ErmParameterSnapshotStatus): string {
-    return this.text().snapshots.statuses[value];
-  }
-  snapshotTone(value: ErmParameterSnapshotStatus) {
-    return toneSeverity(value === 'COMPLETE' ? 'success' : value === 'RUNNING' ? 'info' : 'danger');
-  }
-  /** StarLink parameters are numbered with four digits, for example 0593. */
-  parameterNumber(value: number): string {
-    return String(value).padStart(4, '0');
-  }
-
   async startSnapshot(): Promise<void> {
     const text = this.text();
     this.snapshotConfirmation.set(
@@ -558,22 +673,28 @@ export class DevicePage implements OnInit {
       acceptLabel: text.snapshots.start,
       danger: false,
     });
-    if (!accepted) {
+    if (!accepted || !this.alive()) {
       return;
     }
     this.startingSnapshot.set(true);
     try {
       await this.api.startSnapshot(this.recordId());
-      this.notifications.add({ severity: 'info', summary: text.snapshots.started });
+      if (this.alive()) {
+        this.notifications.add({ severity: 'info', summary: text.snapshots.started });
+      }
     } catch (error: unknown) {
-      this.notifications.add({
-        severity: 'error',
-        summary: text.snapshots.startFailed,
-        detail: requestError(error, text.snapshots.startFailed),
-      });
+      if (this.alive()) {
+        this.notifications.add({
+          severity: 'error',
+          summary: text.snapshots.startFailed,
+          detail: requestError(error, text.snapshots.startFailed),
+        });
+      }
     } finally {
-      this.startingSnapshot.set(false);
-      this.historyReload.update((value) => value + 1);
+      if (this.alive()) {
+        this.startingSnapshot.set(false);
+        this.refresh();
+      }
     }
   }
 }

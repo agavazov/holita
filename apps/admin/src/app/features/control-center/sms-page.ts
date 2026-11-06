@@ -14,103 +14,107 @@ import { Envelope } from '@primeicons/angular/envelope';
 import { MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
-import { TableModule } from 'primeng/table';
+import { Skeleton } from 'primeng/skeleton';
+import { Tag } from 'primeng/tag';
 import type { AdminControlCenterSmsDevicesQuery } from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
 import type { Language } from '../../i18n/messages';
-import { formatNumber } from '../../ui/format/format';
+import { EmptyState } from '../../ui/empty-state/empty-state';
 import { interpolate } from '../../ui/i18n/messages';
-import { PageHeader } from '../../ui/page-header/page-header';
-import { TablePanel } from '../../ui/table-panel/table-panel';
-import { tableView } from '../../ui/table-panel/table-view';
+import { toneSeverity } from '../../ui/tones';
 import { ControlCenterApi } from './control-center-api';
 import { controlCenterText } from './control-center-text';
-import { smsGroups, smsMaxBytes, smsTexts } from './sms-texts';
+import { smsGroups, smsMaxBytes, smsTexts, type SmsGroup } from './sms-texts';
+import bg from './sms-ui.bg.json';
+import en from './sms-ui.en.json';
 
 type SmsDevice = AdminControlCenterSmsDevicesQuery['fleetDevices']['items'][number];
+const smsUiText: Record<Language, typeof en> = { bg, en };
 
-/** What to send by SMS to which truck: SIM number, Simple SMS password and ready texts. */
+/** Prepares supported SMS texts for the current device; sending happens in the phone app. */
 @Component({
   selector: 'holita-control-center-sms',
-  imports: [
-    RouterLink,
-    Copy,
-    Envelope,
-    ButtonDirective,
-    Message,
-    TableModule,
-    PageHeader,
-    TablePanel,
-  ],
+  imports: [RouterLink, Copy, Envelope, ButtonDirective, Message, Skeleton, Tag, EmptyState],
   providers: [ControlCenterApi],
   templateUrl: './sms-page.html',
   styleUrl: './control-center.css',
+  styles: `
+    :host {
+      display: block;
+    }
+    .sms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+      gap: var(--p-app-stack-gap);
+    }
+    .sms-card {
+      border-block-start: var(--p-app-space-1) solid var(--p-app-tone-info-solid);
+    }
+    .sms-card--route {
+      border-block-start-color: var(--p-app-accent-solid);
+    }
+    .sms-card--karma {
+      border-block-start-color: var(--p-app-tone-warn-solid);
+    }
+    .sms-card h3,
+    .sms-card p {
+      margin: 0;
+    }
+    .sms-card code {
+      display: block;
+    }
+    .sms-replies {
+      display: grid;
+      gap: var(--p-app-space-2);
+      margin: 0;
+    }
+    .sms-replies dt {
+      font-weight: 600;
+    }
+    .sms-replies dd {
+      margin: var(--p-app-space-1) 0 0;
+      overflow-wrap: anywhere;
+    }
+  `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SmsPage implements OnInit {
   readonly branchId = input.required<string>();
   readonly language = input.required<Language>();
-  readonly deviceId = input<string | null>(null);
+  readonly deviceId = input.required<string>();
   readonly text = computed(() => controlCenterText[this.language()]);
   readonly sms = computed(() => this.text().sms);
+  readonly ui = computed(() => smsUiText[this.language()]);
   private readonly api = inject(ControlCenterApi);
   private readonly notifications = inject(MessageService);
   readonly maxBytes = smsMaxBytes;
-  readonly devices = signal<SmsDevice[] | null>(null);
-  readonly total = signal<number | null>(null);
+  readonly device = signal<SmsDevice | null>(null);
   readonly loading = signal(true);
   readonly error = signal<unknown>(null);
-  readonly failure = computed(() => requestError(this.error(), this.text().unavailable));
+  readonly failure = computed(() => requestError(this.error(), this.text().deviceUnavailable));
   private readonly reload = signal(0);
-  readonly selectedId = signal<string | null>(null);
-  /** The chosen device, else the first one with a stored password. */
-  readonly selected = computed(() => {
-    const devices = this.devices() ?? [];
-    return (
-      devices.find((device) => device.id === this.selectedId()) ??
-      devices.find((device) => device.smsPassword) ??
-      devices[0] ??
-      null
-    );
-  });
   readonly groups = computed(() => {
-    const password = this.selected()?.smsPassword;
+    const password = this.device()?.smsPassword;
     const texts = password ? smsTexts(password) : [];
     return password
       ? smsGroups.map((group) => ({ group, texts: texts.filter((text) => text.group === group) }))
       : [];
   });
-  readonly partial = computed(() => {
-    const shown = this.devices()?.length ?? 0;
-    const total = this.total() ?? 0;
-    return total > shown
-      ? interpolate(this.sms().firstDevices, {
-          shown: formatNumber(shown, this.language()),
-          total: formatNumber(total, this.language()),
-        })
-      : null;
-  });
-  readonly view = computed(() =>
-    tableView({
-      loading: this.loading() && !this.devices(),
-      error: this.error(),
-      rows: this.devices()?.length ?? null,
-      filtered: false,
-    }),
-  );
 
   constructor() {
     effect((onCleanup) => {
       this.reload();
+      const id = this.deviceId();
       this.loading.set(true);
       this.error.set(null);
-      const subscription = this.api.watchSmsDevices(this.deviceId()).valueChanges.subscribe({
+      const subscription = this.api.watchSmsDevices(id).valueChanges.subscribe({
         next: (result) => {
           this.loading.set(result.loading);
           this.error.set(result.error ?? null);
           if (result.dataState === 'complete' && !result.error) {
-            this.devices.set(result.data.fleetDevices.items);
-            this.total.set(result.data.fleetDevices.total);
+            this.device.set(
+              result.data.fleetDevices.items.find((device) => device.id === id) ?? null,
+            );
           }
         },
         error: (error: unknown) => {
@@ -129,13 +133,15 @@ export class SmsPage implements OnInit {
   }
 
   label(device: SmsDevice): string {
-    const vehicle = device.vehicle;
-    return vehicle
-      ? [vehicle.licensePlate, vehicle.fleetNumber].filter(Boolean).join(' · ')
-      : this.text().noTruck;
+    return device.vehicle
+      ? [device.vehicle.licensePlate, device.vehicle.fleetNumber].filter(Boolean).join(' · ')
+      : device.imei;
   }
   format(template: string, values: Readonly<Record<string, string | number>>): string {
     return interpolate(template, values);
+  }
+  severity(group: SmsGroup) {
+    return toneSeverity(group === 'karma' ? 'warn' : group === 'route' ? 'accent' : 'info');
   }
   editLink(device: SmsDevice): string[] {
     return ['/', this.language(), this.branchId(), 'fleet', 'devices', device.id, 'edit'];
@@ -152,14 +158,8 @@ export class SmsPage implements OnInit {
     const sms = this.sms();
     try {
       await navigator.clipboard.writeText(text);
-      this.notifications.add({
-        severity: 'success',
-        summary: sms.copied,
-        detail: text,
-        life: 3000,
-      });
+      this.notifications.add({ severity: 'success', summary: sms.copied, life: 3000 });
     } catch {
-      // Plain http (for example http://dev.lab:11000) has no Clipboard API: select the text instead.
       getSelection()?.selectAllChildren(element);
       this.notifications.add({ severity: 'info', summary: sms.selected, detail: sms.copyByHand });
     }

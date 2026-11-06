@@ -22,7 +22,6 @@ import { requestError } from '../../../core/graphql/request-error';
 import { messages, type Language } from '../../../i18n/messages';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { formatDateTime } from '../../../ui/format/format';
 import { interpolate, uiMessages } from '../../../ui/i18n/messages';
 import type { ListActionRequest, ListRecord } from '../../../ui/list/list-actions';
 import { listQuery, type ListQuery } from '../../../ui/list/list-query';
@@ -80,7 +79,7 @@ export class DevicesPage implements OnInit {
     '/',
     this.language(),
     this.branch().id,
-    'control-center',
+    'fleet',
     'devices',
   ]);
   readonly branch = input.required<AdminBranchesQuery['branches'][number]>();
@@ -105,7 +104,7 @@ export class DevicesPage implements OnInit {
     const liveAt = this.liveAt();
     return liveAt
       ? interpolate(this.text().liveStale, {
-          time: formatDateTime(liveAt, this.language(), this.units.preferences().timeZone, true),
+          time: this.units.dateTime(liveAt, true),
         })
       : this.text().liveError;
   });

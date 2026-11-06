@@ -20,6 +20,8 @@ import {
   AdminControlCenterFramesDocument,
   AdminControlCenterSendCommandDocument,
   AdminControlCenterCommandRequestsDocument,
+  AdminControlCenterCommandRequestDocument,
+  AdminControlCenterDeviceProblemsDocument,
   AdminControlCenterCancelCommandDocument,
   type SendErmDeviceCommandInput,
   AdminControlCenterSnapshotsDocument,
@@ -185,6 +187,24 @@ export class ControlCenterApi implements OnDestroy {
       fetchPolicy: 'network-only',
       pollInterval: 5_000,
       skipPollAttempt: () => document.hidden || skipPoll(),
+    });
+  }
+
+  watchCommandRequest(id: string, skipPoll: () => boolean) {
+    return this.client().watchQuery({
+      query: AdminControlCenterCommandRequestDocument,
+      variables: { id },
+      fetchPolicy: 'network-only',
+      pollInterval: 5_000,
+      skipPollAttempt: () => document.hidden || skipPoll(),
+    });
+  }
+
+  watchDeviceProblems(id: string, offset: number) {
+    return this.client().watchQuery({
+      query: AdminControlCenterDeviceProblemsDocument,
+      variables: { id, offset },
+      fetchPolicy: 'network-only',
     });
   }
 

@@ -46,92 +46,21 @@
     >
   </p-confirmdialog>
 </section>
-<section class="app-card" [attr.aria-label]="text().history">
-  <h2>{{ text().history }}</h2>
-  <button
-    pButton
-    type="button"
-    severity="secondary"
-    [outlined]="true"
-    [loading]="loading()"
-    (click)="refresh()"
-  >
-    {{ text().refresh }}
-  </button>
-  @for (request of requests(); track request.id) {
-    <details
-      [open]="
-        request.status === 'QUEUED' ||
-        request.status === 'SUBMITTING' ||
-        request.status === 'UNCERTAIN'
-      "
-    >
-      <summary>
-        {{ date(request.createdAt) }} · {{ catalog().actions[request.action] }} ·
-        <p-tag [value]="text().states[request.status]" [severity]="severity(request.status)" />
-      </summary>
-      <dl class="app-facts">
-        <div>
-          <dt>{{ text().actor }}</dt>
-          <dd class="app-mono">{{ request.actorId }}</dd>
-        </div>
-        <div>
-          <dt>{{ text().intent }}</dt>
-          <dd>{{ request.intent }}</dd>
-        </div>
-        <div>
-          <dt>{{ text().target }}</dt>
-          <dd class="app-mono">{{ request.unitId }} · {{ request.deviceId }}</dd>
-        </div>
-        <div>
-          <dt>{{ text().expiresAt }}</dt>
-          <dd>{{ date(request.expiresAt) }}</dd>
-        </div>
-        <div>
-          <dt>{{ text().submittedAt }}</dt>
-          <dd>{{ date(request.submittedAt) }}</dd>
-        </div>
-        <div>
-          <dt>{{ text().completedAt }}</dt>
-          <dd>{{ date(request.completedAt) }}</dd>
-        </div>
-        <div>
-          <dt>{{ text().requestId }}</dt>
-          <dd class="app-mono">{{ request.id }}</dd>
-        </div>
-        <div>
-          <dt>{{ text().commandId }}</dt>
-          <dd class="app-mono">{{ request.commandId ?? '—' }}</dd>
-        </div>
-        <div>
-          <dt>{{ catalog().resultCode }}</dt>
-          <dd>{{ request.resultCode ?? '—' }}</dd>
-        </div>
-      </dl>
-      @if (request.status === 'UNCERTAIN') {
-        <p-message severity="warn">{{ text().uncertain }}</p-message>
-      }
-      @if (request.failureReason) {
-        <p-message severity="warn">{{ request.failureReason }}</p-message>
-      }
-      @if (request.responseText) {
-        <pre class="control-center__frame">{{ request.responseText }}</pre>
-      }
-      @if (request.status === 'QUEUED') {
-        <button
-          pButton
-          type="button"
-          severity="secondary"
-          [outlined]="true"
-          [disabled]="cancelling() !== null"
-          [loading]="cancelling() === request.id"
-          (click)="cancel(request)"
-        >
-          {{ text().cancel }}
-        </button>
-      }
-    </details>
-  } @empty {
-    <p class="app-muted">{{ loading() ? text().loading : text().empty }}</p>
-  }
-</section>
+<holita-command-history
+  [requests]="requests()"
+  [language]="language()"
+  [target]="target()"
+  [loading]="loading()"
+  [error]="error()"
+  (inspect)="selectedId.set($event.id)"
+  (retry)="refresh()"
+/>
+<holita-command-details
+  [request]="selected()"
+  [language]="language()"
+  [target]="target()"
+  [cancelling]="cancelling() === selectedId() && cancelling() !== null"
+  [error]="error()"
+  (closed)="selectedId.set(null)"
+  (cancelRequest)="cancel($event)"
+/>

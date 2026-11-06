@@ -8,7 +8,7 @@ import { DeviceEditorPage } from './device-editor-page';
 import { DevicesPage } from './devices-list-page';
 
 const meta: Meta = {
-  title: 'Admin/Fleet/Devices',
+  title: 'Admin/Devices/List',
   tags: ['!autodocs'],
   parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };
@@ -32,8 +32,32 @@ export const Edit: Story = {
   render: routed('/' + fixtureDevice.id + '/edit'),
 };
 
-export const Stock: Story = {
-  render: routed('/new'),
+export const Loading: Story = {
+  parameters: {
+    holita: { scenario: { failures: { AdminDevices: 'pending' } } } satisfies StoryFixtures,
+  },
+  render: routed(),
+};
+export const DelayedLiveState: Story = {
+  name: 'Waiting for live state',
+  parameters: {
+    holita: { scenario: { failures: { AdminDevicesLive: 'pending' } } } satisfies StoryFixtures,
+  },
+  render: routed(),
+};
+export const NoResults: Story = {
+  render: routed('?search=no-device-results'),
+};
+export const Narrow: Story = {
+  globals: { viewport: { value: 'mobile375', isRotated: false } },
+  render: routed(),
+};
+export const LiveError: Story = {
+  name: 'Live state unavailable',
+  parameters: {
+    holita: { scenario: { failures: { AdminDevicesLive: 'network' } } } satisfies StoryFixtures,
+  },
+  render: routed(),
 };
 export const ErrorState: Story = {
   name: 'Error',

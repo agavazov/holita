@@ -14,7 +14,6 @@ import { GeneralSettingsApi } from '../fleet/settings/general-settings-api';
 import { settingsText } from '../fleet/settings/i18n/messages';
 import { DashboardPage } from './dashboard-page';
 import { DevicePage, deviceTabs } from './device-page';
-import { SmsPage } from './sms-page';
 
 /**
  * One Control center scope per session, Branch and language; the route reuse strategy creates a
@@ -22,7 +21,7 @@ import { SmsPage } from './sms-page';
  */
 @Component({
   selector: 'holita-control-center-workspace',
-  imports: [ButtonDirective, Message, DashboardPage, DevicePage, SmsPage],
+  imports: [ButtonDirective, Message, DashboardPage, DevicePage],
   providers: [
     GeneralSettingsApi,
     FleetPreferences,
@@ -58,8 +57,6 @@ import { SmsPage } from './sms-page';
               </button>
             }
           </section>
-        } @else if (scope.sms) {
-          <holita-control-center-sms [branchId]="scope.branchId" [language]="scope.language" />
         } @else if (scope.recordId) {
           <holita-control-center-device
             [branchId]="scope.branchId"
@@ -94,7 +91,10 @@ export class ControlCenterWorkspace {
     const token = this.workspace.session.current()?.token;
     const id = this.params().get('branchId')?.toLowerCase();
     const branch = this.branches.branches()?.find((branch) => branch.id === id);
-    const tab = deviceTabs.find((tab) => tab === this.params().get('tab')) ?? 'overview';
+    const routeTab = this.params().get('tab');
+    const canonicalTab =
+      routeTab === 'alarms' ? 'problems' : routeTab === 'sms' ? 'sms-commands' : routeTab;
+    const tab = deviceTabs.find((tab) => tab === canonicalTab) ?? 'overview';
     return token && branch && this.enabled
       ? [
           {
@@ -103,7 +103,6 @@ export class ControlCenterWorkspace {
             language: this.workspace.language(),
             recordId: this.params().get('recordId'),
             tab,
-            sms: this.route.snapshot.data['page'] === 'sms',
           },
         ]
       : [];

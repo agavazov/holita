@@ -378,7 +378,13 @@
       "profile": "Profile",
       "preflight": "Preflight"
     },
-    "refresh": "Refresh run history"
+    "refresh": "Refresh run history",
+    "details": "View details",
+    "actions": "Actions",
+    "technical": "Technical details",
+    "started": "Started",
+    "finished": "Finished",
+    "stepsTitle": "Recorded steps"
   },
   "queue": {
     "title": "Queue a device read",
@@ -414,6 +420,62 @@
       "EXPIRED": "Expired",
       "CANCELLED": "Cancelled",
       "UNCERTAIN": "Uncertain"
+    }
+  },
+  "detail": {
+    "connection": "Connection",
+    "connected": "Connected",
+    "disconnected": "Not connected",
+    "live": "Live",
+    "expectedReport": "Expected report interval",
+    "reportingGaps": "Reporting gaps (24 h)",
+    "assignedTrips": "Trips of assigned vehicle",
+    "deviceSections": "Device sections",
+    "problemSummary": "{attention} need attention · {recorded} recorded observations",
+    "problemsUnknown": "Problems have not been checked yet",
+    "problem": "Problem",
+    "problemPeriod": "Current warnings and recorded evidence for",
+    "noProblems": "No warnings or recorded problems in this period.",
+    "details": "View details",
+    "actions": "Actions",
+    "confirmation": "Confirmation of command {reference} — result {result}",
+    "protocolMessage": "Protocol message",
+    "openRequest": "Open command request",
+    "frameFilterHint": "Direction and checksum filters apply to this page of frames. Use Next to inspect older messages.",
+    "allDirections": "All directions",
+    "allChecksums": "All checksums",
+    "registryTechnical": "Registry and technical observations",
+    "tabs": {
+      "overview": "Overview",
+      "problems": "Problems",
+      "commands": "Commands",
+      "sms-commands": "SMS commands",
+      "parameters": "Parameters",
+      "technical-details": "Technical details"
+    },
+    "hints": {
+      "overview": "See this device’s connection, assigned vehicle and latest position.",
+      "problems": "Review current warnings and historical fault evidence for this device.",
+      "commands": "Send supported commands and follow their outcomes.",
+      "sms-commands": "Prepare a message to send from your phone to this device.",
+      "parameters": "Read supported device settings and compare saved snapshots.",
+      "events": "Inspect the reports received from this device for troubleshooting.",
+      "frames": "Inspect the original protocol messages associated with device communication."
+    },
+    "problemKinds": {
+      "FLEET_ALERT": "Fleet alert",
+      "DIAGNOSTIC": "Recorded diagnostic report",
+      "ALARM": "Recorded device alarm",
+      "REPORTING_GAP": "Expected report is overdue",
+      "COMMAND": "Command needs follow-up"
+    },
+    "problemStates": {
+      "OPEN": "Open",
+      "ACKNOWLEDGED": "Acknowledged",
+      "RECORDED": "Recorded evidence",
+      "FAILED": "Failed",
+      "UNCERTAIN": "Outcome unknown",
+      "EXPIRED": "Expired"
     }
   }
 }

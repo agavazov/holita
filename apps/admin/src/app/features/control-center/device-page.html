@@ -1,7 +1,7 @@
-<section class="app-view" [attr.aria-busy]="deviceLoading()">
+<section class="app-view">
   <holita-page-header
     [title]="title()"
-    [eyebrow]="text().fleet"
+    [description]="device() ? 'IMEI ' + device()!.imei : ''"
     [backLink]="link('fleet', 'devices')"
     [backLabel]="text().devices"
   >
@@ -10,865 +10,873 @@
       pButton
       type="button"
       severity="secondary"
-      [disabled]="deviceLoading() || historyLoading()"
+      [disabled]="deviceLoading()"
       (click)="refresh()"
     >
       {{ text().refresh }}
     </button>
   </holita-page-header>
-
   @if (device(); as device) {
     @if (deviceError()) {
-      <div class="control-center__actions" role="alert">
-        <p-message severity="error" variant="simple" size="small">{{ staleFailure() }}</p-message>
-        <button
-          pButton
-          type="button"
-          size="small"
-          severity="secondary"
-          [outlined]="true"
-          (click)="refresh()"
-        >
+      <p-message severity="error"
+        >{{ failure() }}
+        <button pButton type="button" severity="secondary" (click)="refresh()">
           {{ uiText().retry }}
-        </button>
-      </div>
-    }
-
-    @if (routing() === 'KARMA_BACKUP') {
-      <p-message severity="warn">
-        {{ text().backupHint }}
-        <a class="app-link" [routerLink]="deviceLink('sms')">{{ text().sms.title }}</a>
-      </p-message>
-    } @else if (routing() === 'SILENT') {
-      <p-message severity="secondary">{{ text().silentHint }}</p-message>
-    }
-
-    @if (!state() && !deviceError()) {
-      <section
-        class="app-card control-center__panel"
-        [attr.aria-label]="text().neverConnectedState"
+        </button></p-message
       >
-        <div class="control-center__actions">
-          <holita-fleet-connection [device]="liveDevice()" />
-        </div>
-        <p class="app-muted">{{ text().notOnHolita }}</p>
-      </section>
     }
-
     <section class="app-card" [attr.aria-label]="text().liveState">
       <dl class="app-facts">
         <div>
-          <dt>{{ text().state }}</dt>
-          <dd><holita-fleet-connection [device]="liveDevice()" /></dd>
+          <dt>{{ text().detail.connection }}</dt>
+          <dd><holita-fleet-connection [device]="device" /></dd>
         </div>
         <div>
           <dt>{{ text().now }}</dt>
-          <dd><holita-fleet-now [device]="liveDevice()" /></dd>
+          <dd><holita-fleet-now [device]="device" /></dd>
         </div>
         <div>
           <dt>{{ text().lastReport }}</dt>
-          <dd><holita-fleet-last-report [device]="liveDevice()" /></dd>
-        </div>
-        <div>
-          <dt>{{ text().faults }}</dt>
-          <dd><holita-fleet-faults [device]="liveDevice()" [link]="deviceLink('alarms')" /></dd>
+          <dd><holita-fleet-last-report [device]="device" /></dd>
         </div>
       </dl>
+      <div
+        class="app-problem-panel"
+        [class.app-problem-panel--warn]="!!problems()?.counts?.requiringAttention"
+        [class.app-problem-panel--info]="!problems()?.counts?.requiringAttention"
+      >
+        <a class="app-link" [routerLink]="deviceLink('problems')">{{ problemSummary() }}</a>
+        @if (problemsError()) {
+          <span role="alert">{{ problemFailure() }}</span>
+        }
+      </div>
     </section>
-
-    @if (state()?.recovery; as session) {
-      <section class="app-card" [attr.aria-label]="text().recovery">
-        <h2>{{ text().recovery }}</h2>
-        <p>{{ text().recoveryStates[session.outcome] }} · {{ date(session.startedAt) }}</p>
-        @if (session.reason) {
-          <p class="app-muted">{{ session.reason }}</p>
-        }
-      </section>
-    }
-
-    <p class="app-muted">{{ healthLine() }}</p>
-
-    <p-tabs [value]="tab()" (valueChange)="selectTab($event)">
-      <p-tablist>
-        @for (value of tabs; track value) {
-          <p-tab [value]="value">{{ text().tabs[value] }}</p-tab>
-        }
-      </p-tablist>
-      <p-tabpanels>
-        @for (value of tabs; track value) {
-          <p-tabpanel [value]="value">
-            @if (value === tab()) {
-              @switch (value) {
-                @case ('overview') {
-                  <div class="app-card-grid">
-                    <section
-                      class="app-card control-center__panel"
-                      [attr.aria-label]="text().registry"
-                    >
-                      <h2>{{ text().registry }}</h2>
-                      <dl class="app-facts">
-                        <div>
-                          <dt>{{ text().truck }}</dt>
-                          <dd>
-                            @if (device.vehicle; as vehicle) {
-                              <a
-                                class="app-link"
-                                [routerLink]="link('fleet', 'vehicles', vehicle.id, 'overview')"
-                                >{{ vehicle.licensePlate }}</a
-                              >
-                            } @else {
-                              {{ text().noTruck }}
-                            }
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().imei }}</dt>
-                          <dd class="control-center__mono">{{ device.imei }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().serialNumber }}</dt>
-                          <dd>{{ device.serialNumber ?? '—' }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().model }}</dt>
-                          <dd>{{ modelLabel(device.model) || '—' }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().simPhone }}</dt>
-                          <dd>{{ device.simPhoneNumber ?? '—' }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().iccid }}</dt>
-                          <dd class="control-center__mono">{{ device.simIccid ?? '—' }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().firmware }}</dt>
-                          <dd>{{ device.firmwareVersion ?? '—' }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().edataModule }}</dt>
-                          <dd>{{ device.edataModule ?? '—' }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().installed }}</dt>
-                          <dd>{{ date(device.installedAt) }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().options }}</dt>
-                          <dd>{{ device.options.join(', ') || '—' }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().notes }}</dt>
-                          <dd>{{ device.notes ?? '—' }}</dd>
-                        </div>
-                      </dl>
+    <nav class="app-route-nav" [attr.aria-label]="text().detail.deviceSections">
+      @for (item of primaryTabs; track item) {
+        <a
+          class="app-route-nav__link"
+          [routerLink]="deviceLink(item)"
+          [attr.aria-current]="activeTab() === item ? 'page' : null"
+          >{{ text().detail.tabs[item] }}</a
+        >
+      }
+    </nav>
+    <div class="app-tab-content">
+      <p class="app-muted">{{ text().detail.hints[tab()] }}</p>
+      @switch (tab()) {
+        @case ('overview') {
+          <div class="app-card-grid">
+            <section class="app-card app-card--accent" [attr.aria-label]="text().registry">
+              <h2>{{ text().registry }}</h2>
+              <dl class="app-facts">
+                <div>
+                  <dt>{{ text().truck }}</dt>
+                  <dd>
+                    @if (device.vehicle; as vehicle) {
                       <a
-                        class="app-link"
-                        [routerLink]="link('fleet', 'devices', device.id, 'edit')"
-                        [queryParams]="{ editFrom: 'diagnostics' }"
-                        >{{ text().editInFleet }}</a
+                        class="app-plate"
+                        [routerLink]="link('fleet', 'vehicles', vehicle.id, 'overview')"
+                        >{{ vehicle.licensePlate }}</a
                       >
-                    </section>
-
-                    @if (state(); as state) {
-                      <section
-                        class="app-card control-center__panel"
-                        [attr.aria-label]="text().liveState"
-                      >
-                        <h2>{{ text().liveState }}</h2>
-                        <dl class="app-facts">
-                          <div>
-                            <dt>{{ text().state }}</dt>
-                            <dd><holita-fleet-connection [device]="liveDevice()" /></dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().mode }}</dt>
-                            <dd>{{ mode(state.mode) }}</dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().since }}</dt>
-                            <dd>{{ date(state.connectedSince) }}</dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().lastFrame }}</dt>
-                            <dd>{{ date(state.lastFrameAt) }}</dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().alarms24h }}</dt>
-                            <dd>{{ number(state.alarmsLast24h, 0) }}</dd>
-                          </div>
-                        </dl>
-                        @if (state.latestEvent; as event) {
-                          <h3>{{ text().latestValues }}</h3>
-                          <dl class="app-facts">
-                            <div>
-                              <dt>{{ text().event }}</dt>
-                              <dd>
-                                {{ event.name ?? text().unknownEvent }} ·
-                                {{ date(event.eventTime) }}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>{{ text().speed }}</dt>
-                              <dd>{{ speed(event.speedKmh) }}</dd>
-                            </div>
-                            <div>
-                              <dt>{{ text().ignition }}</dt>
-                              <dd>{{ engine(event.engineOn) }}</dd>
-                            </div>
-                            <div>
-                              <dt>{{ text().mainVoltage }}</dt>
-                              <dd>{{ voltage(event.mainVoltage) }}</dd>
-                            </div>
-                            <div>
-                              <dt>{{ text().backupVoltage }}</dt>
-                              <dd>{{ voltage(event.backupVoltage) }}</dd>
-                            </div>
-                            <div>
-                              <dt>{{ text().odometer }}</dt>
-                              <dd>{{ distance(event.odometer) }}</dd>
-                            </div>
-                          </dl>
-                        }
-                      </section>
-
-                      <section
-                        class="app-card control-center__panel"
-                        [attr.aria-label]="text().health"
-                      >
-                        <h2>{{ text().health }}</h2>
-                        <dl class="app-facts">
-                          <div>
-                            <dt>{{ text().frameAge }}</dt>
-                            <dd>
-                              {{ duration(state.health.lastFrameAgeSeconds) }} ·
-                              {{
-                                format(text().expectedEvery, {
-                                  interval: duration(state.health.expectedIntervalSeconds),
-                                })
-                              }}
-                              @if (state.health.overdue) {
-                                <p-tag [value]="text().overdue" [severity]="toneSeverity('warn')" />
-                              }
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().mainVoltage }}</dt>
-                            <dd>{{ reading(state.mainVoltage, 'volt', 2) }}</dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().backupVoltage }}</dt>
-                            <dd>{{ reading(state.backupVoltage, 'volt', 2) }}</dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().signalQuality }}</dt>
-                            <dd>{{ reading(state.signalQuality, null, 0) }}</dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().unitFirmware }}</dt>
-                            <dd>
-                              @if (state.firmwareVersion; as firmware) {
-                                {{ firmware.value }} · {{ date(firmware.observedAt) }}
-                              } @else {
-                                {{ text().unitFirmwareUnknown }}
-                              }
-                            </dd>
-                          </div>
-                          @if (state.health.latestNetworkChange; as change) {
-                            <div>
-                              <dt>{{ text().latestNetworkChange }}</dt>
-                              <dd>
-                                {{
-                                  format(text().networkEvidence, {
-                                    network: change.networkType ?? '—',
-                                    operator: change.operatorCode ?? '—',
-                                    time: date(change.at),
-                                  })
-                                }}
-                              </dd>
-                            </div>
-                          }
-                          @if (device.routingHealth; as routing) {
-                            <div>
-                              <dt>{{ text().lastBackupPeriod }}</dt>
-                              <dd>
-                                {{ date(routing.lastBackupStartedAt) }} –
-                                {{ date(routing.lastBackupEndedAt) }}
-                              </dd>
-                            </div>
-                          }
-                          <div>
-                            <dt>{{ text().lastClose }}</dt>
-                            <dd [title]="state.health.lastCloseReason ?? ''">
-                              {{ closeReason(state.health.lastCloseReason) }} ·
-                              {{ date(state.health.lastClosedAt) }}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().upstreamCloses }}</dt>
-                            <dd>{{ number(state.health.upstreamClosesLast24h, 0) }}</dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().karmaRouteWrites }}</dt>
-                            <dd>
-                              {{ number(state.health.karmaRoutingWritesLast24h, 0) }}
-                              @if (state.health.karmaRoutingWritesLast24h) {
-                                <p-tag
-                                  [value]="text().routeChanged"
-                                  [severity]="toneSeverity('danger')"
-                                />
-                              }
-                            </dd>
-                          </div>
-                        </dl>
-                        @if (state.health.latestKarmaRoutingWrite; as write) {
-                          <h3>{{ text().latestRouteWrite }}</h3>
-                          <p class="app-muted">{{ date(write.receivedAt) }}</p>
-                          <pre class="control-center__frame">{{ write.displayText }}</pre>
-                        }
-                      </section>
+                    } @else {
+                      {{ text().noTruck }}
                     }
-                    <section
-                      class="app-card control-center__panel"
-                      [attr.aria-label]="text().edataMeasurements"
-                    >
-                      <h2>{{ text().edataMeasurements }}</h2>
-                      @if (state()?.edataMeasurements?.length) {
-                        <p class="app-muted">{{ text().edataMeasurementsHint }}</p>
-                        <dl class="app-facts">
-                          @for (
-                            measurement of state()?.edataMeasurements;
-                            track measurement.parameterId
-                          ) {
-                            <div>
-                              <dt>
-                                {{
-                                  measurement.name ??
-                                    format(text().edataParameterId, { id: measurement.parameterId })
-                                }}
-                                @if (measurement.name) {
-                                  <span class="app-muted"
-                                    >·
-                                    {{
-                                      format(text().edataParameterId, {
-                                        id: measurement.parameterId,
-                                      })
-                                    }}</span
-                                  >
-                                }
-                              </dt>
-                              <dd>
-                                <span class="control-center__mono">{{ measurement.valueHex }}</span>
-                                · {{ date(measurement.observedAt) }}
-                                @if (measurement.unit) {
-                                  <span class="app-muted"
-                                    >·
-                                    {{
-                                      format(text().edataCatalogUnit, { unit: measurement.unit })
-                                    }}</span
-                                  >
-                                }
-                              </dd>
-                            </div>
-                          }
-                        </dl>
-                      } @else {
-                        <p class="app-muted">{{ text().edataMeasurementsEmpty }}</p>
-                      }
-                    </section>
+                  </dd>
+                </div>
+                <div>
+                  <dt>{{ text().imei }}</dt>
+                  <dd class="app-mono">{{ device.imei }}</dd>
+                </div>
+                <div>
+                  <dt>{{ text().model }}</dt>
+                  <dd>{{ modelLabel(device.model) }}</dd>
+                </div>
+                <div>
+                  <dt>{{ text().simPhone }}</dt>
+                  <dd>{{ device.simPhoneNumber ?? '—' }}</dd>
+                </div>
+                <div>
+                  <dt>{{ text().installed }}</dt>
+                  <dd [title]="fmt.utc(device.installedAt)">
+                    {{ fmt.dateTime(device.installedAt) }}
+                  </dd>
+                </div>
+              </dl>
+              @if (device.notes) {
+                <p>{{ device.notes }}</p>
+              }
+              <div class="control-center__actions">
+                <a
+                  pButton
+                  severity="secondary"
+                  [routerLink]="link('fleet', 'devices', recordId(), 'edit')"
+                  >{{ text().editInFleet }}</a
+                >
+              </div>
+            </section>
+            <section class="app-card" [attr.aria-label]="text().health">
+              <h2>{{ text().health }}</h2>
+              @if (state(); as state) {
+                <dl class="app-facts">
+                  <div>
+                    <dt>{{ text().since }}</dt>
+                    <dd [title]="fmt.utc(state.connectedSince)">
+                      {{ fmt.dateTime(state.connectedSince, true) }}
+                    </dd>
                   </div>
-                  @if (position(); as position) {
-                    <holita-map-preview
-                      [language]="language()"
-                      [identity]="title()"
-                      [origin]="position.coordinates"
-                      [originTime]="date(position.event.positionTime ?? position.event.eventTime)"
-                    />
-                  }
-                }
-
-                @case ('sms') {
-                  <holita-control-center-sms
-                    [branchId]="branchId()"
-                    [language]="language()"
-                    [deviceId]="recordId()"
-                  />
-                }
-
-                @case ('commands') {
-                  <holita-device-command-queue
-                    [deviceId]="recordId()"
-                    [language]="language()"
-                    [target]="unitName()"
-                    (changed)="refresh()"
-                  />
-                  <holita-table-panel
-                    [heading]="text().commandHistory"
-                    [view]="historyView()"
-                    [busy]="historyLoading()"
-                    [errorText]="historyFailure()"
-                    [emptyTitle]="text().commandsEmpty"
-                    (retry)="refresh()"
+                  <div>
+                    <dt>{{ text().frameAge }}</dt>
+                    <dd>{{ duration(state.health.lastFrameAgeSeconds) }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ text().detail.expectedReport }}</dt>
+                    <dd>{{ duration(state.health.expectedIntervalSeconds) }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ text().detail.reportingGaps }}</dt>
+                    <dd>{{ number(state.health.gapsLast24h.length) }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ text().alarms24h }}</dt>
+                    <dd>{{ number(state.alarmsLast24h) }}</dd>
+                  </div>
+                </dl>
+              } @else {
+                <p class="app-muted">{{ text().neverConnectedState }}</p>
+              }
+              <div class="control-center__actions">
+                <a pButton [routerLink]="deviceLink('commands')">{{
+                  text().detail.tabs.commands
+                }}</a>
+                <a pButton severity="secondary" [routerLink]="deviceLink('sms-commands')">{{
+                  text().detail.tabs['sms-commands']
+                }}</a>
+                @if (device.vehicle; as vehicle) {
+                  <a
+                    class="app-link"
+                    [routerLink]="link('fleet', 'vehicles', vehicle.id, 'trips')"
+                    >{{ text().detail.assignedTrips }}</a
                   >
-                    <p-table
-                      class="app-responsive-table"
-                      [value]="commands()?.items ?? []"
-                      dataKey="id"
-                    >
-                      <ng-template #header>
-                        <tr>
-                          <th scope="col">{{ text().command }}</th>
-                          <th scope="col">{{ text().status }}</th>
-                          <th scope="col">{{ text().sentAt }}</th>
-                          <th scope="col">{{ text().answeredAt }}</th>
-                          <th scope="col">{{ text().resultCode }}</th>
-                          <th scope="col">{{ text().response }}</th>
-                        </tr>
-                      </ng-template>
-                      <ng-template #body let-command>
-                        <tr>
-                          <td>
-                            <div class="app-cell-stack">
-                              <span class="control-center__mono"
-                                >{{ command.command }}{{ commandFields(command.fields) }}</span
-                              >
-                              <span class="app-muted"
-                                >{{ text().reference }}: {{ command.reference }}</span
-                              >
-                            </div>
-                          </td>
-                          <td>
-                            <p-tag
-                              [value]="commandState(command.status)"
-                              [severity]="commandTone(command.status)"
-                            />
-                          </td>
-                          <td>{{ date(command.sentAt) }}</td>
-                          <td>{{ date(command.answeredAt) }}</td>
-                          <td>{{ command.resultCode ?? '—' }}</td>
-                          <td>
-                            <pre class="control-center__frame">{{
-                              command.responseText ?? '—'
-                            }}</pre>
-                          </td>
-                        </tr>
-                      </ng-template>
-                    </p-table>
-                  </holita-table-panel>
                 }
-
-                @case ('parameters') {
-                  <holita-device-settings
-                    [deviceId]="recordId()"
-                    [language]="language()"
-                    [target]="unitName()"
-                    [primary]="canSend()"
-                  />
-                  @if (state()) {
-                    <section
-                      class="app-card control-center__panel"
-                      [attr.aria-label]="text().snapshots.title"
-                    >
-                      <h2>{{ text().snapshots.title }}</h2>
-                      <p class="app-muted">
-                        {{ canSend() ? text().snapshots.hint : commandsHint() }}
-                      </p>
-                      <p class="app-muted">{{ text().snapshots.secretNote }}</p>
-                      <div class="control-center__actions">
-                        <button
-                          pButton
-                          type="button"
-                          [disabled]="!canSend() || snapshotRunning() || startingSnapshot()"
-                          [loading]="startingSnapshot()"
-                          (click)="startSnapshot()"
+              </div>
+            </section>
+          </div>
+          <holita-location-map
+            [language]="language()"
+            [title]="text().position"
+            [records]="mapRecords()"
+            [asOf]="deviceUpdatedAt()"
+            [updatedAt]="deviceUpdatedAt()"
+            [timeZone]="fmt.preferences().timeZone"
+            [dateFormat]="fmt.preferences().dateFormat"
+          />
+        }
+        @case ('problems') {
+          <p class="app-muted">
+            {{ text().detail.problemPeriod }}
+            {{ fmt.dateTimeRange(problems()?.counts?.periodFrom, problems()?.counts?.periodTo) }}
+          </p>
+          <holita-table-panel
+            [heading]="text().detail.tabs.problems"
+            [view]="problemView()"
+            [busy]="problemsLoading()"
+            [columns]="problemColumns()"
+            tableMinWidth="52rem"
+            [total]="problems()?.total ?? null"
+            [page]="{ page: problemPage(), pageSize: 20, total: problems()?.total ?? 0 }"
+            [pageSizes]="[20]"
+            [errorText]="problemFailure()"
+            [emptyTitle]="text().detail.noProblems"
+            (pageChange)="problemPage.set($event.page)"
+            (retry)="refresh()"
+          >
+            <p-table
+              class="app-responsive-table"
+              [value]="problems()?.items ?? []"
+              dataKey="id"
+              [rowTrackBy]="trackById"
+              [scrollable]="true"
+              [tableStyle]="{ 'min-width': '52rem' }"
+            >
+              <ng-template #colgroup
+                ><colgroup>
+                  @for (column of problemColumns(); track column.id) {
+                    <col [style.width]="column.width" [class]="column.className ?? ''" />
+                  }</colgroup
+              ></ng-template>
+              <ng-template #header
+                ><tr>
+                  @for (column of problemColumns(); track column.id) {
+                    <th scope="col" [class]="column.className ?? ''">{{ column.label }}</th>
+                  }
+                </tr></ng-template
+              >
+              <ng-template #body let-row
+                ><tr>
+                  <td>
+                    <div class="app-cell-identity">
+                      @if (problemLink(row); as link) {
+                        <a
+                          class="app-link"
+                          [routerLink]="link"
+                          [queryParams]="
+                            row.commandRequestId ? { request: row.commandRequestId } : null
+                          "
+                          >{{ problemLabel(row) }}</a
                         >
-                          {{ text().snapshots.start }}
-                        </button>
-                      </div>
-                    </section>
-                    <p-confirmdialog
-                      [pt]="confirmPt()"
-                      [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }"
-                    >
-                      <ng-template #message
-                        ><p id="erm-snapshot-confirm-message">
-                          {{ snapshotConfirmation() }}
-                        </p></ng-template
-                      >
-                    </p-confirmdialog>
-                  }
-                  <holita-table-panel
-                    [heading]="text().snapshots.history"
-                    [view]="historyView()"
-                    [busy]="historyLoading()"
-                    [errorText]="historyFailure()"
-                    [emptyTitle]="text().snapshots.empty"
-                    (retry)="refresh()"
-                  >
-                    <p-table
-                      class="app-responsive-table"
-                      [value]="snapshots()?.items ?? []"
-                      dataKey="id"
-                    >
-                      <ng-template #header>
-                        <tr>
-                          <th scope="col">{{ text().snapshots.startedAt }}</th>
-                          <th scope="col">{{ text().queue.actor }}</th>
-                          <th scope="col">{{ text().queue.target }}</th>
-                          <th scope="col">{{ text().queue.intent }}</th>
-                          <th scope="col">{{ text().status }}</th>
-                          <th scope="col">{{ text().snapshots.progress }}</th>
-                          <th scope="col">{{ text().snapshots.finishedAt }}</th>
-                          <th scope="col">{{ text().snapshots.changesCount }}</th>
-                          <th scope="col">
-                            <span class="app-visually-hidden">{{ text().snapshots.show }}</span>
-                          </th>
-                        </tr>
-                      </ng-template>
-                      <ng-template #body let-snapshot>
-                        <tr>
-                          <td>{{ date(snapshot.startedAt) }}</td>
-                          <td class="app-mono">{{ snapshot.actorId ?? '—' }}</td>
-                          <td class="app-mono">{{ snapshot.unitId }}</td>
-                          <td>{{ snapshot.intent ?? '—' }}</td>
-                          <td>
-                            <div class="app-cell-stack">
-                              <p-tag
-                                [value]="snapshotStatus(snapshot.status)"
-                                [severity]="snapshotTone(snapshot.status)"
-                              />
-                              @if (snapshot.failureReason) {
-                                <span class="app-muted">{{ snapshot.failureReason }}</span>
-                              }
-                            </div>
-                          </td>
-                          <td>
-                            {{ number(snapshot.readCount, 0) }} /
-                            {{ number(snapshot.parameterCount, 0) }}
-                          </td>
-                          <td>{{ date(snapshot.finishedAt) }}</td>
-                          <td>{{ number(snapshot.changes.length, 0) }}</td>
-                          <td>
-                            <button
-                              pButton
-                              type="button"
-                              size="small"
-                              severity="secondary"
-                              [outlined]="selectedSnapshot()?.id !== snapshot.id"
-                              [attr.aria-pressed]="selectedSnapshot()?.id === snapshot.id"
-                              [attr.aria-label]="
-                                format(text().snapshots.showLabel, {
-                                  time: date(snapshot.startedAt),
-                                })
-                              "
-                              (click)="selectedSnapshotId.set(snapshot.id)"
-                            >
-                              {{ text().snapshots.show }}
-                            </button>
-                          </td>
-                        </tr>
-                      </ng-template>
-                    </p-table>
-                  </holita-table-panel>
-
-                  @if (selectedSnapshot(); as snapshot) {
-                    <section
-                      class="app-card control-center__panel"
-                      aria-labelledby="snapshot-heading"
-                    >
-                      <h2 id="snapshot-heading">
-                        {{
-                          format(text().snapshots.snapshotFrom, { time: date(snapshot.startedAt) })
-                        }}
-                      </h2>
-                      @if (snapshot.failureReason) {
-                        <p-message severity="error">{{ snapshot.failureReason }}</p-message>
-                      }
-                      <h3>{{ text().snapshots.changes }}</h3>
-                      @if (snapshot.changes.length) {
-                        <p-table class="app-responsive-table" [value]="snapshot.changes">
-                          <ng-template #header>
-                            <tr>
-                              <th scope="col">{{ text().snapshots.parameter }}</th>
-                              <th scope="col">{{ text().snapshots.before }}</th>
-                              <th scope="col">{{ text().snapshots.now }}</th>
-                            </tr>
-                          </ng-template>
-                          <ng-template #body let-change>
-                            <tr>
-                              <td>
-                                <div class="app-cell-stack">
-                                  <span class="control-center__mono">{{
-                                    parameterNumber(change.parameter)
-                                  }}</span>
-                                  <span class="app-muted">{{ change.title ?? '—' }}</span>
-                                </div>
-                              </td>
-                              <td>
-                                <pre class="control-center__frame">{{
-                                  change.previousValue ?? '—'
-                                }}</pre>
-                              </td>
-                              <td>
-                                <pre class="control-center__frame">{{ change.value ?? '—' }}</pre>
-                              </td>
-                            </tr>
-                          </ng-template>
-                        </p-table>
                       } @else {
-                        <p class="app-muted">{{ text().snapshots.noChanges }}</p>
+                        <strong>{{ problemLabel(row) }}</strong>
                       }
-                      <h3>{{ text().snapshots.values }}</h3>
-                      <p-table class="app-responsive-table" [value]="snapshot.values">
-                        <ng-template #header>
-                          <tr>
-                            <th scope="col">{{ text().snapshots.parameter }}</th>
-                            <th scope="col">{{ text().snapshots.value }}</th>
-                            <th scope="col">{{ text().resultCode }}</th>
-                          </tr>
-                        </ng-template>
-                        <ng-template #body let-entry>
-                          <tr>
-                            <td>
-                              <div class="app-cell-stack">
-                                <span class="control-center__mono">{{
-                                  parameterNumber(entry.parameter)
-                                }}</span>
-                                <span class="app-muted">{{ entry.title ?? '—' }}</span>
-                              </div>
-                            </td>
-                            <td>
-                              <pre class="control-center__frame">{{
-                                entry.value ?? text().snapshots.noValue
-                              }}</pre>
-                            </td>
-                            <td>{{ entry.resultCode ?? '—' }}</td>
-                          </tr>
-                        </ng-template>
-                      </p-table>
-                    </section>
+                      <span class="app-muted" [title]="row.details ?? ''">{{
+                        row.details ?? problemLabel(row)
+                      }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="app-cell-date" [title]="fmt.utc(row.occurredAt)">{{
+                      fmt.dateTime(row.occurredAt)
+                    }}</span>
+                  </td>
+                  <td>
+                    <div class="app-cell-status">
+                      <p-tag
+                        [value]="severityLabel(row.severity)"
+                        [severity]="severityTone(row.severity)"
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <div class="app-cell-status">
+                      <p-tag
+                        [value]="problemState(row.state)"
+                        [severity]="toneSeverity(row.requiringAttention ? 'warn' : 'info')"
+                      />
+                    </div>
+                  </td></tr
+              ></ng-template>
+            </p-table>
+          </holita-table-panel>
+        }
+        @case ('commands') {
+          <holita-device-command-queue
+            [deviceId]="recordId()"
+            [language]="language()"
+            [target]="unitName()"
+            [requestId]="requestedCommand()"
+            (changed)="refresh()"
+          />
+        }
+        @case ('sms-commands') {
+          <holita-control-center-sms
+            [branchId]="branchId()"
+            [language]="language()"
+            [deviceId]="recordId()"
+          />
+        }
+        @case ('parameters') {
+          <holita-device-settings
+            [deviceId]="recordId()"
+            [language]="language()"
+            [target]="unitName()"
+            [primary]="canSend()"
+          />
+          <section class="app-card">
+            <h2>{{ text().snapshots.title }}</h2>
+            <p class="app-muted">{{ text().snapshots.hint }}</p>
+            <p class="app-muted">{{ text().snapshots.secretNote }}</p>
+            @if (!canSend()) {
+              <p-message severity="secondary">{{ text().settings.primaryRequired }}</p-message>
+            }
+            <div class="control-center__actions">
+              <button
+                pButton
+                type="button"
+                [disabled]="!canSend() || snapshotRunning() || startingSnapshot()"
+                [loading]="startingSnapshot()"
+                (click)="startSnapshot()"
+              >
+                {{ text().snapshots.start }}
+              </button>
+            </div>
+          </section>
+          <holita-table-panel
+            #snapshotsPanel
+            mode="cursor"
+            [heading]="text().snapshots.history"
+            [view]="historyView()"
+            [busy]="historyLoading()"
+            [columns]="columns()"
+            tableMinWidth="48rem"
+            [cursorPage]="cursorPage()"
+            [errorText]="historyFailure()"
+            [emptyTitle]="text().snapshots.empty"
+            [actions]="actions()"
+            (action)="openDetail($event.ids[0])"
+            (cursorChange)="pageHistory($event)"
+            (retry)="refresh()"
+          >
+            <p-table
+              class="app-responsive-table"
+              [value]="snapshots()?.items ?? []"
+              dataKey="id"
+              [rowTrackBy]="trackById"
+              [scrollable]="true"
+              [tableStyle]="{ 'min-width': '48rem' }"
+            >
+              <ng-template #colgroup
+                ><colgroup>
+                  @for (column of columns(); track column.id) {
+                    <col [style.width]="column.width" [class]="column.className ?? ''" />
+                  }</colgroup
+              ></ng-template>
+              <ng-template #header
+                ><tr>
+                  @for (column of columns(); track column.id) {
+                    <th scope="col" [class]="column.className ?? ''">{{ column.label }}</th>
                   }
-                }
-
-                @case ('frames') {
-                  <holita-table-panel
-                    [heading]="text().tabs.frames"
-                    [view]="historyView()"
-                    [busy]="historyLoading()"
-                    [errorText]="historyFailure()"
-                    [emptyTitle]="text().framesEmpty"
-                    (retry)="refresh()"
-                  >
-                    <p-table
-                      class="app-responsive-table"
-                      [value]="frames()?.items ?? []"
-                      dataKey="id"
-                    >
-                      <ng-template #header>
-                        <tr>
-                          <th scope="col">{{ text().received }}</th>
-                          <th scope="col">{{ text().direction }}</th>
-                          <th scope="col">{{ text().command }}</th>
-                          <th scope="col">{{ text().checksum }}</th>
-                          <th scope="col">{{ text().frame }}</th>
-                        </tr>
-                      </ng-template>
-                      <ng-template #body let-frame>
-                        <tr>
-                          <td>{{ date(frame.receivedAt) }}</td>
-                          <td>{{ direction(frame.direction) }}</td>
-                          <td class="control-center__mono">
-                            {{ frame.command ?? '—' }}
-                            @if (frame.reference) {
-                              · {{ frame.reference }}
-                            }
-                          </td>
-                          <td>
-                            {{ checksum(frame.checksum) }}
-                            @if (frame.partial) {
-                              · {{ text().partial }}
-                            }
-                          </td>
-                          <td>
-                            <pre class="control-center__frame">{{ frame.displayText }}</pre>
-                          </td>
-                        </tr>
-                      </ng-template>
-                    </p-table>
-                  </holita-table-panel>
-                }
-
-                @default {
-                  @if (value === 'alarms') {
-                    <section
-                      class="app-card control-center__panel"
-                      [attr.aria-label]="text().fleetDiagnostics"
-                    >
-                      <h2>{{ text().fleetDiagnostics }}</h2>
-                      <p class="app-muted">{{ text().diagnosticHistoryHint }}</p>
-                      @if (device.diagnostics.latest; as fault) {
-                        <dl class="app-facts">
-                          <div>
-                            <dt>{{ text().diagnosticRecords }}</dt>
-                            <dd>{{ number(device.diagnostics.count, 0) }}</dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().faults }}</dt>
-                            <dd>{{ fault.troubleCode ?? text().edataCanError }}</dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().time }}</dt>
-                            <dd>{{ date(fault.occurredAt) }}</dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().source }}</dt>
-                            <dd>{{ text().sources[fault.source] }}</dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().values }}</dt>
-                            <dd>{{ fault.details ?? '—' }}</dd>
-                          </div>
-                        </dl>
-                      } @else {
-                        <p class="app-muted">{{ text().diagnosticsEmpty }}</p>
-                      }
-                    </section>
-                  }
-                  @if (value === 'events') {
-                    <div
-                      class="control-center__actions"
-                      role="group"
-                      [attr.aria-label]="text().category"
-                    >
+                </tr></ng-template
+              >
+              <ng-template #body let-row
+                ><tr>
+                  <td class="app-col-identity">
+                    <div class="app-cell-identity">
                       <button
-                        pButton
+                        class="app-link"
                         type="button"
-                        severity="secondary"
-                        [outlined]="category() !== null"
-                        [attr.aria-pressed]="category() === null"
-                        (click)="category.set(null); cursor.set(null)"
+                        [title]="fmt.utc(row.startedAt)"
+                        (click)="
+                          snapshotsPanel.run(
+                            'details',
+                            [record(row.id, fmt.dateTime(row.startedAt))],
+                            $event.currentTarget
+                          )
+                        "
                       >
-                        {{ text().allCategories }}
+                        {{ fmt.dateTime(row.startedAt) }}
                       </button>
-                      @for (option of categories; track option) {
-                        <button
-                          pButton
-                          type="button"
-                          severity="secondary"
-                          [outlined]="category() !== option"
-                          [attr.aria-pressed]="category() === option"
-                          (click)="category.set(option); cursor.set(null)"
-                        >
-                          {{ text().categories[option] }}
-                        </button>
+                    </div>
+                    <div class="app-table-mobile-actions">
+                      <holita-row-actions
+                        [actions]="actions()"
+                        [record]="record(row.id, fmt.dateTime(row.startedAt))"
+                        (choose)="
+                          snapshotsPanel.run(
+                            $event.action,
+                            [record(row.id, fmt.dateTime(row.startedAt))],
+                            $event.origin
+                          )
+                        "
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <div class="app-cell-status">
+                      <p-tag
+                        [value]="snapshotStatus(row.status)"
+                        [severity]="snapshotTone(row.status)"
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <span class="app-cell-number"
+                      >{{ number(row.readCount) }} / {{ number(row.parameterCount) }}</span
+                    >
+                  </td>
+                  <td>
+                    <span class="app-cell-number">{{ number(row.changes.length) }}</span>
+                  </td>
+                  <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+                    <holita-row-actions
+                      [actions]="actions()"
+                      [record]="record(row.id, fmt.dateTime(row.startedAt))"
+                      (choose)="
+                        snapshotsPanel.run(
+                          $event.action,
+                          [record(row.id, fmt.dateTime(row.startedAt))],
+                          $event.origin
+                        )
+                      "
+                    />
+                  </td></tr
+              ></ng-template>
+            </p-table>
+          </holita-table-panel>
+        }
+        @default {
+          <nav class="app-route-nav" [attr.aria-label]="text().detail.tabs['technical-details']">
+            <a
+              class="app-route-nav__link"
+              [routerLink]="deviceLink('events')"
+              [attr.aria-current]="tab() === 'events' ? 'page' : null"
+              >{{ text().tabs.events }}</a
+            >
+            <a
+              class="app-route-nav__link"
+              [routerLink]="deviceLink('frames')"
+              [attr.aria-current]="tab() === 'frames' ? 'page' : null"
+              >{{ text().tabs.frames }}</a
+            >
+          </nav>
+          @if (tab() === 'events') {
+            <div class="control-center__actions" role="group" [attr.aria-label]="text().category">
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [outlined]="category() !== null"
+                [attr.aria-pressed]="category() === null"
+                (click)="selectCategory(null)"
+              >
+                {{ text().allCategories }}
+              </button>
+              @for (option of categories; track option) {
+                <button
+                  pButton
+                  type="button"
+                  severity="secondary"
+                  [outlined]="category() !== option"
+                  [attr.aria-pressed]="category() === option"
+                  (click)="selectCategory(option)"
+                >
+                  {{ text().categories[option] }}
+                </button>
+              }
+            </div>
+          } @else {
+            <p class="app-muted">{{ text().detail.frameFilterHint }}</p>
+            <div class="control-center__actions" role="group" [attr.aria-label]="text().direction">
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [outlined]="direction() !== null"
+                [attr.aria-pressed]="direction() === null"
+                (click)="direction.set(null)"
+              >
+                {{ text().detail.allDirections }}
+              </button>
+              @for (option of directions; track option) {
+                <button
+                  pButton
+                  type="button"
+                  severity="secondary"
+                  [outlined]="direction() !== option"
+                  [attr.aria-pressed]="direction() === option"
+                  (click)="direction.set(option)"
+                >
+                  {{ text().directions[option] }}
+                </button>
+              }
+            </div>
+            <div class="control-center__actions" role="group" [attr.aria-label]="text().checksum">
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [outlined]="checksum() !== null"
+                [attr.aria-pressed]="checksum() === null"
+                (click)="checksum.set(null)"
+              >
+                {{ text().detail.allChecksums }}
+              </button>
+              @for (option of checksums; track option) {
+                <button
+                  pButton
+                  type="button"
+                  severity="secondary"
+                  [outlined]="checksum() !== option"
+                  [attr.aria-pressed]="checksum() === option"
+                  (click)="checksum.set(option)"
+                >
+                  {{ text().checksums[option] }}
+                </button>
+              }
+            </div>
+          }
+          <holita-table-panel
+            #technicalPanel
+            mode="cursor"
+            [heading]="tab() === 'events' ? text().tabs.events : text().tabs.frames"
+            [view]="historyView()"
+            [busy]="historyLoading()"
+            [columns]="columns()"
+            tableMinWidth="56rem"
+            [cursorPage]="cursorPage()"
+            [errorText]="historyFailure()"
+            [emptyTitle]="tab() === 'events' ? text().eventsEmpty : text().framesEmpty"
+            [actions]="actions()"
+            [actionContext]="tab()"
+            (action)="openDetail($event.ids[0])"
+            (cursorChange)="pageHistory($event)"
+            (retry)="refresh()"
+            (clearFilters)="selectCategory(null); direction.set(null); checksum.set(null)"
+          >
+            <p-table
+              class="app-responsive-table"
+              [value]="technicalRows()"
+              dataKey="id"
+              [rowTrackBy]="trackById"
+              [scrollable]="true"
+              [tableStyle]="{ 'min-width': '56rem' }"
+            >
+              <ng-template #colgroup
+                ><colgroup>
+                  @for (column of columns(); track column.id) {
+                    <col [style.width]="column.width" [class]="column.className ?? ''" />
+                  }</colgroup
+              ></ng-template>
+              <ng-template #header
+                ><tr>
+                  @for (column of columns(); track column.id) {
+                    <th scope="col" [class]="column.className ?? ''">{{ column.label }}</th>
+                  }
+                </tr></ng-template
+              >
+              <ng-template #body let-row
+                ><tr>
+                  <td class="app-col-identity">
+                    <div class="app-cell-identity">
+                      <button
+                        class="app-link"
+                        type="button"
+                        (click)="
+                          technicalPanel.run(
+                            'details',
+                            [record(row.id, tab() === 'events' ? row.name : frameLabel(row))],
+                            $event.currentTarget
+                          )
+                        "
+                      >
+                        {{
+                          tab() === 'events' ? (row.name ?? text().unknownEvent) : frameLabel(row)
+                        }}</button
+                      ><span class="app-muted">{{
+                        tab() === 'events' ? row.eventId : row.reference
+                      }}</span>
+                    </div>
+                    <div class="app-table-mobile-actions">
+                      <holita-row-actions
+                        [actions]="actions()"
+                        [record]="
+                          record(
+                            row.id,
+                            tab() === 'events' ? (row.name ?? text().unknownEvent) : frameLabel(row)
+                          )
+                        "
+                        (choose)="
+                          technicalPanel.run(
+                            $event.action,
+                            [record(row.id, text().detail.details)],
+                            $event.origin
+                          )
+                        "
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <span
+                      class="app-cell-date"
+                      [title]="fmt.utc(tab() === 'events' ? row.eventTime : row.receivedAt)"
+                      >{{
+                        fmt.dateTime(tab() === 'events' ? row.eventTime : row.receivedAt, true)
+                      }}</span
+                    >
+                  </td>
+                  <td>
+                    <span class="app-cell-status">{{
+                      tab() === 'events'
+                        ? categoryLabel(row.category)
+                        : directionLabel(row.direction)
+                    }}</span>
+                  </td>
+                  <td>
+                    <div class="app-cell-status">
+                      @if (tab() === 'events') {
+                        <p-tag
+                          [value]="severityLabel(row.severity)"
+                          [severity]="severityTone(row.severity)"
+                        />
+                      } @else {
+                        <p-tag
+                          [value]="checksumLabel(row.checksum)"
+                          [severity]="row.checksum === 'MISMATCH' ? 'warn' : 'secondary'"
+                        />
                       }
                     </div>
-                  }
-                  <holita-table-panel
-                    [heading]="value === 'alarms' ? text().tabs.alarms : text().tabs.events"
-                    [view]="historyView()"
-                    [busy]="historyLoading()"
-                    [errorText]="historyFailure()"
-                    [emptyTitle]="text().eventsEmpty"
-                    (retry)="refresh()"
-                    (clearFilters)="category.set(null); cursor.set(null)"
-                  >
-                    <p-table
-                      class="app-responsive-table"
-                      [value]="events()?.items ?? []"
-                      dataKey="id"
-                    >
-                      <ng-template #header>
-                        <tr>
-                          <th scope="col">{{ text().time }}</th>
-                          <th scope="col">{{ text().event }}</th>
-                          <th scope="col">{{ text().category }}</th>
-                          <th scope="col">{{ text().severity }}</th>
-                          <th scope="col">{{ text().values }}</th>
-                        </tr>
-                      </ng-template>
-                      <ng-template #body let-event>
-                        <tr>
-                          <td>{{ date(event.eventTime) }}</td>
-                          <td>
-                            <div class="app-cell-stack">
-                              <span>{{ event.name ?? text().unknownEvent }}</span>
-                              <span class="app-muted"
-                                >{{ text().eventId }}: {{ event.eventId ?? '—' }}</span
-                              >
-                            </div>
-                          </td>
-                          <td>{{ categoryLabel(event.category) }}</td>
-                          <td>
-                            <p-tag
-                              [value]="severityLabel(event.severity)"
-                              [severity]="severityTone(event.severity)"
-                            />
-                          </td>
-                          <td>
-                            <div class="app-cell-stack">
-                              <span
-                                >{{ text().speed }}: {{ speed(event.speedKmh) }} ·
-                                {{ text().ignition }}: {{ engine(event.engineOn) }}</span
-                              >
-                              <span
-                                >{{ text().mainVoltage }}: {{ voltage(event.mainVoltage) }} ·
-                                {{ text().backupVoltage }}: {{ voltage(event.backupVoltage) }}</span
-                              >
-                              @if (edataSummary(event.edata); as summary) {
-                                <span>{{ summary }}</span>
-                              }
-                              <details>
-                                <summary>{{ text().values }}</summary>
-                                <pre class="control-center__frame">{{ event.fields | json }}</pre>
-                              </details>
-                              @if (event.edata) {
-                                <details>
-                                  <summary>{{ text().edata }}</summary>
-                                  <pre class="control-center__frame">{{ event.edata | json }}</pre>
-                                </details>
-                              }
-                            </div>
-                          </td>
-                        </tr>
-                      </ng-template>
-                    </p-table>
-                  </holita-table-panel>
-                }
-              }
-
-              @if (value !== 'overview' && history(); as page) {
-                <div class="control-center__actions">
-                  <button
-                    pButton
-                    type="button"
-                    severity="secondary"
-                    [outlined]="true"
-                    [disabled]="cursor() === null || historyLoading()"
-                    (click)="cursor.set(null)"
-                  >
-                    {{ text().newer }}
-                  </button>
-                  <button
-                    pButton
-                    type="button"
-                    severity="secondary"
-                    [outlined]="true"
-                    [disabled]="!page.hasMore || !page.nextCursor || historyLoading()"
-                    (click)="cursor.set(page.nextCursor)"
-                  >
-                    {{ text().older }}
-                  </button>
+                  </td>
+                  <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+                    <holita-row-actions
+                      [actions]="actions()"
+                      [record]="
+                        record(
+                          row.id,
+                          tab() === 'events' ? (row.name ?? text().unknownEvent) : frameLabel(row)
+                        )
+                      "
+                      (choose)="
+                        technicalPanel.run(
+                          $event.action,
+                          [record(row.id, text().detail.details)],
+                          $event.origin
+                        )
+                      "
+                    />
+                  </td></tr
+              ></ng-template>
+            </p-table>
+          </holita-table-panel>
+          <details class="app-card">
+            <summary>{{ text().detail.registryTechnical }}</summary>
+            <dl class="app-facts">
+              <div>
+                <dt>{{ text().serialNumber }}</dt>
+                <dd>{{ device.serialNumber ?? '—' }}</dd>
+              </div>
+              <div>
+                <dt>{{ text().iccid }}</dt>
+                <dd>{{ device.simIccid ?? '—' }}</dd>
+              </div>
+              <div>
+                <dt>{{ text().firmware }}</dt>
+                <dd>{{ device.firmwareVersion ?? '—' }}</dd>
+              </div>
+              <div>
+                <dt>{{ text().edataModule }}</dt>
+                <dd>{{ device.edataModule ?? '—' }}</dd>
+              </div>
+            </dl>
+            <h3>{{ text().edataMeasurements }}</h3>
+            <p class="app-muted">{{ text().edataMeasurementsHint }}</p>
+            @for (measurement of state()?.edataMeasurements; track measurement.parameterId) {
+              <dl class="app-facts">
+                <div>
+                  <dt>{{ measurement.name ?? measurement.parameterId }}</dt>
+                  <dd class="app-mono">
+                    {{ measurement.valueHex }} ·
+                    <time [title]="fmt.utc(measurement.observedAt)">{{
+                      fmt.dateTime(measurement.observedAt, true)
+                    }}</time>
+                  </dd>
                 </div>
-              }
+              </dl>
+            } @empty {
+              <p>{{ text().edataMeasurementsEmpty }}</p>
             }
-          </p-tabpanel>
+            @if (state()?.health?.latestKarmaRoutingWrite; as write) {
+              <h3>{{ text().latestRouteWrite }}</h3>
+              <time [title]="fmt.utc(write.receivedAt)">{{
+                fmt.dateTime(write.receivedAt, true)
+              }}</time>
+              <pre class="control-center__frame">{{ write.displayText }}</pre>
+            }
+          </details>
         }
-      </p-tabpanels>
-    </p-tabs>
+      }
+    </div>
   } @else if (deviceLoading()) {
     <p-skeleton height="12rem" />
   } @else {
-    <holita-empty-state kind="error" [title]="deviceFailure()" />
+    <holita-empty-state kind="error" [title]="failure()" />
   }
 </section>
+<p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }"
+  ><ng-template #message
+    ><p id="erm-snapshot-confirm-message">{{ snapshotConfirmation() }}</p></ng-template
+  ></p-confirmdialog
+>
+<p-dialog
+  [visible]="detail() !== null"
+  (visibleChange)="!$event && detail.set(null)"
+  [modal]="true"
+  [draggable]="false"
+  [header]="text().detail.details"
+  [closeAriaLabel]="uiText().close"
+  [style]="{ width: 'min(64rem, calc(100vw - 2rem))' }"
+>
+  @if (detail(); as detail) {
+    <div class="app-view">
+      @switch (detail.kind) {
+        @case ('event') {
+          <h3>{{ detail.value.name ?? text().unknownEvent }}</h3>
+          <time [title]="fmt.utc(detail.value.eventTime)">{{
+            fmt.dateTime(detail.value.eventTime, true)
+          }}</time>
+          <dl class="app-facts">
+            <div>
+              <dt>{{ text().category }}</dt>
+              <dd>{{ categoryLabel(detail.value.category) }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().severity }}</dt>
+              <dd>{{ severityLabel(detail.value.severity) }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().speed }}</dt>
+              <dd>{{ fmt.speed(detail.value.speedKmh) }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().odometer }}</dt>
+              <dd>{{ fmt.distance(detail.value.odometer) }}</dd>
+            </div>
+          </dl>
+          <details class="app-card">
+            <summary>{{ text().detail.tabs['technical-details'] }}</summary>
+            <p>{{ text().eventId }}: {{ detail.value.eventId ?? '—' }}</p>
+            <pre class="control-center__frame">{{ detail.value.fields | json }}</pre>
+            @if (detail.value.edata) {
+              <pre class="control-center__frame">{{ detail.value.edata | json }}</pre>
+            }
+          </details>
+        }
+        @case ('frame') {
+          <h3>{{ frameLabel(detail.value) }}</h3>
+          <time [title]="fmt.utc(detail.value.receivedAt)">{{
+            fmt.dateTime(detail.value.receivedAt, true)
+          }}</time>
+          @if (frameRequest(detail.value); as request) {
+            <a
+              class="app-link"
+              [routerLink]="deviceLink('commands')"
+              [queryParams]="{ request: request.id }"
+              (click)="this.detail.set(null)"
+              >{{ text().detail.openRequest }}</a
+            >
+          }
+          <dl class="app-facts">
+            <div>
+              <dt>{{ text().direction }}</dt>
+              <dd>{{ text().directions[detail.value.direction] }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().checksum }}</dt>
+              <dd>{{ text().checksums[detail.value.checksum] }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().reference }}</dt>
+              <dd>{{ detail.value.reference ?? '—' }}</dd>
+            </div>
+          </dl>
+          <details class="app-card">
+            <summary>{{ text().detail.tabs['technical-details'] }}</summary>
+            <pre class="control-center__frame">{{ detail.value.displayText }}</pre>
+            <pre class="control-center__frame">{{ detail.value.rawHex }}</pre>
+          </details>
+        }
+        @case ('snapshot') {
+          <h3>{{ text().snapshots.title }}</h3>
+          <time [title]="fmt.utc(detail.value.startedAt)">{{
+            fmt.dateTime(detail.value.startedAt, true)
+          }}</time
+          ><p-tag
+            [value]="text().snapshots.statuses[detail.value.status]"
+            [severity]="snapshotTone(detail.value.status)"
+          />
+          @if (detail.value.failureReason) {
+            <p-message severity="error">{{ detail.value.failureReason }}</p-message>
+          }
+          <holita-table-panel
+            mode="local"
+            [heading]="text().snapshots.changes"
+            [view]="detail.value.changes.length ? { kind: 'rows' } : { kind: 'empty' }"
+            [total]="detail.value.changes.length"
+            [columns]="changeColumns()"
+            tableMinWidth="54rem"
+            [emptyTitle]="text().snapshots.noChanges"
+          >
+            <p-table
+              [value]="detail.value.changes"
+              [scrollable]="true"
+              [tableStyle]="{ 'min-width': '54rem' }"
+              ><ng-template #colgroup
+                ><colgroup>
+                  @for (column of changeColumns(); track column.id) {
+                    <col [style.width]="column.width" [class]="column.className ?? ''" />
+                  }</colgroup></ng-template
+              ><ng-template #header
+                ><tr>
+                  @for (column of changeColumns(); track column.id) {
+                    <th scope="col" [class]="column.className ?? ''">{{ column.label }}</th>
+                  }
+                </tr></ng-template
+              ><ng-template #body let-row
+                ><tr>
+                  <td>
+                    <div class="app-cell-identity">
+                      <strong>{{ parameter(row.parameter) }}</strong
+                      ><span [title]="row.title ?? ''">{{ row.title ?? '—' }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="app-cell-identity" [title]="row.previousValue ?? ''">{{
+                      row.previousValue ?? '—'
+                    }}</span>
+                  </td>
+                  <td>
+                    <span class="app-cell-identity" [title]="row.value ?? ''">{{
+                      row.value ?? '—'
+                    }}</span>
+                  </td>
+                </tr></ng-template
+              ></p-table
+            >
+          </holita-table-panel>
+          <holita-table-panel
+            mode="local"
+            [heading]="text().snapshots.values"
+            [view]="detail.value.values.length ? { kind: 'rows' } : { kind: 'empty' }"
+            [total]="detail.value.values.length"
+            [columns]="valueColumns()"
+            tableMinWidth="42rem"
+            [emptyTitle]="text().snapshots.noValue"
+          >
+            <p-table
+              [value]="detail.value.values"
+              [scrollable]="true"
+              [tableStyle]="{ 'min-width': '42rem' }"
+              ><ng-template #colgroup
+                ><colgroup>
+                  @for (column of valueColumns(); track column.id) {
+                    <col [style.width]="column.width" [class]="column.className ?? ''" />
+                  }</colgroup></ng-template
+              ><ng-template #header
+                ><tr>
+                  @for (column of valueColumns(); track column.id) {
+                    <th scope="col" [class]="column.className ?? ''">{{ column.label }}</th>
+                  }
+                </tr></ng-template
+              ><ng-template #body let-row
+                ><tr>
+                  <td>
+                    <div class="app-cell-identity">
+                      <strong>{{ parameter(row.parameter) }}</strong
+                      ><span [title]="row.title ?? ''">{{ row.title ?? '—' }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="app-cell-identity" [title]="row.value ?? row.resultCode ?? ''">{{
+                      row.value ?? row.resultCode ?? text().snapshots.noValue
+                    }}</span>
+                  </td>
+                </tr></ng-template
+              ></p-table
+            >
+          </holita-table-panel>
+          <details class="app-card">
+            <summary>{{ text().detail.tabs['technical-details'] }}</summary>
+            <dl class="app-facts">
+              <div>
+                <dt>{{ text().queue.requestId }}</dt>
+                <dd>{{ detail.value.id }}</dd>
+              </div>
+              <div>
+                <dt>{{ text().queue.actor }}</dt>
+                <dd>{{ detail.value.actorId ?? '—' }}</dd>
+              </div>
+            </dl>
+            <pre class="control-center__frame">{{ detail.value.values | json }}</pre>
+          </details>
+        }
+      }
+    </div>
+  }
+</p-dialog>

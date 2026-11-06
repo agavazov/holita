@@ -1,0 +1,177 @@
+<p-dialog
+  [visible]="request() !== null"
+  (visibleChange)="visibilityChanged($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [header]="view()?.purpose ?? text().details"
+  [closeAriaLabel]="text().close"
+  [style]="{ width: '46rem', 'max-width': 'calc(100vw - 2rem)' }"
+>
+  @if (view(); as view) {
+    <div class="app-view">
+      <p class="app-muted">{{ text().closeHint }}</p>
+      <div class="command-details__status" role="status" aria-live="polite">
+        @if (view.pending) {
+          <span class="command-details__spinner" aria-hidden="true"></span>
+        }
+        <p-tag [value]="view.status" [severity]="view.severity" />
+        <span>{{ view.outcome }}</span>
+      </div>
+      @if (error(); as error) {
+        <p-message severity="warn">{{ error }}</p-message>
+      }
+      <section class="app-card" [attr.aria-label]="text().parameters">
+        <h3>{{ text().parameters }}</h3>
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().target }}</dt>
+            <dd>{{ target() }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().purpose }}</dt>
+            <dd>{{ view.purpose }}</dd>
+          </div>
+          @if (view.fields) {
+            <div>
+              <dt>{{ text().fields }}</dt>
+              <dd>{{ view.fields }}</dd>
+            </div>
+          }
+          <div>
+            <dt>{{ text().expiresAt }}</dt>
+            <dd [title]="format.utc(view.request.expiresAt)">
+              {{ format.dateTime(view.request.expiresAt, true) }}
+            </dd>
+          </div>
+        </dl>
+        <p class="app-muted">{{ view.expiry }}</p>
+      </section>
+      <section class="app-card" [attr.aria-label]="text().lifecycle">
+        <h3>{{ text().lifecycle }}</h3>
+        <p-timeline
+          [value]="view.lifecycle"
+          align="left"
+          [pt]="{ eventOpposite: { style: { display: 'none' } } }"
+        >
+          <ng-template #content let-event>
+            <div class="app-timeline-event">
+              <span class="app-timeline-event__title">{{ event.label }}</span>
+              <time
+                class="app-timeline-event__meta"
+                [attr.datetime]="event.at"
+                [title]="format.utc(event.at)"
+                >{{ format.dateTime(event.at, true) }}</time
+              >
+            </div>
+          </ng-template>
+        </p-timeline>
+      </section>
+      <section class="app-card" [attr.aria-label]="text().result">
+        <h3>{{ text().result }}</h3>
+        @if (view.reason) {
+          <p>{{ view.reason }}</p>
+        }
+        <p>{{ view.nextStep }}</p>
+        @if (view.request.configurationVerification; as verification) {
+          <dl class="app-facts">
+            <div>
+              <dt>{{ text().verification }}</dt>
+              <dd>{{ text().verificationStates[verification.status] }}</dd>
+            </div>
+          </dl>
+        }
+      </section>
+      <details class="app-card command-details__technical">
+        <summary>{{ text().technical }}</summary>
+        <div class="app-view">
+          <p class="app-muted">{{ text().technicalHint }}</p>
+          @if (view.confirmation) {
+            <p>{{ view.confirmation }}</p>
+          }
+          <dl class="app-facts">
+            <div>
+              <dt>{{ text().requestId }}</dt>
+              <dd class="app-mono">{{ view.request.id }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().commandId }}</dt>
+              <dd class="app-mono">{{ view.request.commandId ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().reference }}</dt>
+              <dd class="app-mono">{{ view.request.transportCommand?.reference ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().replyReference }}</dt>
+              <dd class="app-mono">
+                {{ view.request.transportCommand?.acknowledgement?.replyReference ?? '—' }}
+              </dd>
+            </div>
+            <div>
+              <dt>{{ text().actor }}</dt>
+              <dd>{{ view.request.actorId }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().intent }}</dt>
+              <dd>{{ view.request.intent || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().actionCode }}</dt>
+              <dd>{{ view.request.actionCode }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().outcomeCode }}</dt>
+              <dd>{{ view.request.outcomeCode }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().reasonCode }}</dt>
+              <dd>{{ view.request.reasonCode ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().resultCode }}</dt>
+              <dd>{{ view.request.resultCode ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().transportStatus }}</dt>
+              <dd>{{ view.request.transportCommand?.status ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ text().failureReason }}</dt>
+              <dd>{{ view.request.failureReason ?? '—' }}</dd>
+            </div>
+          </dl>
+          <p class="app-muted">{{ text().auditHint }}</p>
+          <h4>{{ text().sentFrame }}</h4>
+          <pre>{{ view.request.sentFrame?.displayText ?? text().noEvidence }}</pre>
+          <h4>{{ text().receivedFrame }}</h4>
+          <pre>{{ view.request.responseText ?? text().noEvidence }}</pre>
+          @if (view.request.receivedFrameHex) {
+            <h4>{{ text().receivedHex }}</h4>
+            <pre>{{ view.request.receivedFrameHex }}</pre>
+          }
+        </div>
+      </details>
+    </div>
+  }
+  <ng-template #footer>
+    @if (request(); as request) {
+      @if (request.status === 'QUEUED') {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [loading]="cancelling()"
+          [disabled]="cancelling()"
+          (click)="cancelRequest.emit(request)"
+        >
+          {{ text().cancel }}
+        </button>
+      }
+    }
+    <button pButton type="button" severity="secondary" (click)="closed.emit()">
+      {{ text().close }}
+    </button>
+  </ng-template>
+</p-dialog>

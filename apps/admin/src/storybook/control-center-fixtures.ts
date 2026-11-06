@@ -1,20 +1,34 @@
 import {
   AdminControlCenterConfigurationChangesDocument,
   AdminControlCenterCommandRequestsDocument,
+  AdminControlCenterCommandRequestDocument,
   type AdminControlCenterCommandRequestsQuery,
   AdminControlCenterCommandsDocument,
   AdminControlCenterSnapshotsDocument,
   AdminControlCenterDeviceDocument,
   AdminControlCenterEventsDocument,
+  AdminControlCenterFramesDocument,
+  AdminControlCenterDeviceProblemsDocument,
   type AdminControlCenterDeviceQuery,
   type AdminControlCenterDevicesQuery,
   type AdminControlCenterEventsQuery,
+  type AdminControlCenterFramesQuery,
+  type AdminControlCenterDeviceProblemsQuery,
+  type AdminControlCenterSnapshotsQuery,
   AdminControlCenterSmsDevicesDocument,
   AdminControlCenterDevicesDocument,
   type AdminControlCenterSmsDevicesQuery,
 } from '../generated/graphql/operations';
 import { graphqlFixture, type WithTypename } from './graphql-fixtures';
 import { fixtureDevice, fixtureLiveDevice } from './devices-fixtures';
+import { fixtureAlert } from './alerts-fixtures';
+import {
+  commandPendingFixture,
+  commandAcknowledgedFixture,
+  commandRejectedFixture,
+  commandUnknownFixture,
+  commandFailedFixture,
+} from './erm-command-fixtures';
 
 type SmsDevice = WithTypename<AdminControlCenterSmsDevicesQuery['fleetDevices']['items'][number]>;
 
@@ -345,53 +359,144 @@ graphqlFixture(AdminControlCenterConfigurationChangesDocument, () => ({
   },
 }));
 
+const commandRequests = [
+  commandPendingFixture,
+  commandAcknowledgedFixture,
+  commandRejectedFixture,
+  commandUnknownFixture,
+  commandFailedFixture,
+];
+
 graphqlFixture(
   AdminControlCenterCommandRequestsDocument,
   (): WithTypename<AdminControlCenterCommandRequestsQuery> => ({
     fleetDevice: {
       __typename: 'FleetDevice',
       id: fixtureDevice.id,
-      ermCommandRequests: [
-        {
-          __typename: 'ErmCommandRequest',
-          id: '91000000-0000-4000-8000-000000000001',
-          deviceId: fixtureDevice.id,
-          unitId: fixtureDevice.imei,
-          actorId: 'demo-tenant:sample-tenant',
-          intent: 'Check the next primary connection',
-          action: 'READ_STATUS',
-          status: 'QUEUED',
-          createdAt: '2026-10-20T07:45:00.000Z',
-          expiresAt: '2026-10-20T09:45:00.000Z',
-          submittedAt: null,
-          completedAt: null,
-          commandId: null,
-          resultCode: null,
-          responseText: null,
-          failureReason: null,
-        },
-        {
-          __typename: 'ErmCommandRequest',
-          id: '91000000-0000-4000-8000-000000000002',
-          deviceId: fixtureDevice.id,
-          unitId: fixtureDevice.imei,
-          actorId: 'demo-tenant:sample-tenant',
-          intent: 'Read device version',
-          action: 'READ_VERSION',
-          status: 'UNCERTAIN',
-          createdAt: '2026-10-20T07:30:00.000Z',
-          expiresAt: '2026-10-20T09:30:00.000Z',
-          submittedAt: '2026-10-20T07:30:10.000Z',
-          completedAt: '2026-10-20T07:30:40.000Z',
-          commandId: '92000000-0000-4000-8000-000000000001',
-          resultCode: null,
-          responseText: null,
-          failureReason: 'The gateway response timed out; the request was not replayed.',
-        },
-      ],
+      ermCommandRequests: commandRequests,
     },
   }),
 );
+
+graphqlFixture(AdminControlCenterCommandRequestDocument, (variables) => ({
+  ermCommandRequest:
+    commandRequests.find((request) => request.id === variables.requiredString('id')) ?? null,
+}));
+
+graphqlFixture(
+  AdminControlCenterFramesDocument,
+  (): WithTypename<AdminControlCenterFramesQuery> => {
+    const acknowledged = commandAcknowledgedFixture;
+    const acknowledgement = acknowledged.transportCommand?.acknowledgement;
+    return {
+      fleetDevice: {
+        __typename: 'FleetDevice',
+        id: fixtureDevice.id,
+        ermFrames: {
+          __typename: 'ErmFramesPage',
+          cursor: null,
+          nextCursor: null,
+          hasMore: false,
+          items: [
+            {
+              __typename: 'ErmFrame',
+              id: 'command-confirmation-frame',
+              direction: 'DEVICE',
+              receivedAt: acknowledgement?.receivedAt ?? '2026-10-20T07:45:12.000Z',
+              command: '02',
+              reference: acknowledgement?.replyReference ?? '8063',
+              checksum: 'OK',
+              partial: false,
+              displayText: acknowledged.responseText ?? '',
+              rawHex: acknowledged.receivedFrameHex ?? '',
+            },
+            ...(acknowledged.sentFrame
+              ? [{ ...acknowledged.sentFrame, __typename: 'ErmFrame' }]
+              : []),
+          ] satisfies WithTypename<
+            AdminControlCenterFramesQuery['fleetDevice']['ermFrames']['items']
+          >,
+        },
+      },
+    };
+  },
+);
+
+graphqlFixture(AdminControlCenterDeviceProblemsDocument, (variables) => ({
+  fleetProblems: {
+    __typename: 'FleetProblemPage',
+    total: 3,
+    offset: variables.int('offset', 0),
+    limit: 20,
+    counts: {
+      __typename: 'FleetProblemCounts',
+      asOf: '2026-10-20T08:00:05.000Z',
+      dataAsOf: detailEvent.eventTime,
+      ermAsOf: '2026-10-20T08:00:05.000Z',
+      periodFrom: '2026-10-19T08:00:05.000Z',
+      periodTo: '2026-10-20T08:00:05.000Z',
+      total: 3,
+      requiringAttention: 2,
+      recorded: 1,
+    },
+    items: [
+      {
+        __typename: 'FleetProblem',
+        id: `FLEET_ALERT:${fixtureAlert.id}`,
+        sourceKind: 'FLEET_ALERT',
+        sourceId: fixtureAlert.id,
+        severity: fixtureAlert.severity,
+        occurredAt: fixtureAlert.occurredAt,
+        state: 'OPEN',
+        requiringAttention: true,
+        code: fixtureAlert.kind,
+        details: fixtureAlert.details,
+        deviceId: fixtureDevice.id,
+        deviceImei: fixtureDevice.imei,
+        vehicleId: fixtureDevice.vehicleId,
+        alertId: fixtureAlert.id,
+        ermEventId: null,
+        commandRequestId: null,
+      },
+      {
+        __typename: 'FleetProblem',
+        id: 'DIAGNOSTIC:11',
+        sourceKind: 'DIAGNOSTIC',
+        sourceId: '11',
+        severity: 'WARNING',
+        occurredAt: '2026-10-20T07:30:00.000Z',
+        state: 'RECORDED',
+        requiringAttention: false,
+        code: 'SPN 102 FMI 1',
+        details: 'Diagnostic report recorded by the device.',
+        deviceId: fixtureDevice.id,
+        deviceImei: fixtureDevice.imei,
+        vehicleId: fixtureDevice.vehicleId,
+        alertId: null,
+        ermEventId: '11',
+        commandRequestId: null,
+      },
+      {
+        __typename: 'FleetProblem',
+        id: `COMMAND:${commandUnknownFixture.id}`,
+        sourceKind: 'COMMAND',
+        sourceId: commandUnknownFixture.id,
+        severity: 'WARNING',
+        occurredAt: commandUnknownFixture.completedAt ?? commandUnknownFixture.requestedAt,
+        state: 'UNCERTAIN',
+        requiringAttention: true,
+        code: commandUnknownFixture.reasonCode ?? 'REPLY_TIMEOUT',
+        details: null,
+        deviceId: fixtureDevice.id,
+        deviceImei: fixtureDevice.imei,
+        vehicleId: fixtureDevice.vehicleId,
+        alertId: null,
+        ermEventId: null,
+        commandRequestId: commandUnknownFixture.id,
+      },
+    ] satisfies WithTypename<AdminControlCenterDeviceProblemsQuery['fleetProblems']['items']>,
+  },
+}));
 
 graphqlFixture(AdminControlCenterCommandsDocument, () => ({
   fleetDevice: {
@@ -402,7 +507,9 @@ graphqlFixture(AdminControlCenterCommandsDocument, () => ({
       cursor: null,
       nextCursor: null,
       hasMore: false,
-      items: [],
+      items: commandAcknowledgedFixture.transportCommand
+        ? [commandAcknowledgedFixture.transportCommand]
+        : [],
     },
   },
 }));
@@ -415,7 +522,64 @@ graphqlFixture(AdminControlCenterSnapshotsDocument, () => ({
       cursor: null,
       nextCursor: null,
       hasMore: false,
-      items: [],
+      items: [
+        {
+          __typename: 'ErmParameterSnapshot',
+          id: 'parameter-snapshot-current',
+          unitId: fixtureDevice.imei,
+          actorId: 'demo-tenant:sample-tenant',
+          intent: 'Read supported device settings',
+          status: 'COMPLETE',
+          startedAt: '2026-10-20T07:00:00.000Z',
+          finishedAt: '2026-10-20T07:00:15.000Z',
+          parameterCount: 1,
+          readCount: 1,
+          failureReason: null,
+          values: [
+            {
+              __typename: 'ErmParameterValue',
+              parameter: 593,
+              title: 'Simple SMS password',
+              value: 'password',
+              resultCode: null,
+            },
+          ],
+          changes: [
+            {
+              __typename: 'ErmParameterChange',
+              parameter: 593,
+              title: 'Simple SMS password',
+              previousValue: 'previouspassword',
+              value: 'password',
+            },
+          ],
+        },
+        {
+          __typename: 'ErmParameterSnapshot',
+          id: 'parameter-snapshot-previous',
+          unitId: fixtureDevice.imei,
+          actorId: 'demo-tenant:sample-tenant',
+          intent: 'Read supported device settings',
+          status: 'COMPLETE',
+          startedAt: '2026-10-19T07:00:00.000Z',
+          finishedAt: '2026-10-19T07:00:15.000Z',
+          parameterCount: 1,
+          readCount: 1,
+          failureReason: null,
+          values: [
+            {
+              __typename: 'ErmParameterValue',
+              parameter: 593,
+              title: 'Simple SMS password',
+              value: 'previouspassword',
+              resultCode: null,
+            },
+          ],
+          changes: [],
+        },
+      ] satisfies WithTypename<
+        AdminControlCenterSnapshotsQuery['fleetDevice']['ermParameterSnapshots']['items']
+      >,
     },
   },
 }));

@@ -9,8 +9,6 @@
   </button>
 </holita-page-header>
 
-<holita-fleet-live-summary [devices]="liveDevices()" [loading]="view().kind === 'loading'" />
-
 <holita-filter-builder
   [searchLabel]="text().search"
   [search]="state().search"
@@ -39,6 +37,8 @@
   [heading]="text().table.heading"
   [total]="total()"
   [view]="view()"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
   [errorText]="errorText() ?? text().table.errorText"
   [actionContext]="state()"
   [busy]="busy()"
@@ -63,6 +63,7 @@
   <p-table
     class="app-responsive-table"
     [value]="tableRows()"
+    [tableStyle]="{ 'min-width': tableMinWidth, 'table-layout': 'fixed' }"
     dataKey="id"
     [rowTrackBy]="trackById"
     [lazy]="true"
@@ -74,6 +75,13 @@
     (onLazyLoad)="sort($event)"
     [scrollable]="true"
   >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+          <col [style.width]="column.width" [class]="column.className" />
+        }
+      </colgroup>
+    </ng-template>
     <ng-template #header>
       <tr>
         <th scope="col" class="app-col-check">
@@ -85,13 +93,9 @@
         <th scope="col" class="app-col-identity" pSortableColumn="imei">
           {{ text().table.device }} <p-sort-icon field="imei" />
         </th>
-        <th scope="col" pSortableColumn="vehicle">
-          {{ text().table.vehicle }} <p-sort-icon field="vehicle" />
-        </th>
         <th scope="col">{{ liveText().connection }}</th>
-        <th scope="col">{{ liveText().now }}</th>
         <th scope="col">{{ liveText().lastReport }}</th>
-        <th scope="col" class="devices__faults">{{ liveText().faults }}</th>
+        <th scope="col">{{ text().table.problems }}</th>
         <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
           <span class="app-visually-hidden">{{ text().table.actions }}</span>
         </th>
@@ -103,19 +107,34 @@
           <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row)" />
         </td>
         <td class="app-col-identity">
-          <span class="app-cell-stack">
+          <span class="app-cell-identity" [attr.title]="modelLabel(row.model)">
             @if (deviceLink(row); as link) {
               <a
                 class="app-link app-mono"
                 [routerLink]="link"
+                [attr.title]="row.imei"
                 [attr.aria-label]="label(text().table.view, row)"
                 >{{ row.imei }}</a
               >
             } @else {
               <span class="app-mono">{{ row.imei }}</span>
             }
-            <span>{{ modelLabel(row.model) }}</span>
-            <span class="app-muted app-mono">{{ row.serialNumber || '—' }}</span>
+            @if (row.plate) {
+              @if (row.vehicleId && recordLinks()?.vehicle(row.vehicleId); as link) {
+                <a
+                  class="app-plate app-link"
+                  [routerLink]="link.commands"
+                  [queryParams]="link.queryParams"
+                  [fragment]="link.fragment"
+                  [attr.title]="row.plate"
+                  >{{ row.plate }}</a
+                >
+              } @else {
+                <span class="app-plate" [attr.title]="row.plate">{{ row.plate }}</span>
+              }
+            } @else {
+              <span class="app-muted">{{ text().table.notInstalled }}</span>
+            }
           </span>
           <div class="app-table-mobile-actions">
             <holita-row-actions
@@ -125,28 +144,19 @@
             />
           </div>
         </td>
-        <td>
-          @if (row.plate) {
-            @if (row.vehicleId && recordLinks()?.vehicle(row.vehicleId); as link) {
-              <a
-                class="app-link"
-                [routerLink]="link.commands"
-                [queryParams]="link.queryParams"
-                [fragment]="link.fragment"
-                >{{ row.plate }}</a
-              >
-            } @else {
-              {{ row.plate }}
-            }
-          } @else {
-            <span class="app-muted">{{ text().table.notInstalled }}</span>
-          }
+        <td><holita-fleet-connection mode="table" [device]="row.live" /></td>
+        <td class="app-cell-date">
+          @let reported = reportCell(row);
+          <time
+            [attr.title]="reported.title"
+            [attr.datetime]="
+              row.live?.ermState?.lastFrameAt ?? row.live?.lastReportedAt ?? row.lastSeenAt
+            "
+            >{{ reported.text }}</time
+          >
         </td>
-        <td><holita-fleet-connection [device]="row.live" /></td>
-        <td><holita-fleet-now [device]="row.live" /></td>
-        <td><holita-fleet-last-report [device]="row.live" [reportedAt]="row.lastSeenAt" /></td>
-        <td class="devices__faults">
-          <holita-fleet-faults [device]="row.live" [link]="diagnosticsLink(row)" />
+        <td>
+          <holita-fleet-faults mode="table" [device]="row.live" [link]="diagnosticsLink(row)" />
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
           <holita-row-actions

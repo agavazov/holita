@@ -17,16 +17,14 @@ import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/lis
 import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
-import { TablePanel } from '../../../ui/table-panel/table-panel';
+import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { deviceModelLabel, devicesText } from './i18n/messages';
 import { FleetConnection } from '../../../ui/fleet-live/fleet-connection';
-import { FleetNow } from '../../../ui/fleet-live/fleet-now';
-import { FleetLastReport } from '../../../ui/fleet-live/fleet-last-report';
 import { FleetFaults } from '../../../ui/fleet-live/fleet-faults';
-import { FleetLiveSummary } from '../../../ui/fleet-live/fleet-live-summary';
 import { fleetLiveText, type FleetLiveDevice } from '../../../ui/fleet-live/fleet-live';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
 
 export const deviceStatuses = ['ONLINE', 'OFFLINE', 'IN_STOCK'] as const;
 export type DeviceStatusCode = (typeof deviceStatuses)[number];
@@ -64,17 +62,13 @@ export interface DeviceRow {
     TableModule,
     FilterBuilder,
     FleetConnection,
-    FleetNow,
-    FleetLastReport,
     FleetFaults,
-    FleetLiveSummary,
     PageHeader,
     RowActions,
     ListSortMenu,
     TablePanel,
   ],
   templateUrl: './devices-view.html',
-  styleUrl: './devices-view.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-view' },
 })
@@ -100,13 +94,40 @@ export class DevicesView {
   readonly retry = output();
 
   private readonly language = inject(UI_LANGUAGE);
+  private readonly format = injectFleetFormat();
   private readonly sortReady = injectSortReady();
   protected modelLabel(model: string): string {
     return deviceModelLabel(this.language(), model);
   }
   protected readonly text = computed(() => devicesText(this.language()));
   protected readonly liveText = computed(() => fleetLiveText(this.language()));
-  protected readonly liveDevices = computed(() => this.rows().map((row) => row.live));
+  protected readonly tableMinWidth = '58rem';
+  protected readonly columns = computed<readonly TableColumn[]>(() => [
+    {
+      id: 'select',
+      label: this.text().table.selectPage,
+      width: '3rem',
+      kind: 'check',
+      className: 'app-col-check',
+    },
+    {
+      id: 'device',
+      label: this.text().table.device,
+      width: '17rem',
+      kind: 'identity',
+      className: 'app-col-identity',
+    },
+    { id: 'connection', label: this.liveText().connection, width: '13rem', kind: 'status' },
+    { id: 'lastReport', label: this.liveText().lastReport, width: '12rem', kind: 'date' },
+    { id: 'problems', label: this.text().table.problems, width: '10rem', kind: 'problems' },
+    {
+      id: 'actions',
+      label: this.text().table.actions,
+      width: '3rem',
+      kind: 'actions',
+      className: 'app-col-actions',
+    },
+  ]);
   protected readonly withoutTruck = computed(() =>
     this.state().conditions.some(
       (condition) => condition.field === 'installed' && condition.operator === 'isFalse',
@@ -221,7 +242,13 @@ export class DevicesView {
 
   protected diagnosticsLink(row: DeviceRow): readonly string[] | null {
     const base = this.deviceLinkBase();
-    return base ? [...base, row.id, 'alarms'] : null;
+    return base ? [...base, row.id, 'problems'] : null;
+  }
+
+  protected reportCell(row: DeviceRow) {
+    return this.format.dateTimeCell(
+      row.live?.ermState?.lastFrameAt ?? row.live?.lastReportedAt ?? row.lastSeenAt,
+    );
   }
 
   protected label(template: string, row: DeviceRow): string {

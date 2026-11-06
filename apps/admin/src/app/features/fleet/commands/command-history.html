@@ -1,0 +1,105 @@
+<p class="app-muted">{{ text().historyHint }}</p>
+<holita-table-panel
+  #panel
+  mode="local"
+  [heading]="text().history"
+  [view]="view()"
+  [total]="requests().length"
+  [busy]="loading()"
+  [errorText]="error()"
+  [emptyTitle]="text().empty"
+  [emptyDescription]="text().emptyHint"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
+  [actions]="actions()"
+  (action)="run($event)"
+  (retry)="retry.emit()"
+>
+  <button
+    panelActions
+    pButton
+    type="button"
+    severity="secondary"
+    [outlined]="true"
+    [loading]="loading()"
+    (click)="retry.emit()"
+  >
+    {{ text().refresh }}
+  </button>
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="rows()"
+    dataKey="id"
+    [rowTrackBy]="trackById"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': tableMinWidth }"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+          <col [style.width]="column.width" [class]="column.className ?? ''" />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        @for (column of columns(); track column.id) {
+          <th
+            scope="col"
+            [class]="column.className ?? ''"
+            pFrozenColumn
+            [frozen]="column.kind === 'actions'"
+            alignFrozen="right"
+          >
+            {{ column.label }}
+          </th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-cell-identity">
+            <button
+              type="button"
+              class="app-link"
+              [title]="row.purpose"
+              (click)="panel.run('details', [row.record], $event.currentTarget)"
+            >
+              {{ row.purpose }}
+            </button>
+            <span [title]="target()">{{ target() }}</span>
+          </div>
+          <div class="app-table-mobile-actions">
+            <holita-row-actions
+              [actions]="actions()"
+              [record]="row.record"
+              (choose)="panel.run($event.action, [row.record], $event.origin)"
+            />
+          </div>
+        </td>
+        <td>
+          <span class="app-cell-truncate" [title]="target()">{{ target() }}</span>
+        </td>
+        <td>
+          <span class="app-cell-date" [title]="row.requested.title">{{ row.requested.text }}</span>
+        </td>
+        <td>
+          <div class="app-cell-status">
+            <p-tag [value]="row.status" [severity]="row.severity" />
+          </div>
+        </td>
+        <td class="app-col-secondary">
+          <span class="app-cell-truncate" [title]="row.outcome">{{ row.outcome }}</span>
+        </td>
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <holita-row-actions
+            [actions]="actions()"
+            [record]="row.record"
+            (choose)="panel.run($event.action, [row.record], $event.origin)"
+          />
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</holita-table-panel>

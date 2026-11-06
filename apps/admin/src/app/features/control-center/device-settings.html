@@ -123,9 +123,23 @@
     >
   </p-confirmdialog>
 </section>
-<section class="app-card" [attr.aria-label]="text().history">
-  <h2>{{ text().history }}</h2>
+<holita-table-panel
+  #historyPanel
+  mode="local"
+  [heading]="text().history"
+  [total]="runs().length"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
+  [view]="historyView()"
+  [busy]="loading()"
+  [errorText]="error()"
+  [emptyTitle]="text().empty"
+  [actions]="actions()"
+  (action)="historyAction($event)"
+  (retry)="refreshHistory()"
+>
   <button
+    panelActions
     pButton
     type="button"
     severity="secondary"
@@ -135,51 +149,148 @@
   >
     {{ text().refresh }}
   </button>
-  @for (run of runs(); track run.id) {
-    <details [open]="run.finishedAt === null">
-      <summary>
-        {{ date(run.startedAt) }} ·
-        <p-tag [value]="text().states[run.status]" [severity]="severity(run.status)" />
-      </summary>
-      <dl class="app-facts">
-        <div>
-          <dt>{{ auditText().actor }}</dt>
-          <dd class="app-mono">{{ run.actorId ?? '—' }}</dd>
-        </div>
-        <div>
-          <dt>{{ auditText().intent }}</dt>
-          <dd>{{ run.intent ?? '—' }}</dd>
-        </div>
-        <div>
-          <dt>{{ auditText().target }}</dt>
-          <dd class="app-mono">{{ run.unitId }}</dd>
-        </div>
-        <div>
-          <dt>{{ auditText().requestId }}</dt>
-          <dd class="app-mono">{{ run.id }}</dd>
-        </div>
-      </dl>
+  <p-table
+    class="app-responsive-table"
+    [value]="historyRows()"
+    dataKey="id"
+    [rowTrackBy]="trackById"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': tableMinWidth }"
+    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().history } }"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+          <col [style.width]="column.width" [class]="column.className ?? ''" />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity">{{ text().operation }}</th>
+        <th scope="col">{{ text().started }}</th>
+        <th scope="col">{{ common().status }}</th>
+        <th scope="col" class="app-col-secondary">{{ text().finished }}</th>
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ text().actions }}</span>
+        </th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-run>
+      <tr>
+        <td class="app-col-identity">
+          <span class="app-cell-identity">
+            <button
+              type="button"
+              class="app-link app-cell-truncate"
+              [title]="operation(run)"
+              (click)="historyPanel.run('details', [record(run)], $event.currentTarget)"
+            >
+              {{ operation(run) }}
+            </button>
+            <span [title]="target()">{{ target() }}</span>
+          </span>
+          <span class="app-table-mobile-actions">
+            <holita-row-actions
+              [actions]="actions()"
+              [record]="record(run)"
+              (choose)="historyPanel.run($event.action, [record(run)], $event.origin)"
+            />
+          </span>
+        </td>
+        <td>
+          <span class="app-cell-date" [title]="units.dateTimeCell(run.startedAt, true).title">
+            {{ units.dateTimeCell(run.startedAt, true).text }}
+          </span>
+        </td>
+        <td>
+          <span class="app-cell-status" [title]="stateLabel(run.status)">
+            <p-tag [value]="stateLabel(run.status)" [severity]="severity(run.status)" />
+          </span>
+        </td>
+        <td class="app-col-secondary">
+          <span class="app-cell-date" [title]="units.dateTimeCell(run.finishedAt, true).title">
+            {{ units.dateTimeCell(run.finishedAt, true).text }}
+          </span>
+        </td>
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <holita-row-actions
+            [actions]="actions()"
+            [record]="record(run)"
+            (choose)="historyPanel.run($event.action, [record(run)], $event.origin)"
+          />
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</holita-table-panel>
+
+<p-dialog
+  [header]="text().history"
+  [visible]="selectedRun() !== null"
+  (visibleChange)="!$event && selectedId.set(null)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: 'min(44rem, calc(100vw - 2rem))' }"
+>
+  @if (selectedRun(); as run) {
+    <div class="app-tab-content">
+      <section class="app-card app-card--accent">
+        <h2>{{ operation(run) }}</h2>
+        <p>{{ target() }}</p>
+        <p-tag [value]="stateLabel(run.status)" [severity]="severity(run.status)" />
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().started }}</dt>
+            <dd [title]="units.utc(run.startedAt)">{{ units.dateTime(run.startedAt, true) }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().finished }}</dt>
+            <dd [title]="units.utc(run.finishedAt)">{{ units.dateTime(run.finishedAt, true) }}</dd>
+          </div>
+        </dl>
+      </section>
       @if (run.failureReason) {
         <p-message severity="warn">{{ run.failureReason }}</p-message>
       }
-      <ol>
-        @for (step of steps(run.steps); track $index) {
-          <li>
-            {{ stepLabel(step.name) }}: {{ step.outcome }} · {{ date(step.time) }}
-            @if (step.payload) {
-              <pre class="control-center__frame">{{ step.payload }}</pre>
+      <details class="app-card">
+        <summary>{{ text().technical }}</summary>
+        <div class="app-card__body">
+          <dl class="app-facts">
+            <div>
+              <dt>{{ auditText().actor }}</dt>
+              <dd class="app-mono">{{ run.actorId ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ auditText().target }}</dt>
+              <dd class="app-mono">{{ run.unitId }}</dd>
+            </div>
+            <div>
+              <dt>{{ auditText().requestId }}</dt>
+              <dd class="app-mono">{{ run.id }}</dd>
+            </div>
+          </dl>
+          <h3>{{ text().stepsTitle }}</h3>
+          <ol class="app-card__body">
+            @for (step of steps(run.steps); track $index) {
+              <li>
+                <div class="app-card__body">
+                  <strong>{{ stepLabel(step.name) }}</strong>
+                  <span>{{ step.outcome }}</span>
+                  <span [title]="units.utc(step.time)">{{ units.dateTime(step.time, true) }}</span>
+                  @if (step.payload) {
+                    <pre class="app-mono">{{ step.payload }}</pre>
+                  }
+                </div>
+              </li>
             }
-          </li>
-        }
-      </ol>
-      <details>
-        <summary>{{ text().evidence }}</summary>
-        <pre class="control-center__frame">{{ run.baseline | json }}</pre>
-        <pre class="control-center__frame">{{ run.intended ?? '—' }}</pre>
+          </ol>
+          <h3>{{ text().evidence }}</h3>
+          <pre class="app-mono">{{ run.baseline | json }}</pre>
+          <pre class="app-mono">{{ run.intended ?? '—' }}</pre>
+        </div>
       </details>
-      <p class="app-muted">{{ date(run.finishedAt) }}</p>
-    </details>
-  } @empty {
-    <p class="app-muted">{{ loading() ? text().loading : text().empty }}</p>
+    </div>
   }
-</section>
+</p-dialog>

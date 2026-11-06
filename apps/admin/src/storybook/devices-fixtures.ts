@@ -45,17 +45,41 @@ export const fixtureDevice: WithTypename<AdminDeviceDetailsFragment> = {
   updatedAt: '2026-10-20T08:00:00.000Z',
 };
 
+const listDevices: readonly WithTypename<AdminDeviceDetailsFragment>[] = [
+  fixtureDevice,
+  {
+    ...fixtureDevice,
+    id: '60000000-0000-4000-8000-000000000002',
+    imei: '001234567890124',
+    model: 'STARLINK_SCOUT',
+    lastReportedAt: '2026-10-20T07:00:00.000Z',
+  },
+  {
+    ...fixtureDevice,
+    id: '60000000-0000-4000-8000-000000000003',
+    imei: '001234567890125',
+    vehicleId: null,
+    vehicle: null,
+    status: 'IN_STOCK',
+    installedAt: null,
+    lastReportedAt: null,
+  },
+];
+
 // Fixed read snapshots exercise live containers/transport; persistence and query semantics
 // stay in the real backend/browser checks rather than a second backend in story fixtures.
-graphqlFixture(AdminDevicesDocument, (variables) => ({
-  fleetDevices: {
-    __typename: 'FleetDevicePage',
-    items: [fixtureDevice],
-    total: 1,
-    offset: variables.int('offset', 0),
-    limit: variables.int('limit', 20),
-  },
-}));
+graphqlFixture(AdminDevicesDocument, (variables) => {
+  const items = variables.string('search') === 'no-device-results' ? [] : listDevices;
+  return {
+    fleetDevices: {
+      __typename: 'FleetDevicePage',
+      items,
+      total: items.length,
+      offset: variables.int('offset', 0),
+      limit: variables.int('limit', 20),
+    },
+  };
+});
 export const fixtureLiveDevice: WithTypename<
   AdminDevicesLiveQuery['fleetDevices']['items'][number]
 > = {
@@ -100,17 +124,56 @@ export const fixtureLiveDevice: WithTypename<
     },
   },
 };
+const liveListDevices: readonly WithTypename<
+  AdminDevicesLiveQuery['fleetDevices']['items'][number]
+>[] = [
+  fixtureLiveDevice,
+  {
+    ...fixtureLiveDevice,
+    id: '60000000-0000-4000-8000-000000000002',
+    imei: '001234567890124',
+    lastReportedAt: '2026-10-20T07:00:00.000Z',
+    ermState: {
+      ...fixtureLiveDevice.ermState,
+      __typename: 'ErmUnitState',
+      mode: 'PRIMARY',
+      online: false,
+      connectedSince: null,
+      latestEvent: null,
+      latestAlarm: null,
+      alarmsLast24h: 0,
+      lastFrameAt: '2026-10-20T07:00:00.000Z',
+      health: {
+        __typename: 'ErmUnitHealth',
+        overdue: true,
+        lastFrameAgeSeconds: 3600,
+        expectedIntervalSeconds: 300,
+        lastCloseReason: 'connection closed',
+      },
+    },
+  },
+  {
+    ...fixtureLiveDevice,
+    id: '60000000-0000-4000-8000-000000000003',
+    imei: '001234567890125',
+    vehicleId: null,
+    status: 'IN_STOCK',
+    lastReportedAt: null,
+    ermState: null,
+  },
+];
 graphqlFixture(AdminDevicesLiveDocument, () => ({
   fleetDevices: {
     __typename: 'FleetDevicePage',
-    items: [fixtureLiveDevice],
+    items: liveListDevices,
   },
 }));
 graphqlFixture(AdminDeviceDocument, (variables) => {
-  if (variables.requiredString('id') !== fixtureDevice.id) {
+  const device = listDevices.find((item) => item.id === variables.requiredString('id'));
+  if (!device) {
     throw fixtureError('NOT_FOUND', 'The device was not found.');
   }
-  return { fleetDevice: fixtureDevice };
+  return { fleetDevice: device };
 });
 graphqlFixture(AdminDeviceVehiclesDocument, (variables) => ({
   fleetVehicles: {

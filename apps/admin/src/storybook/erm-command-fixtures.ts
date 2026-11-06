@@ -1,0 +1,136 @@
+import type { CommandRequest } from '../app/features/fleet/commands/command-presentation';
+import { fixtureDevice } from './devices-fixtures';
+
+export function commandFixture(overrides: Partial<CommandRequest> = {}): CommandRequest {
+  return {
+    id: 'a0000000-0000-4000-8000-000000000001',
+    deviceId: fixtureDevice.id,
+    unitId: fixtureDevice.imei,
+    actorId: 'demo:tenant',
+    intent: 'Check the current device status',
+    action: 'READ_STATUS',
+    actionCode: 'READ_STATUS',
+    displayParameters: {
+      expiresInSeconds: 7200,
+      requestedFields: ['IGNITION', 'ENGINE', 'VIN', 'MAIN_VOLTAGE', 'SIGNAL_QUALITY', 'JAMMING'],
+    },
+    status: 'QUEUED',
+    requestedAt: '2026-10-20T07:58:00.000Z',
+    queuedAt: '2026-10-20T07:58:00.000Z',
+    submittingAt: null,
+    sentAt: null,
+    answeredAt: null,
+    failedAt: null,
+    expiredAt: null,
+    cancelledAt: null,
+    uncertainAt: null,
+    outcomeCode: 'WAITING_TO_SEND',
+    reasonCode: null,
+    transportCommand: null,
+    configurationVerification: null,
+    sentFrame: null,
+    receivedFrameHex: null,
+    createdAt: '2026-10-20T07:58:00.000Z',
+    expiresAt: '2026-10-20T09:58:00.000Z',
+    submittedAt: null,
+    completedAt: null,
+    commandId: null,
+    resultCode: null,
+    responseText: null,
+    failureReason: null,
+    ...overrides,
+  };
+}
+
+export const commandPendingFixture = commandFixture();
+
+export const commandAcknowledgedFixture = commandFixture({
+  id: 'a0000000-0000-4000-8000-000000000002',
+  status: 'ANSWERED',
+  action: 'REQUEST_LOCATION',
+  actionCode: 'REQUEST_LOCATION',
+  intent: 'Request the latest location',
+  displayParameters: { expiresInSeconds: 7200, requestedFields: [] },
+  submittingAt: '2026-10-20T07:58:10.000Z',
+  submittedAt: '2026-10-20T07:58:10.000Z',
+  sentAt: '2026-10-20T07:58:11.000Z',
+  answeredAt: '2026-10-20T07:58:12.000Z',
+  completedAt: '2026-10-20T07:58:12.000Z',
+  outcomeCode: 'ACKNOWLEDGED',
+  commandId: 'b0000000-0000-4000-8000-000000000001',
+  resultCode: '01',
+  responseText: '$SLU001234567890123,02,8063,900000081,01*FD',
+  receivedFrameHex:
+    '24534C553030313233343536373839303132332C30322C383036332C3930303030303038312C30312A46440D0A',
+  sentFrame: {
+    id: 'c0000000-0000-4000-8000-000000000001',
+    direction: 'HOLITA',
+    receivedAt: '2026-10-20T07:58:11.000Z',
+    command: '03',
+    reference: '900000081',
+    checksum: 'OK',
+    partial: false,
+    displayText: '$SRV001234567890123,03,900000081*7B',
+    rawHex: '245352563030313233343536373839303132332C30332C3930303030303038312A37420D0A',
+  },
+  transportCommand: {
+    id: 'b0000000-0000-4000-8000-000000000001',
+    unitId: fixtureDevice.imei,
+    connectionId: 'connection-1',
+    reference: '900000081',
+    command: '03',
+    fields: [],
+    status: 'ANSWERED',
+    sentAt: '2026-10-20T07:58:11.000Z',
+    answeredAt: '2026-10-20T07:58:12.000Z',
+    resultCode: '01',
+    responseText: '$SLU001234567890123,02,8063,900000081,01*FD',
+    responseHex:
+      '24534C553030313233343536373839303132332C30322C383036332C3930303030303038312C30312A46440D0A',
+    acknowledgement: {
+      commandId: 'b0000000-0000-4000-8000-000000000001',
+      commandReference: '900000081',
+      replyReference: '8063',
+      resultCode: '01',
+      receivedAt: '2026-10-20T07:58:12.000Z',
+    },
+  },
+});
+
+export const commandRejectedFixture = commandFixture({
+  id: 'a0000000-0000-4000-8000-000000000003',
+  status: 'FAILED',
+  outcomeCode: 'REJECTED',
+  reasonCode: 'DEVICE_REJECTED',
+  resultCode: '02',
+  submittingAt: '2026-10-20T07:58:10.000Z',
+  sentAt: '2026-10-20T07:58:11.000Z',
+  answeredAt: '2026-10-20T07:58:12.000Z',
+  failedAt: '2026-10-20T07:58:12.000Z',
+  completedAt: '2026-10-20T07:58:12.000Z',
+  failureReason: 'The device rejected this command',
+});
+
+export const commandUnknownFixture = commandFixture({
+  id: 'a0000000-0000-4000-8000-000000000004',
+  status: 'UNCERTAIN',
+  actionCode: 'UNRECOGNISED_READ_ACTION',
+  outcomeCode: 'OUTCOME_UNKNOWN',
+  reasonCode: 'REPLY_TIMEOUT',
+  submittingAt: '2026-10-20T07:58:10.000Z',
+  sentAt: '2026-10-20T07:58:11.000Z',
+  uncertainAt: '2026-10-20T07:58:41.000Z',
+  completedAt: '2026-10-20T07:58:41.000Z',
+  failureReason: 'No reply received before the transport timeout',
+});
+
+export const commandFailedFixture = commandFixture({
+  id: 'a0000000-0000-4000-8000-000000000005',
+  status: 'FAILED',
+  outcomeCode: 'FAILED',
+  reasonCode: 'GATEWAY_REFUSED',
+  submittingAt: '2026-10-20T07:58:10.000Z',
+  failedAt: '2026-10-20T07:58:10.000Z',
+  completedAt: '2026-10-20T07:58:10.000Z',
+  failureReason: 'The gateway refused submission because the unit is not primary or is busy',
+});
