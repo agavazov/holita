@@ -136,6 +136,44 @@ The admin reads browser configuration from `apps/admin/public/config.json` and o
 Git-ignored `apps/admin/public/config.local.json`. Local configuration overrides the public
 file and is excluded from production assets.
 
+## Core users and sessions
+
+Apply the additive Core migration before using account authentication, then generate Prisma
+and GraphQL clients. Provision the first user for an existing Tenant from the repository root:
+
+```bash
+npm run user:create --workspace @holita/core -- --tenant TENANT_UUID --email person@example.test --name "First user" < /secure/password-file
+```
+
+The password comes only from stdin or the transient `CORE_SETUP_PASSWORD` environment variable;
+the environment variable takes precedence. Stdin drops one trailing newline. Never put a password
+in command arguments. Passwords accept 12–128 Unicode characters without NUL; names are trimmed
+and accept 1–200 characters without NUL. Emails are trimmed, lowercased, validated and globally
+unique. Repeating setup with an existing email refuses without modifying the user. The setup
+command uses Core's `CORE_DATABASE_URL` and does not create Tenants or apply migrations.
+
+Core GraphQL provides `signIn(email, password)` returning `{ token, user, tenant, expiresAt }`.
+Send the opaque token as `authorization: Bearer <token>`; only its hash is stored. Sessions expire
+eight hours after sign-in. `me` returns the current User including `tenant`; `users` lists all
+active and inactive users in that Tenant. Every authenticated user has equal access to
+`createUser(name, email, password)`, `updateUser(id, name, email)`, `deactivateUser(id)` and
+`reactivateUser(id)`. These account operations require a user session and no Branch context.
+`updateProfile(name, email)` edits the current user. `changePassword(currentPassword, newPassword)`
+revokes the user's other sessions while retaining the current one. `signOut` revokes the current
+session; deactivation revokes all of the target user's sessions. Reactivation requires a fresh
+sign-in. User timestamps and session expiry use `DateTime`, serialized in UTC with milliseconds.
+Invalid sign-in credentials share one `UNAUTHENTICATED` message. Invalid account fields return
+`BAD_USER_INPUT` with `fieldErrors`; foreign or missing user mutations return `NOT_FOUND`.
+
+For service-to-service verification, configure Core's `CORE_INTERNAL_AUTH_TOKEN` with at least
+32 characters. `POST /internal/auth/verify` accepts the user's bearer in `authorization` and the
+internal secret in `x-core-internal-token`, with no request body. It returns HTTP 200 and exactly
+`{ tenantId, userId, sessionId }` for a valid user session, HTTP 401 for invalid internal or session
+credentials, or HTTP 503 when the internal secret is unconfigured. Identity headers such as
+`x-tenant-id` and `x-user-id` are ignored. Responses are not cacheable. Fleet/ERM adoption belongs
+to UI v2 A0b; these services do not yet accept the new user sessions. The existing explicit
+development demo login continues to work for the current admin and Tenant/Branch APIs.
+
 ## Apollo Router
 
 The Gateway workspace includes a standalone [Apollo Router 2.18.0](https://github.com/apollographql/router/releases/tag/v2.18.0)

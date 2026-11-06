@@ -8,22 +8,34 @@ import { TenantsModule } from './modules/tenants/tenants.module.js';
 import { BranchesModule } from './modules/branches/branches.module.js';
 
 import { HealthController } from './health/health.controller.js';
+import { AuthModule } from './auth/auth.module.js';
+import { AuthService } from './auth/auth.service.js';
+import { UsersModule } from './modules/users/users.module.js';
+import { DateTimeScalar } from './graphql/scalars.js';
 
 @Module({
   imports: [
     BranchesModule,
     TenantsModule,
-    GraphQLModule.forRoot<ApolloFederationDriverConfig>({
+    AuthModule,
+    UsersModule,
+    GraphQLModule.forRootAsync<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
-      typeDefs: ['modules/branches/branches', 'modules/tenants/tenants'].map((path) =>
-        readFileSync(new URL(`./${path}.graphql`, import.meta.url), 'utf8'),
-      ),
-      context: createRequestContext,
-      path: '/graphql',
-      includeStacktraceInErrorResponses: false,
-      autoTransformHttpErrors: false,
-      formatError: formatGraphqlError,
-      plugins: [graphqlDiagnostics],
+      imports: [AuthModule],
+      inject: [AuthService],
+      useFactory: (auth: AuthService) => ({
+        typeDefs: ['modules/branches/branches', 'modules/tenants/tenants'].map((path) =>
+          readFileSync(new URL(`./${path}.graphql`, import.meta.url), 'utf8'),
+        ),
+        context: (http: Parameters<typeof createRequestContext>[0]) =>
+          createRequestContext(http, auth),
+        resolvers: { DateTime: DateTimeScalar },
+        path: '/graphql',
+        includeStacktraceInErrorResponses: false,
+        autoTransformHttpErrors: false,
+        formatError: formatGraphqlError,
+        plugins: [graphqlDiagnostics],
+      }),
     }),
   ],
   controllers: [HealthController],

@@ -15,3 +15,40 @@ type Mutation {
 extend type Query {
   tenants: [Tenant!]!
 }
+
+"ISO-8601 instant with an offset; serialized in UTC with milliseconds."
+scalar DateTime
+
+type User {
+  id: ID!
+  tenant: Tenant!
+  name: String!
+  email: String!
+  active: Boolean!
+  lastSignInAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type SignInPayload {
+  token: String!
+  user: User!
+  tenant: Tenant!
+  expiresAt: DateTime!
+}
+
+extend type Query {
+  me: User!
+  users: [User!]!
+}
+
+extend type Mutation {
+  signIn(email: String!, password: String!): SignInPayload!
+  signOut: Boolean!
+  updateProfile(name: String!, email: String!): User!
+  changePassword(currentPassword: String!, newPassword: String!): Boolean!
+  createUser(name: String!, email: String!, password: String!): User!
+  updateUser(id: ID!, name: String!, email: String!): User!
+  deactivateUser(id: ID!): User!
+  reactivateUser(id: ID!): User!
+}

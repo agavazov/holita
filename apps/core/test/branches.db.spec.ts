@@ -3,20 +3,24 @@ import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { issueDemoToken } from '../src/auth/demo-auth.js';
+import { hashPassword } from '../src/auth/password.js';
 import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { createTestDatabase } from './test-database.js';
 import { branchSeeds, seedBranches } from '../prisma/seed-data.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
+const internalAuthToken = 'core-test-internal-auth-token-only-32-characters';
 
 describe('Branches GraphQL with PostgreSQL', () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;
   let closeDatabase: (() => Promise<void>) | undefined;
   let app: INestApplication | undefined;
   let url: string;
+  const previousInternalAuthToken = process.env['CORE_INTERNAL_AUTH_TOKEN'];
 
   beforeAll(async () => {
+    process.env['CORE_INTERNAL_AUTH_TOKEN'] = internalAuthToken;
     database = await createTestDatabase();
     closeDatabase = database.close;
     const module = await Test.createTestingModule({ imports: [AppModule] })
@@ -28,6 +32,11 @@ describe('Branches GraphQL with PostgreSQL', () => {
     url = `${await app.getUrl()}/graphql`;
   });
   afterAll(async () => {
+    if (previousInternalAuthToken === undefined) {
+      delete process.env['CORE_INTERNAL_AUTH_TOKEN'];
+    } else {
+      process.env['CORE_INTERNAL_AUTH_TOKEN'] = previousInternalAuthToken;
+    }
     try {
       await app?.close();
     } finally {
@@ -57,7 +66,66 @@ describe('Branches GraphQL with PostgreSQL', () => {
     return body;
   }
 
-  it('scopes discovery, direct lookup and federation references to the session tenant', async () => {
+  async function accountQuery(
+    source: string,
+    variables: Record<string, unknown> = {},
+    token?: string,
+    identityHeaders: Record<string, string> = {},
+  ): Promise<unknown> {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(token === undefined ? {} : { authorization: `Bearer ${token}` }),
+        ...identityHeaders,
+      },
+      body: JSON.stringify({ query: source, variables }),
+      signal: AbortSignal.timeout(5000),
+    });
+    return response.json();
+  }
+
+  async function signIn(email: string, password: string): Promise<string> {
+    const body = await accountQuery(
+      `mutation($email:String!,$password:String!){
+        signIn(email:$email,password:$password){
+          token expiresAt user{id email lastSignInAt tenant{id}} tenant{id}
+        }
+      }`,
+      { email, password },
+    );
+    expect(body).toMatchObject({
+      data: {
+        signIn: {
+          token: expect.any(String),
+          expiresAt: expect.stringMatching(/Z$/),
+          user: {
+            email: email.trim().toLowerCase(),
+            lastSignInAt: expect.stringMatching(/Z$/),
+          },
+        },
+      },
+    });
+    if (body === null || typeof body !== 'object' || !('data' in body)) {
+      throw new Error('Missing sign-in response');
+    }
+    const data = body.data;
+    if (data === null || typeof data !== 'object' || !('signIn' in data)) {
+      throw new Error('Missing sign-in payload');
+    }
+    const payload = data.signIn;
+    if (
+      payload === null ||
+      typeof payload !== 'object' ||
+      !('token' in payload) ||
+      typeof payload.token !== 'string'
+    ) {
+      throw new Error('Missing session token');
+    }
+    return payload.token;
+  }
+
+  it('scopes Branches and users to verified Tenant sessions and rejects revoked sessions', async () => {
     const otherTenant = await database.client.tenant.create({ data: { name: 'Test tenant' } });
     const foreign = await database.client.branch.create({
       data: { tenantId: otherTenant.id, name: 'Foreign branch' },
@@ -80,6 +148,154 @@ describe('Branches GraphQL with PostgreSQL', () => {
     });
     expect(await response.json()).toMatchObject({
       errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+    });
+
+    const password = `Account-test-${randomUUID()}`;
+    const passwordHash = await hashPassword(password);
+    const owner = await database.client.user.create({
+      data: {
+        tenantId,
+        name: 'First user',
+        email: `first-${randomUUID()}@example.test`,
+        passwordHash,
+      },
+    });
+    const foreignUser = await database.client.user.create({
+      data: {
+        tenantId: otherTenant.id,
+        name: 'Other Tenant user',
+        email: `foreign-${randomUUID()}@example.test`,
+        passwordHash,
+      },
+    });
+    const token = await signIn(`  ${owner.email.toUpperCase()}  `, password);
+    const spoofedIdentity = { 'x-tenant-id': otherTenant.id, 'x-user-id': foreignUser.id };
+    expect(await accountQuery('{me{id tenant{id}} users{id}}', {}, token, spoofedIdentity)).toEqual(
+      {
+        data: { me: { id: owner.id, tenant: { id: tenantId } }, users: [{ id: owner.id }] },
+      },
+    );
+    for (const mutation of [
+      'updateUser(id:$id,name:"Blocked",email:"blocked@example.test")',
+      'deactivateUser(id:$id)',
+      'reactivateUser(id:$id)',
+    ]) {
+      expect(
+        await accountQuery(`mutation($id:ID!){${mutation}{id}}`, { id: foreignUser.id }, token),
+      ).toMatchObject({ data: null, errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    }
+    expect(await database.client.user.findUniqueOrThrow({ where: { id: foreignUser.id } })).toEqual(
+      foreignUser,
+    );
+    expect(await accountQuery('{users{id}}', {}, issueDemoToken(tenantId))).toMatchObject({
+      errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+    });
+
+    const email = `colleague-${randomUUID()}@example.test`;
+    expect(
+      await accountQuery(
+        `mutation($name:String!,$email:String!,$password:String!){
+          createUser(name:$name,email:$email,password:$password){name email active tenant{id}}
+        }`,
+        { name: 'Colleague', email: `  ${email.toUpperCase()}  `, password },
+        token,
+      ),
+    ).toEqual({
+      data: { createUser: { name: 'Colleague', email, active: true, tenant: { id: tenantId } } },
+    });
+    const colleague = await database.client.user.findUniqueOrThrow({ where: { email } });
+    const colleagueToken = await signIn(email, password);
+    expect(
+      await accountQuery(
+        'mutation($id:ID!,$email:String!){updateUser(id:$id,name:"Updated first user",email:$email){id name}}',
+        { id: owner.id, email: owner.email },
+        colleagueToken,
+      ),
+    ).toEqual({ data: { updateUser: { id: owner.id, name: 'Updated first user' } } });
+    expect(await accountQuery('{users{id}}', {}, colleagueToken)).toMatchObject({
+      data: { users: expect.arrayContaining([{ id: owner.id }, { id: colleague.id }]) },
+    });
+
+    const verifyUrl = new URL('/internal/auth/verify', url);
+    const verified = await fetch(verifyUrl, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'x-core-internal-token': internalAuthToken,
+        ...spoofedIdentity,
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+    expect(verified.status).toBe(200);
+    const currentSession = await database.client.session.findFirstOrThrow({
+      where: { tenantId, userId: owner.id, revokedAt: null },
+    });
+    expect(await verified.json()).toEqual({
+      tenantId,
+      userId: owner.id,
+      sessionId: currentSession.id,
+    });
+    for (const [internalToken, sessionToken] of [
+      ['incorrect-internal-token', token],
+      [internalAuthToken, issueDemoToken(tenantId)],
+      [internalAuthToken, 'invalid-session-token'],
+    ] satisfies [string, string][]) {
+      const rejected = await fetch(verifyUrl, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${sessionToken}`,
+          'x-core-internal-token': internalToken,
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+      expect(rejected.status).toBe(401);
+    }
+
+    const otherSessionToken = await signIn(owner.email, password);
+    const newPassword = `Changed-password-${randomUUID()}`;
+    expect(
+      await accountQuery(
+        `mutation($current:String!,$next:String!){
+          changePassword(currentPassword:$current,newPassword:$next)
+        }`,
+        { current: password, next: newPassword },
+        token,
+      ),
+    ).toEqual({ data: { changePassword: true } });
+    expect(await accountQuery('{me{id}}', {}, otherSessionToken)).toMatchObject({
+      errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+    });
+    expect(await accountQuery('{me{id}}', {}, token)).toEqual({ data: { me: { id: owner.id } } });
+    const signedOutToken = await signIn(owner.email, newPassword);
+    expect(await accountQuery('mutation{signOut}', {}, signedOutToken)).toEqual({
+      data: { signOut: true },
+    });
+    expect(await accountQuery('{me{id}}', {}, signedOutToken)).toMatchObject({
+      errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+    });
+    expect(
+      await accountQuery(
+        'mutation($id:ID!){deactivateUser(id:$id){id active}}',
+        { id: colleague.id },
+        token,
+      ),
+    ).toEqual({ data: { deactivateUser: { id: colleague.id, active: false } } });
+    expect(await accountQuery('{me{id}}', {}, colleagueToken)).toMatchObject({
+      errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+    });
+    expect(
+      await accountQuery(
+        'mutation($id:ID!){reactivateUser(id:$id){id active}}',
+        { id: colleague.id },
+        token,
+      ),
+    ).toEqual({ data: { reactivateUser: { id: colleague.id, active: true } } });
+    expect(await accountQuery('{me{id}}', {}, colleagueToken)).toMatchObject({
+      errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+    });
+    const reactivatedToken = await signIn(email, password);
+    expect(await accountQuery('{me{id}}', {}, reactivatedToken)).toEqual({
+      data: { me: { id: colleague.id } },
     });
   });
 
