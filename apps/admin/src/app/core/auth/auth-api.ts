@@ -7,7 +7,7 @@ import {
   AdminMeDocument,
   AdminSignInDocument,
   AdminSignOutDocument,
-} from '../../../generated/graphql/operations';
+} from '../../../generated/graphql/startup-operations';
 import type { Language } from '../../i18n/messages';
 import { AdminConfig } from '../config/admin-config';
 import { graphqlOptions } from '../graphql/graphql-options';

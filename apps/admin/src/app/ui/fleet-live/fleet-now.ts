@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { injectFleetFormat } from '../format/fleet-format';
-import { formatDateTime } from '../format/format';
 import { interpolate } from '../i18n/messages';
 import { UI_LANGUAGE } from '../ui-language';
 import { fleetLiveText, type FleetLiveDevice, type FleetLiveMode } from './fleet-live';
@@ -47,12 +46,5 @@ export class FleetNow {
     }
     return event.speedKmh === 0 || event.engineOn === false ? text.parked : text.unknownActivity;
   });
-  protected readonly exact = computed(() =>
-    formatDateTime(
-      this.event()?.eventTime,
-      this.language(),
-      this.units.preferences().timeZone,
-      true,
-    ),
-  );
+  protected readonly exact = computed(() => this.units.dateTime(this.event()?.eventTime, true));
 }

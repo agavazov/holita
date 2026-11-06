@@ -161,15 +161,23 @@
               </div>
             </section>
           </div>
-          <holita-location-map
-            [language]="language()"
-            [title]="text().position"
-            [records]="mapRecords()"
-            [asOf]="deviceUpdatedAt()"
-            [updatedAt]="deviceUpdatedAt()"
-            [timeZone]="fmt.preferences().timeZone"
-            [dateFormat]="fmt.preferences().dateFormat"
-          />
+          @defer (on immediate) {
+            <holita-location-map
+              [language]="language()"
+              [title]="text().position"
+              [records]="mapRecords()"
+              [asOf]="deviceUpdatedAt()"
+              [updatedAt]="deviceUpdatedAt()"
+              [timeZone]="fmt.preferences().timeZone"
+              [dateFormat]="fmt.preferences().dateFormat"
+            />
+          } @placeholder {
+            <section class="app-card" [attr.aria-label]="text().position">
+              <h2 class="app-card__title">{{ text().position }}</h2>
+              <p-skeleton width="16rem" height="1rem" />
+              <p-skeleton height="24rem" />
+            </section>
+          }
         }
         @case ('problems') {
           <p class="app-muted">
@@ -733,11 +741,11 @@
           <time [title]="fmt.utc(detail.value.receivedAt)">{{
             fmt.dateTime(detail.value.receivedAt, true)
           }}</time>
-          @if (frameRequest(detail.value); as request) {
+          @if (detail.value.acknowledgement?.commandRequestId; as requestId) {
             <a
               class="app-link"
               [routerLink]="deviceLink('commands')"
-              [queryParams]="{ request: request.id }"
+              [queryParams]="{ request: requestId }"
               (click)="this.detail.set(null)"
               >{{ text().detail.openRequest }}</a
             >

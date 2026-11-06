@@ -401,6 +401,9 @@ graphqlFixture(
             {
               __typename: 'ErmFrame',
               id: 'command-confirmation-frame',
+              acknowledgement: acknowledgement
+                ? { ...acknowledgement, commandRequestId: acknowledged.id }
+                : null,
               direction: 'DEVICE',
               receivedAt: acknowledgement?.receivedAt ?? '2026-10-20T07:45:12.000Z',
               command: '02',
@@ -411,7 +414,7 @@ graphqlFixture(
               rawHex: acknowledged.receivedFrameHex ?? '',
             },
             ...(acknowledged.sentFrame
-              ? [{ ...acknowledged.sentFrame, __typename: 'ErmFrame' }]
+              ? [{ ...acknowledged.sentFrame, acknowledgement: null, __typename: 'ErmFrame' }]
               : []),
           ] satisfies WithTypename<
             AdminControlCenterFramesQuery['fleetDevice']['ermFrames']['items']

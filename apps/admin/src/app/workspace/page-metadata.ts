@@ -54,6 +54,23 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
         }
       : null;
   }
+  if (resource === 'vehicles' && recordId && tab && tab !== 'edit') {
+    const vehicleTab =
+      tab === 'overview'
+        ? text.overview
+        : tab === 'problems'
+          ? text.problems
+          : tab === 'trips'
+            ? text.trips
+            : tab === 'maintenance'
+              ? text.maintenance
+              : tab === 'commands'
+                ? text.commands
+                : null;
+    return vehicleTab
+      ? { group: '', page: text.vehicles, pageLink: [...fleet, 'vehicles'], tab: vehicleTab }
+      : null;
+  }
   if (resource !== 'devices' || !recordId || !tab || tab === 'edit') {
     return null;
   }

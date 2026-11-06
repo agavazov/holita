@@ -45,6 +45,82 @@ export async function signOut(page: Page): Promise<void> {
 
 type FederationFixture = Awaited<ReturnType<typeof createFederationFixture>>;
 
+interface SmokeAccount {
+  readonly email: string;
+  readonly password: string;
+  readonly session: {
+    readonly token: string;
+    readonly expiresAt: string;
+    readonly tenant: { readonly id: string; readonly name: string };
+  };
+}
+
+async function createAccount(
+  federation: FederationFixture,
+  tenantId: string,
+): Promise<SmokeAccount> {
+  const bootstrap = await federation.createUserSession(tenantId);
+  const email = `browser-${randomUUID()}@example.test`;
+  const password = randomUUID();
+  const created = await fetch(federation.url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${bootstrap.token}` },
+    body: JSON.stringify({
+      query:
+        'mutation($email:String!,$password:String!){createUser(name:"Browser user",email:$email,password:$password){id}}',
+      variables: { email, password },
+    }),
+  });
+  expect(await created.json()).toHaveProperty('data.createUser.id');
+  const signedIn = await fetch(federation.url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      query:
+        'mutation($email:String!,$password:String!){signIn(email:$email,password:$password){token expiresAt tenant{id name}}}',
+      variables: { email, password },
+    }),
+  });
+  const body: unknown = await signedIn.json();
+  if (
+    !body ||
+    typeof body !== 'object' ||
+    !('data' in body) ||
+    !body.data ||
+    typeof body.data !== 'object' ||
+    !('signIn' in body.data)
+  ) {
+    throw new Error('Missing browser sign-in result.');
+  }
+  const session = body.data.signIn;
+  if (
+    !session ||
+    typeof session !== 'object' ||
+    !('token' in session) ||
+    typeof session.token !== 'string' ||
+    !('expiresAt' in session) ||
+    typeof session.expiresAt !== 'string' ||
+    !('tenant' in session) ||
+    !session.tenant ||
+    typeof session.tenant !== 'object' ||
+    !('id' in session.tenant) ||
+    typeof session.tenant.id !== 'string' ||
+    !('name' in session.tenant) ||
+    typeof session.tenant.name !== 'string'
+  ) {
+    throw new Error('Invalid browser session.');
+  }
+  return {
+    email,
+    password,
+    session: {
+      token: session.token,
+      expiresAt: session.expiresAt,
+      tenant: { id: session.tenant.id, name: session.tenant.name },
+    },
+  };
+}
+
 interface Branch {
   readonly id: string;
   readonly name: string;
@@ -56,21 +132,23 @@ export const test = base.extend<
       url: string;
       gatewayUrl: string;
       demoSession: FederationFixture['demoSession'];
+      account: SmokeAccount;
+      createAccount: (tenantId: string) => Promise<SmokeAccount>;
       branchA: Branch;
       branchB: Branch;
     };
-    demoSignedIn: boolean;
+    signedIn: boolean;
   },
   { backend: { url: string; federation: FederationFixture } }
 >({
-  demoSignedIn: [true, { option: true }],
-  page: async ({ page, app, demoSignedIn }, use) => {
-    if (demoSignedIn) {
+  signedIn: [true, { option: true }],
+  page: async ({ page, app, signedIn }, use) => {
+    if (signedIn) {
       await page.addInitScript(
         (session) => {
-          sessionStorage.setItem('holita.admin.demo-session', JSON.stringify(session));
+          sessionStorage.setItem('holita.admin.session', JSON.stringify(session));
         },
-        { ...app.demoSession, branchId: app.branchA.id },
+        { ...app.account.session, branchId: app.branchA.id },
       );
     }
     await use(page);
@@ -90,6 +168,8 @@ export const test = base.extend<
       url: backend.url,
       gatewayUrl: federation.url,
       demoSession,
+      account: await createAccount(federation, demoSession.tenant.id),
+      createAccount: (tenantId) => createAccount(federation, tenantId),
       branchA,
       branchB,
     });

@@ -264,16 +264,24 @@
             {{ map.hasMore ? mapProgress() : '' }}
           </p>
         }
-        <holita-location-map
-          [language]="language()"
-          [title]="text().map.title"
-          [records]="mapRecords()"
-          [asOf]="map.asOf"
-          [updatedAt]="map.liveAsOf"
-          [timeZone]="units.preferences().timeZone"
-          [dateFormat]="units.preferences().dateFormat"
-          (recordSelect)="vehicleSelect.emit($event.id)"
-        />
+        @defer (on immediate) {
+          <holita-location-map
+            [language]="language()"
+            [title]="text().map.title"
+            [records]="mapRecords()"
+            [asOf]="map.asOf"
+            [updatedAt]="map.liveAsOf"
+            [timeZone]="units.preferences().timeZone"
+            [dateFormat]="units.preferences().dateFormat"
+            (recordSelect)="vehicleSelect.emit($event.id)"
+          />
+        } @placeholder {
+          <section class="app-card overview__map-placeholder" aria-busy="true">
+            <h2 class="app-card__title">{{ text().map.title }}</h2>
+            <p role="status">{{ text().map.loading }}</p>
+            <p-skeleton height="24rem" />
+          </section>
+        }
         @if (!mapRecords().length && !mapLoading()) {
           <p role="status">{{ text().map.empty }}</p>
         }
@@ -352,38 +360,66 @@
   <div class="overview__charts">
     <section class="app-view">
       <p class="app-muted">{{ text().connection.hint }}</p>
-      <holita-chart-panel
-        kind="donut"
-        [title]="text().connection.title"
-        [points]="connectionPoints()"
-        [series]="connectionSeries()"
-        [summary]="connectionSummary()"
-        [unit]="text().connection.vehicles"
-        [timeZone]="units.preferences().timeZone"
-        [dateFormat]="units.preferences().dateFormat"
-        [asOf]="summary()?.vehicles.liveAsOf ?? null"
-        [loading]="loading() && !data()"
-        [drilldown]="true"
-        (pointSelect)="selectConnection($event)"
-      />
+      @defer (on immediate) {
+        <holita-chart-panel
+          kind="donut"
+          [title]="text().connection.title"
+          [points]="connectionPoints()"
+          [series]="connectionSeries()"
+          [summary]="connectionSummary()"
+          [unit]="text().connection.vehicles"
+          [timeZone]="units.preferences().timeZone"
+          [dateFormat]="units.preferences().dateFormat"
+          [asOf]="summary()?.vehicles.liveAsOf ?? null"
+          [loading]="loading() && !data()"
+          [drilldown]="true"
+          (pointSelect)="selectConnection($event)"
+        />
+      } @placeholder {
+        <section class="app-card" aria-busy="true">
+          <div class="app-card__header">
+            <h2 class="app-card__title">{{ text().connection.title }}</h2>
+          </div>
+          <p-skeleton height="1rem" />
+          <p class="app-muted">{{ connectionSummary() }}</p>
+          <p-skeleton height="17rem" />
+          <p-skeleton height="1rem" />
+          <p-skeleton height="1rem" />
+          <p-skeleton height="1rem" />
+        </section>
+      }
     </section>
     <section class="app-view">
       <p class="app-muted">{{ text().distance.hint }}</p>
-      <holita-chart-panel
-        kind="bar"
-        [title]="text().distance.title"
-        [points]="distancePoints()"
-        [series]="distanceSeries()"
-        [summary]="text().distance.summary"
-        [unit]="units.distanceUnit()"
-        [period]="distancePeriod()"
-        [timeZone]="units.preferences().timeZone"
-        [dateFormat]="units.preferences().dateFormat"
-        [asOf]="data()?.fleetDailyDistance.dataAsOf ?? null"
-        [loading]="loading() && !data()"
-        [drilldown]="true"
-        (pointSelect)="distanceSelect($event)"
-      />
+      @defer (on immediate) {
+        <holita-chart-panel
+          kind="bar"
+          [title]="text().distance.title"
+          [points]="distancePoints()"
+          [series]="distanceSeries()"
+          [summary]="text().distance.summary"
+          [unit]="units.distanceUnit()"
+          [period]="distancePeriod()"
+          [timeZone]="units.preferences().timeZone"
+          [dateFormat]="units.preferences().dateFormat"
+          [asOf]="data()?.fleetDailyDistance.dataAsOf ?? null"
+          [loading]="loading() && !data()"
+          [drilldown]="true"
+          (pointSelect)="distanceSelect($event)"
+        />
+      } @placeholder {
+        <section class="app-card" aria-busy="true">
+          <div class="app-card__header">
+            <h2 class="app-card__title">{{ text().distance.title }}</h2>
+          </div>
+          <p-skeleton height="1rem" />
+          <p class="app-muted">{{ text().distance.summary }}</p>
+          <p-skeleton height="17rem" />
+          <p-skeleton height="1rem" />
+          <p-skeleton height="1rem" />
+          <p-skeleton height="1rem" />
+        </section>
+      }
       @if (!distanceData().length && !loading()) {
         <p class="app-muted">{{ text().distance.empty }}</p>
       }

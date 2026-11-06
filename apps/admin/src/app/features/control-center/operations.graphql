@@ -230,6 +230,14 @@ query AdminControlCenterFrames($id: ID!, $input: ErmDevicePageInput) {
         partial
         displayText
         rawHex
+        acknowledgement {
+          commandId
+          commandRequestId
+          commandReference
+          replyReference
+          resultCode
+          receivedAt
+        }
       }
     }
   }

@@ -131,7 +131,7 @@ navigation, Branch/language/account context and page title. Navigation has no bu
 The document title is `<page> · holita`; login uses the localized Sign in title.
 
 - The sidebar lists Dashboard, Vehicles, Devices, Drivers and Maintenance, then Settings with
-  General and Vehicle groups. Users appears only when its page is available. Dashboard opens
+  General, Vehicle groups and Tenant-wide Users. Dashboard opens
   Overview; its Problems and Trips tabs keep Dashboard selected. Device detail belongs to Devices.
 - Desktop navigation collapses to a rail, persisted as `holita.admin.sidebar`. Rail links retain
   accessible names/group labels and hover/focus tooltips. The footer identifies holita and Tenant.
@@ -140,24 +140,26 @@ The document title is `<page> · holita`; login uses the localized Sign in title
 - Keep the topbar one row, with Branch, language and account menus. Branch switching keeps the
   supported section/tab and clears record/list context; language switching keeps URL context.
   No Branch disables its menu with truthful loading/empty/unknown text.
-- Page metadata supplies Dashboard tab and Device titles/breadcrumbs and reserves account/feed
-  destinations without adding unavailable pages or links. Breadcrumb groups are labels, pages are
+- Page metadata supplies Dashboard tab, Device, Profile, Users and Notifications titles/breadcrumbs.
+  Breadcrumb groups are labels, pages are
   links when a record is open, and the final crumb uses `aria-current="page"`. Record pages register
   names/contextual return URLs with `injectPageRecord`.
   Long labels truncate with full text available. Page heading remains when narrow screens hide crumbs.
 - Provide skip link, header, main, labelled navigation and group headings. Active links carry
   `aria-current`. Decorative icons are hidden from assistive technology. A page change focuses its
   title/main; drawer/tab navigation must not steal focus from the current form.
-- Account actions include theme and Sign out. The live Demo notification bell explains that no
-  delivery provider exists; do not fabricate a feed or unread count from Fleet counts.
-- Login has its own layout, Tenant then Branch selection, explicit errors/Retry and language/theme
-  controls. Session/Branch/workspace behavior belongs in [Discocan development](discocan/development.md#demo-tenant-login).
+- Account actions include Profile, theme and Sign out. The workspace supplies the bell's persisted
+  Branch feed, unread count, loading/error state, read actions and Notifications link. Demo sessions
+  display the feed with read actions disabled. The shell performs no notification queries.
+- Login has its own hero/form layout, email/password then fleet selection, explicit errors/Retry
+  and language/theme controls. Development demo login is a separate development-build action.
+  Session/Branch/workspace behavior belongs in [Discocan development](discocan/development.md#user-sessions).
 
 ### Texts and languages
 
 Routes start with `/bg` or `/en`; unknown languages redirect to Bulgarian. Use BG/EN catalogs
 for shell, PrimeNG texts, patterns and connected features. Preserve key/placeholder parity.
-PrimeNG uses localized calendar/overlay labels, `dd.mm.yy` and Monday first. Source record text
+PrimeNG uses localized calendar/overlay labels, the saved Branch date format and Monday first. Source record text
 is not translated. Storybook uses the same texts with a language toolbar.
 
 ## Patterns (`src/app/ui`)
@@ -193,7 +195,10 @@ Numbers use `.app-num`, technical values `.app-mono`, statuses `p-tag`/`toneSeve
 dots. `.app-plate` renders a bounded monospace licence plate with an EU band; set `data-country`
 only when the actual registration country is known. It works in lists, details and map popups.
 Format through `ui/format`; preserve null and zero. Fleet read values use
-`injectFleetFormat`; explicitly labelled canonical inputs/filters keep canonical units. Odometer
+`injectFleetFormat`; `dateTime`/`dateTimeCell` use the Branch zone/date format, `dateOnly` preserves
+calendar dates, ranges use `dateRange`/`dateTimeRange`, and `utc` provides exact instant tooltips.
+Editors use `datePickerFormat()` and the shared date-time input adapter.
+Explicitly labelled canonical inputs/filters keep canonical units. Odometer
 entry converts the configured display unit back to km while preserving an unchanged baseline.
 Use shared zoned-time helpers for instants, with valid gap/overlap handling; date-only values
 stay calendar dates. Use the configured Branch zone, never an assumed browser zone.
@@ -342,8 +347,9 @@ falling back to the page title. Keep loading, invalid ID, missing record and err
 Use the shared full-page settings view, typed forms, titled cards and sticky save/discard bar.
 Its partial-save and persisted Discard behavior is documented in
 [the operator guide](discocan/development.md#fleet-operator-workflows). Gate business views on a
-successful scoped preferences read with Retry. Notification controls stay disabled/Demo;
-the speed reference generates no alert or device command.
+successful scoped preferences read with Retry. General settings saves the Branch date format,
+time zone, units, thresholds and notification retention; external delivery toggles are absent.
+The speed reference generates no alert or device command.
 
 ## Storybook review
 

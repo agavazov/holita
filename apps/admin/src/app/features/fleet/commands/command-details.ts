@@ -44,6 +44,7 @@ export class CommandDetails {
   readonly language = input.required<Language>();
   readonly target = input.required<string>();
   readonly cancelling = input(false);
+  readonly canCancel = input(true);
   readonly error = input<string | null>(null);
   readonly closed = output();
   readonly cancelRequest = output<CommandRequest>();

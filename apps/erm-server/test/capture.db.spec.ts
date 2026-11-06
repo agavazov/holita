@@ -676,7 +676,7 @@ it('persists captured connection lifecycle and raw frames through the production
     const neverConnectedDeviceId = randomUUID();
     const overdueDeviceId = randomUUID();
     const healthDeviceId = randomUUID();
-    const fleetDeviceImeis = new Map([
+    const fleetDeviceImeis = new Map<string, string>([
       [deviceId, unitId],
       [neverConnectedDeviceId, '123456789012345'],
     ]);
@@ -1046,12 +1046,14 @@ it('persists captured connection lifecycle and raw frames through the production
               command: command.command,
               reference: recorded.reference,
               checksum: 'OK',
-              raw: buildServerFrame(
-                unitId,
-                command.command,
-                recorded.reference,
-                command.fields,
-              ).subarray(0, -2),
+              raw: Uint8Array.from(
+                buildServerFrame(
+                  unitId,
+                  command.command,
+                  recorded.reference,
+                  command.fields,
+                ).subarray(0, -2),
+              ),
             },
           });
         }
@@ -1632,6 +1634,149 @@ it('persists captured connection lifecycle and raw frames through the production
       },
       receivedFrameHex: acknowledgedRequest?.receivedFrameHex,
       configurationVerification: null,
+    });
+    if (!acknowledgedRequest?.receivedFrameHex) {
+      throw new Error('Expected captured acknowledgement evidence');
+    }
+    // Frame capture and command completion have independent clocks. Older requests stay linked
+    // even after they leave the recent-command history window.
+    const confirmationAt = new Date();
+    const confirmationFrame = await database.client.ermFrame.create({
+      data: {
+        connectionId: stored.id,
+        unitId,
+        direction: 'DEVICE',
+        receivedAt: confirmationAt,
+        command: '02',
+        reference: '8063',
+        checksum: 'OK',
+        raw: Buffer.from(acknowledgedRequest.receivedFrameHex, 'hex'),
+      },
+    });
+    const dataConfirmations: {
+      frameId: bigint;
+      commandId: string;
+      reference: string;
+      replyReference: string;
+    }[] = [];
+    // A successful read ACK is still evidence when the command waits for its data reply,
+    // and after that data reply replaces the ACK in the transport response.
+    for (const [index, scenario] of [
+      { command: '03', status: 'SENT' },
+      { command: '45', status: 'ANSWERED' },
+    ].entries()) {
+      const commandReference = String(900009000 + index);
+      const replyReference = String(8600 + index);
+      const command = await database.client.ermCommand.create({
+        data: {
+          connectionId: stored.id,
+          unitId,
+          reference: commandReference,
+          command: scenario.command,
+          fields: [],
+          status: scenario.status === 'SENT' ? 'SENT' : 'ANSWERED',
+          sentAt: new Date(confirmationAt.getTime() - 1000),
+          answeredAt: scenario.status === 'ANSWERED' ? confirmationAt : null,
+          response:
+            scenario.status === 'ANSWERED' ? Buffer.from(`$SLU${unitId},45,8602,0774,120`) : null,
+        },
+      });
+      const body = `SLU${unitId},02,${replyReference},${commandReference},01`;
+      const sum = [...Buffer.from(body)].reduce((total, byte) => total + byte, 0);
+      const frame = await database.client.ermFrame.create({
+        data: {
+          connectionId: stored.id,
+          unitId,
+          direction: 'DEVICE',
+          receivedAt: confirmationAt,
+          command: '02',
+          reference: replyReference,
+          checksum: 'OK',
+          raw: Buffer.from(`$${body}*${(sum % 256).toString(16).toUpperCase().padStart(2, '0')}`),
+        },
+      });
+      dataConfirmations.push({
+        frameId: frame.id,
+        commandId: command.id,
+        reference: commandReference,
+        replyReference,
+      });
+    }
+    const recentRequestIds = Array.from({ length: 51 }, () => randomUUID());
+    await database.client.ermCommandRequest.createMany({
+      data: recentRequestIds.map((id) => ({
+        id,
+        tenantId,
+        branchId,
+        deviceId,
+        unitId,
+        actorId: 'integration-test',
+        intent: 'Newer cancelled request',
+        action: 'READ_STATUS',
+        status: 'CANCELLED',
+        createdAt: confirmationAt,
+        expiresAt: confirmationAt,
+        completedAt: confirmationAt,
+      })),
+    });
+    const frameContract = await graphql({
+      schema,
+      source: `query($representations: [_Any!]!) {
+        _entities(representations: $representations) { ... on FleetDevice {
+          ermFrames(input: { pageSize: 25 }) { items { id acknowledgement {
+            commandId commandRequestId commandReference replyReference resultCode receivedAt
+          } } }
+          ermCommandRequests { id }
+        } }
+      }`,
+      variableValues: {
+        representations: [{ __typename: 'FleetDevice', id: deviceId, imei: unitId }],
+      },
+      contextValue: { ...scopedContext },
+    });
+    expect(frameContract.errors).toBeUndefined();
+    expect(frameContract.data?.['_entities']).toMatchObject([
+      {
+        ermFrames: {
+          items: expect.arrayContaining([
+            {
+              id: String(confirmationFrame.id),
+              acknowledgement: {
+                commandId: acknowledgedRequest.commandId,
+                commandRequestId: acknowledgedRequestId,
+                commandReference: '900001001',
+                replyReference: '8063',
+                resultCode: '01',
+                receivedAt: confirmationAt.toISOString(),
+              },
+            },
+            ...dataConfirmations.map((confirmation) => ({
+              id: String(confirmation.frameId),
+              acknowledgement: {
+                commandId: confirmation.commandId,
+                commandRequestId: null,
+                commandReference: confirmation.reference,
+                replyReference: confirmation.replyReference,
+                resultCode: '01',
+                receivedAt: confirmationAt.toISOString(),
+              },
+            })),
+          ]),
+        },
+        ermCommandRequests: recentRequestIds
+          .slice()
+          .sort((left, right) => right.localeCompare(left))
+          .slice(0, 50)
+          .map((id) => ({ id })),
+      },
+    ]);
+    await database.client.ermCommandRequest.deleteMany({ where: { id: { in: recentRequestIds } } });
+    await database.client.ermFrame.delete({ where: { id: confirmationFrame.id } });
+    await database.client.ermFrame.deleteMany({
+      where: { id: { in: dataConfirmations.map((confirmation) => confirmation.frameId) } },
+    });
+    await database.client.ermCommand.deleteMany({
+      where: { id: { in: dataConfirmations.map((confirmation) => confirmation.commandId) } },
     });
     for (const foreignScope of [
       { tenantId: randomUUID(), branchId },

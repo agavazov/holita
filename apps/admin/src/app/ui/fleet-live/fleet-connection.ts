@@ -10,7 +10,7 @@ import {
   type FleetLiveMode,
 } from './fleet-live';
 import { injectFleetFormat } from '../format/fleet-format';
-import { formatDateTime, formatDuration, formatTime } from '../format/format';
+import { formatDuration } from '../format/format';
 import { interpolate } from '../i18n/messages';
 
 @Component({
@@ -55,10 +55,9 @@ export class FleetConnection {
     const device = this.device(),
       state = device?.ermState,
       text = this.text();
-    const zone = this.units.preferences().timeZone;
     if (device?.routing === 'KARMA_BACKUP' && device.routingHealth?.backupSince) {
       return interpolate(text.backupSince, {
-        time: formatDateTime(device.routingHealth.backupSince, this.language(), zone),
+        time: this.units.dateTime(device.routingHealth.backupSince),
       });
     }
     if (!state) {
@@ -80,7 +79,7 @@ export class FleetConnection {
       const next = new Date(
         Date.parse(state.lastFrameAt) + state.health.expectedIntervalSeconds * 1000,
       ).toISOString();
-      return interpolate(text.parkedNext, { time: formatTime(next, this.language(), zone) });
+      return interpolate(text.parkedNext, { time: this.units.time(next) });
     }
     return state.health.lastCloseReason
       ? fleetCloseReason(state.health.lastCloseReason, this.language())

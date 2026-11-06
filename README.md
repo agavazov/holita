@@ -4,7 +4,7 @@ holita is a strict TypeScript npm-workspaces repository with Nx tasks and five h
 applications: Angular admin, native Apollo Router gateway and NestJS core, fleet and erm-server services.
 The admin uses the holita [design system](docs/admin-design-system.md) on PrimeNG and
 Bulgarian/English catalogs.
-Its modules are Fleet management and ERM device-server inspection and controlled settings. Core provides Branch discovery; Gateway
+Its modules are Fleet management and ERM device-server inspection and controlled settings. Core provides users, sessions and Branch discovery; Gateway
 exposes their schema-first federated GraphQL API. PostgreSQL is the only container.
 
 Documentation separates [Discocan fleet telemetry](docs/discocan/README.md) from
@@ -42,7 +42,10 @@ npm run dev
 their watchers. PostgreSQL remains running; `npm run db:down` stops it separately.
 
 If needed, run `nvm install` before `nvm use`. Open [Angular admin](http://127.0.0.1:11000).
-Choose RentalSofia and a Branch on the standalone demo login screen to open Overview. There is no Branch list landing page; the topbar Branch menu switches Branches after login. Switching Branches preserves the current Fleet
+Sign in with your email and password, then choose a fleet to open Dashboard. Provision the
+first Tenant user with the [controlled setup command](docs/development.md#core-users-and-sessions).
+Development builds also expose an explicit Development demo login: choose RentalSofia,
+continue, then select a Branch. The topbar Branch menu switches fleets after login. Switching Branches preserves the current Fleet
 section and resets the list query. Routes and list filters survive reloads and language changes.
 Each mounted workspace owns its Apollo client/cache. Submitted writes settle in their original
 Branch; navigation cancels obsolete reads and callbacks.
@@ -53,17 +56,29 @@ delete/deactivate actions submit one IDs-array operation; partial failures retai
 records for retry and appear in the shared operation toast. See the
 [Vehicles workflow](docs/discocan/development.md#fleet-operator-workflows).
 
-The other live Fleet screens share their Storybook views: Overview, Alerts, Trip log,
-Drivers/scorecards, Maintenance, Devices, Vehicle groups, General settings and Vehicle profile/manual odometer.
+The sidebar contains Dashboard, Vehicles, Devices, Drivers, Maintenance and Settings.
+Dashboard groups Overview, Problems and Trips. Overview combines whole-Branch KPIs, a fleet
+map and interactive charts; Vehicle Overview adds the recorded track. Problems distinguishes actionable alerts from
+recorded device evidence and command outcomes. Vehicle details offer Overview, Trips, Problems,
+Maintenance and Commands; Commands selects an installed Device. Devices open Overview,
+Problems, Trips, Commands, SMS commands, Parameters and Technical details.
 Devices have a required 15-digit IMEI that is globally unique (one physical unit belongs to one
 Branch) and optional scoped Vehicle assignment;
 unassigned Devices are stock. Multiple Devices may share a Vehicle. Editable lists use typed
 route drawers, URL filters and captured clients; supported row/selection actions preserve
-partial failures for retry. Restart and notification delivery are clearly labelled Demo/unavailable.
+partial failures for retry. Readable command history shows queued, waiting and terminal outcomes
+with technical evidence in a modal. SMS cards prepare texts for the selected Device's stored
+SIM/password; sending occurs in the phone app. Unsupported hardware actions remain unavailable.
 General settings saves Branch regional preferences and thresholds plus a separate Core Branch
 rename; partial saves retain the actual persisted values. Read values use the saved display units
-and time zone, while editors keep explicitly labelled canonical entry units. See the
+and time zone/date format, while editors keep explicitly labelled canonical entry units. See the
 [General settings workflow](docs/discocan/development.md#fleet-operator-workflows).
+
+The account menu opens Profile and password changes. Settings → Users manages Tenant-wide
+users; every authenticated Tenant user has equal access. The bell shows the persisted Branch
+notification feed, unread count and read actions, with See all opening the filterable feed.
+Notifications cover alert transitions, recorded device evidence and terminal command outcomes;
+General settings controls retention (seven days by default). Delivery is in-app.
 
 For richer local Fleet data, run `npm run db:seed:fleet-demo` after setup/migrations and with Core
 running. It inserts only missing synthetic Discordia records and preserves existing edits.
@@ -80,8 +95,13 @@ Gateway, Core and Fleet listen on loopback ports 11010, 11011 and 11013; Postgre
 the native Router, Node applications and Storybook together. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
 and seeding are explicit commands. The seed inserts RentalSofia, Discordia and Sandbox Branches, two sample Vehicles and one Device without replacing existing records.
 
-Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). `{ tenants { id name } }` is public for demo login. Sign in through `demoLogin` and send its token as `Authorization: Bearer <token>` to discover Branches. Branch discovery needs no Branch header. Fleet business operations require `x-branch-id`, for example the seeded Discordia Branch
-`10000000-0000-4000-8000-000000000001`. The demo login has no passwords or tenant membership checks and must be replaced before production. Tenant identity is verified from the signed session; business records are scoped by Tenant and Branch. See [demo session configuration and limitations](docs/discocan/development.md#demo-tenant-login).
+Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). Sign in through `signIn(email, password)`
+and send its token as `Authorization: Bearer <token>` to discover Branches. Branch discovery
+needs no Branch header. Fleet business operations require `x-branch-id`, for example the seeded Discordia Branch
+`10000000-0000-4000-8000-000000000001`. Tenant identity is verified from the session;
+business records are scoped by Tenant and Branch. `{ tenants { id name } }` and `demoLogin`
+remain development-only paths with no password or membership checks. See
+[user sessions and demo limitations](docs/discocan/development.md#user-sessions).
 Router exposes `/health` on its separate loopback port 11016; the subgraphs expose `/health`
 on their normal ports. Health is independent of database/downstream availability.
 

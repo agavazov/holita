@@ -1,4 +1,5 @@
 import { computed, inject, InjectionToken, signal, type Signal } from '@angular/core';
+import type { Language } from '../../i18n/messages';
 import type { AdminFleetSettingsFragment } from '../../../generated/graphql/operations';
 import { UI_LANGUAGE } from '../ui-language';
 import { uiMessages } from '../i18n/messages';
@@ -48,9 +49,10 @@ function volumeValue(value: number | null, unit: FleetDisplayPreferences['volume
 }
 
 /** Display conversions; an editor accepting these units converts back to its canonical API units. */
-export function injectFleetFormat() {
-  const preferences = inject(FLEET_DISPLAY);
-  const language = inject(UI_LANGUAGE);
+export function injectFleetFormat(
+  preferences: Signal<FleetDisplayPreferences> = inject(FLEET_DISPLAY),
+  language: Signal<Language> = inject(UI_LANGUAGE),
+) {
   const distanceUnit = computed(
     () => uiMessages[language()].units[preferences().distanceUnit === 'MI' ? 'mi' : 'km'],
   );
@@ -109,8 +111,8 @@ export function injectFleetFormat() {
         seconds,
         preferences().dateFormat,
       ),
-    time: (value: string | null | undefined) =>
-      formatTime(value, language(), preferences().timeZone),
+    time: (value: string | null | undefined, timeZone = preferences().timeZone) =>
+      formatTime(value, language(), timeZone),
     utc: formatUtcInstant,
     distanceUnit,
     speedUnit,

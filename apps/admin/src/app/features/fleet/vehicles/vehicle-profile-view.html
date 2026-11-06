@@ -147,16 +147,24 @@
           <p-tabpanel value="overview">
             <div class="app-tab-content">
               <p class="app-muted">{{ v2().hints.overview }}</p>
-              <holita-location-map
-                [language]="language()"
-                [title]="v2().map"
-                [records]="mapRecords()"
-                [track]="track()"
-                [asOf]="mapAsOf()"
-                [updatedAt]="mapUpdatedAt()"
-                [timeZone]="units.preferences().timeZone"
-                [dateFormat]="units.preferences().dateFormat"
-              />
+              @defer (on immediate) {
+                <holita-location-map
+                  [language]="language()"
+                  [title]="v2().map"
+                  [records]="mapRecords()"
+                  [track]="track()"
+                  [asOf]="mapAsOf()"
+                  [updatedAt]="mapUpdatedAt()"
+                  [timeZone]="units.preferences().timeZone"
+                  [dateFormat]="units.preferences().dateFormat"
+                />
+              } @placeholder {
+                <section class="app-card" [attr.aria-label]="v2().map">
+                  <h2 class="app-card__title">{{ v2().map }}</h2>
+                  <p-skeleton width="16rem" height="1rem" />
+                  <p-skeleton height="24rem" />
+                </section>
+              }
               <p class="app-muted">
                 {{ v2().snapshotTime }}:
                 <time [title]="units.utc(mapAsOf())">{{ units.dateTime(mapAsOf()) }}</time> ·
@@ -691,6 +699,14 @@
                   <p>{{ v2().commands.empty }}</p>
                 }
               </section>
+              @if (selectedDevice(); as selected) {
+                <holita-vehicle-command-history
+                  [branchId]="branchId()"
+                  [language]="language()"
+                  [deviceId]="selected.id"
+                  [target]="selected.imei"
+                />
+              }
             </div>
           </p-tabpanel>
         </p-tabpanels>

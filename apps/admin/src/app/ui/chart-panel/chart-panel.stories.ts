@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { onFrame } from '../../../storybook/story-config';
-import { formatDateOnly } from '../format/format';
+import { injectFleetFormat } from '../format/fleet-format';
 import { UI_LANGUAGE } from '../ui-language';
 import {
   ChartPanel,
@@ -80,11 +80,9 @@ class ChartPanelDemo {
   readonly loading = input(false);
   protected readonly selected = signal<ChartPanelSelection | null>(null);
   private readonly language = inject(UI_LANGUAGE);
+  private readonly format = injectFleetFormat();
   protected readonly text = computed(() => storyMessages[this.language()]);
-  protected readonly period = computed(
-    () =>
-      `${formatDateOnly('2026-10-12', this.language())} – ${formatDateOnly('2026-10-18', this.language())}`,
-  );
+  protected readonly period = computed(() => this.format.dateRange('2026-10-12', '2026-10-18'));
   protected readonly points = computed<readonly ChartPanelPoint[]>(() => {
     if (this.empty()) {
       return [];
@@ -98,7 +96,7 @@ class ChartPanelDemo {
     }
     return Array.from({ length: 7 }, (_value, index) => ({
       id: `2026-10-${String(12 + index)}`,
-      label: formatDateOnly(`2026-10-${String(12 + index)}`, this.language()),
+      label: this.format.dateOnly(`2026-10-${String(12 + index)}`),
     }));
   });
   protected readonly series = computed<readonly ChartPanelSeries[]>(() => {

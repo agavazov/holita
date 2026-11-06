@@ -78,6 +78,17 @@ if (target === 'gateway') {
     true,
     documents.filter((document) => document.location.startsWith(`apps/${target}/`)),
   );
+  // Eager session/Branch services must not pull every feature document into the initial bundle.
+  const startupOperations = new Set([
+    'apps/admin/src/app/features/auth/operations.graphql',
+    'apps/admin/src/app/features/branches/operations.graphql',
+  ]);
+  await generateTypes(
+    'apps/admin/src/generated/graphql/startup-operations.ts',
+    composition.apiSchema,
+    true,
+    documents.filter((document) => startupOperations.has(document.location)),
+  );
 } else if (target === 'core' || target === 'fleet' || target === 'erm-server') {
   const schema = composition.schemas.get(target);
   if (!schema) {

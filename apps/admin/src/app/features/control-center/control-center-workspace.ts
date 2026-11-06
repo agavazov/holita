@@ -92,9 +92,7 @@ export class ControlCenterWorkspace {
     const id = this.params().get('branchId')?.toLowerCase();
     const branch = this.branches.branches()?.find((branch) => branch.id === id);
     const routeTab = this.params().get('tab');
-    const canonicalTab =
-      routeTab === 'alarms' ? 'problems' : routeTab === 'sms' ? 'sms-commands' : routeTab;
-    const tab = deviceTabs.find((tab) => tab === canonicalTab) ?? 'overview';
+    const tab = deviceTabs.find((tab) => tab === routeTab) ?? 'overview';
     return token && branch && this.enabled
       ? [
           {

@@ -30,6 +30,7 @@ import { TelemetryRepository } from './telemetry.repository.js';
 import { edataParameterLabel } from './edata-catalog.js';
 import { CommandRequestsService } from './command-requests.service.js';
 import { FleetClient } from './fleet.client.js';
+import { operatorScope } from './operator-audit.js';
 
 // Fleet's telemetry feed carries only the eData reports it imports, in the shapes agreed for
 // ADR 0008; any other report, or a value outside those shapes, is null.
@@ -566,13 +567,19 @@ export class TelemetryService {
     if (!page) {
       const queries = deviceTelemetryQueries('frames', request.unitIds, input);
       page = this.repository
-        .deviceFrames(queries)
+        .deviceFrames(queries, context.branchId ? operatorScope(context) : null, request.devices)
         .then(
           (rows) =>
             new Map(
               rows.map(({ query, rows: frames }) => [
                 query.unitId,
-                telemetryPage(frames.map(frameView), query),
+                telemetryPage(
+                  frames.map((frame) => ({
+                    ...frameView(frame),
+                    acknowledgement: frame.acknowledgement,
+                  })),
+                  query,
+                ),
               ]),
             ),
         );

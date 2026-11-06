@@ -111,7 +111,7 @@ describe('Telemetry, data clock and odometer readings with PostgreSQL', () => {
   async function query(
     source: string,
     variables: Record<string, unknown> = {},
-    scope = branchId,
+    scope: string = branchId,
     scopeTenant = tenantId,
   ) {
     const response = await fetch(url, {

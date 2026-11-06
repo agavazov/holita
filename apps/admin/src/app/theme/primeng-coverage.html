@@ -132,7 +132,10 @@
         title="Recorded distance"
         unit="km"
         timeZone="UTC"
-        [points]="[{ id: 'monday', label: 'Monday' }, { id: 'tuesday', label: 'Tuesday' }]"
+        [points]="[
+          { id: 'monday', label: 'Monday' },
+          { id: 'tuesday', label: 'Tuesday' },
+        ]"
         [series]="[{ id: 'distance', label: 'Distance', values: [120, 180], category: 'c1' }]"
       />
     </div>

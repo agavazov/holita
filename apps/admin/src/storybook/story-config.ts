@@ -30,6 +30,7 @@ import {
 } from './graphql-fixtures';
 import { clearSession, defaultBranchId, seedSession } from './session-fixtures';
 import './general-settings-fixtures';
+import { notificationFixtures } from './notifications-fixtures';
 
 /** Per-story fixture options, passed as `parameters.holita`. */
 export interface StoryFixtures {
@@ -177,6 +178,7 @@ export function applyStoryGlobals(globals: Readonly<Record<string, unknown>>): v
 export function prepareStory(fixtures: unknown, globals: Readonly<Record<string, unknown>>): void {
   const options = readStoryFixtures(fixtures);
   useFixtureScenario(options.scenario);
+  notificationFixtures();
   const instant = Date.parse(options.now ?? defaultStoryNow);
   now = Number.isNaN(instant) ? Date.parse(defaultStoryNow) : instant;
   if (options.signedIn === false) {

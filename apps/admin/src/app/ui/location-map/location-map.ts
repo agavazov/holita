@@ -20,12 +20,8 @@ import * as L from 'leaflet';
 import { ButtonDirective } from 'primeng/button';
 import { AdminConfig } from '../../core/config/admin-config';
 import type { Language } from '../../i18n/messages';
-import {
-  formatDateTime,
-  formatNumber,
-  formatRelative,
-  type FleetDateFormat,
-} from '../format/format';
+import { formatNumber, formatRelative, type FleetDateFormat } from '../format/format';
+import { FLEET_DISPLAY, injectFleetFormat } from '../format/fleet-format';
 import { interpolate } from '../i18n/messages';
 import { locationMap, mapCoordinates } from '../map-preview/location-map';
 import {
@@ -63,6 +59,15 @@ export class LocationMap {
   readonly timeZone = input('UTC');
   readonly dateFormat = input<FleetDateFormat>('YYYY_MM_DD');
   readonly recordSelect = output<LocationMapRecord>();
+  private readonly preferences = inject(FLEET_DISPLAY);
+  protected readonly format = injectFleetFormat(
+    computed(() => ({
+      ...this.preferences(),
+      timeZone: this.timeZone(),
+      dateFormat: this.dateFormat(),
+    })),
+    this.language,
+  );
   protected readonly text = computed(() => messages[this.language()]);
   protected readonly selectedId = linkedSignal<readonly LocationMapRecord[], string | null>({
     source: this.records,
@@ -141,7 +146,7 @@ export class LocationMap {
   }
 
   protected date(value: string | null): string {
-    return formatDateTime(value, this.language(), this.timeZone(), true, this.dateFormat());
+    return this.format.dateTime(value, true);
   }
 
   protected age(record: LocationMapRecord): string {
@@ -314,7 +319,7 @@ export class LocationMap {
     time.textContent = this.date(record.positionAt);
     if (record.positionAt) {
       time.dateTime = record.positionAt;
-      time.title = record.positionAt;
+      time.title = this.format.utc(record.positionAt);
     }
     popup.append(time);
     if (record.href) {

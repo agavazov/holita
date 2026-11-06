@@ -12,12 +12,8 @@ import { ChartModule } from 'primeng/chart';
 import type { ChartDataSelectEvent } from 'primeng/types/chart';
 import { categorySlots, statusToneNames } from '../../theme/status-tones';
 import type { Language } from '../../i18n/messages';
-import {
-  defaultDateFormat,
-  type FleetDateFormat,
-  formatDateTime,
-  formatNumber,
-} from '../format/format';
+import { defaultDateFormat, type FleetDateFormat, formatNumber } from '../format/format';
+import { FLEET_DISPLAY, injectFleetFormat } from '../format/fleet-format';
 import { interpolate } from '../i18n/messages';
 import { UI_LANGUAGE } from '../ui-language';
 import type {
@@ -63,6 +59,14 @@ export class ChartPanel {
   readonly pointSelect = output<ChartPanelSelection>();
 
   private readonly language = inject(UI_LANGUAGE);
+  private readonly preferences = inject(FLEET_DISPLAY);
+  protected readonly format = injectFleetFormat(
+    computed(() => ({
+      ...this.preferences(),
+      timeZone: this.timeZone(),
+      dateFormat: this.dateFormat(),
+    })),
+  );
   private readonly theme = injectChartPalette(inject<ElementRef<HTMLElement>>(ElementRef));
   protected readonly text = computed(() => messages[this.language()]);
   protected readonly palette = this.theme.palette;
@@ -83,9 +87,7 @@ export class ChartPanel {
         series: this.series().length,
       }),
   );
-  protected readonly asOfText = computed(() =>
-    formatDateTime(this.asOf(), this.language(), this.timeZone(), false, this.dateFormat()),
-  );
+  protected readonly asOfText = computed(() => this.format.dateTime(this.asOf()));
   protected readonly legend = computed(() => {
     const items = this.kind() === 'donut' ? this.points() : this.series();
     return items.map((item, index) => ({

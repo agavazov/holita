@@ -15,6 +15,7 @@ import { Gauge } from '@primeicons/angular/gauge';
 import { Wrench } from '@primeicons/angular/wrench';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
+import { Skeleton } from 'primeng/skeleton';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { Tag } from 'primeng/tag';
 import { ColumnSeries, type SeriesPoint } from '../../../ui/charts/column-series';
@@ -47,6 +48,7 @@ import { maintenanceText } from '../maintenance/i18n/messages';
 import { type ServiceTaskRow, urgencyTones, serviceStatusTones } from '../maintenance/service-task';
 import { tripsText } from '../trips/i18n/messages';
 import { type TripRow, worstTone } from '../trips/trips-view';
+import { VehicleCommandHistory } from '../commands/vehicle-command-history';
 import { vehiclesText } from './i18n/messages';
 import type { VehicleFuelType } from './vehicle-drawer';
 import { vehicleLastReport, vehicleLiveStatus } from './vehicle-live';
@@ -111,6 +113,7 @@ function listView(rows: readonly unknown[]): TableView {
     Wrench,
     ButtonDirective,
     TableModule,
+    Skeleton,
     Tabs,
     TabList,
     Tab,
@@ -128,6 +131,7 @@ function listView(rows: readonly unknown[]): TableView {
     LocationMap,
     PageHeader,
     TablePanel,
+    VehicleCommandHistory,
   ],
   templateUrl: './vehicle-profile-view.html',
   styleUrl: './vehicle-profile-view.scss',
@@ -135,6 +139,7 @@ function listView(rows: readonly unknown[]): TableView {
   host: { class: 'app-view' },
 })
 export class VehicleProfileView {
+  readonly branchId = input.required<string>();
   readonly deviceLinkBase = input<readonly string[]>([]);
   readonly recordLinks = input<FleetRecordLinks | null>(null);
   readonly state = input.required<VehicleProfileState>();

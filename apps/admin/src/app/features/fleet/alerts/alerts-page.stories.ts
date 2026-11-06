@@ -1,9 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
-import { alertsNoResultsSearch, fixtureAlert } from '../../../../storybook/alerts-fixtures';
+import { fixtureAlert } from '../../../../storybook/alerts-fixtures';
+import '../../../../storybook/dashboard-problems-fixtures';
 import { defaultBranchId } from '../../../../storybook/session-fixtures';
 import { routeAt, StoryApp, type StoryFixtures } from '../../../../storybook/story-config';
 import { AdminWorkspace } from '../../../workspace/admin-workspace';
-import { FleetWorkspace } from '../fleet-workspace';
+import { DashboardWorkspace } from '../../../workspace/dashboard-workspace';
+import { ProblemsPage } from '../overview/problems-page';
 import { AlertDetailPage } from './alert-detail-page';
 const meta: Meta = {
   title: 'Admin/Dashboard/Problems',
@@ -17,7 +19,9 @@ function routed(suffix = ''): NonNullable<Story['render']> {
   const render = routeAt(path + suffix);
   return () => ({
     ...render(),
-    moduleMetadata: { imports: [StoryApp, AdminWorkspace, FleetWorkspace, AlertDetailPage] },
+    moduleMetadata: {
+      imports: [StoryApp, AdminWorkspace, DashboardWorkspace, ProblemsPage, AlertDetailPage],
+    },
     template: '<holita-story-app [url]="url" />',
   });
 }
@@ -31,17 +35,21 @@ export const ErrorState: Story = {
   name: 'Error',
   render: routed(),
   parameters: {
-    holita: { scenario: { failures: { AdminAlerts: 'network' } } } satisfies StoryFixtures,
+    holita: {
+      scenario: { failures: { AdminDashboardProblems: 'network' } },
+    } satisfies StoryFixtures,
   },
 };
 export const Loading: Story = {
   render: routed(),
   parameters: {
-    holita: { scenario: { failures: { AdminAlerts: 'pending' } } } satisfies StoryFixtures,
+    holita: {
+      scenario: { failures: { AdminDashboardProblems: 'pending' } },
+    } satisfies StoryFixtures,
   },
 };
 export const NoResults: Story = {
-  render: routed(`?search=${alertsNoResultsSearch}`),
+  render: routed('?state=EXPIRED'),
 };
 export const Mobile: Story = {
   render: routed(),

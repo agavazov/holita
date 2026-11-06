@@ -43,12 +43,20 @@ test('compiled Angular discovers branches and reads Vehicles through the real ga
     }
   });
   await page.goto(`${app.url}/en`);
-  await expect(page).toHaveURL(`${app.url}/en/${branchA.id}/fleet/overview`);
-  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(`${app.url}/en/${branchA.id}/fleet/dashboard/overview`);
+  await expect(page.getByRole('heading', { name: branchA.name, exact: true })).toBeVisible();
+  await expect(page.locator('aside nav').getByRole('link')).toHaveText([
+    'Dashboard',
+    'Vehicles',
+    'Devices',
+    'Drivers',
+    'Maintenance',
+    'General',
+    'Vehicle groups',
+    'Users',
+  ]);
   await expect(page.locator('aside nav').getByRole('heading', { level: 2 })).toHaveText([
-    'Control center',
-    'Monitoring',
-    'Fleet',
+    'Navigation',
     'Settings',
   ]);
   await expect(page.getByRole('link', { name: 'Branches', exact: true })).toHaveCount(0);
@@ -79,9 +87,7 @@ test('compiled Angular discovers branches and reads Vehicles through the real ga
   await expect(page.getByRole('heading', { level: 1, name: /^Автомобили/ })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'bg');
   await expect(page.locator('aside nav').getByRole('heading', { level: 2 })).toHaveText([
-    'Контролен център',
-    'Наблюдение',
-    'Автопарк',
+    'Навигация',
     'Настройки',
   ]);
   await page.getByRole('link', { name: 'Устройства', exact: true }).click();

@@ -12,7 +12,7 @@ This backlog owns frontend and release work; the
 ## Provider integrations
 
 Signal quality and voltage acquisition, firmware targets/policy, Restart and other unsupported
-hardware commands, and notification delivery require real integrations. The supported command
+hardware commands, and external email/SMS notification delivery require real integrations. The supported command
 301 eData configuration reads, additions and interval changes do not establish support for
 other commands. Keep explicit Demo/unavailable presentation for unsupported capabilities;
 do not simulate live success or derive a notification feed from Fleet counts. Contract
@@ -34,12 +34,10 @@ dependencies belong to the [backend backlog](admin-design-system-backend.md#prov
 
 These require later product scope:
 
-- Mobile card layouts for additional lists if review requests them; a map view, saved list
+- Mobile card layouts for additional lists if review requests them; saved list
   views and export.
 - System color-scheme default and navigation counts, with an explicit behavior/ownership
   decision and scope-retirement coverage.
-- Shared account identity and a real notification feed after their contracts/providers exist;
-  do not synthesize either from the current Tenant or Fleet business counts.
 
 Domain features belong to the [backend backlog](admin-design-system-backend.md#deferred-domain-work).
 Choose checks with [testing](../testing.md).

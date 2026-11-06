@@ -156,7 +156,7 @@
   }
   <ng-template #footer>
     @if (request(); as request) {
-      @if (request.status === 'QUEUED') {
+      @if (canCancel() && request.status === 'QUEUED') {
         <button
           pButton
           type="button"

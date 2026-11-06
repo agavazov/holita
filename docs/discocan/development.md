@@ -7,7 +7,7 @@ environment, host commands, Storybook and Angular agent tools. The
 ## Telemetry admin
 
 Prepare databases, migrate/seed and run `npm run dev`; open http://127.0.0.1:11000.
-Choose RentalSofia, then Discordia or Sandbox, and sign in to Overview. `/bg` is the default;
+Sign in with your email and password, then choose a fleet to open Dashboard. `/bg` is the default;
 `/en` selects English. `npm run dev:admin` runs Angular alone against available backends.
 Branch switching keeps the Fleet section and clears record/list context; language switching
 preserves path/query/hash. The [design system](../admin-design-system.md#shell) defines shell,
@@ -24,6 +24,17 @@ Keep `fleetEnabled` and backend `FLEET_ENABLED` consistent when disabling Fleet.
 
 ### User sessions
 
+Provision the first user for an existing Tenant using the
+[Core setup command](../development.md#core-users-and-sessions); there is no public registration
+or password recovery. Sign-in takes email/password first, then offers that Tenant's Branches.
+A single Branch opens automatically; an account with no Branches can open Profile and retry
+discovery. Profile edits name/email and changes the password; the admin signs out after a password
+change and requires the new password. The account menu also offers theme and Sign out.
+
+Settings → Users is Tenant-wide and requires no Branch. Every authenticated Tenant user has
+equal access to create users with an initial password, edit name/email and deactivate/reactivate
+accounts. Deactivation revokes that user's sessions; reactivation requires a fresh sign-in.
+
 Fleet and ERM accept the bearer returned by Core's `signIn`. Configure `CORE_AUTH_VERIFY_URL`
 and the shared `CORE_INTERNAL_AUTH_TOKEN` in both services as described in
 [Core users and sessions](../development.md#core-users-and-sessions). Core supplies the verified
@@ -33,8 +44,10 @@ delay before revocation takes effect in Fleet/ERM; failed verifications are not 
 
 ### Demo tenant login
 
+Development builds expose **Development demo login** separately from email/password sign-in.
+Choose an organization, select **Continue with demo**, then choose a fleet and **Open Dashboard**.
 Tenant selection obtains a candidate token and loads that Tenant's Branches. The session
-starts only after a valid Branch is selected and Sign in is submitted. Core issues an
+starts only after a valid Branch is selected. Core issues an
 HMAC-SHA256 session with an eight-hour expiry; all subgraphs independently verify it.
 Authenticated requests carry `Authorization: Bearer <session>`; Fleet also needs `x-branch-id`.
 A caller-supplied tenant header never selects identity.
@@ -44,7 +57,7 @@ Core, Fleet and ERM API use the same `DEMO_AUTH_SECRET` (at least 32 characters)
 available. Production requires explicit demo enablement and a valid secret. This development
 login deliberately permits anyone to choose any Tenant; use real user sessions for client access.
 
-Tab sessionStorage retains the unexpired session and selected Branch. Denied storage uses
+Tab sessionStorage retains the unexpired real or demo session and selected Branch. Denied storage uses
 memory only. Logout honors dirty guards, retires clients and clears the tab session; expiry
 also retires it. Submitted writes keep their captured token; demo tokens have no server-side
 revocation. A rejected real session never falls back to this demo flow.
@@ -68,19 +81,25 @@ Drawers retain lists and return context; failed saves retain drafts. Dirty forms
 leaving; submitted forms lock until settlement. Only successful batch IDs leave selection.
 Server-derived facts and clocks remain unknown when data is absent.
 
-| Destination               | Operator workflow                                                                                                                           |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/fleet/overview`         | Branch KPIs, attention links, activity by group, recent trips and daily distance                                                            |
-| `/fleet/vehicles`         | Create/edit master data, delete/deactivate; profile tabs `overview`, `trips`, `alerts`, `service`; Record odometer opens the profile drawer |
-| `/fleet/devices`          | Register/edit IMEI, ERM serial, module, model/options, SIM and assignment; clear assignment to stock; diagnostics and control-center access |
-| `/fleet/drivers`          | Contact/identification/documents; 7/30/90-day scorecard; assigned drivers cannot be deactivated/deleted                                     |
-| `/fleet/trips`            | Scoped trip detail and complete maneuver timeline; filtered distance and whole-Branch summary remain separate                               |
-| `/fleet/alerts`           | Acknowledge OPEN alerts; resolve/reopen with loaded `expectedStatus`; rejected remarks remain editable                                      |
-| `/fleet/maintenance`      | Planned-only edits; completion can atomically schedule the next task; DONE/CANCELLED history is read-only                                   |
-| `/fleet/settings/groups`  | Manage groups and counts; groups containing Vehicles cannot be deleted                                                                      |
-| `/fleet/settings/general` | Branch name, zone, display units and Fleet thresholds                                                                                       |
+| Destination                 | Operator workflow                                                                                                                                                                                                                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/fleet/dashboard/overview` | Whole-Branch KPIs, complete paged fleet map, attention links, charts and filtered drill-downs                                                                                                                                                                                                                |
+| `/fleet/dashboard/problems` | Alerts, recorded device evidence, reporting gaps and failed/uncertain commands; only alerts allow acknowledge/resolve/reopen                                                                                                                                                                                 |
+| `/fleet/dashboard/trips`    | Scoped trip detail and complete maneuver timeline; filtered distance and whole-Branch summary remain separate                                                                                                                                                                                                |
+| `/fleet/vehicles`           | Create/edit master data, delete/deactivate; detail tabs `overview`, `trips`, `problems`, `maintenance`, `commands`; Overview includes the last 24 hours of recorded track with coverage/truncation; Commands selects an installed Device                                                                     |
+| `/fleet/devices`            | Register/edit globally unique IMEI, ERM serial, module, model/options, SIM and assignment; clear assignment to stock; open `/:id/overview`, `problems`, `commands`, `sms-commands`, `parameters` or `technical-details/events` and `technical-details/frames`; Trips links to the currently assigned Vehicle |
+| `/fleet/drivers`            | Contact/identification/documents; 7/30/90-day scorecard; assigned drivers cannot be deactivated/deleted                                                                                                                                                                                                      |
+| `/fleet/maintenance`        | Planned-only edits; completion can atomically schedule the next task; DONE/CANCELLED history is read-only                                                                                                                                                                                                    |
+| `/fleet/settings/groups`    | Manage groups and counts; groups containing Vehicles cannot be deleted                                                                                                                                                                                                                                       |
+| `/fleet/settings/general`   | Branch name, zone, date format, display units, Fleet thresholds and notification retention                                                                                                                                                                                                                   |
+| `/fleet/notifications`      | Filter Branch notifications by read state/category, open related records and mark individual/all items read                                                                                                                                                                                                  |
 
-IMEI remains a 15-digit string unique per Branch; assignment is optional and scoped. Several
+`/:language/profile` and `/:language/settings/users` are account routes without a Branch prefix.
+The sidebar groups Dashboard, Vehicles, Devices, Drivers, Maintenance and Settings (General,
+Vehicle groups, Users). Legacy Overview/Alerts/Trips, Control center and Vehicle alerts/service
+URLs redirect to canonical destinations while retaining applicable record/query/fragment context.
+
+IMEI remains a globally unique 15-digit string; assignment is optional and scoped. Several
 Devices may share one Vehicle. Manual odometer readings never create device activity or advance
 the data clock. Service completion odometers use earlier service history, separate from telemetry;
 EUR costs retain exact cents and zero. An inactive Vehicle allows historical completion without
@@ -92,8 +111,23 @@ Display units convert read values/charts; API values and explicitly labelled can
 remain km, km/h and litres. Date-only documents/service values are not shifted between zones.
 Save persists Fleet preferences first, then renames Core's Branch only if changed. A failed
 rename leaves saved Fleet values applied, retains the name draft and reports partial success.
-Discard restores actual persisted values. Notification switches remain disabled Demo controls;
-the speed reference creates no alerts or device commands.
+Discard restores actual persisted values. The speed reference creates no alerts or device commands.
+Dates use the Branch's `YYYY-MM-DD`, `DD.MM.YYYY` or `MM/DD/YYYY` preference and IANA time zone;
+instant tooltips expose the exact UTC timestamp. GPS age is independent of Connected (current
+socket), Reporting (expected-frame freshness) and Live (both).
+
+### Notifications
+
+The bell displays recent persisted Branch notifications, the unread count, **Mark all as read**
+and **See all**. The Notifications page offers read-state/category filters and individual/bulk
+read actions. Read state belongs to the signed-in user; demo sessions can view the feed but
+cannot save read state. Sources are Fleet alert transitions, recorded device diagnostic/alarm
+evidence and terminal durable command outcomes. Recorded evidence does not establish an
+unresolved fault. Notifications are in-app only; no email/SMS delivery provider is configured.
+
+General settings saves notification retention, default seven days. Daily cleanup removes old
+feed entries and their read receipts by feed creation time, preserving telemetry and command
+audit. Feed collection does not depend on an open browser.
 
 ## Admin translations
 
@@ -102,9 +136,11 @@ sets document language and captured `Accept-Language`; record content displays a
 
 ## GraphQL usage
 
-Through Gateway, request `{ tenants { id name } }`, then
+Through Gateway, call `signIn(email: ..., password: ...) { token expiresAt tenant { id name } }`.
+Use the token for `{ branches { id name } }` and business requests. The explicit development
+demo alternative is `{ tenants { id name } }`, then
 `demoLogin(tenantId: "01000000-0000-4000-8000-000000000001") { token tenant { id name } }`.
-Use the token for `{ branches { id name } }` and all business requests. Discordia's seeded
+Discordia's seeded
 `x-branch-id` is `10000000-0000-4000-8000-000000000001`.
 
 ```graphql
@@ -252,9 +288,11 @@ it must not open the device TCP listener. Configure Core verification for user s
 same demo-session settings as Core/Fleet when explicitly using development demo login.
 Keep the gateway's loopback internal API and machine token private.
 
-The admin **Fleet** group keeps Vehicles and Devices together. Both lists and the **Control
-center** dashboard open one Device page with live state, faults and diagnostics, events, commands,
-parameters, frames and SMS. The former Fleet diagnostics URL redirects to its faults tab. Fleet
+The admin **Devices** section opens one Device page with Overview, Problems, Commands,
+SMS commands, Parameters and Technical details (events/frames). Trips opens the currently
+assigned Vehicle's trips. Vehicle Commands selects a particular installed Device and uses the
+same readable history and details modal. Legacy Control center and diagnostics URLs redirect
+to these pages. Fleet
 diagnostic counts are historical DTC/CAN evidence for the current vehicle/IMEI pair, not active-fault
 counts; the faults tab also shows alarm and eData events, including cleared faults. Fleet owns the ten registered truck identities,
 including `serialNumber` and `edataModule`; ERM state is joined by IMEI. Use Branch-scoped
@@ -377,13 +415,24 @@ submissions are never replayed automatically. Acceptance is not delivery, a unit
 shown plainly, and a read response is not configuration verification. If the browser loses the
 mutation result, inspect the audit before making another decision.
 
-The Device page retains the latest 50 requests with intent, exact target, expiry, submission and
-completion times, wire command ID, result and uncertainty. Settings and snapshots show their
+The Commands tab shows readable request purpose, target, lifecycle times, expiry and outcome.
+Queued/offline and waiting states stay visible across polls, and details expose parameters,
+intent, actor, transport IDs, exact sent/received frames and configuration verification.
+A device acknowledgement links to its request and means device confirmation, not proof of
+execution. Settings and snapshots show their
 actor and intent alongside steps and before/after evidence. New actions from real sessions record
 the verified Core `userId` as their actor. Demo sessions identify the Tenant only
 (`demo-tenant:<tenantId>`); historical demo audit rows remain unchanged. Audit history and
 snapshot diffs use the stored Tenant/Branch/Device scope, so
 unattributed legacy tool runs are not included in this operator history.
+
+The current Device's **SMS commands** tab uses its stored SIM number and SMS password; it
+never asks the operator to choose a different target. Cards explain each purpose, message text,
+expected reply and timeout meaning. Copy prepares text; **Open SMS app** fills the phone's
+message composer and never sends from holita. Missing credentials link to the Device editor,
+and unavailable/overlength messages cannot be opened for sending. A timeout leaves the result
+unknown. Routing messages retain their explicit warning and require the operator to confirm
+the resulting device connection independently.
 
 The Device's **Parameters → Device settings** editor starts background controlled workflows
 through `startErmEdataChange` (read, one interval, one definition or globals `302`) and

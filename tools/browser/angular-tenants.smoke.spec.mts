@@ -1,16 +1,22 @@
 import { expect, type Page } from '@playwright/test';
 import { signOut, test } from './angular-fixture.mjs';
 
-test.use({ demoSignedIn: false });
-async function signIn(page: Page, name: string, branch: string) {
-  await page.getByRole('combobox', { name: 'Tenant', exact: true }).click();
-  await page.getByRole('option', { name, exact: true }).click();
-  await expect(page.getByTestId('demo-login')).toBeDisabled();
-  await page.getByRole('combobox', { name: 'Branch', exact: true }).click();
-  await page.getByRole('option', { name: branch, exact: true }).click();
-  await page.getByTestId('demo-login').click();
+test.use({ signedIn: false });
+async function signIn(
+  page: Page,
+  account: { readonly email: string; readonly password: string },
+  branch?: string,
+) {
+  await page.getByRole('textbox', { name: /^Email/ }).fill(account.email);
+  await page.getByRole('textbox', { name: /^Password/ }).fill(account.password);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  if (branch) {
+    await page.getByRole('combobox', { name: 'Choose a fleet', exact: true }).click();
+    await page.getByRole('option', { name: branch, exact: true }).click();
+    await page.getByRole('button', { name: 'Open Dashboard', exact: true }).click();
+  }
 }
-test('demo login gates deep links and business reads, survives reload, clears on logout and isolates a second tenant', async ({
+test('sign-in gates deep links and business reads, survives reload, clears on logout and isolates a second tenant', async ({
   page,
   app,
 }) => {
@@ -33,43 +39,44 @@ test('demo login gates deep links and business reads, survives reload, clears on
       business.push(request.headers()['authorization'] ?? 'missing');
     }
   });
-  for (const path of [`${app.branchB.id}/fleet/devices/new?search=old`]) {
-    await page.goto(`${app.url}/en/${path}`);
-    await expect(page.getByRole('heading', { name: 'Demo sign in', exact: true })).toBeVisible();
-  }
+  await page.goto(`${app.url}/en/${app.branchB.id}/fleet/devices/new?search=old`);
+  await expect(page).toHaveURL(`${app.url}/en/${app.branchB.id}/fleet/devices/new?search=old`);
+  await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
   await expect(page.locator('holita-admin-shell')).toHaveCount(0);
-  await expect(page.getByRole('combobox', { name: 'Branch', exact: true })).toHaveAttribute(
-    'aria-disabled',
-    'true',
-  );
+  await expect(page.getByRole('combobox', { name: 'Choose a fleet', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: /^Email/ })).toBeVisible();
   expect(business).toEqual([]);
-  await signIn(page, app.demoSession.tenant.name, app.branchA.name);
-  await expect(page).toHaveURL(`${app.url}/en/${app.branchA.id}/fleet/overview`);
-  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  await signIn(page, app.account, app.branchA.name);
+  await expect(page).toHaveURL(
+    `${app.url}/en/${app.branchA.id}/fleet/dashboard/overview?search=old`,
+  );
+  await expect(page.getByRole('heading', { name: app.branchA.name, exact: true })).toBeVisible();
   expect(business.length).toBeGreaterThan(0);
-  expect(
-    business.every((header) =>
-      header.startsWith(`Bearer holita-demo.${app.demoSession.tenant.id}.`),
-    ),
-  ).toBe(true);
+  expect(business.every((header) => header.startsWith('Bearer holita-session.'))).toBe(true);
   await page.getByRole('link', { name: 'Vehicles', exact: true }).click();
   const firstTenantVehicle = page.getByRole('button', { name: 'Open FIRST-TENANT', exact: true });
   await expect(firstTenantVehicle).toBeVisible();
   await page.reload();
   await expect(firstTenantVehicle).toBeVisible();
   await signOut(page);
-  await expect(page.getByRole('heading', { name: 'Demo sign in', exact: true })).toBeVisible();
-  expect(await page.evaluate(() => sessionStorage.getItem('holita.admin.demo-session'))).toBeNull();
-  await signIn(page, 'Isolation tenant', 'Isolation branch');
+  await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.getItem('holita.admin.session'))).toBeNull();
+  const isolationAccount = await app.createAccount('01000000-0000-4000-8000-000000000002');
+  await signIn(page, isolationAccount);
   await expect(
     page
       .locator('holita-admin-topbar')
       .getByRole('button', { name: 'Branch: Isolation branch', exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Isolation branch', exact: true })).toBeVisible();
   // The first tenant's cached Vehicles must not survive the session change.
   await page.getByRole('link', { name: 'Vehicles', exact: true }).click();
   await expect(page.getByText('No vehicles yet', { exact: true })).toBeVisible();
   await expect(firstTenantVehicle).toHaveCount(0);
-  expect(business.at(-1)).toContain('Bearer holita-demo.01000000-0000-4000-8000-000000000002.');
+  const restored: unknown = await page.evaluate(() => {
+    const session: unknown = JSON.parse(sessionStorage.getItem('holita.admin.session') ?? 'null');
+    return session;
+  });
+  expect(restored).toHaveProperty('tenant.id', '01000000-0000-4000-8000-000000000002');
+  expect(business.at(-1)).toMatch(/^Bearer holita-session\./);
 });

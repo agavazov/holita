@@ -21,8 +21,7 @@ Real providers and their contracts are prerequisites for:
   eData configuration reads, predefined-parameter additions and existing-interval changes;
   it does not establish general command support. Define supported devices, authorization,
   delivery and completion/failure semantics for each additional command.
-- Notification generation/delivery and any account-backed feed/read state. Fleet counts do
-  not constitute notifications or unread delivery state.
+- External email/SMS notification delivery beyond the implemented in-app feed.
 
 Keep the existing Demo/unavailable UI until each integration is real. Provider unavailability
 does not block the current supported Fleet screens and must not be replaced by simulated
@@ -32,7 +31,7 @@ successful writes.
 
 The following requires separate product scope and is not pending Storybook screen adoption:
 
-- Fuel entries; geozones/POIs; a diagnostic-fault lifecycle; telemetry ingestion/reporting;
+- Fuel entries; geozones/POIs; a diagnostic-fault lifecycle;
   driver-assignment history. Remaining eData measurement verification and scoped restoration
   belong to the [eData backlog](erm-roadmap.md).
 - Demo dataset refresh/versioning. The fixed anchor intentionally ages against the business

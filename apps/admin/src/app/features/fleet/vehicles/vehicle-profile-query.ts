@@ -10,8 +10,7 @@ export interface ProfilePage {
 const sizes: readonly number[] = [10, 20, 50, 100];
 
 export function profileTab(value: string | null): VehicleProfileTab {
-  const canonical = value === 'alerts' ? 'problems' : value === 'service' ? 'maintenance' : value;
-  return vehicleProfileTabs.find((tab) => tab === canonical) ?? 'overview';
+  return vehicleProfileTabs.find((tab) => tab === value) ?? 'overview';
 }
 
 export function profilePage(params: ParamMap, tab: ProfileListTab): ProfilePage {

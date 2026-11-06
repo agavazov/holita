@@ -10,15 +10,13 @@ const vehicleProfileRoute: UrlMatcher = (segments) => {
     vehicles?.path !== 'vehicles' ||
     !recordId ||
     !tab ||
-    !['overview', 'trips', 'problems', 'maintenance'].includes(tab.path)
+    !['overview', 'trips', 'problems', 'maintenance', 'commands'].includes(tab.path)
   ) {
     return null;
   }
-  const retainedTab =
-    tab.path === 'problems' ? 'alerts' : tab.path === 'maintenance' ? 'service' : tab.path;
   return {
     consumed: segments.slice(0, 5),
-    posParams: { branchId, recordId, tab: new UrlSegment(retainedTab, tab.parameters) },
+    posParams: { branchId, recordId, tab },
   };
 };
 
@@ -27,23 +25,18 @@ const deviceProfileRoute: UrlMatcher = (segments) => {
   if (!branchId || fleet?.path !== 'fleet' || devices?.path !== 'devices' || !recordId || !tab) {
     return null;
   }
-  const retainedTab =
-    tab.path === 'problems'
-      ? 'alarms'
-      : tab.path === 'sms-commands'
-        ? 'sms'
-        : tab.path === 'technical-details' &&
-            (detail?.path === 'events' || detail?.path === 'frames')
-          ? detail.path
-          : ['overview', 'commands', 'parameters'].includes(tab.path)
-            ? tab.path
-            : null;
-  if (!retainedTab || recordId.path === 'new') {
+  const canonicalTab =
+    tab.path === 'technical-details' && (detail?.path === 'events' || detail?.path === 'frames')
+      ? detail.path
+      : ['overview', 'problems', 'commands', 'sms-commands', 'parameters'].includes(tab.path)
+        ? tab.path
+        : null;
+  if (!canonicalTab || recordId.path === 'new') {
     return null;
   }
   return {
     consumed: segments.slice(0, tab.path === 'technical-details' ? 6 : 5),
-    posParams: { branchId, recordId, tab: new UrlSegment(retainedTab, tab.parameters) },
+    posParams: { branchId, recordId, tab: new UrlSegment(canonicalTab, tab.parameters) },
   };
 };
 

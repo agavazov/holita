@@ -4,6 +4,7 @@ import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { onFrame } from '../../../storybook/story-config';
+import { injectFleetFormat } from '../format/fleet-format';
 import {
   listRecord,
   trackById,
@@ -38,7 +39,7 @@ const rows: readonly DemoRow[] = [
     plate: 'CB 1001 AX',
     model: 'MAN TGX 18.510',
     status: { label: 'Reporting', severity: 'success' },
-    reported: '2026-11-06 12:34',
+    reported: '2026-11-06T10:34:00.000Z',
     notes: 'International routes; tachograph calibrated in September.',
     odometer: '412,330',
     problems: 0,
@@ -48,7 +49,7 @@ const rows: readonly DemoRow[] = [
     plate: 'CB 1002 AX',
     model: 'Volvo FH 500',
     status: { label: 'Connected', severity: 'success' },
-    reported: '2026-11-06 12:30',
+    reported: '2026-11-06T10:30:00.000Z',
     notes:
       'Check wheel balance, suspension bushings and the propeller shaft before the next long trip.',
     odometer: '388,041',
@@ -59,7 +60,7 @@ const rows: readonly DemoRow[] = [
     plate: 'CB 1003 AX',
     model: 'DAF XF 480',
     status: { label: 'Reporting gap', severity: 'warn' },
-    reported: '2026-11-06 11:20',
+    reported: '2026-11-06T09:20:00.000Z',
     notes: 'Gearbox repair at the Plovdiv workshop.',
     odometer: '501,920',
     problems: 1,
@@ -69,7 +70,7 @@ const rows: readonly DemoRow[] = [
     plate: 'CB 1004 AX',
     model: 'Scania R 450',
     status: { label: 'Reporting', severity: 'success' },
-    reported: '2026-11-06 12:33',
+    reported: '2026-11-06T10:33:00.000Z',
     notes: '',
     odometer: '97,614',
     problems: 0,
@@ -79,7 +80,7 @@ const rows: readonly DemoRow[] = [
     plate: 'CB 1005 AX',
     model: 'Mercedes-Benz Sprinter',
     status: { label: 'Disconnected', severity: 'secondary' },
-    reported: '2026-11-05 18:22',
+    reported: '2026-11-05T16:22:00.000Z',
     notes: 'Retired from the city fleet; waiting for sale.',
     odometer: '0',
     problems: 0,
@@ -224,8 +225,8 @@ function recordOf(row: DemoRow): ListRecord<DemoAction> {
               /></span>
             </td>
             <td>
-              <time class="app-cell-date" [title]="row.reported + ' Europe/Sofia'">{{
-                row.reported
+              <time class="app-cell-date" [title]="format.dateTimeCell(row.reported).title">{{
+                format.dateTimeCell(row.reported).text
               }}</time>
             </td>
             <td>
@@ -278,6 +279,7 @@ function recordOf(row: DemoRow): ListRecord<DemoAction> {
   `,
 })
 class TablePanelDemo {
+  protected readonly format = injectFleetFormat();
   readonly mode = input<TableMode>('offset');
   readonly view = input<TableView>({ kind: 'rows' });
   readonly busy = input(false);
@@ -301,7 +303,7 @@ class TablePanelDemo {
   readonly shownRows = computed(() => {
     const page = this.mode() === 'cursor' ? this.cursorStack().length : this.paging().page;
     return this.mode() === 'local'
-      ? rows
+      ? [...rows]
       : rows.map((row) => ({
           ...row,
           id: `${String(page)}-${row.id}`,

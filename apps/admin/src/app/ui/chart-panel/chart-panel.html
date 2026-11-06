@@ -22,7 +22,7 @@
     <div>
       <dt>{{ text().asOf }}</dt>
       <dd>
-        <time [attr.datetime]="asOf()" [title]="asOf() ?? ''">{{ asOfText() }}</time>
+        <time [attr.datetime]="asOf()" [title]="format.utc(asOf())">{{ asOfText() }}</time>
       </dd>
     </div>
   }

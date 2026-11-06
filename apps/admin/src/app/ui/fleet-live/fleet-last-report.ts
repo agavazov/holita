@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { toSignal } from '@angular/core/rxjs-interop';
 import { interval, map } from 'rxjs';
 import { injectFleetFormat } from '../format/fleet-format';
-import { formatDateTime, formatRelative } from '../format/format';
+import { formatRelative } from '../format/format';
 import { UI_LANGUAGE } from '../ui-language';
 import { fleetLiveText, type FleetLiveDevice, type FleetLiveMode } from './fleet-live';
 
@@ -42,10 +42,7 @@ export class FleetLastReport {
         this.reportedAt()),
   );
   protected readonly exact = computed(
-    () =>
-      formatDateTime(this.timestamp(), this.language(), this.units.preferences().timeZone, true) +
-      ' · ' +
-      this.units.preferences().timeZone,
+    () => this.units.dateTime(this.timestamp(), true) + ' · ' + this.units.preferences().timeZone,
   );
   protected readonly relative = computed(() => {
     this.device();

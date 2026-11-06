@@ -7,7 +7,7 @@ import {
   AdminBranchesDocument,
   AdminTenantsDocument,
   AdminDemoLoginDocument,
-} from '../../../generated/graphql/operations';
+} from '../../../generated/graphql/startup-operations';
 import { AdminConfig } from '../../core/config/admin-config';
 import { graphqlOptions } from '../../core/graphql/graphql-options';
 import { DemoSession } from '../../core/auth/demo-session';

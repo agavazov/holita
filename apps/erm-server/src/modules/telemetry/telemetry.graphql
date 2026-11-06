@@ -88,6 +88,8 @@ enum ErmCommandDisplayField {
 }
 "A confirmation linked by the original transport command reference."
 type ErmCommandAcknowledgement {
+  "The Branch-scoped operator request, when this confirmation belongs to one."
+  commandRequestId: ID
   commandId: ID!
   commandReference: String!
   replyReference: String!
@@ -386,6 +388,8 @@ type ErmUnitState {
   health: ErmUnitHealth!
 }
 type ErmFrame {
+  "Exact captured device confirmation linked to its original command and scoped request."
+  acknowledgement: ErmCommandAcknowledgement
   id: ID!
   connectionId: ID!
   unitId: ID

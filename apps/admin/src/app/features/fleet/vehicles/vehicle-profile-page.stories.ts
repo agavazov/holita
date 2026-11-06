@@ -52,7 +52,7 @@ export const Maintenance: Story = {
   render: routed('maintenance'),
 };
 export const Commands: Story = {
-  render: routed('overview', '?vehicleTab=commands'),
+  render: routed('commands'),
 };
 export const Narrow: Story = {
   globals: { viewport: { value: 'mobile375', isRotated: false } },

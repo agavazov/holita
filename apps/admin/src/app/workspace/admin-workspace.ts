@@ -36,7 +36,7 @@ import type { LanguageOption, ShellNotification } from '../layout/admin-topbar';
 import { navigationContext } from '../layout/navigation';
 import { PageRecord } from '../layout/page-record';
 import { UI_LANGUAGE } from '../ui/ui-language';
-import { formatUtcInstant } from '../ui/format/format';
+import { injectFleetFormat } from '../ui/format/fleet-format';
 import type { LeavableDrawer } from '../ui/drawer/leave-drawer.guard';
 import { adminNavigation } from './admin-navigation';
 import { pageMetadata } from './page-metadata';
@@ -99,7 +99,7 @@ export class AdminWorkspace {
       id: item.id,
       title: notificationRow(item, connection.language, connection.branchId).sentence,
       at: item.occurredAt,
-      atTitle: formatUtcInstant(item.occurredAt),
+      atTitle: this.format.utc(item.occurredAt),
       unread: item.readAt === null,
       category:
         item.category === 'ALERT' ? 'alert' : item.category === 'DEVICE' ? 'device' : 'command',
@@ -114,6 +114,7 @@ export class AdminWorkspace {
     this.router.events.pipe(filter((event) => event instanceof NavigationEnd)),
   );
   readonly language = computed(() => readLanguage(this.params().get('language')));
+  private readonly format = injectFleetFormat(undefined, this.language);
   readonly text = computed(() => messages[this.language()]);
   readonly branchFailure = computed(() =>
     requestError(this.branches.error(), this.text().networkError),

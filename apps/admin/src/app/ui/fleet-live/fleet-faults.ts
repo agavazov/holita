@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { ExternalLink } from '@primeicons/angular/external-link';
 import { Tag } from 'primeng/tag';
 import { injectFleetFormat } from '../format/fleet-format';
-import { formatDateTime, formatNumber } from '../format/format';
+import { formatNumber } from '../format/format';
 import { interpolate } from '../i18n/messages';
 import { toneSeverity, type StatusTone } from '../tones';
 import { UI_LANGUAGE } from '../ui-language';
@@ -161,6 +161,6 @@ export class FleetFaults {
     return labels[kind] ?? this.text().unknownEvent;
   }
   protected date(value: string | null | undefined): string {
-    return formatDateTime(value, this.language(), this.units.preferences().timeZone, true);
+    return this.units.dateTime(value, true);
   }
 }

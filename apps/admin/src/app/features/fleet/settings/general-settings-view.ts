@@ -26,13 +26,10 @@ import { Tag } from 'primeng/tag';
 import bg from './general-settings-view.bg.json';
 import en from './general-settings-view.en.json';
 import { map, timer } from 'rxjs';
-import type { FleetDisplayPreferences } from '../../../ui/format/fleet-format';
+import { injectFleetFormat, type FleetDisplayPreferences } from '../../../ui/format/fleet-format';
 import {
   dateFormatLabels,
   defaultDateFormat,
-  formatDateTime,
-  formatTime,
-  formatUtcInstant,
   supportedDateFormats,
 } from '../../../ui/format/format';
 import { WALL_CLOCK } from '../../../ui/clock';
@@ -117,6 +114,7 @@ export class GeneralSettingsView {
   readonly retry = output();
 
   private readonly language = inject(UI_LANGUAGE);
+  private readonly display = injectFleetFormat();
   private readonly wallClock = inject(WALL_CLOCK);
   private readonly now = toSignal(timer(0, 30_000).pipe(map(() => this.wallClock())), {
     initialValue: this.wallClock(),
@@ -174,6 +172,16 @@ export class GeneralSettingsView {
     ),
   });
   private readonly events = toSignal(this.form.events);
+  private readonly previewFormat = injectFleetFormat(
+    computed(() => {
+      this.events();
+      return {
+        ...this.display.preferences(),
+        timeZone: this.form.controls.timeZone.value,
+        dateFormat: this.form.controls.dateFormat.value,
+      };
+    }),
+  );
   private submitted = false;
 
   protected readonly timeZones = computed(() => {
@@ -183,21 +191,15 @@ export class GeneralSettingsView {
     const zones = [...new Set([...timeZones, this.form.controls.timeZone.value])].sort();
     return zones.map((zone) => ({
       value: zone,
-      label: `${zone} · ${formatTime(instant, this.language(), zone)}`,
+      label: `${zone} · ${this.display.time(instant, zone)}`,
     }));
   });
   protected readonly preview = computed(() => {
     this.events();
-    return formatDateTime(
-      new Date(this.now()).toISOString(),
-      this.language(),
-      this.form.controls.timeZone.value,
-      false,
-      this.form.controls.dateFormat.value,
-    );
+    return this.previewFormat.dateTime(new Date(this.now()).toISOString());
   });
   protected readonly previewUtc = computed(() =>
-    formatUtcInstant(new Date(this.now()).toISOString()),
+    this.display.utc(new Date(this.now()).toISOString()),
   );
   protected readonly dateFormatHint = computed(() =>
     interpolate(this.text().dateFormatPreview, { value: this.preview() }),

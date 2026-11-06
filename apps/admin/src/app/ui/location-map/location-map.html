@@ -15,13 +15,13 @@
   <div class="location-map__meta">
     <span
       >{{ text().updated }}:
-      <time [attr.datetime]="updatedAt()" [title]="updatedAt() ?? ''">{{
+      <time [attr.datetime]="updatedAt()" [title]="format.utc(updatedAt())">{{
         date(updatedAt())
       }}</time></span
     >
     <span
       >{{ text().dataTime }}:
-      <time [attr.datetime]="asOf()" [title]="asOf() ?? ''">{{ date(asOf()) }}</time> ·
+      <time [attr.datetime]="asOf()" [title]="format.utc(asOf())">{{ date(asOf()) }}</time> ·
       {{ timeZone() }}</span
     >
   </div>
@@ -108,7 +108,7 @@
           </button>
           <span>{{ record.label }} · {{ record.status.label }}</span>
           <span class="app-num">{{ position(record) }}</span>
-          <span [title]="record.positionAt ?? ''"
+          <span [title]="format.utc(record.positionAt)"
             >{{ text().positionTime }}: {{ date(record.positionAt) }}</span
           >
           <span>{{ text().positionAge }}: {{ age(record) }}</span>

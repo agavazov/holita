@@ -1,11 +1,20 @@
 # Discocan: fleet telemetry
 
 Discocan is holita's fleet telemetry domain. Fleet owns Vehicles, Devices, Drivers, Vehicle
-groups, samples/data clock, trips, alerts, service tasks, Overview and Branch settings.
+groups, samples/data clock, trips, alerts, service tasks, Dashboard, notifications and Branch settings.
 The Angular admin uses generated GraphQL operations through Router. ERM Server receives
 StarLink traffic and records connections, exact frames, decoded events and commands; its gateway
-keeps device sessions while its api process serves the Control center and Fleet Device fields.
-Fleet activity remains demo/manual data until telemetry ingestion is connected.
+keeps device sessions while its api process serves Fleet Device inspection and controlled commands.
+Configured ERM ingestion projects device reports into Fleet activity; availability and reporting
+freshness remain distinct from the age of a recorded GPS position.
+
+The admin opens Dashboard after email/password sign-in and fleet selection. Its Overview,
+Problems and Trips tabs combine Branch totals, a paged fleet map, charts and source-aware
+problems. Vehicles and Devices have their own detail pages; readable command history and
+current-device SMS preparation sit under Devices, and a Vehicle's Commands tab selects an
+installed Device. Profile and Tenant-wide Users use Core accounts. The bell opens the persisted
+Branch notification feed with per-user read state. See the
+[operator workflows](development.md#fleet-operator-workflows).
 
 Device inspection, reads and controlled settings use ERM Server. Protocol and hardware references
 are in [ERM resources](erm-resources/README.md); active replacement work is tracked in the

@@ -78,6 +78,7 @@ const samePage = (left: ProfilePage, right: ProfilePage) =>
   providers: [VehicleProfileApi],
   template: `
     <holita-vehicle-profile-view
+      [branchId]="branch().id"
       [recordLinks]="recordLinks()"
       [deviceLinkBase]="['/', language(), branch().id, 'fleet', 'devices']"
       [state]="state()"
@@ -163,11 +164,7 @@ export class VehicleProfilePage implements OnInit {
   readonly state = signal<VehicleProfileState>('loading');
   readonly record = signal<AdminVehicleProfileQuery | null>(null);
   readonly error = signal<unknown>(null);
-  readonly tab = computed(() =>
-    this.queryParams().get('vehicleTab') === 'commands'
-      ? 'commands'
-      : profileTab(this.params().get('tab')),
-  );
+  readonly tab = computed(() => profileTab(this.params().get('tab')));
   private readonly units = injectFleetFormat();
   private readonly wallClock = inject(WALL_CLOCK);
   readonly vehicle = computed(() => {
@@ -211,7 +208,7 @@ export class VehicleProfilePage implements OnInit {
   protected readonly profileLink = computed(() => [
     ...this.vehicleListLink(),
     drawerParam(this.route, 'recordId') ?? '',
-    this.tab() === 'commands' ? 'overview' : this.tab(),
+    this.tab(),
   ]);
   protected readonly retry = new Subject<void>();
   protected readonly retryTrips = new Subject<void>();
@@ -388,13 +385,9 @@ export class VehicleProfilePage implements OnInit {
 
   changeTab(tab: VehicleProfileTab): void {
     void this.router.navigate(
-      [
-        ...this.vehicleListLink(),
-        drawerParam(this.route, 'recordId'),
-        tab === 'commands' ? 'overview' : tab,
-      ],
+      [...this.vehicleListLink(), drawerParam(this.route, 'recordId'), tab],
       {
-        queryParams: { vehicleTab: tab === 'commands' ? 'commands' : null },
+        queryParams: { vehicleTab: null },
         queryParamsHandling: 'merge',
         preserveFragment: true,
       },

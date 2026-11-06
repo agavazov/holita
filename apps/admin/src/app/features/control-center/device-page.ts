@@ -29,7 +29,6 @@ import type {
   AdminControlCenterFramesQuery,
   AdminControlCenterSnapshotsQuery,
   AdminControlCenterDeviceProblemsQuery,
-  AdminControlCenterCommandRequestFieldsFragment,
   ErmEventCategory,
   ErmFrameDirection,
   ErmFrameChecksum,
@@ -234,7 +233,6 @@ export class DevicePage implements OnInit {
   readonly events = signal<Events | null>(null);
   readonly frames = signal<Frames | null>(null);
   readonly snapshots = signal<Snapshots | null>(null);
-  readonly requests = signal<readonly AdminControlCenterCommandRequestFieldsFragment[]>([]);
   readonly historyLoading = signal(false);
   readonly historyError = signal<unknown>(null);
   readonly historyFailure = computed(() =>
@@ -521,27 +519,6 @@ export class DevicePage implements OnInit {
         sub.unsubscribe();
       });
     });
-    effect((onCleanup) => {
-      this.reload();
-      if (this.tab() !== 'frames') {
-        return;
-      }
-      const sub = this.api
-        .watchCommandRequests(this.recordId(), () => true)
-        .valueChanges.subscribe({
-          next: (result) => {
-            if (result.dataState === 'complete' && !result.error) {
-              this.requests.set(result.data.fleetDevice.ermCommandRequests);
-            }
-          },
-          error: () => {
-            this.requests.set([]);
-          },
-        });
-      onCleanup(() => {
-        sub.unsubscribe();
-      });
-    });
   }
   private alive(): boolean {
     return !this.destroy.destroyed;
@@ -610,18 +587,8 @@ export class DevicePage implements OnInit {
       }
     }
   }
-  frameRequest(
-    frame: Frames['items'][number],
-  ): AdminControlCenterCommandRequestFieldsFragment | undefined {
-    return this.requests().find(
-      (request) =>
-        frame.direction === 'DEVICE' &&
-        request.transportCommand?.acknowledgement?.replyReference === frame.reference &&
-        request.transportCommand.acknowledgement.receivedAt === frame.receivedAt,
-    );
-  }
   frameLabel(frame: Frames['items'][number]): string {
-    const ack = this.frameRequest(frame)?.transportCommand?.acknowledgement;
+    const ack = frame.acknowledgement;
     return ack
       ? interpolate(this.text().detail.confirmation, {
           reference: ack.commandReference,

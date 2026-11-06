@@ -15,10 +15,12 @@ import type {
   ErmEventSeverity,
   ErmFleetProblemSourceKind,
   ErmFleetProblemState,
+  ErmCommandAcknowledgement,
 } from '../../generated/graphql/types.js';
 import { parseFrame } from '../../starlink/protocol.js';
 import { categoryEventIds, starlinkEvents } from '../../starlink/event-catalog.js';
 import type { TelemetryQuery } from './telemetry-query.js';
+import type { OperatorScope } from './operator-audit.js';
 
 function nullableNumber(row: Record<string, unknown>, key: string): number | null {
   const value = row[key];
@@ -689,7 +691,11 @@ export class TelemetryRepository {
     }));
   }
 
-  async deviceFrames(queries: TelemetryQuery[]) {
+  async deviceFrames(
+    queries: TelemetryQuery[],
+    scope: OperatorScope | null,
+    devices: { id: string; imei: string }[],
+  ) {
     const selected = sqlRows(
       await this.prisma.client.$queryRaw(Prisma.sql`
       SELECT q."unitId", h.id::text AS id FROM
@@ -704,12 +710,82 @@ export class TelemetryRepository {
       ) h ORDER BY q."unitId", h."receivedAt" DESC, h.id DESC
     `),
     );
-    const rows = new Map(
-      (
-        await this.prisma.client.ermFrame.findMany({
-          where: { id: { in: selected.map((row) => BigInt(sqlText(row, 'id'))) } },
+    const frames = await this.prisma.client.ermFrame.findMany({
+      where: { id: { in: selected.map((row) => BigInt(sqlText(row, 'id'))) } },
+    });
+    const confirmations = frames.flatMap((frame) => {
+      const parsed =
+        frame.direction === 'DEVICE' && !frame.partial
+          ? parseFrame(Buffer.from(frame.raw))
+          : undefined;
+      const reference = parsed?.fields[0]?.toString('latin1');
+      const resultCode = parsed?.fields[1]?.toString('latin1');
+      return parsed?.origin === 'SLU' &&
+        parsed.command === '02' &&
+        reference !== undefined &&
+        resultCode !== undefined
+        ? [
+            {
+              frame,
+              unitId: parsed.unitId,
+              reference,
+              replyReference: parsed.reference,
+              resultCode,
+            },
+          ]
+        : [];
+    });
+    const commands = confirmations.length
+      ? await this.prisma.client.ermCommand.findMany({
+          where: {
+            OR: confirmations.map(({ frame, unitId, reference }) => ({
+              unitId,
+              connectionId: frame.connectionId,
+              reference,
+              sentAt: { lte: frame.receivedAt },
+            })),
+          },
         })
-      ).map((frame) => [String(frame.id), frame]),
+      : [];
+    const requests =
+      scope && commands.length
+        ? await this.prisma.client.ermCommandRequest.findMany({
+            where: {
+              ...scope,
+              OR: devices.map((device) => ({ deviceId: device.id, unitId: device.imei })),
+              commandId: { in: commands.map((command) => command.id) },
+            },
+          })
+        : [];
+    const acknowledgements = new Map<string, ErmCommandAcknowledgement>();
+    for (const { frame, unitId, reference, replyReference, resultCode } of confirmations) {
+      const command = commands.find(
+        (candidate) =>
+          candidate.unitId === unitId &&
+          candidate.connectionId === frame.connectionId &&
+          candidate.reference === reference &&
+          candidate.sentAt.getTime() <= frame.receivedAt.getTime(),
+      );
+      if (command) {
+        acknowledgements.set(String(frame.id), {
+          commandId: command.id,
+          commandReference: reference,
+          replyReference,
+          resultCode,
+          receivedAt: frame.receivedAt,
+          commandRequestId:
+            requests.find((request) => request.commandId === command.id)?.id ?? null,
+        });
+      }
+    }
+    const rows = new Map(
+      frames.map((frame) => [
+        String(frame.id),
+        {
+          ...frame,
+          acknowledgement: acknowledgements.get(String(frame.id)) ?? null,
+        },
+      ]),
     );
     return queries.map((query) => ({
       query,
