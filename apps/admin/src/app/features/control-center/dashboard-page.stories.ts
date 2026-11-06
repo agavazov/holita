@@ -1,24 +1,29 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import '../../../storybook/control-center-fixtures';
+import '../../../storybook/dashboard-problems-fixtures';
 import { defaultBranchId } from '../../../storybook/session-fixtures';
 import { routeAt, StoryApp, type StoryFixtures } from '../../../storybook/story-config';
 import { AdminWorkspace } from '../../workspace/admin-workspace';
-import { ControlCenterWorkspace } from './control-center-workspace';
-import { DashboardPage } from './dashboard-page';
+import { DashboardWorkspace } from '../../workspace/dashboard-workspace';
+import { AlertDetailPage } from '../fleet/alerts/alert-detail-page';
+import { ProblemsPage } from '../fleet/overview/problems-page';
+
 const meta: Meta = {
-  title: 'Admin/Control center/Dashboard',
+  title: 'Admin/Dashboard/Problems',
   tags: ['!autodocs'],
-  parameters: {
-    holita: { signedIn: true, now: '2026-10-20T08:05:00.000Z' } satisfies StoryFixtures,
-  },
+  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };
 export default meta;
 type Story = StoryObj;
-const render = routeAt(defaultBranchId + '/control-center');
-export const Default: Story = {
+const route = routeAt(`${defaultBranchId}/fleet/dashboard/problems`);
+
+export const CombinedFeed: Story = {
+  name: 'Combined feed',
   render: () => ({
-    ...render(),
-    moduleMetadata: { imports: [StoryApp, AdminWorkspace, ControlCenterWorkspace, DashboardPage] },
+    ...route(),
+    moduleMetadata: {
+      imports: [StoryApp, AdminWorkspace, DashboardWorkspace, ProblemsPage, AlertDetailPage],
+    },
     template: '<holita-story-app [url]="url" />',
   }),
 };

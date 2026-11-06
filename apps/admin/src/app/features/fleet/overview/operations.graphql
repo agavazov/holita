@@ -1,49 +1,93 @@
-query AdminFleetOverview {
+query AdminFleetOverview($from: DateTime!, $to: DateTime!, $days: Int!) {
+  fleetDashboard(from: $from, to: $to) {
+    vehicles {
+      asOf
+      dataAsOf
+      liveAsOf
+      total
+      connected
+      reporting
+      live
+    }
+    devices {
+      asOf
+      liveAsOf
+      total
+      connected
+      reporting
+      live
+    }
+    trips {
+      asOf
+      dataAsOf
+      from
+      to
+      total
+      distanceKm
+      distanceKnownTrips
+    }
+    problems {
+      asOf
+      dataAsOf
+      ermAsOf
+      periodFrom
+      periodTo
+      total
+      requiringAttention
+      recorded
+    }
+  }
   fleetOverview {
     dataAsOf
     businessDate
-    activeVehicles
-    movingVehicles
-    notReportingVehicles
-    distanceTodayKm
-    openCriticalAlerts
     overdueService
-    dailyDistance {
+  }
+  fleetDailyDistance(days: $days) {
+    dataAsOf
+    points {
       date
       distanceKm
     }
-    activityByGroup {
-      group {
-        id
-        name
-        colorToken
-      }
-      total
-      moving
-      idle
-      parked
-      notReporting
-      asset
-      noDevice
-    }
   }
-  critical: fleetEvents(
-    limit: 3
-    filter: { actionable: true, alertStatuses: [OPEN], severities: [CRITICAL] }
+  critical: fleetProblems(
+    limit: 5
+    filter: {
+      requiringAttention: true
+      severities: [CRITICAL]
+      occurredFrom: $from
+      occurredTo: $to
+    }
   ) {
     items {
-      id
-      kind
-      details
-      vehicle {
-        licensePlate
-      }
+      ...AdminOverviewProblem
+    }
+  }
+  warning: fleetProblems(
+    limit: 5
+    filter: {
+      requiringAttention: true
+      severities: [WARNING]
+      occurredFrom: $from
+      occurredTo: $to
+    }
+  ) {
+    items {
+      ...AdminOverviewProblem
+    }
+  }
+  information: fleetProblems(
+    limit: 5
+    filter: { requiringAttention: true, severities: [INFO], occurredFrom: $from, occurredTo: $to }
+  ) {
+    items {
+      ...AdminOverviewProblem
     }
   }
   overdue: fleetServiceTasks(
     limit: 2
     filter: { urgencies: [OVERDUE], allOf: [{ vehicleStatuses: [ACTIVE, IN_WORKSHOP] }] }
   ) {
+    total
     items {
       id
       title
@@ -59,6 +103,7 @@ query AdminFleetOverview {
     filter: { documentsExpireWithinDays: 0 }
     sort: { field: LICENSE_EXPIRES_ON, direction: ASC }
   ) {
+    total
     items {
       id
       firstName
@@ -66,20 +111,131 @@ query AdminFleetOverview {
       documentStatus
     }
   }
-  fleetDeviceSummary {
-    offline
+  fleetDriverSummary {
+    active
+    onLeave
   }
-  fleetTrips(limit: 5, sort: { field: STARTED_AT, direction: DESC }) {
+}
+
+fragment AdminOverviewProblem on FleetProblem {
+  id
+  sourceKind
+  severity
+  occurredAt
+  state
+  code
+  details
+  vehicleId
+  deviceId
+  deviceImei
+  alertId
+  vehicle {
+    licensePlate
+  }
+}
+
+query AdminOverviewMap($offset: Int!, $limit: Int!) {
+  fleetMap(offset: $offset, limit: $limit) {
+    asOf
+    dataAsOf
+    liveAsOf
+    total
+    withPosition
+    withoutPosition
+    offset
+    limit
+    hasMore
+    items {
+      vehicle {
+        id
+        licensePlate
+      }
+      position {
+        latitude
+        longitude
+        headingDeg
+        recordedAt
+        ageSeconds
+      }
+      activity
+      connected
+      reporting
+      live
+      devices {
+        deviceId
+        expectedIntervalSeconds
+      }
+    }
+  }
+}
+
+query AdminOverviewConnectedDevices($offset: Int!, $limit: Int!) {
+  fleetDevices(offset: $offset, limit: $limit, sort: { field: IMEI, direction: ASC }) {
+    total
+    offset
+    limit
     items {
       id
-      vehicleId
+      imei
       vehicle {
         licensePlate
       }
-      startedAt
-      startAddress
-      endAddress
-      distanceKm
+      ermState {
+        online
+        lastFrameAt
+      }
+    }
+  }
+}
+
+query AdminDashboardProblems($offset: Int!, $limit: Int!, $filter: FleetProblemFilter) {
+  fleetProblems(offset: $offset, limit: $limit, filter: $filter) {
+    items {
+      id
+      sourceKind
+      sourceId
+      severity
+      occurredAt
+      state
+      requiringAttention
+      code
+      details
+      vehicleId
+      vehicle {
+        id
+        licensePlate
+      }
+      deviceId
+      deviceImei
+      alertId
+      fleetEventId
+      ermEventId
+      commandRequestId
+    }
+    total
+    offset
+    limit
+    counts {
+      asOf
+      dataAsOf
+      ermAsOf
+      periodFrom
+      periodTo
+      total
+      requiringAttention
+      recorded
+      bySeverity {
+        severity
+        total
+        requiringAttention
+        recorded
+      }
+      bySource {
+        sourceKind
+        total
+        requiringAttention
+        recorded
+      }
     }
   }
 }

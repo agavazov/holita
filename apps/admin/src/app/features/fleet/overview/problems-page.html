@@ -1,0 +1,245 @@
+<holita-page-header [title]="text().title" [count]="page()?.total ?? null">
+  <span headerMeta class="app-muted">{{ branch().name }}</span>
+  <button
+    headerActions
+    pButton
+    type="button"
+    severity="secondary"
+    [disabled]="loading()"
+    (click)="refresh()"
+  >
+    <svg data-p-icon="refresh" aria-hidden="true"></svg>
+    {{ text().refresh }}
+  </button>
+</holita-page-header>
+
+@if (page()?.counts; as counts) {
+  <div class="app-card">
+    <div class="app-inline" [attr.aria-label]="text().filtered">
+      <p-tag
+        severity="warn"
+        [value]="text().attention + ': ' + (counts.requiringAttention | holitaNumber)"
+      />
+      <p-tag
+        severity="secondary"
+        [value]="text().recorded + ': ' + (counts.recorded | holitaNumber)"
+      />
+      <span class="app-muted" [title]="format.utc(counts.asOf)"
+        >{{ text().updated }} {{ format.dateTime(counts.asOf) }}</span
+      >
+    </div>
+    <p class="app-muted">{{ text().recordedHint }}</p>
+    <p class="app-muted">
+      {{ text().period }}: {{ format.dateTimeRange(counts.periodFrom, counts.periodTo) }} ·
+      {{ format.preferences().timeZone }}. {{ text().currentHint }}
+    </p>
+  </div>
+}
+
+<div class="app-card" role="group" [attr.aria-label]="text().filters.label">
+  <div class="problem-filters">
+    <holita-form-field controlId="problems-source" [label]="text().filters.source">
+      <p-select
+        inputId="problems-source"
+        [options]="sources()"
+        optionLabel="label"
+        optionValue="value"
+        [multiple]="true"
+        [pt]="selectMultiplePt"
+        [placeholder]="text().filters.allSources"
+        [ngModel]="url.state().filter.source ?? []"
+        (ngModelChange)="sourceChanged($event)"
+      />
+    </holita-form-field>
+    <holita-form-field controlId="problems-severity" [label]="text().filters.severity">
+      <p-select
+        inputId="problems-severity"
+        [options]="severities()"
+        optionLabel="label"
+        optionValue="value"
+        [multiple]="true"
+        [pt]="selectMultiplePt"
+        [placeholder]="text().filters.allSeverities"
+        [ngModel]="url.state().filter.severity ?? []"
+        (ngModelChange)="severityChanged($event)"
+      />
+    </holita-form-field>
+    <holita-form-field controlId="problems-state" [label]="text().filters.state">
+      <p-select
+        inputId="problems-state"
+        [options]="states()"
+        optionLabel="label"
+        optionValue="value"
+        [multiple]="true"
+        [pt]="selectMultiplePt"
+        [placeholder]="text().filters.allStates"
+        [ngModel]="url.state().filter.state ?? []"
+        (ngModelChange)="stateChanged($event)"
+      />
+    </holita-form-field>
+    <holita-form-field controlId="problems-attention" [label]="text().filters.attention">
+      <p-select
+        inputId="problems-attention"
+        [options]="attentionOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="url.state().filter.attention ?? null"
+        (ngModelChange)="attentionChanged($event)"
+      />
+    </holita-form-field>
+  </div>
+  @if (filtered()) {
+    <div class="app-inline">
+      @if (url.state().filter.vehicleIds?.length) {
+        <p-tag severity="info" [value]="text().filters.vehicleScope" />
+      }
+      @if (url.state().filter.deviceIds?.length) {
+        <p-tag severity="info" [value]="text().filters.deviceScope" />
+      }
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        variant="text"
+        (click)="url.clearFilters()"
+      >
+        {{ text().filters.clear }}
+      </button>
+    </div>
+  }
+</div>
+
+<holita-table-panel
+  #panel
+  [heading]="text().table.heading"
+  [total]="page()?.total ?? null"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
+  [view]="view()"
+  [busy]="loading()"
+  [errorText]="failure()"
+  [emptyTitle]="text().table.emptyTitle"
+  [emptyDescription]="text().table.emptyDescription"
+  [actions]="actions()"
+  [actionContext]="url.state()"
+  [page]="{ page: url.state().page, pageSize: url.state().pageSize, total: page()?.total ?? 0 }"
+  (action)="run($event)"
+  (pageChange)="url.setPage($event)"
+  (clearFilters)="url.clearFilters()"
+  (retry)="refresh()"
+>
+  <span panelActions class="app-muted">{{ text().table.newestFirst }}</span>
+  <p-table
+    class="app-responsive-table"
+    [value]="rows()"
+    dataKey="id"
+    [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': tableMinWidth }"
+    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().table.heading } }"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+          <col [style.width]="column.width" [class]="column.className ?? ''" />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity">{{ text().table.problem }}</th>
+        <th scope="col" class="app-col-secondary">{{ text().table.source }}</th>
+        <th scope="col">{{ text().table.severity }}</th>
+        <th scope="col">{{ text().table.state }}</th>
+        <th scope="col">{{ text().table.time }}</th>
+        <th scope="col">{{ text().table.target }}</th>
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ text().table.actions }}</span>
+        </th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
+        <td class="app-col-identity">
+          <span class="app-cell-identity">
+            @if (row.alertId || row.deviceId || row.vehicleId) {
+              <button
+                type="button"
+                class="app-link"
+                [title]="row.title"
+                [attr.aria-label]="
+                  row.alertId ? text().table.openAlert + ': ' + row.title : row.title
+                "
+                (click)="panel.run('open', [recordOf(row)], $event.currentTarget)"
+              >
+                {{ row.title }}
+              </button>
+            } @else {
+              <span [title]="row.title">{{ row.title }}</span>
+            }
+            <span [title]="row.code + (row.detail ? ' · ' + row.detail : '')">{{
+              row.detail || row.sourceLabel
+            }}</span>
+          </span>
+          <div class="app-table-mobile-actions">
+            <holita-row-actions
+              [actions]="actions()"
+              [record]="recordOf(row)"
+              (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
+            />
+          </div>
+        </td>
+        <td class="app-col-secondary">
+          <span class="app-cell-truncate" [title]="row.sourceTitle">{{ row.sourceLabel }}</span>
+        </td>
+        <td>
+          <span class="app-cell-status" [title]="row.severityLabel"
+            ><p-tag [severity]="row.severitySeverity" [value]="row.severityLabel"
+          /></span>
+        </td>
+        <td>
+          <span class="app-cell-status" [title]="row.stateLabel"
+            ><p-tag [severity]="row.stateSeverity" [value]="row.stateLabel"
+          /></span>
+        </td>
+        <td class="app-cell-date" [title]="row.date.title">{{ row.date.text }}</td>
+        <td>
+          <span class="app-cell-identity">
+            @if (row.vehicleId) {
+              <button
+                type="button"
+                class="app-link app-plate"
+                [title]="row.vehicle?.licensePlate ?? text().table.openVehicle"
+                (click)="panel.run('vehicle', [recordOf(row)], $event.currentTarget)"
+              >
+                {{ row.vehicle?.licensePlate ?? text().table.openVehicle }}
+              </button>
+            }
+            @if (row.deviceId) {
+              <button
+                type="button"
+                class="app-link app-mono"
+                [title]="text().table.openDevice + ': ' + (row.deviceImei ?? row.deviceId)"
+                (click)="panel.run('device', [recordOf(row)], $event.currentTarget)"
+              >
+                {{ row.deviceImei ?? text().table.device }}
+              </button>
+            } @else if (!row.vehicleId) {
+              <span [title]="text().table.noTarget">{{ text().table.noTarget }}</span>
+            }
+          </span>
+        </td>
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <holita-row-actions
+            [actions]="actions()"
+            [record]="recordOf(row)"
+            (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
+          />
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</holita-table-panel>
+<router-outlet [routerOutletData]="drawerHost" />
