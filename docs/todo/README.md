@@ -5,6 +5,7 @@ Pending work and planned tasks, separate from implemented product documentation.
 - [ERM roadmap](erm-roadmap.md): fleet routing, safety/test levels, device control, recovery,
   questions for ERM, owner decisions and production deployment.
 - [Admin UI v2 follow-ups](ui-v2.md): visual acceptance and tile-provider deployment work.
+- [Devices, commands and truck faults](devices-commands-faults.md): the Discocan phase after UI v2.
 - [Admin presentation and release](admin-design-system.md): remaining product/release decisions.
 - [Admin backend follow-ups](admin-design-system-backend.md): unresolved provider integrations.
 - [Instant tasks](_instant-tsks.md): short one-line tasks.
