@@ -208,6 +208,32 @@ Keep rejected drafts editable and focus their first invalid field. Never expose 
 `holita-source-context` presents provenance, period, coverage and availability; it owns no fetching
 or actions. Keep source identity, retrieval and event clocks, gaps and missing fields distinct.
 
+### Maps and charts
+
+`holita-location-map` (`ui/location-map`) presents one record or a fleet with status text/tones,
+measured heading, a recorded track and a matching accessible list. Callers supply canonical
+positions, localized status labels, detail URLs, the data clock (`asOf`), retrieval time
+(`updatedAt`) and Branch display preferences. A missing position stays in the list. Position age
+uses the supplied data clock; connection/reporting status never refreshes an older GPS position.
+Track points use explicit null positions or `breakBefore` to break unavailable intervals; pass the
+requested range, coverage and `truncated` disclosure from the source. Markers emit `recordSelect`.
+Refreshes retain the view and selection; Fit fleet is explicit after the first positioned read.
+Tile failure opens the list and preserves actions. Public tile configuration and attribution are
+documented in [development](development.md#ports-and-environment). Google external links remain
+available. Review `Design System/Maps` for fleet, single, missing, stale, heading/track, tile failure
+and narrow states.
+
+`holita-chart-panel` (`ui/chart-panel`) uses `p-chart`/Chart.js for donut, line and bar summaries.
+Supply localized point/series labels, canonical numeric values, units, time zone/date format,
+period/as-of and a useful summary. Null values remain gaps; measured zero stays zero. Category
+slots c1–c8 and explicit status tones resolve from the current tokens at runtime, including brand
+and scheme changes. Reduced-motion preference disables the restrained animation. Loading/empty
+states, a text legend, tooltips and a native data table are shared presentation. Set `drilldown`
+to emit `pointSelect` from chart elements or matching keyboard-reachable table buttons; the host
+owns navigation/filtering. Existing SVG charts remain available for small summaries. Review
+`Design System/Charts` for donut, line, bar, empty, gaps, dark and loading states. PrimeNG Chart has
+no Aura design tokens; its registry entry is empty and the shared canvas palette owns its colours.
+
 ### Table conventions
 
 Every list/sub-table projects a `p-table` into TablePanel. The default `mode="offset"` keeps the

@@ -1,0 +1,120 @@
+:host {
+  display: flex;
+  min-inline-size: 0;
+}
+
+.chart-panel__context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-app-space-2) var(--p-app-space-4);
+  margin: 0;
+  font-size: var(--p-app-text-xs);
+  color: var(--p-text-muted-color);
+
+  div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--p-app-space-1);
+  }
+
+  dt::after {
+    content: ':';
+  }
+  dd {
+    margin: 0;
+    color: var(--p-text-color);
+  }
+}
+
+.chart-panel__summary,
+.chart-panel__hint {
+  margin: 0;
+  font-size: var(--p-app-text-sm);
+  color: var(--p-text-muted-color);
+}
+
+.chart-panel__plot,
+.chart-panel__state {
+  block-size: 17rem;
+  min-inline-size: 0;
+}
+
+.chart-panel__plot {
+  position: relative;
+}
+.chart-panel__state {
+  display: grid;
+  place-items: center;
+  color: var(--p-text-muted-color);
+}
+
+.chart-panel__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-app-space-2) var(--p-app-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--p-app-text-sm);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: var(--p-app-space-2);
+  }
+}
+
+.chart-panel__swatch {
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  flex: none;
+  border-radius: var(--p-app-radius-control);
+}
+
+.chart-panel__data {
+  border-block-start: 1px solid var(--p-content-border-color);
+  padding-block-start: var(--p-app-space-3);
+  font-size: var(--p-app-text-sm);
+
+  summary {
+    cursor: pointer;
+    color: var(--p-primary-color);
+  }
+}
+
+.chart-panel__scroll {
+  overflow: auto;
+  max-block-size: 20rem;
+  margin-block-start: var(--p-app-space-3);
+}
+table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+th,
+td {
+  padding: var(--p-app-space-2);
+  border-block-end: 1px solid var(--p-content-border-color);
+  text-align: start;
+}
+td {
+  text-align: end;
+  white-space: nowrap;
+}
+
+.chart-panel__value {
+  border: 0;
+  padding: var(--p-app-space-1) var(--p-app-space-2);
+  border-radius: var(--p-app-radius-control);
+  background: var(--p-app-tone-accent-background);
+  color: var(--p-app-tone-accent-color);
+  font: inherit;
+  cursor: pointer;
+}
+
+summary:focus-visible,
+.chart-panel__value:focus-visible,
+.chart-panel__scroll:focus-visible {
+  outline: var(--p-focus-ring-width) solid var(--p-focus-ring-color);
+  outline-offset: var(--p-focus-ring-offset);
+}

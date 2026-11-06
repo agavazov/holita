@@ -32,6 +32,7 @@ import { Timeline } from 'primeng/timeline';
 import { ToggleButton } from 'primeng/togglebutton';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 import { Tooltip } from 'primeng/tooltip';
+import { ChartPanel } from '../ui/chart-panel/chart-panel';
 import { confirmAction, confirmDialogPt } from '../ui/confirm';
 import { selectMultiplePt } from '../ui/select-multiple';
 
@@ -47,6 +48,7 @@ const vehicles = Array.from({ length: 200 }, (_, index) => `CB ${String(1001 + i
     Badge,
     ButtonDirective,
     Checkbox,
+    ChartPanel,
     Chip,
     DatePicker,
     IconField,

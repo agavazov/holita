@@ -4,8 +4,14 @@ export interface AdminRuntimeConfig {
   graphqlUrl: string;
   primeUiLicense?: string;
   googleMapsEmbedApiKey?: string;
+  mapTileUrl?: string;
+  mapAttribution?: string;
   fleetEnabled?: boolean;
 }
+
+const defaultMapTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const defaultMapAttribution =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 export const ADMIN_RUNTIME_CONFIG = new InjectionToken<AdminRuntimeConfig>('admin runtime config', {
   providedIn: 'root',
@@ -43,7 +49,7 @@ export function readAdminConfig(value: unknown): AdminRuntimeConfig {
     throw new Error('fleetEnabled must be a boolean.');
   }
   const availability = fleet === undefined ? {} : { fleetEnabled: fleet };
-  const maps = readGoogleMapsConfig(value);
+  const maps = { ...readGoogleMapsConfig(value), ...readMapTilesConfig(value) };
   if (typeof value === 'object' && value !== null && 'primeUiLicense' in value) {
     if (typeof value.primeUiLicense !== 'string') {
       throw new Error('primeUiLicense must be a string.');
@@ -52,6 +58,33 @@ export function readAdminConfig(value: unknown): AdminRuntimeConfig {
     return { graphqlUrl, ...availability, ...maps, ...(primeUiLicense ? { primeUiLicense } : {}) };
   }
   return { graphqlUrl, ...availability, ...maps };
+}
+
+function readMapTilesConfig(
+  value: unknown,
+): Pick<AdminRuntimeConfig, 'mapTileUrl' | 'mapAttribution'> {
+  if (typeof value !== 'object' || value === null) {
+    return {};
+  }
+  const config: Pick<AdminRuntimeConfig, 'mapTileUrl' | 'mapAttribution'> = {};
+  if ('mapTileUrl' in value) {
+    if (typeof value.mapTileUrl !== 'string' || !value.mapTileUrl.trim()) {
+      throw new Error('mapTileUrl must be a nonempty HTTP tile URL.');
+    }
+    const mapTileUrl = value.mapTileUrl.trim();
+    const url = new URL(mapTileUrl.replace(/\{[xyzs]\}/g, '0'));
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.hash) {
+      throw new Error('mapTileUrl must be an HTTP tile URL without credentials or a fragment.');
+    }
+    config.mapTileUrl = mapTileUrl;
+  }
+  if ('mapAttribution' in value) {
+    if (typeof value.mapAttribution !== 'string' || !value.mapAttribution.trim()) {
+      throw new Error('mapAttribution must be a nonempty string.');
+    }
+    config.mapAttribution = value.mapAttribution.trim();
+  }
+  return config;
 }
 
 function readGoogleMapsConfig(value: unknown): Pick<AdminRuntimeConfig, 'googleMapsEmbedApiKey'> {
@@ -96,4 +129,6 @@ export class AdminConfig {
   readonly graphqlUrl = inject(ADMIN_RUNTIME_CONFIG).graphqlUrl;
   readonly fleetEnabled = inject(ADMIN_RUNTIME_CONFIG).fleetEnabled ?? true;
   readonly googleMapsEmbedApiKey = inject(ADMIN_RUNTIME_CONFIG).googleMapsEmbedApiKey;
+  readonly mapTileUrl = inject(ADMIN_RUNTIME_CONFIG).mapTileUrl ?? defaultMapTileUrl;
+  readonly mapAttribution = inject(ADMIN_RUNTIME_CONFIG).mapAttribution ?? defaultMapAttribution;
 }

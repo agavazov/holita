@@ -136,6 +136,16 @@ The admin reads browser configuration from `apps/admin/public/config.json` and o
 Git-ignored `apps/admin/public/config.local.json`. Local configuration overrides the public
 file and is excluded from production assets.
 
+The public file requires `graphqlUrl` and optionally accepts `fleetEnabled` (default `true`),
+`primeUiLicense`, `googleMapsEmbedApiKey`, `mapTileUrl` and `mapAttribution`. Tile configuration
+is public browser configuration: `mapTileUrl` is an absolute HTTP(S) URL template supporting
+`{z}`, `{x}`, `{y}` and optional `{s}`; `mapAttribution` is nonempty provider attribution HTML.
+The map defaults to `https://tile.openstreetmap.org/{z}/{x}/{y}.png` with linked
+[OpenStreetMap contributors attribution](https://www.openstreetmap.org/copyright). Configure
+a managed tile provider and its required attribution before client demos, following that
+provider's terms; the community OSM tile server is not an unlimited hosted service.
+The local file accepts only `primeUiLicense` and `googleMapsEmbedApiKey`.
+
 ## Core users and sessions
 
 Apply the additive Core migration before using account authentication, then generate Prisma

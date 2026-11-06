@@ -124,6 +124,18 @@
         </p-tabpanels>
       </p-tabs>
     </div>
+    <div class="row">
+      <span class="label">p-chart</span>
+      <holita-chart-panel
+        style="width: 100%"
+        kind="bar"
+        title="Recorded distance"
+        unit="km"
+        timeZone="UTC"
+        [points]="[{ id: 'monday', label: 'Monday' }, { id: 'tuesday', label: 'Tuesday' }]"
+        [series]="[{ id: 'distance', label: 'Distance', values: [120, 180], category: 'c1' }]"
+      />
+    </div>
   </section>
 }
 <span id="segment-label" class="app-visually-hidden">Period</span>

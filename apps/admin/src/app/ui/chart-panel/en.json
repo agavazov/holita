@@ -1,0 +1,15 @@
+{
+  "loading": "Loading chart…",
+  "empty": "No chart data available.",
+  "legend": "Legend",
+  "unit": "Unit",
+  "timeZone": "Time zone",
+  "period": "Period",
+  "asOf": "Data as of",
+  "data": "Data and actions",
+  "point": "Period / category",
+  "gap": "No data",
+  "summary": "{points} points across {series} series. Missing values are gaps; zero is a measured value.",
+  "open": "Open {series}, {point}: {value}",
+  "drilldownHint": "Select a chart value, or open the data for keyboard access."
+}

@@ -1,0 +1,132 @@
+<section class="app-card" [attr.aria-label]="title() ?? text().title">
+  <div class="app-card__header location-map__header">
+    <h2 class="app-card__title">{{ title() ?? text().title }}</h2>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="!positioned().length"
+      (click)="fitFleet()"
+    >
+      {{ text().fit }}
+    </button>
+  </div>
+  <div class="location-map__meta">
+    <span
+      >{{ text().updated }}:
+      <time [attr.datetime]="updatedAt()" [title]="updatedAt() ?? ''">{{
+        date(updatedAt())
+      }}</time></span
+    >
+    <span
+      >{{ text().dataTime }}:
+      <time [attr.datetime]="asOf()" [title]="asOf() ?? ''">{{ date(asOf()) }}</time> ·
+      {{ timeZone() }}</span
+    >
+  </div>
+  @if (tileFailed()) {
+    <p role="status">
+      {{ text().tileFailure }}
+      <button pButton type="button" severity="secondary" [text]="true" (click)="retryTiles()">
+        {{ text().retry }}
+      </button>
+    </p>
+  }
+  <div class="location-map__surface">
+    <div
+      #mapCanvas
+      class="location-map__canvas"
+      role="region"
+      [attr.aria-label]="title() ?? text().title"
+    ></div>
+    <div class="location-map__zoom">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [attr.aria-label]="text().zoomIn"
+        (click)="zoom(1)"
+      >
+        +
+      </button>
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [attr.aria-label]="text().zoomOut"
+        (click)="zoom(-1)"
+      >
+        −
+      </button>
+    </div>
+  </div>
+  @if (!positioned().length) {
+    <p role="status">{{ text().noPositions }}</p>
+  }
+  <ul class="location-map__legend" [attr.aria-label]="text().legend">
+    @for (status of legend(); track status.label + status.tone) {
+      <li>
+        <span
+          class="location-map__dot"
+          [style.background]="'var(--p-app-tone-' + status.tone + '-solid)'"
+          aria-hidden="true"
+        ></span
+        >{{ status.label }}
+      </li>
+    }
+  </ul>
+  @if (track(); as recorded) {
+    <div class="location-map__meta">
+      <strong>{{ text().track }}</strong>
+      <span>{{ date(recorded.from) }} – {{ date(recorded.to) }} · {{ timeZone() }}</span>
+      <span>{{ recorded.coverage }}</span>
+      <span>{{ text().trackGaps }}</span>
+      @if (recorded.truncated) {
+        <span>{{ text().truncated }}</span>
+      }
+    </div>
+  }
+  <details [open]="tileFailed() || !positioned().length">
+    <summary>{{ text().list }} ({{ records().length }})</summary>
+    <ul class="location-map__list">
+      @for (record of records(); track record.id; let index = $index) {
+        <li [class.location-map__record--selected]="selectedId() === record.id">
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [text]="true"
+            [attr.aria-label]="selectLabel(record)"
+            [attr.aria-pressed]="selectedId() === record.id"
+            (click)="select(record)"
+          >
+            <span>{{ index + 1 }}.</span>
+            <span [class.app-plate]="!!record.plate" [attr.data-country]="record.countryCode">{{
+              record.plate ?? record.label
+            }}</span>
+          </button>
+          <span>{{ record.label }} · {{ record.status.label }}</span>
+          <span class="app-num">{{ position(record) }}</span>
+          <span [title]="record.positionAt ?? ''"
+            >{{ text().positionTime }}: {{ date(record.positionAt) }}</span
+          >
+          <span>{{ text().positionAge }}: {{ age(record) }}</span>
+          @if (record.heading !== null && record.heading !== undefined) {
+            <span>{{ text().heading }}: {{ record.heading }}°</span>
+          }
+          <div class="location-map__actions">
+            @if (record.href) {
+              <a [href]="record.href">{{ text().open }}</a>
+            }
+            @if (googleUrl(record); as url) {
+              <a [href]="url" target="_blank" rel="noopener noreferrer">{{ text().google }}</a>
+            }
+          </div>
+        </li>
+      } @empty {
+        <li>{{ text().noRecords }}</li>
+      }
+    </ul>
+  </details>
+</section>

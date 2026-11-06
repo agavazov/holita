@@ -1,0 +1,211 @@
+// Minimal Leaflet layout for div icons/raster tiles/SVG tracks. No default icon assets.
+holita-location-map {
+  display: block;
+  min-inline-size: 0;
+}
+
+.location-map__header,
+.location-map__meta,
+.location-map__legend,
+.location-map__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-app-space-2) var(--p-app-space-4);
+}
+.location-map__meta {
+  color: var(--p-text-muted-color);
+  font-size: var(--p-app-text-sm);
+}
+.location-map__surface {
+  position: relative;
+  isolation: isolate;
+}
+.location-map__canvas {
+  block-size: 24rem;
+  overflow: hidden;
+  position: relative;
+  background: var(--p-app-canvas-background);
+  border: 1px solid var(--p-app-panel-border-color);
+  border-radius: var(--p-app-radius-panel);
+  font: inherit;
+  touch-action: none;
+}
+.location-map__zoom {
+  position: absolute;
+  inset: var(--p-app-space-2) auto auto var(--p-app-space-2);
+  z-index: 800;
+  display: grid;
+  gap: var(--p-app-space-1);
+}
+.location-map__legend,
+.location-map__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.location-map__legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--p-app-space-2);
+}
+.location-map__dot {
+  inline-size: 0.625rem;
+  block-size: 0.625rem;
+  border-radius: 50%;
+}
+.location-map__list {
+  display: grid;
+  gap: var(--p-app-space-3);
+  padding-block: var(--p-app-space-3);
+}
+.location-map__list li {
+  display: grid;
+  justify-items: start;
+  gap: var(--p-app-space-2);
+  padding: var(--p-app-space-3);
+  border: 1px solid var(--p-app-panel-border-color);
+  border-radius: var(--p-app-radius-control);
+}
+.location-map__record--selected {
+  background: var(--p-highlight-background);
+}
+
+holita-location-map {
+  summary {
+    cursor: pointer;
+  }
+  :is(
+    .leaflet-pane,
+    .leaflet-tile,
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow,
+    .leaflet-tile-container,
+    .leaflet-pane > svg,
+    .leaflet-pane > canvas,
+    .leaflet-zoom-box
+  ) {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+  .leaflet-tile {
+    visibility: hidden;
+    user-select: none;
+  }
+  .leaflet-tile-loaded {
+    visibility: inherit;
+  }
+  .leaflet-tile-container {
+    pointer-events: none;
+  }
+  .leaflet-container img.leaflet-tile {
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    border: 0;
+  }
+  .leaflet-pane {
+    z-index: 400;
+  }
+  .leaflet-tile-pane {
+    z-index: 200;
+  }
+  .leaflet-marker-pane {
+    z-index: 600;
+  }
+  .leaflet-popup-pane {
+    z-index: 700;
+  }
+  .leaflet-pane > svg {
+    pointer-events: none;
+  }
+  .leaflet-zoom-animated {
+    transform-origin: 0 0;
+  }
+  .leaflet-interactive,
+  .leaflet-marker-icon {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+  .leaflet-grab {
+    cursor: grab;
+  }
+  .leaflet-dragging .leaflet-grab {
+    cursor: grabbing;
+  }
+  .leaflet-control-container {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 800;
+  }
+  .leaflet-bottom {
+    position: absolute;
+    bottom: 0;
+    z-index: 1000;
+  }
+  .leaflet-right {
+    right: 0;
+  }
+  .leaflet-control {
+    pointer-events: auto;
+  }
+  .leaflet-control-attribution {
+    background: var(--p-app-panel-background);
+    color: var(--p-text-color);
+    padding: var(--p-app-space-1);
+    font-size: var(--p-app-text-xs);
+  }
+}
+
+.location-map__marker {
+  background: transparent;
+  border: 0;
+}
+.location-map__pin {
+  display: grid;
+  place-items: center;
+  inline-size: 100%;
+  block-size: 100%;
+  border: 3px solid;
+  border-radius: 50%;
+  font-weight: 800;
+  position: relative;
+}
+.location-map__heading {
+  position: absolute;
+  inset: -1.5rem;
+  font-size: 2rem;
+  text-align: center;
+  pointer-events: none;
+}
+.location-map__marker--selected,
+.location-map__marker:focus-visible {
+  outline: var(--p-focus-ring-width) solid var(--p-focus-ring-color);
+  outline-offset: var(--p-focus-ring-offset);
+  border-radius: 50%;
+}
+
+holita-location-map {
+  .leaflet-popup {
+    position: absolute;
+    text-align: center;
+    margin-bottom: var(--p-app-space-4);
+  }
+  .leaflet-popup-content-wrapper {
+    padding: var(--p-app-space-3);
+    background: var(--p-app-panel-background);
+    color: var(--p-text-color);
+    border: 1px solid var(--p-app-panel-border-color);
+    border-radius: var(--p-app-radius-panel);
+    box-shadow: var(--p-app-shadow-floating);
+  }
+}
+
+.location-map__popup {
+  display: grid;
+  justify-items: start;
+  gap: var(--p-app-space-2);
+  min-inline-size: 10rem;
+  text-align: start;
+}

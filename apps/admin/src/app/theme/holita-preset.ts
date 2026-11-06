@@ -56,6 +56,8 @@ export const registeredComponents = {
   avatar: Avatar,
   badge: Badge,
   button: Button,
+  // p-chart exposes no Aura tokens; ChartPanel resolves the app palette for its canvas.
+  chart: {},
   checkbox: Checkbox,
   chip: Chip,
   confirmdialog: ConfirmDialog,

@@ -1,0 +1,118 @@
+<div class="app-card__header">
+  <h2 class="app-card__title">{{ title() }}</h2>
+</div>
+<dl class="chart-panel__context">
+  @if (unit()) {
+    <div>
+      <dt>{{ text().unit }}</dt>
+      <dd>{{ unit() }}</dd>
+    </div>
+  }
+  <div>
+    <dt>{{ text().timeZone }}</dt>
+    <dd>{{ timeZone() }}</dd>
+  </div>
+  @if (period()) {
+    <div>
+      <dt>{{ text().period }}</dt>
+      <dd>{{ period() }}</dd>
+    </div>
+  }
+  @if (asOf()) {
+    <div>
+      <dt>{{ text().asOf }}</dt>
+      <dd>
+        <time [attr.datetime]="asOf()" [title]="asOf() ?? ''">{{ asOfText() }}</time>
+      </dd>
+    </div>
+  }
+</dl>
+@if (loading()) {
+  <div class="chart-panel__state" role="status">{{ text().loading }}</div>
+} @else if (!hasData()) {
+  <div class="chart-panel__state" role="status">{{ text().empty }}</div>
+} @else {
+  <p class="chart-panel__summary">{{ summaryText() }}</p>
+  <div class="chart-panel__plot">
+    @if (palette()) {
+      <p-chart
+        [type]="chartType()"
+        [data]="chartData()"
+        [options]="chartOptions()"
+        [ariaLabel]="title() + '. ' + summaryText()"
+        height="100%"
+        (onDataSelect)="chartSelect($event)"
+      />
+    }
+  </div>
+  <ul class="chart-panel__legend" [attr.aria-label]="text().legend">
+    @for (item of legend(); track item.id) {
+      <li>
+        <span class="chart-panel__swatch" [style.background]="item.color" aria-hidden="true"></span
+        >{{ item.label }}
+      </li>
+    }
+  </ul>
+  @if (drilldown()) {
+    <p class="chart-panel__hint">{{ text().drilldownHint }}</p>
+  }
+  <details class="chart-panel__data">
+    <summary>{{ text().data }}</summary>
+    <div
+      class="chart-panel__scroll"
+      tabindex="0"
+      role="region"
+      [attr.aria-label]="title() + ': ' + text().data"
+    >
+      <table>
+        <caption class="app-visually-hidden">
+          {{
+            title()
+          }}
+          ·
+          {{
+            timeZone()
+          }}
+          @if (unit()) {
+            · {{ unit() }}
+          }
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">{{ text().point }}</th>
+            @for (item of series(); track item.id) {
+              <th scope="col">{{ item.label }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (point of points(); track point.id; let pointIndex = $index) {
+            <tr>
+              <th scope="row">{{ point.label }}</th>
+              @for (item of series(); track item.id; let seriesIndex = $index) {
+                <td class="app-num">
+                  @if (
+                    drilldown() &&
+                    item.values[pointIndex] !== null &&
+                    item.values[pointIndex] !== undefined
+                  ) {
+                    <button
+                      type="button"
+                      class="chart-panel__value"
+                      [attr.aria-label]="actionLabel(item, point, item.values[pointIndex])"
+                      (click)="select(seriesIndex, pointIndex)"
+                    >
+                      {{ valueText(item.values[pointIndex]) }}
+                    </button>
+                  } @else {
+                    {{ valueText(item.values[pointIndex]) }}
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </details>
+}
