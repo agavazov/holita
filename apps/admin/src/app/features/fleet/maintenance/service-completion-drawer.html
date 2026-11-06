@@ -19,7 +19,7 @@
             [routerLink]="link.commands"
             [queryParams]="link.queryParams"
             [fragment]="link.fragment"
-            >{{ task()?.plate }}</a
+            ><span class="app-plate">{{ task()?.plate }}</span></a
           >
         </dd>
       </div>
@@ -31,7 +31,7 @@
       <dl class="app-facts">
         <div>
           <dt>{{ text().completedOn }}</dt>
-          <dd>{{ record.completedOn | holitaDate }}</dd>
+          <dd>{{ units.dateOnly(record.completedOn) }}</dd>
         </div>
         <div>
           <dt>{{ completedOdometerLabel() }}</dt>
@@ -73,7 +73,7 @@
             <p-datepicker
               inputId="completion-completedOn"
               formControlName="completedOn"
-              dateFormat="yy-mm-dd"
+              [dateFormat]="units.datePickerFormat()"
               appendTo="body"
               [fluid]="true"
               [invalid]="!!errorOf('completedOn')"
@@ -170,7 +170,7 @@
               <p-datepicker
                 inputId="completion-nextDueOn"
                 formControlName="nextDueOn"
-                dateFormat="yy-mm-dd"
+                [dateFormat]="units.datePickerFormat()"
                 appendTo="body"
                 [fluid]="true"
                 [invalid]="!!errorOf('nextDueOn')"

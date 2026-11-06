@@ -2,6 +2,7 @@
   "eyebrow": "Fleet",
   "title": "Drivers",
   "description": "{branch} · driving data of the last 30 days",
+  "hint": "Manage drivers, document expiry dates and driving summaries.",
   "new": "New driver",
   "search": "Search name, employee number, identification key or phone",
   "kpis": {

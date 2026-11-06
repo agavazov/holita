@@ -9,6 +9,7 @@ import {
 import { fixtureError, graphqlFixture, type WithTypename } from './graphql-fixtures';
 import { defaultBranchId } from './session-fixtures';
 const driverId = '40000000-0000-4000-8000-000000000001';
+export const tripsNoResultsSearch = 'storybook-empty-trips';
 export const fixtureTrip: WithTypename<AdminTripDetailsFragment> = {
   __typename: 'FleetTrip',
   id: '70000000-0000-4000-8000-000000000001',
@@ -72,8 +73,8 @@ export const fixtureOpenTrip: WithTypename<AdminTripDetailsFragment> = {
 graphqlFixture(AdminTripsDocument, (variables) => ({
   fleetTrips: {
     __typename: 'FleetTripPage',
-    items: [fixtureTrip],
-    total: 1,
+    items: variables.string('search') === tripsNoResultsSearch ? [] : [fixtureTrip],
+    total: variables.string('search') === tripsNoResultsSearch ? 0 : 1,
     offset: variables.int('offset', 0),
     limit: variables.int('limit', 20),
     totalDistanceKm: 150,

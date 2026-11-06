@@ -9,14 +9,6 @@
   (retry)="retry.emit()"
   (closeRequest)="requestClose()"
 >
-  @if (clockError(); as error) {
-    <p-message severity="warn"
-      >{{ error }}
-      <button pButton type="button" severity="secondary" (click)="retryClock.emit()">
-        {{ clockRetry() }}
-      </button></p-message
-    >
-  }
   @if (alert(); as alert) {
     <p-tag
       drawerMeta
@@ -24,96 +16,109 @@
       [value]="severityLabel(alert.severity)"
     />
   }
-  @if (alert(); as alert) {
-    @if (saveError(); as error) {
-      <p-message severity="error" role="alert">{{ error }}</p-message>
-    }
-    <section class="app-form-section">
-      <h3>{{ text().details }}</h3>
-      <dl class="app-facts">
-        <div>
-          <dt>{{ text().status }}</dt>
-          <dd>
-            <p-tag [severity]="statusSeverity(alert.status)" [value]="statusLabel(alert.status)" />
-          </dd>
-        </div>
-        <div>
-          <dt>{{ text().occurred }}</dt>
-          <dd>
-            {{ alert.occurredAt | holitaDateTime }}
-            <span class="app-muted">({{ alert.occurredAt | holitaRelative: dataAsOf() }})</span>
-          </dd>
-        </div>
-        <div>
-          <dt>{{ text().vehicle }}</dt>
-          <dd>
-            @if (recordLinks()?.vehicle(alert.vehicleId); as link) {
-              <a
-                class="app-link"
-                [routerLink]="busy() ? null : link.commands"
-                [queryParams]="link.queryParams"
-                [fragment]="link.fragment"
-                [attr.aria-disabled]="busy() ? 'true' : null"
-                [attr.tabindex]="busy() ? -1 : null"
-                >{{ alert.plate }}</a
-              >
-            } @else {
-              <button
-                type="button"
-                class="app-link"
-                [disabled]="!!busy()"
-                (click)="requestVehicle()"
-              >
-                {{ alert.plate }}
-              </button>
-            }
-          </dd>
-        </div>
-        <div>
-          <dt>{{ text().driver }}</dt>
-          <dd>
-            @if (alert.driverId && recordLinks()?.driver(alert.driverId); as link) {
-              <a
-                class="app-link"
-                [routerLink]="busy() ? null : link.commands"
-                [queryParams]="link.queryParams"
-                [attr.aria-disabled]="busy() ? 'true' : null"
-                [attr.tabindex]="busy() ? -1 : null"
-                >{{ alert.driverName }}</a
-              >
-            } @else {
-              {{ alert.driverName ?? '—' }}
-            }
-          </dd>
-        </div>
-        <div class="app-facts--wide">
-          <dt>{{ text().detail }}</dt>
-          <dd>{{ alert.detail }}</dd>
-        </div>
-      </dl>
-    </section>
-    <section class="app-form-section">
-      <h3>{{ text().handling }}</h3>
-      <holita-form-field
-        [label]="text().remark"
-        controlId="alert-remark"
-        [hint]="text().remarkHint"
-        [error]="remarkError()"
-        [counter]="{ length: remarkLength(), max: 1000 }"
+  <div class="app-view">
+    @if (clockError(); as error) {
+      <p-message severity="warn"
+        >{{ error }}
+        <button pButton type="button" severity="secondary" (click)="retryClock.emit()">
+          {{ clockRetry() }}
+        </button></p-message
       >
-        <textarea
-          #remarkElement
-          pTextarea
-          id="alert-remark"
-          rows="4"
-          [formControl]="remark"
-          [invalid]="!!remarkError()"
-          [attr.aria-invalid]="remarkError() ? 'true' : null"
-          aria-describedby="alert-remark-hint alert-remark-error"
-        ></textarea>
-      </holita-form-field>
-    </section>
-  }
+    }
+    @if (alert(); as alert) {
+      @if (saveError(); as error) {
+        <p-message severity="error" role="alert">{{ error }}</p-message>
+      }
+      <section class="app-card">
+        <h3 class="app-card__title">{{ text().details }}</h3>
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().status }}</dt>
+            <dd>
+              <p-tag
+                [severity]="statusSeverity(alert.status)"
+                [value]="statusLabel(alert.status)"
+              />
+            </dd>
+          </div>
+          <div>
+            <dt>{{ text().occurred }}</dt>
+            <dd [title]="format.dateTimeCell(alert.occurredAt).title">
+              {{ format.dateTimeCell(alert.occurredAt).text }}
+              <span class="app-muted">({{ alert.occurredAt | holitaRelative: dataAsOf() }})</span>
+            </dd>
+          </div>
+          <div>
+            <dt>{{ text().vehicle }}</dt>
+            <dd>
+              @if (recordLinks()?.vehicle(alert.vehicleId); as link) {
+                <a
+                  class="app-link"
+                  [routerLink]="busy() ? null : link.commands"
+                  [queryParams]="link.queryParams"
+                  [fragment]="link.fragment"
+                  [attr.aria-disabled]="busy() ? 'true' : null"
+                  [attr.tabindex]="busy() ? -1 : null"
+                  ><span class="app-plate">{{ alert.plate }}</span></a
+                >
+              } @else {
+                <button
+                  type="button"
+                  class="app-link"
+                  [disabled]="!!busy()"
+                  (click)="requestVehicle()"
+                >
+                  <span class="app-plate">{{ alert.plate }}</span>
+                </button>
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>{{ text().driver }}</dt>
+            <dd>
+              @if (alert.driverId && recordLinks()?.driver(alert.driverId); as link) {
+                <a
+                  class="app-link"
+                  [routerLink]="busy() ? null : link.commands"
+                  [queryParams]="link.queryParams"
+                  [attr.aria-disabled]="busy() ? 'true' : null"
+                  [attr.tabindex]="busy() ? -1 : null"
+                  >{{ alert.driverName }}</a
+                >
+              } @else {
+                {{ alert.driverName ?? '—' }}
+              }
+            </dd>
+          </div>
+          <div class="app-facts--wide">
+            <dt>{{ text().detail }}</dt>
+            <dd>{{ alert.detail }}</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="app-card">
+        <h3 class="app-card__title">{{ text().handling }}</h3>
+        <holita-form-field
+          [label]="text().remark"
+          controlId="alert-remark"
+          [hint]="text().remarkHint"
+          [error]="remarkError()"
+          [counter]="{ length: remarkLength(), max: 1000 }"
+        >
+          <textarea
+            #remarkElement
+            pTextarea
+            id="alert-remark"
+            rows="4"
+            [formControl]="remark"
+            [invalid]="!!remarkError()"
+            [attr.aria-invalid]="remarkError() ? 'true' : null"
+            aria-describedby="alert-remark-hint alert-remark-error"
+          ></textarea>
+        </holita-form-field>
+      </section>
+    }
+  </div>
   <div drawerFooter class="app-drawer-actions">
     @if (alert(); as alert) {
       <button

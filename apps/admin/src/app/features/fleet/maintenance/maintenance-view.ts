@@ -1,16 +1,15 @@
-import { RouterLink } from '@angular/router';
 import type { FleetRecordLinks } from '../fleet-record-links';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { Calendar } from '@primeicons/angular/calendar';
+import { Clock } from '@primeicons/angular/clock';
+import { ExclamationTriangle } from '@primeicons/angular/exclamation-triangle';
+import { Wallet } from '@primeicons/angular/wallet';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { FilterCondition, FilterField } from '../../../ui/filter-builder/filter-model';
 import { FilterBuilder } from '../../../ui/filter-builder/filter-builder';
-import {
-  FormatDateOnlyPipe,
-  FormatMoneyPipe,
-  FormatNumberPipe,
-} from '../../../ui/format/format.pipes';
+import { FormatMoneyPipe, FormatNumberPipe } from '../../../ui/format/format.pipes';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
@@ -24,7 +23,7 @@ import {
 import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
-import { TablePanel } from '../../../ui/table-panel/table-panel';
+import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
@@ -64,12 +63,14 @@ export type MaintenanceActionId = 'view' | 'edit' | 'complete' | 'cancel' | 'veh
 @Component({
   selector: 'holita-maintenance-view',
   imports: [
-    RouterLink,
+    Calendar,
+    Clock,
+    ExclamationTriangle,
+    Wallet,
     ButtonDirective,
     TableModule,
     Tag,
     FilterBuilder,
-    FormatDateOnlyPipe,
     FormatMoneyPipe,
     FormatNumberPipe,
     KpiStrip,
@@ -122,6 +123,38 @@ export class MaintenanceView {
   protected readonly description = computed(() =>
     interpolate(this.text().description, { branch: this.branchName() }),
   );
+  protected readonly tableMinWidth = '83.25rem';
+  protected readonly columns = computed<readonly TableColumn[]>(() => {
+    const text = this.text().table;
+    return [
+      {
+        id: 'check',
+        label: text.selectPage,
+        width: '3rem',
+        kind: 'check',
+        className: 'app-col-check',
+      },
+      {
+        id: 'task',
+        label: text.task,
+        width: '17rem',
+        kind: 'identity',
+        className: 'app-col-identity',
+      },
+      { id: 'vehicle', label: text.vehicle, width: '12rem' },
+      { id: 'due', label: text.due, width: '16rem', kind: 'date' },
+      { id: 'urgency', label: text.urgency, width: '12rem', kind: 'status' },
+      { id: 'cost', label: text.cost, width: '8rem', kind: 'number', className: 'app-num' },
+      { id: 'notes', label: text.notes, width: '12rem', className: 'app-col-secondary' },
+      {
+        id: 'actions',
+        label: text.actions,
+        width: '3.25rem',
+        kind: 'actions',
+        className: 'app-col-actions',
+      },
+    ];
+  });
   protected readonly fields = computed<readonly FilterField[]>(() => {
     const text = this.text();
     return [
@@ -274,6 +307,15 @@ export class MaintenanceView {
 
   protected urgencyLabel(task: ServiceTaskRow): string {
     return task.urgency ? this.text().urgencies[task.urgency] : this.text().statuses[task.status];
+  }
+
+  protected dueLabel(task: ServiceTaskRow): string {
+    return [
+      task.dueOn ? this.units.dateOnly(task.dueOn) : null,
+      task.dueKm !== null ? this.units.distance(task.dueKm, true, 0) : null,
+    ]
+      .filter((value) => value !== null)
+      .join(' · ');
   }
 
   /** "1,200 km left" or "300 km over" against the current odometer. */

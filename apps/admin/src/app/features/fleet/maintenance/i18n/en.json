@@ -2,6 +2,7 @@
   "eyebrow": "Service",
   "title": "Maintenance",
   "description": "{branch} · service tasks by date or odometer, whichever comes first",
+  "hint": "Plan service, review due work and record completion.",
   "new": "New service task",
   "search": "Search task, plate, workshop or notes",
   "kpis": {
@@ -28,6 +29,7 @@
     "edit": "Edit {task} on {plate}",
     "view": "View completed {task} on {plate}",
     "viewCancelled": "View cancelled {task} on {plate}",
+    "openVehicle": "Open vehicle {plate}",
     "record": "{task} on {plate}",
     "dueOn": "by {date}",
     "dueKm": "at {km} {unit}",

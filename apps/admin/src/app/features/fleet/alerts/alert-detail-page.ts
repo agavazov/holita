@@ -84,7 +84,8 @@ export class AlertDetailPage implements OnInit {
     this.language(),
     drawerParam(this.route, 'branchId'),
     'fleet',
-    'alerts',
+    'dashboard',
+    'problems',
   ];
   readonly record = signal<AdminAlertDetailsFragment | null>(null);
   readonly state = signal<RouteDrawerState>('loading');

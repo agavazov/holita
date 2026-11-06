@@ -189,7 +189,6 @@ export class AlertsPage implements OnInit {
     this.url.changes
       .pipe(
         switchMap((state) => {
-          this.page.set(null);
           this.selected.set([]);
           this.loading.set(true);
           this.error.set(null);
@@ -296,6 +295,17 @@ export class AlertsPage implements OnInit {
           event.vehicleId,
           'overview',
         ]);
+      }
+      return;
+    }
+    if (action === 'driver') {
+      const event = this.page()?.items.find((event) => event.id === id);
+      if (event?.driverId) {
+        const link = this.recordLinks().driver(event.driverId);
+        void this.router.navigate(link.commands, {
+          ...(link.queryParams ? { queryParams: link.queryParams } : {}),
+          ...(link.fragment !== undefined ? { fragment: link.fragment } : {}),
+        });
       }
       return;
     }

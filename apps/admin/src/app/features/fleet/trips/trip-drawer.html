@@ -15,109 +15,117 @@
     />
   }
   @if (trip(); as record) {
-    <section class="app-form-section">
-      <h3>{{ text().summary }}</h3>
-      <dl class="app-facts">
-        <div>
-          <dt>{{ text().vehicle }}</dt>
-          <dd>
-            @if (recordLinks()?.vehicle(record.vehicleId); as link) {
-              <a
-                class="app-link"
-                [routerLink]="link.commands"
-                [queryParams]="link.queryParams"
-                [fragment]="link.fragment"
-                >{{ record.plate }}</a
-              >
-            } @else {
-              {{ record.plate }}
-            }
-          </dd>
-        </div>
-        <div>
-          <dt>{{ text().driver }}</dt>
-          <dd>
-            @if (record.driverId && recordLinks()?.driver(record.driverId); as link) {
-              <a class="app-link" [routerLink]="link.commands" [queryParams]="link.queryParams">{{
-                record.driverName
-              }}</a>
-            } @else {
-              {{ record.driverName ?? '—' }}
-            }
-          </dd>
-        </div>
-        <div>
-          <dt>{{ text().started }}</dt>
-          <dd>{{ record.startedAt | holitaDateTime }}</dd>
-        </div>
-        <div>
-          <dt>{{ text().ended }}</dt>
-          <dd>{{ record.endedAt | holitaDateTime }}</dd>
-        </div>
-        <div>
-          <dt>{{ text().duration }}</dt>
-          <dd>
-            {{ (record.durationMin === null ? null : record.durationMin * 60) | holitaDuration }}
-          </dd>
-        </div>
-        <div>
-          <dt>{{ text().distance }}</dt>
-          <dd>
-            {{ units.distance(record.distanceKm, true, 0) }}
-          </dd>
-        </div>
-        <div>
-          <dt>{{ text().maxSpeed }}</dt>
-          <dd>
-            {{ units.speed(record.maxSpeedKph) }}
-          </dd>
-        </div>
-        <div>
-          <dt>{{ text().fuel }}</dt>
-          <dd>
-            @if (record.fuelUsedL !== null) {
-              {{ units.volume(record.fuelUsedL, true, 0) }}
-            } @else {
-              —
-            }
-          </dd>
-        </div>
-        <div>
-          <dt>{{ text().score }}</dt>
-          <dd>
-            @if (record.score !== null) {
-              <span class="app-meter-cell">
-                <span
-                  [class]="scoreClass(record.score)"
-                  [style.--app-meter-value]="record.score + '%'"
-                  aria-hidden="true"
-                ></span>
-                <span>{{ record.score }}</span>
-              </span>
-            } @else {
-              —
-            }
-          </dd>
-        </div>
-      </dl>
-    </section>
-    <section class="app-form-section">
-      <h3>{{ text().timeline }}</h3>
-      <p-timeline [value]="entries()">
-        <ng-template #marker let-entry>
-          <span [class]="dotClass(entry)"></span>
-        </ng-template>
-        <ng-template #content let-entry>
-          <div class="app-timeline-event">
-            <span class="app-timeline-event__title">{{ entry.title }}</span>
-            <span class="app-timeline-event__meta">{{ entry.at | holitaDateTime }}</span>
-            @if (entry.detail) {
-              <span class="app-timeline-event__body">{{ entry.detail }}</span>
-            }
+    <div class="app-view">
+      <section class="app-card">
+        <h3 class="app-card__title">{{ text().summary }}</h3>
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().vehicle }}</dt>
+            <dd>
+              @if (recordLinks()?.vehicle(record.vehicleId); as link) {
+                <a
+                  class="app-link"
+                  [routerLink]="link.commands"
+                  [queryParams]="link.queryParams"
+                  [fragment]="link.fragment"
+                  ><span class="app-plate">{{ record.plate }}</span></a
+                >
+              } @else {
+                <span class="app-plate">{{ record.plate }}</span>
+              }
+            </dd>
           </div>
-        </ng-template>
-      </p-timeline>
-    </section>
+          <div>
+            <dt>{{ text().driver }}</dt>
+            <dd>
+              @if (record.driverId && recordLinks()?.driver(record.driverId); as link) {
+                <a class="app-link" [routerLink]="link.commands" [queryParams]="link.queryParams">{{
+                  record.driverName
+                }}</a>
+              } @else {
+                {{ record.driverName ?? '—' }}
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>{{ text().started }}</dt>
+            <dd [title]="units.dateTimeCell(record.startedAt).title">
+              {{ units.dateTimeCell(record.startedAt).text }}
+            </dd>
+          </div>
+          <div>
+            <dt>{{ text().ended }}</dt>
+            <dd [title]="units.dateTimeCell(record.endedAt).title">
+              {{ units.dateTimeCell(record.endedAt).text }}
+            </dd>
+          </div>
+          <div>
+            <dt>{{ text().duration }}</dt>
+            <dd>
+              {{ (record.durationMin === null ? null : record.durationMin * 60) | holitaDuration }}
+            </dd>
+          </div>
+          <div>
+            <dt>{{ text().distance }}</dt>
+            <dd>
+              {{ units.distance(record.distanceKm, true, 0) }}
+            </dd>
+          </div>
+          <div>
+            <dt>{{ text().maxSpeed }}</dt>
+            <dd>
+              {{ units.speed(record.maxSpeedKph) }}
+            </dd>
+          </div>
+          <div>
+            <dt>{{ text().fuel }}</dt>
+            <dd>
+              @if (record.fuelUsedL !== null) {
+                {{ units.volume(record.fuelUsedL, true, 0) }}
+              } @else {
+                —
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>{{ text().score }}</dt>
+            <dd>
+              @if (record.score !== null) {
+                <span class="app-meter-cell">
+                  <span
+                    [class]="scoreClass(record.score)"
+                    [style.--app-meter-value]="record.score + '%'"
+                    aria-hidden="true"
+                  ></span>
+                  <span>{{ record.score | holitaNumber }}</span>
+                </span>
+              } @else {
+                —
+              }
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="app-card">
+        <h3 class="app-card__title">{{ text().timeline }}</h3>
+        <p-timeline [value]="entries()">
+          <ng-template #marker let-entry>
+            <span [class]="dotClass(entry)"></span>
+          </ng-template>
+          <ng-template #content let-entry>
+            <div class="app-timeline-event">
+              <span class="app-timeline-event__title">{{ entry.title }}</span>
+              <span class="app-timeline-event__meta" [title]="units.dateTimeCell(entry.at).title">{{
+                units.dateTimeCell(entry.at).text
+              }}</span>
+              @if (entry.detail) {
+                <span class="app-timeline-event__body">{{ entry.detail }}</span>
+              }
+            </div>
+          </ng-template>
+        </p-timeline>
+      </section>
+    </div>
   }
   <div drawerFooter class="app-drawer-actions">
     <button pButton type="button" severity="secondary" [outlined]="true" (click)="close()">

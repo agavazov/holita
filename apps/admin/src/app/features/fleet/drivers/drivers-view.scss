@@ -1,3 +1,7 @@
 .drivers__notes {
   --app-truncate-width: 14rem;
 }
+
+.drivers__expiry-date {
+  flex-shrink: 0;
+}

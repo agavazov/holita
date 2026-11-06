@@ -11,34 +11,33 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { MessageService } from 'primeng/api';
-import {
-  EMPTY,
-  Subject,
-  catchError,
-  expand,
-  filter,
-  map,
-  reduce,
-  startWith,
-  switchMap,
-  take,
-} from 'rxjs';
+import { EMPTY, Subject, catchError, startWith, switchMap } from 'rxjs';
 import type {
   AdminBranchesQuery,
-  AdminVehicleGroupDetailsFragment,
+  AdminVehicleGroupsListQuery,
 } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
 import { messages, type Language } from '../../../i18n/messages';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
 import { interpolate } from '../../../ui/i18n/messages';
 import type { ListActionRequest } from '../../../ui/list/list-actions';
+import type { ListDefinition } from '../../../ui/list/list-state';
+import { UrlListState } from '../../../ui/list/url-list-state';
 import { tableView } from '../../../ui/table-panel/table-view';
 import { GroupsView, type GroupActionId } from '../settings/groups-view';
 import { settingsText } from '../settings/i18n/messages';
 import { vehicleGroupRow } from './vehicle-group-mapping';
 import { VehicleGroupsApi } from './vehicle-groups-api';
 
-/** The short group list displays every group; transport pages remain bounded. */
+const groupDefinition: ListDefinition<Record<string, never>, 'name'> = {
+  pageSizes: [10, 20, 50, 100],
+  defaultPageSize: 20,
+  sorts: [{ param: 'name', field: 'name' }],
+  defaultSort: { field: 'name', direction: 'ASC' },
+  filters: {},
+};
+
+/** A bounded group page; the existing operation keeps its supported name ordering. */
 @Component({
   selector: 'holita-vehicle-groups-page',
   imports: [GroupsView, RouterOutlet],
@@ -46,13 +45,15 @@ import { VehicleGroupsApi } from './vehicle-groups-api';
   template: `
     <holita-groups-view
       [rows]="rows()"
+      [page]="pagination()"
       [view]="view()"
       [busy]="loading() || acting()"
       [errorText]="failure()"
-      [actionContext]="groups()"
+      [actionContext]="url.state()"
       (create)="openEditor(null)"
       (action)="run($event)"
       (retry)="refresh()"
+      (pageChange)="url.setPage($event)"
     />
     <router-outlet [routerOutletData]="drawerHost" />
   `,
@@ -62,16 +63,22 @@ export class VehicleGroupsPage implements OnInit {
   readonly branch = input.required<AdminBranchesQuery['branches'][number]>();
   readonly language = input.required<Language>();
   readonly api = inject(VehicleGroupsApi);
+  readonly url = new UrlListState(groupDefinition);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly notifications = inject(MessageService);
   private readonly reload = new Subject<void>();
-  readonly groups = signal<readonly AdminVehicleGroupDetailsFragment[] | null>(null);
+  readonly page = signal<AdminVehicleGroupsListQuery['fleetVehicleGroups'] | null>(null);
   readonly loading = signal(true);
   readonly acting = signal(false);
   readonly error = signal<unknown>(null);
-  protected readonly rows = computed(() => (this.groups() ?? []).map(vehicleGroupRow));
+  protected readonly rows = computed(() => (this.page()?.items ?? []).map(vehicleGroupRow));
+  protected readonly pagination = computed(() => ({
+    page: this.url.state().page,
+    pageSize: this.url.state().pageSize,
+    total: this.page()?.total ?? 0,
+  }));
   readonly failure = computed(() =>
     requestError(this.error(), messages[this.language()].networkError),
   );
@@ -79,7 +86,7 @@ export class VehicleGroupsPage implements OnInit {
     tableView({
       loading: this.loading(),
       error: this.error(),
-      rows: this.groups() === null ? null : this.rows().length,
+      rows: this.page() === null ? null : this.rows().length,
       filtered: false,
     }),
   );
@@ -95,45 +102,37 @@ export class VehicleGroupsPage implements OnInit {
 
   ngOnInit(): void {
     this.api.initialize(this.branch().id, this.language());
-    const pageAt = (offset: number) =>
-      this.api.watch({ offset, limit: 100 }).valueChanges.pipe(
-        filter((result) => !result.loading),
-        take(1),
-        map((result) => {
-          if (result.error) {
-            throw result.error instanceof Error ? result.error : new Error(result.error.message);
-          }
-          if (result.dataState !== 'complete') {
-            throw new Error('Missing vehicle groups.');
-          }
-          return result.data.fleetVehicleGroups;
-        }),
-      );
-    this.reload
+    this.url.changes
       .pipe(
-        startWith(undefined),
-        switchMap(() => {
-          this.loading.set(true);
-          this.error.set(null);
-          return pageAt(0).pipe(
-            expand((page) =>
-              page.offset + page.items.length < page.total && page.items.length
-                ? pageAt(page.offset + page.items.length)
-                : EMPTY,
-            ),
-            reduce((all: AdminVehicleGroupDetailsFragment[], page) => [...all, ...page.items], []),
-            catchError((error: unknown) => {
-              this.loading.set(false);
-              this.error.set(error);
-              return EMPTY;
+        switchMap((state) => {
+          return this.reload.pipe(
+            startWith(undefined),
+            switchMap(() => {
+              this.loading.set(true);
+              this.error.set(null);
+              return this.api
+                .watch({ offset: (state.page - 1) * state.pageSize, limit: state.pageSize })
+                .valueChanges.pipe(
+                  catchError((error: unknown) => {
+                    this.loading.set(false);
+                    this.error.set(error);
+                    return EMPTY;
+                  }),
+                );
             }),
           );
         }),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe((groups) => {
-        this.groups.set(groups);
-        this.loading.set(false);
+      .subscribe((result) => {
+        this.loading.set(result.loading);
+        this.error.set(result.error ?? null);
+        if (result.dataState !== 'complete' || result.error || result.loading) {
+          return;
+        }
+        const page = result.data.fleetVehicleGroups;
+        this.page.set(page);
+        this.url.correctPage(Math.max(1, Math.ceil(page.total / this.url.state().pageSize)));
       });
   }
 
@@ -167,7 +166,11 @@ export class VehicleGroupsPage implements OnInit {
       if (!this.current()) {
         return;
       }
-      this.groups.update((groups) => groups?.filter((group) => group.id !== id) ?? null);
+      this.page.update((page) =>
+        page
+          ? { ...page, items: page.items.filter((group) => group.id !== id), total: page.total - 1 }
+          : null,
+      );
       this.notifications.add({
         severity: 'success',
         summary: interpolate(this.text().deleted, { count: 1 }),

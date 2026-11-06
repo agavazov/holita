@@ -138,7 +138,6 @@ export class DriversPage implements OnInit {
     this.url.changes
       .pipe(
         switchMap((query) => {
-          this.page.set(null);
           this.removed.set(new Set());
           this.selected.set([]);
           this.loading.set(true);

@@ -2,28 +2,42 @@
   [eyebrow]="text().eyebrow"
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
-  [description]="description()"
-/>
+  [description]="text().description"
+>
+  <span headerMeta class="app-muted">{{ branchName() }}</span>
+</holita-page-header>
 
 @if (kpis(); as kpis) {
   <holita-kpi-strip [label]="text().kpis.label">
-    <holita-kpi-tile [label]="text().kpis.trips" [value]="kpis.trips | holitaNumber" />
+    <holita-kpi-tile [label]="text().kpis.trips" [value]="kpis.trips | holitaNumber" category="c1">
+      <svg kpiIcon data-p-icon="map" aria-hidden="true"></svg>
+    </holita-kpi-tile>
     <holita-kpi-tile
       [label]="text().kpis.distance"
       [value]="units.distance(kpis.distanceKm, false, 0)"
       [unit]="units.distanceUnit()"
-    />
+      category="c2"
+    >
+      <svg kpiIcon data-p-icon="chart-line" aria-hidden="true"></svg>
+    </holita-kpi-tile>
     <holita-kpi-tile
       [label]="text().kpis.drivingTime"
       [value]="kpis.drivingMin * 60 | holitaDuration"
-    />
-    <holita-kpi-tile [label]="text().kpis.score" [value]="scoreValue()" />
+      category="c4"
+    >
+      <svg kpiIcon data-p-icon="clock" aria-hidden="true"></svg>
+    </holita-kpi-tile>
+    <holita-kpi-tile [label]="text().kpis.score" [value]="scoreValue()" category="c6">
+      <svg kpiIcon data-p-icon="star" aria-hidden="true"></svg>
+    </holita-kpi-tile>
     <holita-kpi-tile
       [label]="text().kpis.events"
       [value]="kpis.events | holitaNumber"
       [footnote]="text().kpis.eventsFootnote"
       [tone]="kpis.events ? 'warn' : null"
-    />
+    >
+      <svg kpiIcon data-p-icon="exclamation-triangle" aria-hidden="true"></svg>
+    </holita-kpi-tile>
   </holita-kpi-strip>
 }
 
@@ -42,6 +56,8 @@
   #panel
   [heading]="text().table.heading"
   [total]="total()"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
   [view]="view()"
   [errorText]="errorText() ?? text().table.errorText"
   [busy]="busy()"
@@ -72,7 +88,16 @@
     [sortOrder]="sortOrder()"
     (onLazyLoad)="sort($event)"
     [scrollable]="true"
+    [tableStyle]="{ 'min-width': tableMinWidth }"
+    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().table.heading } }"
   >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+          <col [style.width]="column.width" [class]="column.className ?? ''" />
+        }
+      </colgroup>
+    </ng-template>
     <ng-template #header>
       <tr>
         <th scope="col" class="app-col-identity" pSortableColumn="startedAt">
@@ -88,7 +113,7 @@
         </th>
         <th scope="col" class="app-num app-col-secondary">{{ text().table.maxSpeed }}</th>
         <th scope="col" class="app-num app-col-secondary">{{ text().table.fuel }}</th>
-        <th scope="col" pSortableColumn="score">
+        <th scope="col" class="app-num" pSortableColumn="score">
           {{ text().table.score }} <p-sort-icon field="score" />
         </th>
         <th scope="col">{{ text().table.events }}</th>
@@ -100,50 +125,55 @@
     <ng-template #body let-row>
       <tr>
         <td class="app-col-identity">
-          <div class="app-table-identity">
-            <span class="app-table-mobile-meta">{{ row.plate }}</span>
+          <div class="app-cell-identity">
             <button
               type="button"
-              class="app-link"
+              class="app-link app-cell-date"
               [attr.aria-label]="openLabel(row)"
+              [title]="units.dateTimeCell(row.startedAt).title"
               (click)="panel.run('open', [recordOf(row)], $event.currentTarget)"
             >
-              {{ row.startedAt | holitaDateTime }}
+              {{ units.dateTimeCell(row.startedAt).text }}
             </button>
-            @if (row.endedAt === null) {
-              <p-tag
-                severity="info"
-                [value]="row.inProgress ? text().table.inProgress : text().table.noEnd"
-              />
-            }
-            @if (row.holita) {
-              <p-tag severity="secondary" [value]="text().table.holita" />
-            }
-            <div class="app-table-mobile-actions">
-              <holita-row-actions
-                [actions]="actions()"
-                [record]="recordOf(row)"
-                (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
-              />
-            </div>
+            <span class="app-cell-status">
+              @if (row.endedAt === null) {
+                <p-tag
+                  severity="info"
+                  [value]="row.inProgress ? text().table.inProgress : text().table.noEnd"
+                />
+              }
+              @if (row.holita) {
+                <p-tag severity="secondary" [value]="text().table.holita" />
+              }
+            </span>
+          </div>
+          <div class="app-table-mobile-actions">
+            <holita-row-actions
+              [actions]="actions()"
+              [record]="recordOf(row)"
+              (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
+            />
           </div>
         </td>
         <td>
-          <span class="app-cell-stack">
-            <span>
-              @if (recordLinks()?.vehicle(row.vehicleId); as link) {
-                <a class="app-link" [routerLink]="link.commands" [queryParams]="link.queryParams">{{
-                  row.plate
-                }}</a>
-              } @else {
-                {{ row.plate }}
-              }
-            </span>
-            <span>
-              @if (row.driverId && recordLinks()?.driver(row.driverId); as link) {
-                <a class="app-link" [routerLink]="link.commands" [queryParams]="link.queryParams">{{
-                  row.driverName
-                }}</a>
+          <span class="app-cell-identity">
+            <button
+              type="button"
+              class="app-link app-plate"
+              [title]="row.plate"
+              (click)="panel.run('vehicle', [recordOf(row)], $event.currentTarget)"
+            >
+              {{ row.plate }}
+            </button>
+            <span [title]="row.driverName ?? text().table.noDriver">
+              @if (row.driverId && recordLinks()?.driver(row.driverId)) {
+                <button
+                  type="button"
+                  class="app-link"
+                  (click)="panel.run('driver', [recordOf(row)], $event.currentTarget)"
+                >
+                  {{ row.driverName }}
+                </button>
               } @else {
                 {{ row.driverName ?? text().table.noDriver }}
               }
@@ -151,36 +181,41 @@
           </span>
         </td>
         <td>
-          <span class="app-cell-stack">
-            <span>{{ row.from ?? '—' }}</span>
-            <span>→ {{ row.to ?? '—' }}</span>
+          <span class="app-cell-identity">
+            <span [title]="row.from ?? '—'">{{ row.from ?? '—' }}</span>
+            <span [title]="row.to ?? '—'">→ {{ row.to ?? '—' }}</span>
           </span>
         </td>
-        <td class="app-num">{{ units.distance(row.distanceKm, false, 0) }}</td>
-        <td class="app-num">
+        <td class="app-cell-number">{{ units.distance(row.distanceKm, false, 0) }}</td>
+        <td class="app-cell-number">
           {{ (row.durationMin === null ? null : row.durationMin * 60) | holitaDuration }}
         </td>
-        <td class="app-num app-col-secondary">
+        <td class="app-cell-number app-col-secondary">
           {{ units.speed(row.maxSpeedKph) }}
         </td>
-        <td class="app-num app-col-secondary">{{ units.volume(row.fuelUsedL, false, 0) }}</td>
-        <td>
+        <td class="app-cell-number app-col-secondary">
+          {{ units.volume(row.fuelUsedL, false, 0) }}
+        </td>
+        <td class="app-cell-number">
           @if (row.score !== null) {
-            <span class="app-meter-cell">
-              <span
-                [class]="scoreClass(row.score)"
-                [style.--app-meter-value]="row.score + '%'"
-                aria-hidden="true"
-              ></span>
-              <span>{{ row.score }}</span>
-            </span>
+            {{ row.score | holitaNumber }}
           } @else {
             <span class="app-muted">—</span>
           }
         </td>
         <td>
           @if (row.events.length) {
-            <p-tag [severity]="eventsSeverity(row)" [value]="eventsLabel(row)" />
+            <span class="app-cell-problems" [title]="eventsLabel(row)">
+              <p-tag [severity]="eventsSeverity(row)" [value]="row.events.length | holitaNumber" />
+              <button
+                type="button"
+                class="app-link"
+                [attr.aria-label]="openLabel(row)"
+                (click)="panel.run('open', [recordOf(row)], $event.currentTarget)"
+              >
+                {{ text().table.events }}
+              </button>
+            </span>
           } @else {
             <span class="app-muted">{{ text().table.noEvents }}</span>
           }

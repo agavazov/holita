@@ -39,7 +39,6 @@ import { interpolate, uiMessages } from '../../../ui/i18n/messages';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { lockWhileSaving } from '../../../ui/forms/saving';
-import { FormatDateOnlyPipe } from '../../../ui/format/format.pipes';
 import { maintenanceText } from './i18n/messages';
 import type { MaintenanceOption } from './maintenance-view';
 import { serviceTypes, type ServiceType } from './service-task';
@@ -86,7 +85,6 @@ const fieldOrder: readonly ServiceTaskField[] = [
     Textarea,
     RouteDrawer,
     FormField,
-    FormatDateOnlyPipe,
   ],
   templateUrl: './service-task-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

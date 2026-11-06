@@ -1,4 +1,8 @@
-import { RouterLink } from '@angular/router';
+import { ChartLine } from '@primeicons/angular/chart-line';
+import { Clock } from '@primeicons/angular/clock';
+import { ExclamationTriangle } from '@primeicons/angular/exclamation-triangle';
+import { Map as MapIcon } from '@primeicons/angular/map';
+import { Star } from '@primeicons/angular/star';
 import type { FleetRecordLinks } from '../fleet-record-links';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
@@ -6,12 +10,8 @@ import { Tag } from 'primeng/tag';
 import type { StatusTone } from '../../../theme/status-tones';
 import type { FilterCondition, FilterField } from '../../../ui/filter-builder/filter-model';
 import { FilterBuilder } from '../../../ui/filter-builder/filter-builder';
-import {
-  FormatDateTimePipe,
-  FormatDurationPipe,
-  FormatNumberPipe,
-} from '../../../ui/format/format.pipes';
-import { formatDateTime, formatNumber } from '../../../ui/format/format';
+import { FormatDurationPipe, FormatNumberPipe } from '../../../ui/format/format.pipes';
+import { formatNumber } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
@@ -26,15 +26,14 @@ import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/lis
 import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
-import { TablePanel } from '../../../ui/table-panel/table-panel';
+import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { scoreTone } from '../drivers/drivers-view';
 import { tripsText } from './i18n/messages';
 
-export type TripActionId = 'open' | 'vehicle';
+export type TripActionId = 'open' | 'vehicle' | 'driver';
 
 export interface TripEvent {
   readonly id?: string;
@@ -95,11 +94,14 @@ export function worstTone(events: readonly TripEvent[]): StatusTone {
 @Component({
   selector: 'holita-trips-view',
   imports: [
-    RouterLink,
+    ChartLine,
+    Clock,
+    ExclamationTriangle,
+    MapIcon,
+    Star,
     TableModule,
     Tag,
     FilterBuilder,
-    FormatDateTimePipe,
     FormatDurationPipe,
     FormatNumberPipe,
     KpiStrip,
@@ -145,9 +147,52 @@ export class TripsView {
       },
     };
   });
-  protected readonly description = computed(() =>
-    interpolate(this.text().description, { branch: this.branchName() }),
-  );
+  protected readonly tableMinWidth = '104.25rem';
+  protected readonly columns = computed<readonly TableColumn[]>(() => {
+    const text = this.text().table;
+    return [
+      {
+        id: 'started',
+        label: text.started,
+        width: '13rem',
+        kind: 'identity',
+        className: 'app-col-identity',
+      },
+      { id: 'vehicle', label: text.vehicle, width: '14rem', kind: 'identity' },
+      { id: 'route', label: text.route, width: '17rem', kind: 'identity' },
+      { id: 'distance', label: text.distance, width: '9rem', kind: 'number', className: 'app-num' },
+      {
+        id: 'duration',
+        label: text.duration,
+        width: '10rem',
+        kind: 'number',
+        className: 'app-num',
+      },
+      {
+        id: 'maxSpeed',
+        label: text.maxSpeed,
+        width: '10rem',
+        kind: 'number',
+        className: 'app-num app-col-secondary',
+      },
+      {
+        id: 'fuel',
+        label: text.fuel,
+        width: '9rem',
+        kind: 'number',
+        className: 'app-num app-col-secondary',
+      },
+      { id: 'score', label: text.score, width: '8rem', kind: 'number', className: 'app-num' },
+      { id: 'events', label: text.events, width: '11rem', kind: 'problems' },
+      {
+        id: 'actions',
+        label: text.actions,
+        width: '3.25rem',
+        kind: 'actions',
+        className: 'app-col-actions',
+      },
+    ];
+  });
   protected readonly sortFields = computed<readonly ListSortField[]>(() => [
     { field: 'startedAt', label: this.text().table.started },
     { field: 'distance', label: this.text().table.distance },
@@ -212,6 +257,11 @@ export class TripsView {
     return [
       { id: 'open', label: text.open },
       { id: 'vehicle', label: text.vehicle },
+      {
+        id: 'driver',
+        label: text.driver,
+        appliesTo: (row) => !!row.driverId && !!this.recordLinks()?.driver(row.driverId),
+      },
     ];
   });
   private readonly records = computed(
@@ -242,10 +292,6 @@ export class TripsView {
 
   protected eventsLabel(row: TripRow): string {
     return interpolate(this.text().table.eventCount, { count: row.events.length });
-  }
-
-  protected scoreClass(score: number): string {
-    return `app-meter app-meter--${scoreTone(score)}`;
   }
 
   protected recordOf(row: TripRow): ListRecord<TripActionId> {
@@ -292,7 +338,7 @@ export class TripsView {
   private toRecord(row: TripRow): ListRecord<TripActionId> {
     const label = interpolate(this.text().table.tripName, {
       plate: row.plate,
-      started: formatDateTime(row.startedAt, this.language(), this.units.preferences().timeZone),
+      started: this.units.dateTime(row.startedAt),
     });
     return listRecord(this.actions(), row, row.id, label);
   }

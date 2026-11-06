@@ -2,8 +2,10 @@
   [eyebrow]="text().eyebrow"
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
-  [description]="description()"
-/>
+  [description]="text().description"
+>
+  <span headerMeta class="app-muted">{{ branchName() }}</span>
+</holita-page-header>
 
 @if (kpis(); as kpis) {
   <holita-kpi-strip [label]="text().kpis.label">
@@ -11,23 +13,32 @@
       [label]="text().kpis.critical"
       [value]="kpis.critical | holitaNumber"
       [tone]="kpis.critical ? 'danger' : null"
-    />
+    >
+      <svg kpiIcon data-p-icon="exclamation-triangle" aria-hidden="true"></svg>
+    </holita-kpi-tile>
     <holita-kpi-tile
       [label]="text().kpis.open"
       [value]="kpis.open | holitaNumber"
       [tone]="kpis.open ? 'warn' : null"
-    />
+    >
+      <svg kpiIcon data-p-icon="bell" aria-hidden="true"></svg>
+    </holita-kpi-tile>
     <holita-kpi-tile
       [label]="text().kpis.acknowledged"
       [value]="kpis.acknowledged | holitaNumber"
       [footnote]="text().kpis.acknowledgedFootnote"
-    />
+      tone="info"
+    >
+      <svg kpiIcon data-p-icon="clock" aria-hidden="true"></svg>
+    </holita-kpi-tile>
     <holita-kpi-tile
       [label]="text().kpis.resolved"
       [value]="kpis.resolved | holitaNumber"
       [footnote]="text().kpis.resolvedFootnote"
       tone="success"
-    />
+    >
+      <svg kpiIcon data-p-icon="check-circle" aria-hidden="true"></svg>
+    </holita-kpi-tile>
   </holita-kpi-strip>
 }
 
@@ -46,6 +57,8 @@
   #panel
   [heading]="text().table.heading"
   [total]="total()"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
   [view]="view()"
   [errorText]="errorText() ?? text().table.errorText"
   [busy]="busy()"
@@ -80,7 +93,16 @@
     [sortOrder]="sortOrder()"
     (onLazyLoad)="sort($event)"
     [scrollable]="true"
+    [tableStyle]="{ 'min-width': tableMinWidth }"
+    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().table.heading } }"
   >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+          <col [style.width]="column.width" [class]="column.className ?? ''" />
+        }
+      </colgroup>
+    </ng-template>
     <ng-template #header>
       <tr>
         <th scope="col" class="app-col-check">
@@ -92,10 +114,10 @@
             [ariaLabel]="text().table.selectPage"
           />
         </th>
+        <th scope="col" class="app-col-identity">{{ text().table.alert }}</th>
         <th scope="col" pSortableColumn="severity">
           {{ text().table.severity }} <p-sort-icon field="severity" />
         </th>
-        <th scope="col" class="app-col-identity">{{ text().table.alert }}</th>
         <th scope="col">{{ text().table.vehicle }}</th>
         <th scope="col" pSortableColumn="status">
           {{ text().table.status }} <p-sort-icon field="status" />
@@ -114,26 +136,18 @@
         <td class="app-col-check">
           <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row)" />
         </td>
-        <td>
-          <p-tag
-            [severity]="severitySeverity(row.severity)"
-            [value]="severityLabel(row.severity)"
-          />
-        </td>
         <td class="app-col-identity">
-          <span class="app-cell-stack">
+          <span class="app-cell-identity">
             <button
               type="button"
               class="app-link"
               [attr.aria-label]="label(text().table.open, row)"
+              [title]="row.kind"
               (click)="panel.run('open', [recordOf(row)], $event.currentTarget)"
             >
               {{ row.kind }}
             </button>
-            <span class="app-cell-truncate alerts__detail" [title]="row.detail">{{
-              row.detail
-            }}</span>
-            <span class="app-table-mobile-meta">{{ row.plate }}</span>
+            <span [title]="row.detail">{{ row.detail }}</span>
           </span>
           <div class="app-table-mobile-actions">
             <holita-row-actions
@@ -144,32 +158,50 @@
           </div>
         </td>
         <td>
-          <span class="app-cell-stack">
-            @if (recordLinks()?.vehicle(row.vehicleId); as link) {
-              <a class="app-link" [routerLink]="link.commands" [queryParams]="link.queryParams">{{
-                row.plate
-              }}</a>
+          <span class="app-cell-status" [title]="severityLabel(row.severity)">
+            <p-tag
+              [severity]="severitySeverity(row.severity)"
+              [value]="severityLabel(row.severity)"
+            />
+          </span>
+        </td>
+        <td>
+          <span class="app-cell-identity">
+            <button
+              type="button"
+              class="app-link app-plate"
+              [title]="row.plate"
+              (click)="panel.run('vehicle', [recordOf(row)], $event.currentTarget)"
+            >
+              {{ row.plate }}
+            </button>
+            @if (row.driverId && recordLinks()?.driver(row.driverId)) {
+              <button
+                type="button"
+                class="app-link"
+                [title]="row.driverName"
+                (click)="panel.run('driver', [recordOf(row)], $event.currentTarget)"
+              >
+                {{ row.driverName }}
+              </button>
             } @else {
-              <span>{{ row.plate }}</span>
-            }
-            @if (row.driverId && recordLinks()?.driver(row.driverId); as link) {
-              <a class="app-link" [routerLink]="link.commands" [queryParams]="link.queryParams">{{
-                row.driverName
-              }}</a>
-            } @else {
-              <span>{{ row.driverName ?? text().table.noDriver }}</span>
+              <span [title]="row.driverName ?? text().table.noDriver">{{
+                row.driverName ?? text().table.noDriver
+              }}</span>
             }
           </span>
         </td>
         <td>
-          <p-tag [severity]="statusSeverity(row.status)" [value]="statusLabel(row.status)" />
+          <span class="app-cell-status" [title]="statusLabel(row.status)">
+            <p-tag [severity]="statusSeverity(row.status)" [value]="statusLabel(row.status)" />
+          </span>
         </td>
-        <td>{{ row.occurredAt | holitaRelative: dataAsOf() }}</td>
+        <td class="app-cell-date" [title]="format.dateTimeCell(row.occurredAt).title">
+          {{ format.dateTimeCell(row.occurredAt).text }}
+        </td>
         <td class="app-col-secondary">
           @if (row.remark) {
-            <span class="app-cell-truncate alerts__remark" [title]="row.remark">{{
-              row.remark
-            }}</span>
+            <span class="app-cell-truncate" [title]="row.remark">{{ row.remark }}</span>
           } @else {
             <span class="app-muted">—</span>
           }

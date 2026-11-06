@@ -58,6 +58,7 @@ export class TripDetailPage implements OnInit {
     this.language(),
     drawerParam(this.route, 'branchId'),
     'fleet',
+    'dashboard',
     'trips',
   ];
   readonly record = signal<AdminTripDetailsFragment | null>(null);

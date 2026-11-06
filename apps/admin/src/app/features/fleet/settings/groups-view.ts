@@ -12,10 +12,12 @@ import {
 } from '../../../ui/list/list-actions';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
-import { TablePanel } from '../../../ui/table-panel/table-panel';
+import { TablePanel, type TableColumn, type TablePage } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { settingsText } from './i18n/messages';
+import bg from './groups-view.bg.json';
+import en from './groups-view.en.json';
 
 export type GroupActionId = 'edit' | 'delete';
 
@@ -29,8 +31,7 @@ export interface GroupRow {
 }
 
 /**
- * A short settings list: no search, filters, selection or paging, every row on one page; a row
- * opens straight into its form. Groups that still have vehicles cannot be deleted.
+ * A paged settings list with identity and vehicle counts. Groups in use cannot be deleted.
  */
 @Component({
   selector: 'holita-groups-view',
@@ -41,6 +42,7 @@ export interface GroupRow {
 })
 export class GroupsView {
   readonly rows = input.required<readonly GroupRow[]>();
+  readonly page = input.required<TablePage>();
   readonly view = input.required<TableView>();
   readonly busy = input(false);
   readonly errorText = input<string | null>(null);
@@ -49,11 +51,37 @@ export class GroupsView {
   /** Row actions, with the ID of the group they apply to. */
   readonly action = output<ListActionRequest<GroupActionId>>();
   readonly retry = output();
+  readonly pageChange = output<{ page: number; pageSize: number }>();
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly catalog = computed(() => settingsText(this.language()));
   protected readonly eyebrow = computed(() => this.catalog().eyebrow);
   protected readonly text = computed(() => this.catalog().groups);
+  protected readonly guidance = computed(() => (this.language() === 'bg' ? bg : en).guidance);
+  protected readonly tableMinWidth = '36.25rem';
+  protected readonly columns = computed<readonly TableColumn[]>(() => [
+    {
+      id: 'name',
+      label: this.text().name,
+      width: '23rem',
+      kind: 'identity',
+      className: 'app-col-identity',
+    },
+    {
+      id: 'vehicles',
+      label: this.text().vehicles,
+      width: '10rem',
+      kind: 'number',
+      className: 'app-cell-number',
+    },
+    {
+      id: 'actions',
+      label: this.text().actionsColumn,
+      width: '3.25rem',
+      kind: 'actions',
+      className: 'app-col-actions',
+    },
+  ]);
   /** The list's actions for the row menu; the list has no selection, so none is bulk. */
   protected readonly actions = computed<readonly ListAction<GroupActionId, GroupRow>[]>(() => {
     const text = this.text().actions;

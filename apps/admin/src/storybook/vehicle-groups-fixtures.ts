@@ -37,6 +37,28 @@ export const fixtureVehicleGroups: readonly WithTypename<AdminVehicleGroupDetail
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   },
+  ...[
+    'Airport transfers',
+    'Construction',
+    'Distribution',
+    'Emergency support',
+    'Express deliveries',
+    'Heavy transport',
+    'Municipal services',
+    'Refrigerated transport',
+    'Replacement vehicles',
+    'Specialized international transport and oversized cargo support',
+  ].map((name, index): WithTypename<AdminVehicleGroupDetailsFragment> => ({
+    __typename: 'FleetVehicleGroup',
+    id: `30000000-0000-4000-8000-${String(index + 3).padStart(12, '0')}`,
+    branchId: defaultBranchId,
+    name,
+    description: 'Vehicles assigned to dedicated operations, regional teams and scheduled routes.',
+    colorToken: 'C1',
+    vehicleCount: index,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  })),
 ];
 
 function findGroup(variables: FixtureVariables): WithTypename<AdminVehicleGroupDetailsFragment> {
@@ -57,7 +79,9 @@ graphqlFixture(AdminVehicleGroupsListDocument, (variables) => {
   return {
     fleetVehicleGroups: {
       __typename: 'FleetVehicleGroupPage',
-      items: fixtureVehicleGroups.slice(offset, offset + limit),
+      items: [...fixtureVehicleGroups]
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .slice(offset, offset + limit),
       total: fixtureVehicleGroups.length,
       offset,
       limit,

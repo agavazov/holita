@@ -172,7 +172,6 @@ export class MaintenancePage implements OnInit {
     this.url.changes
       .pipe(
         switchMap((state) => {
-          this.page.set(null);
           this.removed.set(new Set());
           this.selected.set([]);
           this.loading.set(true);

@@ -1,12 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Bell } from '@primeicons/angular/bell';
+import { CheckCircle } from '@primeicons/angular/check-circle';
+import { Clock } from '@primeicons/angular/clock';
+import { ExclamationTriangle } from '@primeicons/angular/exclamation-triangle';
 import type { FleetRecordLinks } from '../fleet-record-links';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { StatusTone } from '../../../theme/status-tones';
 import type { FilterCondition, FilterField } from '../../../ui/filter-builder/filter-model';
 import { FilterBuilder } from '../../../ui/filter-builder/filter-builder';
-import { FormatNumberPipe, FormatRelativePipe } from '../../../ui/format/format.pipes';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
+import { FormatNumberPipe } from '../../../ui/format/format.pipes';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
@@ -21,7 +25,7 @@ import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/lis
 import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
-import { TablePanel } from '../../../ui/table-panel/table-panel';
+import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
@@ -31,7 +35,7 @@ export const alertSeverities = ['CRITICAL', 'WARNING', 'INFO'] as const;
 export const alertStatuses = ['OPEN', 'ACKNOWLEDGED', 'RESOLVED'] as const;
 export type AlertSeverityCode = (typeof alertSeverities)[number];
 export type AlertStatusCode = (typeof alertStatuses)[number];
-export type AlertActionId = 'open' | 'acknowledge' | 'resolve' | 'vehicle';
+export type AlertActionId = 'open' | 'acknowledge' | 'resolve' | 'vehicle' | 'driver';
 
 /** One alert, as the Alerts list query returns it (the drawer shows the same record). */
 export interface AlertRow {
@@ -81,12 +85,14 @@ export const alertStatusTones: Record<AlertStatusCode, StatusTone> = {
 @Component({
   selector: 'holita-alerts-view',
   imports: [
-    RouterLink,
+    Bell,
+    CheckCircle,
+    Clock,
+    ExclamationTriangle,
     TableModule,
     Tag,
     FilterBuilder,
     FormatNumberPipe,
-    FormatRelativePipe,
     KpiStrip,
     KpiTile,
     PageHeader,
@@ -95,7 +101,6 @@ export const alertStatusTones: Record<AlertStatusCode, StatusTone> = {
     TablePanel,
   ],
   templateUrl: './alerts-view.html',
-  styleUrl: './alerts-view.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-view' },
 })
@@ -121,10 +126,40 @@ export class AlertsView {
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly sortReady = injectSortReady();
+  protected readonly format = injectFleetFormat();
   protected readonly text = computed(() => alertsText(this.language()));
-  protected readonly description = computed(() =>
-    interpolate(this.text().description, { branch: this.branchName() }),
-  );
+  protected readonly tableMinWidth = '90.25rem';
+  protected readonly columns = computed<readonly TableColumn[]>(() => {
+    const text = this.text().table;
+    return [
+      {
+        id: 'select',
+        label: text.selectPage,
+        width: '3rem',
+        kind: 'check',
+        className: 'app-col-check',
+      },
+      {
+        id: 'alert',
+        label: text.alert,
+        width: '18rem',
+        kind: 'identity',
+        className: 'app-col-identity',
+      },
+      { id: 'severity', label: text.severity, width: '10rem', kind: 'status' },
+      { id: 'vehicle', label: text.vehicle, width: '14rem', kind: 'identity' },
+      { id: 'status', label: text.status, width: '11rem', kind: 'status' },
+      { id: 'occurred', label: text.occurred, width: '13rem', kind: 'date' },
+      { id: 'remark', label: text.remark, width: '18rem', className: 'app-col-secondary' },
+      {
+        id: 'actions',
+        label: text.actions,
+        width: '3.25rem',
+        kind: 'actions',
+        className: 'app-col-actions',
+      },
+    ];
+  });
   protected readonly sortFields = computed<readonly ListSortField[]>(() => [
     { field: 'severity', label: this.text().table.severity },
     { field: 'status', label: this.text().table.status },
@@ -181,6 +216,11 @@ export class AlertsView {
       },
       { id: 'resolve', label: text.resolve, appliesTo: (row) => row.status !== 'RESOLVED' },
       { id: 'vehicle', label: text.vehicle },
+      {
+        id: 'driver',
+        label: text.driver,
+        appliesTo: (row) => !!row.driverId && !!this.recordLinks()?.driver(row.driverId),
+      },
     ];
   });
   private readonly records = computed(

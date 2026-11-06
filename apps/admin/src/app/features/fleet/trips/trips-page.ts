@@ -146,7 +146,6 @@ export class TripsPage implements OnInit {
     this.url.changes
       .pipe(
         switchMap((state) => {
-          this.page.set(null);
           this.loading.set(true);
           this.error.set(null);
           this.query = this.api.watch(tripVariables(state, this.units.preferences().timeZone));
@@ -204,6 +203,15 @@ export class TripsPage implements OnInit {
         queryParamsHandling: 'preserve',
         preserveFragment: true,
       });
+    } else if (action === 'driver') {
+      const trip = this.page()?.items.find((trip) => trip.id === id);
+      if (trip?.driverId) {
+        const link = this.recordLinks().driver(trip.driverId);
+        void this.router.navigate(link.commands, {
+          ...(link.queryParams ? { queryParams: link.queryParams } : {}),
+          ...(link.fragment !== undefined ? { fragment: link.fragment } : {}),
+        });
+      }
     } else {
       const trip = this.page()?.items.find((trip) => trip.id === id);
       if (trip) {

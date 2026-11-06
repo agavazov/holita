@@ -13,8 +13,7 @@ import { ButtonDirective } from 'primeng/button';
 import { Timeline } from 'primeng/timeline';
 import { Tag } from 'primeng/tag';
 import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
-import { FormatDateTimePipe, FormatDurationPipe } from '../../../ui/format/format.pipes';
-import { formatDateTime } from '../../../ui/format/format';
+import { FormatDurationPipe, FormatNumberPipe } from '../../../ui/format/format.pipes';
 import { interpolate } from '../../../ui/i18n/messages';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
@@ -41,8 +40,8 @@ interface TimelineEntry {
     Timeline,
     Tag,
     RouteDrawer,
-    FormatDateTimePipe,
     FormatDurationPipe,
+    FormatNumberPipe,
   ],
   templateUrl: './trip-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -71,7 +70,7 @@ export class TripDrawer {
     if (!trip) {
       return null;
     }
-    return `${formatDateTime(trip.startedAt, this.language(), this.units.preferences().timeZone)} · ${trip.from ?? '—'} → ${trip.to ?? '—'}`;
+    return `${this.units.dateTime(trip.startedAt)} · ${trip.from ?? '—'} → ${trip.to ?? '—'}`;
   });
   protected readonly timeline = computed<readonly TimelineEntry[]>(() => {
     const trip = this.trip();

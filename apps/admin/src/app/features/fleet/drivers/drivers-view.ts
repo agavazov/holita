@@ -1,11 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChartLine } from '@primeicons/angular/chart-line';
+import { Compass } from '@primeicons/angular/compass';
+import { IdCard } from '@primeicons/angular/id-card';
+import { Users } from '@primeicons/angular/users';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { StatusTone } from '../../../theme/status-tones';
 import type { FilterCondition, FilterField } from '../../../ui/filter-builder/filter-model';
 import { FilterBuilder } from '../../../ui/filter-builder/filter-builder';
-import { FormatDateOnlyPipe, FormatNumberPipe } from '../../../ui/format/format.pipes';
+import { FormatNumberPipe } from '../../../ui/format/format.pipes';
 import { formatNumber } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
@@ -21,7 +25,7 @@ import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/lis
 import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
-import { TablePanel } from '../../../ui/table-panel/table-panel';
+import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
@@ -53,6 +57,7 @@ export interface DriverRow {
   readonly status: DriverStatusCode;
   readonly phone: string;
   readonly vehiclePlate: string | null;
+  readonly vehicles: readonly { readonly id: string; readonly plate: string }[];
   readonly licenseExpiresOn: string | null;
   readonly tachoCardExpiresOn: string | null;
   readonly score: number | null;
@@ -101,8 +106,11 @@ export function scoreTone(score: number): StatusTone {
     ButtonDirective,
     TableModule,
     Tag,
+    ChartLine,
+    Compass,
+    IdCard,
+    Users,
     FilterBuilder,
-    FormatDateOnlyPipe,
     FormatNumberPipe,
     KpiStrip,
     KpiTile,
@@ -151,6 +159,54 @@ export class DriversView {
   protected readonly description = computed(() =>
     interpolate(this.text().description, { branch: this.branchName() }),
   );
+  protected readonly tableMinWidth = '124.25rem';
+  protected readonly columns = computed<readonly TableColumn[]>(() => {
+    const text = this.text().table;
+    return [
+      {
+        id: 'check',
+        label: text.selectPage,
+        width: '3rem',
+        kind: 'check',
+        className: 'app-col-check',
+      },
+      {
+        id: 'name',
+        label: text.name,
+        width: '16rem',
+        kind: 'identity',
+        className: 'app-col-identity',
+      },
+      { id: 'status', label: text.status, width: '9rem', kind: 'status' },
+      { id: 'vehicle', label: text.vehicle, width: '12rem' },
+      { id: 'license', label: text.license, width: '13rem', kind: 'date' },
+      { id: 'tachoCard', label: text.tachoCard, width: '13rem', kind: 'date' },
+      { id: 'score', label: text.score, width: '9rem', kind: 'number', className: 'app-num' },
+      {
+        id: 'trips',
+        label: text.trips,
+        width: '9rem',
+        kind: 'number',
+        className: 'app-num app-col-secondary',
+      },
+      {
+        id: 'distance',
+        label: text.distance,
+        width: '11rem',
+        kind: 'number',
+        className: 'app-num app-col-secondary',
+      },
+      { id: 'phone', label: text.phone, width: '12rem', className: 'app-col-secondary' },
+      { id: 'notes', label: text.notes, width: '14rem', className: 'app-col-secondary' },
+      {
+        id: 'actions',
+        label: text.actions,
+        width: '3.25rem',
+        kind: 'actions',
+        className: 'app-col-actions',
+      },
+    ];
+  });
   protected readonly sortFields = computed<readonly ListSortField[]>(() => [
     { field: 'name', label: this.text().table.name },
     { field: 'lastName', label: this.text().sorts.lastName },

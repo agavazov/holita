@@ -1,7 +1,7 @@
 {
-  "eyebrow": "Monitoring",
+  "eyebrow": "Dashboard",
   "title": "Trips",
-  "description": "{branch} · trips recorded by the trackers, read-only",
+  "description": "Explore recorded journeys, routes and driving events for the selected period.",
   "search": "Search plate, driver or place",
   "kpis": {
     "label": "Trip summary",
@@ -38,7 +38,8 @@
   },
   "actions": {
     "open": "Open trip",
-    "vehicle": "Open vehicle profile"
+    "vehicle": "Open vehicle profile",
+    "driver": "Open driver profile"
   },
   "filters": {
     "vehicle": "Vehicle",

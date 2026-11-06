@@ -19,6 +19,7 @@
   }
 
   @if (!editing() && driver(); as driver) {
+    <p class="app-muted">{{ catalog().hint }}</p>
     <section class="app-form-section">
       <h3>{{ text().contact }}</h3>
       <dl class="app-facts">
@@ -39,11 +40,20 @@
           <dd class="app-inline">
             @for (vehicle of driver.vehicles; track vehicle.id) {
               @if (recordLinks()?.vehicle(vehicle.id); as link) {
-                <a class="app-link" [routerLink]="link.commands" [queryParams]="link.queryParams">{{
-                  vehicle.plate
-                }}</a>
+                <a
+                  class="app-link app-plate"
+                  [routerLink]="link.commands"
+                  [queryParams]="link.queryParams"
+                  [title]="vehicle.plate"
+                  >{{ vehicle.plate }}</a
+                >
               } @else {
-                <button type="button" class="app-link" (click)="openVehicle.emit(vehicle.id)">
+                <button
+                  type="button"
+                  class="app-link app-plate"
+                  [title]="vehicle.plate"
+                  (click)="openVehicle.emit(vehicle.id)"
+                >
                   {{ vehicle.plate }}
                 </button>
               }
@@ -71,7 +81,7 @@
         <div>
           <dt>{{ text().license }}</dt>
           <dd class="app-inline">
-            {{ driver.licenseExpiresOn | holitaDate }}
+            {{ units.dateOnly(driver.licenseExpiresOn) }}
             @if (expiry(driver.licenseExpiresOn); as flag) {
               <p-tag [severity]="flag.severity" [value]="flag.label" />
             }
@@ -84,7 +94,7 @@
         <div>
           <dt>{{ text().tachoCard }}</dt>
           <dd class="app-inline">
-            {{ driver.tachoCardExpiresOn | holitaDate }}
+            {{ units.dateOnly(driver.tachoCardExpiresOn) }}
             @if (expiry(driver.tachoCardExpiresOn); as flag) {
               <p-tag [severity]="flag.severity" [value]="flag.label" />
             }
@@ -105,7 +115,7 @@
                   [style.--app-meter-value]="driver.score + '%'"
                   aria-hidden="true"
                 ></span>
-                <span>{{ driver.score }}</span>
+                <span class="app-cell-number">{{ driver.score | holitaNumber: 1 }}</span>
               </span>
             } @else {
               —
@@ -131,16 +141,33 @@
         </div>
         <div>
           <dt>{{ text().createdAt }}</dt>
-          <dd>{{ driver.createdAt | holitaDateTime }}</dd>
+          <dd>
+            @let created = units.dateTimeCell(driver.createdAt);
+            ><time
+              class="app-cell-date"
+              [attr.datetime]="driver.createdAt"
+              [title]="created.title"
+              >{{ created.text }}</time
+            >
+          </dd>
         </div>
         <div>
           <dt>{{ text().updatedAt }}</dt>
-          <dd>{{ driver.updatedAt | holitaDateTime }}</dd>
+          <dd>
+            @let updated = units.dateTimeCell(driver.updatedAt);
+            ><time
+              class="app-cell-date"
+              [attr.datetime]="driver.updatedAt"
+              [title]="updated.title"
+              >{{ updated.text }}</time
+            >
+          </dd>
         </div>
       </dl>
     </section>
   } @else {
     <form #formElement id="driver-form" [formGroup]="form" (ngSubmit)="submit()">
+      <p class="app-muted">{{ catalog().hint }}</p>
       @if (saveError(); as error) {
         <p-message severity="error" role="alert">{{ error }}</p-message>
       }
@@ -304,7 +331,7 @@
             <p-datepicker
               inputId="driver-licenseExpiresOn"
               formControlName="licenseExpiresOn"
-              dateFormat="yy-mm-dd"
+              [dateFormat]="units.datePickerFormat()"
               appendTo="body"
               [fluid]="true"
               [invalid]="!!errorOf('licenseExpiresOn')"
@@ -333,7 +360,7 @@
             <p-datepicker
               inputId="driver-tachoCardExpiresOn"
               formControlName="tachoCardExpiresOn"
-              dateFormat="yy-mm-dd"
+              [dateFormat]="units.datePickerFormat()"
               appendTo="body"
               [fluid]="true"
               [invalid]="!!errorOf('tachoCardExpiresOn')"

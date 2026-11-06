@@ -22,7 +22,8 @@ import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
 import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
-import { FormatDateTimePipe, FormatRelativePipe } from '../../../ui/format/format.pipes';
+import { injectFleetFormat } from '../../../ui/format/fleet-format';
+import { FormatRelativePipe } from '../../../ui/format/format.pipes';
 import { textValidator, validationMessage } from '../../../ui/forms/validators';
 import { lockWhileSaving } from '../../../ui/forms/saving';
 import { uiMessages } from '../../../ui/i18n/messages';
@@ -55,7 +56,6 @@ export type AlertAction = 'acknowledge' | 'resolve' | 'reopen';
     Textarea,
     RouteDrawer,
     FormField,
-    FormatDateTimePipe,
     FormatRelativePipe,
   ],
   templateUrl: './alert-drawer.html',
@@ -87,6 +87,7 @@ export class AlertDrawer {
   private readonly remarkElement = viewChild<ElementRef<HTMLTextAreaElement>>('remarkElement');
   private readonly catalog = computed(() => alertsText(this.language()));
   protected readonly text = computed(() => this.catalog().drawer);
+  protected readonly format = injectFleetFormat();
   protected readonly clockRetry = computed(() => uiMessages[this.language()].retry);
 
   protected readonly remark = new FormControl('', {

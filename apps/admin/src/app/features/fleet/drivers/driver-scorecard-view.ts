@@ -1,5 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink, type Params } from '@angular/router';
+import { ChartLine } from '@primeicons/angular/chart-line';
+import { Compass } from '@primeicons/angular/compass';
+import { ExclamationTriangle } from '@primeicons/angular/exclamation-triangle';
+import { Map } from '@primeicons/angular/map';
+import { Star } from '@primeicons/angular/star';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import {
@@ -8,7 +13,7 @@ import {
   type StackedRow,
 } from '../../../ui/charts/stacked-bars';
 import { EmptyState } from '../../../ui/empty-state/empty-state';
-import { FormatDateTimePipe, FormatNumberPipe } from '../../../ui/format/format.pipes';
+import { FormatNumberPipe } from '../../../ui/format/format.pipes';
 import { formatNumber } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
@@ -65,9 +70,13 @@ export interface DriverScorecard {
     RouterLink,
     ButtonDirective,
     Message,
+    ChartLine,
+    Compass,
+    ExclamationTriangle,
+    Map,
+    Star,
     StackedBars,
     EmptyState,
-    FormatDateTimePipe,
     FormatNumberPipe,
     KpiStrip,
     KpiTile,
@@ -107,6 +116,7 @@ export class DriverScorecardView {
     return rate === null || rate === undefined ? null : rate / (this.units.distanceValue(1) ?? 1);
   });
   protected readonly periods = scorecardPeriods;
+  protected readonly hint = computed(() => driversText(this.language()).hint);
   protected readonly description = computed(() => {
     const employeeNo = this.scorecard()?.employeeNo;
     return employeeNo ? `${this.text().title} · ${employeeNo}` : this.text().title;

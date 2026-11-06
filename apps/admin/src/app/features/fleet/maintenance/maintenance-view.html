@@ -2,10 +2,11 @@
   [eyebrow]="text().eyebrow"
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
-  [description]="description()"
+  [description]="text().hint"
 >
   <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
 </holita-page-header>
+<p class="app-muted">{{ description() }}</p>
 
 @if (kpis(); as kpis) {
   <holita-kpi-strip [label]="text().kpis.label">
@@ -13,15 +14,31 @@
       [label]="text().kpis.overdue"
       [value]="kpis.overdue | holitaNumber"
       [tone]="kpis.overdue ? 'danger' : null"
-    />
+    >
+      <svg kpiIcon data-p-icon="exclamation-triangle" />
+    </holita-kpi-tile>
     <holita-kpi-tile
       [label]="text().kpis.dueSoon"
       [value]="kpis.dueSoon | holitaNumber"
       [footnote]="text().kpis.dueSoonFootnote"
       [tone]="kpis.dueSoon ? 'warn' : null"
-    />
-    <holita-kpi-tile [label]="text().kpis.planned" [value]="kpis.planned | holitaNumber" />
-    <holita-kpi-tile [label]="text().kpis.cost" [value]="kpis.costCents | holitaMoney" />
+    >
+      <svg kpiIcon data-p-icon="clock" />
+    </holita-kpi-tile>
+    <holita-kpi-tile
+      [label]="text().kpis.planned"
+      [value]="kpis.planned | holitaNumber"
+      category="c1"
+    >
+      <svg kpiIcon data-p-icon="calendar" />
+    </holita-kpi-tile>
+    <holita-kpi-tile
+      [label]="text().kpis.cost"
+      [value]="kpis.costCents | holitaMoney"
+      category="c2"
+    >
+      <svg kpiIcon data-p-icon="wallet" />
+    </holita-kpi-tile>
   </holita-kpi-strip>
 }
 
@@ -41,6 +58,8 @@
   [heading]="text().table.heading"
   [total]="total()"
   [view]="view()"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
   [errorText]="errorText() ?? text().table.errorText"
   [busy]="busy()"
   [actionContext]="state()"
@@ -75,7 +94,16 @@
     [sortOrder]="sortOrder()"
     (onLazyLoad)="sort($event)"
     [scrollable]="true"
+    [tableStyle]="{ 'min-width': tableMinWidth }"
+    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().table.heading } }"
   >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+          <col [style.width]="column.width" [class]="column.className ?? ''" />
+        }
+      </colgroup>
+    </ng-template>
     <ng-template #header>
       <tr>
         <th scope="col" class="app-col-check">
@@ -112,28 +140,37 @@
         </td>
         <td class="app-col-identity">
           <div class="app-table-identity">
-            <span class="app-table-mobile-meta">{{ row.plate }}</span>
-            @if (row.status !== 'PLANNED') {
-              <button
-                type="button"
-                class="app-link"
-                [attr.aria-label]="
-                  label(row.status === 'DONE' ? text().table.view : text().table.viewCancelled, row)
-                "
-                (click)="panel.run('view', [recordOf(row)], $event.currentTarget)"
-              >
-                {{ row.kind }}
-              </button>
-            } @else {
-              <button
-                type="button"
-                class="app-link"
-                [attr.aria-label]="label(text().table.edit, row)"
-                (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
-              >
-                {{ row.kind }}
-              </button>
-            }
+            <div class="app-cell-identity">
+              @if (row.status !== 'PLANNED') {
+                <button
+                  type="button"
+                  class="app-link"
+                  [title]="row.kind"
+                  [attr.aria-label]="
+                    label(
+                      row.status === 'DONE' ? text().table.view : text().table.viewCancelled,
+                      row
+                    )
+                  "
+                  (click)="panel.run('view', [recordOf(row)], $event.currentTarget)"
+                >
+                  {{ row.kind }}
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="app-link"
+                  [title]="row.kind"
+                  [attr.aria-label]="label(text().table.edit, row)"
+                  (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
+                >
+                  {{ row.kind }}
+                </button>
+              }
+              <span class="app-plate app-table-mobile-meta" [title]="row.plate">{{
+                row.plate
+              }}</span>
+            </div>
             <div class="app-table-mobile-actions">
               <holita-row-actions
                 [actions]="actions()"
@@ -144,19 +181,26 @@
           </div>
         </td>
         <td>
-          @if (recordLinks()?.vehicle(row.vehicleId); as link) {
-            <a class="app-link" [routerLink]="link.commands" [queryParams]="link.queryParams">{{
-              row.plate
-            }}</a>
-          } @else {
-            {{ row.plate }}
-          }
+          <span class="app-cell-status">
+            @if (recordLinks()) {
+              <button
+                type="button"
+                class="app-link"
+                [attr.aria-label]="label(text().table.openVehicle, row)"
+                (click)="panel.run('vehicle', [recordOf(row)], $event.currentTarget)"
+              >
+                <span class="app-plate" [title]="row.plate">{{ row.plate }}</span>
+              </button>
+            } @else {
+              <span class="app-plate" [title]="row.plate">{{ row.plate }}</span>
+            }
+          </span>
         </td>
         <td>
-          <span class="app-cell-stack">
-            <span>
+          <span class="app-cell-identity">
+            <span class="app-cell-date" [title]="dueLabel(row)">
               @if (row.dueOn) {
-                {{ row.dueOn | holitaDate }}
+                <time [attr.datetime]="row.dueOn">{{ units.dateOnly(row.dueOn) }}</time>
               }
               @if (row.dueOn && row.dueKm !== null) {
                 ·
@@ -164,21 +208,26 @@
               @if (row.dueKm !== null) {
                 {{ units.distance(row.dueKm, true, 0) }}
               }
+              @if (!row.dueOn && row.dueKm === null) {
+                —
+              }
             </span>
             @if (kmLeftLabel(row); as left) {
-              <span [class.maintenance__over]="row.kmLeft < 0">{{ left }}</span>
+              <span [title]="left" [class.maintenance__over]="row.kmLeft < 0">{{ left }}</span>
             }
           </span>
         </td>
         <td>
-          <p-tag [severity]="urgencySeverity(row)" [value]="urgencyLabel(row)" />
+          <span class="app-cell-status" [title]="urgencyLabel(row)">
+            <p-tag [severity]="urgencySeverity(row)" [value]="urgencyLabel(row)" />
+          </span>
         </td>
-        <td class="app-num">{{ row.costCents | holitaMoney }}</td>
+        <td class="app-num">
+          <span class="app-cell-number">{{ row.costCents | holitaMoney }}</span>
+        </td>
         <td class="app-col-secondary">
           @if (row.notes) {
-            <span class="app-cell-truncate maintenance__notes" [title]="row.notes">{{
-              row.notes
-            }}</span>
+            <span class="app-cell-truncate" [title]="row.notes">{{ row.notes }}</span>
           } @else {
             <span class="app-muted">—</span>
           }

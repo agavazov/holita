@@ -10,7 +10,7 @@ import { DriverScorecardPage } from './driver-scorecard-page';
 import { DriversPage } from './drivers-page';
 
 const meta: Meta = {
-  title: 'Admin/Fleet/Drivers',
+  title: 'Admin/Drivers',
   tags: ['!autodocs'],
   parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };
@@ -39,6 +39,22 @@ function routed(suffix = ''): NonNullable<Story['render']> {
 
 export const Default: Story = {
   render: routed(),
+};
+
+export const Loading: Story = {
+  render: routed(),
+  parameters: {
+    holita: { scenario: { failures: { AdminDrivers: 'pending' } } } satisfies StoryFixtures,
+  },
+};
+
+export const NoResults: Story = {
+  render: routed('?search=no-driver-results'),
+};
+
+export const Mobile: Story = {
+  render: routed(),
+  globals: { viewport: { value: 'mobile375', isRotated: false } },
 };
 
 export const AssignedVehicle: Story = {

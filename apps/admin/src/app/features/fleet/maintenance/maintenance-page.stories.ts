@@ -9,7 +9,7 @@ import { AdminWorkspace } from '../../../workspace/admin-workspace';
 import { FleetWorkspace } from '../fleet-workspace';
 import { MaintenanceRecordPage } from './maintenance-record-page';
 const meta: Meta = {
-  title: 'Admin/Fleet/Maintenance',
+  title: 'Admin/Maintenance',
   tags: ['!autodocs'],
   parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };
@@ -26,6 +26,17 @@ function routed(suffix = ''): NonNullable<Story['render']> {
 }
 export const Default: Story = {
   render: routed(),
+};
+export const FirstLoad: Story = {
+  name: 'First load',
+  render: routed(),
+  parameters: {
+    holita: { scenario: { latencyMs: 1800 } } satisfies StoryFixtures,
+  },
+};
+export const Mobile: Story = {
+  render: routed(),
+  globals: { viewport: { value: 'mobile375', isRotated: false } },
 };
 export const Edit: Story = {
   render: routed(`/${fixtureServiceTask.id}/edit?keep=storybook#maintenance`),

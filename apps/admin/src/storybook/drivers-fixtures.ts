@@ -85,8 +85,11 @@ export const fixtureUnassignedDriver: WithTypename<AdminDriverDetailsFragment> =
 graphqlFixture(AdminDriversDocument, (variables) => ({
   fleetDrivers: {
     __typename: 'FleetDriverPage',
-    items: [fixtureDriver, fixtureUnassignedDriver],
-    total: 2,
+    items:
+      variables.string('search') === 'no-driver-results'
+        ? []
+        : [fixtureDriver, fixtureUnassignedDriver],
+    total: variables.string('search') === 'no-driver-results' ? 0 : 2,
     offset: variables.int('offset', 0),
     limit: variables.int('limit', 20),
   },

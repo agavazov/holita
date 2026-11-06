@@ -37,19 +37,19 @@
                   [routerLink]="link.commands"
                   [queryParams]="link.queryParams"
                   [fragment]="link.fragment"
-                  >{{ vehicleName() }}</a
+                  ><span class="app-plate">{{ vehicleName() }}</span></a
                 >
               } @else {
-                {{ vehicleName() }}
+                <span class="app-plate">{{ vehicleName() }}</span>
               }
             } @else {
-              {{ vehicleName() }}
+              <span class="app-plate">{{ vehicleName() }}</span>
             }
           </dd>
         </div>
         <div>
           <dt>{{ text().dueOn }}</dt>
-          <dd>{{ record.dueOn | holitaDate }}</dd>
+          <dd>{{ units.dateOnly(record.dueOn) }}</dd>
         </div>
         <div>
           <dt>{{ dueOdometerLabel() }}</dt>
@@ -127,13 +127,13 @@
                       [routerLink]="link.commands"
                       [queryParams]="link.queryParams"
                       [fragment]="link.fragment"
-                      >{{ vehicleName() }}</a
+                      ><span class="app-plate">{{ vehicleName() }}</span></a
                     >
                   } @else {
-                    {{ vehicleName() }}
+                    <span class="app-plate">{{ vehicleName() }}</span>
                   }
                 } @else {
-                  {{ vehicleName() }}
+                  <span class="app-plate">{{ vehicleName() }}</span>
                 }
               </output>
             } @else {
@@ -172,7 +172,7 @@
             <p-datepicker
               inputId="task-dueOn"
               formControlName="dueOn"
-              dateFormat="yy-mm-dd"
+              [dateFormat]="units.datePickerFormat()"
               appendTo="body"
               [fluid]="true"
               [invalid]="!!errorOf('dueOn')"

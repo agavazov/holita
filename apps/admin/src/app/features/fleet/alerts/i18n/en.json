@@ -1,7 +1,7 @@
 {
-  "eyebrow": "Monitoring",
-  "title": "Alerts",
-  "description": "{branch} · open and acknowledged alerts first",
+  "eyebrow": "Dashboard",
+  "title": "Problems",
+  "description": "Review open alerts, recent fault reports and operations that need follow-up.",
   "search": "Search alert, plate, driver or remark",
   "kpis": {
     "label": "Alert summary",
@@ -68,7 +68,8 @@
     "open": "Open",
     "acknowledge": "Acknowledge",
     "resolve": "Resolve",
-    "vehicle": "Open vehicle profile"
+    "vehicle": "Open vehicle profile",
+    "driver": "Open driver profile"
   },
   "filters": {
     "severity": "Severity",

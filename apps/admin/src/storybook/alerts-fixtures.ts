@@ -18,6 +18,7 @@ import {
 } from './graphql-fixtures';
 import { defaultBranchId } from './session-fixtures';
 const at = '2026-10-18T07:00:00.000Z';
+export const alertsNoResultsSearch = 'storybook-empty-alerts';
 export const fixtureAlert: WithTypename<AdminAlertDetailsFragment> = {
   __typename: 'FleetEvent',
   id: '60000000-0000-4000-8000-000000000001',
@@ -77,8 +78,8 @@ function find(variables: FixtureVariables) {
 graphqlFixture(AdminAlertsDocument, (variables) => ({
   fleetEvents: {
     __typename: 'FleetEventPage',
-    items: [fixtureAlert, otherAlert],
-    total: 2,
+    items: variables.string('search') === alertsNoResultsSearch ? [] : [fixtureAlert, otherAlert],
+    total: variables.string('search') === alertsNoResultsSearch ? 0 : 2,
     offset: variables.int('offset', 0),
     limit: variables.int('limit', 20),
   },

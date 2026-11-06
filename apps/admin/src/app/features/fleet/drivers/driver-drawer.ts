@@ -26,11 +26,7 @@ import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
 import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
-import {
-  FormatDateOnlyPipe,
-  FormatDateTimePipe,
-  FormatNumberPipe,
-} from '../../../ui/format/format.pipes';
+import { FormatNumberPipe } from '../../../ui/format/format.pipes';
 import { fromDateOnly, toDateOnly } from '../../../ui/format/zoned-time';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
 import { datePickerInputPt } from '../../../ui/forms/inner-input-pt';
@@ -125,8 +121,6 @@ const statusTones = { ACTIVE: 'success', ON_LEAVE: 'info', INACTIVE: 'neutral' }
     Textarea,
     RouteDrawer,
     FormField,
-    FormatDateOnlyPipe,
-    FormatDateTimePipe,
     FormatNumberPipe,
   ],
   templateUrl: './driver-drawer.html',

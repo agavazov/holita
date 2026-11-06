@@ -33,6 +33,19 @@ export const Default: Story = {
   render: routed(),
 };
 
+export const SecondPage: Story = {
+  render: routed('?page=2&pageSize=10&keep=storybook#groups'),
+};
+
+export const Loading: Story = {
+  render: routed(),
+  parameters: {
+    holita: {
+      scenario: { failures: { AdminVehicleGroupsList: 'pending' } },
+    } satisfies StoryFixtures,
+  },
+};
+
 export const Edit: Story = {
   render: routed(`/${editableGroup.id}/edit?keep=storybook#groups`),
 };

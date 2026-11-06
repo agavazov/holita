@@ -2,10 +2,12 @@
   [eyebrow]="text().eyebrow"
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
-  [description]="description()"
+  [description]="text().hint"
 >
   <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
 </holita-page-header>
+
+<p class="app-muted">{{ description() }}</p>
 
 @if (businessDate() === null) {
   <p class="app-muted" role="status">{{ text().expiry.unavailable }}</p>
@@ -17,23 +19,30 @@
       [label]="text().kpis.active"
       [value]="kpis.active | holitaNumber"
       [secondary]="onLeave(kpis.onLeave)"
-    />
+      tone="success"
+      ><svg kpiIcon data-p-icon="users"
+    /></holita-kpi-tile>
     <holita-kpi-tile
       [label]="text().kpis.documents"
       [value]="kpis.documents | holitaNumber"
       [footnote]="text().kpis.documentsFootnote"
-      [tone]="kpis.documents ? 'warn' : null"
-    />
+      [tone]="kpis.documents ? 'warn' : 'success'"
+      ><svg kpiIcon data-p-icon="id-card"
+    /></holita-kpi-tile>
     <holita-kpi-tile
       [label]="text().kpis.score"
       [value]="scoreValue()"
       [footnote]="text().kpis.scoreFootnote"
-    />
+      category="c3"
+      ><svg kpiIcon data-p-icon="chart-line"
+    /></holita-kpi-tile>
     <holita-kpi-tile
       [label]="text().kpis.distance"
       [value]="units.distance(kpis.distanceKm, false, 0)"
       [unit]="units.distanceUnit()"
-    />
+      category="c4"
+      ><svg kpiIcon data-p-icon="compass"
+    /></holita-kpi-tile>
   </holita-kpi-strip>
 }
 
@@ -61,6 +70,8 @@
   [actions]="actions()"
   [selection]="selectedRecords()"
   [page]="page()"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
   (action)="action.emit($event)"
   (pageChange)="changePage($event)"
   (clearFilters)="clearFilters()"
@@ -87,7 +98,15 @@
     [sortOrder]="sortOrder()"
     (onLazyLoad)="sort($event)"
     [scrollable]="true"
+    [tableStyle]="{ 'min-width': tableMinWidth }"
   >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+          <col [style.width]="column.width" [class]="column.className ?? ''" />
+        }
+      </colgroup>
+    </ng-template>
     <ng-template #header>
       <tr>
         <th scope="col" class="app-col-check">
@@ -109,7 +128,7 @@
         <th scope="col" pSortableColumn="tachoCard">
           {{ text().table.tachoCard }} <p-sort-icon field="tachoCard" />
         </th>
-        <th scope="col" pSortableColumn="score">
+        <th scope="col" class="app-num" pSortableColumn="score">
           {{ text().table.score }} <p-sort-icon field="score" />
         </th>
         <th scope="col" class="app-num app-col-secondary" pSortableColumn="trips">
@@ -131,16 +150,17 @@
           <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row.name)" />
         </td>
         <td class="app-col-identity">
-          <span class="app-cell-stack">
+          <span class="app-cell-identity">
             <button
               type="button"
               class="app-link"
               [attr.aria-label]="label(text().table.open, row.name)"
+              [title]="row.name"
               (click)="panel.run('view', [recordOf(row)], $event.currentTarget)"
             >
               {{ row.name }}
             </button>
-            <span>{{ row.employeeNo }}</span>
+            <span [title]="row.employeeNo">{{ row.employeeNo || '—' }}</span>
           </span>
           <div class="app-table-mobile-actions">
             <holita-row-actions
@@ -151,32 +171,51 @@
           </div>
         </td>
         <td>
-          <p-tag [severity]="statusSeverity(row.status)" [value]="statusLabel(row.status)" />
+          <span class="app-cell-status" [title]="statusLabel(row.status)">
+            <p-tag [severity]="statusSeverity(row.status)" [value]="statusLabel(row.status)" />
+          </span>
         </td>
         <td>
-          @if (row.vehiclePlate) {
-            {{ row.vehiclePlate }}
+          @if (row.vehicles[0]; as vehicle) {
+            <span class="app-cell-status" [title]="row.vehiclePlate">
+              <span class="app-plate">{{ vehicle.plate }}</span>
+              @if (row.vehicles.length > 1) {
+                <span>+{{ row.vehicles.length - 1 }}</span>
+              }
+            </span>
           } @else {
-            <span class="app-muted">{{ text().table.noVehicle }}</span>
+            <span class="app-cell-truncate app-muted" [title]="text().table.noVehicle">{{
+              text().table.noVehicle
+            }}</span>
           }
         </td>
         <td>
-          <span class="app-inline">
-            {{ row.licenseExpiresOn | holitaDate }}
+          <span class="app-cell-status">
+            <time
+              class="app-cell-date drivers__expiry-date"
+              [attr.datetime]="row.licenseExpiresOn"
+              [title]="row.licenseExpiresOn"
+              >{{ units.dateOnly(row.licenseExpiresOn) }}</time
+            >
             @if (expiry(row.licenseExpiresOn); as flag) {
-              <p-tag [severity]="flag.severity" [value]="flag.label" />
+              <p-tag [severity]="flag.severity" [value]="flag.label" [title]="flag.label" />
             }
           </span>
         </td>
         <td>
-          <span class="app-inline">
-            {{ row.tachoCardExpiresOn | holitaDate }}
+          <span class="app-cell-status">
+            <time
+              class="app-cell-date drivers__expiry-date"
+              [attr.datetime]="row.tachoCardExpiresOn"
+              [title]="row.tachoCardExpiresOn"
+              >{{ units.dateOnly(row.tachoCardExpiresOn) }}</time
+            >
             @if (expiry(row.tachoCardExpiresOn); as flag) {
-              <p-tag [severity]="flag.severity" [value]="flag.label" />
+              <p-tag [severity]="flag.severity" [value]="flag.label" [title]="flag.label" />
             }
           </span>
         </td>
-        <td>
+        <td class="app-cell-number">
           @if (row.score !== null) {
             <span class="app-meter-cell">
               <span
@@ -184,15 +223,19 @@
                 [style.--app-meter-value]="row.score + '%'"
                 aria-hidden="true"
               ></span>
-              <span>{{ row.score }}</span>
+              <span class="app-cell-number">{{ row.score | holitaNumber: 1 }}</span>
             </span>
           } @else {
             <span class="app-muted">{{ text().table.noScore }}</span>
           }
         </td>
-        <td class="app-num app-col-secondary">{{ row.trips30d | holitaNumber }}</td>
-        <td class="app-num app-col-secondary">{{ units.distance(row.distance30dKm, false, 0) }}</td>
-        <td class="app-col-secondary">{{ row.phone }}</td>
+        <td class="app-cell-number app-col-secondary">{{ row.trips30d | holitaNumber }}</td>
+        <td class="app-cell-number app-col-secondary">
+          {{ units.distance(row.distance30dKm, false, 0) }}
+        </td>
+        <td class="app-col-secondary">
+          <span class="app-cell-truncate" [title]="row.phone">{{ row.phone || '—' }}</span>
+        </td>
         <td class="app-col-secondary">
           @if (row.notes) {
             <span class="app-cell-truncate drivers__notes" [title]="row.notes">{{

@@ -38,16 +38,28 @@
     <holita-page-header
       [eyebrow]="text().eyebrow"
       [title]="text().title"
+      [description]="hint()"
       [backLink]="backLink()"
       [backLabel]="text().back"
       [backQueryParams]="backQueryParams()"
       [backFragment]="backFragment()"
     />
     <holita-kpi-strip [label]="text().summary" [loading]="true">
-      <holita-kpi-tile [label]="text().drivingScore" [loading]="true" />
-      <holita-kpi-tile [label]="text().ecoScore" [loading]="true" />
-      <holita-kpi-tile [label]="text().distance" [loading]="true" />
-      <holita-kpi-tile [label]="text().trips" [loading]="true" />
+      <holita-kpi-tile [label]="text().drivingScore" [loading]="true" category="c3"
+        ><svg kpiIcon data-p-icon="star"
+      /></holita-kpi-tile>
+      <holita-kpi-tile [label]="text().ecoScore" [loading]="true" tone="success"
+        ><svg kpiIcon data-p-icon="chart-line"
+      /></holita-kpi-tile>
+      <holita-kpi-tile [label]="text().distance" [loading]="true" category="c4"
+        ><svg kpiIcon data-p-icon="compass"
+      /></holita-kpi-tile>
+      <holita-kpi-tile [label]="text().trips" [loading]="true" category="c2"
+        ><svg kpiIcon data-p-icon="map"
+      /></holita-kpi-tile>
+      <holita-kpi-tile [label]="text().maneuversPer100Km" [loading]="true" tone="warn"
+        ><svg kpiIcon data-p-icon="exclamation-triangle"
+      /></holita-kpi-tile>
     </holita-kpi-strip>
   }
   @case ('ready') {
@@ -55,12 +67,14 @@
       <holita-page-header
         [eyebrow]="text().eyebrow"
         [title]="card.name"
-        [description]="description()"
+        [description]="hint()"
         [backLink]="backLink()"
         [backLabel]="text().back"
         [backQueryParams]="backQueryParams()"
         [backFragment]="backFragment()"
       />
+
+      <p class="app-muted">{{ description() }}</p>
 
       <section class="app-card scorecard__period" [attr.aria-label]="text().period">
         <div role="group" class="app-inline" [attr.aria-label]="text().period">
@@ -78,8 +92,12 @@
           }
         </div>
         @if (card.asOf) {
+          @let asOf = units.dateTimeCell(card.asOf);
           <p class="app-muted scorecard__clock">
-            {{ text().asOf }} {{ card.asOf | holitaDateTime }}
+            {{ text().asOf }}
+            <time class="app-cell-date" [attr.datetime]="card.asOf" [title]="asOf.title">{{
+              asOf.text
+            }}</time>
           </p>
         }
       </section>
@@ -96,26 +114,36 @@
             [label]="text().drivingScore"
             [value]="card.averageDrivingScore | holitaNumber: 1"
             [footnote]="text().outOf100"
-          />
+            category="c3"
+            ><svg kpiIcon data-p-icon="star"
+          /></holita-kpi-tile>
           <holita-kpi-tile
             [label]="text().ecoScore"
             [value]="card.averageEcoScore | holitaNumber: 1"
             [footnote]="text().outOf100"
-          />
+            tone="success"
+            ><svg kpiIcon data-p-icon="chart-line"
+          /></holita-kpi-tile>
           <holita-kpi-tile
             [label]="text().distance"
             [value]="units.distance(card.distanceKm, false, 1)"
             [unit]="units.distanceUnit()"
-          />
+            category="c4"
+            ><svg kpiIcon data-p-icon="compass"
+          /></holita-kpi-tile>
           <holita-kpi-tile
             [label]="text().trips"
             [value]="card.tripCount | holitaNumber"
             [footnote]="coverage()"
-          />
+            category="c2"
+            ><svg kpiIcon data-p-icon="map"
+          /></holita-kpi-tile>
           <holita-kpi-tile
             [label]="text().maneuversPer100Km"
             [value]="maneuverRate() | holitaNumber: 1"
-          />
+            tone="warn"
+            ><svg kpiIcon data-p-icon="exclamation-triangle"
+          /></holita-kpi-tile>
         </holita-kpi-strip>
 
         @if (!card.tripCount) {
@@ -146,11 +174,27 @@
             <dl class="app-facts">
               <div class="app-facts--wide">
                 <dt>{{ text().windowStart }}</dt>
-                <dd>{{ card.windowStart | holitaDateTime }}</dd>
+                <dd>
+                  @let start = units.dateTimeCell(card.windowStart);
+                  ><time
+                    class="app-cell-date"
+                    [attr.datetime]="card.windowStart"
+                    [title]="start.title"
+                    >{{ start.text }}</time
+                  >
+                </dd>
               </div>
               <div class="app-facts--wide">
                 <dt>{{ text().windowEnd }}</dt>
-                <dd>{{ card.windowEnd | holitaDateTime }}</dd>
+                <dd>
+                  @let end = units.dateTimeCell(card.windowEnd);
+                  ><time
+                    class="app-cell-date"
+                    [attr.datetime]="card.windowEnd"
+                    [title]="end.title"
+                    >{{ end.text }}</time
+                  >
+                </dd>
               </div>
               <div>
                 <dt>{{ text().scoredTrips }}</dt>
