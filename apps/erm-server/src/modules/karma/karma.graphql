@@ -1,0 +1,48 @@
+enum ErmKarmaRoutingState {
+  UNKNOWN
+  HOLITA
+  KARMA_BACKUP
+}
+
+enum ErmKarmaReturnStatus {
+  SUBMITTING
+  QUEUED
+  UNCERTAIN
+  RETURNED
+  NEEDS_OPERATOR
+  FAILED
+}
+
+type ErmKarmaReturnAttempt {
+  id: ID!
+  actorId: ID!
+  requestedAt: DateTime!
+  queueId: ID
+  status: ErmKarmaReturnStatus!
+  "An uncertain submission stays pending; it is never automatically replayed."
+  pending: Boolean!
+  recovery: ErmRecoverySession
+  holitaConnectionId: ID
+  holitaConnectedAt: DateTime
+}
+
+type ErmDeviceRouting {
+  state: ErmKarmaRoutingState!
+  "First report after the last holita frame, if found in the bounded Karma lookup."
+  since: DateTime
+  observedAt: DateTime
+  latestKarmaReportAt: DateTime
+  "Whether the latest observed Karma event proves ignition off or parking."
+  parked: Boolean
+  latestReturnAttempt: ErmKarmaReturnAttempt
+}
+
+extend type FleetDevice {
+  "Transitional Karma routing detection for this Branch's Device. UNKNOWN when unavailable."
+  ermRouting: ErmDeviceRouting! @requires(fields: "imei")
+}
+
+extend type Mutation {
+  "Engineer/Administrator only: request a parked backup unit's read-only recovery session."
+  returnErmDeviceToHolita(deviceId: ID!): ErmKarmaReturnAttempt!
+}

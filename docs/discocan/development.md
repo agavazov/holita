@@ -688,10 +688,28 @@ too and are not forwarded to Karma, so run it between their sessions (open sessi
 over to it by itself while holita is unreachable.
 
 A unit can stay on that backup after holita drops it, as CB6711TE did after a gateway restart.
-To bring it back, run the tool with `--to holita` on a configuration port and queue
-`98,1,<public-host>,<port>` through Karma: the tool reads 0049–0052, finds the primary server
-already pointing to holita, writes nothing and confirms the reply, and the unit makes its next
-ordinary connection to its primary server (about 5 minutes later on 2026-11-03).
+The API role's temporary Karma module checks `ERM_PRIMARY_UNITS` every five minutes using a
+30-minute event window. It marks a unit `KARMA_BACKUP` when its latest Karma report is more than
+three minutes newer than holita's last device frame. For a newly detected episode whose last
+holita frame is older than the current window, one additional lookup reads the first 30 minutes
+after that frame. `since` records the first later Karma report from that lookup and stays null if
+no such report is found. Later polls preserve the episode start. `FleetDevice.ermRouting` exposes
+routing, its observation time, the latest Karma report, whether the latest event establishes that
+the unit is parked, and the latest return attempt with its recovery result. The former Karma Client treats
+`date_type=utc` / `edt` as UTC and `edt_tz` as local time; an event outside the requested UTC window
+is rejected rather than reinterpreted as Europe/Sofia time.
+
+Set `KARMA_USER`, `KARMA_PASSWORD` and `ERM_RECOVERY_ENDPOINT` in the API process's private
+environment to enable detection and returns; `KARMA_API_URL` defaults to
+`https://karma.online/apiv2/`. Without complete valid configuration routing is `UNKNOWN` and a
+return is unavailable. The recovery endpoint is the public `host:port` the unit can reach, normally
+the permanent listener on 11510 described below. An Engineer or Administrator can request the
+explicit `returnErmDeviceToHolita` mutation for a Device in the active Branch. It refreshes Karma status, requires
+`KARMA_BACKUP`, a parked latest event (`eid` 5, or `eid` 1 with first `extra` field `0`) and no
+pending return, then queues only `98,1,<recovery-host>,<port>`. This temporary session changes no
+device settings. The attempt records its actor, submission time and Karma queue ID, and links the
+read-only recovery outcome and the next ordinary holita connection. An uncertain submission is
+not automatically retried.
 
 Run `98` sessions, for routing or this recovery, only while the truck is parked: reports a unit
 sends during a configuration session are lost (CB6711TE's ten driving reports during its

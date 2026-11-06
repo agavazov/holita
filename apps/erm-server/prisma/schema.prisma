@@ -88,6 +88,7 @@ model ErmRecoverySession {
   reason String
   primaryHost String?
   primaryPort String?
+  karmaReturns ErmKarmaReturnAttempt[]
   @@index([unitId, startedAt(sort: Desc)])
   @@map("ermRecoverySession")
 }
@@ -106,6 +107,7 @@ model ErmConnection {
   frames ErmFrame[]
   commands ErmCommand[]
   upstreamCloses ErmUpstreamClose[]
+  karmaReturns ErmKarmaReturnAttempt[]
   @@map("ermConnection")
 }
 
@@ -273,4 +275,55 @@ model ErmCommandBatch {
   requests ErmCommandRequest[]
   @@unique([tenantId, branchId, id])
   @@map("ermCommandBatch")
+}
+
+enum ErmKarmaRoutingState {
+  UNKNOWN @map("unknown")
+  HOLITA @map("holita")
+  KARMA_BACKUP @map("karmaBackup")
+  @@map("ermKarmaRoutingState")
+}
+
+enum ErmKarmaReturnStatus {
+  SUBMITTING @map("submitting")
+  QUEUED @map("queued")
+  UNCERTAIN @map("uncertain")
+  RETURNED @map("returned")
+  NEEDS_OPERATOR @map("needsOperator")
+  FAILED @map("failed")
+  @@map("ermKarmaReturnStatus")
+}
+
+model ErmKarmaRouting {
+  id BigInt @id @default(autoincrement())
+  unitId String @db.VarChar(15)
+  state ErmKarmaRoutingState
+  since DateTime? @db.Timestamptz(3)
+  observedAt DateTime @db.Timestamptz(3)
+  latestKarmaReportAt DateTime? @db.Timestamptz(3)
+  parked Boolean?
+  createdAt DateTime @db.Timestamptz(3)
+  notificationKind String? @db.VarChar(64)
+  @@index([unitId, id(sort: Desc)])
+  @@map("ermKarmaRouting")
+}
+
+model ErmKarmaReturnAttempt {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  deviceId String @db.Uuid
+  unitId String @db.VarChar(15)
+  actorId String @db.VarChar(128)
+  requestedAt DateTime @db.Timestamptz(3)
+  queueId String?
+  status ErmKarmaReturnStatus @default(SUBMITTING)
+  pending Boolean @default(true)
+  recoverySessionId String? @db.Uuid
+  recovery ErmRecoverySession? @relation(fields: [recoverySessionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  holitaConnectionId String? @db.Uuid
+  holitaConnection ErmConnection? @relation(fields: [holitaConnectionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  @@index([tenantId, branchId, deviceId, requestedAt(sort: Desc)])
+  @@index([unitId, requestedAt(sort: Desc)])
+  @@map("ermKarmaReturnAttempt")
 }

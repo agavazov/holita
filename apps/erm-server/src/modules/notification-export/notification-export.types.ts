@@ -7,6 +7,7 @@ export interface NotificationExportScope {
 
 export interface NotificationExportCursor {
   eventId: string;
+  karmaRoutingId: string;
   commandCompletedAt: string | null;
   commandId: string | null;
 }

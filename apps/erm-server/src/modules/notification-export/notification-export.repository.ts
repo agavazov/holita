@@ -88,6 +88,19 @@ export class NotificationExportRepository {
     });
   }
 
+  karmaRouting(imei: string, since: Date, after: string, limit: number) {
+    return this.prisma.client.ermKarmaRouting.findMany({
+      where: {
+        unitId: imei,
+        id: { gt: BigInt(after) },
+        createdAt: { gte: since },
+        notificationKind: { not: null },
+      },
+      orderBy: { id: 'asc' },
+      take: limit + 1,
+    });
+  }
+
   async transportCommands(scope: NotificationExportScope, requests: ErmCommandRequest[]) {
     const linked = requests.filter(
       (request): request is ErmCommandRequest & { commandId: string } =>

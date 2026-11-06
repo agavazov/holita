@@ -1,5 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { commandNotification, eventNotifications } from './notification-export.mapping.js';
+import {
+  commandNotification,
+  eventNotifications,
+  karmaRoutingNotification,
+} from './notification-export.mapping.js';
 import { NotificationExportRepository } from './notification-export.repository.js';
 import type {
   NotificationExportCursor,
@@ -24,7 +28,7 @@ function utcDate(value: unknown): value is string {
 
 function cursor(value: unknown): NotificationExportCursor {
   if (value === undefined) {
-    return { eventId: '0', commandCompletedAt: null, commandId: null };
+    return { eventId: '0', karmaRoutingId: '0', commandCompletedAt: null, commandId: null };
   }
   if (typeof value !== 'string') {
     throw invalid();
@@ -42,6 +46,10 @@ function cursor(value: unknown): NotificationExportCursor {
     typeof decoded.eventId !== 'string' ||
     !/^\d+$/.test(decoded.eventId) ||
     BigInt(decoded.eventId) > 9223372036854775807n ||
+    ('karmaRoutingId' in decoded &&
+      (typeof decoded.karmaRoutingId !== 'string' ||
+        !/^\d+$/.test(decoded.karmaRoutingId) ||
+        BigInt(decoded.karmaRoutingId) > 9223372036854775807n)) ||
     !('commandCompletedAt' in decoded) ||
     !('commandId' in decoded) ||
     !(
@@ -55,6 +63,7 @@ function cursor(value: unknown): NotificationExportCursor {
   }
   return {
     eventId: decoded.eventId,
+    karmaRoutingId: 'karmaRoutingId' in decoded ? String(decoded.karmaRoutingId) : '0',
     commandCompletedAt: decoded.commandCompletedAt,
     commandId: decoded.commandId,
   };
@@ -102,16 +111,19 @@ export class NotificationExportService {
     const after = cursor(query.after);
     const since = new Date(query.since);
     const limit = Number(pageSize);
-    const [eventRows, commandRows] = await Promise.all([
+    const [eventRows, commandRows, karmaRoutingRows] = await Promise.all([
       this.repository.events(imei, since, after.eventId, limit),
       this.repository.commands(scope, since, after, limit),
+      this.repository.karmaRouting(imei, since, after.karmaRoutingId, limit),
     ]);
     const events = eventRows.slice(0, limit);
     const commands = commandRows.slice(0, limit);
+    const routing = karmaRoutingRows.slice(0, limit);
     const transportCommands = await this.repository.transportCommands(scope, commands);
     const lastCommand = commands.at(-1);
     const next: NotificationExportCursor = {
       eventId: events.at(-1)?.id ?? after.eventId,
+      karmaRoutingId: routing.at(-1)?.id.toString() ?? after.karmaRoutingId,
       commandCompletedAt: lastCommand?.completedAt?.toISOString() ?? after.commandCompletedAt,
       commandId: lastCommand?.id ?? after.commandId,
     };
@@ -119,9 +131,11 @@ export class NotificationExportService {
       items: [
         ...events.flatMap((event) => eventNotifications(event, scope)),
         ...commands.map((request) => commandNotification(request, transportCommands)),
+        ...routing.map((row) => karmaRoutingNotification(row, scope)),
       ],
       next: Buffer.from(JSON.stringify(next)).toString('base64url'),
-      hasMore: eventRows.length > limit || commandRows.length > limit,
+      hasMore:
+        eventRows.length > limit || commandRows.length > limit || karmaRoutingRows.length > limit,
     };
   }
 }

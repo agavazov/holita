@@ -27,6 +27,10 @@ import {
   type RecoveryResult,
 } from '../src/modules/recovery/recovery-listener.js';
 import { RecoveryRepository } from '../src/modules/recovery/recovery.repository.js';
+import { KarmaRepository } from '../src/modules/karma/karma.repository.js';
+import { KarmaResolver } from '../src/modules/karma/karma.resolver.js';
+import { KarmaService } from '../src/modules/karma/karma.service.js';
+import { KarmaTransport } from '../src/modules/karma/karma.transport.js';
 import {
   buildServerFrame,
   FrameSplitter,
@@ -75,6 +79,7 @@ import type {
   FleetDeviceErmFramesArgs,
   FleetDeviceErmCommandsArgs,
   FleetDeviceErmParameterSnapshotsArgs,
+  MutationReturnErmDeviceToHolitaArgs,
 } from '../src/generated/graphql/types.js';
 import type { RequestContext } from '../src/graphql/request-context.js';
 import { formatGraphqlError } from '../src/graphql/errors.js';
@@ -103,6 +108,15 @@ it('persists captured connection lifecycle and raw frames through the production
   const previousInternalToken = process.env.ERM_INTERNAL_TOKEN;
   const previousTelemetryToken = process.env.ERM_TELEMETRY_TOKEN;
   const previousConfigurationWrites = process.env.ERM_CONFIGURATION_WRITES_ENABLED;
+  const previousKarmaEnvironment = new Map(
+    [
+      'KARMA_API_URL',
+      'KARMA_USER',
+      'KARMA_PASSWORD',
+      'ERM_RECOVERY_ENDPOINT',
+      'ERM_PRIMARY_UNITS',
+    ].map((name) => [name, process.env[name]] as const),
+  );
   try {
     const captureRoot = process.env.ERM_CAPTURE_DIR ?? tmpdir();
     await mkdir(captureRoot, { recursive: true });
@@ -794,7 +808,7 @@ it('persists captured connection lifecycle and raw frames through the production
             JSON.stringify(
               code
                 ? { errors: [{ message: 'Private upstream details', extensions: { code } }] }
-                : { data: { fleetDevice: { id: deviceId, imei: unitId } } },
+                : { data: { fleetDevice: { id: deviceId, imei: fleetDeviceImeis.get(deviceId) } } },
             ),
           );
           return;
@@ -3843,7 +3857,408 @@ it('persists captured connection lifecycle and raw frames through the production
         notificationExport.page(notificationImei, { ...notificationQuery, ...invalidQuery }),
       ).rejects.toThrow('Invalid notification export');
     }
+
+    // Karma is fake; only the guarded test database and loopback Fleet boundary are used.
+    const karmaUnitId = '862129080369999';
+    fleetDeviceImeis.set(deviceId, karmaUnitId);
+    process.env.KARMA_API_URL = 'https://karma.example/apiv2/';
+    process.env.KARMA_USER = 'test-karma-user';
+    process.env.KARMA_PASSWORD = 'test-karma-password';
+    process.env.ERM_RECOVERY_ENDPOINT = 'recovery.example:11510';
+    process.env.ERM_PRIMARY_UNITS = karmaUnitId;
+    const karmaRepository = new KarmaRepository(module.get(PrismaService));
+    const karmaTransport = new KarmaTransport();
+    let karmaTargetUnitId = karmaUnitId;
+    let karmaEvents: { reportedAt: Date; parked: boolean }[] = [];
+    jest
+      .spyOn(karmaTransport, 'readCars')
+      .mockImplementation(() => Promise.resolve([{ carId: '19', unitId: karmaTargetUnitId }]));
+    const karmaReads = jest
+      .spyOn(karmaTransport, 'readEvents')
+      .mockImplementation((carId, from, to, expectedUnitId) => {
+        expect(carId).toBe('19');
+        expect(expectedUnitId).toBe(karmaTargetUnitId);
+        expect(to.getTime() - from.getTime()).toBeLessThanOrEqual(30 * 60_000);
+        return Promise.resolve(
+          karmaEvents.filter(({ reportedAt }) => reportedAt >= from && reportedAt <= to),
+        );
+      });
+    const karmaSubmissions = jest
+      .spyOn(karmaTransport, 'requestReturn')
+      .mockResolvedValue({ status: 'ACCEPTED', queueId: '7301' });
+    const karma = new KarmaService(karmaRepository, karmaTransport, new FleetClient());
+    const karmaResolver = new KarmaResolver(karma);
+    const engineerContext: RequestContext = {
+      ...scopedContext,
+      role: 'ENGINEER',
+      userId: randomUUID(),
+    };
+    const karmaDevice = (): DeviceReference => ({
+      id: deviceId,
+      imei: karmaUnitId,
+      telemetryRequest: deviceTelemetryRequest(
+        [karmaUnitId],
+        [{ id: deviceId, imei: karmaUnitId }],
+      ),
+    });
+    const karmaObservedAt = new Date();
+    const karmaHolitaAt = new Date(karmaObservedAt.getTime() - 10 * 60_000);
+    const karmaConnection = await database.client.ermConnection.create({
+      data: {
+        unitId: karmaUnitId,
+        peer,
+        upstream: 'primary',
+        openedAt: karmaHolitaAt,
+        closedAt: karmaHolitaAt,
+        frames: {
+          create: {
+            unitId: karmaUnitId,
+            receivedAt: karmaHolitaAt,
+            direction: 'DEVICE',
+            command: '01',
+            checksum: 'ABSENT',
+            raw: Buffer.from(`$SLU${karmaUnitId},01,1`),
+          },
+        },
+      },
+    });
+    karmaEvents = [{ reportedAt: new Date(karmaHolitaAt.getTime() + 180_000), parked: true }];
+    expect(await karma.observe(karmaUnitId, '19', karmaObservedAt)).toMatchObject({
+      state: 'HOLITA',
+    });
+    await expect(karma.requestReturn(deviceId, engineerContext)).rejects.toMatchObject({
+      status: 409,
+    });
+    const firstKarmaReportAt = new Date(karmaHolitaAt.getTime() + 60_000);
+    const latestKarmaReportAt = new Date(karmaObservedAt.getTime() - 60_000);
+    karmaEvents = [
+      { reportedAt: latestKarmaReportAt, parked: false },
+      { reportedAt: firstKarmaReportAt, parked: true },
+    ];
+    const backup = await karma.observe(karmaUnitId, '19', karmaObservedAt);
+    expect(backup).toMatchObject({
+      state: 'KARMA_BACKUP',
+      since: firstKarmaReportAt,
+      observedAt: karmaObservedAt,
+      latestKarmaReportAt,
+      parked: false,
+    });
+    for (const role of [undefined, 'VIEWER', 'OPERATOR'] as const) {
+      try {
+        await karma.requestReturn(deviceId, { ...engineerContext, role });
+        throw new Error('Expected the return role refusal');
+      } catch (error) {
+        expect(error).toMatchObject({ status: 403 });
+        if (!(error instanceof Error)) {
+          throw error;
+        }
+        expect(
+          formatGraphqlError(
+            { message: error.message },
+            new GraphQLError(error.message, { originalError: error }),
+          ).extensions?.['code'],
+        ).toBe('FORBIDDEN');
+      }
+    }
+    await expect(
+      karma.requestReturn(deviceId, { ...engineerContext, branchId: randomUUID() }),
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(karma.requestReturn(deviceId, engineerContext)).rejects.toMatchObject({
+      status: 409,
+    });
+    expect(karmaSubmissions).not.toHaveBeenCalled();
+    expect(await database.client.ermKarmaReturnAttempt.count()).toBe(0);
+    delete process.env.KARMA_PASSWORD;
+    expect(await karma.deviceRouting(karmaDevice(), engineerContext)).toMatchObject({
+      state: 'UNKNOWN',
+    });
+    await expect(karma.requestReturn(deviceId, engineerContext)).rejects.toMatchObject({
+      status: 503,
+    });
+    process.env.KARMA_PASSWORD = 'test-karma-password';
+    karmaEvents = karmaEvents.map((report) => ({ ...report, parked: true }));
+    const karmaSchema = buildSubgraphSchema([
+      {
+        typeDefs: parse(
+          (
+            await Promise.all([
+              readFile(
+                new URL('../src/modules/telemetry/telemetry.graphql', import.meta.url),
+                'utf8',
+              ),
+              readFile(new URL('../src/modules/karma/karma.graphql', import.meta.url), 'utf8'),
+            ])
+          ).join('\n'),
+        ),
+        resolvers: {
+          DateTime: new GraphQLScalarType({
+            name: 'DateTime',
+            serialize: (value) => dateTime.serialize(value),
+            parseValue: (value) => dateTime.parseValue(value),
+            parseLiteral: (node) => dateTime.parseLiteral(node),
+          }),
+          Mutation: {
+            returnErmDeviceToHolita: (
+              _parent: unknown,
+              args: MutationReturnErmDeviceToHolitaArgs,
+              ctx: RequestContext,
+            ) => karmaResolver.returnToHolita(args, ctx),
+          },
+          FleetDevice: {
+            __resolveReference: (
+              ref: Pick<DeviceReference, 'id' | 'imei'>,
+              ctx: RequestContext,
+              info: GraphQLResolveInfo,
+            ) => resolver.reference(ref, ctx, info),
+            ermRouting: (ref: DeviceReference, _args: unknown, ctx: RequestContext) =>
+              karmaResolver.routing(ref, ctx),
+          },
+        },
+      },
+    ]);
+    const karmaAccepted = await graphql({
+      schema: karmaSchema,
+      source: `mutation($deviceId: ID!) { returnErmDeviceToHolita(deviceId: $deviceId) {
+        id actorId requestedAt queueId status pending recovery { outcome }
+        holitaConnectionId holitaConnectedAt
+      } }`,
+      variableValues: { deviceId },
+      contextValue: engineerContext,
+    });
+    expect(karmaAccepted.errors).toBeUndefined();
+    expect(karmaAccepted.data?.['returnErmDeviceToHolita']).toMatchObject({
+      actorId: engineerContext.userId,
+      queueId: '7301',
+      status: 'QUEUED',
+      pending: true,
+      recovery: null,
+      holitaConnectionId: null,
+      holitaConnectedAt: null,
+    });
+    const firstReturn = await database.client.ermKarmaReturnAttempt.findFirstOrThrow({
+      where: { unitId: karmaUnitId },
+    });
+    expect(firstReturn).toMatchObject({
+      tenantId,
+      branchId,
+      deviceId,
+      actorId: engineerContext.userId,
+      queueId: '7301',
+    });
+    await expect(karma.requestReturn(deviceId, engineerContext)).rejects.toMatchObject({
+      status: 409,
+    });
+    expect(karmaSubmissions).toHaveBeenCalledTimes(1);
+    const needsOperator = await recoveryRepository.record({
+      unitId: karmaUnitId,
+      peer,
+      startedAt: firstReturn.requestedAt,
+      finishedAt: firstReturn.requestedAt,
+      outcome: 'NEEDS_OPERATOR',
+      reason: 'Primary endpoint still points to Karma',
+      primaryHost: 'in.karma.online',
+      primaryPort: '11500',
+    });
+    await karmaRepository.reconcile(karmaUnitId);
+    expect(await karma.deviceRouting(karmaDevice(), engineerContext)).toMatchObject({
+      latestReturnAttempt: {
+        id: firstReturn.id,
+        status: 'NEEDS_OPERATOR',
+        pending: false,
+        recovery: { id: needsOperator.id, outcome: 'NEEDS_OPERATOR' },
+      },
+    });
+    karmaSubmissions.mockResolvedValue({ status: 'ACCEPTED', queueId: '7302' });
+    const secondReturn = await karma.requestReturn(deviceId, {
+      ...engineerContext,
+      role: 'ADMINISTRATOR',
+    });
+    const alreadyHolita = await recoveryRepository.record({
+      unitId: karmaUnitId,
+      peer,
+      startedAt: secondReturn.requestedAt,
+      finishedAt: secondReturn.requestedAt,
+      outcome: 'ALREADY_HOLITA',
+      reason: 'Primary endpoint already points to holita',
+      primaryHost: 'holita.example',
+      primaryPort: '11500',
+    });
+    await karmaRepository.reconcile(karmaUnitId);
+    expect(await karma.deviceRouting(karmaDevice(), engineerContext)).toMatchObject({
+      latestReturnAttempt: {
+        id: secondReturn.id,
+        pending: true,
+        recovery: { id: alreadyHolita.id, outcome: 'ALREADY_HOLITA' },
+        holitaConnectionId: null,
+      },
+    });
+    const returnedAt = new Date(secondReturn.requestedAt.getTime() + 1000);
+    const returnedConnection = await database.client.ermConnection.create({
+      data: {
+        unitId: karmaUnitId,
+        peer,
+        upstream: 'primary',
+        openedAt: returnedAt,
+        frames: {
+          create: {
+            unitId: karmaUnitId,
+            receivedAt: returnedAt,
+            direction: 'DEVICE',
+            command: '01',
+            checksum: 'ABSENT',
+            raw: Buffer.from(`$SLU${karmaUnitId},01,2`),
+          },
+        },
+      },
+    });
+    expect(returnedConnection.id).not.toBe(karmaConnection.id);
+    await karmaRepository.reconcile(karmaUnitId);
+    expect(await karma.observe(karmaUnitId, '19', returnedAt)).toMatchObject({ state: 'HOLITA' });
+    const routingSource = `query($representations: [_Any!]!) {
+      _entities(representations: $representations) { ... on FleetDevice {
+        ermRouting { state since observedAt latestKarmaReportAt parked latestReturnAttempt {
+          id queueId status pending recovery { id outcome } holitaConnectionId holitaConnectedAt
+        } }
+      } }
+    }`;
+    const routingContract = await graphql({
+      schema: karmaSchema,
+      source: routingSource,
+      variableValues: {
+        representations: [{ __typename: 'FleetDevice', id: deviceId, imei: karmaUnitId }],
+      },
+      contextValue: engineerContext,
+    });
+    expect(routingContract.errors).toBeUndefined();
+    expect(routingContract.data?.['_entities']).toEqual([
+      {
+        ermRouting: expect.objectContaining({
+          state: 'HOLITA',
+          latestReturnAttempt: {
+            id: secondReturn.id,
+            queueId: '7302',
+            status: 'RETURNED',
+            pending: false,
+            recovery: { id: alreadyHolita.id, outcome: 'ALREADY_HOLITA' },
+            holitaConnectionId: returnedConnection.id,
+            holitaConnectedAt: returnedAt.toISOString(),
+          },
+        }),
+      },
+    ]);
+    for (const foreignScope of [
+      { branchId: randomUUID() },
+      { tenantId: foreignTenantId, authorization: `Bearer ${issueDemoToken(foreignTenantId)}` },
+    ]) {
+      const foreignRouting = await graphql({
+        schema: karmaSchema,
+        source: routingSource,
+        variableValues: {
+          representations: [{ __typename: 'FleetDevice', id: deviceId, imei: karmaUnitId }],
+        },
+        contextValue: { ...engineerContext, ...foreignScope },
+      });
+      expect(foreignRouting.errors).toBeUndefined();
+      expect(foreignRouting.data?.['_entities']).toEqual([null]);
+    }
+    expect(karmaSubmissions).toHaveBeenCalledTimes(2);
+    const karmaNotifications = await notificationExport.page(karmaUnitId, {
+      tenantId,
+      branchId,
+      deviceId,
+      since: karmaHolitaAt.toISOString(),
+    });
+    expect(karmaNotifications.items).toEqual([
+      expect.objectContaining({
+        sourceKind: 'DIAGNOSTIC',
+        parameters: { eventKind: 'UNIT_ON_BACKUP' },
+        target: { kind: 'DEVICE', id: deviceId },
+      }),
+      expect.objectContaining({
+        sourceKind: 'DIAGNOSTIC',
+        parameters: { eventKind: 'UNIT_RETURNED_TO_HOLITA' },
+        target: { kind: 'DEVICE', id: deviceId },
+      }),
+    ]);
+    expect(
+      await notificationExport.page(karmaUnitId, {
+        tenantId,
+        branchId,
+        deviceId,
+        since: karmaHolitaAt.toISOString(),
+        after: karmaNotifications.next,
+      }),
+    ).toMatchObject({ items: [], hasMore: false });
+
+    // An older backup episode needs its bounded onset read; parked reports can be hourly.
+    karmaTargetUnitId = '862129080369998';
+    fleetDeviceImeis.set(deviceId, karmaTargetUnitId);
+    process.env.ERM_PRIMARY_UNITS = karmaTargetUnitId;
+    const lateObservedAt = new Date();
+    const oldHolitaAt = new Date(lateObservedAt.getTime() - 2 * 60 * 60_000);
+    const onsetAt = new Date(oldHolitaAt.getTime() + 60_000);
+    const parkedReportAt = new Date(lateObservedAt.getTime() - 5 * 60_000);
+    await database.client.ermConnection.create({
+      data: {
+        unitId: karmaTargetUnitId,
+        peer,
+        upstream: 'primary',
+        openedAt: oldHolitaAt,
+        closedAt: oldHolitaAt,
+        frames: {
+          create: {
+            unitId: karmaTargetUnitId,
+            receivedAt: oldHolitaAt,
+            direction: 'DEVICE',
+            checksum: 'ABSENT',
+            raw: Buffer.from(`$SLU${karmaTargetUnitId},01,1`),
+          },
+        },
+      },
+    });
+    karmaEvents = [
+      { reportedAt: onsetAt, parked: true },
+      { reportedAt: parkedReportAt, parked: true },
+    ];
+    expect(await karma.observe(karmaTargetUnitId, '19', lateObservedAt)).toMatchObject({
+      state: 'KARMA_BACKUP',
+      since: onsetAt,
+      latestKarmaReportAt: parkedReportAt,
+      parked: true,
+    });
+    expect(karmaReads).toHaveBeenLastCalledWith(
+      '19',
+      oldHolitaAt,
+      new Date(oldHolitaAt.getTime() + 30 * 60_000),
+      karmaTargetUnitId,
+    );
+    const emptyWindowAt = new Date(lateObservedAt.getTime() + 31 * 60_000);
+    expect(await karma.observe(karmaTargetUnitId, '19', emptyWindowAt)).toMatchObject({
+      state: 'KARMA_BACKUP',
+      since: onsetAt,
+      observedAt: emptyWindowAt,
+      latestKarmaReportAt: parkedReportAt,
+      parked: true,
+    });
+    karmaSubmissions.mockResolvedValue({ status: 'UNCERTAIN', queueId: null });
+    expect(await karma.requestReturn(deviceId, engineerContext)).toMatchObject({
+      status: 'UNCERTAIN',
+      pending: true,
+      queueId: null,
+    });
+    await expect(karma.requestReturn(deviceId, engineerContext)).rejects.toMatchObject({
+      status: 409,
+    });
+    await karma.tick();
+    expect(karmaSubmissions).toHaveBeenCalledTimes(3);
   } finally {
+    for (const [name, value] of previousKarmaEnvironment) {
+      if (value === undefined) {
+        Reflect.deleteProperty(process.env, name);
+      } else {
+        process.env[name] = value;
+      }
+    }
     releaseSnapshotBatch?.();
     await commandRequests?.onModuleDestroy();
     await configurationService?.onModuleDestroy();

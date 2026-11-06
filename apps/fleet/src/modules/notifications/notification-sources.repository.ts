@@ -63,7 +63,10 @@ export class NotificationSourcesRepository {
         deviceId: device.id,
         vehicleId:
           item.occurredAt >= (device.installedAt ?? device.createdAt) ? device.vehicleId : null,
-        ermEventId: item.sourceKind === 'COMMAND' ? null : item.sourceId,
+        ermEventId:
+          item.sourceKind === 'COMMAND' || item.sourceId.startsWith('karma-routing:')
+            ? null
+            : item.sourceId,
         commandRequestId: item.sourceKind === 'COMMAND' ? item.sourceId : null,
       }));
       if (data.length) {

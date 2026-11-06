@@ -11,6 +11,7 @@ import { TelemetryModule } from './modules/telemetry/telemetry.module.js';
 import { ermRole } from './role.js';
 import { RecoveryModule } from './modules/recovery/recovery.module.js';
 import { NotificationExportModule } from './modules/notification-export/notification-export.module.js';
+import { KarmaModule } from './modules/karma/karma.module.js';
 
 const role = ermRole();
 
@@ -24,10 +25,13 @@ const role = ermRole();
           NotificationExportModule,
           GraphQLModule.forRoot<ApolloFederationDriverConfig>({
             driver: ApolloFederationDriver,
-            typeDefs: readFileSync(
-              new URL('./modules/telemetry/telemetry.graphql', import.meta.url),
-              'utf8',
-            ),
+            typeDefs: [
+              readFileSync(
+                new URL('./modules/telemetry/telemetry.graphql', import.meta.url),
+                'utf8',
+              ),
+              readFileSync(new URL('./modules/karma/karma.graphql', import.meta.url), 'utf8'),
+            ],
             resolvers: {
               ErmJSON: new GraphQLScalarType({ name: 'ErmJSON', serialize: (value) => value }),
             },
@@ -38,6 +42,7 @@ const role = ermRole();
             formatError: formatGraphqlError,
             plugins: [graphqlDiagnostics],
           }),
+          KarmaModule,
         ]
       : []),
   ],

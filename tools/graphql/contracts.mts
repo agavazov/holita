@@ -18,7 +18,7 @@ export const subgraphs = [
     name: 'erm-server',
     url: 'http://127.0.0.1:11015/graphql',
     path: 'apps/erm-server/src/modules/telemetry/telemetry.graphql',
-    additionalPaths: [],
+    additionalPaths: ['apps/erm-server/src/modules/karma/karma.graphql'],
   },
   {
     name: 'core',

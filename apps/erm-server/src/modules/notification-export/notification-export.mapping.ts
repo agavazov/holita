@@ -1,4 +1,4 @@
-import type { ErmCommandRequest } from '../../generated/prisma/client.js';
+import type { ErmCommandRequest, ErmKarmaRouting } from '../../generated/prisma/client.js';
 import type { ErmCommand } from '../../generated/graphql/types.js';
 import { starlinkEvents } from '../../starlink/event-catalog.js';
 import { commandRequestView } from '../telemetry/command-request-view.js';
@@ -112,5 +112,22 @@ export function commandNotification(
     },
     target: { kind: 'DEVICE', id: request.deviceId },
     recorded: false,
+  };
+}
+
+export function karmaRoutingNotification(
+  routing: ErmKarmaRouting,
+  scope: NotificationExportScope,
+): NotificationExportItem {
+  return {
+    sourceKind: 'DIAGNOSTIC',
+    sourceKey: `karma-routing:${routing.id.toString()}`,
+    sourceId: `karma-routing:${routing.id.toString()}`,
+    occurredAt: routing.createdAt.toISOString(),
+    severity: routing.notificationKind === 'UNIT_ON_BACKUP' ? 'WARNING' : 'INFO',
+    wordingKey: 'notification.recordedDiagnostic',
+    parameters: { eventKind: routing.notificationKind },
+    target: { kind: 'DEVICE', id: scope.deviceId },
+    recorded: true,
   };
 }
