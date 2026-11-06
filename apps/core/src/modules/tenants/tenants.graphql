@@ -19,12 +19,20 @@ extend type Query {
 "ISO-8601 instant with an offset; serialized in UTC with milliseconds."
 scalar DateTime
 
+enum UserRole {
+  VIEWER
+  OPERATOR
+  ENGINEER
+  ADMINISTRATOR
+}
+
 type User {
   id: ID!
   tenant: Tenant!
   name: String!
   email: String!
   active: Boolean!
+  role: UserRole!
   lastSignInAt: DateTime
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -47,8 +55,8 @@ extend type Mutation {
   signOut: Boolean!
   updateProfile(name: String!, email: String!): User!
   changePassword(currentPassword: String!, newPassword: String!): Boolean!
-  createUser(name: String!, email: String!, password: String!): User!
-  updateUser(id: ID!, name: String!, email: String!): User!
+  createUser(name: String!, email: String!, password: String!, role: UserRole): User!
+  updateUser(id: ID!, name: String!, email: String!, role: UserRole): User!
   deactivateUser(id: ID!): User!
   reactivateUser(id: ID!): User!
 }

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { requireRole } from '../../auth/roles.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
 import type {
   CreateFleetVehicleGroupInput,
@@ -100,6 +101,7 @@ export class VehicleGroupsService {
     input: CreateFleetVehicleGroupInput,
   ): Promise<FleetVehicleGroup> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const data: VehicleGroupData = {
       name: text(input.name, 'name', 64),
       description: optionalText(input.description, 'description', 500),
@@ -120,6 +122,7 @@ export class VehicleGroupsService {
     input: UpdateFleetVehicleGroupInput,
   ): Promise<FleetVehicleGroup> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const recordId = uuid(id, 'id');
     const data: Partial<VehicleGroupData> = {};
     if (input.name !== undefined) {
@@ -146,6 +149,7 @@ export class VehicleGroupsService {
 
   async delete(context: RequestContext, id: string): Promise<FleetVehicleGroup> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const recordId = uuid(id, 'id');
     try {
       return toGroup(await this.groups.delete(scope, recordId));

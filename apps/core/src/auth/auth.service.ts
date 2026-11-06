@@ -59,7 +59,12 @@ export class AuthService {
     if (!session) {
       return undefined;
     }
-    const identity = { tenantId: session.tenantId, userId: session.userId, sessionId: session.id };
+    const identity: SessionIdentity = {
+      tenantId: session.tenantId,
+      userId: session.userId,
+      sessionId: session.id,
+      role: session.user.role,
+    };
     await this.auth.touchSession(identity, now);
     return identity;
   }

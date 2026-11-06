@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { requireRole } from '../../auth/roles.js';
 import { runFleetActions } from '../../fleet-actions.js';
 import { addDays, businessDate, FleetClock } from '../../clock/fleet-clock.js';
 import type {
@@ -178,6 +179,7 @@ export class ServiceTasksService {
     input: CreateFleetServiceTaskInput,
   ): Promise<FleetServiceTask> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const vehicleId = uuid(input.vehicleId, 'vehicleId');
     const dueOn = serviceDate(input.dueOn, 'dueOn');
     const plan: ServiceTaskPlan = {
@@ -216,6 +218,7 @@ export class ServiceTasksService {
     input: UpdateFleetServiceTaskInput,
   ): Promise<FleetServiceTask> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const recordId = uuid(id, 'id');
     const data: Partial<ServiceTaskPlan> = {};
     if (input.serviceType !== undefined) {
@@ -266,6 +269,7 @@ export class ServiceTasksService {
     input: CompleteFleetServiceTaskInput,
   ): Promise<FleetServiceTaskCompletion> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const recordId = uuid(id, 'id');
     const today = await this.today(scope);
     const completedOn = dateOnly(input.completedOn, 'completedOn');
@@ -383,6 +387,7 @@ export class ServiceTasksService {
 
   async cancel(context: RequestContext, id: string): Promise<FleetServiceTask> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const recordId = uuid(id, 'id');
     await this.cancelStored(scope, recordId);
     return this.load(scope, recordId);
@@ -397,6 +402,7 @@ export class ServiceTasksService {
   /** Deletes a PLANNED or CANCELLED task; completed service is kept as history. */
   async delete(context: RequestContext, id: string): Promise<FleetServiceTask> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const recordId = uuid(id, 'id');
     const task = await this.load(scope, recordId);
     await this.deleteStored(scope, recordId, task.status);
@@ -424,6 +430,7 @@ export class ServiceTasksService {
     values: readonly string[],
   ): Promise<FleetServiceTaskActionResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one service task.', 'REQUIRED');
@@ -438,6 +445,7 @@ export class ServiceTasksService {
     values: readonly string[],
   ): Promise<FleetServiceTaskActionResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one service task.', 'REQUIRED');

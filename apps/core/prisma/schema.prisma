@@ -39,6 +39,7 @@ model User {
   email String @unique @db.VarChar(254)
   name String @db.VarChar(200)
   passwordHash String
+  role UserRole @default(VIEWER)
   active Boolean @default(true)
   lastSignInAt DateTime? @db.Timestamptz(3)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
@@ -47,6 +48,14 @@ model User {
   @@unique([tenantId, id])
   @@index([tenantId, name, id])
   @@map("user")
+}
+
+enum UserRole {
+  VIEWER @map("viewer")
+  OPERATOR @map("operator")
+  ENGINEER @map("engineer")
+  ADMINISTRATOR @map("administrator")
+  @@map("userRole")
 }
 
 model Session {

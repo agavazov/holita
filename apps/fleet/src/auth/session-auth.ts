@@ -1,9 +1,12 @@
 import { createHash } from 'node:crypto';
+import { ServiceUnavailableException } from '@nestjs/common';
+import type { UserRole } from './roles.js';
 
 interface SessionIdentity {
   tenantId: string;
   userId: string;
   sessionId: string;
+  role: UserRole;
 }
 
 const verifiedSessions = new Map<string, { identity: SessionIdentity; expiresAt: number }>();
@@ -46,7 +49,7 @@ export async function readSession(
       },
     );
     if (!response.ok) {
-      return undefined;
+      throw new ServiceUnavailableException('Session verification is unavailable');
     }
     const body: unknown = await response.json();
     if (
@@ -57,14 +60,24 @@ export async function readSession(
       !('userId' in body) ||
       !isUuid(body.userId) ||
       !('sessionId' in body) ||
-      !isUuid(body.sessionId)
+      !isUuid(body.sessionId) ||
+      !('role' in body) ||
+      (body.role !== 'VIEWER' &&
+        body.role !== 'OPERATOR' &&
+        body.role !== 'ENGINEER' &&
+        body.role !== 'ADMINISTRATOR')
     ) {
       return undefined;
     }
-    const identity = { tenantId: body.tenantId, userId: body.userId, sessionId: body.sessionId };
+    const identity: SessionIdentity = {
+      tenantId: body.tenantId,
+      userId: body.userId,
+      sessionId: body.sessionId,
+      role: body.role,
+    };
     verifiedSessions.set(hash, { identity, expiresAt: now + cacheMilliseconds });
     return identity;
   } catch {
-    return undefined;
+    throw new ServiceUnavailableException('Session verification is unavailable');
   }
 }

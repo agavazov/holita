@@ -26,12 +26,12 @@ export class UsersResolver {
 
   @Mutation('createUser')
   create(@Args() args: MutationCreateUserArgs, @Context() context: RequestContext): Promise<User> {
-    return this.users.create(context, args.name, args.email, args.password);
+    return this.users.create(context, args.name, args.email, args.password, args.role);
   }
 
   @Mutation('updateUser')
   update(@Args() args: MutationUpdateUserArgs, @Context() context: RequestContext): Promise<User> {
-    return this.users.update(context, args.id, args.name, args.email);
+    return this.users.update(context, args.id, args.name, args.email, args.role);
   }
 
   @Mutation('updateProfile')

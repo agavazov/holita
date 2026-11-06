@@ -1,10 +1,12 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { createServer } from 'node:http';
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { NotFoundException, type INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import pg from 'pg';
 import { AppModule } from '../src/app.module.js';
 import { issueDemoToken } from '../src/auth/demo-auth.js';
+import type { UserRole } from '../src/auth/roles.js';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
@@ -39,6 +41,7 @@ const updateGroup =
 interface Scope {
   tenantId?: string;
   branchId?: string;
+  authorization?: string;
 }
 
 async function rejection(action: Promise<unknown>): Promise<unknown> {
@@ -105,7 +108,11 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        ...(scope.tenantId ? { authorization: `Bearer ${issueDemoToken(scope.tenantId)}` } : {}),
+        ...(scope.authorization
+          ? { authorization: scope.authorization }
+          : scope.tenantId
+            ? { authorization: `Bearer ${issueDemoToken(scope.tenantId)}` }
+            : {}),
         ...(scope.branchId ? { 'x-branch-id': scope.branchId } : {}),
       },
       body: JSON.stringify({ query: source, variables }),
@@ -451,6 +458,232 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         client.vehicleGroup.count({ where: unconfirmed }),
       ]),
     ).toEqual([0, 0, 0, 0]);
+
+    const sessions = new Map<
+      string,
+      { tenantId: string; userId: string; sessionId: string; role: UserRole }
+    >();
+    let verification: 'identity' | 'unavailable' | 'unauthorized' | 'network' | 'timeout' =
+      'identity';
+    const verifier = createServer((request, response) => {
+      if (verification === 'network') {
+        request.socket.destroy();
+        return;
+      }
+      if (verification === 'timeout') {
+        return;
+      }
+      response.statusCode =
+        verification === 'unavailable' ? 503 : verification === 'unauthorized' ? 401 : 200;
+      response.setHeader('content-type', 'application/json');
+      response.end(
+        JSON.stringify(
+          sessions.get(request.headers.authorization ?? '') ?? { authenticated: false },
+        ),
+      );
+    });
+    const originalVerifyUrl = process.env.CORE_AUTH_VERIFY_URL;
+    const originalInternalToken = process.env.CORE_INTERNAL_AUTH_TOKEN;
+    await new Promise<void>((resolve) => verifier.listen(0, '127.0.0.1', resolve));
+    try {
+      const address = verifier.address();
+      if (address === null || typeof address === 'string') {
+        throw new Error('Missing session verifier address');
+      }
+      process.env.CORE_AUTH_VERIFY_URL = `http://127.0.0.1:${String(address.port)}/internal/auth/verify`;
+      process.env.CORE_INTERNAL_AUTH_TOKEN = randomBytes(32).toString('hex');
+      await client.device.update({ where: { id: device.id }, data: { smsPassword: 'secret123' } });
+      const notification = await client.fleetNotification.create({
+        data: {
+          ...owner,
+          sourceKind: 'FLEET_ALERT',
+          sourceKey: alert.id,
+          category: 'ALERT',
+          severity: 'WARNING',
+          occurredAt: now,
+          wordingKey: 'alert.opened',
+          parameters: {},
+        },
+      });
+      const roles: readonly UserRole[] = ['VIEWER', 'OPERATOR', 'ENGINEER', 'ADMINISTRATOR'];
+      for (const role of roles) {
+        const authorization = `Bearer holita-session.${randomBytes(32).toString('base64url')}`;
+        sessions.set(authorization, {
+          tenantId,
+          userId: randomUUID(),
+          sessionId: randomUUID(),
+          role,
+        });
+        const scope = { ...owner, authorization };
+        const smsPassword = role === 'VIEWER' ? null : 'secret123';
+        expect(
+          await query(
+            'query($id:ID!,$vehicleId:ID!,$refs:[_Any!]!){fleetDevice(id:$id){smsPassword}fleetDevices(ids:[$id]){items{smsPassword}}fleetVehicle(id:$vehicleId){devices{smsPassword}}_entities(representations:$refs){...on FleetDevice{smsPassword}}}',
+            {
+              id: device.id,
+              vehicleId: vehicle.id,
+              refs: [{ __typename: 'FleetDevice', id: device.id, smsPassword: 'SPOOFED' }],
+            },
+            scope,
+          ),
+        ).toEqual({
+          data: {
+            fleetDevice: { smsPassword },
+            fleetDevices: { items: [{ smsPassword }] },
+            fleetVehicle: { devices: [{ smsPassword }] },
+            _entities: [{ smsPassword }],
+          },
+        });
+        const batchVehicle = await client.vehicle.create({
+          data: { ...owner, licensePlate: `ROLE-${role}` },
+        });
+        const writes: [string, string, Record<string, unknown>, unknown][] = [
+          [
+            'updateFleetVehicle',
+            updateVehicle,
+            { id: vehicle.id, input: { notes: role } },
+            { id: vehicle.id },
+          ],
+          [
+            'updateFleetDevice',
+            updateDevice,
+            { id: device.id, input: { notes: role } },
+            { id: device.id },
+          ],
+          [
+            'updateFleetDriver',
+            updateDriver,
+            { id: driver.id, input: { notes: role } },
+            { id: driver.id },
+          ],
+          [
+            'updateFleetVehicleGroup',
+            updateGroup,
+            { id: group.id, input: { description: role } },
+            { id: group.id },
+          ],
+          [
+            'updateFleetServiceTask',
+            'mutation($id:ID!){updateFleetServiceTask(id:$id,input:{notes:"Role allowed"}){id}}',
+            { id: task.id },
+            { id: task.id },
+          ],
+          [
+            'acknowledgeFleetAlert',
+            'mutation($id:ID!){acknowledgeFleetAlert(id:$id,input:{expectedStatus:OPEN}){id}}',
+            { id: alert.id },
+            { id: alert.id },
+          ],
+          [
+            'resolveFleetAlert',
+            'mutation($id:ID!){resolveFleetAlert(id:$id,input:{expectedStatus:ACKNOWLEDGED}){id}}',
+            { id: alert.id },
+            { id: alert.id },
+          ],
+          [
+            'reopenFleetAlert',
+            'mutation($id:ID!){reopenFleetAlert(id:$id,input:{expectedStatus:RESOLVED}){id}}',
+            { id: alert.id },
+            { id: alert.id },
+          ],
+          [
+            'deactivateFleetVehicles',
+            'mutation($ids:[ID!]!){deactivateFleetVehicles(ids:$ids){succeededIds failures{id}}}',
+            { ids: [batchVehicle.id] },
+            { succeededIds: [batchVehicle.id], failures: [] },
+          ],
+          [
+            'updateFleetSettings',
+            'mutation{updateFleetSettings(input:{timeZone:"Europe/Sofia",distanceUnit:KM,volumeUnit:LITRE,lowFuelPct:15,notReportingHours:48,speedLimitKph:90}){timeZone}}',
+            {},
+            { timeZone: 'Europe/Sofia' },
+          ],
+        ];
+        const beforeWrites = await ownerRows();
+        for (const [field, source, variables, expected] of writes) {
+          const allowed =
+            field === 'updateFleetSettings' ? role === 'ADMINISTRATOR' : role !== 'VIEWER';
+          expect({ role, field, value: await query(source, variables, scope) }).toMatchObject({
+            role,
+            field,
+            value: allowed
+              ? { data: { [field]: expected } }
+              : { data: null, errors: [{ extensions: { code: 'FORBIDDEN' } }] },
+          });
+        }
+        if (role === 'VIEWER') {
+          expect(await ownerRows()).toEqual(beforeWrites);
+        }
+        // Receipts remain personal, including for the read-only role.
+        expect(
+          await query(
+            'query($id:ID!){notifications(ids:[$id]){items{readAt}}}',
+            { id: notification.id },
+            scope,
+          ),
+        ).toEqual({
+          data: { notifications: { items: [{ readAt: null }] } },
+        });
+        expect(
+          await query(
+            'mutation($id:ID!){markNotificationRead(id:$id){readAt}}',
+            { id: notification.id },
+            scope,
+          ),
+        ).toEqual({
+          data: { markNotificationRead: { readAt: now.toISOString() } },
+        });
+        expect(await query('mutation{markAllNotificationsRead}', {}, scope)).toMatchObject({
+          data: { markAllNotificationsRead: expect.any(Number) },
+        });
+      }
+      for (const mode of [
+        'identity',
+        'unavailable',
+        'unauthorized',
+        'network',
+        'timeout',
+      ] as const) {
+        verification = mode;
+        const authorization = `Bearer holita-session.${randomBytes(32).toString('base64url')}`;
+        expect({
+          mode,
+          value: await query('query{fleetSettings{timeZone}}', {}, { ...owner, authorization }),
+        }).toMatchObject({
+          mode,
+          value: {
+            errors: [
+              {
+                extensions: {
+                  code: mode === 'identity' ? 'UNAUTHENTICATED' : 'SERVICE_UNAVAILABLE',
+                },
+              },
+            ],
+          },
+        });
+      }
+    } finally {
+      if (originalVerifyUrl === undefined) {
+        delete process.env.CORE_AUTH_VERIFY_URL;
+      } else {
+        process.env.CORE_AUTH_VERIFY_URL = originalVerifyUrl;
+      }
+      if (originalInternalToken === undefined) {
+        delete process.env.CORE_INTERNAL_AUTH_TOKEN;
+      } else {
+        process.env.CORE_INTERNAL_AUTH_TOKEN = originalInternalToken;
+      }
+      verifier.closeAllConnections();
+      await new Promise<void>((resolve, reject) =>
+        verifier.close((error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        }),
+      );
+    }
   });
 
   it('cross-scope references are rejected by the API and by composite FKs', async () => {

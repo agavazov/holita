@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
+import type { UserRole } from '../../generated/graphql/types.js';
 
 @Injectable()
 export class UsersRepository {
@@ -20,17 +21,17 @@ export class UsersRepository {
     });
   }
 
-  create(tenantId: string, name: string, email: string, passwordHash: string) {
+  create(tenantId: string, name: string, email: string, passwordHash: string, role: UserRole) {
     return this.prisma.client.user.create({
-      data: { tenantId, name, email, passwordHash },
+      data: { tenantId, name, email, passwordHash, role },
       include: { tenant: true },
     });
   }
 
-  update(tenantId: string, id: string, name: string, email: string) {
+  update(tenantId: string, id: string, name: string, email: string, role?: UserRole) {
     return this.prisma.client.user.update({
       where: { id, tenantId },
-      data: { name, email },
+      data: { name, email, ...(role === undefined ? {} : { role }) },
       include: { tenant: true },
     });
   }

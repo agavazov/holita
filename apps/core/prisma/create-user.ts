@@ -4,6 +4,7 @@ import { isUUID } from 'class-validator';
 import { BadRequestException } from '@nestjs/common';
 import { normalizedEmail, userName, validatePassword } from '../src/auth/account-input.js';
 import { hashPassword } from '../src/auth/password.js';
+import { setupUserRole } from '../src/auth/role.js';
 import { createPrismaClient } from '../src/database/client.js';
 import { Prisma } from '../src/generated/prisma/client.js';
 
@@ -29,24 +30,30 @@ async function passwordFromInput(): Promise<string> {
 }
 
 async function createUser(): Promise<void> {
-  let values: { tenant?: string; email?: string; name?: string };
+  let values: { tenant?: string; email?: string; name?: string; role?: string };
   try {
     ({ values } = parseArgs({
-      options: { tenant: { type: 'string' }, email: { type: 'string' }, name: { type: 'string' } },
+      options: {
+        tenant: { type: 'string' },
+        email: { type: 'string' },
+        name: { type: 'string' },
+        role: { type: 'string' },
+      },
       strict: true,
       allowPositionals: false,
     }));
   } catch {
     throw new BadRequestException(
-      'Use --tenant UUID --email EMAIL --name NAME. Passwords are accepted only through stdin or CORE_SETUP_PASSWORD.',
+      'Use --tenant UUID --email EMAIL --name NAME [--role ROLE]. Passwords are accepted only through stdin or CORE_SETUP_PASSWORD.',
     );
   }
   if (!values.tenant || !isUUID(values.tenant) || !values.email || !values.name) {
-    throw new BadRequestException('Use --tenant UUID --email EMAIL --name NAME.');
+    throw new BadRequestException('Use --tenant UUID --email EMAIL --name NAME [--role ROLE].');
   }
   const tenantId = values.tenant.toLowerCase();
   const email = normalizedEmail(values.email);
   const name = userName(values.name);
+  const role = setupUserRole(values.role);
   const password = await passwordFromInput();
   const client = createPrismaClient();
   try {
@@ -57,7 +64,7 @@ async function createUser(): Promise<void> {
       throw new BadRequestException('Tenant not found; no changes were made.');
     }
     await client.user.create({
-      data: { tenantId, email, name, passwordHash: await hashPassword(password) },
+      data: { tenantId, email, name, role, passwordHash: await hashPassword(password) },
     });
     console.info('core: user created');
   } catch (error: unknown) {

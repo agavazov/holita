@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { requireRole } from '../../auth/roles.js';
 import { runFleetActions } from '../../fleet-actions.js';
 import { FleetClock } from '../../clock/fleet-clock.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
@@ -340,6 +341,7 @@ export class DevicesService {
     values: readonly string[],
   ): Promise<FleetDeviceActionResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one device.', 'REQUIRED');
@@ -351,6 +353,7 @@ export class DevicesService {
 
   async create(context: RequestContext, input: CreateFleetDeviceInput): Promise<DeviceResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const data: DeviceData = {
       imei: imei(input.imei),
       vehicleId: optionalUuid(input.vehicleId, 'vehicleId'),
@@ -389,6 +392,7 @@ export class DevicesService {
     input: UpdateFleetDeviceInput,
   ): Promise<DeviceResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const recordId = uuid(id, 'id');
     const data: Partial<DeviceData> = {};
     if (input.imei !== undefined) {
@@ -459,6 +463,7 @@ export class DevicesService {
   /** Telemetry keeps an IMEI snapshot when a Device is deleted. */
   async delete(context: RequestContext, id: string): Promise<DeviceResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const row = await this.deleteStored(scope, uuid(id, 'id'));
     return this.completeOne(scope, row);
   }

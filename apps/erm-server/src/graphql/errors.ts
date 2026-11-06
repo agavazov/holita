@@ -1,7 +1,7 @@
 import { unwrapResolverError } from '@apollo/server/errors';
 import type { ApolloServerPlugin } from '@apollo/server';
 import { HttpException, Logger } from '@nestjs/common';
-import type { GraphQLFormattedError } from 'graphql';
+import { GraphQLError, type GraphQLFormattedError } from 'graphql';
 import type { RequestContext } from './request-context.js';
 
 const logger = new Logger('GraphQL');
@@ -88,7 +88,7 @@ export function formatGraphqlError(
 ): GraphQLFormattedError {
   const requestId = formatted.extensions?.['requestId'];
   const trace = typeof requestId === 'string' ? { requestId } : {};
-  const original: unknown = unwrapResolverError(error);
+  const original: unknown = error instanceof GraphQLError ? (error.originalError ?? error) : error;
   if (original instanceof HttpException) {
     const code = codes.get(original.getStatus());
     if (code) {

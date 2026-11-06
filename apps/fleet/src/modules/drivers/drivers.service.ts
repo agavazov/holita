@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { requireRole } from '../../auth/roles.js';
 import { runFleetActions } from '../../fleet-actions.js';
 import { addDays, businessDate, dataWindow, FleetClock } from '../../clock/fleet-clock.js';
 import {
@@ -280,6 +281,7 @@ export class DriversService {
     values: readonly string[],
   ): Promise<FleetDriverActionResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one driver.', 'REQUIRED');
@@ -294,6 +296,7 @@ export class DriversService {
     values: readonly string[],
   ): Promise<FleetDriverActionResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one driver.', 'REQUIRED');
@@ -347,6 +350,7 @@ export class DriversService {
 
   async create(context: RequestContext, input: CreateFleetDriverInput): Promise<DriverResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const data: DriverData = {
       firstName: text(input.firstName, 'firstName', 64),
       lastName: text(input.lastName, 'lastName', 64),
@@ -379,6 +383,7 @@ export class DriversService {
     input: UpdateFleetDriverInput,
   ): Promise<DriverResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const row = await this.updateStored(scope, uuid(id, 'id'), input);
     return this.completeOne(scope, row);
   }
@@ -457,6 +462,7 @@ export class DriversService {
   /** Drivers with trips or events cannot be deleted (composite foreign keys). */
   async delete(context: RequestContext, id: string): Promise<DriverResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const row = await this.deleteStored(scope, uuid(id, 'id'));
     return this.completeOne(scope, row);
   }

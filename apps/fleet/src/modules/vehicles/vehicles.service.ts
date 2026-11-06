@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { requireRole } from '../../auth/roles.js';
 import { runFleetActions } from '../../fleet-actions.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
 import type {
@@ -228,6 +229,7 @@ export class VehiclesService {
     values: readonly string[],
   ): Promise<FleetVehicleActionResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one vehicle.', 'REQUIRED');
@@ -242,6 +244,7 @@ export class VehiclesService {
     values: readonly string[],
   ): Promise<FleetVehicleActionResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one vehicle.', 'REQUIRED');
@@ -262,6 +265,7 @@ export class VehiclesService {
 
   async create(context: RequestContext, input: CreateFleetVehicleInput): Promise<VehicleResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const data: VehicleData = {
       licensePlate: text(input.licensePlate, 'licensePlate', 32),
       notes: optionalText(input.notes, 'notes', 2000),
@@ -298,6 +302,7 @@ export class VehiclesService {
     input: UpdateFleetVehicleInput,
   ): Promise<VehicleResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const recordId = uuid(id, 'id');
     const data = vehicleChanges(input);
     if (!Object.keys(data).length) {
@@ -342,6 +347,7 @@ export class VehiclesService {
 
   async deactivate(context: RequestContext, id: string): Promise<VehicleResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const row = await this.deactivateStored(scope, uuid(id, 'id'));
     return this.completeOne(scope, row);
   }
@@ -359,6 +365,7 @@ export class VehiclesService {
   /** A deletable vehicle has no devices, samples, events or tasks, so its derived values are empty. */
   async delete(context: RequestContext, id: string): Promise<VehicleResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const row = await this.deleteStored(scope, uuid(id, 'id'));
     return this.completeOne(scope, row);
   }

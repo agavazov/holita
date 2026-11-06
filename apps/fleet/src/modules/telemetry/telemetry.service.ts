@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { requireRole } from '../../auth/roles.js';
 import { businessDate, FleetClock } from '../../clock/fleet-clock.js';
 import type {
   FleetDataClock,
@@ -177,6 +178,7 @@ export class TelemetryService {
     input: RecordFleetOdometerReadingInput,
   ): Promise<FleetStatusSample> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const vehicleId = uuid(input.vehicleId, 'vehicleId');
     const odometerKm = Math.round(finite(input.odometerKm, 'odometerKm', 0, 9_999_999.9) * 10) / 10;
     const recordedAt = dateTime(input.recordedAt, 'recordedAt');

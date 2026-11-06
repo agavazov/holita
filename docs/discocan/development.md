@@ -25,22 +25,38 @@ Keep `fleetEnabled` and backend `FLEET_ENABLED` consistent when disabling Fleet.
 ### User sessions
 
 Provision the first user for an existing Tenant using the
-[Core setup command](../development.md#core-users-and-sessions); there is no public registration
+[Core setup command](../development.md#core-users-and-sessions) with `--role ADMINISTRATOR`; there is no public registration
 or password recovery. Sign-in takes email/password first, then offers that Tenant's Branches.
 A single Branch opens automatically; an account with no Branches can open Profile and retry
 discovery. Profile edits name/email and changes the password; the admin signs out after a password
 change and requires the new password. The account menu also offers theme and Sign out.
 
-Settings → Users is Tenant-wide and requires no Branch. Every authenticated Tenant user has
-equal access to create users with an initial password, edit name/email and deactivate/reactivate
-accounts. Deactivation revokes that user's sessions; reactivation requires a fresh sign-in.
+Settings → Users is Tenant-wide and requires no Branch. Only Administrators can create users,
+edit their accounts or roles, and deactivate/reactivate accounts. Nobody can change their own
+role. Deactivation revokes that user's sessions; reactivation requires a fresh sign-in.
+Each user has one Tenant-wide role: `VIEWER`, `OPERATOR`, `ENGINEER` or `ADMINISTRATOR`.
+Existing accounts become Administrators when the role migration is applied; new accounts default
+to Viewer unless a role is supplied. Core exposes `User.role` through `me` and user queries;
+`createUser` and `updateUser` accept an optional `role` argument. Profile editing and password
+changes remain available to every signed-in user.
+
+In Fleet, Viewers can read data with stored Device SMS passwords returned as null. Operators,
+Engineers and Administrators can edit master data, perform batch actions and act on alerts.
+Branch settings and Branch renaming require Administrator. Notification read state remains
+available to every real user. ERM receives the role for subsequent command and configuration
+authorization; this identity change does not yet restrict its telemetry operations.
 
 Fleet and ERM accept the bearer returned by Core's `signIn`. Configure `CORE_AUTH_VERIFY_URL`
 and the shared `CORE_INTERNAL_AUTH_TOKEN` in both services as described in
 [Core users and sessions](../development.md#core-users-and-sessions). Core supplies the verified
-Tenant, User and session IDs; caller identity headers are ignored. Supply `x-branch-id` for the
+Tenant, User and session IDs and the user's role; caller identity headers are ignored. Supply `x-branch-id` for the
 selected fleet. Successful verifications are cached for five seconds, including the maximum
-delay before revocation takes effect in Fleet/ERM; failed verifications are not cached.
+delay before revocation or a role change takes effect in Fleet/ERM; failed verifications are not cached.
+An unavailable Core verification service returns `SERVICE_UNAVAILABLE`, while an invalid session
+returns `UNAUTHENTICATED`. Permission refusals use `FORBIDDEN`.
+For authenticated internal callers, Core's verification endpoint returns HTTP 200 with the
+identity (including `role`), or `{ "authenticated": false }` for an invalid/revoked session.
+Non-success responses mean verification is unavailable to Fleet and ERM.
 
 ### Demo tenant login
 
@@ -50,7 +66,7 @@ Tenant selection obtains a candidate token and loads that Tenant's Branches. The
 starts only after a valid Branch is selected. Core issues an
 HMAC-SHA256 session with an eight-hour expiry; all subgraphs independently verify it.
 Authenticated requests carry `Authorization: Bearer <session>`; Fleet also needs `x-branch-id`.
-A caller-supplied tenant header never selects identity.
+A caller-supplied tenant header never selects identity. Demo Tenant sessions act as `ADMINISTRATOR`.
 
 Core, Fleet and ERM API use the same `DEMO_AUTH_SECRET` (at least 32 characters).
 `DEMO_AUTH_ENABLED=false` disables demo discovery/login/sessions; real user sessions remain

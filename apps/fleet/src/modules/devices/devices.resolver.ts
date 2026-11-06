@@ -1,5 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { FleetEnabledGuard } from '../../fleet-enabled.guard.js';
+import { hasRole } from '../../auth/roles.js';
 import {
   Args,
   Context,
@@ -86,5 +87,10 @@ export class DevicesResolver {
   @ResolveField('branch')
   branch(@Parent() device: DeviceResult): Branch {
     return { __typename: 'Branch', id: device.branchId };
+  }
+
+  @ResolveField('smsPassword')
+  async smsPassword(@Parent() device: DeviceResult, @Context() context: RequestContext) {
+    return (await hasRole(context, 'OPERATOR')) ? device.smsPassword : null;
   }
 }

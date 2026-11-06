@@ -2,12 +2,14 @@ import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { readDemoTenant } from '../auth/demo-auth.js';
 import { readSession } from '../auth/session-auth.js';
+import type { UserRole } from '../auth/roles.js';
 
 export interface RequestContext {
   requestId: string;
   tenantId: string | undefined;
   userId?: string | undefined;
   sessionId?: string | undefined;
+  role?: UserRole | undefined;
   authorization?: string | undefined;
   branchId?: string | undefined;
 }
@@ -29,11 +31,13 @@ export async function createRequestContext({
   const authorization = req.headers.authorization;
   const isSession = /^Bearer holita-session\./i.test(authorization ?? '');
   const identity = isSession ? await readSession(authorization) : undefined;
+  const tenantId = isSession ? identity?.tenantId : readDemoTenant(authorization);
   return {
     requestId,
-    tenantId: isSession ? identity?.tenantId : readDemoTenant(authorization),
+    tenantId,
     userId: identity?.userId,
     sessionId: identity?.sessionId,
+    role: isSession ? identity?.role : tenantId ? 'ADMINISTRATOR' : undefined,
     authorization,
     branchId: typeof branchId === 'string' ? branchId : undefined,
   };

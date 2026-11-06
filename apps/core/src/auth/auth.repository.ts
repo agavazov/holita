@@ -35,6 +35,7 @@ export class AuthRepository {
   findSession(tokenHash: string, now: Date) {
     return this.prisma.client.session.findUnique({
       where: { tokenHash, revokedAt: null, expiresAt: { gt: now }, user: { active: true } },
+      include: { user: { select: { role: true } } },
     });
   }
 

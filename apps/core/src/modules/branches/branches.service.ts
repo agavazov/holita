@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { requireTenant } from '../../auth/demo-auth.js';
+import { requireAdministrator } from '../../auth/role.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { isUUID } from 'class-validator';
 import type { Branch } from '../../generated/graphql/types.js';
@@ -25,6 +26,7 @@ export class BranchesService {
 
   async updateName(context: RequestContext, id: string, name: string): Promise<Branch> {
     const tenantId = requireTenant(context);
+    requireAdministrator(context);
     if (!context.branchId || !isUUID(context.branchId)) {
       throw new BadRequestException('Select a Branch with a valid x-branch-id.');
     }

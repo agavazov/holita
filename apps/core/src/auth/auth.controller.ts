@@ -21,7 +21,7 @@ export class AuthController {
   async verify(
     @Headers('x-core-internal-token') internalToken: string | undefined,
     @Headers('authorization') authorization: string | undefined,
-  ): Promise<SessionIdentity> {
+  ): Promise<SessionIdentity | { authenticated: false }> {
     const expected = process.env.CORE_INTERNAL_AUTH_TOKEN;
     if (!expected || expected.length < 32) {
       throw new ServiceUnavailableException('Internal session verification is not configured');
@@ -36,9 +36,6 @@ export class AuthController {
       throw new UnauthorizedException('Invalid internal authentication');
     }
     const identity = await this.auth.verifyAuthorization(authorization);
-    if (!identity) {
-      throw new UnauthorizedException('Invalid session');
-    }
-    return identity;
+    return identity ?? { authenticated: false };
   }
 }

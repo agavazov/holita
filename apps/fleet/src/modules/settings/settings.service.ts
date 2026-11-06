@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { requireRole } from '../../auth/roles.js';
 import type { FleetSettings, UpdateFleetSettingsInput } from '../../generated/graphql/types.js';
 import {
   FleetDateFormat,
@@ -35,6 +36,7 @@ export class SettingsService {
 
   async update(context: RequestContext, input: UpdateFleetSettingsInput): Promise<FleetSettings> {
     const scope = requireScope(context);
+    await requireRole(context, 'ADMINISTRATOR');
     const defaults = defaultFleetSettings();
     const data: UpdateFleetSettingsInput = {
       timeZone: timeZone(input.timeZone),

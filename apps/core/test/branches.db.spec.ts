@@ -6,6 +6,7 @@ import { issueDemoToken } from '../src/auth/demo-auth.js';
 import { hashPassword } from '../src/auth/password.js';
 import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/database/prisma.service.js';
+import type { UserRole } from '../src/generated/graphql/types.js';
 import { createTestDatabase } from './test-database.js';
 import { branchSeeds, seedBranches } from '../prisma/seed-data.js';
 
@@ -158,6 +159,7 @@ describe('Branches GraphQL with PostgreSQL', () => {
         name: 'First user',
         email: `first-${randomUUID()}@example.test`,
         passwordHash,
+        role: 'ADMINISTRATOR',
       },
     });
     const foreignUser = await database.client.user.create({
@@ -170,11 +172,14 @@ describe('Branches GraphQL with PostgreSQL', () => {
     });
     const token = await signIn(`  ${owner.email.toUpperCase()}  `, password);
     const spoofedIdentity = { 'x-tenant-id': otherTenant.id, 'x-user-id': foreignUser.id };
-    expect(await accountQuery('{me{id tenant{id}} users{id}}', {}, token, spoofedIdentity)).toEqual(
-      {
-        data: { me: { id: owner.id, tenant: { id: tenantId } }, users: [{ id: owner.id }] },
+    expect(
+      await accountQuery('{me{id role tenant{id}} users{id}}', {}, token, spoofedIdentity),
+    ).toEqual({
+      data: {
+        me: { id: owner.id, role: 'ADMINISTRATOR', tenant: { id: tenantId } },
+        users: [{ id: owner.id }],
       },
-    );
+    });
     for (const mutation of [
       'updateUser(id:$id,name:"Blocked",email:"blocked@example.test")',
       'deactivateUser(id:$id)',
@@ -195,16 +200,111 @@ describe('Branches GraphQL with PostgreSQL', () => {
     expect(
       await accountQuery(
         `mutation($name:String!,$email:String!,$password:String!){
-          createUser(name:$name,email:$email,password:$password){name email active tenant{id}}
+          createUser(name:$name,email:$email,password:$password){name email active role tenant{id}}
         }`,
         { name: 'Colleague', email: `  ${email.toUpperCase()}  `, password },
         token,
       ),
     ).toEqual({
-      data: { createUser: { name: 'Colleague', email, active: true, tenant: { id: tenantId } } },
+      data: {
+        createUser: {
+          name: 'Colleague',
+          email,
+          active: true,
+          role: 'VIEWER',
+          tenant: { id: tenantId },
+        },
+      },
     });
     const colleague = await database.client.user.findUniqueOrThrow({ where: { email } });
     const colleagueToken = await signIn(email, password);
+    const managedUser = await database.client.user.create({
+      data: {
+        tenantId,
+        name: 'Managed user',
+        email: `managed-${randomUUID()}@example.test`,
+        passwordHash,
+      },
+    });
+    const managedBranch = await database.client.branch.create({
+      data: { tenantId, name: 'Managed branch' },
+    });
+    for (const role of ['VIEWER', 'OPERATOR', 'ENGINEER', 'ADMINISTRATOR'] satisfies UserRole[]) {
+      expect(
+        await accountQuery(
+          'mutation($id:ID!,$email:String!,$role:UserRole){updateUser(id:$id,name:"Colleague",email:$email,role:$role){id role}}',
+          { id: colleague.id, email, role },
+          token,
+        ),
+      ).toEqual({ data: { updateUser: { id: colleague.id, role } } });
+      expect(await accountQuery('{me{id role} branches{id}}', {}, colleagueToken)).toMatchObject({
+        data: {
+          me: { id: colleague.id, role },
+          branches: expect.arrayContaining([{ id: managedBranch.id }]),
+        },
+      });
+      expect(
+        await accountQuery(
+          'mutation($email:String!){updateProfile(name:"My profile",email:$email){id name role}}',
+          { email },
+          colleagueToken,
+        ),
+      ).toEqual({ data: { updateProfile: { id: colleague.id, name: 'My profile', role } } });
+      for (const [operation, source, variables, expected] of [
+        [
+          'create user',
+          'mutation($email:String!,$password:String!){createUser(name:"Created",email:$email,password:$password,role:ENGINEER){role}}',
+          { email: `created-${randomUUID()}@example.test`, password },
+          { createUser: { role: 'ENGINEER' } },
+        ],
+        [
+          'update user',
+          'mutation($id:ID!,$email:String!){updateUser(id:$id,name:"Managed",email:$email,role:OPERATOR){id role}}',
+          { id: managedUser.id, email: managedUser.email },
+          { updateUser: { id: managedUser.id, role: 'OPERATOR' } },
+        ],
+        [
+          'deactivate user',
+          'mutation($id:ID!){deactivateUser(id:$id){id active}}',
+          { id: managedUser.id },
+          { deactivateUser: { id: managedUser.id, active: false } },
+        ],
+        [
+          'reactivate user',
+          'mutation($id:ID!){reactivateUser(id:$id){id active}}',
+          { id: managedUser.id },
+          { reactivateUser: { id: managedUser.id, active: true } },
+        ],
+        [
+          'rename Branch',
+          'mutation($id:ID!){updateBranchName(id:$id,name:"Renamed branch"){id name}}',
+          { id: managedBranch.id },
+          { updateBranchName: { id: managedBranch.id, name: 'Renamed branch' } },
+        ],
+      ] satisfies [string, string, Record<string, unknown>, Record<string, unknown>][]) {
+        const result = await accountQuery(source, variables, colleagueToken, {
+          'x-branch-id': managedBranch.id,
+        });
+        expect({ role, operation, result }).toMatchObject({
+          role,
+          operation,
+          result:
+            role === 'ADMINISTRATOR'
+              ? { data: expected }
+              : { data: null, errors: [{ extensions: { code: 'FORBIDDEN' } }] },
+        });
+      }
+      expect(
+        await accountQuery(
+          'mutation($id:ID!,$email:String!,$role:UserRole){updateUser(id:$id,name:"Self role change",email:$email,role:$role){id}}',
+          { id: colleague.id, email, role: role === 'ADMINISTRATOR' ? 'VIEWER' : 'ADMINISTRATOR' },
+          colleagueToken,
+        ),
+      ).toMatchObject({ data: null, errors: [{ extensions: { code: 'FORBIDDEN' } }] });
+      expect(
+        (await database.client.user.findUniqueOrThrow({ where: { id: colleague.id } })).role,
+      ).toBe(role);
+    }
     expect(
       await accountQuery(
         'mutation($id:ID!,$email:String!){updateUser(id:$id,name:"Updated first user",email:$email){id name}}',
@@ -234,12 +334,13 @@ describe('Branches GraphQL with PostgreSQL', () => {
       tenantId,
       userId: owner.id,
       sessionId: currentSession.id,
+      role: 'ADMINISTRATOR',
     });
-    for (const [internalToken, sessionToken] of [
-      ['incorrect-internal-token', token],
-      [internalAuthToken, issueDemoToken(tenantId)],
-      [internalAuthToken, 'invalid-session-token'],
-    ] satisfies [string, string][]) {
+    for (const [internalToken, sessionToken, status] of [
+      ['incorrect-internal-token', token, 401],
+      [internalAuthToken, issueDemoToken(tenantId), 200],
+      [internalAuthToken, 'invalid-session-token', 200],
+    ] satisfies [string, string, number][]) {
       const rejected = await fetch(verifyUrl, {
         method: 'POST',
         headers: {
@@ -248,7 +349,10 @@ describe('Branches GraphQL with PostgreSQL', () => {
         },
         signal: AbortSignal.timeout(5000),
       });
-      expect(rejected.status).toBe(401);
+      expect(rejected.status).toBe(status);
+      if (status === 200) {
+        expect(await rejected.json()).toEqual({ authenticated: false });
+      }
     }
 
     const otherSessionToken = await signIn(owner.email, password);
@@ -270,6 +374,16 @@ describe('Branches GraphQL with PostgreSQL', () => {
     expect(await accountQuery('mutation{signOut}', {}, signedOutToken)).toEqual({
       data: { signOut: true },
     });
+    const revokedVerification = await fetch(verifyUrl, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${signedOutToken}`,
+        'x-core-internal-token': internalAuthToken,
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+    expect(revokedVerification.status).toBe(200);
+    expect(await revokedVerification.json()).toEqual({ authenticated: false });
     expect(await accountQuery('{me{id}}', {}, signedOutToken)).toMatchObject({
       errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
     });

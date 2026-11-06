@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { requireRole } from '../../auth/roles.js';
 import { runFleetActions } from '../../fleet-actions.js';
 import { type DataWindow, FleetClock } from '../../clock/fleet-clock.js';
 import type {
@@ -263,6 +264,7 @@ export class EventsService {
     input: FleetAlertTransitionInput,
   ): Promise<FleetEvent> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const recordId = uuid(id, 'id');
     await this.transitionStored(scope, transition, recordId, input);
     const row = await this.events.find(scope, recordId);
@@ -311,6 +313,7 @@ export class EventsService {
     input: FleetAlertTransitionInput,
   ): Promise<FleetAlertActionResult> {
     const scope = requireScope(context);
+    await requireRole(context, 'OPERATOR');
     const selected = ids(values, 'ids');
     if (!selected.length) {
       invalid('ids', 'Choose at least one alert.', 'REQUIRED');
