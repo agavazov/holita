@@ -1,11 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { fixtureLiveDevice } from '../../../storybook/devices-fixtures';
-import { onFrame } from '../../../storybook/story-config';
+import { onFrame, type StoryFixtures } from '../../../storybook/story-config';
 import { FleetNow } from './fleet-now';
 const meta: Meta<FleetNow> = {
   title: 'Design System/Fleet/Now',
   component: FleetNow,
   decorators: [onFrame],
+  parameters: { holita: { now: '2026-10-20T08:00:05.000Z' } satisfies StoryFixtures },
   tags: ['!autodocs'],
 };
 export default meta;

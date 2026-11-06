@@ -145,7 +145,7 @@ function recordOf(row: DemoRow): ListRecord<DemoAction> {
     <holita-table-panel
       #panel
       heading="Vehicles"
-      [total]="mode() === 'local' ? rows.length : 46"
+      [total]="view().kind === 'empty' ? 0 : mode() === 'local' ? rows.length : 46"
       [view]="view()"
       errorText="The list could not be loaded. Try again."
       [busy]="busy()"

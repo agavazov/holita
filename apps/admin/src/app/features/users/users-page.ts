@@ -27,6 +27,7 @@ import { interpolate } from '../../ui/i18n/messages';
 import type { ListActionRequest } from '../../ui/list/list-actions';
 import { tableView, type TableView } from '../../ui/table-panel/table-view';
 import { UI_LANGUAGE } from '../../ui/ui-language';
+import { SettingsTabs } from '../../workspace/settings-tabs';
 import { BranchContext } from '../branches/branch-context';
 import { usersText } from './i18n/messages';
 import { UsersApi } from './users-api';
@@ -250,11 +251,13 @@ export class UsersContent implements OnInit {
 /** Account screens retire their clients on a session or language change without needing a Branch. */
 @Component({
   selector: 'holita-users-page',
-  imports: [UsersContent],
+  imports: [UsersContent, SettingsTabs],
   template: `
-    @for (scope of scopes(); track scope.key) {
-      <holita-users-content [language]="scope.language" />
-    }
+    <holita-settings-tabs current="users">
+      @for (scope of scopes(); track scope.key) {
+        <holita-users-content [language]="scope.language" />
+      }
+    </holita-settings-tabs>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

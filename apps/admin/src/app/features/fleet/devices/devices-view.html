@@ -122,12 +122,12 @@
             @if (row.plate) {
               @if (row.vehicleId && recordLinks()?.vehicle(row.vehicleId); as link) {
                 <a
-                  class="app-plate app-link"
+                  class="app-link"
                   [routerLink]="link.commands"
                   [queryParams]="link.queryParams"
                   [fragment]="link.fragment"
                   [attr.title]="row.plate"
-                  >{{ row.plate }}</a
+                  ><span class="app-plate">{{ row.plate }}</span></a
                 >
               } @else {
                 <span class="app-plate" [attr.title]="row.plate">{{ row.plate }}</span>

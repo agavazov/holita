@@ -150,7 +150,7 @@ export function brandContrastChecks(brand: Brand): readonly ContrastCheck[] {
     check('Teal solid accent on panel', primitiveHex('teal', 700), white, 3),
     check('Dark teal solid accent on panel', primitiveHex('teal', 400), surface(900), 3),
     check('Hero primary endpoint: white on primary 700', white, primary(700), 4.5),
-    check('Hero teal endpoint: white on teal 800', white, primitiveHex('teal', 800), 4.5),
+    check('Hero shaded endpoint: white on primary 900', white, primary(900), 4.5),
     check('Dark hero primary endpoint: white on primary 900', white, primary(900), 4.5),
     check('Dark hero teal endpoint: white on teal 950', white, primitiveHex('teal', 950), 4.5),
     check('Plate characters: surface 950 on white (both schemes)', surface(950), white, 4.5),

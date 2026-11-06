@@ -41,20 +41,20 @@
             @for (vehicle of driver.vehicles; track vehicle.id) {
               @if (recordLinks()?.vehicle(vehicle.id); as link) {
                 <a
-                  class="app-link app-plate"
+                  class="app-link"
                   [routerLink]="link.commands"
                   [queryParams]="link.queryParams"
                   [title]="vehicle.plate"
-                  >{{ vehicle.plate }}</a
+                  ><span class="app-plate">{{ vehicle.plate }}</span></a
                 >
               } @else {
                 <button
                   type="button"
-                  class="app-link app-plate"
+                  class="app-link"
                   [title]="vehicle.plate"
                   (click)="openVehicle.emit(vehicle.id)"
                 >
-                  {{ vehicle.plate }}
+                  <span class="app-plate">{{ vehicle.plate }}</span>
                 </button>
               }
             } @empty {
@@ -143,7 +143,7 @@
           <dt>{{ text().createdAt }}</dt>
           <dd>
             @let created = units.dateTimeCell(driver.createdAt);
-            ><time
+            <time
               class="app-cell-date"
               [attr.datetime]="driver.createdAt"
               [title]="created.title"
@@ -155,7 +155,7 @@
           <dt>{{ text().updatedAt }}</dt>
           <dd>
             @let updated = units.dateTimeCell(driver.updatedAt);
-            ><time
+            <time
               class="app-cell-date"
               [attr.datetime]="driver.updatedAt"
               [title]="updated.title"

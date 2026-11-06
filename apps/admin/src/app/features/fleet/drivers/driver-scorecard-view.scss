@@ -1,9 +1,18 @@
+@use 'breakpoints' as bp;
+
 .scorecard__period {
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--p-app-space-3);
+}
+
+.scorecard__details {
+  @include bp.from(md) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .scorecard__clock {

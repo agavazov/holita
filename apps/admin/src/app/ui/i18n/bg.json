@@ -57,7 +57,7 @@
   },
   "drawer": {
     "notFoundTitle": "Записът не е намерен",
-    "notFoundDescription": "Може да е изтрит или да е от друг клон.",
+    "notFoundDescription": "Възможно е да е изтрит или да не е достъпен в това работно пространство.",
     "invalidIdTitle": "Невалиден адрес",
     "invalidIdDescription": "Връзката не сочи към запис.",
     "errorTitle": "Записът не може да бъде зареден"

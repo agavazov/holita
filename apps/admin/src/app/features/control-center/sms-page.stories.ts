@@ -10,7 +10,9 @@ import { SmsPage } from './sms-page';
 const meta: Meta = {
   title: 'Admin/Devices/SMS commands',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: {
+    holita: { signedIn: true, now: '2026-10-20T08:00:05.000Z' } satisfies StoryFixtures,
+  },
 };
 export default meta;
 type Story = StoryObj;

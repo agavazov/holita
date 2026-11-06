@@ -365,7 +365,7 @@ const commandRequests = [
   commandRejectedFixture,
   commandUnknownFixture,
   commandFailedFixture,
-];
+].map((request) => ({ ...request, __typename: 'ErmCommandRequest' }));
 
 graphqlFixture(
   AdminControlCenterCommandRequestsDocument,

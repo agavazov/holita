@@ -169,11 +169,11 @@
           <span class="app-cell-identity">
             <button
               type="button"
-              class="app-link app-plate"
+              class="app-link"
               [title]="row.plate"
               (click)="panel.run('vehicle', [recordOf(row)], $event.currentTarget)"
             >
-              {{ row.plate }}
+              <span class="app-plate">{{ row.plate }}</span>
             </button>
             @if (row.driverId && recordLinks()?.driver(row.driverId)) {
               <button

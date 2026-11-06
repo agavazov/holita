@@ -79,9 +79,6 @@
 
 .page-header__description {
   max-inline-size: 70ch;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: var(--p-text-muted-color);
 }
 

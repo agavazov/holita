@@ -18,184 +18,197 @@
   <p-message severity="info">{{ text().demo }}</p-message>
 }
 
-<div class="notifications__filters">
-  <div class="notifications__search">
-    <label class="app-visually-hidden" for="notifications-search">{{ text().search }}</label>
-    <input
-      pInputText
-      id="notifications-search"
-      type="search"
-      [value]="state().search"
-      [placeholder]="text().search"
-      [attr.maxlength]="maxSearchLength"
-      [attr.aria-invalid]="searchError() ? 'true' : null"
-      [attr.aria-describedby]="searchError() ? 'notifications-search-error' : null"
-      [invalid]="!!searchError()"
-      [fluid]="true"
-      autocomplete="off"
-      (input)="inputSearch($event)"
-    />
-    @if (searchError(); as error) {
-      <p-message id="notifications-search-error" severity="error" variant="simple" size="small">{{
-        error
-      }}</p-message>
+<p-tabs [value]="readState()" (valueChange)="changeFilter('readState', $event)">
+  <p-tablist [pt]="{ content: { 'aria-label': text().readState } }">
+    @for (option of readOptions(); track option.value) {
+      <p-tab [value]="option.value">{{ option.label }}</p-tab>
     }
-  </div>
-  <p-select
-    inputId="notifications-read-state"
-    [ariaLabel]="text().readState"
-    [options]="readOptions()"
-    optionLabel="label"
-    optionValue="value"
-    [ngModel]="readState()"
-    (ngModelChange)="changeFilter('readState', $event)"
-  />
-  <p-select
-    inputId="notifications-category"
-    [ariaLabel]="text().category"
-    [options]="categoryOptions()"
-    optionLabel="label"
-    optionValue="value"
-    [ngModel]="category()"
-    (ngModelChange)="changeFilter('category', $event)"
-  />
-</div>
-
-<holita-table-panel
-  #panel
-  [heading]="text().table.heading"
-  [total]="total()"
-  [view]="view()"
-  [errorText]="errorText() ?? text().table.errorText"
-  [busy]="busy() || loading()"
-  [actionContext]="state()"
-  [emptyTitle]="text().table.emptyTitle"
-  [emptyDescription]="text().table.emptyDescription"
-  [actions]="actions()"
-  [page]="page()"
-  [columns]="columns()"
-  [tableMinWidth]="tableMinWidth"
-  (action)="run($event)"
-  (pageChange)="changePage($event)"
-  (clearFilters)="clearFilters()"
-  (retry)="retry.emit()"
->
-  <p-table
-    class="app-responsive-table"
-    [value]="tableRows()"
-    dataKey="id"
-    [rowTrackBy]="trackById"
-    [lazy]="true"
-    [lazyLoadOnInit]="false"
-    [scrollable]="true"
-    [tableStyle]="{ 'min-width': tableMinWidth }"
-    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().table.heading } }"
-  >
-    <ng-template #colgroup>
-      <colgroup>
-        @for (column of columns(); track column.id) {
-          <col [style.width]="column.width" [class]="column.className ?? ''" />
-        }
-      </colgroup>
-    </ng-template>
-    <ng-template #header>
-      <tr>
-        <th scope="col" class="app-col-identity">{{ text().table.notification }}</th>
-        <th scope="col">{{ text().category }}</th>
-        <th scope="col" class="app-col-secondary">{{ text().table.source }}</th>
-        <th scope="col">{{ text().table.target }}</th>
-        <th scope="col">{{ text().table.occurred }}</th>
-        <th scope="col">{{ text().readState }}</th>
-        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
-          <span class="app-visually-hidden">{{ text().table.actions }}</span>
-        </th>
-      </tr>
-    </ng-template>
-    <ng-template #body let-row>
-      <tr>
-        <td class="app-col-identity">
-          <span class="app-cell-identity" [class.notifications__unread]="row.unread">
-            @if (row.sourceLink; as source) {
-              <a class="app-link" [routerLink]="row.sourceUrl" [title]="row.sentence">{{
-                row.sentence
-              }}</a>
-            } @else {
-              <span [title]="row.sentence">{{ row.sentence }}</span>
-            }
-            <span>{{ severityLabel(row.severity) }}</span>
-          </span>
-          <div class="app-table-mobile-actions">
-            <holita-row-actions
-              [actions]="actions()"
-              [record]="row.record"
-              (choose)="panel.run($event.action, [row.record], $event.origin)"
+  </p-tablist>
+  <p-tabpanels>
+    <p-tabpanel [value]="readState()">
+      <div class="app-tab-content">
+        <div class="notifications__filters">
+          <div class="notifications__search">
+            <label class="app-visually-hidden" for="notifications-search">{{
+              text().search
+            }}</label>
+            <input
+              pInputText
+              id="notifications-search"
+              type="search"
+              [value]="state().search"
+              [placeholder]="text().search"
+              [attr.maxlength]="maxSearchLength"
+              [attr.aria-invalid]="searchError() ? 'true' : null"
+              [attr.aria-describedby]="searchError() ? 'notifications-search-error' : null"
+              [invalid]="!!searchError()"
+              [fluid]="true"
+              autocomplete="off"
+              (input)="inputSearch($event)"
             />
+            @if (searchError(); as error) {
+              <p-message
+                id="notifications-search-error"
+                severity="error"
+                variant="simple"
+                size="small"
+                >{{ error }}</p-message
+              >
+            }
           </div>
-        </td>
-        <td>
-          <span class="app-cell-status" [title]="categoryLabel(row.category)">
-            <span [class]="'app-icon-well app-icon-well--' + row.tone" aria-hidden="true">
-              @switch (row.category) {
-                @case ('ALERT') {
-                  <svg data-p-icon="exclamation-triangle" />
-                }
-                @case ('DEVICE') {
-                  <svg data-p-icon="microchip" />
-                }
-                @case ('COMMAND') {
-                  <svg data-p-icon="send" />
-                }
-              }
-            </span>
-            <span>{{ categoryLabel(row.category) }}</span>
-          </span>
-        </td>
-        <td class="app-col-secondary">
-          <span class="app-cell-identity">
-            @if (row.sourceLink; as source) {
-              <a class="app-link" [routerLink]="row.sourceUrl" [title]="row.sourceKey">{{
-                source.label
-              }}</a>
-            } @else {
-              <span [title]="row.sourceKey">{{ sourceLabel(row.sourceKind) }}</span>
-            }
-            @if (row.sourceKind === 'DIAGNOSTIC' || row.sourceKind === 'ALARM') {
-              <span>{{ text().table.recorded }}</span>
-            }
-          </span>
-        </td>
-        <td>
-          <span class="notifications__links">
-            @for (link of row.links; track link.kind) {
-              <a class="app-link" [routerLink]="link.route" [title]="link.title">{{
-                link.label
-              }}</a>
-            } @empty {
-              <span class="app-muted">—</span>
-            }
-          </span>
-        </td>
-        <td>
-          <time class="app-cell-date" [attr.datetime]="row.occurredAt" [title]="row.date.title">{{
-            row.date.text
-          }}</time>
-        </td>
-        <td>
-          <span class="app-cell-status">
-            <p-tag
-              [severity]="row.unread ? 'info' : 'secondary'"
-              [value]="row.unread ? text().unread : text().read"
-            />
-          </span>
-        </td>
-        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-          <holita-row-actions
-            [actions]="actions()"
-            [record]="row.record"
-            (choose)="panel.run($event.action, [row.record], $event.origin)"
+          <p-select
+            inputId="notifications-category"
+            [ariaLabel]="text().category"
+            [options]="categoryOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="category()"
+            (ngModelChange)="changeFilter('category', $event)"
           />
-        </td>
-      </tr>
-    </ng-template>
-  </p-table>
-</holita-table-panel>
+        </div>
+
+        <holita-table-panel
+          #panel
+          [heading]="text().table.heading"
+          [total]="total()"
+          [view]="view()"
+          [errorText]="errorText() ?? text().table.errorText"
+          [busy]="busy() || loading()"
+          [actionContext]="state()"
+          [emptyTitle]="text().table.emptyTitle"
+          [emptyDescription]="text().table.emptyDescription"
+          [actions]="actions()"
+          [page]="page()"
+          [columns]="columns()"
+          [tableMinWidth]="tableMinWidth"
+          (action)="run($event)"
+          (pageChange)="changePage($event)"
+          (clearFilters)="clearFilters()"
+          (retry)="retry.emit()"
+        >
+          <p-table
+            class="app-responsive-table"
+            [value]="tableRows()"
+            dataKey="id"
+            [rowTrackBy]="trackById"
+            [lazy]="true"
+            [lazyLoadOnInit]="false"
+            [scrollable]="true"
+            [tableStyle]="{ 'min-width': tableMinWidth }"
+            [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().table.heading } }"
+          >
+            <ng-template #colgroup>
+              <colgroup>
+                @for (column of columns(); track column.id) {
+                  <col [style.width]="column.width" [class]="column.className ?? ''" />
+                }
+              </colgroup>
+            </ng-template>
+            <ng-template #header>
+              <tr>
+                <th scope="col" class="app-col-identity">{{ text().table.notification }}</th>
+                <th scope="col">{{ text().category }}</th>
+                <th scope="col" class="app-col-secondary">{{ text().table.source }}</th>
+                <th scope="col">{{ text().table.target }}</th>
+                <th scope="col">{{ text().table.occurred }}</th>
+                <th scope="col">{{ text().readState }}</th>
+                <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+                  <span class="app-visually-hidden">{{ text().table.actions }}</span>
+                </th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-row>
+              <tr>
+                <td class="app-col-identity">
+                  <span class="app-cell-identity" [class.notifications__unread]="row.unread">
+                    @if (row.sourceLink; as source) {
+                      <a class="app-link" [routerLink]="row.sourceUrl" [title]="row.sentence">{{
+                        row.sentence
+                      }}</a>
+                    } @else {
+                      <span [title]="row.sentence">{{ row.sentence }}</span>
+                    }
+                    <span>{{ severityLabel(row.severity) }}</span>
+                  </span>
+                  <div class="app-table-mobile-actions">
+                    <holita-row-actions
+                      [actions]="actions()"
+                      [record]="row.record"
+                      (choose)="panel.run($event.action, [row.record], $event.origin)"
+                    />
+                  </div>
+                </td>
+                <td>
+                  <span class="app-cell-status" [title]="categoryLabel(row.category)">
+                    <span [class]="'app-icon-well app-icon-well--' + row.tone" aria-hidden="true">
+                      @switch (row.category) {
+                        @case ('ALERT') {
+                          <svg data-p-icon="exclamation-triangle" />
+                        }
+                        @case ('DEVICE') {
+                          <svg data-p-icon="microchip" />
+                        }
+                        @case ('COMMAND') {
+                          <svg data-p-icon="send" />
+                        }
+                      }
+                    </span>
+                    <span>{{ categoryLabel(row.category) }}</span>
+                  </span>
+                </td>
+                <td class="app-col-secondary">
+                  <span class="app-cell-identity">
+                    @if (row.sourceLink; as source) {
+                      <a class="app-link" [routerLink]="row.sourceUrl" [title]="row.sourceKey">{{
+                        source.label
+                      }}</a>
+                    } @else {
+                      <span [title]="row.sourceKey">{{ sourceLabel(row.sourceKind) }}</span>
+                    }
+                    @if (row.sourceKind === 'DIAGNOSTIC' || row.sourceKind === 'ALARM') {
+                      <span>{{ text().table.recorded }}</span>
+                    }
+                  </span>
+                </td>
+                <td>
+                  <span class="notifications__links">
+                    @for (link of row.links; track link.kind) {
+                      <a class="app-link" [routerLink]="link.route" [title]="link.title">{{
+                        link.label
+                      }}</a>
+                    } @empty {
+                      <span class="app-muted">—</span>
+                    }
+                  </span>
+                </td>
+                <td>
+                  <time
+                    class="app-cell-date"
+                    [attr.datetime]="row.occurredAt"
+                    [title]="row.date.title"
+                    >{{ row.date.text }}</time
+                  >
+                </td>
+                <td>
+                  <span class="app-cell-status">
+                    <p-tag
+                      [severity]="row.unread ? 'info' : 'secondary'"
+                      [value]="row.unread ? text().unread : text().read"
+                    />
+                  </span>
+                </td>
+                <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+                  <holita-row-actions
+                    [actions]="actions()"
+                    [record]="row.record"
+                    (choose)="panel.run($event.action, [row.record], $event.origin)"
+                  />
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </holita-table-panel>
+      </div>
+    </p-tabpanel>
+  </p-tabpanels>
+</p-tabs>

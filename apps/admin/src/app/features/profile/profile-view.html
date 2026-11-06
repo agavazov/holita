@@ -17,7 +17,7 @@
       <h2>{{ text().identity }}</h2>
       <p>{{ text().identityHint }}</p>
     </header>
-    <div class="app-form-section">
+    <div class="app-card__body">
       @if (saveError(); as error) {
         <p-message severity="error" role="alert">{{ error }}</p-message>
       }
@@ -77,7 +77,7 @@
       <h2>{{ text().password }}</h2>
       <p>{{ text().passwordHint }}</p>
     </header>
-    <div class="app-form-section">
+    <div class="app-card__body">
       @if (passwordError(); as error) {
         <p-message severity="error" role="alert">{{ error }}</p-message>
       }

@@ -13,7 +13,7 @@ import {
   type OnInit,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { ConfirmDialog } from 'primeng/confirmdialog';
@@ -22,6 +22,7 @@ import { Message } from 'primeng/message';
 import { Skeleton } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { map, type Observable } from 'rxjs';
 import type {
   AdminControlCenterDeviceQuery,
@@ -99,6 +100,11 @@ interface HistoryRead {
     Skeleton,
     TableModule,
     Tag,
+    Tabs,
+    TabList,
+    Tab,
+    TabPanels,
+    TabPanel,
     EmptyState,
     FleetConnection,
     FleetNow,
@@ -152,6 +158,7 @@ export class DevicePage implements OnInit {
   private readonly confirmation = inject(ConfirmationService);
   private readonly notifications = inject(MessageService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly queryParams = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
   });
@@ -530,6 +537,13 @@ export class DevicePage implements OnInit {
   link(...path: string[]): string[] {
     return ['/', this.language(), this.branchId(), ...path];
   }
+  selectTab(value: string | number | undefined): void {
+    const tab = value === 'technical-details' ? value : deviceTabs.find((tab) => tab === value);
+    if (tab) {
+      void this.router.navigate(this.deviceLink(tab));
+    }
+  }
+
   deviceLink(tab: DeviceTab | 'technical-details'): string[] {
     return this.link(
       'fleet',

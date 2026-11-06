@@ -138,7 +138,7 @@
       </holita-kpi-strip>
 
       <p-tabs [value]="tab()" (valueChange)="selectTab($event)">
-        <p-tablist>
+        <p-tablist [pt]="{ content: { 'aria-label': text().eyebrow } }">
           @for (tab of profileTabs; track tab) {
             <p-tab [value]="tab">{{ v2().tabs[tab] }}</p-tab>
           }

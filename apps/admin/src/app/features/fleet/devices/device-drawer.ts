@@ -114,8 +114,10 @@ export class DeviceDrawer {
       'aria-describedby': this.describedBy('options'),
     },
   }));
-  protected readonly optionChoices = deviceOptions.map((value) => ({ value, label: value }));
   private readonly catalog = computed(() => devicesText(this.language()));
+  protected readonly optionChoices = computed(() =>
+    deviceOptions.map((value) => ({ value, label: this.catalog().optionLabels[value] })),
+  );
   protected readonly text = computed(() => this.catalog().drawer);
   protected readonly modelSubtitle = computed(
     () => deviceModelLabel(this.language(), this.device()?.model) || null,

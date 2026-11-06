@@ -107,7 +107,7 @@
           <span class="app-cell-identity">
             <button
               type="button"
-              class="app-link app-plate"
+              class="app-link"
               [attr.aria-label]="
                 label(
                   profileEnabled() ? text().table.openProfile : text().table.openEditor,
@@ -122,7 +122,7 @@
                 )
               "
             >
-              {{ row.plate }}
+              <span class="app-plate">{{ row.plate }}</span>
             </button>
             <span [title]="identity(row)">{{ identity(row) }}</span>
           </span>

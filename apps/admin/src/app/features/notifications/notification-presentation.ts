@@ -74,12 +74,12 @@ export function notificationSentence(
           ? interpolate(text.codeSuffix, { code: parameters.alarmCode })
           : '',
       });
-    case 'ALARM':
+    case 'ALARM': {
+      const event = translated(alertsText(language).kinds, parameters.alarmCode, '');
       return interpolate(text.recordedAlarm, {
-        code: parameters.alarmCode
-          ? interpolate(text.codeSuffix, { code: parameters.alarmCode })
-          : '',
+        event: event ? interpolate(text.eventSuffix, { event }) : '',
       });
+    }
     case 'COMMAND': {
       const commands = commandText[language];
       return interpolate(text.command, {

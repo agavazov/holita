@@ -143,7 +143,7 @@ const semanticColorTokens = [
   styles: `
     :host {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 32rem), 1fr));
       gap: 1rem;
       padding: 1.5rem;
     }

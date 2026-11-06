@@ -12,6 +12,7 @@ import { Message } from 'primeng/message';
 import { ButtonDirective } from 'primeng/button';
 import { AdminConfig } from '../../core/config/admin-config';
 import { AdminWorkspace } from '../../workspace/admin-workspace';
+import { SettingsTabs } from '../../workspace/settings-tabs';
 import { BranchContext } from '../branches/branch-context';
 import { DevicesPage } from './devices/devices-list-page';
 import { VehiclesPage } from './vehicles/vehicles-page';
@@ -46,6 +47,7 @@ import { settingsText } from './settings/i18n/messages';
     VehicleProfilePage,
     MaintenancePage,
     GeneralSettingsPage,
+    SettingsTabs,
   ],
   providers: [
     GeneralSettingsApi,

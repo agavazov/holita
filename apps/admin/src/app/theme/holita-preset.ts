@@ -223,7 +223,7 @@ function appTokens(brand: Brand, density: Density) {
     },
     hero: {
       background:
-        'linear-gradient(120deg, light-dark({primary.700}, {primary.900}) 0%, light-dark({teal.800}, {teal.950}) 100%)',
+        'linear-gradient(120deg, light-dark({primary.700}, {primary.900}) 0%, light-dark({primary.900}, {teal.950}) 100%)',
       color: '{surface.0}',
     },
     plate: {

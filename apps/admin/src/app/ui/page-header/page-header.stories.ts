@@ -64,7 +64,7 @@ export const LongTitle: Story = {
         eyebrow="Drivers · International haulage · Long-term contracts"
         title="Aleksandar-Kristiyan Petrov-Stoyanov Georgiev-Dimitrov Ivanov"
         [count]="1234"
-        description="A very long description that is truncated to a single line so it does not push the actions and the content below the page title aside on narrow screens."
+        description="A long description wraps on narrow screens so the full page hint remains readable while the actions move to the next row."
       >
         <button headerActions pButton type="button">Action</button>
       </holita-page-header>

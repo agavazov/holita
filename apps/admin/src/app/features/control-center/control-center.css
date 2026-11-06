@@ -4,6 +4,14 @@
   align-content: start;
 }
 
+.control-center__overview {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+}
+
+.control-center__status {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+}
+
 .control-center__panel h2 {
   margin: 0;
 }

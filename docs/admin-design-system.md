@@ -188,12 +188,16 @@ as `.app-view`. Use `.app-stack` only when children should align to the start. A
 outer margin. Use `.app-card--accent` for a contextual lead panel,
 `.app-icon-well--<tone|c1…c8>` with `.app-icon-well` for a tinted icon, and
 `.app-problem-panel--<tone>` with `.app-problem-panel` for a concise status block. Forms use `.app-form-section`/`.app-form-grid`; facts use
-`<dl class="app-facts">`. Context navigation uses real `.app-route-nav__link` anchors and
-`aria-current`. Do not recreate shared cards, menus, value meters or form layouts in a feature.
+`<dl class="app-facts">`. Dashboard, Vehicle, Device, Settings and Notifications sections use
+PrimeNG Tabs with a labelled tablist and matching tab panel. Route tabs keep their existing
+destinations and unsaved-change guards; Notifications tabs use the existing All/Unread filter.
+Do not recreate shared cards, menus, value meters or form layouts in a feature.
 
 Numbers use `.app-num`, technical values `.app-mono`, statuses `p-tag`/`toneSeverity` and labelled
 dots. `.app-plate` renders a bounded monospace licence plate with an EU band; set `data-country`
-only when the actual registration country is known. It works in lists, details and map popups.
+only when the actual registration country is known. It stays white with dark characters and a
+border in both themes. Inside links/buttons or mobile metadata, put the plate on an inner span
+so interactive and responsive styles do not replace its appearance.
 Format through `ui/format`; preserve null and zero. Fleet read values use
 `injectFleetFormat`; `dateTime`/`dateTimeCell` use the Branch zone/date format, `dateOnly` preserves
 calendar dates, ranges use `dateRange`/`dateTimeRange`, and `utc` provides exact instant tooltips.
@@ -215,21 +219,24 @@ or actions. Keep source identity, retrieval and event clocks, gaps and missing f
 
 ### Maps and charts
 
-`holita-location-map` (`ui/location-map`) presents one record or a fleet with status text/tones,
-measured heading, a recorded track and a matching accessible list. Callers supply canonical
-positions, localized status labels, detail URLs, the data clock (`asOf`), retrieval time
-(`updatedAt`) and Branch display preferences. A missing position stays in the list. Observation
+`holita-location-map` (`ui/location-map`) uses Google Maps JavaScript API for one record or a
+fleet, with truck pins coloured by status, a recorded track and a matching accessible list.
+Selected pins are highlighted; heading arrows appear only for fresh moving positions.
+Callers establish motion with optional canonical `speedKph` or source-provided `moving`; a heading
+or connection status alone never implies movement. Callers supply canonical positions, localized status labels, detail URLs, the data clock (`asOf`),
+retrieval time (`updatedAt`) and Branch display preferences. A missing position stays in the list. Observation
 ages advance against wall time; connection/reporting status never refreshes an older activity
 or GPS observation. Activity, speed and heading become unknown beyond the Branch not-reporting
 threshold. Retained recorded values and map positions show their age; expired map positions
 are labelled historical and omit heading arrows.
 Track points use explicit null positions or `breakBefore` to break unavailable intervals; pass the
-requested range, coverage and `truncated` disclosure from the source. Markers emit `recordSelect`.
-Refreshes retain the view and selection; Fit fleet is explicit after the first positioned read.
-Tile failure opens the list and preserves actions. Public tile configuration and attribution are
-documented in [development](development.md#ports-and-environment). Google external links remain
-available. Review `Design System/Maps` for fleet, single, missing, stale, heading/track, tile failure
-and narrow states.
+requested range, coverage and `truncated` disclosure from the source. Selecting a marker or list
+record emits `recordSelect`, pans and zooms to that truck, and opens its plate/status/position-age
+popup with the detail action. Refreshes retain the view and selection; Fit fleet is explicit after
+the first positioned read. A missing key or script/tile failure keeps the accessible list and its
+actions available. Browser key and Map ID configuration are documented in
+[development](development.md#ports-and-environment). Google external links remain available.
+Review `Design System/Maps` for missing-key, fleet, single, stale, heading/track and narrow states.
 
 `holita-chart-panel` (`ui/chart-panel`) uses `p-chart`/Chart.js for donut, line and bar summaries.
 Supply localized point/series labels, canonical numeric values, units, time zone/date format,

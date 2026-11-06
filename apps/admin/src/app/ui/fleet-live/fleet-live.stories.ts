@@ -1,6 +1,6 @@
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { fixtureLiveDevice } from '../../../storybook/devices-fixtures';
-import { onFrame, storyLanguage } from '../../../storybook/story-config';
+import { onFrame, storyLanguage, type StoryFixtures } from '../../../storybook/story-config';
 import { FleetConnection } from './fleet-connection';
 import { FleetFaults } from './fleet-faults';
 import { FleetLastReport } from './fleet-last-report';
@@ -14,6 +14,7 @@ const meta: Meta = {
     onFrame,
   ],
   tags: ['!autodocs'],
+  parameters: { holita: { now: '2026-10-20T08:00:05.000Z' } satisfies StoryFixtures },
 };
 export default meta;
 type Story = StoryObj;

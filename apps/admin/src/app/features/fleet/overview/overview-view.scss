@@ -17,6 +17,7 @@
   min-width: 0;
 }
 .overview__identity h1 {
+  color: var(--p-app-hero-color);
   font-size: var(--p-app-text-title);
   overflow-wrap: anywhere;
 }

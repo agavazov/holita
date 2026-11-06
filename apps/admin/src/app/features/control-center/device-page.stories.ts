@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
+import '../../../storybook/control-center-fixtures';
 import { fixtureDevice } from '../../../storybook/devices-fixtures';
 import { defaultBranchId } from '../../../storybook/session-fixtures';
 import { routeAt, StoryApp, type StoryFixtures } from '../../../storybook/story-config';

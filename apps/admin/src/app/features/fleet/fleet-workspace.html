@@ -24,15 +24,19 @@
             <p role="status">{{ uiText().loading }}</p>
           } @else {
             <p-message severity="error" role="alert">{{ preferencesError() }}</p-message>
-            <button pButton type="button" (click)="preferences.retry()">
-              {{ uiText().retry }}
-            </button>
+            <div class="app-inline">
+              <button pButton type="button" (click)="preferences.retry()">
+                {{ uiText().retry }}
+              </button>
+            </div>
           }
         </section>
       } @else {
         @switch (scope.resource) {
           @case ('general') {
-            <holita-general-settings-page [branch]="scope.branch" [language]="scope.language" />
+            <holita-settings-tabs current="general">
+              <holita-general-settings-page [branch]="scope.branch" [language]="scope.language" />
+            </holita-settings-tabs>
           }
           @case ('vehicle-profile') {
             <holita-vehicle-profile-page [branch]="scope.branch" [language]="scope.language" />
@@ -56,7 +60,9 @@
             <holita-alerts-page [branch]="scope.branch" [language]="scope.language" />
           }
           @case ('groups') {
-            <holita-vehicle-groups-page [branch]="scope.branch" [language]="scope.language" />
+            <holita-settings-tabs current="vehicle-groups">
+              <holita-vehicle-groups-page [branch]="scope.branch" [language]="scope.language" />
+            </holita-settings-tabs>
           }
           @case ('devices') {
             <holita-devices-list-page [branch]="scope.branch" [language]="scope.language" />

@@ -1,5 +1,10 @@
 @for (scheme of schemes; track scheme) {
-  <section class="scheme" [class.app-dark]="scheme === 'dark'" [attr.aria-label]="scheme">
+  <section
+    class="scheme"
+    [class.app-dark]="scheme === 'dark'"
+    [style.color-scheme]="scheme"
+    [attr.aria-label]="scheme"
+  >
     <div class="row">
       <span class="label">button · badge · tag · chip · avatar</span>
       <button pButton type="button">Save</button>

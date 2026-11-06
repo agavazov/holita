@@ -83,8 +83,8 @@ export function appCategoryTokens(): Readonly<Record<string, string>> {
   for (const slot of categorySlots) {
     const { family } = categoryPalette[slot];
     tokens[slot] = categoryToken(slot);
-    tokens[`${slot}Background`] = `light-dark({${family}.100}, ${tint(family)})`;
-    tokens[`${slot}Color`] = `light-dark({${family}.800}, {${family}.200})`;
+    tokens[`${slot}-background`] = `light-dark({${family}.100}, ${tint(family)})`;
+    tokens[`${slot}-color`] = `light-dark({${family}.800}, {${family}.200})`;
   }
   return tokens;
 }

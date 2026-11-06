@@ -79,6 +79,21 @@
   },
   "liveError": "The live holita connection is unavailable right now; the device registry is up to date.",
   "liveStale": "The live holita connection could not be refreshed; it shows the state from {time}.",
+  "optionLabels": {
+    "CELLULAR_4G": "4G cellular connectivity",
+    "SAFETY_SF": "Safety (SF)",
+    "IRF": "IRF",
+    "CAN": "CAN bus",
+    "DRIVER_ID": "Driver identification",
+    "GEOZONES_GO": "Geofences (GO)",
+    "TEMPERATURE_DS": "Temperature sensor (DS)",
+    "ECONNECT": "eConnect",
+    "WIFI": "Wi-Fi",
+    "VOICE": "Voice communication",
+    "EXTERNAL_ANTENNA": "External antenna",
+    "RS232": "RS-232",
+    "WILIOT": "Wiliot"
+  },
   "models": {
     "STARLINK_TRACKER": "StarLink Tracker",
     "STARLINK_SCOUT": "StarLink Scout",

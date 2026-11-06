@@ -156,7 +156,7 @@
           <p-message severity="warn" role="status">{{ text().lowConfidence }}</p-message>
         }
 
-        <div class="app-card-grid">
+        <div class="app-card-grid scorecard__details">
           <section class="app-card">
             <h2 class="app-card__title app-card__header">{{ text().maneuvers }}</h2>
             <p class="app-muted">{{ text().maneuverDescription }}</p>
@@ -176,7 +176,7 @@
                 <dt>{{ text().windowStart }}</dt>
                 <dd>
                   @let start = units.dateTimeCell(card.windowStart);
-                  ><time
+                  <time
                     class="app-cell-date"
                     [attr.datetime]="card.windowStart"
                     [title]="start.title"
@@ -188,7 +188,7 @@
                 <dt>{{ text().windowEnd }}</dt>
                 <dd>
                   @let end = units.dateTimeCell(card.windowEnd);
-                  ><time
+                  <time
                     class="app-cell-date"
                     [attr.datetime]="card.windowEnd"
                     [title]="end.title"

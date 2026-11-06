@@ -210,11 +210,13 @@
             @if (row.vehicleId) {
               <button
                 type="button"
-                class="app-link app-plate"
+                class="app-link"
                 [title]="row.vehicle?.licensePlate ?? text().table.openVehicle"
                 (click)="panel.run('vehicle', [recordOf(row)], $event.currentTarget)"
               >
-                {{ row.vehicle?.licensePlate ?? text().table.openVehicle }}
+                <span class="app-plate">{{
+                  row.vehicle?.licensePlate ?? text().table.openVehicle
+                }}</span>
               </button>
             }
             @if (row.deviceId) {

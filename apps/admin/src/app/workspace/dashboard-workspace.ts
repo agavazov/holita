@@ -67,7 +67,7 @@ import { AdminWorkspace } from './admin-workspace';
           </section>
         } @else {
           <p-tabs [value]="tab" (valueChange)="selectTab($event)">
-            <p-tablist [attr.aria-label]="workspace.text().dashboard">
+            <p-tablist [pt]="{ content: { 'aria-label': workspace.text().dashboard } }">
               <p-tab value="overview">{{ workspace.text().overview }}</p-tab>
               <p-tab value="problems">{{ workspace.text().problems }}</p-tab>
               <p-tab value="trips">{{ workspace.text().trips }}</p-tab>

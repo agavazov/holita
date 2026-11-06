@@ -79,6 +79,21 @@
   },
   "liveError": "Връзката с holita в реално време не е достъпна в момента; регистърът на устройствата е актуален.",
   "liveStale": "Връзката с holita в реално време не можа да се обнови; показано е състоянието от {time}.",
+  "optionLabels": {
+    "CELLULAR_4G": "Мобилна връзка 4G",
+    "SAFETY_SF": "Безопасност (SF)",
+    "IRF": "IRF",
+    "CAN": "CAN шина",
+    "DRIVER_ID": "Идентификация на водача",
+    "GEOZONES_GO": "Геозони (GO)",
+    "TEMPERATURE_DS": "Температурен сензор (DS)",
+    "ECONNECT": "eConnect",
+    "WIFI": "Wi-Fi",
+    "VOICE": "Гласова връзка",
+    "EXTERNAL_ANTENNA": "Външна антена",
+    "RS232": "RS-232",
+    "WILIOT": "Wiliot"
+  },
   "models": {
     "STARLINK_TRACKER": "StarLink Tracker",
     "STARLINK_SCOUT": "StarLink Scout",

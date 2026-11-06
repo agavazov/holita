@@ -10,6 +10,7 @@ import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import type { FilterCondition } from '../../ui/filter-builder/filter-model';
 import { injectFleetFormat } from '../../ui/format/fleet-format';
 import {
@@ -42,6 +43,11 @@ import { notificationTone, type NotificationRow } from './notification-presentat
     Select,
     TableModule,
     Tag,
+    Tabs,
+    TabList,
+    Tab,
+    TabPanels,
+    TabPanel,
     PageHeader,
     RowActions,
     TablePanel,

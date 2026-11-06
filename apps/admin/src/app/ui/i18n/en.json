@@ -57,7 +57,7 @@
   },
   "drawer": {
     "notFoundTitle": "Record not found",
-    "notFoundDescription": "It may have been deleted or belong to another branch.",
+    "notFoundDescription": "It may have been deleted or be unavailable in this workspace.",
     "invalidIdTitle": "Invalid address",
     "invalidIdDescription": "The link does not identify a record.",
     "errorTitle": "Could not load the record"

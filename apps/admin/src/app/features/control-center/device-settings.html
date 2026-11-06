@@ -102,20 +102,22 @@
         </div>
       }
     </div>
-    <button
-      pButton
-      type="submit"
-      [disabled]="
-        !primary() ||
-        running() ||
-        submitting() ||
-        form.invalid ||
-        (mode() !== 'READ_EDATA' && !writesEnabled())
-      "
-      [loading]="submitting()"
-    >
-      {{ text().start }}
-    </button>
+    <div class="app-inline">
+      <button
+        pButton
+        type="submit"
+        [disabled]="
+          !primary() ||
+          running() ||
+          submitting() ||
+          form.invalid ||
+          (mode() !== 'READ_EDATA' && !writesEnabled())
+        "
+        [loading]="submitting()"
+      >
+        {{ text().start }}
+      </button>
+    </div>
   </form>
   <p-confirmdialog [pt]="confirmPt()">
     <ng-template #message
