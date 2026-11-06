@@ -16,8 +16,7 @@ open only the section you need.
     `@use 'breakpoints' as bp` mixins.
   - Never use literal colours, `.app-dark` selectors or Sakai aliases (`--surface-*`,
     `--text-color*`).
-  - Never use `.card`/`.page-heading` classes outside `styles/_legacy-karma.scss` and Karma's own
-    files.
+  - Use shared `.app-*` pattern classes instead of `.card`/`.page-heading`.
 - TypeScript never hard-codes a breakpoint. Use `below(name)` from `ui/media.ts`.
 - Use single PrimeNG controls directly. Build a component in `app/ui` only for repeated
   structure, state or behaviour, and don't wrap `p-tag` and similar controls.
@@ -76,7 +75,7 @@ Stories are a development tool and are not tests:
 
 - Titles follow `Admin/<menu group>/<menu item>[/<sub-page>]`, using the English labels and order
   from `admin-navigation.ts`. Nest sub-pages under the item that opens them; Sign in is
-  `Admin/Sign in`. Truck pages belong under `Admin/Karma Client/Trucks/Truck/<page>`.
+  `Admin/Sign in`.
 - Add stories beside the connected adapter, using `routeAt`, `StoryApp` and typed `graphqlFixture`
   snapshots in `src/storybook/*-fixtures.ts`. Keep representative states, aiming for at most eight
   per screen. Use the Language, Theme, Brand and Density globals instead of language/theme copies.

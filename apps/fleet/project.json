@@ -3,7 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "sourceRoot": "apps/fleet/src",
-  "implicitDependencies": ["core", "karma-client"],
+  "implicitDependencies": ["core"],
   "tags": ["type:app", "scope:fleet"],
   "targets": {
     "test": {
@@ -14,44 +14,16 @@
         "cwd": "apps/fleet",
         "forwardAllArgs": true
       },
-      "dependsOn": [
-        "db-generate",
-        "graphql-generate",
-        {
-          "target": "build",
-          "projects": ["edata-rules"]
-        }
-      ]
+      "dependsOn": ["db-generate", "graphql-generate"]
     },
     "lint": {
-      "dependsOn": [
-        "db-generate",
-        "graphql-generate",
-        {
-          "target": "build",
-          "projects": ["edata-rules"]
-        }
-      ]
+      "dependsOn": ["db-generate", "graphql-generate"]
     },
     "typecheck": {
-      "dependsOn": [
-        "db-generate",
-        "graphql-generate",
-        {
-          "target": "build",
-          "projects": ["edata-rules"]
-        }
-      ]
+      "dependsOn": ["db-generate", "graphql-generate"]
     },
     "build": {
-      "dependsOn": [
-        "db-generate",
-        "graphql-generate",
-        {
-          "target": "build",
-          "projects": ["edata-rules"]
-        }
-      ]
+      "dependsOn": ["db-generate", "graphql-generate"]
     },
     "db-generate": {
       "executor": "nx:run-commands",
@@ -69,14 +41,7 @@
     },
     "test-db": {
       "executor": "nx:run-commands",
-      "dependsOn": [
-        "db-generate",
-        "graphql-generate",
-        {
-          "target": "build",
-          "projects": ["edata-rules"]
-        }
-      ],
+      "dependsOn": ["db-generate", "graphql-generate"],
       "cache": true,
       "inputs": ["default"],
       "options": {
@@ -97,14 +62,6 @@
     }
   },
   "namedInputs": {
-    "default": [
-      "{projectRoot}/**/*",
-      "sharedGlobals",
-      "databaseTooling",
-      "graphqlContracts",
-      "{workspaceRoot}/packages/edata-rules/src/**/*",
-      "{workspaceRoot}/packages/edata-rules/tsconfig.json",
-      "{workspaceRoot}/packages/edata-rules/package.json"
-    ]
+    "default": ["{projectRoot}/**/*", "sharedGlobals", "databaseTooling", "graphqlContracts"]
   }
 }

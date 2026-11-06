@@ -7,8 +7,7 @@ boundaries; the [Fleet index](fleet.md) covers domain rules and source entry poi
 ## Persistence ownership
 
 Core owns Tenant/Branch. Fleet owns Vehicle, Device, Driver, VehicleGroup,
-VehicleStatusSample, Trip, FleetEvent, ServiceTask, FleetSettings and the retained
-FleetDeviceOperation records. Each service owns its PostgreSQL database, Prisma client
+VehicleStatusSample, Trip, FleetEvent, ServiceTask and FleetSettings. Each service owns its PostgreSQL database, Prisma client
 and reviewed migrations. Admin and Router have no database credentials.
 
 Fleet business tables begin with `id`, `tenantId`, `branchId`. Every predicate, relation,
@@ -234,15 +233,3 @@ successful IDs from selection, retaining failures for retry.
 [the design system](../admin-design-system.md) owns presentation and accessibility rules.
 Demo sessions last eight hours in tab sessionStorage; logout honors dirty guards and retires
 clients, with no server-side token revocation.
-
-## Karma Client
-
-Deprecated, view-only reference: [historical Karma Client architecture](../archive/karma/architecture.md#karma-client).
-
-## Background device configuration reads
-
-Deprecated Karma integration: [historical configuration contracts](../archive/karma/architecture.md#background-device-configuration-reads).
-
-## Karma pull monitoring
-
-Deprecated Karma integration: [historical monitoring contracts](../archive/karma/architecture.md#karma-pull-monitoring).

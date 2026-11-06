@@ -24,7 +24,6 @@ export class FleetRouteReuseStrategy extends BaseRouteReuseStrategy {
     if (
       next.data['resource'] !== 'vehicles' &&
       next.data['resource'] !== 'devices' &&
-      next.data['resource'] !== 'device-configuration' &&
       next.data['resource'] !== 'groups' &&
       next.data['resource'] !== 'alerts' &&
       next.data['resource'] !== 'overview' &&

@@ -1,4 +1,4 @@
-# Configuring eData parameter reporting through Karma
+# eData parameter reporting reference
 
 Reference edition **2.3**, updated **2026-10-21 (Europe/Sofia)**. Sources are the
 [eData Simple 4.04 protocol](content.md), the
@@ -6,67 +6,10 @@ Reference edition **2.3**, updated **2026-10-21 (Europe/Sofia)**. Sources are th
 the supplied Monitor **9.56** catalog, and observed device responses through
 [Karma API v2](../../../archive/karma/karma-api-v2/README.md).
 
-This reference describes the device configuration procedure and its evidence
-limits. Holita implements Fleet-owned persisted parameter reads, single predefined-ID
-additions and existing-interval changes through Karma. Deletion, restoration, global
-settings and other command examples below remain manual upstream procedures.
-
-## Implemented background operations
-
-The [background device configuration read](../../../archive/karma/architecture.md#background-device-configuration-reads)
-accepts a scoped Fleet Device and an explicitly selected Karma car/device identity.
-Fleet stores the queued operation before its Nest scheduler dispatches the request.
-Karma Client's internal machine API rechecks the target and submits fixed parameter
-reads (`301`, payload `0702BC`), profile reads (`301`, payload `1F`) or a single
-22-byte parameter definition (`301`, payload `02`). It cannot accept arbitrary
-command strings, replacement/deletion operations or browser-held machine credentials.
-The public Karma GraphQL interface remains read-only; Fleet owns the change mutations.
-
-The reader collects `GET /events` responses for event type `33` in a bounded UTC
-window. Supported text `401` fragments retain their full 22-byte definitions,
-parameter IDs and reporting intervals, including unknown IDs and zero intervals.
-Assembly checks the configuration ID, message numbering, final marker and
-conflicting definitions. Missing fragments or incomplete scan coverage cannot yield
-a complete snapshot. Fleet persists observations so a subsequent check can assemble
-fragments received before and after a process restart.
-
-For a read, `COMPLETE` means the returned fragments form a consistent parameter
-readback. For a change, completion additionally requires a subsequent independent
-whole-set read that matches the intended change and all unrelated definitions.
-It does not prove that measurements are arriving,
-identify an acknowledgment for a particular queue ID, or confirm firmware support
-for every catalog parameter. Queue IDs are references; the worker does not call
-`GET /queue/{id}` or infer success from `transmitted`. An uncertain submission is
-reconciled through later observations rather than automatically replayed. Global
-settings, diagnostics and hardware-version reads in the manual table below remain
-outside the implemented machine API.
-
-Changes require a captured complete baseline for the exact Device/IMEI and selected
-Karma car/device pair. Additions use only eligible Monitor-source entries from the
-imported 9.56 binary SHA-256
-`01dd13e50c55fdf84078ce298bde72320d55bee458baa4c0d2a06fca7c0ca1a0`, extractor
-`1.0.0`, schema `1`, with an unambiguous name, no row issues and membership in the
-observed profile's set. The generic constructor evidence is retained below. Interval
-changes can use unknown IDs: they preserve every captured field except the final
-two interval bytes. Requested intervals are integers `0..65000`; Monitor's zero
-means **not in use**, which is distinct from deletion or proven measurement silence.
-
-Fleet rereads and compares the entire baseline before the one-definition `02` write.
-Profile/baseline freshness is 120 seconds from the earlier phase-request/response
-time, with enough lease/deadline budget reserved for the submission. Old evidence
-causes a safe new read with an advanced watermark; it is not made fresh by fetching
-it again. An addition is rejected at the adapter's 1000-definition readback bound;
-this is not a hardware capacity guarantee. The durable write marker prevents a
-second write attempt after restart, network uncertainty or a lost HTTP response.
-Verification excludes baseline message IDs, compares the whole returned set and
-permits only the documented predefined multiplier/divisor `1/1` to `0/0`
-normalization for additions. Fleet preserves submitted and returned evidence.
-
-The separate write flag defaults to false. All operations have a ten-minute local
-deadline, which cannot cancel an accepted command in the vendor queue. A delayed
-write can arrive after expiry; reconcile a fresh configuration before another
-change. See the [authoritative operation architecture](../../../archive/karma/architecture.md#background-device-configuration-reads)
-and [configuration workflow](../../../archive/karma/development.md#background-device-configuration-reads).
+This reference records device configuration procedures and observed responses, including manual
+upstream examples. The current holita workflow uses the
+[ERM control center](../../development.md#erm-device-server) for snapshots and controlled changes.
+Protocol examples here do not authorize a device write.
 
 ## Catalog, configuration and measurements
 

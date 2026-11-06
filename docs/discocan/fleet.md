@@ -225,8 +225,8 @@ The shared [Simple eData vendor catalog](erm-resources/simple-edata-catalog/READ
 is implemented by [file validation](../../apps/fleet/src/modules/edata-catalog/catalog-file.ts),
 [transactional persistence](../../apps/fleet/src/modules/edata-catalog/catalog.repository.ts)
 and a [local CLI](../../apps/fleet/src/modules/edata-catalog/cli.ts). Its offline TypeScript extractor
-is [tools/erm-edata/catalog.mts](../../tools/erm-edata/catalog.mts). DeviceOperations reads
-eligible Monitor presets for additions; catalog import/editing remains local CLI only.
+is [tools/erm-edata/catalog.mts](../../tools/erm-edata/catalog.mts). Catalog import/editing remains
+local CLI only.
 
 ## Angular foundation
 
@@ -302,8 +302,8 @@ On narrow screens, Fleet tables keep a compact identity cell and its row menu pi
 while the remaining columns scroll. The separate right-hand menu column is used at wider widths;
 secondary fields hidden at narrow widths remain available in record details.
 
-The sidebar places Maintenance in Fleet. Settings follows Karma Client and retains the
-selected Branch's Vehicle groups and General settings links.
+The sidebar places Maintenance in Fleet. Settings retains the selected Branch's Vehicle groups
+and General settings links.
 
 ## Devices admin
 
@@ -318,13 +318,11 @@ delete actions use one partial-result batch. Connection status and whole-Branch 
 server. Each list response retains one database snapshot for status/report dates, filters, sorting
 and count. Diagnostics display available stored metadata; signal, voltage, firmware policy and Restart
 are explicitly unavailable/Demo until integrated.
-Device `routing` compares the latest data Karma and holita received: `KARMA_BACKUP` after two
-polls with Karma more than three minutes ahead, `SILENT` when both sides are older than 70 minutes,
-otherwise `HOLITA`; it is null before holita receives data or while Fleet's ERM import is disabled.
-Entering `KARMA_BACKUP` records one dated `UNIT_ON_BACKUP` warning event per episode at the first
-ahead Karma receipt, without an alert lifecycle or device command. Known limitation: if Fleet's ERM
-import itself stalls for more than three minutes while Karma keeps receiving relayed data, routed
-units also read `KARMA_BACKUP`.
+Device `routing` exposes the retained destination observation for up to 70 minutes. A newer ERM
+receipt proves `HOLITA`; without a fresh observation it is null, as it is while Fleet's ERM import
+is disabled. `routingHealth` preserves the recorded backup periods and caps open-period duration
+at the retained observation. New backup transitions require an upstream
+last-data source that ERM does not currently provide.
 The installation field uses native floating date/time text in the displayed Branch time zone,
 matching odometer entry. Invalid dates and skipped DST times are rejected. An unchanged instant
 retains its seconds, milliseconds and overlap occurrence; an edited ambiguous time uses the first
@@ -385,7 +383,3 @@ gates entity resolution; disabled Angular routes issue no business requests.
 
 See [architecture](architecture.md), [development](development.md) and
 [testing](../testing.md) for current behavior and validation commands.
-
-## Background device configuration reads
-
-Deprecated Karma integration: [historical Fleet integration index](../archive/karma/fleet.md#background-device-configuration-reads).

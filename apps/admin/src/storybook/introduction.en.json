@@ -3,8 +3,7 @@
   "intro": "holita admin helps you follow trucks, review trips and faults, and manage your fleet and devices. The Storybook tree follows the admin menu in the same order; pages opened from a menu item sit underneath it.",
   "review": "Choose English or Bulgarian with Language in the Storybook toolbar. Theme and the phone viewport let you review the same screen in a different appearance or width. Open a state, then use its controls to explore.",
   "sourcesTitle": "What each menu item does",
-  "sourcesNote": "Badges describe the data available in the admin today. Storybook itself uses fixed examples: it does not contact Karma or send commands to trucks. Fleet records and preferences are stored in holita; this review uses a demo fleet.",
-  "karma": "Real data from Karma",
+  "sourcesNote": "Storybook uses fixed examples and does not contact live services or send commands to trucks. Fleet records and preferences are stored in holita.",
   "demo": "Demo data",
   "entries": {
     "overview": "See the fleet totals and recent activity from demo telemetry.",
@@ -14,30 +13,9 @@
     "drivers": "Manage driver records and assignments in holita; scorecards use demo telemetry.",
     "devices": "Manage tracking-device records and vehicle assignments in holita.",
     "maintenance": "Plan and record service work for the selected fleet in holita.",
-    "karma-cars": "Open trucks from the connected Karma account, then review their trips, location, events, eData, diagnostics and device settings.",
-    "karma-administration": "Read users, roles, projects, time zones and API information from the connected Karma account.",
     "vehicle-groups": "Organize the selected fleet’s vehicles into groups stored in holita.",
-    "general": "Choose the fleet name, units and time zone, stored in holita.",
-    "karma-monitoring": "See truck connectivity, retained fault reports and the Branch event log. Default retention is 10 days.",
-    "karma-settings": "Set monitoring intervals, fault reads and log retention for the selected Branch."
+    "general": "Choose the fleet name, units and time zone, stored in holita."
   },
-  "statusTitle": "Device settings: what is proven as of 2 November 2026",
-  "provenTitle": "Proven on a real truck",
-  "proven": [
-    "Configuration read.",
-    "Interval change on CB1147TP: parameter 662 changed from 30 to 60 seconds.",
-    "Diagnostic history displayed three real faults.",
-    "Five real 411 connection reports were received. This proves receiving reports; requesting the check from the admin still needs a real-truck trial."
-  ],
-  "unprovenTitle": "Implemented, awaiting a real-truck trial",
-  "unproven": [
-    "Adding a parameter through the admin.",
-    "Reading rules and changing a rule.",
-    "Requesting the 411 connection check from the admin."
-  ],
-  "logger": "Fault logger read: the truck answers “not acknowledged”, so no faults are retrieved this way. The three proven faults came from diagnostic history.",
-  "settingsLink": "Open device settings",
-  "diagnosticsLink": "Open real-truck Diagnostics examples",
   "reportTitle": "How to report a problem",
   "report": "Send the full story title from the sidebar, explain what looks wrong or what you expected, and attach a screenshot. Include the Language, Theme and viewport you used.",
   "buildingBlocks": "Shared building blocks",

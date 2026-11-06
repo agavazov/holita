@@ -113,7 +113,6 @@ const detailDevice: WithTypename<AdminControlCenterDeviceQuery['fleetDevice']> =
     },
   },
   routingHealth: null,
-  latestRecoveryAttempt: null,
   ermState: {
     __typename: 'ErmUnitState',
     unitId: fixtureDevice.imei,
@@ -191,18 +190,6 @@ const reportingDevice: typeof detailDevice = {
 };
 graphqlFixture(AdminControlCenterDeviceDocument, (variables) => ({
   fleetDevice: variables.string('id') === reportingDeviceId ? reportingDevice : detailDevice,
-  fleetKarmaMonitoringTrucks: {
-    __typename: 'FleetKarmaMonitoringTruckPage',
-    items: [
-      {
-        __typename: 'FleetKarmaMonitoringTruck',
-        id: 'karma-truck',
-        karmaDeviceId: fixtureDevice.imei,
-        online: false,
-        lastDataAt: '2026-10-20T07:59:00.000Z',
-      },
-    ],
-  },
 }));
 const detailEvents: WithTypename<AdminControlCenterEventsQuery['fleetDevice']['ermEvents']> = {
   __typename: 'ErmEventsPage',

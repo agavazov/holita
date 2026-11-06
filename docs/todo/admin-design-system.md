@@ -7,9 +7,7 @@ belong to the [Fleet implementation index](../discocan/fleet.md) and
 [Discocan architecture](../discocan/architecture.md).
 
 This backlog owns frontend and release work; the
-[backend backlog](admin-design-system-backend.md) owns API and provider work. Historical review
-corrections and the deprecated Karma device-management proposal are archived in
-[review corrections](../archive/karma/review-corrections-and-karma-management.md). Keep only pending work here.
+[backend backlog](admin-design-system-backend.md) owns API and provider work. Keep only pending work here.
 
 ## Provider integrations
 
@@ -42,7 +40,6 @@ These require later product scope:
   decision and scope-retirement coverage.
 - Shared account identity and a real notification feed after their contracts/providers exist;
   do not synthesize either from the current Tenant or Fleet business counts.
-- Remove `styles/_legacy-karma.scss` after its remaining consumers are gone.
 
 Domain features belong to the [backend backlog](admin-design-system-backend.md#deferred-domain-work).
 Choose checks with [testing](../testing.md).

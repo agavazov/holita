@@ -45,7 +45,7 @@ export const MAP_PAGE_TYPE = new InjectionToken<MapPageType>('Map page type', {
 
 function storedVisibility(page: MapPageType): boolean {
   try {
-    const stored = localStorage.getItem(`holita.karma.map.${page}`);
+    const stored = localStorage.getItem(`holita.admin.map.${page}`);
     if (stored === 'shown' || stored === 'hidden') {
       return stored === 'shown';
     }
@@ -73,7 +73,7 @@ interface MapPoint {
 })
 export class MapPreview {
   readonly pageType = input(inject(MAP_PAGE_TYPE));
-  protected readonly contentId = `karma-map-${String(nextMapId++)}`;
+  protected readonly contentId = `holita-map-${String(nextMapId++)}`;
   protected readonly expanded = linkedSignal(() => storedVisibility(this.pageType()));
   private readonly activated = linkedSignal(() => storedVisibility(this.pageType()));
 
@@ -84,7 +84,7 @@ export class MapPreview {
       this.activated.set(true);
     }
     try {
-      localStorage.setItem(`holita.karma.map.${this.pageType()}`, expanded ? 'shown' : 'hidden');
+      localStorage.setItem(`holita.admin.map.${this.pageType()}`, expanded ? 'shown' : 'hidden');
     } catch {
       /* The in-memory choice still works when storage is unavailable. */
     }

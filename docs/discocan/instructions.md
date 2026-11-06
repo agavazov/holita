@@ -48,8 +48,7 @@ code is the reference for behavior details.
   - Never automatically replay an ambiguous submission, and never expose arbitrary command
     strings.
   - An interval change preserves captured definition bytes except the interval bytes.
-    A one-rule change preserves all unrelated records; unsupported rule expressions stay opaque.
-  - Follow the [operation contract](../archive/karma/architecture.md#background-device-configuration-reads).
+  - Follow the [ERM operator contract](development.md#erm-device-server).
 - The [Simple eData vendor catalog](erm-resources/simple-edata-catalog/README.md) is shared
   manufacturer reference data scoped by catalog version, without Tenant/Branch columns.
 
@@ -58,7 +57,6 @@ code is the reference for behavior details.
 - Follow [holita-admin-development](../../.agents/skills/holita-admin-development/SKILL.md) and the
   [admin design-system skill](../../.agents/skills/holita-admin-design-system/SKILL.md). Framework
   conventions come from [angular-developer](../../.agents/skills/angular-developer/SKILL.md).
-  Karma pages keep their legacy classes only through `styles/_legacy-karma.scss`.
 - Keep standalone Angular and Component → concrete feature service → Apollo with generated
   TypedDocumentNodes through the actual Gateway. Do not add generic CRUD, facades, repositories,
   duplicate API models or duplicate business screens.
@@ -71,22 +69,3 @@ code is the reference for behavior details.
   - Add another feature only when explicitly requested.
 - Devices require a 15-digit string IMEI that is globally unique: one physical unit belongs to one
   Branch. Vehicle assignment is optional and, when set, must belong to the same Tenant/Branch.
-
-## Karma Client
-
-Deprecated, view-only until holita recreates the required functions. Read the
-[Karma archive](../archive/karma/README.md) only for tasks that need its historical contracts.
-
-- `apps/karma-client` owns the external Karma account connection and its read-only `karma*`
-  queries. It is an independent host process with no database or Fleet implementation imports.
-- Data from the configured account is intentionally shared across every authenticated Tenant and
-  Branch.
-  - Verify the signed session before any upstream access.
-  - Never use Branch context to filter.
-- Keep Karma credentials and session IDs on the server.
-  - Bound every request.
-  - Renew a rejected upstream session at most once.
-  - Sanitize external failures, and do not expose arbitrary upstream paths.
-- The admin's Karma section stays usable without Fleet.
-  - Preserve source values, null/zero distinctions and original IDs.
-  - Do not invent units, totals or meanings.

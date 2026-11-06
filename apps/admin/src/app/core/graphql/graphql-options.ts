@@ -44,9 +44,7 @@ export function graphqlOptions(
   });
   return {
     link: ApolloLink.from([link, errors, httpLink.create({ uri })]),
-    cache: new InMemoryCache({
-      typePolicies: { KarmaEdataParameter: { keyFields: false } },
-    }),
+    cache: new InMemoryCache(),
     defaultOptions: {
       watchQuery: { fetchPolicy: 'cache-and-network', notifyOnNetworkStatusChange: true },
     },

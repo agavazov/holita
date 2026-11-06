@@ -23,8 +23,6 @@ Keep colors, spacing scale, radii, shadows and breakpoints central. Component SC
 `var(--p-*)`/`--p-app-*`, shared pattern classes and breakpoint mixins; no literal colors,
 `.app-dark` selectors or Sakai aliases. Component-specific dimensions may stay local.
 Never use shell classes in feature code. Compiled component CSS warns at 4 kB and fails at 8 kB.
-Karma is deprecated, view-only; its historical presentation is in the
-[Karma archive](archive/karma/README.md).
 
 ## Theme
 
@@ -190,7 +188,6 @@ Keep rejected drafts editable and focus their first invalid field. Never expose 
 
 `holita-source-context` presents provenance, period, coverage and availability; it owns no fetching
 or actions. Keep source identity, retrieval and event clocks, gaps and missing fields distinct.
-Historical Karma-specific source contracts are in the [archive](archive/karma/architecture.md).
 
 ### Table conventions
 
@@ -283,7 +280,7 @@ the speed reference generates no alert or device command.
 Run `npm run storybook:admin` on 11001. Review real shared components with fixed fixtures;
 stories are not a backend or an automatic test suite. No play functions or story runner.
 Use `Admin/<menu group>/<menu item>[/<sub-page>]` in the navigation's English label/order;
-shared stories belong under `Design System`. Deprecated Karma stories remain reference only.
+shared stories belong under `Design System`.
 
 Keep representative default/loading/empty/error/missing-scope/narrow/workflow states, aiming for
 at most eight per screen. Use Language, Theme, Brand, Density and viewport toolbar globals instead

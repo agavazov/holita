@@ -50,7 +50,6 @@ test('compiled Angular discovers branches and reads Vehicles through the real ga
     'Monitoring',
     'Fleet',
     'Settings',
-    /^Karma Client/,
   ]);
   await expect(page.getByRole('link', { name: 'Branches', exact: true })).toHaveCount(0);
   await page.getByRole('link', { name: 'Vehicles', exact: true }).click();
@@ -84,7 +83,6 @@ test('compiled Angular discovers branches and reads Vehicles through the real ga
     'Наблюдение',
     'Автопарк',
     'Настройки',
-    /^Karma Client/,
   ]);
   await page.getByRole('link', { name: 'Устройства', exact: true }).click();
   await expect(page).toHaveURL(`${app.url}/bg/${branchA.id}/fleet/devices`);

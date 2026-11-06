@@ -8,10 +8,6 @@ Pending work and planned tasks, separate from implemented product documentation.
 - [Admin backend follow-ups](admin-design-system-backend.md): unresolved provider integrations.
 - [Instant tasks](_instant-tsks.md): short one-line tasks.
 
-Karma is deprecated, view-only. Former Karma backlogs and interface/API research are in the
-[reference archive](../archive/karma/README.md), not active delivery plans. Open ERM questions
-have moved to the roadmap.
-
 Use an existing component backlog before adding another description. Larger plans use descriptive
 Markdown files here. Write in English, distinguish proposals from implemented behavior and remove
 completed/cancelled tasks. Keep product documentation in

@@ -1,12 +1,12 @@
 import { spawn, execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
 import { config } from 'dotenv';
-import { createKarmaFixture } from './karma-fixture.mjs';
 import pg from 'pg';
 import { workspaceRoot } from './contracts.mjs';
 
@@ -335,7 +335,7 @@ async function insertErmRecords(databaseUrl: string, schemaName: string) {
 
 async function startRouter(options: {
   adminOrigin: string;
-  subgraphUrls: { core: string; fleet: string; 'karma-client': string; 'erm-server': string };
+  subgraphUrls: { core: string; fleet: string; 'erm-server': string };
 }) {
   const cwd = join(workspaceRoot, 'apps/gateway');
   const binary = join(cwd, 'router/dist/router');
@@ -367,7 +367,6 @@ async function startRouter(options: {
         ROUTER_HEALTH_PORT: String(healthPort),
         CORE_GRAPHQL_URL: options.subgraphUrls.core,
         FLEET_GRAPHQL_URL: options.subgraphUrls.fleet,
-        KARMA_CLIENT_GRAPHQL_URL: options.subgraphUrls['karma-client'],
         ERM_SERVER_GRAPHQL_URL: options.subgraphUrls['erm-server'],
         ADMIN_ORIGIN: options.adminOrigin,
       },
@@ -569,9 +568,7 @@ async function observeRequests(target: string) {
   };
 }
 
-export async function createFederationFixture(
-  options: { adminOrigin?: string; deviceOperations?: boolean } = {},
-) {
+export async function createFederationFixture(options: { adminOrigin?: string } = {}) {
   config({
     path: [
       join(workspaceRoot, 'apps/core/.env'),
@@ -610,9 +607,7 @@ export async function createFederationFixture(
     const ermDatabase = await prepareDatabase('erm');
     cleanup.push(ermDatabase.close);
     await insertErmRecords(ermDatabase.databaseUrl, ermDatabase.schema);
-    const captureParent = join(workspaceRoot, '.references/review');
-    await mkdir(captureParent, { recursive: true });
-    const captureDirectory = await mkdtemp(join(captureParent, 'erm-federation-'));
+    const captureDirectory = await mkdtemp(join(tmpdir(), 'holita-erm-federation-'));
     cleanup.push(() => rm(captureDirectory, { recursive: true, force: true }));
     const ermServer = await startApplication('erm-server', {
       ERM_DATABASE_URL: ermDatabase.url,
@@ -628,16 +623,6 @@ export async function createFederationFixture(
     cleanup.push(core.stop);
     const coreObserver = await observeRequests(core.url);
     cleanup.push(coreObserver.close);
-    const internalToken = 'holita-fixture-device-configuration-token';
-    const karma = await createKarmaFixture();
-    cleanup.push(karma.close);
-    const karmaClient = await startApplication('karma-client', {
-      KARMA_API_URL: karma.url,
-      KARMA_USER: 'fixture-user',
-      KARMA_PASSWORD: 'fixture-password',
-      KARMA_INTERNAL_TOKEN: internalToken,
-    });
-    cleanup.push(karmaClient.stop);
     const fleetEnv = {
       ADMIN_ORIGINS: options.adminOrigin ?? 'http://127.0.0.1:11000',
       ADMIN_ORIGIN: options.adminOrigin ?? 'http://127.0.0.1:11000',
@@ -645,10 +630,6 @@ export async function createFederationFixture(
       CORE_GRAPHQL_URL: coreObserver.url,
       // Explicit values override a developer's apps/fleet/.env.
       FLEET_ENABLED: 'true',
-      FLEET_DEVICE_OPERATIONS_ENABLED: String(options.deviceOperations ?? false),
-      FLEET_DEVICE_CONFIGURATION_WRITES_ENABLED: String(options.deviceOperations ?? false),
-      FLEET_KARMA_INTERNAL_URL: new URL(karmaClient.url).origin,
-      KARMA_INTERNAL_TOKEN: internalToken,
     };
     const fleet = await startApplication('fleet', fleetEnv);
     cleanup.push(fleet.stop);
@@ -657,7 +638,6 @@ export async function createFederationFixture(
     const subgraphUrls = {
       core: coreObserver.url,
       fleet: fleetObserver.url,
-      'karma-client': karmaClient.url,
       'erm-server': ermServer.url,
     };
     const adminOrigin = options.adminOrigin ?? 'http://127.0.0.1:11000';
@@ -687,10 +667,8 @@ export async function createFederationFixture(
         gateway: gateway.logs(),
         core: core.logs(),
         fleet: fleet.logs(),
-        'karma-client': karmaClient.logs(),
         'erm-server': ermServer.logs(),
       }),
-      karma,
       coreRequests: coreObserver.requests,
       setCoreResponse: coreObserver.setResponse,
       fleetUrl: fleet.url,

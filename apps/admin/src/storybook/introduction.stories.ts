@@ -6,7 +6,7 @@ import bg from './introduction.bg.json';
 import en from './introduction.en.json';
 
 type EntryId = keyof typeof en.entries;
-const entries: Record<EntryId, { story: string; source: 'karma' | 'demo' | 'stored' }> = {
+const entries: Record<EntryId, { story: string; source: 'demo' | 'stored' }> = {
   overview: { story: 'admin-monitoring-overview--default', source: 'demo' },
   alerts: { story: 'admin-monitoring-alerts--default', source: 'demo' },
   trips: { story: 'admin-monitoring-trip-log--default', source: 'demo' },
@@ -14,13 +14,6 @@ const entries: Record<EntryId, { story: string; source: 'karma' | 'demo' | 'stor
   drivers: { story: 'admin-fleet-drivers--default', source: 'demo' },
   devices: { story: 'admin-fleet-devices--default', source: 'demo' },
   maintenance: { story: 'admin-fleet-maintenance--default', source: 'demo' },
-  'karma-monitoring': { story: 'admin-karma-client-monitoring-trucks--default', source: 'stored' },
-  'karma-settings': { story: 'admin-karma-client-settings--default', source: 'stored' },
-  'karma-cars': { story: 'admin-karma-client-trucks--default', source: 'karma' },
-  'karma-administration': {
-    story: 'admin-karma-client-administration-users--default',
-    source: 'karma',
-  },
   'vehicle-groups': { story: 'admin-settings-vehicle-groups--default', source: 'demo' },
   general: { story: 'admin-settings-general--default', source: 'demo' },
 };
@@ -52,34 +45,6 @@ const entries: Record<EntryId, { story: string; source: 'karma' | 'demo' | 'stor
           }
         </ul>
       }
-      <h2>{{ text().statusTitle }}</h2>
-      <h3>{{ text().provenTitle }}</h3>
-      <ul>
-        @for (fact of text().proven; track fact) {
-          <li>{{ fact }}</li>
-        }
-      </ul>
-      <h3>{{ text().unprovenTitle }}</h3>
-      <ul>
-        @for (fact of text().unproven; track fact) {
-          <li>{{ fact }}</li>
-        }
-      </ul>
-      <p>{{ text().logger }}</p>
-      <p>
-        <a
-          [href]="link('admin-karma-client-trucks-truck-device-settings--default')"
-          target="_top"
-          >{{ text().settingsLink }}</a
-        >
-      </p>
-      <p>
-        <a
-          [href]="link('admin-karma-client-trucks-truck-diagnostics--source-reports')"
-          target="_top"
-          >{{ text().diagnosticsLink }}</a
-        >
-      </p>
       <h2>{{ text().reportTitle }}</h2>
       <p>{{ text().report }}</p>
       <h2>{{ text().buildingBlocks }}</h2>

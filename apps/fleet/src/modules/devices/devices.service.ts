@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { runFleetActions } from '../../fleet-actions.js';
 import { FleetClock } from '../../clock/fleet-clock.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
@@ -14,7 +8,6 @@ import type {
   FleetDevicePage,
   FleetDeviceRouting,
   FleetDeviceRoutingHealth,
-  FleetRecoveryAttempt,
   FleetDeviceSortField,
   FleetDeviceActionResult,
   FleetDeviceSummary,
@@ -58,17 +51,11 @@ import { deviceConditions } from './device-filter.js';
 import { deviceStatus } from './device-state.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { ermTelemetryEnabled } from '../erm-telemetry/erm-telemetry.jobs.js';
-import { ermHealthEnabled } from '../karma-monitoring/karma-monitoring.config.js';
 
 export type DeviceResult = Omit<FleetDevice, 'branch'>;
 type StoredDevice = Omit<
   DeviceResult,
-  | 'lastReportedAt'
-  | 'status'
-  | 'routing'
-  | 'routingHealth'
-  | 'latestRecoveryAttempt'
-  | 'diagnostics'
+  'lastReportedAt' | 'status' | 'routing' | 'routingHealth' | 'diagnostics'
 >;
 
 const DEVICE_MODELS = Object.values(FleetDeviceModel);
@@ -202,57 +189,55 @@ export class DevicesService {
     return { matches: device?.imei === body.imei };
   }
 
-  private async routing(
-    scope: FleetScope,
-    rows: readonly DeviceRow[],
-  ): Promise<
-    Map<
-      string,
-      {
-        routing: FleetDeviceRouting | null;
-        routingHealth: FleetDeviceRoutingHealth | null;
-        latestRecoveryAttempt: FleetRecoveryAttempt | null;
-      }
-    >
+  private routing(rows: readonly DeviceRow[]): Map<
+    string,
+    {
+      routing: FleetDeviceRouting | null;
+      routingHealth: FleetDeviceRoutingHealth | null;
+    }
   > {
     if (!ermTelemetryEnabled() || !rows.length) {
       return new Map();
     }
-    const imeis = rows
-      .filter((row) => row.ermCursor?.lastReceivedAt != null)
-      .map((row) => row.imei);
-    if (!imeis.length) {
-      return new Map();
-    }
-    const now = this.clock.now();
-    const healthEnabled = ermHealthEnabled();
+    const freshAfter = this.clock.now().getTime() - 70 * 60_000;
     return new Map(
-      (await this.devices.routing(scope, imeis)).map((truck) => [
-        truck.karmaDeviceId,
-        {
-          routing: truck.routing,
-          routingHealth:
-            !healthEnabled ||
-            (truck.routing === null &&
-              truck.backupSince === null &&
-              truck.lastBackupEndedAt === null)
-              ? null
-              : {
-                  backupSince: truck.backupSince,
-                  lastBackupStartedAt: truck.lastBackupStartedAt,
-                  lastBackupEndedAt: truck.lastBackupEndedAt,
-                  backupSeconds:
-                    truck.backupSeconds +
-                    (truck.backupSince === null
-                      ? 0
-                      : Math.max(
-                          0,
-                          Math.floor((now.getTime() - truck.backupSince.getTime()) / 1000),
-                        )),
-                },
-          latestRecoveryAttempt: truck.recoveryAttempts[0] ?? null,
-        },
-      ]),
+      rows.map((row) => {
+        const primaryReceivedAt = row.ermCursor?.lastReceivedAt ?? null;
+        const primaryAfterObservation =
+          primaryReceivedAt !== null &&
+          (row.routingObservedAt === null || primaryReceivedAt > row.routingObservedAt);
+        const routing: FleetDeviceRouting | null = primaryAfterObservation
+          ? primaryReceivedAt.getTime() >= freshAfter
+            ? 'HOLITA'
+            : null
+          : row.routingObservedAt !== null && row.routingObservedAt.getTime() >= freshAfter
+            ? row.routing
+            : null;
+        return [
+          row.imei,
+          {
+            routing,
+            routingHealth:
+              row.routingObservedAt === null
+                ? null
+                : {
+                    backupSince: row.backupSince,
+                    lastBackupStartedAt: row.lastBackupStartedAt,
+                    lastBackupEndedAt: row.lastBackupEndedAt,
+                    backupSeconds:
+                      row.backupSeconds +
+                      (row.backupSince === null
+                        ? 0
+                        : Math.max(
+                            0,
+                            Math.floor(
+                              (row.routingObservedAt.getTime() - row.backupSince.getTime()) / 1000,
+                            ),
+                          )),
+                  },
+          },
+        ];
+      }),
     );
   }
 
@@ -314,10 +299,8 @@ export class DevicesService {
       direction: sortDirection(args.sort?.direction, 'DESC'),
     };
     const page = await this.devices.list(scope, { offset, limit }, criteria, sort);
-    const [routing, diagnostics] = await Promise.all([
-      this.routing(scope, page.items),
-      this.diagnostics(scope, page.items),
-    ]);
+    const routing = this.routing(page.items);
+    const diagnostics = await this.diagnostics(scope, page.items);
     return {
       items: page.items.map((row) => ({
         ...toDevice(row),
@@ -325,7 +308,6 @@ export class DevicesService {
         lastReportedAt: row.lastReportedAt,
         routing: routing.get(row.imei)?.routing ?? null,
         routingHealth: routing.get(row.imei)?.routingHealth ?? null,
-        latestRecoveryAttempt: routing.get(row.imei)?.latestRecoveryAttempt ?? null,
         diagnostics:
           row.vehicleId === null
             ? { count: 0, latest: null }
@@ -474,7 +456,7 @@ export class DevicesService {
     return this.completeOne(scope, row);
   }
 
-  /** Telemetry keeps an IMEI snapshot; saved configuration reads protect their Device. */
+  /** Telemetry keeps an IMEI snapshot when a Device is deleted. */
   async delete(context: RequestContext, id: string): Promise<DeviceResult> {
     const scope = requireScope(context);
     const row = await this.deleteStored(scope, uuid(id, 'id'));
@@ -486,9 +468,6 @@ export class DevicesService {
     try {
       row = await this.devices.delete(scope, recordId);
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-        throw new ConflictException('Device has saved configuration read history');
-      }
       this.writeError(error);
     }
     return row;
@@ -502,11 +481,11 @@ export class DevicesService {
     const pairs = rows.flatMap((row) =>
       row.vehicleId === null ? [] : [{ vehicleId: row.vehicleId, imei: row.imei }],
     );
-    const [reported, asOf, settings, routing, diagnostics] = await Promise.all([
+    const routing = this.routing(rows);
+    const [reported, asOf, settings, diagnostics] = await Promise.all([
       this.telemetry.lastReported(scope, pairs),
       this.telemetry.asOf(scope),
       this.settings.read(scope),
-      this.routing(scope, rows),
       this.diagnostics(scope, rows),
     ]);
     return rows.map((row) => {
@@ -518,7 +497,6 @@ export class DevicesService {
         ...toDevice(row),
         routing: routing.get(row.imei)?.routing ?? null,
         routingHealth: routing.get(row.imei)?.routingHealth ?? null,
-        latestRecoveryAttempt: routing.get(row.imei)?.latestRecoveryAttempt ?? null,
         lastReportedAt,
         status: deviceStatus(row.vehicleId, lastReportedAt, asOf, settings.notReportingHours),
         diagnostics:

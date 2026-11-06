@@ -1,10 +1,10 @@
 # holita
 
-holita is a strict TypeScript npm-workspaces repository with Nx tasks and six host
-applications: Angular admin, native Apollo Router gateway and NestJS core, fleet, karma-client and erm-server services.
+holita is a strict TypeScript npm-workspaces repository with Nx tasks and five host
+applications: Angular admin, native Apollo Router gateway and NestJS core, fleet and erm-server services.
 The admin uses the holita [design system](docs/admin-design-system.md) on PrimeNG and
 Bulgarian/English catalogs.
-Its modules are Vehicles, Devices, shared Karma truck data and reference views, and ERM device-server inspection and controlled settings. Core provides Branch discovery; Gateway
+Its modules are Fleet management and ERM device-server inspection and controlled settings. Core provides Branch discovery; Gateway
 exposes their schema-first federated GraphQL API. PostgreSQL is the only container.
 
 Documentation separates [Discocan fleet telemetry](docs/discocan/README.md) from
@@ -69,27 +69,6 @@ For richer local Fleet data, run `npm run db:seed:fleet-demo` after setup/migrat
 running. It inserts only missing synthetic Discordia records and preserves existing edits.
 The [demo seed guide](docs/discocan/development.md#fleet-demo-data) explains its fixed anchor and guards.
 
-Karma Client → Users/Roles provides read-only account search, local paging and full user
-details. Role descriptions and numeric flags are shown as source values.
-Karma Client → Trucks lists all cars from one configured Karma account for every signed-in
-Tenant/Branch at `/bg/karma-client/cars` or `/en/karma-client/cars`. Configure the ignored
-`apps/karma-client/.env` using the Karma Client and shared demo entries in the
-[single root environment reference](.env.example).
-Click a registration number to open read-only truck details; these pages support Refresh. Open eData from truck details for the latest 50 messages,
-25/50/100 pagination, optional UTC/parameter-ID filters and complete message detail.
-Open Location from truck details to inspect the last-known message and coordinates; valid
-coordinates provide a map link in a new tab. Projects, Time zones and API information have
-separate Karma menu entries. Reference lists support search and 25/50/100 pagination
-(default 50); truck list/details show reference names beside their original IDs.
-Trips and Events open separate truck histories with latest-50 pagination, optional date
-filters and complete row details; Events also supports original event-code filters.
-Driving profile shows nine category scores/weights for a default seven-day period, with
-editable bounds. Trip/profile filters use API wall-clock values with an unspecified
-provider timezone; metrics and event codes retain their original values.
-Karma has no persistence or Fleet synchronization.
-Karma is independent of the Branch menu and `fleetEnabled`. See
-[Karma configuration](docs/archive/karma/development.md#karma-client).
-
 The shell supports keyboard/mobile navigation, a persisted sidebar rail and persisted light/dark
 themes. The startup `fleetEnabled` flag gates both business modules; Branch discovery stays available.
 The [admin design system](docs/admin-design-system.md) describes the theme, shell and patterns.
@@ -97,7 +76,7 @@ To start it separately, `npm run storybook:admin` serves the [admin Storybook](d
 `http://127.0.0.1:11001` with synthetic data and no backend. Storybook is a development and
 review tool; it has no automated tests.
 
-Gateway, Core, Fleet and Karma Client listen on loopback ports 11010, 11011, 11013 and 11014; PostgreSQL uses 11084. `dev` waits for PostgreSQL health and generates admin GraphQL artifacts once before starting the five applications and Storybook. Ctrl+C stops
+Gateway, Core and Fleet listen on loopback ports 11010, 11011 and 11013; PostgreSQL uses 11084. `dev` waits for PostgreSQL health and generates admin GraphQL artifacts once before starting the four web/API applications and Storybook. Ctrl+C stops
 the native Router, Node applications and Storybook together. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
 and seeding are explicit commands. The seed inserts RentalSofia, Discordia and Sandbox Branches, two sample Vehicles and one Device without replacing existing records.
 
@@ -106,7 +85,7 @@ Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). `{ tenants { id name } }`
 Router exposes `/health` on its separate loopback port 11016; the subgraphs expose `/health`
 on their normal ports. Health is independent of database/downstream availability.
 
-To start one application, use `dev:admin`, `dev:gateway`, `dev:core`, `dev:fleet`, `dev:karma-client`
+To start one application, use `dev:admin`, `dev:gateway`, `dev:core`, `dev:fleet`
 or `dev:erm-server`. ERM Server defaults to HTTP health on loopback 11015 and device TCP on
 all interfaces at 11500. It is outside `npm run dev` and `npm run kill`; run its compiled output
 as an independent service to retain device connections during web/API restarts.

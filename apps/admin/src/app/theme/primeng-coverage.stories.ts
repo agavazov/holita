@@ -161,7 +161,7 @@ class PrimeNgControls {
       <p style="max-inline-size: 16rem">Open alarms in the branch as of the data timestamp.</p>
     </p-popover>
     <p-dialog
-      header="Details (Karma)"
+      header="Details"
       [visible]="true"
       [modal]="false"
       [draggable]="false"
@@ -169,7 +169,7 @@ class PrimeNgControls {
       closeAriaLabel="Close"
       position="topleft"
     >
-      <p>Dialogs remain for Karma Client only; Fleet edits in drawers.</p>
+      <p>Dialog control preview. Fleet edits open in drawers.</p>
     </p-dialog>
     <p-drawer
       header="Navigation"

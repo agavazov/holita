@@ -3,8 +3,7 @@
 Remaining work to run every StarLink unit on holita, verify its data and commands, and retire
 Karma. Follow [ADR 0007](../architecture/decisions/0007-erm-gateway-and-api-processes.md),
 the [operator guide](../discocan/development.md#erm-device-server) and the retained
-[ERM sources](../discocan/erm-resources/README.md). Karma is deprecated and view-only;
-its [archive](../archive/karma/README.md) is reference material, not an active delivery backlog.
+[ERM sources](../discocan/erm-resources/README.md).
 
 The delivery baseline includes Fleet `serialNumber`/`edataModule`, the ten registered trucks,
 `ERM_ROLE=api` on 11017, the event catalog/categories/severities, federated Device state/history,
@@ -68,11 +67,6 @@ reopen them as roadmap tasks.
 
 ## Open engineering work
 
-- **Automatic backup recovery parking coverage:** the permanent read-only listener and
-  disabled-by-default Fleet recovery job accept only a latest stationary ignition-off event
-  (05), aged 10–70 minutes. Establish a broader verified ignition-state contract for ordinary
-  Karma reports before qualifying those reports; unknown state must continue to prevent `98`.
-
 - **Named-person operator authorization:** the durable six-read queue, expiry/cancellation and
   scoped configuration/snapshot audit are implemented. The verified demo session identifies only
   a Tenant. Introduce named identities and operator roles before production; do not present the
@@ -116,11 +110,7 @@ reopen them as roadmap tasks.
   authentication where needed, command delivery and eData replies.
 - Before removing Karma backup, run a second holita endpoint on another host and prove failover
   on L1. Prove the Simple SMS emergency route and write the on-call recovery procedure.
-- Run one unit for 30 days without Karma before moving the others. Retire Karma pulls per truck
-  only after holita supplies equivalent verified data and control.
-- When holita recreates every needed function, archive `apps/karma-client` and the Karma-based
-  Fleet paths with their behavior record. Keep the current code only for viewing until then;
-  the archived documentation does not authorize renewed Karma feature work.
+- Run one unit for 30 days without Karma before moving the others.
 - Deploy outside the development host: independent gateway/API supervision, database backups and
   restore, raw frame/capture retention, protected internal API, public TCP routing and the
   verified TLS option (`0053=2`). PostgreSQL remains the only containerized infrastructure.

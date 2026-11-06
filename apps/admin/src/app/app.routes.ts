@@ -1,7 +1,6 @@
 import { inject } from '@angular/core';
 import { Router, type Routes } from '@angular/router';
 import { fleetRoutes } from './features/fleet/fleet.routes';
-import { karmaRoutes } from './features/karma-client/karma.routes';
 import { controlCenterRoutes } from './features/control-center/control-center.routes';
 
 export const routes: Routes = [
@@ -15,11 +14,6 @@ export const routes: Routes = [
     ],
     loadComponent: () =>
       import('./workspace/admin-workspace').then((module) => module.AdminWorkspace),
-    children: [
-      ...controlCenterRoutes,
-      ...karmaRoutes,
-      ...fleetRoutes,
-      { path: '**', redirectTo: '' },
-    ],
+    children: [...controlCenterRoutes, ...fleetRoutes, { path: '**', redirectTo: '' }],
   },
 ];

@@ -22,10 +22,3 @@ export function deviceLabel(device: {
 }): string {
   return device.vehicle?.licensePlate ?? device.imei;
 }
-
-/** Fleet's Karma monitoring truck of each IMEI (Karma's device ID is the unit's IMEI). */
-export function karmaByImei<T extends { readonly karmaDeviceId: string }>(page: {
-  readonly items: readonly T[];
-}): ReadonlyMap<string, T> {
-  return new Map(page.items.map((truck) => [truck.karmaDeviceId, truck]));
-}

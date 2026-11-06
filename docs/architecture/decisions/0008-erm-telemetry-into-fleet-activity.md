@@ -28,7 +28,7 @@ message broker would add infrastructure beside PostgreSQL.
 ## Decision
 
 **Fleet pulls; erm-server serves.** A Fleet background job (`@nestjs/schedule` with
-`waitForCompletion`, like Karma monitoring) runs every 30 seconds when
+`waitForCompletion`) runs every 30 seconds when
 `FLEET_ERM_TELEMETRY_ENABLED=true` (default off), against `ERM_TELEMETRY_URL` (default
 `http://127.0.0.1:11017`). For each registered Device it requests that IMEI's events after the
 Device's cursor. Raw ERM telemetry stays provider-level, without Tenant/Branch scope, and
@@ -113,13 +113,11 @@ Addresses, idle time, fuel, scores and the driver stay null until measured. Bina
 reports decode ignition and engine state from tag `32` flags; Scouts' text events carry
 `#IGN#` or `#ENG#` when configured.
 
-**Karma until each truck is routed.** Fleet imports only what erm-server receives. A truck still on
-Karma, or reporting to its Karma backup (0051/0052) for a while, has no ERM events: its Fleet
-activity stays empty or shows the gap, and the Karma Client section and Fleet's Karma monitoring
-(`karmaMonitoring*` tables) remain its source. Routing a truck starts its ERM activity. Fleet
-status samples and trips never store Karma-derived values. The separate monitoring job creates
-`UNIT_ON_BACKUP` observations by comparing Karma and holita receipts; these are routing evidence,
-not imported vehicle samples. Karma pulls retire per truck only when the ERM roadmap allows.
+**Fleet activity follows ERM receipts.** Fleet imports only what erm-server receives. A truck
+still on Karma, or reporting to its Karma backup (0051/0052) for a while, has no ERM events:
+its Fleet activity stays empty or shows the gap. Routing a truck starts its ERM activity.
+Fleet status samples and trips never store Karma-derived values. `UNIT_ON_BACKUP` observations
+are routing evidence, separate from imported vehicle samples.
 
 ## Consequences
 

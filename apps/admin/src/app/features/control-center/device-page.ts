@@ -58,18 +58,11 @@ import { ControlCenterApi } from './control-center-api';
 import { SmsPage } from './sms-page';
 import { DeviceSettings } from './device-settings';
 import { DeviceCommandQueue } from './device-command-queue';
-import {
-  controlCenterText,
-  deviceLabel,
-  ermLanguage,
-  karmaByImei,
-  severityTone,
-} from './control-center-text';
+import { controlCenterText, deviceLabel, ermLanguage, severityTone } from './control-center-text';
 
 export type DeviceTab =
   'overview' | 'events' | 'alarms' | 'commands' | 'parameters' | 'frames' | 'sms';
 type Device = AdminControlCenterDeviceQuery['fleetDevice'];
-type KarmaTruck = AdminControlCenterDeviceQuery['fleetKarmaMonitoringTrucks']['items'][number];
 type Events = AdminControlCenterEventsQuery['fleetDevice']['ermEvents'];
 type Commands = AdminControlCenterCommandsQuery['fleetDevice']['ermCommands'];
 type Frames = AdminControlCenterFramesQuery['fleetDevice']['ermFrames'];
@@ -175,22 +168,8 @@ export class DevicePage implements OnInit {
   readonly liveDevice = computed(() =>
     this.deviceError() && !this.state() ? undefined : this.device(),
   );
-  private readonly karmaTrucks = signal<ReadonlyMap<string, KarmaTruck>>(new Map());
-  /** Fleet's Karma monitoring of this unit, for the Karma-versus-holita cross-check. */
-  readonly karma = computed(() => {
-    const imei = this.device()?.imei;
-    return imei ? (this.karmaTrucks().get(imei) ?? null) : null;
-  });
   /** Fleet's routing state explains where the unit's data arrives. */
   readonly routing = computed(() => this.device()?.routing ?? null);
-  readonly karmaText = computed(() => {
-    const karma = this.karma();
-    const routing = this.routing();
-    const lastData = karma
-      ? interpolate(this.text().lastData, { time: this.date(karma.lastDataAt) })
-      : this.text().notInKarma;
-    return routing ? `${this.text().routing[routing]} · ${lastData}` : lastData;
-  });
   readonly healthLine = computed(() => {
     const health = this.state()?.health;
     if (!health) {
@@ -311,7 +290,6 @@ export class DevicePage implements OnInit {
           this.deviceError.set(result.error ?? null);
           if (result.dataState === 'complete' && (!result.error || !this.device())) {
             this.device.set(result.data.fleetDevice);
-            this.karmaTrucks.set(karmaByImei(result.data.fleetKarmaMonitoringTrucks));
             this.deviceUpdatedAt.set(new Date().toISOString());
           }
         },

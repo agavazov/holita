@@ -30,7 +30,7 @@ HMAC-SHA256 session with an eight-hour expiry; all subgraphs independently verif
 Authenticated requests carry `Authorization: Bearer <session>`; Fleet also needs `x-branch-id`.
 A caller-supplied tenant header never selects identity.
 
-Core, Fleet, Karma Client and ERM API use the same `DEMO_AUTH_SECRET` (at least 32 characters).
+Core, Fleet and ERM API use the same `DEMO_AUTH_SECRET` (at least 32 characters).
 `DEMO_AUTH_ENABLED=false` disables discovery/login/sessions. Production requires explicit demo
 enablement and a valid secret. This login deliberately permits anyone to choose any Tenant;
 production needs real identity, membership, permissions and revocation.
@@ -116,14 +116,6 @@ query VehiclesWithBranches {
 The [standard list contract](architecture.md#standard-list-contract) defines search, filters,
 sorting and bounds. Use feature SDL and generated operations for other queries/mutations,
 then follow [generation/validation](../../AGENTS.md#nestjs) after contract changes.
-
-## Karma Client
-
-Deprecated, view-only: [historical account setup and truck workflows](../archive/karma/development.md#karma-client).
-
-## Background device configuration reads
-
-Deprecated Karma integration: [historical configuration setup and workflow](../archive/karma/development.md#background-device-configuration-reads).
 
 ## ERM relay
 
@@ -594,16 +586,6 @@ reply and closes; it never writes routing or forwards a session to Karma. It rec
 `ALREADY_HOLITA` (65.108.137.165:11500) or `NEEDS_OPERATOR`, including a timeout, disconnect or
 unexpected destination. Deploying it does not require a gateway restart. Apply the additive ERM
 migration before deploying the recovery listener or the API that displays its results.
-
-`FLEET_ERM_RECOVERY_ENABLED=true` enables automatic requests in Fleet's existing Karma monitoring
-job, with monitoring and ERM imports enabled. It sends only `98,1,65.108.137.165,11510`, after
-recording the attempt, at most once per unit per two hours. Eligibility deliberately requires the
-latest Karma record to be a stationary ignition-off event (05), at least ten minutes old and no
-more than seventy minutes old. Ordinary reports and unknown ignition do not qualify. This uses
-the existing status poll. Acceptance means Karma queued the request, not that the unit returned;
-the Device page shows the attempt and the recovery session outcome separately. An uncertain
-submission is retained and never automatically replayed. Check the next ordinary primary
-connection; unexpected settings or missing replies need an operator.
 
 ### Vehicle eData history
 

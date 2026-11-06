@@ -5,7 +5,7 @@ The process lifecycle, Branch access and operator command path are refined by
 
 ## Context
 
-ERM StarLink devices push raw TCP frames to a public port. Router, Core, Fleet and Karma Client
+ERM StarLink devices push raw TCP frames to a public port. Router, Core and Fleet
 serve HTTP/GraphQL and follow the web/API process lifecycle. Adding a device listener there would
 drop long-lived truck connections during ordinary application restarts. Raw units also arrive
 before any Fleet Vehicle or Tenant/Branch association exists.

@@ -30,8 +30,6 @@ import {
 } from './graphql-fixtures';
 import { clearSession, defaultBranchId, seedSession } from './session-fixtures';
 import './general-settings-fixtures';
-import './karma-fixtures';
-import './device-configuration-fixtures';
 
 /** Per-story fixture options, passed as `parameters.holita`. */
 export interface StoryFixtures {

@@ -58,7 +58,6 @@ export const test = base.extend<
       demoSession: FederationFixture['demoSession'];
       branchA: Branch;
       branchB: Branch;
-      karma: FederationFixture['karma'];
     };
     demoSignedIn: boolean;
   },
@@ -79,7 +78,6 @@ export const test = base.extend<
   // One backend serves all tests of a worker; each test signs in to its own new Tenant.
   app: async ({ backend }, use) => {
     const { federation } = backend;
-    federation.karma.reset();
     const { demoSession, branches } = await federation.createTenant(
       `Smoke tenant ${randomUUID().slice(0, 8)}`,
       ['Discordia', 'Sandbox'],
@@ -94,7 +92,6 @@ export const test = base.extend<
       demoSession,
       branchA,
       branchB,
-      karma: federation.karma,
     });
   },
   backend: [
@@ -173,7 +170,6 @@ export const test = base.extend<
         const url = `http://127.0.0.1:${String(address.port)}`;
         const federation = await createFederationFixture({
           adminOrigin: url,
-          deviceOperations: true,
         });
         try {
           gatewayUrl = federation.url;

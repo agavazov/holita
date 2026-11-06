@@ -1,6 +1,5 @@
 import type { Language } from '../../i18n/messages';
 import { fieldErrors } from '../../ui/forms/field-errors';
-import { deviceConfigurationText } from './device-operations/i18n/messages';
 import { devicesText } from './devices/i18n/messages';
 import { driversText } from './drivers/i18n/messages';
 import { fleetValidationText } from './i18n/messages';
@@ -70,12 +69,6 @@ export function fleetFieldErrors<F extends string>(
         return path === 'nextDueOn'
           ? maintenanceText(language).completion.nextDateError
           : maintenanceText(language).completion.nextOdometerError;
-      case 'CONFIGURATION_CAPACITY':
-        return text.configurationCapacity;
-      case 'CATALOG_PARAMETER_UNSUPPORTED':
-        return text.catalogParameterUnsupported;
-      case 'VALUE_UNCHANGED':
-        return deviceConfigurationText(language).editor.unchanged;
       case 'BOUNDED_PERIOD_REQUIRED':
         return text.boundedPeriodRequired;
       default:

@@ -21,7 +21,6 @@ and the PrimeNG plugin for current component APIs. Open the
     discovery, selection and routing.
   - [Login](../../../apps/admin/src/app/features/auth/login.ts) selects a Tenant, then a Branch,
     and opens Overview.
-  - Karma uses the session and language without BranchContext.
 - [FleetWorkspace](../../../apps/admin/src/app/features/fleet/fleet-workspace.ts) gates
   availability and preferences, and keys business views by session, Branch, language and resource.
 - [graphqlOptions](../../../apps/admin/src/app/core/graphql/graphql-options.ts) captures the

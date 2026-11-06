@@ -25,13 +25,13 @@ enum FleetDeviceStatus {
   IN_STOCK
 }
 
-"Observed destination of the unit's latest data."
+"Observed destination; null when the last available observation is older than 70 minutes."
 enum FleetDeviceRouting {
-  "The latest received data does not establish use of the Karma backup."
+  "The device reported to holita after the retained routing observation."
   HOLITA
-  "Karma received data more than three minutes after holita on two consecutive polls."
+  "The retained observation established use of the Karma backup."
   KARMA_BACKUP
-  "Neither holita nor Karma received data within the last 70 minutes."
+  "The retained observation established that neither destination received recent data."
   SILENT
 }
 
@@ -45,12 +45,10 @@ type FleetDevice @key(fields: "id") {
   vehicle: FleetVehicleRef
   "Unassigned means IN_STOCK; assigned devices are ONLINE when their current pair reported within the configured not-reporting hours of the Branch data clock."
   status: FleetDeviceStatus!
-  "Compares the latest data Karma and holita received, not the unit's configuration; null when the unit never reported to holita or Fleet's ERM import is disabled."
+  "A fresh ERM receipt after the retained observation establishes HOLITA. Otherwise the retained observation expires after 70 minutes; null means unknown or ERM import disabled."
   routing: FleetDeviceRouting
-  "Observed backup periods retained by Fleet monitoring; null without a routing observation."
+  "Retained backup history at the last stored routing observation; null without one."
   routingHealth: FleetDeviceRoutingHealth
-  "Latest automatic recovery intent and Karma queue outcome; acceptance does not confirm a device session."
-  latestRecoveryAttempt: FleetRecoveryAttempt
   model: FleetDeviceModel
   "ERM serial number from the unit's label; unique within the Branch."
   serialNumber: String
@@ -71,32 +69,14 @@ type FleetDevice @key(fields: "id") {
   updatedAt: DateTime!
 }
 
-enum FleetRecoveryAttemptStatus {
-  SUBMITTING
-  ACCEPTED
-  UNCERTAIN
-  FAILED
-}
-
 type FleetDeviceRoutingHealth {
-  "Start of the open observed backup period, retained until holita is observed again."
+  "Backup period open at the retained observation; does not establish the current destination."
   backupSince: DateTime
-  "Latest completed observed backup period."
+  "Latest completed backup period at the retained observation."
   lastBackupStartedAt: DateTime
   lastBackupEndedAt: DateTime
-  "Accumulated observed backup time, including the current open period."
+  "Accumulated backup seconds through the retained observation; never extended by the current clock."
   backupSeconds: Int!
-}
-
-type FleetRecoveryAttempt {
-  id: ID!
-  status: FleetRecoveryAttemptStatus!
-  requestedAt: DateTime!
-  completedAt: DateTime
-  ignitionOffAt: DateTime!
-  lastDataAt: DateTime!
-  queueIds: [String!]!
-  errorCode: String
 }
 
 "Recorded DTC and CAN faults for the current vehicle/IMEI pair; these are historical evidence, not an active-fault assertion."

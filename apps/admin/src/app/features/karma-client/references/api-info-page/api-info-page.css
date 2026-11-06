@@ -1,8 +1,0 @@
-:host {
-  display: block;
-  min-inline-size: 0;
-}
-
-.summary {
-  padding-block: var(--p-app-space-4);
-}

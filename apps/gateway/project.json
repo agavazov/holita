@@ -3,7 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "sourceRoot": "apps/gateway/router",
-  "implicitDependencies": ["core", "fleet", "karma-client", "erm-server"],
+  "implicitDependencies": ["core", "fleet", "erm-server"],
   "tags": ["type:app", "scope:gateway"],
   "targets": {
     "graphql-generate": {
@@ -28,7 +28,7 @@
       "cache": false,
       "dependsOn": [
         {
-          "projects": ["core", "gateway", "fleet", "karma-client", "erm-server"],
+          "projects": ["core", "gateway", "fleet", "erm-server"],
           "target": "build"
         }
       ],

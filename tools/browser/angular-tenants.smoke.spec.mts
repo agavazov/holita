@@ -10,7 +10,7 @@ async function signIn(page: Page, name: string, branch: string) {
   await page.getByRole('option', { name: branch, exact: true }).click();
   await page.getByTestId('demo-login').click();
 }
-test('demo login gates deep links and Karma reads, survives reload, clears on logout and isolates a second tenant', async ({
+test('demo login gates deep links and business reads, survives reload, clears on logout and isolates a second tenant', async ({
   page,
   app,
 }) => {
@@ -26,18 +26,14 @@ test('demo login gates deep links and Karma reads, survives reload, clears on lo
     if (
       request.method() === 'POST' &&
       request.url() === app.gatewayUrl &&
-      /Admin(Vehicles|Devices|Branches|FleetOverview|FleetPreferences|Karma)/.test(
+      /Admin(Vehicles|Devices|Branches|FleetOverview|FleetPreferences)/.test(
         request.postData() ?? '',
       )
     ) {
       business.push(request.headers()['authorization'] ?? 'missing');
     }
   });
-  for (const path of [
-    'karma-client/cars',
-    'karma-client/cars/41/location',
-    `${app.branchB.id}/fleet/devices/new?search=old`,
-  ]) {
+  for (const path of [`${app.branchB.id}/fleet/devices/new?search=old`]) {
     await page.goto(`${app.url}/en/${path}`);
     await expect(page.getByRole('heading', { name: 'Demo sign in', exact: true })).toBeVisible();
   }
@@ -47,7 +43,6 @@ test('demo login gates deep links and Karma reads, survives reload, clears on lo
     'true',
   );
   expect(business).toEqual([]);
-  expect(app.karma.requests).toEqual([]);
   await signIn(page, app.demoSession.tenant.name, app.branchA.name);
   await expect(page).toHaveURL(`${app.url}/en/${app.branchA.id}/fleet/overview`);
   await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();

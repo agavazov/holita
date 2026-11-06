@@ -50,12 +50,8 @@
       >
         <div class="control-center__actions">
           <holita-fleet-connection [device]="liveDevice()" />
-          <a class="app-link" [routerLink]="['/', language(), 'karma-client', 'cars']">{{
-            text().openKarma
-          }}</a>
         </div>
         <p class="app-muted">{{ text().notOnHolita }}</p>
-        <p class="app-muted">{{ text().karma }}: {{ karmaText() }}</p>
       </section>
     }
 
@@ -80,20 +76,12 @@
       </dl>
     </section>
 
-    @if (device.latestRecoveryAttempt || state()?.recovery) {
+    @if (state()?.recovery; as session) {
       <section class="app-card" [attr.aria-label]="text().recovery">
         <h2>{{ text().recovery }}</h2>
-        @if (device.latestRecoveryAttempt; as attempt) {
-          <p>{{ text().recoveryStates[attempt.status] }} · {{ date(attempt.requestedAt) }}</p>
-          @if (attempt.errorCode) {
-            <p class="app-muted">{{ attempt.errorCode }}</p>
-          }
-        }
-        @if (state()?.recovery; as session) {
-          <p>{{ text().recoveryStates[session.outcome] }} · {{ date(session.startedAt) }}</p>
-          @if (session.reason) {
-            <p class="app-muted">{{ session.reason }}</p>
-          }
+        <p>{{ text().recoveryStates[session.outcome] }} · {{ date(session.startedAt) }}</p>
+        @if (session.reason) {
+          <p class="app-muted">{{ session.reason }}</p>
         }
       </section>
     }
@@ -208,10 +196,6 @@
                           <div>
                             <dt>{{ text().alarms24h }}</dt>
                             <dd>{{ number(state.alarmsLast24h, 0) }}</dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().karma }}</dt>
-                            <dd>{{ karmaText() }}</dd>
                           </div>
                         </dl>
                         @if (state.latestEvent; as event) {

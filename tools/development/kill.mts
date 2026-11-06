@@ -10,11 +10,11 @@ if (process.platform !== 'linux') {
 
 const root = fileURLToPath(new URL('../../', import.meta.url)).replace(/\/$/, '');
 const routerBinary = resolve(root, 'apps/gateway/router/dist/router');
-const appDirectories = ['admin', 'gateway', 'core', 'fleet', 'karma-client'].map((app) =>
+const appDirectories = ['admin', 'gateway', 'core', 'fleet'].map((app) =>
   resolve(root, 'apps', app),
 );
 // Dev watchers serve dist-dev; builds, checks and production runs use dist.
-const backendEntries = ['core', 'fleet', 'karma-client'].flatMap((app) =>
+const backendEntries = ['core', 'fleet'].flatMap((app) =>
   ['dist', 'dist-dev'].flatMap((output) => [
     resolve(root, 'apps', app, output, 'main'),
     resolve(root, 'apps', app, output, 'main.js'),
@@ -42,7 +42,7 @@ for (const entry of readdirSync('/proc')) {
       args.includes('--watch');
     const group =
       args.includes(resolve(root, 'node_modules/.bin/concurrently')) &&
-      args.includes('gateway,core,fleet,karma-client,admin,storybook');
+      args.includes('gateway,core,fleet,admin,storybook');
     const admin =
       directory === appDirectories[0] &&
       (args.some((arg) => arg.startsWith('ng serve')) ||

@@ -7,10 +7,9 @@ StarLink traffic and records connections, exact frames, decoded events and comma
 keeps device sessions while its api process serves the Control center and Fleet Device fields.
 Fleet activity remains demo/manual data until telemetry ingestion is connected.
 
-**Karma is deprecated, view-only.** Its code stays in place for reference until holita recreates
-every required function. API/interface sources and historical integration guides are in the
-[Karma archive](../archive/karma/README.md), read only when needed. Active replacement work is
-tracked once in the [ERM roadmap](../todo/erm-roadmap.md).
+Device inspection, reads and controlled settings use ERM Server. Protocol and hardware references
+are in [ERM resources](erm-resources/README.md); active replacement work is tracked in the
+[ERM roadmap](../todo/erm-roadmap.md).
 
 - [Contributor instructions](instructions.md).
 - [Implemented requirements](requirements.md).

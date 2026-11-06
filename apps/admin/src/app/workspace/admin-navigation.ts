@@ -3,7 +3,7 @@ import type { NavGroup } from '../layout/navigation';
 
 /**
  * The sidebar navigation: Control center, Fleet and Settings (with a selected Branch and Fleet
- * enabled) and, last, the deprecated Karma Client.
+ * enabled).
  */
 export function adminNavigation(
   language: Language,
@@ -75,26 +75,5 @@ export function adminNavigation(
       ],
     });
   }
-  const karma = ['/', language, 'karma-client'];
-  groups.push({
-    id: 'karma-client',
-    label: text.karmaClient,
-    items: [
-      {
-        id: 'karma-monitoring',
-        label: text.monitoring,
-        icon: 'th-large',
-        link: [...karma, 'monitoring'],
-      },
-      { id: 'karma-cars', label: text.karmaTrucks, icon: 'car', link: [...karma, 'cars'] },
-      {
-        id: 'karma-administration',
-        label: text.karmaAdministration,
-        icon: 'users',
-        link: [...karma, 'administration'],
-      },
-      { id: 'karma-settings', label: text.settings, icon: 'clock', link: [...karma, 'settings'] },
-    ],
-  });
   return groups;
 }

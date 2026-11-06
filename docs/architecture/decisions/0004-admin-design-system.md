@@ -57,9 +57,7 @@ reviewed against a running backend.
 - A brand, density, token or pattern change is made once and reaches every screen; Storybook
   shows the alternatives side by side, and changing `appTheme` is the only code change needed to
   switch the application.
-- The root font size follows the browser (16 px by default). Karma Client pages use
-  `styles/_legacy-karma.scss`, the only place the old class names and Sakai variable aliases
-  survive. Remove the file only after its remaining consumers are gone.
+- The root font size follows the browser (16 px by default).
 - `light-dark()` and `color-mix()` require current evergreen browsers.
 - The connected Fleet application uses the shared views and drawers for Vehicles, Devices,
   Drivers, monitoring, Maintenance and settings

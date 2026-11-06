@@ -39,14 +39,6 @@ fragment AdminControlCenterStateFields on ErmUnitState {
     karmaRoutingWritesLast24h
   }
 }
-fragment AdminControlCenterKarmaTrucks on FleetKarmaMonitoringTruckPage {
-  items {
-    id
-    karmaDeviceId
-    lastDataAt
-    online
-  }
-}
 fragment AdminControlCenterDashboardDevice on FleetDevice {
   ...AdminFleetLiveDevice
   model
@@ -105,13 +97,6 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
       lastBackupStartedAt
       lastBackupEndedAt
       backupSeconds
-    }
-    latestRecoveryAttempt {
-      id
-      status
-      requestedAt
-      completedAt
-      errorCode
     }
     vehicle {
       id
@@ -174,9 +159,6 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
         }
       }
     }
-  }
-  fleetKarmaMonitoringTrucks(limit: 100) {
-    ...AdminControlCenterKarmaTrucks
   }
 }
 query AdminControlCenterSmsDevices($ids: [ID!]) {

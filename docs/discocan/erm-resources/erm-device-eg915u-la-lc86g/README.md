@@ -123,7 +123,7 @@ supported way for holita to operate this tracker.
 ## Relationship to holita and the supplied integration proposal
 
 The current [Discocan documentation](../../README.md) describes the implemented
-Fleet and Karma Client behavior. This hardware reference adds no ingestion
+Fleet and ERM Server behavior. This hardware reference adds no ingestion
 service, decoder, command queue, telemetry persistence or device-configuration
 workflow. It also does not establish a mapping between this unit, Karma API
 `device_id` and a Fleet Device record.

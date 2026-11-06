@@ -173,25 +173,6 @@ export class DevicesRepository {
     return { counts, latest };
   }
 
-  routing(scope: FleetScope, imeis: string[]) {
-    return this.prisma.client.karmaMonitoringTruck.findMany({
-      where: { ...scope, karmaDeviceId: { in: imeis } },
-      select: {
-        karmaDeviceId: true,
-        routing: true,
-        backupSince: true,
-        lastBackupStartedAt: true,
-        lastBackupEndedAt: true,
-        backupSeconds: true,
-        recoveryAttempts: {
-          where: scope,
-          orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
-          take: 1,
-        },
-      },
-    });
-  }
-
   findVehicle(scope: FleetScope, id: string) {
     return this.prisma.client.vehicle.findUnique({
       where: { id, tenantId: scope.tenantId, branchId: scope.branchId },

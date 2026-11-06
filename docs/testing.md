@@ -45,7 +45,6 @@ When handing over, also run:
 ```bash
 npm run test:fleet -- validation.spec.ts
 npm run test:core
-npm run test:karma-client
 npm run test:admin -- --include=app/ui/format/zoned-time.spec.ts
 ```
 
@@ -95,9 +94,8 @@ The script runs the `gateway:test-federation` Nx target. That target is not part
 
 `tools/graphql/federation.db.spec.mts` builds the subgraphs and starts:
 
-- Core, Fleet and Karma Client, each with an isolated test schema;
-- the native Router;
-- a local Karma HTTP fixture, so no live credentials are needed.
+- Core, Fleet and ERM Server, each with an isolated test schema;
+- the native Router.
 
 It checks:
 
@@ -129,8 +127,7 @@ The suite covers:
 - Branch A → B → A;
 - Vehicles, Devices and Drivers;
 - General settings;
-- Maintenance;
-- one Karma journey.
+- Maintenance.
 
 Failure traces stay under the ignored `test-results/` directory. Failure screenshots are opt-in
 with `HOLITA_BROWSER_SCREENSHOTS=1`.

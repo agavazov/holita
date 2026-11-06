@@ -1,7 +1,5 @@
 import fleetAlertsBg from '../features/fleet/alerts/i18n/bg.json';
 import fleetAlertsEn from '../features/fleet/alerts/i18n/en.json';
-import fleetDeviceOperationsBg from '../features/fleet/device-operations/i18n/bg.json';
-import fleetDeviceOperationsEn from '../features/fleet/device-operations/i18n/en.json';
 import fleetDevicesBg from '../features/fleet/devices/i18n/bg.json';
 import fleetDevicesEn from '../features/fleet/devices/i18n/en.json';
 import fleetDriversBg from '../features/fleet/drivers/i18n/bg.json';
@@ -18,18 +16,8 @@ import fleetTripsBg from '../features/fleet/trips/i18n/bg.json';
 import fleetTripsEn from '../features/fleet/trips/i18n/en.json';
 import fleetVehiclesBg from '../features/fleet/vehicles/i18n/bg.json';
 import fleetVehiclesEn from '../features/fleet/vehicles/i18n/en.json';
-import karmaCarHeaderBg from '../features/karma-client/car-header/bg.json';
-import karmaCarHeaderEn from '../features/karma-client/car-header/en.json';
-import karmaCarsPageBg from '../features/karma-client/cars/cars-page/i18n/bg.json';
-import karmaCarsPageEn from '../features/karma-client/cars/cars-page/i18n/en.json';
-import karmaDateTimeBg from '../features/karma-client/date-time/i18n/bg.json';
-import karmaDateTimeEn from '../features/karma-client/date-time/i18n/en.json';
-import karmaFilterValidationBg from '../features/karma-client/filter-validation/i18n/bg.json';
-import karmaFilterValidationEn from '../features/karma-client/filter-validation/i18n/en.json';
-import karmaMapPreviewBg from '../ui/map-preview/bg.json';
-import karmaMapPreviewEn from '../ui/map-preview/en.json';
-import karmaRecordDetailsBg from '../features/karma-client/record-details/i18n/bg.json';
-import karmaRecordDetailsEn from '../features/karma-client/record-details/i18n/en.json';
+import mapPreviewBg from '../ui/map-preview/bg.json';
+import mapPreviewEn from '../ui/map-preview/en.json';
 import uiBg from '../ui/i18n/bg.json';
 import uiEn from '../ui/i18n/en.json';
 import bg from './bg.json';
@@ -42,11 +30,6 @@ const catalogs: readonly { readonly name: string; readonly bg: unknown; readonly
   { name: 'ui/i18n', bg: uiBg, en: uiEn },
   { name: 'features/fleet/i18n', bg: fleetBg, en: fleetEn },
   { name: 'features/fleet/alerts', bg: fleetAlertsBg, en: fleetAlertsEn },
-  {
-    name: 'features/fleet/device-operations',
-    bg: fleetDeviceOperationsBg,
-    en: fleetDeviceOperationsEn,
-  },
   { name: 'features/fleet/devices', bg: fleetDevicesBg, en: fleetDevicesEn },
   { name: 'features/fleet/drivers', bg: fleetDriversBg, en: fleetDriversEn },
   { name: 'features/fleet/maintenance', bg: fleetMaintenanceBg, en: fleetMaintenanceEn },
@@ -54,23 +37,10 @@ const catalogs: readonly { readonly name: string; readonly bg: unknown; readonly
   { name: 'features/fleet/settings', bg: fleetSettingsBg, en: fleetSettingsEn },
   { name: 'features/fleet/trips', bg: fleetTripsBg, en: fleetTripsEn },
   { name: 'features/fleet/vehicles', bg: fleetVehiclesBg, en: fleetVehiclesEn },
-  { name: 'features/karma-client/car-header', bg: karmaCarHeaderBg, en: karmaCarHeaderEn },
-  { name: 'features/karma-client/cars/cars-page', bg: karmaCarsPageBg, en: karmaCarsPageEn },
-  { name: 'features/karma-client/date-time', bg: karmaDateTimeBg, en: karmaDateTimeEn },
-  {
-    name: 'features/karma-client/filter-validation',
-    bg: karmaFilterValidationBg,
-    en: karmaFilterValidationEn,
-  },
   {
     name: 'ui/map-preview',
-    bg: karmaMapPreviewBg,
-    en: karmaMapPreviewEn,
-  },
-  {
-    name: 'features/karma-client/record-details',
-    bg: karmaRecordDetailsBg,
-    en: karmaRecordDetailsEn,
+    bg: mapPreviewBg,
+    en: mapPreviewEn,
   },
 ];
 

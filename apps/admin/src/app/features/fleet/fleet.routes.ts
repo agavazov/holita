@@ -22,14 +22,6 @@ export const fleetRoutes: Routes = [
     pathMatch: 'full',
     redirectTo: ':branchId/control-center/devices/:recordId/alarms',
   },
-  {
-    path: ':branchId/fleet/devices/:recordId/configuration',
-    data: { feature: 'karma-client', requiresBranch: false },
-    loadComponent: () =>
-      import('./device-operations/device-configuration-redirect').then(
-        (module) => module.DeviceConfigurationRedirect,
-      ),
-  },
   { path: ':branchId/fleet', pathMatch: 'full', redirectTo: ':branchId/fleet/overview' },
   {
     path: ':branchId/fleet/settings/general',

@@ -101,17 +101,13 @@ export class BranchContext {
     },
     language: Language,
   ): Promise<void> {
-    // Resume the matched settings route after login; its setup hints are validated by that page.
-    const requested = this.route.firstChild?.snapshot;
-    const returnUrl =
-      requested?.data['feature'] === 'karma-client' &&
-      requested.data['section'] === 'configuration' &&
-      this.router.url.startsWith(`/${language}/`)
-        ? this.router.parseUrl(this.router.url)
-        : null;
-    const destination =
-      returnUrl ??
-      this.router.createUrlTree(['/', language, selection.branchId, 'fleet', 'overview']);
+    const destination = this.router.createUrlTree([
+      '/',
+      language,
+      selection.branchId,
+      'fleet',
+      'overview',
+    ]);
     if (
       this.router.url === this.router.serializeUrl(destination) ||
       (await this.router.navigateByUrl(destination))

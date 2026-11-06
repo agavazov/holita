@@ -9,7 +9,5 @@
   "futureNotAllowed": "Choose a time that is not in the future.",
   "invalidTransition": "The alert state does not allow this action.",
   "dueThresholdRequired": "Give a due date, a due odometer or both.",
-  "boundedPeriodRequired": "Choose trips or provide a start and end within the allowed period.",
-  "configurationCapacity": "The configuration has reached the supported parameter capacity.",
-  "catalogParameterUnsupported": "Choose an eligible predefined Monitor catalog parameter."
+  "boundedPeriodRequired": "Choose trips or provide a start and end within the allowed period."
 }

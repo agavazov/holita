@@ -11,14 +11,12 @@ import {
 } from '../../ui/list/list-state';
 import { alertRemarkError } from './alerts/alert-mapping';
 import { alertDefinition, alertQueryState, alertVariables } from './alerts/alert-query';
-import { deviceConfigurationText } from './device-operations/i18n/messages';
 import { deviceFieldErrors } from './devices/device-mapping';
 import { deviceDefinition, deviceQueryState, deviceVariables } from './devices/device-query';
 import { devicesText } from './devices/i18n/messages';
 import { driverFieldErrors } from './drivers/driver-mapping';
 import { driverDefinition, driverQueryState, driverVariables } from './drivers/driver-query';
 import { driversText } from './drivers/i18n/messages';
-import { fleetFieldErrors } from './field-errors';
 import { fleetValidationText } from './i18n/messages';
 import { maintenanceText } from './maintenance/i18n/messages';
 import {
@@ -605,20 +603,6 @@ describe('Fleet logic', () => {
         row: 'alert status conflict',
         actual: alertRemarkError(failure({ path: 'expectedStatus', code: 'INVALID_TRANSITION' })),
         expected: null,
-      },
-      {
-        row: 'device-configuration write',
-        actual: fleetFieldErrors(
-          failure(
-            { path: 'parameterId', code: 'CONFIGURATION_CAPACITY' },
-            { path: 'intervalSeconds', code: 'VALUE_UNCHANGED' },
-          ),
-          ['catalogId', 'parameterId', 'intervalSeconds'],
-        ),
-        expected: {
-          parameterId: fleet.configurationCapacity,
-          intervalSeconds: deviceConfigurationText('en').editor.unchanged,
-        },
       },
     ];
     for (const { row, actual, expected } of rows) {

@@ -72,17 +72,6 @@ enum FleetDeviceModel {
   @@map("fleetDeviceModel")
 }
 
-enum FleetDeviceOperationStatus {
-  QUEUED @map("queued")
-  SUBMITTING @map("submitting")
-  WAITING @map("waiting")
-  COMPLETE @map("complete")
-  TIMED_OUT @map("timedOut")
-  FAILED @map("failed")
-  UNKNOWN @map("unknown")
-  @@map("fleetDeviceOperationStatus")
-}
-
 enum FleetDeviceOption {
   CELLULAR_4G @map("cellular4g")
   SAFETY_SF @map("safetySf")
@@ -265,7 +254,14 @@ model Device {
   smsPassword String? @db.VarChar(16)
   installedAt DateTime? @db.Timestamptz(3)
   notes String? @db.VarChar(2000)
-  operations FleetDeviceOperation[]
+  karmaCarId String? @db.VarChar(32)
+  karmaDeviceId String? @db.VarChar(128)
+  routing FleetDeviceRouting?
+  routingObservedAt DateTime? @db.Timestamptz(3)
+  backupSince DateTime? @db.Timestamptz(3)
+  lastBackupStartedAt DateTime? @db.Timestamptz(3)
+  lastBackupEndedAt DateTime? @db.Timestamptz(3)
+  backupSeconds Int @default(0)
   ermCursor FleetErmCursor?
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -289,99 +285,6 @@ model FleetErmCursor {
 
   @@unique([tenantId, branchId, deviceId])
   @@map("fleetErmCursor")
-}
-
-enum FleetDeviceOperationKind {
-  READ_CONFIGURATION @map("readConfiguration")
-  ADD_PARAMETER @map("addParameter")
-  UPDATE_INTERVAL @map("updateInterval")
-  READ_RULES @map("readRules")
-  UPSERT_RULE @map("upsertRule")
-  READ_FAULT_LOGGER @map("readFaultLogger")
-  READ_COMMUNICATION_DIAGNOSTICS @map("readCommunicationDiagnostics")
-  @@map("fleetDeviceOperationKind")
-}
-
-enum FleetDeviceOperationPhase {
-  READ_PROFILE @map("readProfile")
-  READ_PARAMETERS @map("readParameters")
-  WRITE_PARAMETER @map("writeParameter")
-  VERIFY_PARAMETERS @map("verifyParameters")
-  READ_RULES @map("readRules")
-  WRITE_RULE @map("writeRule")
-  VERIFY_RULES @map("verifyRules")
-  READ_DIAGNOSTICS @map("readDiagnostics")
-  @@map("fleetDeviceOperationPhase")
-}
-
-// Configuration operations retain intent, preflight evidence and independent readback.
-model FleetDeviceOperation {
-  id String @id @default(uuid()) @db.Uuid
-  tenantId String @db.Uuid
-  branchId String @db.Uuid
-  deviceId String? @db.Uuid
-  device Device? @relation(fields: [tenantId, branchId, deviceId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
-  deviceImei String? @db.VarChar(15)
-  karmaCarId String @db.VarChar(32)
-  karmaDeviceId String @db.VarChar(128)
-  status FleetDeviceOperationStatus @default(QUEUED)
-  monitoringOrigin Boolean @default(false)
-  kind FleetDeviceOperationKind @default(READ_CONFIGURATION)
-  phase FleetDeviceOperationPhase @default(READ_PARAMETERS)
-  baselineOperationId String? @db.Uuid
-  baselineOperation FleetDeviceOperation? @relation("DeviceOperationBaseline", fields: [tenantId, branchId, baselineOperationId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
-  dependentOperations FleetDeviceOperation[] @relation("DeviceOperationBaseline")
-  parameterBaselineOperationId String? @db.Uuid
-  parameterBaselineOperation FleetDeviceOperation? @relation("DeviceRuleParameterBaseline", fields: [tenantId, branchId, parameterBaselineOperationId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
-  dependentRuleOperations FleetDeviceOperation[] @relation("DeviceRuleParameterBaseline")
-  ruleId Int?
-  ruleExpression String? @db.VarChar(4096)
-  ruleTrueEventId Int?
-  ruleFalseEventId Int?
-  ruleDebounceMilliseconds Int?
-  ruleDefinitionHex String? @db.VarChar(274)
-  baselineRules Json?
-  rules Json?
-  rulesConfigurationId String? @db.VarChar(16)
-  rulesReadAt DateTime? @db.Timestamptz(3)
-  rulesObservations Json @default("[]")
-  rulesAfterMessageId String? @db.VarChar(16)
-  parameterId Int?
-  intervalSeconds Int?
-  previousIntervalSeconds Int?
-  catalogId String? @db.Uuid
-  profileId Int?
-  profileReadAt DateTime? @db.Timestamptz(3)
-  profileObservations Json @default("[]")
-  baselineConfiguration Json?
-  baselineConfigurationId String? @db.VarChar(16)
-  baselineObservations Json @default("[]")
-  baselineReadAt DateTime? @db.Timestamptz(3)
-  definitionHex String? @db.VarChar(44)
-  readAfterMessageId String? @db.VarChar(16)
-  phaseDispatchedAt DateTime? @db.Timestamptz(3)
-  writeDispatchedAt DateTime? @db.Timestamptz(3)
-  writeQueueIds String[] @default([])
-  writeUncertain Boolean @default(false)
-  requestedAt DateTime @default(now()) @db.Timestamptz(3)
-  dispatchedAt DateTime? @db.Timestamptz(3)
-  completedAt DateTime? @db.Timestamptz(3)
-  nextCheckAt DateTime @db.Timestamptz(3)
-  deadlineAt DateTime @db.Timestamptz(3)
-  leaseToken String? @db.Uuid
-  leaseUntil DateTime? @db.Timestamptz(3)
-  queueIds String[] @default([])
-  observations Json @default("[]")
-  configuration Json?
-  configurationId String? @db.VarChar(16)
-  errorCode String? @db.VarChar(64)
-  attempts Int @default(0)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@unique([tenantId, branchId, id])
-  @@index([tenantId, branchId, karmaCarId, karmaDeviceId, requestedAt, id])
-  @@index([status, nextCheckAt, leaseUntil])
-  @@map("fleetDeviceOperation")
 }
 
 // Hand-written CHECKs: licenseCategories NOT NULL with at most 10 values, phone format.
@@ -667,147 +570,6 @@ model EdataCatalogProfile {
 
   @@id([catalogId, vendorId])
   @@map("edataCatalogProfile")
-}
-
-enum KarmaMonitoringEventKind {
-  CAME_ONLINE @map("cameOnline")
-  NO_DATA_SINCE @map("noDataSince")
-  FAULT_REPORTED @map("faultReported")
-  FAULT_REPORT_UNDECODED @map("faultReportUndecoded")
-  FAULT_READ_REQUESTED @map("faultReadRequested")
-  FAULT_READ_ANSWERED @map("faultReadAnswered")
-  FAULT_READ_FAILED @map("faultReadFailed")
-  POLL_FAILED @map("pollFailed")
-  @@map("karmaMonitoringEventKind")
-}
-
-enum KarmaMonitoringSource {
-  STATUS_POLL @map("statusPoll")
-  KARMA_HISTORY @map("karmaHistory")
-  DEVICE_COMMAND @map("deviceCommand")
-  @@map("karmaMonitoringSource")
-}
-
-enum KarmaMonitoringCommandOutcome {
-  NOT_ACKNOWLEDGED @map("notAcknowledged")
-  EMPTY @map("empty")
-  FAULTS @map("faults")
-  UNRESOLVED @map("unresolved")
-  FAILED @map("failed")
-  @@map("karmaMonitoringCommandOutcome")
-}
-
-model KarmaMonitoringSettings {
-  id String @id @default(uuid()) @db.Uuid
-  tenantId String @db.Uuid
-  branchId String @db.Uuid
-  enabled Boolean @default(false)
-  statusPollSeconds Int @default(60)
-  offlineAfterMinutes Int @default(15)
-  faultHistoryPollMinutes Int @default(60)
-  faultCommandEnabled Boolean @default(true)
-  faultCommandMinutes Int @default(60)
-  retentionDays Int @default(10)
-  lastStatusPollAt DateTime? @db.Timestamptz(3)
-  lastRetentionAt DateTime? @db.Timestamptz(3)
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@unique([tenantId, branchId])
-  @@map("karmaMonitoringSettings")
-}
-
-model KarmaMonitoringTruck {
-  id String @id @default(uuid()) @db.Uuid
-  tenantId String @db.Uuid
-  branchId String @db.Uuid
-  karmaCarId String @db.VarChar(32)
-  karmaDeviceId String @db.VarChar(128)
-  displayName String @db.VarChar(256)
-  lastDataAt DateTime? @db.Timestamptz(3)
-  ignitionOffAt DateTime? @db.Timestamptz(3)
-  recoveryBlocked Boolean @default(false)
-  routing FleetDeviceRouting?
-  routingAheadPolls Int @default(0)
-  routingAheadSince DateTime? @db.Timestamptz(3)
-  backupSince DateTime? @db.Timestamptz(3)
-  lastBackupStartedAt DateTime? @db.Timestamptz(3)
-  lastBackupEndedAt DateTime? @db.Timestamptz(3)
-  backupSeconds Int @default(0)
-  online Boolean @default(false)
-  onlineSince DateTime? @db.Timestamptz(3)
-  noDataSince DateTime? @db.Timestamptz(3)
-  historyCursor String @default("0") @db.VarChar(32)
-  historyBeforeId String? @db.VarChar(32)
-  historyHighWatermark String? @db.VarChar(32)
-  lastHistoryPollAt DateTime? @db.Timestamptz(3)
-  lastCommandOperationId String? @db.Uuid
-  lastCommandRequestedAt DateTime? @db.Timestamptz(3)
-  lastCommandCompletedAt DateTime? @db.Timestamptz(3)
-  lastCommandOutcome KarmaMonitoringCommandOutcome?
-  events KarmaMonitoringEvent[]
-  recoveryAttempts KarmaRecoveryAttempt[]
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@unique([tenantId, branchId, karmaCarId])
-  @@index([tenantId, branchId, displayName, id])
-  @@map("karmaMonitoringTruck")
-}
-
-model KarmaMonitoringEvent {
-  id String @id @default(uuid()) @db.Uuid
-  tenantId String @db.Uuid
-  branchId String @db.Uuid
-  karmaCarId String? @db.VarChar(32)
-  truck KarmaMonitoringTruck? @relation(fields: [tenantId, branchId, karmaCarId], references: [tenantId, branchId, karmaCarId], onDelete: Restrict, onUpdate: Restrict)
-  kind KarmaMonitoringEventKind
-  source KarmaMonitoringSource
-  sourceKey String @db.VarChar(256)
-  occurredAt DateTime @db.Timestamptz(3)
-  recordedAt DateTime @default(now()) @db.Timestamptz(3)
-  code String? @db.VarChar(32)
-  spn Float?
-  fmi Int?
-  faultStatus String? @db.VarChar(32)
-  commandOutcome KarmaMonitoringCommandOutcome?
-  operationId String? @db.Uuid
-  rawRecord Json?
-  details String? @db.VarChar(256)
-
-  @@unique([tenantId, branchId, source, sourceKey])
-  @@index([tenantId, branchId, occurredAt(sort: Desc), id])
-  @@index([tenantId, branchId, karmaCarId, kind, occurredAt(sort: Desc)])
-  @@map("karmaMonitoringEvent")
-}
-
-enum KarmaRecoveryAttemptStatus {
-  SUBMITTING @map("submitting")
-  ACCEPTED @map("accepted")
-  UNCERTAIN @map("uncertain")
-  FAILED @map("failed")
-  @@map("karmaRecoveryAttemptStatus")
-}
-
-// Recovery intents are committed before dispatch; uncertainty is never replayed.
-model KarmaRecoveryAttempt {
-  id String @id @default(uuid()) @db.Uuid
-  tenantId String @db.Uuid
-  branchId String @db.Uuid
-  karmaCarId String @db.VarChar(32)
-  deviceImei String @db.VarChar(15)
-  truck KarmaMonitoringTruck @relation(fields: [tenantId, branchId, karmaCarId], references: [tenantId, branchId, karmaCarId], onDelete: Restrict, onUpdate: Restrict)
-  status KarmaRecoveryAttemptStatus @default(SUBMITTING)
-  requestedAt DateTime @db.Timestamptz(3)
-  completedAt DateTime? @db.Timestamptz(3)
-  ignitionOffAt DateTime @db.Timestamptz(3)
-  lastDataAt DateTime @db.Timestamptz(3)
-  queueIds String[] @default([])
-  errorCode String? @db.VarChar(64)
-
-  @@index([tenantId, branchId, deviceImei, requestedAt(sort: Desc)])
-  @@index([tenantId, branchId, karmaCarId, requestedAt(sort: Desc)])
-  @@map("karmaRecoveryAttempt")
 }
 
 // Raw 405 observations retain their source event identity; catalog labels never imply conversion.
