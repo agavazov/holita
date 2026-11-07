@@ -35,7 +35,7 @@
       </button>
     </p>
   }
-  <div class="location-map__surface" [hidden]="missingKey || failed()">
+  <div class="location-map__surface" [hidden]="missingKey || failed() || !positioned().length">
     <div
       #mapCanvas
       class="location-map__canvas"
@@ -91,47 +91,49 @@
       }
     </div>
   }
-  <details [open]="missingKey || failed() || !positioned().length">
-    <summary>{{ text().list }} ({{ records().length }})</summary>
-    <ul class="location-map__list">
-      @for (record of records(); track record.id; let index = $index) {
-        <li [class.location-map__record--selected]="selectedId() === record.id">
-          <button
-            pButton
-            type="button"
-            severity="secondary"
-            [text]="true"
-            [attr.aria-label]="selectLabel(record)"
-            [attr.aria-pressed]="selectedId() === record.id"
-            (click)="select(record)"
-          >
-            <span>{{ index + 1 }}.</span>
-            <span [class.app-plate]="!!record.plate" [attr.data-country]="record.countryCode">{{
-              record.plate ?? record.label
-            }}</span>
-          </button>
-          <span>{{ record.label }} · {{ status(record).label }}</span>
-          <span class="app-num">{{ position(record) }}</span>
-          <span [title]="format.utc(record.positionAt)"
-            >{{ text().positionTime }}: {{ date(record.positionAt) }}</span
-          >
-          <span>{{ recordedPosition(record) }}</span>
-          @let recordedHeading = heading(record);
-          @if (recordedHeading !== null) {
-            <span>{{ text().heading }}: {{ recordedHeading }}°</span>
-          }
-          <div class="location-map__actions">
-            @if (record.href) {
-              <a [href]="record.href">{{ text().open }}</a>
+  @if (missingKey || failed() || !positioned().length) {
+    <details open>
+      <summary>{{ text().list }} ({{ records().length }})</summary>
+      <ul class="location-map__list">
+        @for (record of records(); track record.id; let index = $index) {
+          <li [class.location-map__record--selected]="selectedId() === record.id">
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [text]="true"
+              [attr.aria-label]="selectLabel(record)"
+              [attr.aria-pressed]="selectedId() === record.id"
+              (click)="select(record)"
+            >
+              <span>{{ index + 1 }}.</span>
+              <span [class.app-plate]="!!record.plate" [attr.data-country]="record.countryCode">{{
+                record.plate ?? record.label
+              }}</span>
+            </button>
+            <span>{{ record.label }} · {{ status(record).label }}</span>
+            <span class="app-num">{{ position(record) }}</span>
+            <span [title]="format.utc(record.positionAt)"
+              >{{ text().positionTime }}: {{ date(record.positionAt) }}</span
+            >
+            <span>{{ recordedPosition(record) }}</span>
+            @let recordedHeading = heading(record);
+            @if (recordedHeading !== null) {
+              <span>{{ text().heading }}: {{ recordedHeading }}°</span>
             }
-            @if (googleUrl(record); as url) {
-              <a [href]="url" target="_blank" rel="noopener noreferrer">{{ text().google }}</a>
-            }
-          </div>
-        </li>
-      } @empty {
-        <li>{{ text().noRecords }}</li>
-      }
-    </ul>
-  </details>
+            <div class="location-map__actions">
+              @if (record.href) {
+                <a [href]="record.href">{{ text().open }}</a>
+              }
+              @if (googleUrl(record); as url) {
+                <a [href]="url" target="_blank" rel="noopener noreferrer">{{ text().google }}</a>
+              }
+            </div>
+          </li>
+        } @empty {
+          <li>{{ text().noRecords }}</li>
+        }
+      </ul>
+    </details>
+  }
 </section>

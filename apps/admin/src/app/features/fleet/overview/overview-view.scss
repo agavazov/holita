@@ -46,7 +46,7 @@
 }
 .overview__primary {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--p-app-stack-gap);
   align-items: start;
 }
@@ -119,20 +119,18 @@
 .overview__driver-counts strong {
   font-size: var(--p-app-text-lg);
 }
-@include bp.below(xl) {
-  .overview__primary {
-    grid-template-columns: minmax(0, 3fr) minmax(16rem, 2fr);
-  }
+.overview__map-placeholder {
+  --map-placeholder-height: clamp(24rem, 60vh, 44rem);
 }
 @include bp.below(lg) {
   .overview__hero {
     flex-direction: column;
   }
-  .overview__primary {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 @include bp.below(md) {
+  .overview__map-placeholder {
+    --map-placeholder-height: clamp(18rem, 45vh, 28rem);
+  }
   .overview__charts,
   .overview__summaries {
     grid-template-columns: minmax(0, 1fr);

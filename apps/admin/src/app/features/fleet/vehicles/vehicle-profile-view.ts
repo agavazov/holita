@@ -297,13 +297,15 @@ export class VehicleProfileView {
     if (!task) {
       return { value: this.text().kpis.noService, footnote: null, tone: null };
     }
+    const due = task.dueOn
+      ? this.units.dateOnly(task.dueOn)
+      : task.dueKm === null
+        ? null
+        : this.units.distance(task.dueKm, true, 0);
+    // The short due value fits the tile; the longer task title truncates as its footnote.
     return {
-      value: task.kind,
-      footnote: task.dueOn
-        ? this.units.dateOnly(task.dueOn)
-        : task.dueKm === null
-          ? null
-          : this.units.distance(task.dueKm, true, 0),
+      value: due ?? task.kind,
+      footnote: due === null ? null : task.kind,
       tone:
         task.urgency === 'OVERDUE'
           ? ('danger' as const)

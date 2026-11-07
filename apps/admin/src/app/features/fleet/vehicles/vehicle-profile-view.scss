@@ -1,8 +1,15 @@
+@use 'breakpoints' as bp;
+
 .vehicle-profile__summary {
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+}
+
+.vehicle-profile__summary > .app-inline {
+  flex-wrap: wrap;
+  min-inline-size: 0;
 }
 
 .vehicle-profile__devices {
@@ -38,4 +45,14 @@
   background: var(--p-select-background);
   border: 1px solid var(--p-select-border-color);
   border-radius: var(--p-app-radius-control);
+}
+
+.vehicle-profile__map-placeholder {
+  --map-placeholder-height: clamp(24rem, 60vh, 44rem);
+}
+
+@include bp.below(md) {
+  .vehicle-profile__map-placeholder {
+    --map-placeholder-height: clamp(18rem, 45vh, 28rem);
+  }
 }

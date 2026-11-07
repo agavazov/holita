@@ -12,13 +12,13 @@
   "snapshotHint": "Current connections and reporting; journeys follow the selected period.",
   "kpis": {
     "label": "Whole-fleet totals",
-    "live": "Live trucks",
+    "live": "Online trucks",
     "connected": "Connected devices",
     "problems": "Problems needing attention",
     "trips": "Trips in the period",
     "vehicleTotal": "of {count} vehicles in this fleet",
     "deviceTotal": "of {count} registered devices",
-    "liveHint": "Live means a device is connected and reporting on time. GPS position age is shown separately.",
+    "liveHint": "Online means a device is connected and reporting on time. GPS position age is shown separately.",
     "connectedHint": "A current device connection, including unassigned devices. Open to see every connected device.",
     "problemHint": "Current open alerts and reporting gaps, plus device operations needing follow-up in this period. Recorded fault evidence is separate.",
     "distanceCoverage": "Measured distance: {measured} of {total} trips",
@@ -27,7 +27,6 @@
   },
   "map": {
     "title": "Fleet locations",
-    "hint": "Find a vehicle, check its position age and open its details.",
     "filter": "Show on the map",
     "all": "All vehicles",
     "noPosition": "No recorded position",
@@ -54,24 +53,22 @@
     "target": "Fleet"
   },
   "connection": {
-    "title": "Live and connection status",
+    "title": "Online and connection status",
     "hint": "Select a slice to see those vehicles on the map.",
-    "live": "Live",
-    "waiting": "Connected, not live",
+    "live": "Online",
+    "waiting": "Connected, not online",
     "disconnected": "Not connected",
     "vehicles": "Vehicles",
-    "summary": "{live} live · {connected} connected · {total} vehicles. Live requires a connected device with an on-time report; GPS age is separate."
+    "summary": "{live} online · {connected} connected · {total} vehicles. Online requires a connected device with an on-time report; GPS age is separate."
   },
   "distance": {
     "title": "Recorded distance per day",
-    "hint": "Explore recorded trip distance; select a day to open its journeys.",
     "summary": "Only supplied days inside the selected period are shown, through the vehicle data clock. Zero means no recorded trip distance for that day.",
     "empty": "No daily distance is available for this period.",
     "dataClock": "Vehicle data clock"
   },
   "maintenance": {
     "title": "Maintenance",
-    "hint": "Review overdue work for active vehicles and vehicles in the workshop.",
     "summary": "{count} overdue tasks",
     "all": "Review overdue work",
     "due": "Due",
@@ -80,7 +77,6 @@
   },
   "drivers": {
     "title": "Drivers",
-    "hint": "Check active drivers and documents that need attention today.",
     "active": "Active drivers",
     "leave": "On leave",
     "documents": "{count} drivers have expired documents or documents due today",

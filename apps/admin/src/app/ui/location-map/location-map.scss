@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 holita-location-map {
   display: block;
   min-inline-size: 0;
@@ -19,7 +21,7 @@ holita-location-map {
     isolation: isolate;
   }
   .location-map__canvas {
-    block-size: 24rem;
+    block-size: clamp(24rem, 60vh, 44rem);
     overflow: hidden;
     position: relative;
     background: var(--p-app-canvas-background);
@@ -125,5 +127,11 @@ holita-location-map {
   }
   .location-map__popup p {
     margin: 0;
+  }
+}
+
+@include bp.below(md) {
+  holita-location-map .location-map__canvas {
+    block-size: clamp(18rem, 45vh, 28rem);
   }
 }

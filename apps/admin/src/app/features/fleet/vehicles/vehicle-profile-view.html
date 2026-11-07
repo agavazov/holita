@@ -1,21 +1,26 @@
 @switch (state()) {
   @case ('not-found') {
+    <holita-page-header
+      [title]="text().eyebrow"
+      [backLink]="backLink()"
+      [backLabel]="backLabel() ?? text().back"
+      [backQueryParams]="backQueryParams()"
+      [backFragment]="backFragment()"
+    />
     <holita-empty-state
       kind="not-found"
       [title]="text().notFoundTitle"
       [description]="text().notFoundDescription"
-    >
-      <a
-        emptyActions
-        pButton
-        [routerLink]="backLink()"
-        [queryParams]="backQueryParams()"
-        [fragment]="backFragment() ?? undefined"
-        >{{ backLabel() ?? text().back }}</a
-      >
-    </holita-empty-state>
+    />
   }
   @case ('error') {
+    <holita-page-header
+      [title]="text().eyebrow"
+      [backLink]="backLink()"
+      [backLabel]="backLabel() ?? text().back"
+      [backQueryParams]="backQueryParams()"
+      [backFragment]="backFragment()"
+    />
     <holita-empty-state
       kind="error"
       [title]="text().errorTitle"
@@ -26,13 +31,14 @@
   }
   @case ('loading') {
     <holita-page-header
-      [eyebrow]="text().eyebrow"
       title="…"
       [backLink]="backLink()"
       [backLabel]="backLabel() ?? text().back"
       [backQueryParams]="backQueryParams()"
       [backFragment]="backFragment()"
     />
+    <p-skeleton height="3rem" />
+    <p-skeleton height="4rem" />
     <holita-kpi-strip [label]="text().kpis.label" [loading]="true">
       <holita-kpi-tile [label]="text().kpis.odometer" category="c1"
         ><svg kpiIcon data-p-icon="gauge"
@@ -50,19 +56,25 @@
         ><svg kpiIcon data-p-icon="wrench"
       /></holita-kpi-tile>
     </holita-kpi-strip>
+    <section
+      class="app-card vehicle-profile__map-placeholder"
+      [attr.aria-label]="v2().map"
+      aria-busy="true"
+    >
+      <h2 class="app-card__title">{{ v2().map }}</h2>
+      <p-skeleton height="var(--map-placeholder-height)" />
+    </section>
   }
   @case ('ready') {
     @if (vehicle(); as vehicle) {
       <holita-page-header
-        [eyebrow]="text().eyebrow"
-        [title]="description() || text().eyebrow"
-        [description]="vehicle.group?.name ?? null"
+        [title]="vehicle.plate"
+        [description]="description()"
         [backLink]="backLink()"
         [backLabel]="backLabel() ?? text().back"
         [backQueryParams]="backQueryParams()"
         [backFragment]="backFragment()"
       >
-        <span headerMeta class="app-plate">{{ vehicle.plate }}</span>
         <p-tag
           headerMeta
           [severity]="statusSeverity(vehicle.status)"
@@ -83,60 +95,6 @@
         }
       </holita-page-header>
 
-      <div class="app-card app-card--accent vehicle-profile__summary">
-        <span class="app-inline">
-          <p-tag [severity]="toneSeverity(liveStatus().tone)" [value]="liveStatus().label" />
-          <holita-fleet-now mode="table" [device]="activityDevice()" />
-        </span>
-        <span class="app-cell-date" [title]="units.utc(lastReport())">
-          {{ text().lastReport }}:
-          <time [attr.datetime]="lastReport()">{{ units.dateTime(lastReport()) }}</time>
-        </span>
-        <button type="button" class="app-link" (click)="tabChange.emit('problems')">
-          {{ problemSummary() }}
-        </button>
-      </div>
-
-      <holita-kpi-strip [label]="text().kpis.label">
-        <holita-kpi-tile
-          [label]="text().kpis.odometer"
-          [value]="units.distance(vehicle.odometerKm, false, 0)"
-          [unit]="units.distanceUnit()"
-          category="c1"
-          ><svg kpiIcon data-p-icon="gauge"
-        /></holita-kpi-tile>
-        <holita-kpi-tile
-          [label]="text().kpis.fuel"
-          [value]="vehicle.fuelPct === null ? null : (vehicle.fuelPct | holitaNumber)"
-          [unit]="vehicle.fuelPct === null ? null : '%'"
-          [tone]="vehicle.fuelStatus === 'LOW' ? 'danger' : null"
-          [category]="vehicle.fuelStatus === 'LOW' ? null : 'c2'"
-          [footnote]="vehicle.fuelStatus === 'STALE' ? staleFuelText() : null"
-          ><svg kpiIcon data-p-icon="gauge"
-        /></holita-kpi-tile>
-        <holita-kpi-tile
-          [label]="text().kpis.distance"
-          [value]="units.distance(distanceTotal(), false, 0)"
-          [unit]="units.distanceUnit()"
-          category="c3"
-          ><svg kpiIcon data-p-icon="chart-line"
-        /></holita-kpi-tile>
-        <holita-kpi-tile
-          [label]="v2().problemKpi"
-          [value]="problemCounts()?.requiringAttention | holitaNumber"
-          [tone]="problemCounts()?.requiringAttention ? 'warn' : 'neutral'"
-          ><svg kpiIcon data-p-icon="exclamation-triangle"
-        /></holita-kpi-tile>
-        <holita-kpi-tile
-          [label]="text().kpis.nextService"
-          [value]="nextService().value"
-          [footnote]="nextService().footnote"
-          [tone]="nextService().tone"
-          [category]="nextService().tone ? null : 'c4'"
-          ><svg kpiIcon data-p-icon="wrench"
-        /></holita-kpi-tile>
-      </holita-kpi-strip>
-
       <p-tabs [value]="tab()" (valueChange)="selectTab($event)">
         <p-tablist [pt]="{ content: { 'aria-label': text().eyebrow } }">
           @for (tab of profileTabs; track tab) {
@@ -146,7 +104,62 @@
         <p-tabpanels>
           <p-tabpanel value="overview">
             <div class="app-tab-content">
-              <p class="app-muted">{{ v2().hints.overview }}</p>
+              <div class="app-card app-card--accent vehicle-profile__summary">
+                <span class="app-inline">
+                  <p-tag
+                    [severity]="toneSeverity(liveStatus().tone)"
+                    [value]="liveStatus().label"
+                  />
+                  <holita-fleet-now mode="table" [device]="activityDevice()" />
+                </span>
+                <span class="app-cell-date" [title]="units.utc(lastReport())">
+                  {{ text().lastReport }}:
+                  <time [attr.datetime]="lastReport()">{{ units.dateTime(lastReport()) }}</time>
+                </span>
+                <button type="button" class="app-link" (click)="tabChange.emit('problems')">
+                  {{ problemSummary() }}
+                </button>
+              </div>
+
+              <holita-kpi-strip [label]="text().kpis.label">
+                <holita-kpi-tile
+                  [label]="text().kpis.odometer"
+                  [value]="units.distance(vehicle.odometerKm, false, 0)"
+                  [unit]="units.distanceUnit()"
+                  category="c1"
+                  ><svg kpiIcon data-p-icon="gauge"
+                /></holita-kpi-tile>
+                <holita-kpi-tile
+                  [label]="text().kpis.fuel"
+                  [value]="vehicle.fuelPct === null ? null : (vehicle.fuelPct | holitaNumber)"
+                  [unit]="vehicle.fuelPct === null ? null : '%'"
+                  [tone]="vehicle.fuelStatus === 'LOW' ? 'danger' : null"
+                  [category]="vehicle.fuelStatus === 'LOW' ? null : 'c2'"
+                  [footnote]="vehicle.fuelStatus === 'STALE' ? staleFuelText() : null"
+                  ><svg kpiIcon data-p-icon="gauge"
+                /></holita-kpi-tile>
+                <holita-kpi-tile
+                  [label]="text().kpis.distance"
+                  [value]="units.distance(distanceTotal(), false, 0)"
+                  [unit]="units.distanceUnit()"
+                  category="c3"
+                  ><svg kpiIcon data-p-icon="chart-line"
+                /></holita-kpi-tile>
+                <holita-kpi-tile
+                  [label]="v2().problemKpi"
+                  [value]="problemCounts()?.requiringAttention | holitaNumber"
+                  [tone]="problemCounts()?.requiringAttention ? 'warn' : 'neutral'"
+                  ><svg kpiIcon data-p-icon="exclamation-triangle"
+                /></holita-kpi-tile>
+                <holita-kpi-tile
+                  [label]="text().kpis.nextService"
+                  [value]="nextService().value"
+                  [footnote]="nextService().footnote"
+                  [tone]="nextService().tone"
+                  [category]="nextService().tone ? null : 'c4'"
+                  ><svg kpiIcon data-p-icon="wrench"
+                /></holita-kpi-tile>
+              </holita-kpi-strip>
               @defer (on immediate) {
                 <holita-location-map
                   [language]="language()"
@@ -159,10 +172,14 @@
                   [dateFormat]="units.preferences().dateFormat"
                 />
               } @placeholder {
-                <section class="app-card" [attr.aria-label]="v2().map">
+                <section
+                  class="app-card vehicle-profile__map-placeholder"
+                  [attr.aria-label]="v2().map"
+                  aria-busy="true"
+                >
                   <h2 class="app-card__title">{{ v2().map }}</h2>
                   <p-skeleton width="16rem" height="1rem" />
-                  <p-skeleton height="24rem" />
+                  <p-skeleton height="var(--map-placeholder-height)" />
                 </section>
               }
               <p class="app-muted">
@@ -185,7 +202,6 @@
               }
               <div class="app-card-grid">
                 <section class="app-card">
-                  <p class="app-muted">{{ v2().factsHint }}</p>
                   <h2 class="app-card__title">{{ text().state }}</h2>
                   <dl class="app-facts">
                     <div>
@@ -251,7 +267,6 @@
                   </dl>
                 </section>
                 <section class="app-card">
-                  <p class="app-muted">{{ v2().distanceHint }}</p>
                   <h2 class="app-card__title">{{ text().distanceChart }}</h2>
                   <holita-column-series
                     [label]="text().distanceChart"
@@ -259,7 +274,6 @@
                   />
                 </section>
                 <section class="app-card">
-                  <p class="app-muted">{{ v2().registryHint }}</p>
                   <h2 class="app-card__title">{{ text().specification }}</h2>
                   <dl class="app-facts">
                     <div class="app-facts--wide">
@@ -304,7 +318,6 @@
                   </dl>
                 </section>
                 <section class="app-card">
-                  <p class="app-muted">{{ v2().notesHint }}</p>
                   <h2 class="app-card__title">{{ text().notes }}</h2>
                   <p class="vehicle-profile__notes">{{ vehicle.notes || text().noNotes }}</p>
                 </section>
@@ -382,7 +395,6 @@
 
           <p-tabpanel value="problems">
             <div class="app-tab-content">
-              <p class="app-muted">{{ v2().hints.problems }}</p>
               <p class="app-muted">{{ v2().problems.note }}</p>
               @if (problemCounts(); as counts) {
                 <p class="app-muted">
@@ -486,7 +498,6 @@
 
           <p-tabpanel value="trips">
             <div class="app-tab-content">
-              <p class="app-muted">{{ v2().hints.trips }}</p>
               <holita-table-panel
                 [heading]="text().recentTrips"
                 [total]="tripPage()?.total ?? trips().length"
@@ -582,7 +593,6 @@
 
           <p-tabpanel value="maintenance">
             <div class="app-tab-content">
-              <p class="app-muted">{{ v2().hints.maintenance }}</p>
               <holita-table-panel
                 [heading]="text().serviceHeading"
                 [total]="servicePage()?.total ?? service().length"
@@ -657,9 +667,7 @@
 
           <p-tabpanel value="commands">
             <div class="app-tab-content">
-              <p class="app-muted">{{ v2().hints.commands }}</p>
               <section class="app-card">
-                <p class="app-muted">{{ v2().hints.commands }}</p>
                 <h2 class="app-card__title">{{ v2().commands.heading }}</h2>
                 @if (vehicle.devices.length) {
                   <label class="vehicle-profile__device-label" for="vehicle-command-device">{{

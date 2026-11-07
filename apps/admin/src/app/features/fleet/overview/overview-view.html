@@ -202,7 +202,6 @@
         </holita-table-panel>
       </section>
     } @else {
-      <p class="app-muted">{{ text().map.hint }}</p>
       <div class="overview__map-toolbar">
         <label for="dashboard-map-filter">{{ text().map.filter }}</label>
         <p-select
@@ -279,7 +278,7 @@
           <section class="app-card overview__map-placeholder" aria-busy="true">
             <h2 class="app-card__title">{{ text().map.title }}</h2>
             <p role="status">{{ text().map.loading }}</p>
-            <p-skeleton height="24rem" />
+            <p-skeleton height="var(--map-placeholder-height)" />
           </section>
         }
         @if (!mapRecords().length && !mapLoading()) {
@@ -289,7 +288,7 @@
         <section class="app-card overview__map-placeholder" aria-busy="true">
           <h2 class="app-card__title">{{ text().map.title }}</h2>
           <p role="status">{{ text().map.loading }}</p>
-          <p-skeleton height="24rem" />
+          <p-skeleton height="var(--map-placeholder-height)" />
         </section>
       } @else {
         <holita-empty-state kind="error" [title]="text().map.error" />
@@ -390,7 +389,6 @@
       }
     </section>
     <section class="app-view">
-      <p class="app-muted">{{ text().distance.hint }}</p>
       @defer (on immediate) {
         <holita-chart-panel
           kind="bar"
@@ -435,7 +433,7 @@
         text().maintenance.all
       }}</a>
     </div>
-    <p class="app-muted">{{ text().maintenance.hint }}</p>
+
     @if (data(); as data) {
       <strong>{{ maintenanceSummary() }}</strong>
       <ul class="overview__list">
@@ -465,7 +463,7 @@
         text().drivers.all
       }}</a>
     </div>
-    <p class="app-muted">{{ text().drivers.hint }}</p>
+
     @if (data(); as data) {
       <div class="overview__driver-counts">
         <span
