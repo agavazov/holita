@@ -72,9 +72,13 @@ and ignition trips imported per
 [ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md).
 The import also writes dated eData FleetEvents (413/418 codes, 419 SPN/FMI fault observations,
 411 CAN errors and 417 CAN loss) without an alert lifecycle. Problems exposes every fault's code,
-added/deleted status and available source times through `diagnostics`; deletion does not establish
-a repair. Device and Vehicle `warningLamps` expose the latest stored brake, engine/MIL and ABS
-telltales, with unknown coverage when measurements are absent. Operators add MANUAL odometer readings.
+added/deleted status, versioned system/component keys and first/last observations within the
+requested period through `diagnostics`; deletion does not establish a repair. Device and Vehicle
+`warningLamps` expose the latest stored brake, engine/MIL and ABS telltales and current state start
+time, with unknown coverage when measurements are absent. `currentWarnings` contains their RED,
+YELLOW and INFORMATION subset; only these contribute to Device diagnostic counts. Lamp entry
+to RED/YELLOW and return to OFF create Branch notifications once per transition. Operators add
+MANUAL odometer readings.
 Samples, trips and events store the reporting IMEI as a snapshot instead of a Device foreign key,
 so devices can be replaced, reassigned or deleted without rewriting history. A sample's history
 belongs to the (vehicle, IMEI) pair at reporting time.

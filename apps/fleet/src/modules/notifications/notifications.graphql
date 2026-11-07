@@ -27,6 +27,11 @@ type FleetNotificationParameters {
   commandKind: String
   commandStatus: String
   reasonCode: String
+  lamp: String
+  state: String
+  previousState: String
+  deviceId: ID
+  vehicleId: ID
 }
 
 type FleetNotification {
@@ -38,7 +43,7 @@ type FleetNotification {
   severity: FleetEventSeverity!
   occurredAt: DateTime!
   createdAt: DateTime!
-  "Stable translation key; DIAGNOSTIC and ALARM describe recorded evidence."
+  "Stable translation key distinguishing recorded evidence, alert and lamp transitions."
   wordingKey: String!
   parameters: FleetNotificationParameters!
   vehicleId: ID

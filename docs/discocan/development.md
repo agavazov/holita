@@ -315,9 +315,9 @@ The admin **Devices** section opens one Device page with Overview, Problems, Com
 SMS commands, Parameters and Technical details (events/frames). Trips opens the currently
 assigned Vehicle's trips. Vehicle Commands selects a particular installed Device and uses the
 same readable history and details modal. Legacy Control center and diagnostics URLs redirect
-to these pages. Fleet diagnostic counts include added DTC observations, recorded CAN evidence and
-the latest red, yellow or information warning lamps for the current vehicle/IMEI pair. Deleted
-fault observations do not increase the count. The count does not establish active ECU faults;
+to these pages. Fleet diagnostic counts include only the latest red, yellow or information
+warning lamps for the current vehicle/IMEI pair. Recorded DTC and CAN evidence remains history and never increases
+a danger badge. The count does not establish active ECU faults;
 the Problems rows expose every recorded fault in `diagnostics`, including deleted observations
 whose status does not prove a repair. Fleet owns the ten registered truck identities,
 including `serialNumber` and `edataModule`; ERM state is joined by IMEI. Use Branch-scoped
@@ -640,7 +640,36 @@ with the Device, raw value and measurement time. Collection requires
 `FLEET_ERM_EDATA_MEASUREMENTS_ENABLED=true`; existing import cursors are not rewound.
 The one-byte FMS1 scalar states are `0` OFF, `1` RED, `2` YELLOW, `3` INFORMATION,
 `4`–`6` RESERVED and `7` NOT_AVAILABLE. A missing report or unsupported encoding is UNKNOWN,
-never OFF. A timestamp establishes the last observation, not continuing coverage or fault clearance.
+never OFF. `stateSince` is the first observation in the uninterrupted current decoded state;
+`recordedAt` is its latest observation. `FleetDevice.currentWarnings` and
+`FleetVehicle.currentWarnings` contain only RED, YELLOW and INFORMATION lamps. These retained
+states do not establish freshness, continuing coverage or fault clearance.
+
+Fleet imports create a Branch notification once when a lamp enters RED or YELLOW, and when a
+warning lamp returns to OFF. Repeated states, import replay and observations older than the
+retained latest measurement do not notify. Initial OFF, INFORMATION, unknown, reserved and
+unavailable states do not notify. The wording keys are `notification.warningLampEntered` and
+`notification.warningLampOff`; parameters are `lamp` (BRAKE_SYSTEM, ENGINE or ABS), `state`,
+`previousState`, `deviceId` and `vehicleId`. Severity is CRITICAL for RED, WARNING for YELLOW and
+INFO for OFF. Measurement collection and notification retention apply as above; no DTC lifecycle
+is inferred.
+
+`FleetProblem.diagnostics` adds `systemKey`, nullable `descriptionKey` and `catalogVersion`
+(`2026-11-08.1`), alongside the retained SPN/FMI. `firstObservedAt` and `lastObservedAt` bound
+observations of the same code/kind/report on the same Vehicle/IMEI within the requested evidence
+period, across added/deleted reports. Alert-backed diagnostic entries use their own observation
+time. Missing code meanings use OTHER with no description.
+The versioned catalog in [Fleet](../../apps/fleet/src/modules/events/fault-meanings.ts) provides
+holita component wording keys for engine, brakes, ABS/EBS and aftertreatment. Generic SPN
+associations come from the manufacturer [Prevost service manual, Group 28](https://techpub.prevostcar.com/content/media/18633/view),
+[Basler DGC-2020ES manual, section 6-9](https://www.basler.com/resource-hub/manuals/instruction-manual/dgc-2020es-operation-instruction-manual-rev-d-english/9469200996.pdf),
+and ZF [sBSP](https://www.zf.com/products/media/automotive/cv/literature_downloads_wna/truck_solutions/abs_maintenance_manuals_/MM060125_ABS_and_ESC_Maintenance_Manual_for_sBSP_102025_updated.pdf)
+and [mBSP](https://www.zf.com/products/media/automotive/cv/literature_downloads_wna/truck_solutions/abs_maintenance_manuals_/MM1719_ABS_and_ESC_Maintenance_Manual_for_mBSP_DTC_list_Updated0514.pdf)
+manuals. They identify component families, not a truck-specific repair diagnosis, source ECU or
+lamp severity. Observed 4339 maps to SCR feedback control and 1247 to engine power; their exact
+FMI-specific diagnoses remain unverified. Observed 23806 remains unknown. eData parameter IDs
+are not SPNs. No SAE description tables are copied; BG/EN component and FMI wording belongs in
+the admin catalogs.
 
 ### Development and service management
 

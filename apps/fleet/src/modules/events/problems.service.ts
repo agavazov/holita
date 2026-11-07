@@ -27,6 +27,7 @@ import {
   requireScope,
 } from '../../validation.js';
 import { ProblemsRepository } from './problems.repository.js';
+import { faultMeaning } from './fault-meanings.js';
 
 const SOURCES: readonly FleetProblemSourceKind[] = [
   'FLEET_ALERT',
@@ -73,32 +74,82 @@ function storedDiagnostic(event: StoredEvent): FleetProblemDiagnostic[] {
   const legacyFault =
     event.kind === 'DIAGNOSTIC_TROUBLE_CODE' && event.details?.startsWith('eData 419:');
   const faultCode = /^SPN (\d+) FMI (\d+)$/.exec(event.troubleCode ?? '');
+  const diagnostic: Omit<
+    FleetProblemDiagnostic,
+    'systemKey' | 'descriptionKey' | 'catalogVersion' | 'firstObservedAt' | 'lastObservedAt'
+  > = {
+    kind: event.kind,
+    troubleCode: event.troubleCode,
+    status:
+      event.diagnosticStatus === 1
+        ? 'ADDED'
+        : event.diagnosticStatus === 2
+          ? 'DELETED'
+          : legacyFault
+            ? event.details?.includes('logger deleted')
+              ? 'DELETED'
+              : 'ADDED'
+            : null,
+    report: event.diagnosticReport ?? (legacyFault ? 419 : null),
+    spn:
+      event.diagnosticSpn === null
+        ? faultCode
+          ? Number(faultCode[1])
+          : null
+        : Number(event.diagnosticSpn),
+    fmi: event.diagnosticFmi ?? (faultCode ? Number(faultCode[2]) : null),
+    occurredAt: event.occurredAt,
+    receivedAt: event.receivedAt,
+  };
   return [
     {
-      kind: event.kind,
-      troubleCode: event.troubleCode,
-      status:
-        event.diagnosticStatus === 1
-          ? 'ADDED'
-          : event.diagnosticStatus === 2
-            ? 'DELETED'
-            : legacyFault
-              ? event.details?.includes('logger deleted')
-                ? 'DELETED'
-                : 'ADDED'
-              : null,
-      report: event.diagnosticReport ?? (legacyFault ? 419 : null),
-      spn:
-        event.diagnosticSpn === null
-          ? faultCode
-            ? Number(faultCode[1])
-            : null
-          : Number(event.diagnosticSpn),
-      fmi: event.diagnosticFmi ?? (faultCode ? Number(faultCode[2]) : null),
-      occurredAt: event.occurredAt,
-      receivedAt: event.receivedAt,
+      ...diagnostic,
+      ...faultMeaning(diagnostic.spn ?? null),
+      firstObservedAt: diagnostic.occurredAt,
+      lastObservedAt: diagnostic.occurredAt,
     },
   ];
+}
+
+function diagnosticHistory(items: FleetProblem[]): FleetProblem[] {
+  const observations = new Map<string, FleetProblemDiagnostic[]>();
+  for (const item of items) {
+    if (item.sourceKind !== 'DIAGNOSTIC') {
+      continue;
+    }
+    for (const diagnostic of item.diagnostics) {
+      const key = JSON.stringify([
+        item.vehicleId,
+        item.deviceImei,
+        diagnostic.kind,
+        diagnostic.report,
+        diagnostic.troubleCode,
+      ]);
+      const history = observations.get(key) ?? [];
+      history.push(diagnostic);
+      observations.set(key, history);
+    }
+  }
+  for (const history of observations.values()) {
+    let first = history[0]?.occurredAt;
+    let last = first;
+    if (first === undefined || last === undefined) {
+      continue;
+    }
+    for (const diagnostic of history) {
+      if (diagnostic.occurredAt < first) {
+        first = diagnostic.occurredAt;
+      }
+      if (diagnostic.occurredAt > last) {
+        last = diagnostic.occurredAt;
+      }
+    }
+    for (const diagnostic of history) {
+      diagnostic.firstObservedAt = first;
+      diagnostic.lastObservedAt = last;
+    }
+  }
+  return items;
 }
 
 function diagnosticIdentity(
@@ -373,6 +424,9 @@ export class ProblemsService {
           report: diagnosticReport(evidence) ?? storedEvent?.diagnosticReport ?? null,
           spn: faultCode ? Number(faultCode[1]) : null,
           fmi: faultCode ? Number(faultCode[2]) : null,
+          ...faultMeaning(faultCode ? Number(faultCode[1]) : null),
+          firstObservedAt: evidence.eventTime ?? evidence.occurredAt,
+          lastObservedAt: evidence.eventTime ?? evidence.occurredAt,
           occurredAt: evidence.eventTime ?? evidence.occurredAt,
           receivedAt: storedEvent?.receivedAt ?? null,
         };
@@ -432,7 +486,7 @@ export class ProblemsService {
       });
     }
     return {
-      items: [...items.values()].sort(
+      items: diagnosticHistory([...items.values()]).sort(
         (left, right) =>
           right.occurredAt.getTime() - left.occurredAt.getTime() || left.id.localeCompare(right.id),
       ),

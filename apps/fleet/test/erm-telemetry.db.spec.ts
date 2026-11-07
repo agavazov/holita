@@ -987,5 +987,175 @@ describe('ERM telemetry import with PostgreSQL', () => {
       ).toEqual(lastValidCursor);
       expect(await database.client.fleetEvent.count()).toBe(9);
     }
+
+    events.get(deviceA.imei)?.pop();
+    const lampVehicle = await database.client.vehicle.create({
+      data: { ...scopeA, licensePlate: 'ERM LAMPS' },
+    });
+    const lampDevice = await database.client.device.create({
+      data: {
+        ...scopeA,
+        imei: '000000000000104',
+        vehicleId: lampVehicle.id,
+        installedAt,
+        createdAt: installedAt,
+      },
+    });
+    for (const selectedScope of [
+      { tenantId: scopeA.tenantId, branchId: scopeB.branchId },
+      { tenantId: scopeB.tenantId, branchId: scopeA.branchId },
+      scopeA,
+    ]) {
+      const previousVehicle = await database.client.vehicle.create({
+        data: { ...selectedScope, licensePlate: 'UNRELATED LAMP' },
+      });
+      await database.client.vehicleEdataMeasurement.create({
+        data: {
+          ...selectedScope,
+          vehicleId: previousVehicle.id,
+          deviceImei: lampDevice.imei,
+          source: 'ERM',
+          sourceEventId: 99n,
+          recordedAt: at(-1),
+          receivedAt: at(-1),
+          parameterId: 1896,
+          parameterType: 0,
+          valueSize: 1,
+          valueHex: '01',
+        },
+      });
+    }
+    const lampEvent = (
+      id: string,
+      seconds: number,
+      brake: string,
+      engine = '00',
+      abs = '00',
+    ): FeedEvent => ({
+      ...event(id, seconds, null),
+      edata: {
+        report: '405',
+        measurements: [
+          [1896, brake],
+          [1906, engine],
+          [1910, abs],
+        ].map(([parameterId, valueHex]) => ({
+          parameterId,
+          parameterType: 0,
+          valueSize: 1,
+          valueHex,
+        })),
+      },
+    });
+    events.set(lampDevice.imei, [
+      lampEvent('100', 0, '00'),
+      lampEvent('101', 10, '01'),
+      lampEvent('102', 20, '01'),
+      lampEvent('103', 30, '00'),
+      lampEvent('104', 40, '02'),
+      lampEvent('105', 50, '02'),
+      lampEvent('106', 60, '00'),
+      lampEvent('107', 70, '03'),
+      lampEvent('108', 80, '04'),
+      lampEvent('109', 90, '05'),
+      lampEvent('110', 100, '07'),
+      lampEvent('111', 110, '01', '02', '01'),
+      lampEvent('112', 110, '02', '02', '01'),
+      lampEvent('113', 120, '00'),
+    ]);
+    await jobs.tick();
+    const lampNotifications = () =>
+      database.client.fleetNotification.findMany({
+        where: { ...scopeA, deviceId: lampDevice.id },
+        orderBy: [{ occurredAt: 'asc' }, { sourceKey: 'asc' }],
+      });
+    const lampTransitions = await lampNotifications();
+    expect(lampTransitions).toHaveLength(11);
+    expect(lampTransitions).toEqual(
+      expect.arrayContaining(
+        (
+          [
+            [10, 'BRAKE_SYSTEM', 'RED', 'OFF', 'CRITICAL'],
+            [30, 'BRAKE_SYSTEM', 'OFF', 'RED', 'INFO'],
+            [40, 'BRAKE_SYSTEM', 'YELLOW', 'OFF', 'WARNING'],
+            [60, 'BRAKE_SYSTEM', 'OFF', 'YELLOW', 'INFO'],
+            [110, 'BRAKE_SYSTEM', 'RED', 'NOT_AVAILABLE', 'CRITICAL'],
+            [110, 'BRAKE_SYSTEM', 'YELLOW', 'RED', 'WARNING'],
+            [110, 'ENGINE', 'YELLOW', 'OFF', 'WARNING'],
+            [110, 'ABS', 'RED', 'OFF', 'CRITICAL'],
+            [120, 'BRAKE_SYSTEM', 'OFF', 'YELLOW', 'INFO'],
+            [120, 'ENGINE', 'OFF', 'YELLOW', 'INFO'],
+            [120, 'ABS', 'OFF', 'RED', 'INFO'],
+          ] as const
+        ).map(([seconds, lamp, state, previousState, severity]) =>
+          expect.objectContaining({
+            ...scopeA,
+            sourceKind: 'DIAGNOSTIC',
+            category: 'DEVICE',
+            severity,
+            occurredAt: at(seconds),
+            createdAt: at(600),
+            wordingKey:
+              state === 'OFF' ? 'notification.warningLampOff' : 'notification.warningLampEntered',
+            parameters: {
+              lamp,
+              state,
+              previousState,
+              deviceId: lampDevice.id,
+              vehicleId: lampVehicle.id,
+            },
+            deviceId: lampDevice.id,
+            vehicleId: lampVehicle.id,
+          }),
+        ),
+      ),
+    );
+    await jobs.tick();
+    expect(await lampNotifications()).toEqual(lampTransitions);
+    await database.client.fleetErmCursor.update({
+      where: { ...scopeA, deviceId: lampDevice.id },
+      data: { lastEventId: 0n },
+    });
+    await jobs.tick();
+    expect(await lampNotifications()).toEqual(lampTransitions);
+    events.get(lampDevice.imei)?.push(lampEvent('114', 90, '01'));
+    await jobs.tick();
+    expect(await lampNotifications()).toEqual(lampTransitions);
+
+    for (const selectedScope of [
+      scopeA,
+      { tenantId: scopeA.tenantId, branchId: scopeB.branchId },
+      { tenantId: scopeB.tenantId, branchId: scopeA.branchId },
+    ]) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${issueDemoToken(selectedScope.tenantId)}`,
+          'x-branch-id': selectedScope.branchId,
+        },
+        body: JSON.stringify({
+          query:
+            'query($ids:[ID!]){notifications(ids:$ids){total items{wordingKey parameters{lamp state previousState deviceId vehicleId}}}}',
+          variables: { ids: lampTransitions.map(({ id }) => id) },
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const body: unknown = await response.json();
+      if (selectedScope === scopeA) {
+        expect(body).toMatchObject({
+          data: {
+            notifications: {
+              total: lampTransitions.length,
+              items: expect.arrayContaining(
+                lampTransitions.map(({ wordingKey, parameters }) => ({ wordingKey, parameters })),
+              ),
+            },
+          },
+        });
+      } else {
+        expect(body).toEqual({ data: { notifications: { total: 0, items: [] } } });
+      }
+    }
   });
 });

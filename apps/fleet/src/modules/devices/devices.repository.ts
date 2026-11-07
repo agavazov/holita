@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
-import { date, dateOrNull, fleetTable, integer, oneOf, rowsOf, text } from '../../database/sql.js';
+import { date, dateOrNull, integer, oneOf, rowsOf, text } from '../../database/sql.js';
 import type {
   FleetDeviceSortField,
   FleetDeviceStatus,
@@ -13,7 +13,7 @@ import { vehicleDataClockSql } from '../telemetry/vehicle-facts.sql.js';
 import type { DeviceConditionCriteria } from './device-filter.js';
 import { deviceListOrderSql, deviceListRowsSql, deviceListWhereSql } from './device-list.sql.js';
 import { DEVICE_STATUSES } from './device-state.js';
-import { WARNING_LAMP_PARAMETER_IDS } from './warning-lamps.js';
+import { warningLampsSql } from './warning-lamps.sql.js';
 
 /** The vehicle reference is loaded with every device through the composite relation. */
 const deviceInclude = {
@@ -161,15 +161,8 @@ export class DevicesRepository {
         },
       ],
     };
-    const devices = fleetTable(this.prisma.schema, 'device');
-    const measurements = fleetTable(this.prisma.schema, 'vehicleEdataMeasurement');
-    const [counts, latest, rawLamps] = await this.prisma.client.$transaction(
+    const [latest, rawLamps] = await this.prisma.client.$transaction(
       [
-        this.prisma.client.fleetEvent.groupBy({
-          by: ['vehicleId', 'deviceImei'],
-          where,
-          _count: { _all: true },
-        }),
         this.prisma.client.fleetEvent.findMany({
           where,
           distinct: ['vehicleId', 'deviceImei'],
@@ -184,22 +177,7 @@ export class DevicesRepository {
             source: true,
           },
         }),
-        this.prisma.client.$queryRaw(Prisma.sql`
-          SELECT d."id"::text AS "deviceId", lamp."parameterId"::int AS "parameterId",
-            lamp."valueSize"::int AS "valueSize", lamp."valueHex", lamp."recordedAt"
-          FROM ${devices} d
-          JOIN LATERAL (
-            SELECT DISTINCT ON (m."parameterId") m."parameterId", m."valueSize",
-              m."valueHex", m."recordedAt"
-            FROM ${measurements} m
-            WHERE m."tenantId" = ${scope.tenantId}::uuid AND m."branchId" = ${scope.branchId}::uuid
-              AND m."vehicleId" = d."vehicleId" AND m."deviceImei" = d."imei"
-              AND m."parameterId" = ANY(${[...WARNING_LAMP_PARAMETER_IDS]}::int[])
-            ORDER BY m."parameterId", m."recordedAt" DESC, m."receivedAt" DESC,
-              m."sourceEventId" DESC, m."id" DESC
-          ) lamp ON TRUE
-          WHERE d."tenantId" = ${scope.tenantId}::uuid AND d."branchId" = ${scope.branchId}::uuid
-            AND d."id" = ANY(${[...deviceIds]}::uuid[])`),
+        this.prisma.client.$queryRaw(warningLampsSql(this.prisma.schema, scope, deviceIds)),
       ],
       { isolationLevel: 'RepeatableRead' },
     );
@@ -209,8 +187,9 @@ export class DevicesRepository {
       valueSize: integer(row, 'valueSize'),
       valueHex: text(row, 'valueHex'),
       recordedAt: date(row, 'recordedAt'),
+      stateSince: date(row, 'stateSince'),
     }));
-    return { counts, latest, lamps };
+    return { latest, lamps };
   }
 
   findVehicle(scope: FleetScope, id: string) {

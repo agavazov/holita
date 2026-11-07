@@ -44,6 +44,8 @@ type FleetVehicle @key(fields: "id") {
   devices: [FleetDevice!]!
   "Latest telltales for assigned Devices, loaded with the same scoped Device batch."
   warningLamps: [FleetWarningLamp!]!
+  "Current RED, YELLOW or INFORMATION lamps across assigned Devices."
+  currentWarnings: [FleetWarningLamp!]!
   state: FleetVehicleState! # B2
   "Events of the vehicle with alert status OPEN." # B2
   openAlertCount: Int! # B2

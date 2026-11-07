@@ -16,7 +16,7 @@ const TELLTALE_STATES: readonly FleetWarningLampState[] = [
 export function warningLamp(
   deviceId: string,
   parameterId: number,
-  measurement?: { valueSize: number; valueHex: string; recordedAt: Date },
+  measurement?: { valueSize: number; valueHex: string; recordedAt: Date; stateSince?: Date },
 ): FleetWarningLamp {
   const value =
     measurement?.valueSize === 1 && /^[0-9a-f]{2}$/i.test(measurement.valueHex)
@@ -29,11 +29,12 @@ export function warningLamp(
     value,
     valueHex: measurement?.valueHex ?? null,
     recordedAt: measurement?.recordedAt ?? null,
+    stateSince: measurement?.stateSince ?? measurement?.recordedAt ?? null,
   };
 }
 
-export function warningLampCount(lamps: readonly FleetWarningLamp[]): number {
+export function currentWarnings(lamps: readonly FleetWarningLamp[]): FleetWarningLamp[] {
   return lamps.filter(
     (lamp) => lamp.state === 'RED' || lamp.state === 'YELLOW' || lamp.state === 'INFORMATION',
-  ).length;
+  );
 }

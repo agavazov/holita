@@ -587,6 +587,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
             status: 'ADDED',
           },
           { kind: 'DIAGNOSTIC_TROUBLE_CODE', troubleCode: 'SPN 1247 FMI 11', status: 'DELETED' },
+          { kind: 'DIAGNOSTIC_TROUBLE_CODE', troubleCode: 'SPN 4339 FMI 7', status: 'ADDED' },
           {
             kind: 'DIAGNOSTIC_TROUBLE_CODE',
             troubleCode: 'SPN 4294967295 FMI 31',
@@ -597,16 +598,18 @@ describe('Events and alert workflow with PostgreSQL', () => {
       {
         report: 419,
         sourceId: '906',
-        at: hours(-0.05),
+        at: hours(-0.025),
         raw: false,
         diagnostics: [
           {
             kind: 'DIAGNOSTIC_TROUBLE_CODE',
             troubleCode: 'SPN 4294967295 FMI 31',
-            status: 'ADDED',
+            status: 'DELETED',
           },
+          { kind: 'DIAGNOSTIC_TROUBLE_CODE', troubleCode: 'SPN 4339 FMI 7', status: 'DELETED' },
         ],
       },
+      { report: 417, sourceId: '907', at: hours(-0.075), diagnostics: [] },
     ];
     const expectedReports: Record<string, unknown>[] = [];
     const expectedFallback: Record<string, unknown>[] = [];
@@ -657,24 +660,45 @@ describe('Events and alert workflow with PostgreSQL', () => {
           diagnostics: report.diagnostics,
         });
       }
-      const expectedDiagnostics = diagnostics.map((diagnostic) => ({
-        ...diagnostic,
-        report: report.report,
-        spn:
-          diagnostic.troubleCode === 'SPN 4294967295 FMI 31'
-            ? 4294967295
-            : diagnostic.troubleCode === 'SPN 1247 FMI 11'
-              ? 1247
-              : null,
-        fmi:
-          diagnostic.troubleCode === 'SPN 4294967295 FMI 31'
-            ? 31
-            : diagnostic.troubleCode === 'SPN 1247 FMI 11'
-              ? 11
-              : null,
-        occurredAt: report.at.toISOString(),
-        receivedAt: asOf.toISOString(),
-      }));
+      const expectedDiagnostics = diagnostics.map((diagnostic) => {
+        const faultCode = /^SPN (\d+) FMI (\d+)$/.exec(diagnostic.troubleCode ?? '');
+        const repeatedFault =
+          diagnostic.troubleCode === 'SPN 4294967295 FMI 31' ||
+          diagnostic.troubleCode === 'SPN 4339 FMI 7';
+        return {
+          ...diagnostic,
+          report: report.report,
+          spn: faultCode ? Number(faultCode[1]) : null,
+          fmi: faultCode ? Number(faultCode[2]) : null,
+          systemKey:
+            diagnostic.troubleCode === 'SPN 4339 FMI 7'
+              ? 'AFTERTREATMENT'
+              : diagnostic.troubleCode === 'SPN 1247 FMI 11'
+                ? 'ENGINE'
+                : 'OTHER',
+          descriptionKey:
+            diagnostic.troubleCode === 'SPN 4339 FMI 7'
+              ? 'faults.spn.scrFeedbackControl'
+              : diagnostic.troubleCode === 'SPN 1247 FMI 11'
+                ? 'faults.spn.enginePower'
+                : null,
+          catalogVersion: '2026-11-08.1',
+          firstObservedAt:
+            report.report === 417
+              ? hours(-0.2).toISOString()
+              : repeatedFault
+                ? hours(-0.05).toISOString()
+                : report.at.toISOString(),
+          lastObservedAt:
+            report.report === 417
+              ? hours(-0.075).toISOString()
+              : repeatedFault
+                ? hours(-0.025).toISOString()
+                : report.at.toISOString(),
+          occurredAt: report.at.toISOString(),
+          receivedAt: asOf.toISOString(),
+        };
+      });
       const expected = {
         sourceKind: 'DIAGNOSTIC',
         state: 'RECORDED',
@@ -689,10 +713,37 @@ describe('Events and alert workflow with PostgreSQL', () => {
       });
       expectedFallback.unshift({ ...expected, sourceId: `fleet:${String(storedIds[0])}` });
     }
-    const diagnosticProblems = `query {
-      fleetProblems(filter:{sourceKinds:[DIAGNOSTIC]},limit:100){
+    // Matching codes outside this Tenant/Branch never widen the observation bounds.
+    for (const [scopeTenant, scopeBranch] of [
+      [tenantId, otherBranchId],
+      [randomUUID(), branchId],
+    ] as const) {
+      const vehicle = await database.client.vehicle.create({
+        data: { tenantId: scopeTenant, branchId: scopeBranch, licensePlate: 'CB 1006 AX' },
+      });
+      await database.client.fleetEvent.create({
+        data: {
+          tenantId: scopeTenant,
+          branchId: scopeBranch,
+          vehicleId: vehicle.id,
+          deviceImei: device.imei,
+          source: 'ERM',
+          sourceEventId: 908n,
+          occurredAt: hours(-0.3),
+          kind: 'DIAGNOSTIC_TROUBLE_CODE',
+          severity: 'WARNING',
+          diagnosticReport: 419,
+          diagnosticSpn: 4339n,
+          diagnosticFmi: 7,
+          troubleCode: 'SPN 4339 FMI 7',
+        },
+      });
+    }
+    const diagnosticProblems = `query($from:DateTime,$to:DateTime) {
+      fleetProblems(filter:{sourceKinds:[DIAGNOSTIC],occurredFrom:$from,occurredTo:$to},limit:100){
         total items{sourceKind sourceId state requiringAttention alertId ermEventId
-          diagnostics{kind troubleCode status report spn fmi occurredAt receivedAt}}
+          diagnostics{kind troubleCode status report spn fmi systemKey descriptionKey catalogVersion
+            firstObservedAt lastObservedAt occurredAt receivedAt}}
       }
     }`;
     const canError = {
@@ -703,16 +754,71 @@ describe('Events and alert workflow with PostgreSQL', () => {
           troubleCode: null,
           status: null,
           report: 411,
+          systemKey: 'OTHER',
+          descriptionKey: null,
+          catalogVersion: '2026-11-08.1',
+          firstObservedAt: hours(-0.25).toISOString(),
+          lastObservedAt: hours(-0.25).toISOString(),
         }),
       ],
     };
     expect(await query(diagnosticProblems, {})).toMatchObject({
       data: {
         fleetProblems: {
-          total: 6,
+          total: 7,
           items: expect.arrayContaining(
             [...expectedReports, canError].map((row) => expect.objectContaining(row)),
           ),
+        },
+      },
+    });
+    expect(await query(diagnosticProblems, {}, otherBranchId)).toMatchObject({
+      data: {
+        fleetProblems: {
+          total: 1,
+          items: [
+            {
+              diagnostics: [
+                {
+                  spn: 4339,
+                  systemKey: 'AFTERTREATMENT',
+                  firstObservedAt: hours(-0.3).toISOString(),
+                  lastObservedAt: hours(-0.3).toISOString(),
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    // The bounds describe only the requested evidence period, including when status changes.
+    expect(
+      await query(diagnosticProblems, {
+        from: hours(-0.04).toISOString(),
+        to: hours(0).toISOString(),
+      }),
+    ).toMatchObject({
+      data: {
+        fleetProblems: {
+          total: 1,
+          items: [
+            {
+              diagnostics: [
+                {
+                  spn: 4294967295,
+                  status: 'DELETED',
+                  firstObservedAt: hours(-0.025).toISOString(),
+                  lastObservedAt: hours(-0.025).toISOString(),
+                },
+                {
+                  spn: 4339,
+                  status: 'DELETED',
+                  firstObservedAt: hours(-0.025).toISOString(),
+                  lastObservedAt: hours(-0.025).toISOString(),
+                },
+              ],
+            },
+          ],
         },
       },
     });
@@ -726,7 +832,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
     expect(await query(diagnosticProblems, {})).toMatchObject({
       data: {
         fleetProblems: {
-          total: 6,
+          total: 7,
           items: expect.arrayContaining(
             [...expectedFallback, canError].map((row) => expect.objectContaining(row)),
           ),

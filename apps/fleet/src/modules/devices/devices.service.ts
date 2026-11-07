@@ -53,12 +53,18 @@ import { deviceConditions } from './device-filter.js';
 import { deviceStatus } from './device-state.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { ermTelemetryEnabled } from '../erm-telemetry/erm-telemetry.jobs.js';
-import { WARNING_LAMP_PARAMETER_IDS, warningLamp, warningLampCount } from './warning-lamps.js';
+import { WARNING_LAMP_PARAMETER_IDS, warningLamp, currentWarnings } from './warning-lamps.js';
 
 export type DeviceResult = Omit<FleetDevice, 'branch'>;
 type StoredDevice = Omit<
   DeviceResult,
-  'lastReportedAt' | 'status' | 'routing' | 'routingHealth' | 'diagnostics' | 'warningLamps'
+  | 'lastReportedAt'
+  | 'status'
+  | 'routing'
+  | 'routingHealth'
+  | 'diagnostics'
+  | 'warningLamps'
+  | 'currentWarnings'
 >;
 
 const DEVICE_MODELS = Object.values(FleetDeviceModel);
@@ -248,7 +254,14 @@ export class DevicesService {
     scope: FleetScope,
     rows: readonly DeviceRow[],
   ): Promise<
-    Map<string, { diagnostics: FleetDeviceDiagnosticSummary; warningLamps: FleetWarningLamp[] }>
+    Map<
+      string,
+      {
+        diagnostics: FleetDeviceDiagnosticSummary;
+        warningLamps: FleetWarningLamp[];
+        currentWarnings: FleetWarningLamp[];
+      }
+    >
   > {
     if (!rows.length) {
       return new Map();
@@ -256,7 +269,7 @@ export class DevicesService {
     const pairs = rows.flatMap((row) =>
       row.vehicleId === null ? [] : [{ vehicleId: row.vehicleId, imei: row.imei }],
     );
-    const { counts, latest, lamps } = await this.devices.diagnostics(
+    const { latest, lamps } = await this.devices.diagnostics(
       scope,
       pairs,
       rows.map((row) => row.id),
@@ -266,13 +279,6 @@ export class DevicesService {
         row.deviceImei === null
           ? []
           : [[reportingPair(row.vehicleId, row.deviceImei), row] as const],
-      ),
-    );
-    const countsByPair = new Map(
-      counts.flatMap((row) =>
-        row.deviceImei === null
-          ? []
-          : [[reportingPair(row.vehicleId, row.deviceImei), row._count._all] as const],
       ),
     );
     return new Map(
@@ -289,12 +295,11 @@ export class DevicesService {
           row.id,
           {
             diagnostics: {
-              count:
-                (pair === null ? 0 : (countsByPair.get(pair) ?? 0)) +
-                warningLampCount(warningLamps),
+              count: currentWarnings(warningLamps).length,
               latest: pair === null ? null : (latestByPair.get(pair) ?? null),
             },
             warningLamps,
+            currentWarnings: currentWarnings(warningLamps),
           },
         ];
       }),
@@ -341,6 +346,7 @@ export class DevicesService {
         routingHealth: routing.get(row.imei)?.routingHealth ?? null,
         diagnostics: diagnostics.get(row.id)?.diagnostics ?? { count: 0, latest: null },
         warningLamps: diagnostics.get(row.id)?.warningLamps ?? [],
+        currentWarnings: diagnostics.get(row.id)?.currentWarnings ?? [],
       })),
       total: page.total,
       offset,
@@ -531,6 +537,7 @@ export class DevicesService {
         status: deviceStatus(row.vehicleId, lastReportedAt, asOf, settings.notReportingHours),
         diagnostics: diagnostics.get(row.id)?.diagnostics ?? { count: 0, latest: null },
         warningLamps: diagnostics.get(row.id)?.warningLamps ?? [],
+        currentWarnings: diagnostics.get(row.id)?.currentWarnings ?? [],
       };
     });
   }

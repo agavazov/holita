@@ -67,6 +67,8 @@ type FleetDevice @key(fields: "id") {
   diagnostics: FleetDeviceDiagnosticSummary!
   "Latest stored 405 observation for each supported telltale on the current vehicle/IMEI pair; missing observations are UNKNOWN."
   warningLamps: [FleetWarningLamp!]!
+  "Latest RED, YELLOW or INFORMATION lamps for the current vehicle/IMEI pair."
+  currentWarnings: [FleetWarningLamp!]!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -81,9 +83,9 @@ type FleetDeviceRoutingHealth {
   backupSeconds: Int!
 }
 
-"Added DTC and CAN observations for the current vehicle/IMEI pair plus latest warning telltales; recorded faults do not assert an active ECU fault."
+"Current warning count with a separate historical diagnostic observation."
 type FleetDeviceDiagnosticSummary {
-  "Added fault observations and latest RED, YELLOW or INFORMATION telltales; deleted fault observations are excluded."
+  "Latest RED, YELLOW or INFORMATION telltales only; recorded DTC/CAN history never increases this count."
   count: Int!
   "Latest counted DTC or CAN observation, independent of warning telltales."
   latest: FleetDeviceDiagnosticFault
@@ -110,6 +112,8 @@ type FleetWarningLamp {
   valueHex: String
   "Observation time; null means no stored report for this telltale."
   recordedAt: DateTime
+  "First observation in the uninterrupted current decoded state; null without a measurement."
+  stateSince: DateTime
 }
 
 type FleetDeviceDiagnosticFault {

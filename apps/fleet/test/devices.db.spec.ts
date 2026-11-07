@@ -350,7 +350,7 @@ describe('Device GraphQL with PostgreSQL', () => {
     ).toEqual({ data: { fleetDevices: { total: 0 } } });
     expect(
       await query(
-        'query($id:ID!){fleetDevice(id:$id){warningLamps{parameterId state value valueHex recordedAt}}}',
+        'query($id:ID!){fleetDevice(id:$id){warningLamps{parameterId state value valueHex recordedAt stateSince} currentWarnings{parameterId}}}',
         { id: silent.id },
         branchId,
       ),
@@ -363,7 +363,9 @@ describe('Device GraphQL with PostgreSQL', () => {
             value: null,
             valueHex: null,
             recordedAt: null,
+            stateSince: null,
           })),
+          currentWarnings: [],
         },
       },
     });
@@ -511,11 +513,16 @@ describe('Device GraphQL with PostgreSQL', () => {
     await database.client.vehicleEdataMeasurement.createMany({
       data: [
         measurement(first.id, imei, 1896, '01', '2026-10-18T05:00:00.000Z', 1n),
-        measurement(first.id, imei, 1896, '00', lampTime, 2n),
-        measurement(first.id, imei, 1906, '02', lampTime, 2n),
-        measurement(first.id, imei, 1910, '03', lampTime, 2n),
+        measurement(first.id, imei, 1896, '01', lampTime, 2n),
+        measurement(first.id, imei, 1896, '00', lampTime, 3n),
+        measurement(first.id, imei, 1906, '01', '2026-10-18T05:15:00.000Z', 1n),
+        measurement(first.id, imei, 1906, '02', '2026-10-18T05:15:00.000Z', 2n),
+        measurement(first.id, imei, 1906, '02', lampTime, 3n),
+        measurement(first.id, imei, 1910, '01', '2026-10-18T05:00:00.000Z', 1n),
+        measurement(first.id, imei, 1910, '03', '2026-10-18T05:30:00.000Z', 2n),
+        measurement(first.id, imei, 1910, '03', lampTime, 3n),
         // Neither another pair nor a later foreign-scope measurement supplies this Device's state.
-        measurement(second.id, imei, 1896, '00', '2026-10-18T08:00:00.000Z', 3n),
+        measurement(second.id, imei, 1896, '00', '2026-10-18T08:00:00.000Z', 4n),
         measurement(first.id, '990601000000002', 1906, '01', '2026-10-18T08:00:00.000Z', 3n),
         {
           ...measurement(elsewhere.id, imei, 1906, '01', '2026-10-18T08:00:00.000Z', 3n),
@@ -527,7 +534,8 @@ describe('Device GraphQL with PostgreSQL', () => {
         },
       ],
     });
-    const warningLamps = 'warningLamps{deviceId parameterId state value valueHex recordedAt}';
+    const lampFields = 'deviceId parameterId state value valueHex recordedAt stateSince';
+    const warningLamps = `warningLamps{${lampFields}} currentWarnings{${lampFields}}`;
     const expectedLamps = [
       {
         deviceId: device.id,
@@ -536,6 +544,7 @@ describe('Device GraphQL with PostgreSQL', () => {
         value: 0,
         valueHex: '00',
         recordedAt: lampTime,
+        stateSince: lampTime,
       },
       {
         deviceId: device.id,
@@ -544,6 +553,7 @@ describe('Device GraphQL with PostgreSQL', () => {
         value: 2,
         valueHex: '02',
         recordedAt: lampTime,
+        stateSince: '2026-10-18T05:15:00.000Z',
       },
       {
         deviceId: device.id,
@@ -552,11 +562,12 @@ describe('Device GraphQL with PostgreSQL', () => {
         value: 3,
         valueHex: '03',
         recordedAt: lampTime,
+        stateSince: '2026-10-18T05:30:00.000Z',
       },
     ];
     const diagnostics = 'diagnostics{count latest{kind occurredAt troubleCode source}}';
     const currentFaults = {
-      count: 4,
+      count: 2,
       latest: {
         kind: 'CAN_ERROR',
         occurredAt: '2026-10-18T06:00:00.000Z',
@@ -567,11 +578,27 @@ describe('Device GraphQL with PostgreSQL', () => {
     for (const [source, expected] of [
       [
         `query($id:ID!){fleetDevice(id:$id){${diagnostics} ${warningLamps}}}`,
-        { fleetDevice: { diagnostics: currentFaults, warningLamps: expectedLamps } },
+        {
+          fleetDevice: {
+            diagnostics: currentFaults,
+            warningLamps: expectedLamps,
+            currentWarnings: expectedLamps.slice(1),
+          },
+        },
       ],
       [
         `query($id:ID!){fleetDevices(ids:[$id]){items{${diagnostics} ${warningLamps}}}}`,
-        { fleetDevices: { items: [{ diagnostics: currentFaults, warningLamps: expectedLamps }] } },
+        {
+          fleetDevices: {
+            items: [
+              {
+                diagnostics: currentFaults,
+                warningLamps: expectedLamps,
+                currentWarnings: expectedLamps.slice(1),
+              },
+            ],
+          },
+        },
       ],
       [
         `query($id:ID!){fleetVehicles(ids:[$id]){items{${warningLamps} devices{imei ${diagnostics} ${warningLamps}}}}}`,
@@ -580,7 +607,15 @@ describe('Device GraphQL with PostgreSQL', () => {
             items: [
               {
                 warningLamps: expectedLamps,
-                devices: [{ imei, diagnostics: currentFaults, warningLamps: expectedLamps }],
+                currentWarnings: expectedLamps.slice(1),
+                devices: [
+                  {
+                    imei,
+                    diagnostics: currentFaults,
+                    warningLamps: expectedLamps,
+                    currentWarnings: expectedLamps.slice(1),
+                  },
+                ],
               },
             ],
           },
@@ -612,6 +647,20 @@ describe('Device GraphQL with PostgreSQL', () => {
       await database.client.vehicleEdataMeasurement.create({
         data: measurement(first.id, imei, 1896, valueHex, recordedAt, BigInt(value + 10)),
       });
+      const brake = {
+        deviceId: device.id,
+        parameterId: 1896,
+        state,
+        value,
+        valueHex,
+        recordedAt,
+        stateSince:
+          value === 0
+            ? lampTime
+            : value === 5 || value === 6
+              ? new Date(new Date(lampTime).getTime() + 5 * 60_000).toISOString()
+              : recordedAt,
+      };
       expect(
         await query(
           `query($id:ID!){fleetDevice(id:$id){${diagnostics} ${warningLamps}}}`,
@@ -621,9 +670,10 @@ describe('Device GraphQL with PostgreSQL', () => {
       ).toEqual({
         data: {
           fleetDevice: {
-            diagnostics: { ...currentFaults, count: 4 + ([1, 2, 3].includes(value) ? 1 : 0) },
-            warningLamps: [
-              { deviceId: device.id, parameterId: 1896, state, value, valueHex, recordedAt },
+            diagnostics: { ...currentFaults, count: 2 + ([1, 2, 3].includes(value) ? 1 : 0) },
+            warningLamps: [brake, ...expectedLamps.slice(1)],
+            currentWarnings: [
+              ...([1, 2, 3].includes(value) ? [brake] : []),
               ...expectedLamps.slice(1),
             ],
           },
@@ -643,11 +693,13 @@ describe('Device GraphQL with PostgreSQL', () => {
     });
     expect(
       await query(
-        `query($id:ID!){fleetDevice(id:$id){${diagnostics}}}`,
+        `query($id:ID!){fleetDevice(id:$id){${diagnostics} currentWarnings{parameterId}}}`,
         { id: device.id },
         pairBranch,
       ),
-    ).toEqual({ data: { fleetDevice: { diagnostics: { count: 0, latest: null } } } });
+    ).toEqual({
+      data: { fleetDevice: { diagnostics: { count: 0, latest: null }, currentWarnings: [] } },
+    });
     for (const [scopeBranch, scopeTenant] of [
       [foreignBranch, tenantId],
       [pairBranch, otherTenant],

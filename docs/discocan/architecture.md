@@ -113,11 +113,14 @@ anyone select any Tenant and is not production identity or membership authorizat
 
 `FleetVehicle` and `FleetDevice` are federation entities keyed by `id`, with `branch: Branch!`.
 `FleetVehicle.devices` exposes assigned Device entities through a scoped page batch, so Router
-can compose each device's live `ermState`. `FleetDevice.diagnostics` counts added DTC observations,
-recorded CAN error/disconnection evidence and latest warning lamps for the current vehicle/IMEI
-pair, excluding deleted observations. `FleetDevice.warningLamps` and `FleetVehicle.warningLamps`
+can compose each device's live `ermState`. `FleetDevice.diagnostics.count` counts only latest RED,
+YELLOW or INFORMATION lamps for the current vehicle/IMEI pair; DTC and CAN observations remain
+history. `FleetDevice.warningLamps` and `FleetVehicle.warningLamps`
 return each of the three supported FMS1 telltales with its raw value and last measurement time;
-missing measurements remain unknown. These fields do not assert that a historical fault is still
+missing measurements remain unknown. `stateSince` marks the first observation of the current
+decoded state. Device/Vehicle `currentWarnings` contains the RED, YELLOW and INFORMATION
+subset. Diagnostic history includes catalog system/description keys and first/last observations
+within the requested evidence period. These fields do not assert that a historical fault is still
 active. Live ERM values and these
 display-only diagnostics do not drive Fleet list filtering, sorting or whole-Branch counts.
 Other record links use stored-field reference types. Derived list facts must be computed

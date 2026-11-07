@@ -199,6 +199,14 @@ enum FleetDiagnosticStatus {
   DELETED
 }
 
+enum FleetFaultSystem {
+  ENGINE
+  BRAKES
+  ABS_EBS
+  AFTERTREATMENT
+  OTHER
+}
+
 type FleetProblemDiagnostic {
   kind: FleetEventKind!
   troubleCode: String
@@ -209,6 +217,14 @@ type FleetProblemDiagnostic {
   "SPN uses Float to retain unsigned 32-bit values beyond GraphQL Int."
   spn: Float
   fmi: Int
+  "Vehicle-system translation key from holita's versioned catalog; unknown codes use OTHER."
+  systemKey: FleetFaultSystem!
+  "Holita component-description translation key, when the code has a supported meaning."
+  descriptionKey: String
+  catalogVersion: String!
+  "For recorded diagnostics, first and last observations of this code/kind/report on the same vehicle/IMEI within the requested evidence period, across added/deleted observations. Alert-backed diagnostics use their own observation time."
+  firstObservedAt: DateTime!
+  lastObservedAt: DateTime!
   occurredAt: DateTime!
   "Receipt time when retained by Fleet; null for evidence available only from ERM Problems."
   receivedAt: DateTime

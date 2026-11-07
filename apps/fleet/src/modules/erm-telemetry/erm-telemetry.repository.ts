@@ -13,6 +13,8 @@ import {
 } from './erm-telemetry.mapping.js';
 import { recordedDiagnosticNotifications } from '../notifications/notification-projection.js';
 import { notificationCutoff } from '../notifications/notification-sources.repository.js';
+import { warningLampNotifications } from '../notifications/warning-lamp-notifications.js';
+import { WARNING_LAMP_PARAMETER_IDS } from '../devices/warning-lamps.js';
 
 @Injectable()
 export class ErmTelemetryRepository {
@@ -107,10 +109,39 @@ export class ErmTelemetryRepository {
           const labels = await this.measurementLabels(transaction, parameterIds);
           const measurements = ermEdataMeasurements(device, page.events, labels);
           if (measurements.length > 0) {
-            await transaction.vehicleEdataMeasurement.createMany({
+            const previousLamps = await transaction.vehicleEdataMeasurement.findMany({
+              where: {
+                ...scope,
+                vehicleId: device.vehicleId,
+                deviceImei: device.imei,
+                parameterId: { in: [...WARNING_LAMP_PARAMETER_IDS] },
+              },
+              distinct: ['parameterId'],
+              orderBy: [
+                { parameterId: 'asc' },
+                { recordedAt: 'desc' },
+                { receivedAt: 'desc' },
+                { sourceEventId: 'desc' },
+                { id: 'desc' },
+              ],
+            });
+            const inserted = await transaction.vehicleEdataMeasurement.createManyAndReturn({
               data: measurements,
               skipDuplicates: true,
             });
+            const lampNotifications = warningLampNotifications(
+              device,
+              previousLamps,
+              inserted,
+              notificationCursor.since > cutoff ? notificationCursor.since : cutoff,
+              now,
+            );
+            if (lampNotifications.length) {
+              await transaction.fleetNotification.createMany({
+                data: lampNotifications,
+                skipDuplicates: true,
+              });
+            }
           }
         }
       }

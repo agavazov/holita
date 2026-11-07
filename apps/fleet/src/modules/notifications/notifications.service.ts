@@ -61,6 +61,11 @@ function wordingParameters(value: Prisma.JsonValue): FleetNotificationParameters
     commandKind: stringValue('commandKind'),
     commandStatus: stringValue('commandStatus'),
     reasonCode: stringValue('reasonCode'),
+    lamp: stringValue('lamp'),
+    state: stringValue('state'),
+    previousState: stringValue('previousState'),
+    deviceId: stringValue('deviceId'),
+    vehicleId: stringValue('vehicleId'),
   };
 }
 
