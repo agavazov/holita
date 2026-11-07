@@ -45,7 +45,7 @@
   "deviceError": "Грешка във връзката с устройството",
   "upstreamError": "Грешка във връзката с Karma",
   "connected": "Свързано",
-  "live": "На живо",
+  "live": "Онлайн",
   "positionAge": "Възраст на позицията",
   "alarmsShort": "{count} аларми / 24 ч."
 }

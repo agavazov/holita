@@ -1,4 +1,6 @@
-// Document defaults. Every value comes from the holita preset (`--p-*`, `--p-app-*`).
+@use 'loading';
+
+// Document defaults. Startup fallbacks apply before the PrimeNG preset is installed.
 @layer holita {
   html {
     // The browser default root (16 px) honours the user's font-size setting.
@@ -7,11 +9,11 @@
 
   body {
     min-height: 100dvh;
-    font-family: var(--p-app-font-family);
-    font-size: var(--p-app-text-base);
+    font-family: var(--p-app-font-family, 'Lato', sans-serif);
+    font-size: var(--p-app-text-base, 1rem);
     line-height: 1.5;
-    color: var(--p-text-color);
-    background: var(--p-app-canvas-background);
+    color: var(--p-text-color, var(--app-startup-text));
+    background: var(--p-app-canvas-background, var(--app-startup-background));
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

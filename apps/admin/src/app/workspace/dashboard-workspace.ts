@@ -16,6 +16,7 @@ import { TripsPage } from '../features/fleet/trips/trips-page';
 import { FLEET_DISPLAY, defaultFleetDisplay } from '../ui/format/fleet-format';
 import { uiMessages } from '../ui/i18n/messages';
 import { AdminWorkspace } from './admin-workspace';
+import { PageLoading } from './page-loading';
 
 /** Each mounted dashboard owns its Branch preferences and feature clients. */
 @Component({
@@ -31,6 +32,7 @@ import { AdminWorkspace } from './admin-workspace';
     OverviewPage,
     ProblemsPage,
     TripsPage,
+    PageLoading,
   ],
   providers: [
     GeneralSettingsApi,
@@ -54,17 +56,16 @@ import { AdminWorkspace } from './admin-workspace';
     } @else {
       @for (scope of scopes(); track scope.token + ':' + scope.branch.id + ':' + scope.language) {
         @if (!preferences.settings()) {
-          <section class="app-card">
-            <h1 id="page-title">{{ workspace.text().dashboard }}</h1>
-            @if (preferences.loading()) {
-              <p role="status">{{ uiText().loading }}</p>
-            } @else {
+          @if (preferences.loading()) {
+            <holita-page-loading />
+          } @else {
+            <section class="app-card">
               <p-message severity="error">{{ preferencesError() }}</p-message>
               <button pButton type="button" (click)="preferences.retry()">
                 {{ uiText().retry }}
               </button>
-            }
-          </section>
+            </section>
+          }
         } @else {
           <p-tabs [value]="tab" (valueChange)="selectTab($event)">
             <p-tablist [pt]="{ content: { 'aria-label': workspace.text().dashboard } }">
@@ -75,9 +76,6 @@ import { AdminWorkspace } from './admin-workspace';
             <p-tabpanels>
               <p-tabpanel [value]="tab">
                 <div class="app-view">
-                  @if (tab !== 'trips') {
-                    <p class="app-muted">{{ hint() }}</p>
-                  }
                   @switch (tab) {
                     @case ('overview') {
                       <holita-overview-page [branch]="scope.branch" [language]="scope.language" />
@@ -129,14 +127,6 @@ export class DashboardWorkspace {
       settingsText(this.workspace.language()).general.loadError,
     ),
   );
-  protected readonly hint = computed(() => {
-    const text = this.workspace.text();
-    return this.tab === 'problems'
-      ? text.dashboardProblemsHint
-      : this.tab === 'trips'
-        ? text.dashboardTripsHint
-        : text.dashboardOverviewHint;
-  });
 
   constructor() {
     effect(() => {

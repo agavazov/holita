@@ -20,7 +20,7 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
   }
   if (branchId === 'settings' && namespace === 'users') {
     return {
-      group: text.settings,
+      group: '',
       page: text.users,
       pageLink: ['/', language, 'settings', 'users'],
     };
@@ -29,6 +29,12 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
     return null;
   }
   const fleet = ['/', language, branchId, 'fleet'];
+  if (resource === 'settings' && (recordId === 'general' || recordId === 'groups')) {
+    return {
+      group: text.settings,
+      page: recordId === 'general' ? text.settingsGeneral : text.vehicleGroups,
+    };
+  }
   if (resource === 'notifications') {
     return {
       group: '',
@@ -68,7 +74,14 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
                 ? text.commands
                 : null;
     return vehicleTab
-      ? { group: '', page: text.vehicles, pageLink: [...fleet, 'vehicles'], tab: vehicleTab }
+      ? {
+          group: '',
+          page: text.vehicles,
+          pageLink: [...fleet, 'vehicles'],
+          ...(tab === 'overview'
+            ? {}
+            : { recordLink: [...fleet, 'vehicles', recordId, 'overview'], tab: vehicleTab }),
+        }
       : null;
   }
   if (resource !== 'devices' || !recordId || !tab || tab === 'edit') {
@@ -91,6 +104,13 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
                   ? `${text.technicalDetails} — ${text.frames}`
                   : null;
   return deviceTab
-    ? { group: '', page: text.devices, pageLink: [...fleet, 'devices'], tab: deviceTab }
+    ? {
+        group: '',
+        page: text.devices,
+        pageLink: [...fleet, 'devices'],
+        ...(tab === 'overview'
+          ? {}
+          : { recordLink: [...fleet, 'devices', recordId, 'overview'], tab: deviceTab }),
+      }
     : null;
 }

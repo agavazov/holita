@@ -1,4 +1,7 @@
 <holita-operation-toast />
+@if (navigating()) {
+  <div class="app-route-progress" role="progressbar" [attr.aria-label]="text().loading"></div>
+}
 @if (!session.current() || (!session.branchId() && branches.required())) {
   <holita-login
     [language]="language()"

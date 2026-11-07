@@ -36,7 +36,7 @@ expiry and a detected server revocation clear the real session across tabs; each
 its current fleet when another tab changes fleets. Denied storage uses memory only.
 Sign-out honors dirty guards and retires clients; submitted writes keep their captured token.
 
-Settings → Users is Tenant-wide and requires no Branch. Only Administrators can create users,
+Users is a separate Tenant-wide sidebar destination and requires no Branch. Only Administrators can create users,
 edit their accounts or roles, and deactivate/reactivate accounts. Nobody can change their own
 role. Deactivation revokes that user's sessions; reactivation requires a fresh sign-in.
 Each user has one Tenant-wide role: `VIEWER`, `OPERATOR`, `ENGINEER` or `ADMINISTRATOR`.
@@ -114,8 +114,9 @@ Server-derived facts and clocks remain unknown when data is absent.
 | `/fleet/notifications`      | Filter Branch notifications by read state/category, open related records and mark individual/all items read                                                                                                                                                                                                  |
 
 `/:language/profile` and `/:language/settings/users` are account routes without a Branch prefix.
-The sidebar groups Dashboard, Vehicles, Devices, Drivers, Maintenance and Settings (General,
-Vehicle groups, Users). Legacy Overview/Alerts/Trips, Control center and Vehicle alerts/service
+The sidebar lists Dashboard, Vehicles, Devices, Drivers and Maintenance, followed by Settings
+and Users without a visible group heading. Settings opens General with General | Vehicle groups
+tabs; Users is separate and has no Settings tabs. Legacy Overview/Alerts/Trips, Control center and Vehicle alerts/service
 URLs redirect to canonical destinations while retaining applicable record/query/fragment context.
 
 IMEI remains a globally unique 15-digit string; assignment is optional and scoped. Several

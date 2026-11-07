@@ -1,0 +1,126 @@
+@layer holita {
+  // These fallbacks are available before Angular installs the theme tokens.
+  :root {
+    --app-startup-background: light-dark(#f1f5f9, #020617);
+    --app-startup-text: light-dark(#0f172a, #f8fafc);
+    --app-startup-accent: light-dark(#2563eb, #60a5fa);
+  }
+
+  .app-startup {
+    min-block-size: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    background: var(--app-startup-background);
+    color: var(--app-startup-text);
+  }
+
+  .app-startup__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  .app-startup__mark {
+    display: grid;
+    place-items: center;
+    inline-size: 3rem;
+    block-size: 3rem;
+    border-radius: 0.75rem;
+    background: var(--app-startup-accent);
+    color: var(--app-startup-background);
+  }
+
+  .app-startup__spinner {
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    border: 2px solid color-mix(in srgb, var(--app-startup-accent) 20%, transparent);
+    border-block-start-color: var(--app-startup-accent);
+    border-radius: 50%;
+    animation: app-startup-spin 0.8s linear infinite;
+  }
+
+  .app-route-progress {
+    position: fixed;
+    inset: 0 0 auto;
+    block-size: 3px;
+    z-index: 1200;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--p-primary-color) 20%, transparent);
+
+    &::after {
+      content: '';
+      display: block;
+      inline-size: 40%;
+      block-size: 100%;
+      background: var(--p-primary-color);
+      animation: app-route-progress 1s ease-in-out infinite;
+    }
+  }
+
+  // The first lazy route loads before a workspace exists to render its progress bar.
+  holita-root:has(> router-outlet:only-child)::before {
+    content: '';
+    position: fixed;
+    inset: 0 auto auto 0;
+    inline-size: 40%;
+    block-size: 3px;
+    z-index: 1200;
+    background: var(--p-primary-color, var(--app-startup-accent));
+    animation: app-route-progress 1s ease-in-out infinite;
+  }
+
+  .app-page-loading {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p-app-space-4);
+    padding-block: var(--p-app-space-4);
+  }
+
+  .app-page-loading__heading,
+  .app-page-loading__line,
+  .app-page-loading__panel {
+    border-radius: var(--p-app-radius-panel);
+    background: var(--p-content-border-color);
+    animation: app-page-loading 1.4s ease-in-out infinite alternate;
+  }
+
+  .app-page-loading__heading {
+    inline-size: 40%;
+    block-size: 2rem;
+  }
+
+  .app-page-loading__line {
+    inline-size: 65%;
+    block-size: 1rem;
+  }
+
+  .app-page-loading__panel {
+    block-size: 18rem;
+  }
+
+  @keyframes app-startup-spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  @keyframes app-route-progress {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(350%);
+    }
+  }
+
+  @keyframes app-page-loading {
+    to {
+      opacity: 0.45;
+    }
+  }
+}

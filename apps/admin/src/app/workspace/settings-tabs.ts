@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { AdminWorkspace } from './admin-workspace';
 
-/** Settings pages share the existing sidebar destinations and labels. */
+/** Branch settings have their own tabs; Tenant-wide Users is a separate destination. */
 @Component({
   selector: 'holita-settings-tabs',
   imports: [Tabs, TabList, Tab, TabPanels, TabPanel],
@@ -24,12 +24,17 @@ import { AdminWorkspace } from './admin-workspace';
   `,
 })
 export class SettingsTabs {
-  readonly current = input.required<'general' | 'vehicle-groups' | 'users'>();
+  readonly current = input.required<'general' | 'vehicle-groups'>();
   protected readonly workspace = inject(AdminWorkspace);
   private readonly router = inject(Router);
-  protected readonly items = computed(
-    () => this.workspace.navigation().find((group) => group.id === 'settings')?.items ?? [],
-  );
+  protected readonly items = computed(() => {
+    const text = this.workspace.text();
+    const fleet = ['/', this.workspace.language(), this.workspace.branches.selectedId(), 'fleet'];
+    return [
+      { id: 'general', label: text.settingsGeneral, link: [...fleet, 'settings', 'general'] },
+      { id: 'vehicle-groups', label: text.vehicleGroups, link: [...fleet, 'settings', 'groups'] },
+    ];
+  });
 
   protected select(value: string | number | undefined, tabs: Tabs): void {
     const item = this.items().find((item) => item.id === value);

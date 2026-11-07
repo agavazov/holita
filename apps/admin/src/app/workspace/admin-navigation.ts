@@ -11,6 +11,7 @@ export function adminNavigation(
   const users: NavGroup = {
     id: 'settings',
     label: text.settings,
+    headingHidden: true,
     items: [
       { id: 'users', label: text.users, icon: 'users', link: ['/', language, 'settings', 'users'] },
     ],
@@ -46,18 +47,14 @@ export function adminNavigation(
     {
       id: 'settings',
       label: text.settings,
+      headingHidden: true,
       items: [
         {
-          id: 'general',
-          label: text.settingsGeneral,
+          id: 'settings',
+          label: text.settings,
           icon: 'info-circle',
           link: [...fleet, 'settings', 'general'],
-        },
-        {
-          id: 'vehicle-groups',
-          label: text.vehicleGroups,
-          icon: 'tags',
-          link: [...fleet, 'settings', 'groups'],
+          activePrefix: [...fleet, 'settings'],
         },
         ...users.items,
       ],

@@ -130,8 +130,10 @@ The shell imports no business features and fetches no business data. The workspa
 navigation, Branch/language/account context and page title. Navigation has no business-count badges.
 The document title is `<page> · holita`; login uses the localized Sign in title.
 
-- The sidebar lists Dashboard, Vehicles, Devices, Drivers and Maintenance, then Settings with
-  General, Vehicle groups and Tenant-wide Users. Dashboard opens
+- The sidebar lists Dashboard, Vehicles, Devices, Drivers and Maintenance, then a second group
+  without a visible heading containing Settings and Tenant-wide Users. Settings opens General
+  and stays selected across its General | Vehicle groups tabs. Users has no Settings tabs and
+  remains available without Fleet or a Branch. Dashboard opens
   Overview; its Problems and Trips tabs keep Dashboard selected. Device detail belongs to Devices.
 - Desktop navigation collapses to a rail, persisted as `holita.admin.sidebar`. Rail links retain
   accessible names/group labels and hover/focus tooltips. The footer identifies holita and Tenant.
@@ -142,7 +144,8 @@ The document title is `<page> · holita`; login uses the localized Sign in title
   No Branch disables its menu with truthful loading/empty/unknown text.
 - Page metadata supplies Dashboard tab, Device, Profile, Users and Notifications titles/breadcrumbs.
   Breadcrumb groups are labels, pages are
-  links when a record is open, and the final crumb uses `aria-current="page"`. Record pages register
+  links when a record is open, record names link to Overview from sub-tabs, and the final crumb
+  uses `aria-current="page"`. Record pages register
   names/contextual return URLs with `injectPageRecord`.
   Long labels truncate with full text available. Page heading remains when narrow screens hide crumbs.
 - Provide skip link, header, main, labelled navigation and group headings. Active links carry

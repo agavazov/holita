@@ -48,6 +48,7 @@ export interface PageContext {
   readonly title?: string;
   readonly pageLink?: readonly string[] | UrlTree;
   readonly record?: string | null;
+  readonly recordLink?: readonly string[];
   readonly tab?: string;
 }
 

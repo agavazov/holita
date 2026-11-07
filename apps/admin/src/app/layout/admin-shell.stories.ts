@@ -147,9 +147,15 @@ const rows = [
 class ShellPreview {
   /** Very long Branch, page and record names: everything stays on one line with an ellipsis. */
   readonly longNames = input(false);
-  readonly section = input<'vehicles' | 'devices' | 'dashboard/problems' | 'settings/general'>(
-    'vehicles',
-  );
+  readonly section = input<
+    | 'vehicles'
+    | 'devices'
+    | 'dashboard/problems'
+    | 'settings/general'
+    | 'settings/groups'
+    | 'vehicles/vehicle-1/commands'
+    | 'devices/device-1/commands'
+  >('vehicles');
   readonly language = inject(UI_LANGUAGE);
   readonly branches = computed(() =>
     this.longNames()
@@ -174,7 +180,16 @@ class ShellPreview {
     const context =
       pageMetadata(this.language(), this.path()) ??
       navigationContext(this.navigation(), this.path());
-    if (!context || !this.longNames()) {
+    if (!context) {
+      return context;
+    }
+    if (context.recordLink) {
+      return {
+        ...context,
+        record: this.section().startsWith('vehicles/') ? 'CB1344XH' : '359632100000001',
+      };
+    }
+    if (!this.longNames()) {
       return context;
     }
     return {
@@ -242,6 +257,28 @@ export const SettingsNavigation: Story = {
   render: () => ({
     moduleMetadata: { imports: [ShellPreview] },
     template: '<holita-shell-preview section="settings/general" />',
+  }),
+};
+
+export const GroupsNavigation: Story = {
+  name: 'Vehicle groups keep Settings selected',
+  render: () => ({
+    moduleMetadata: { imports: [ShellPreview] },
+    template: '<holita-shell-preview section="settings/groups" />',
+  }),
+};
+
+export const VehicleBreadcrumb: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [ShellPreview] },
+    template: '<holita-shell-preview section="vehicles/vehicle-1/commands" />',
+  }),
+};
+
+export const DeviceBreadcrumb: Story = {
+  render: () => ({
+    moduleMetadata: { imports: [ShellPreview] },
+    template: '<holita-shell-preview section="devices/device-1/commands" />',
   }),
 };
 

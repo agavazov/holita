@@ -28,6 +28,15 @@ export const Default: Story = {
   render: routed(),
 };
 
+export const Loading: Story = {
+  render: routed(),
+  parameters: {
+    holita: {
+      scenario: { failures: { AdminFleetPreferences: 'pending' } },
+    } satisfies StoryFixtures,
+  },
+};
+
 export const ReadError: Story = {
   name: 'Preferences read failure',
   render: routed(),

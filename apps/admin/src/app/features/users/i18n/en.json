@@ -1,5 +1,4 @@
 {
-  "eyebrow": "Settings",
   "title": "Users",
   "guidance": "Manage the people who can sign in to this organization.",
   "scope": "Users belong to the organization and have the same access to every fleet. Every user can manage other users.",

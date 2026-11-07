@@ -5,8 +5,27 @@
     <title>holita</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      let dark = false;
+      try {
+        // Matches Appearance: the admin stays light unless the user chose dark.
+        dark = localStorage.getItem('holita.admin.theme') === 'dark';
+      } catch {
+        // Light stays the default when browser storage is unavailable.
+      }
+      document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+      document.documentElement.classList.toggle('app-dark', dark);
+    </script>
   </head>
   <body>
-    <holita-root></holita-root>
+    <holita-root>
+      <div class="app-startup" role="status" aria-label="holita" aria-busy="true">
+        <div class="app-startup__brand">
+          <span class="app-startup__mark" aria-hidden="true">h</span>
+          <span>holita</span>
+        </div>
+        <span class="app-startup__spinner" aria-hidden="true"></span>
+      </div>
+    </holita-root>
   </body>
 </html>

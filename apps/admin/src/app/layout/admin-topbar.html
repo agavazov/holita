@@ -48,12 +48,21 @@
                 class="app-breadcrumb__separator"
                 aria-hidden="true"
               ></svg>
-              <span
-                class="app-breadcrumb__text"
-                [attr.aria-current]="context.tab ? null : 'page'"
-                [title]="context.record"
-                >{{ context.record }}</span
-              >
+              @if (context.recordLink) {
+                <a
+                  class="app-breadcrumb__text"
+                  [routerLink]="context.recordLink"
+                  [title]="context.record"
+                  >{{ context.record }}</a
+                >
+              } @else {
+                <span
+                  class="app-breadcrumb__text"
+                  [attr.aria-current]="context.tab ? null : 'page'"
+                  [title]="context.record"
+                  >{{ context.record }}</span
+                >
+              }
             </li>
           }
         } @else {

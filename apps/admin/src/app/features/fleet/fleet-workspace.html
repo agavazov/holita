@@ -18,19 +18,18 @@
         scope.recordId
     ) {
       <ng-template #preferencesState>
-        <section class="app-card">
-          <h1>{{ workspace.text().fleet }}</h1>
-          @if (preferences.loading()) {
-            <p role="status">{{ uiText().loading }}</p>
-          } @else {
+        @if (preferences.loading()) {
+          <holita-page-loading />
+        } @else {
+          <section class="app-card">
             <p-message severity="error" role="alert">{{ preferencesError() }}</p-message>
             <div class="app-inline">
               <button pButton type="button" (click)="preferences.retry()">
                 {{ uiText().retry }}
               </button>
             </div>
-          }
-        </section>
+          </section>
+        }
       </ng-template>
       @if (scope.resource === 'general' || scope.resource === 'groups') {
         <holita-settings-tabs

@@ -9,8 +9,18 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, NavigationEnd, RouterOutlet, UrlSegment } from '@angular/router';
-import { filter } from 'rxjs';
+import {
+  ActivatedRoute,
+  Router,
+  NavigationStart,
+  NavigationEnd,
+  NavigationCancel,
+  NavigationError,
+  NavigationSkipped,
+  RouterOutlet,
+  UrlSegment,
+} from '@angular/router';
+import { filter, map } from 'rxjs';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { PrimeNG } from 'primeng/config';
@@ -21,6 +31,7 @@ import { AdminConfig } from '../core/config/admin-config';
 import { requestError } from '../core/graphql/request-error';
 import { Login } from '../features/auth/login';
 import { BranchContext } from '../features/branches/branch-context';
+import { FleetPreferencesSession } from '../features/fleet/settings/fleet-preferences';
 import {
   NotificationsApi,
   type NotificationsConnection,
@@ -56,6 +67,7 @@ function hasLeaveGuard(component: unknown): component is LeavableDrawer {
   imports: [RouterOutlet, AdminShell, ButtonDirective, Message, Login, OperationToast],
   providers: [
     BranchContext,
+    FleetPreferencesSession,
     MessageService,
     NotificationsApi,
     { provide: UI_LANGUAGE, useFactory: () => inject(AdminWorkspace).language },
@@ -112,6 +124,20 @@ export class AdminWorkspace {
   });
   private readonly navigationEnd = toSignal(
     this.router.events.pipe(filter((event) => event instanceof NavigationEnd)),
+  );
+  readonly navigating = toSignal(
+    this.router.events.pipe(
+      filter(
+        (event) =>
+          event instanceof NavigationStart ||
+          event instanceof NavigationEnd ||
+          event instanceof NavigationCancel ||
+          event instanceof NavigationError ||
+          event instanceof NavigationSkipped,
+      ),
+      map((event) => event instanceof NavigationStart),
+    ),
+    { initialValue: this.router.currentNavigation() !== null },
   );
   readonly language = computed(() => readLanguage(this.params().get('language')));
   private readonly format = injectFleetFormat(undefined, this.language);
