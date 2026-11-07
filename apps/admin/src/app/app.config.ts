@@ -1,11 +1,17 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { inject, provideBrowserGlobalErrorListeners, type ApplicationConfig } from '@angular/core';
+import {
+  ErrorHandler,
+  inject,
+  provideBrowserGlobalErrorListeners,
+  type ApplicationConfig,
+} from '@angular/core';
 import { provideRouter, RouteReuseStrategy } from '@angular/router';
 import { FleetRouteReuseStrategy } from './features/fleet/fleet-route-reuse';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import { timeout } from 'rxjs';
 import { routes } from './app.routes';
+import { AdminErrorHandler } from './core/admin-error-handler';
 import {
   ADMIN_RUNTIME_CONFIG,
   AdminConfig,
@@ -23,6 +29,7 @@ export function appConfig(
   return {
     providers: [
       { provide: ADMIN_RUNTIME_CONFIG, useValue: config },
+      { provide: ErrorHandler, useClass: AdminErrorHandler },
       provideBrowserGlobalErrorListeners(),
       provideHttpClient(withInterceptors([(request, next) => next(request).pipe(timeout(10_000))])),
       provideHolitaTheme(theme, config.primeUiLicense),
