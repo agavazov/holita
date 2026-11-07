@@ -43,7 +43,7 @@ export function commandState(request: CommandRequest): CommandState {
     case 'SUBMITTING':
       return 'SENDING';
     case 'ANSWERED':
-      return request.resultCode === '01' ? 'ACKNOWLEDGED' : 'UNKNOWN';
+      return request.resultCode === '01' ? 'ACKNOWLEDGED' : 'ANSWERED';
     case 'FAILED':
       return 'FAILED';
     case 'EXPIRED':
@@ -62,7 +62,7 @@ export function commandPending(request: CommandRequest): boolean {
 export function commandSeverity(request: CommandRequest) {
   const state = commandState(request);
   return toneSeverity(
-    state === 'ACKNOWLEDGED'
+    state === 'ACKNOWLEDGED' || state === 'ANSWERED'
       ? 'success'
       : state === 'REJECTED' || state === 'FAILED'
         ? 'danger'
@@ -80,6 +80,7 @@ export function commandNextStep(request: CommandRequest, language: Language): st
     WAITING: text.waitingHint,
     SENDING: text.sendingHint,
     ACKNOWLEDGED: text.acknowledgedHint,
+    ANSWERED: text.answeredHint,
     REJECTED: text.rejectedHint,
     FAILED: text.failedHint,
     EXPIRED: text.expiredHint,

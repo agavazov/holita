@@ -2,6 +2,9 @@
   <h2>{{ text().title }}</h2>
   <p class="app-muted">{{ text().hint }}</p>
   <p class="app-muted">{{ text().identityNote }}</p>
+  @if (!canOperate()) {
+    <p-message severity="info">{{ operatorRequired() }}</p-message>
+  }
   @if (error(); as error) {
     <p-message severity="warn">{{ error }}</p-message>
   }
@@ -32,7 +35,8 @@
         type="button"
         severity="secondary"
         [outlined]="true"
-        [disabled]="formStatus() !== 'VALID' || sending() !== null"
+        [disabled]="!canOperate() || formStatus() !== 'VALID' || sending() !== null"
+        [title]="canOperate() ? catalog().actions[action] : operatorRequired()"
         [loading]="sending() === action"
         (click)="send(action)"
       >
@@ -60,6 +64,7 @@
   [language]="language()"
   [target]="target()"
   [cancelling]="cancelling() === selectedId() && cancelling() !== null"
+  [canCancel]="canOperate()"
   [error]="error()"
   (closed)="selectedId.set(null)"
   (cancelRequest)="cancel($event)"

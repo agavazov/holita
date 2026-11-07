@@ -68,6 +68,46 @@
     "codeSuffix": " (код {code})",
     "command": "{command}: {outcome}{reason}.",
     "reasonSuffix": "; {reason}",
-    "unknownNotification": "Записано е известие за автопарка."
-  }
+    "unknownNotification": "Записано е известие за автопарка.",
+    "configurationOutcome": "{operation}: {outcome}.",
+    "snapshotOutcome": "Снимка на параметрите: {outcome}{reason}.",
+    "unknownConfiguration": "Промяна на конфигурация",
+    "unknownOutcome": "резултатът не е наличен",
+    "snapshotStates": {
+      "RUNNING": "чете се",
+      "COMPLETE": "завършена",
+      "PARTIAL": "частично прочетена",
+      "FAILED": "неуспешна"
+    },
+    "snapshotReasons": {
+      "UNREAD_PARAMETERS": "някои параметри не можаха да бъдат прочетени",
+      "SNAPSHOT_INTERRUPTED": "четенето е прекъснато от рестартиране на услугата",
+      "PRIMARY_REQUIRED": "нужна е свободна основна връзка с устройството",
+      "PARAMETER_READ_TIMEOUT": "времето за прочитане на параметъра изтече",
+      "PARAMETER_READ_FAILED": "параметър не можа да бъде прочетен",
+      "GATEWAY_UNAVAILABLE": "шлюзът към устройствата не е достъпен",
+      "SNAPSHOT_FAILED": "снимката не можа да бъде завършена"
+    },
+    "configurationOperations": {
+      "READ_EDATA": "Прочети конфигурацията eData",
+      "INTERVAL": "Промени един интервал eData",
+      "ADD_DEFINITION": "Добави една дефиниция eData",
+      "GLOBALS": "Промени глобалните настройки eData (302)",
+      "PARAMETER": "Промени един параметър StarLink (04)",
+      "PARAMETERS": "Промяна на няколко StarLink параметъра (46)"
+    },
+    "configurationStates": {
+      "RUNNING": "Изпълнява се",
+      "READ": "Прочетено",
+      "VERIFIED": "Проверено",
+      "MISMATCH": "Разлика при проверката",
+      "RESTORED": "Изходната стойност е възстановена",
+      "RESTORE_FAILED": "Неуспешно възстановяване",
+      "UNCERTAIN": "Неясен резултат — необходима е проверка от оператор",
+      "REFUSED": "Отказано",
+      "FAILED": "Неуспешно"
+    }
+  },
+  "configurationSource": "Изпълнение на настройка",
+  "snapshotSource": "Снимка на параметрите"
 }

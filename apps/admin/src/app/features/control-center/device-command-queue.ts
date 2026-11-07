@@ -18,6 +18,7 @@ import { ConfirmDialog } from 'primeng/confirmdialog';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import type { ErmDeviceAction } from '../../../generated/graphql/operations';
+import { DemoSession } from '../../core/auth/demo-session';
 import { requestError } from '../../core/graphql/request-error';
 import type { Language } from '../../i18n/messages';
 import { confirmAction, confirmDialogPt } from '../../ui/confirm';
@@ -31,7 +32,7 @@ import {
   type CommandRequest,
 } from '../fleet/commands';
 import { ControlCenterApi } from './control-center-api';
-import { controlCenterText } from './control-center-text';
+import { commandError, controlCenterText } from './control-center-text';
 
 const actions: readonly ErmDeviceAction[] = [
   'REQUEST_LOCATION',
@@ -73,6 +74,9 @@ export class DeviceCommandQueue {
     confirmDialogPt(this.language(), 'erm-queue-confirm-message'),
   );
   private readonly api = inject(ControlCenterApi);
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
+  protected readonly operatorRequired = computed(() => this.catalog().branchQueue.operatorRequired);
   private readonly confirmation = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly confirmationMessage = signal('');
@@ -221,7 +225,7 @@ export class DeviceCommandQueue {
   }
 
   protected async send(action: ErmDeviceAction): Promise<void> {
-    if (this.form.invalid || this.sending() !== null) {
+    if (!this.canOperate() || this.form.invalid || this.sending() !== null) {
       return;
     }
     const values = this.form.getRawValue();
@@ -275,7 +279,7 @@ export class DeviceCommandQueue {
             ].includes(code)
           );
         });
-      const reason = requestError(error, this.text().unavailable);
+      const reason = commandError(error, this.language());
       this.actionError.set(refused ? reason : `${reason} ${this.text().uncertainSubmission}`);
     } finally {
       if (this.alive()) {
@@ -286,7 +290,7 @@ export class DeviceCommandQueue {
   }
 
   protected async cancel(request: CommandRequest): Promise<void> {
-    if (request.status !== 'QUEUED' || this.cancelling() !== null) {
+    if (!this.canOperate() || request.status !== 'QUEUED' || this.cancelling() !== null) {
       return;
     }
     this.confirmationMessage.set(
@@ -314,7 +318,7 @@ export class DeviceCommandQueue {
       this.changed.emit();
     } catch (error: unknown) {
       if (this.alive()) {
-        this.actionError.set(requestError(error, this.text().unavailable));
+        this.actionError.set(commandError(error, this.language()));
       }
     } finally {
       if (this.alive()) {

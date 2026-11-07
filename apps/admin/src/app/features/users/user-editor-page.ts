@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { EMPTY, Subject, catchError, startWith, switchMap } from 'rxjs';
 import type { AdminUserDetailsFragment } from '../../../generated/graphql/operations';
 import { DemoSession } from '../../core/auth/demo-session';
@@ -35,6 +36,8 @@ import { UsersApi } from './users-api';
       [loadError]="loadFailure()"
       [closeLink]="listLink"
       [saving]="saving()"
+      [canManage]="canManage()"
+      [ownAccount]="ownAccount()"
       [saveError]="saveFailure()"
       [fieldErrors]="fieldFailures()"
       (save)="save($event)"
@@ -54,6 +57,8 @@ export class UserEditorPage implements OnInit {
   private readonly drawer = viewChild(UserDrawer);
   private readonly routeData = drawerRouteData(this.route);
   private closingAfterSave = false;
+  readonly canManage = computed(() => this.session.hasRole('ADMINISTRATOR'));
+  readonly ownAccount = computed(() => this.id === this.session.user()?.id);
   readonly creating = this.routeData.mode === 'create';
   readonly id = this.creating ? null : drawerParam(this.route, 'recordId');
   readonly listLink = ['/', this.language(), 'settings', 'users'];
@@ -65,13 +70,20 @@ export class UserEditorPage implements OnInit {
   protected readonly retry = new Subject<void>();
   private readonly text = computed(() => usersText(this.language()));
   protected readonly loadFailure = computed(() => this.text().errorText);
-  protected readonly saveFailure = computed(() =>
-    this.saveError() ? this.text().drawer.saveError : null,
-  );
+  protected readonly saveFailure = computed(() => {
+    const error = this.saveError();
+    if (!error) {
+      return null;
+    }
+    return CombinedGraphQLErrors.is(error) &&
+      error.errors.some((failure) => failure.extensions?.['code'] === 'FORBIDDEN')
+      ? this.text().administratorRequired
+      : this.text().drawer.saveError;
+  });
   protected readonly fieldFailures = computed(() =>
     fieldErrors<UserField>(
       this.saveError(),
-      ['name', 'email', 'password'],
+      ['name', 'email', 'role', 'password'],
       this.language(),
       (code) => (code === 'DUPLICATE' ? this.text().drawer.emailInUse : undefined),
     ),
@@ -121,15 +133,25 @@ export class UserEditorPage implements OnInit {
   }
 
   async save(form: UserForm): Promise<void> {
-    if (this.saving() || this.state() !== 'ready') {
+    if (this.saving() || this.state() !== 'ready' || !this.canManage()) {
       return;
     }
     this.saving.set(true);
     this.saveError.set(null);
     try {
       const user = this.id
-        ? await this.api.update({ id: this.id, name: form.name, email: form.email })
-        : await this.api.create({ name: form.name, email: form.email, password: form.password });
+        ? await this.api.update({
+            id: this.id,
+            name: form.name,
+            email: form.email,
+            role: form.role,
+          })
+        : await this.api.create({
+            name: form.name,
+            email: form.email,
+            password: form.password,
+            role: form.role,
+          });
       if (!this.current()) {
         return;
       }

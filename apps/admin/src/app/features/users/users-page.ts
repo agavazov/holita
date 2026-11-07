@@ -12,6 +12,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { MessageService } from 'primeng/api';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { EMPTY, Subject, catchError, startWith, switchMap } from 'rxjs';
 import type { AdminUserDetailsFragment } from '../../../generated/graphql/operations';
 import { DemoSession } from '../../core/auth/demo-session';
@@ -46,6 +47,7 @@ import { UsersView, type UserActionId } from './users-view';
       [busy]="loading() || displayLoading() || acting()"
       [errorText]="failure()"
       [actionContext]="api.token"
+      [canManage]="canManage()"
       (create)="openEditor(null)"
       (action)="run($event)"
       (retry)="retryRead()"
@@ -57,6 +59,7 @@ import { UsersView, type UserActionId } from './users-view';
 export class UsersContent implements OnInit {
   readonly language = input.required<Language>();
   readonly api = inject(UsersApi);
+  readonly canManage = computed(() => this.session.hasRole('ADMINISTRATOR'));
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly session = inject(DemoSession);
@@ -174,7 +177,7 @@ export class UsersContent implements OnInit {
   }
 
   openEditor(id: string | null): void {
-    if (this.acting()) {
+    if (this.acting() || !this.canManage()) {
       return;
     }
     void this.router.navigate(id ? [id, 'edit'] : ['new'], {
@@ -186,7 +189,7 @@ export class UsersContent implements OnInit {
 
   async run({ action, ids }: ListActionRequest<UserActionId>): Promise<void> {
     const [id] = ids;
-    if (!id || this.acting() || !this.current()) {
+    if (!id || this.acting() || !this.current() || !this.canManage()) {
       return;
     }
     if (action === 'edit') {
@@ -215,11 +218,15 @@ export class UsersContent implements OnInit {
         ),
         life: 5000,
       });
-    } catch {
+    } catch (error: unknown) {
       if (this.current()) {
         this.notifications.add({
           severity: 'error',
-          summary: this.text().drawer.saveError,
+          summary:
+            CombinedGraphQLErrors.is(error) &&
+            error.errors.some((failure) => failure.extensions?.['code'] === 'FORBIDDEN')
+              ? this.text().administratorRequired
+              : this.text().drawer.saveError,
           sticky: true,
         });
       }

@@ -5,6 +5,10 @@ import {
   unobservedDeviceId,
 } from '../../../storybook/control-center-fixtures';
 import { fixtureDevice } from '../../../storybook/devices-fixtures';
+import {
+  settingsBatchDeviceId,
+  settingsWritableDeviceId,
+} from '../../../storybook/device-settings-fixtures';
 import { defaultBranchId } from '../../../storybook/session-fixtures';
 import { routeAt, StoryApp, type StoryFixtures } from '../../../storybook/story-config';
 import { AdminWorkspace } from '../../workspace/admin-workspace';
@@ -33,7 +37,11 @@ export const Overview: Story = { render: routed('overview') };
 export const Problems: Story = { render: routed('problems') };
 export const Commands: Story = { render: routed('commands') };
 export const SmsCommands: Story = { name: 'SMS commands', render: routed('sms-commands') };
-export const Parameters: Story = { render: routed('parameters') };
+export const Parameters: Story = { render: routed('parameters', settingsWritableDeviceId) };
+export const ParametersBatch: Story = {
+  name: 'Parameters — Batch progress',
+  render: routed('parameters', settingsBatchDeviceId),
+};
 export const Events: Story = { name: 'Technical details — Events', render: routed('events') };
 export const Frames: Story = { name: 'Technical details — Frames', render: routed('frames') };
 export const KarmaBackup: Story = {

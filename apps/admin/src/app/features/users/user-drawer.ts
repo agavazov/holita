@@ -23,7 +23,8 @@ import {
 import { ButtonDirective } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
-import type { AdminUserDetailsFragment } from '../../../generated/graphql/operations';
+import { Select } from 'primeng/select';
+import type { AdminUserDetailsFragment, UserRole } from '../../../generated/graphql/operations';
 import { RouteDrawer, type RouteDrawerState } from '../../ui/drawer/route-drawer';
 import { FormField } from '../../ui/form-field/form-field';
 import { focusFirstInvalid } from '../../ui/forms/focus';
@@ -37,10 +38,11 @@ export interface UserForm {
   readonly name: string;
   readonly email: string;
   readonly password: string;
+  readonly role: UserRole;
 }
 
 export type UserField = keyof UserForm;
-const fieldOrder: readonly UserField[] = ['name', 'email', 'password'];
+const fieldOrder: readonly UserField[] = ['name', 'email', 'role', 'password'];
 const initialPassword: ValidatorFn = (control) => {
   const value: unknown = control.value;
   if (typeof value !== 'string' || value.length === 0) {
@@ -52,13 +54,23 @@ const initialPassword: ValidatorFn = (control) => {
 
 @Component({
   selector: 'holita-user-drawer',
-  imports: [ReactiveFormsModule, ButtonDirective, InputText, Message, RouteDrawer, FormField],
+  imports: [
+    ReactiveFormsModule,
+    ButtonDirective,
+    InputText,
+    Message,
+    Select,
+    RouteDrawer,
+    FormField,
+  ],
   templateUrl: './user-drawer.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserDrawer {
   readonly user = input<AdminUserDetailsFragment | null>(null);
   readonly creating = input(false);
+  readonly canManage = input(false);
+  readonly ownAccount = input(false);
   readonly saving = input(false);
   readonly state = input<RouteDrawerState>('ready');
   readonly loadError = input<string | null>(null);
@@ -73,6 +85,9 @@ export class UserDrawer {
   private readonly drawer = viewChild.required(RouteDrawer);
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
   protected readonly text = computed(() => usersText(this.language()));
+  protected readonly roleOptions = computed(() =>
+    Object.entries(this.text().roles).map(([value, label]) => ({ value, label })),
+  );
   protected readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
@@ -81,6 +96,10 @@ export class UserDrawer {
     email: new FormControl('', {
       nonNullable: true,
       validators: [textValidator(254, { required: true }), (control) => Validators.email(control)],
+    }),
+    role: new FormControl<UserRole>('VIEWER', {
+      nonNullable: true,
+      validators: (control) => Validators.required(control),
     }),
     password: new FormControl('', { nonNullable: true }),
   });
@@ -107,7 +126,12 @@ export class UserDrawer {
       untracked(() => {
         this.submitted = false;
         this.form.controls.password.setValidators(creating ? initialPassword : null);
-        this.form.reset({ name: user?.name ?? '', email: user?.email ?? '', password: '' });
+        this.form.reset({
+          name: user?.name ?? '',
+          email: user?.email ?? '',
+          role: user?.role ?? 'VIEWER',
+          password: '',
+        });
       });
     });
     effect(() => {
@@ -154,7 +178,7 @@ export class UserDrawer {
   }
 
   protected submit(): void {
-    if (this.saving() || this.state() !== 'ready') {
+    if (this.saving() || this.state() !== 'ready' || !this.canManage()) {
       return;
     }
     this.submitted = true;

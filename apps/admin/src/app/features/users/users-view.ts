@@ -34,6 +34,7 @@ export class UsersView {
   readonly rows = input.required<readonly AdminUserDetailsFragment[]>();
   readonly view = input.required<TableView>();
   readonly busy = input(false);
+  readonly canManage = input(false);
   readonly errorText = input<string | null>(null);
   readonly actionContext = input<unknown>(null);
   readonly create = output();
@@ -46,7 +47,7 @@ export class UsersView {
   protected readonly severity = toneSeverity;
   protected readonly trackById = trackById;
   protected readonly tableRows = computed(() => [...this.rows()]);
-  protected readonly tableMinWidth = '58.25rem';
+  protected readonly tableMinWidth = '69.25rem';
   protected readonly columns = computed<readonly TableColumn[]>(() => [
     {
       id: 'name',
@@ -56,6 +57,7 @@ export class UsersView {
       className: 'app-col-identity',
     },
     { id: 'email', label: this.text().email, width: '20rem', kind: 'text' },
+    { id: 'role', label: this.text().role, width: '11rem', kind: 'text' },
     { id: 'status', label: this.text().status, width: '8rem', kind: 'status' },
     {
       id: 'lastSignIn',
@@ -75,6 +77,9 @@ export class UsersView {
   protected readonly actions = computed<
     readonly ListAction<UserActionId, AdminUserDetailsFragment>[]
   >(() => {
+    if (!this.canManage()) {
+      return [];
+    }
     const text = this.text().actions;
     return [
       { id: 'edit', label: text.edit },
@@ -96,6 +101,10 @@ export class UsersView {
   private readonly records = computed(
     () => new Map(this.rows().map((row) => [row.id, this.toRecord(row)])),
   );
+
+  protected roleLabel(row: AdminUserDetailsFragment): string {
+    return this.text().roles[row.role];
+  }
 
   protected editLabel(row: AdminUserDetailsFragment): string {
     return interpolate(this.text().editLabel, { name: row.name });

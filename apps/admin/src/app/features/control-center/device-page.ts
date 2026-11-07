@@ -34,11 +34,13 @@ import type {
   ErmFrameDirection,
   ErmFrameChecksum,
   ErmEventSeverity,
+  ErmParameterReadOutcome,
   ErmParameterSnapshotStatus,
   FleetWarningLampState,
   ErmKarmaReturnStatus,
 } from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
+import { DemoSession } from '../../core/auth/demo-session';
 import type { Language } from '../../i18n/messages';
 import { injectPageRecord } from '../../layout/page-record';
 import { confirmAction, confirmDialogPt } from '../../ui/confirm';
@@ -60,6 +62,7 @@ import { deviceModelLabel } from '../fleet/devices/i18n/messages';
 import { ControlCenterApi } from './control-center-api';
 import {
   controlCenterText,
+  controlCenterError,
   ermLanguage,
   returnToHolitaError,
   severityTone,
@@ -159,6 +162,9 @@ export class DevicePage implements OnInit {
   readonly directions: readonly ErmFrameDirection[] = ['DEVICE', 'UPSTREAM', 'HOLITA'];
   readonly checksums: readonly ErmFrameChecksum[] = ['OK', 'MISMATCH', 'ABSENT'];
   private readonly api = inject(ControlCenterApi);
+  private readonly session = inject(DemoSession);
+  readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
+  readonly canConfigure = computed(() => this.session.hasRole('ENGINEER'));
   private readonly destroy = inject(DestroyRef);
   private readonly confirmation = inject(ConfirmationService);
   private readonly notifications = inject(MessageService);
@@ -197,6 +203,9 @@ export class DevicePage implements OnInit {
   readonly returnDisabledReason = computed(() => {
     const route = this.routing();
     const text = this.text().deviceStatus;
+    if (!this.canConfigure()) {
+      return text.returnEngineer;
+    }
     if (this.returning()) {
       return text.returnSubmitting;
     }
@@ -723,6 +732,9 @@ export class DevicePage implements OnInit {
   parameter(value: number): string {
     return String(value).padStart(4, '0');
   }
+  snapshotOutcome(value: ErmParameterReadOutcome): string {
+    return this.text().snapshots.outcomes[value];
+  }
   snapshotTone(value: ErmParameterSnapshotStatus) {
     return toneSeverity(value === 'COMPLETE' ? 'success' : value === 'RUNNING' ? 'info' : 'danger');
   }
@@ -745,6 +757,14 @@ export class DevicePage implements OnInit {
     return this.text().severities[value];
   }
   async startSnapshot(): Promise<void> {
+    if (
+      !this.canConfigure() ||
+      !this.canSend() ||
+      this.snapshotRunning() ||
+      this.startingSnapshot()
+    ) {
+      return;
+    }
     const text = this.text();
     this.actionConfirmation.set(
       interpolate(text.snapshots.confirmMessage, { unit: this.unitName() }),
@@ -768,7 +788,7 @@ export class DevicePage implements OnInit {
         this.notifications.add({
           severity: 'error',
           summary: text.snapshots.startFailed,
-          detail: requestError(error, text.snapshots.startFailed),
+          detail: controlCenterError(error, this.language(), text.snapshots.startFailed),
         });
       }
     } finally {

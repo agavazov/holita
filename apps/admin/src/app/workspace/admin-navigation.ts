@@ -33,6 +33,12 @@ export function adminNavigation(
           link: [...fleet, 'dashboard', 'overview'],
           activePrefix: [...fleet, 'dashboard'],
         },
+        {
+          id: 'command-queue',
+          label: text.commands,
+          icon: 'clock',
+          link: [...fleet, 'command-queue'],
+        },
         { id: 'vehicles', label: text.vehicles, icon: 'truck', link: [...fleet, 'vehicles'] },
         { id: 'devices', label: text.devices, icon: 'mobile', link: [...fleet, 'devices'] },
         { id: 'drivers', label: text.drivers, icon: 'id-card', link: [...fleet, 'drivers'] },

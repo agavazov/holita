@@ -45,6 +45,36 @@ export function notificationSentence(
 ): string {
   const text = notificationsText(language).wording;
   const parameters = notification.parameters;
+  if (
+    parameters.eventKind === 'CONFIGURATION_OUTCOME' ||
+    notification.wordingKey === 'notification.configurationOutcome'
+  ) {
+    return interpolate(text.configurationOutcome, {
+      operation: translated(
+        text.configurationOperations,
+        parameters.commandKind,
+        text.unknownConfiguration,
+      ),
+      outcome: translated(text.configurationStates, parameters.commandStatus, text.unknownOutcome),
+    });
+  }
+  if (
+    parameters.eventKind === 'PARAMETER_SNAPSHOT_OUTCOME' ||
+    notification.wordingKey === 'notification.snapshotOutcome'
+  ) {
+    return interpolate(text.snapshotOutcome, {
+      outcome: translated(text.snapshotStates, parameters.commandStatus, text.unknownOutcome),
+      reason: parameters.reasonCode
+        ? interpolate(text.reasonSuffix, {
+            reason: translated(
+              text.snapshotReasons,
+              parameters.reasonCode,
+              text.snapshotReasons.SNAPSHOT_FAILED,
+            ),
+          })
+        : '',
+    });
+  }
   switch (notification.sourceKind) {
     case 'FLEET_ALERT':
       return interpolate(text.alert, {
@@ -138,6 +168,21 @@ export function notificationRow(
       `${base}/devices/${notification.deviceId}/commands?request=${encodeURIComponent(notification.commandRequestId)}`,
     );
   }
+  let outcomeSourceLink: NotificationRow['sourceLink'] = null;
+  if (notification.deviceId) {
+    const url = `${base}/devices/${notification.deviceId}/parameters`;
+    if (
+      notification.parameters.eventKind === 'CONFIGURATION_OUTCOME' ||
+      notification.wordingKey === 'notification.configurationOutcome'
+    ) {
+      outcomeSourceLink = { label: text.configurationSource, url };
+    } else if (
+      notification.parameters.eventKind === 'PARAMETER_SNAPSHOT_OUTCOME' ||
+      notification.wordingKey === 'notification.snapshotOutcome'
+    ) {
+      outcomeSourceLink = { label: text.snapshotSource, url };
+    }
+  }
   const primary = links.find((link) =>
     notification.sourceKind === 'FLEET_ALERT'
       ? link.kind === 'alert'
@@ -155,15 +200,17 @@ export function notificationRow(
     occurredAt: notification.occurredAt,
     unread: notification.readAt === null,
     links,
-    sourceLink: primary
-      ? {
-          label: text.sources[notification.sourceKind],
-          url:
-            (notification.sourceKind === 'DIAGNOSTIC' || notification.sourceKind === 'ALARM') &&
-            notification.deviceId
-              ? `${base}/devices/${notification.deviceId}/problems`
-              : primary.url,
-        }
-      : null,
+    sourceLink:
+      outcomeSourceLink ??
+      (primary
+        ? {
+            label: text.sources[notification.sourceKind],
+            url:
+              (notification.sourceKind === 'DIAGNOSTIC' || notification.sourceKind === 'ALARM') &&
+              notification.deviceId
+                ? `${base}/devices/${notification.deviceId}/problems`
+                : primary.url,
+          }
+        : null),
   };
 }

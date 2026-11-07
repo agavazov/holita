@@ -7,6 +7,7 @@ fragment AdminUserDetails on User {
   name
   email
   active
+  role
   lastSignInAt
   createdAt
   updatedAt
@@ -18,14 +19,14 @@ query AdminUsers {
   }
 }
 
-mutation AdminCreateUser($name: String!, $email: String!, $password: String!) {
-  createUser(name: $name, email: $email, password: $password) {
+mutation AdminCreateUser($name: String!, $email: String!, $password: String!, $role: UserRole!) {
+  createUser(name: $name, email: $email, password: $password, role: $role) {
     ...AdminUserDetails
   }
 }
 
-mutation AdminUpdateUser($id: ID!, $name: String!, $email: String!) {
-  updateUser(id: $id, name: $name, email: $email) {
+mutation AdminUpdateUser($id: ID!, $name: String!, $email: String!, $role: UserRole!) {
+  updateUser(id: $id, name: $name, email: $email, role: $role) {
     ...AdminUserDetails
   }
 }

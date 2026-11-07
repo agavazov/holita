@@ -5,5 +5,10 @@ const legacyControlCenterRoute: UrlMatcher = (segments) =>
   segments[1]?.path === 'control-center' ? { consumed: segments } : null;
 
 export const controlCenterRoutes: Routes = [
+  {
+    path: ':branchId/fleet/command-queue',
+    loadComponent: () =>
+      import('./branch-command-queue-page').then((module) => module.BranchCommandQueuePage),
+  },
   { matcher: legacyControlCenterRoute, canMatch: [redirectLegacyAdminUrl], children: [] },
 ];

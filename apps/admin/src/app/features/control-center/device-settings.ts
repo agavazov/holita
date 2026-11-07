@@ -1,4 +1,4 @@
-import { JsonPipe } from '@angular/common';
+import { JsonPipe, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -7,9 +7,10 @@ import {
   inject,
   input,
   signal,
+  untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormArray, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ConfirmationService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { Checkbox } from 'primeng/checkbox';
@@ -23,9 +24,13 @@ import { Tag } from 'primeng/tag';
 import { toneSeverity } from '../../ui/tones';
 import type {
   AdminControlCenterConfigurationChangesQuery,
+  AdminControlCenterConfigurationBatchQuery,
+  AdminControlCenterParameterBaselineQuery,
+  AdminControlCenterSettingsDevicesQuery,
+  ErmConfigurationOperation,
   StartErmEdataChangeInput,
 } from '../../../generated/graphql/operations';
-import { requestError } from '../../core/graphql/request-error';
+import { DemoSession } from '../../core/auth/demo-session';
 import type { Language } from '../../i18n/messages';
 import { confirmAction, confirmDialogPt } from '../../ui/confirm';
 import { FormField } from '../../ui/form-field/form-field';
@@ -38,14 +43,29 @@ import {
   type ListActionRequest,
 } from '../../ui/list/list-actions';
 import { RowActions } from '../../ui/row-actions/row-actions';
+import { selectMultiplePt } from '../../ui/select-multiple';
 import { TablePanel, type TableColumn } from '../../ui/table-panel/table-panel';
 import { tableView } from '../../ui/table-panel/table-view';
 import { ControlCenterApi } from './control-center-api';
-import { controlCenterText } from './control-center-text';
+import {
+  controlCenterError,
+  controlCenterReason,
+  controlCenterText,
+  deviceLabel,
+} from './control-center-text';
 
-type SettingsMode = 'READ_EDATA' | 'INTERVAL' | 'ADD_DEFINITION' | 'GLOBALS' | 'PARAMETER';
+type SettingsMode = ErmConfigurationOperation;
 type Run =
   AdminControlCenterConfigurationChangesQuery['fleetDevice']['ermConfigurationChanges'][number];
+type Batch = NonNullable<AdminControlCenterConfigurationBatchQuery['ermConfigurationBatch']>;
+type Baseline =
+  AdminControlCenterParameterBaselineQuery['fleetDevice']['ermParameterSnapshots']['items'][number];
+type Device = AdminControlCenterSettingsDevicesQuery['fleetDevices']['items'][number];
+type ParameterForm = FormGroup<{
+  parameter: FormControl<string>;
+  value: FormControl<string>;
+}>;
+const protectedParameters = new Set([49, 50, 51, 52, 53, 54, 59, 60, 61, 187, 524, 525, 593]);
 interface Step {
   name: string;
   time: string;
@@ -57,6 +77,7 @@ interface Step {
   selector: 'holita-device-settings',
   imports: [
     JsonPipe,
+    NgTemplateOutlet,
     ReactiveFormsModule,
     ButtonDirective,
     Checkbox,
@@ -89,7 +110,11 @@ export class DeviceSettings {
     confirmDialogPt(this.language(), 'erm-settings-confirm-message'),
   );
   private readonly api = inject(ControlCenterApi);
+  private readonly session = inject(DemoSession);
   private readonly confirmation = inject(ConfirmationService);
+  protected readonly canRead = computed(() => this.session.hasRole('OPERATOR'));
+  protected readonly canWrite = computed(() => this.session.hasRole('ENGINEER'));
+  protected readonly selectMultiplePt = selectMultiplePt;
   protected readonly confirmationMessage = signal('');
   protected readonly units = injectFleetFormat();
   protected readonly form = new FormGroup({
@@ -100,7 +125,17 @@ export class DeviceSettings {
     globalsHex: new FormControl('', { nonNullable: true }),
     parameter: new FormControl('', { nonNullable: true }),
     value: new FormControl('', { nonNullable: true }),
+    parameters: new FormArray<ParameterForm>([]),
+    batch: new FormControl(false, { nonNullable: true }),
+    deviceIds: new FormControl<string[]>([], { nonNullable: true }),
     restoreAfter: new FormControl(false, { nonNullable: true }),
+  });
+  protected readonly parameterSelection = new FormControl<string[]>([], { nonNullable: true });
+  private readonly selectedParameters = toSignal(this.parameterSelection.valueChanges, {
+    initialValue: this.parameterSelection.value,
+  });
+  private readonly formValue = toSignal(this.form.valueChanges, {
+    initialValue: this.form.value,
   });
   protected readonly mode = toSignal(this.form.controls.mode.valueChanges, {
     initialValue: this.form.controls.mode.value,
@@ -113,9 +148,106 @@ export class DeviceSettings {
       'ADD_DEFINITION',
       'GLOBALS',
       'PARAMETER',
+      'PARAMETERS',
     ];
     return modes.map((value) => ({ value, label: labels[value] }));
   });
+  protected readonly baseline = signal<Baseline | null>(null);
+  protected readonly parameterOptions = computed(() =>
+    (this.baseline()?.values ?? [])
+      .filter(
+        (entry) =>
+          !protectedParameters.has(entry.parameter) &&
+          !/\b(?:password|secret|lock|unlock|PIN)\b/i.test(entry.title ?? ''),
+      )
+      .map((entry) => ({
+        value: this.parameter(entry.parameter),
+        label: `${this.parameter(entry.parameter)} · ${entry.title ?? '—'}`,
+      })),
+  );
+  protected readonly plannedChange = computed(() => {
+    this.formValue();
+    const value = this.form.getRawValue();
+    const parameters =
+      value.mode === 'PARAMETER'
+        ? [{ parameter: value.parameter, value: value.value }]
+        : value.mode === 'PARAMETERS'
+          ? value.parameters
+          : [];
+    return parameters
+      .filter((entry) => entry.parameter)
+      .map((entry) => {
+        const current = this.baseline()?.values.find(
+          (current) => current.parameter === Number(entry.parameter),
+        );
+        return {
+          parameter: entry.parameter,
+          title: current?.title ?? '—',
+          current: current?.outcome === 'READ' ? current.value : null,
+          value: entry.value,
+        };
+      });
+  });
+  protected readonly planColumns = computed<readonly TableColumn[]>(() => [
+    {
+      id: 'parameter',
+      label: this.text().parameter,
+      width: '20rem',
+      kind: 'identity',
+      className: 'app-col-identity',
+    },
+    { id: 'current', label: this.text().currentValue, width: '16rem' },
+    { id: 'value', label: this.text().plannedValue, width: '16rem' },
+  ]);
+  protected readonly isBatch = computed(() => {
+    this.formValue();
+    return this.mode() === 'PARAMETERS' && this.form.controls.batch.value;
+  });
+  protected readonly devices = signal<readonly Device[]>([]);
+  protected readonly devicesTotal = signal(0);
+  protected readonly devicesLoading = signal(false);
+  private readonly devicesOffset = signal(0);
+  protected readonly deviceOptions = computed(() =>
+    this.devices().map((device) => ({
+      value: device.id,
+      label: `${deviceLabel(device)} · ${device.imei}`,
+      disabled:
+        !device.ermConfigurationWritesEnabled ||
+        device.ermState?.online !== true ||
+        device.ermState.mode !== 'PRIMARY',
+    })),
+  );
+  protected readonly batch = signal<Batch | null>(null);
+  protected readonly stoppingBatch = signal(false);
+  private readonly batchId = signal<string | null>(null);
+  private readonly activeBatchId = computed(
+    () => this.batchId() ?? this.runs().find((run) => run.batchId)?.batchId ?? null,
+  );
+  protected readonly batchRunning = computed(
+    () => this.batch() !== null && this.batch()?.finishedAt === null,
+  );
+  protected readonly batchProgress = computed(() =>
+    interpolate(this.text().batchProgress, {
+      completed: this.batch()?.changes.filter((change) => change.finishedAt !== null).length ?? 0,
+      total: this.batch()?.changes.length ?? 0,
+    }),
+  );
+  protected readonly batchBaselineHint = computed(() =>
+    interpolate(this.text().batchBaselineHint, {
+      target: this.target(),
+    }),
+  );
+  protected readonly batchRows = computed(() => this.batch()?.changes ?? []);
+  protected readonly batchColumns = computed<readonly TableColumn[]>(() => [
+    {
+      id: 'unit',
+      label: this.auditText().target,
+      width: '20rem',
+      kind: 'identity',
+      className: 'app-col-identity',
+    },
+    { id: 'status', label: this.common().status, width: '16rem', kind: 'status' },
+  ]);
   protected readonly runs = signal<readonly Run[]>([]);
   protected readonly trackById = trackById;
   protected readonly tableMinWidth = '60rem';
@@ -170,8 +302,140 @@ export class DeviceSettings {
       (run) => run.finishedAt === null && run.status !== 'FAILED' && run.status !== 'REFUSED',
     ),
   );
+  protected readonly disabledReason = computed(() => {
+    this.formValue();
+    if (this.mode() === 'READ_EDATA' ? !this.canRead() : !this.canWrite()) {
+      return this.mode() === 'READ_EDATA'
+        ? this.text().readRoleRequired
+        : this.text().writeRoleRequired;
+    }
+    if (this.mode() !== 'READ_EDATA' && !this.writesEnabled()) {
+      return this.text().writesDisabled;
+    }
+    if (this.isBatch()) {
+      if (!this.form.controls.deviceIds.value.length) {
+        return this.text().batchDevices;
+      }
+      if (this.form.controls.deviceIds.value.length > 100) {
+        return this.text().batchHint;
+      }
+    } else if (!this.primary()) {
+      return this.text().primaryRequired;
+    }
+    if (
+      (this.mode() === 'PARAMETER' || this.mode() === 'PARAMETERS') &&
+      !this.plannedChange().length
+    ) {
+      return this.text().parametersRequired;
+    }
+    return null;
+  });
 
   constructor() {
+    effect(() => {
+      const selected = this.selectedParameters();
+      untracked(() => {
+        const previous = new Map(
+          this.form.controls.parameters.controls.map((control) => [
+            control.controls.parameter.value,
+            control,
+          ]),
+        );
+        this.form.controls.parameters.clear({ emitEvent: false });
+        for (const parameter of selected) {
+          this.form.controls.parameters.push(
+            previous.get(parameter) ??
+              new FormGroup({
+                parameter: new FormControl(parameter, { nonNullable: true }),
+                value: new FormControl('', { nonNullable: true }),
+              }),
+            { emitEvent: false },
+          );
+        }
+        this.form.controls.parameters.updateValueAndValidity();
+      });
+    });
+    effect((onCleanup) => {
+      this.reload();
+      const subscription = this.api.watchParameterBaseline(this.deviceId()).valueChanges.subscribe({
+        next: (result) => {
+          if (result.error) {
+            this.error.set(
+              controlCenterError(result.error, this.language(), this.text().unavailable),
+            );
+          } else if (result.dataState === 'complete') {
+            this.baseline.set(result.data.fleetDevice.ermParameterSnapshots.items[0] ?? null);
+          }
+        },
+        error: (error: unknown) => {
+          this.error.set(controlCenterError(error, this.language(), this.text().unavailable));
+        },
+      });
+      onCleanup(() => {
+        subscription.unsubscribe();
+      });
+    });
+    effect((onCleanup) => {
+      if (!this.isBatch()) {
+        return;
+      }
+      const offset = this.devicesOffset();
+      this.devicesLoading.set(true);
+      const subscription = this.api.watchSettingsDevices(offset).valueChanges.subscribe({
+        next: (result) => {
+          this.devicesLoading.set(result.loading);
+          if (result.error) {
+            this.error.set(
+              controlCenterError(result.error, this.language(), this.text().unavailable),
+            );
+          } else if (result.dataState === 'complete') {
+            const page = result.data.fleetDevices;
+            this.devicesTotal.set(page.total);
+            this.devices.update((current) =>
+              offset === 0
+                ? page.items
+                : [
+                    ...current,
+                    ...page.items.filter(
+                      (device) => !current.some((existing) => existing.id === device.id),
+                    ),
+                  ],
+            );
+          }
+        },
+        error: (error: unknown) => {
+          this.devicesLoading.set(false);
+          this.error.set(controlCenterError(error, this.language(), this.text().unavailable));
+        },
+      });
+      onCleanup(() => {
+        subscription.unsubscribe();
+      });
+    });
+    effect((onCleanup) => {
+      const id = this.activeBatchId();
+      if (!id) {
+        return;
+      }
+      const query = this.api.watchConfigurationBatch(id, () => this.batch()?.finishedAt != null);
+      const subscription = query.valueChanges.subscribe({
+        next: (result) => {
+          if (result.error) {
+            this.error.set(
+              controlCenterError(result.error, this.language(), this.text().unavailable),
+            );
+          } else if (result.dataState === 'complete') {
+            this.batch.set(result.data.ermConfigurationBatch);
+          }
+        },
+        error: (error: unknown) => {
+          this.error.set(controlCenterError(error, this.language(), this.text().unavailable));
+        },
+      });
+      onCleanup(() => {
+        subscription.unsubscribe();
+      });
+    });
     effect((onCleanup) => {
       this.reload();
       const id = this.deviceId();
@@ -186,12 +450,14 @@ export class DeviceSettings {
               this.writesEnabled.set(result.data.fleetDevice.ermConfigurationWritesEnabled);
             }
             if (result.error) {
-              this.error.set(requestError(result.error, this.text().unavailable));
+              this.error.set(
+                controlCenterError(result.error, this.language(), this.text().unavailable),
+              );
             }
           },
           error: (error: unknown) => {
             this.loading.set(false);
-            this.error.set(requestError(error, this.text().unavailable));
+            this.error.set(controlCenterError(error, this.language(), this.text().unavailable));
           },
         });
       onCleanup(() => {
@@ -201,7 +467,13 @@ export class DeviceSettings {
   }
 
   protected async submit(): Promise<void> {
-    if (!this.primary() || this.submitting() || this.running()) {
+    if (
+      this.disabledReason() ||
+      this.form.invalid ||
+      this.submitting() ||
+      this.running() ||
+      this.batchRunning()
+    ) {
       return;
     }
     const value = this.form.getRawValue();
@@ -209,10 +481,15 @@ export class DeviceSettings {
       return;
     }
     this.confirmationMessage.set(
-      interpolate(this.text().confirm, {
-        target: this.target(),
-        operation: this.text().modes[value.mode],
-      }),
+      this.isBatch()
+        ? interpolate(this.text().batchConfirm, {
+            operation: this.text().modes[value.mode],
+            count: value.deviceIds.length,
+          })
+        : interpolate(this.text().confirm, {
+            target: this.target(),
+            operation: this.text().modes[value.mode],
+          }),
     );
     const accepted = await confirmAction(this.confirmation, this.language(), {
       header: this.text().start,
@@ -225,7 +502,21 @@ export class DeviceSettings {
     this.submitting.set(true);
     this.error.set(null);
     try {
-      if (value.mode === 'PARAMETER') {
+      if (value.mode === 'PARAMETERS' && value.batch) {
+        const batch = await this.api.startParameterBatch({
+          deviceIds: value.deviceIds,
+          parameters: value.parameters,
+          restoreAfter: value.restoreAfter,
+        });
+        this.batch.set(batch);
+        this.batchId.set(batch.id);
+      } else if (value.mode === 'PARAMETERS') {
+        await this.api.startParametersChange({
+          deviceId: this.deviceId(),
+          parameters: value.parameters,
+          restoreAfter: value.restoreAfter,
+        });
+      } else if (value.mode === 'PARAMETER') {
         await this.api.startParameterChange({
           deviceId: this.deviceId(),
           parameter: value.parameter,
@@ -246,7 +537,7 @@ export class DeviceSettings {
       }
       this.reload.update((value) => value + 1);
     } catch (error) {
-      this.error.set(requestError(error, this.text().uncertain));
+      this.error.set(controlCenterError(error, this.language(), this.text().uncertain));
       this.reload.update((value) => value + 1);
     } finally {
       this.submitting.set(false);
@@ -258,7 +549,30 @@ export class DeviceSettings {
     this.reload.update((value) => value + 1);
   }
   protected operation(run: Run): string {
-    return run.intent || this.text().title;
+    return this.text().modes[run.operation];
+  }
+  protected failureReason(reason: string): string {
+    return controlCenterReason(reason, this.language());
+  }
+  protected parameter(value: number): string {
+    return String(value).padStart(4, '0');
+  }
+  protected loadMoreDevices(): void {
+    this.devicesOffset.set(this.devices().length);
+  }
+  protected async stopBatch(): Promise<void> {
+    const id = this.activeBatchId();
+    if (!id || !this.canWrite() || this.stoppingBatch()) {
+      return;
+    }
+    this.stoppingBatch.set(true);
+    try {
+      this.batch.set(await this.api.stopConfigurationBatch(id));
+    } catch (error: unknown) {
+      this.error.set(controlCenterError(error, this.language(), this.text().unavailable));
+    } finally {
+      this.stoppingBatch.set(false);
+    }
   }
   protected record(run: Run) {
     return listRecord(this.actions(), run, run.id, this.operation(run));

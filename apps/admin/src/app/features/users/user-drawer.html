@@ -7,67 +7,100 @@
   [closeLink]="closeLink()"
   (retry)="retry.emit()"
 >
-  <p class="app-muted">{{ text().drawer.guidance }}</p>
-  @if (saveError(); as error) {
-    <p-message severity="error">{{ error }}</p-message>
-  }
-  <form #formElement id="user-form" [formGroup]="form" (ngSubmit)="submit()">
-    <section class="app-form-section">
-      <holita-form-field
-        [label]="text().name"
-        controlId="user-name"
-        [required]="true"
-        [error]="errorOf('name')"
-      >
-        <input
-          pInputText
-          id="user-name"
-          autocomplete="name"
-          formControlName="name"
-          [invalid]="!!errorOf('name')"
-          [attr.aria-invalid]="errorOf('name') ? 'true' : null"
-          aria-describedby="user-name-hint user-name-error"
-        />
-      </holita-form-field>
-      <holita-form-field
-        [label]="text().email"
-        controlId="user-email"
-        [required]="true"
-        [error]="errorOf('email')"
-      >
-        <input
-          pInputText
-          type="email"
-          id="user-email"
-          autocomplete="off"
-          formControlName="email"
-          [invalid]="!!errorOf('email')"
-          [attr.aria-invalid]="errorOf('email') ? 'true' : null"
-          aria-describedby="user-email-hint user-email-error"
-        />
-      </holita-form-field>
-      @if (creating()) {
+  @if (!canManage()) {
+    <p-message severity="secondary">{{ text().administratorRequired }}</p-message>
+  } @else {
+    <p class="app-muted">{{ text().drawer.guidance }}</p>
+    @if (saveError(); as error) {
+      <p-message severity="error">{{ error }}</p-message>
+    }
+    <form #formElement id="user-form" [formGroup]="form" (ngSubmit)="submit()">
+      <section class="app-form-section">
         <holita-form-field
-          [label]="text().drawer.password"
-          controlId="user-password"
-          [hint]="text().drawer.passwordHint"
+          [label]="text().name"
+          controlId="user-name"
           [required]="true"
-          [error]="errorOf('password')"
+          [error]="errorOf('name')"
         >
           <input
             pInputText
-            type="password"
-            id="user-password"
-            autocomplete="new-password"
-            formControlName="password"
-            [invalid]="!!errorOf('password')"
-            [attr.aria-invalid]="errorOf('password') ? 'true' : null"
-            aria-describedby="user-password-hint user-password-error"
+            id="user-name"
+            autocomplete="name"
+            formControlName="name"
+            [invalid]="!!errorOf('name')"
+            [attr.aria-invalid]="errorOf('name') ? 'true' : null"
+            aria-describedby="user-name-hint user-name-error"
           />
         </holita-form-field>
-      }
-    </section>
-  </form>
+        <holita-form-field
+          [label]="text().email"
+          controlId="user-email"
+          [required]="true"
+          [error]="errorOf('email')"
+        >
+          <input
+            pInputText
+            type="email"
+            id="user-email"
+            autocomplete="off"
+            formControlName="email"
+            [invalid]="!!errorOf('email')"
+            [attr.aria-invalid]="errorOf('email') ? 'true' : null"
+            aria-describedby="user-email-hint user-email-error"
+          />
+        </holita-form-field>
+        @if (ownAccount()) {
+          <holita-form-field
+            [label]="text().role"
+            controlId="user-role"
+            [hint]="text().drawer.ownRole"
+          >
+            <p id="user-role">{{ text().roles[form.controls.role.value] }}</p>
+          </holita-form-field>
+        } @else {
+          <holita-form-field
+            [label]="text().role"
+            controlId="user-role"
+            [required]="true"
+            [hint]="text().drawer.roleHint"
+            [error]="errorOf('role')"
+          >
+            <p-select
+              inputId="user-role"
+              formControlName="role"
+              [options]="roleOptions()"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              [ariaLabel]="text().role"
+              [invalid]="!!errorOf('role')"
+              aria-describedby="user-role-hint user-role-error"
+            />
+          </holita-form-field>
+        }
+        @if (creating()) {
+          <holita-form-field
+            [label]="text().drawer.password"
+            controlId="user-password"
+            [hint]="text().drawer.passwordHint"
+            [required]="true"
+            [error]="errorOf('password')"
+          >
+            <input
+              pInputText
+              type="password"
+              id="user-password"
+              autocomplete="new-password"
+              formControlName="password"
+              [invalid]="!!errorOf('password')"
+              [attr.aria-invalid]="errorOf('password') ? 'true' : null"
+              aria-describedby="user-password-hint user-password-error"
+            />
+          </holita-form-field>
+        }
+      </section>
+    </form>
+  }
   <div drawerFooter class="app-drawer-actions">
     <button
       pButton
@@ -79,8 +112,10 @@
     >
       {{ text().drawer.cancel }}
     </button>
-    <button pButton type="submit" form="user-form" [loading]="saving()" [disabled]="saving()">
-      {{ creating() ? text().drawer.create : text().drawer.save }}
-    </button>
+    @if (canManage()) {
+      <button pButton type="submit" form="user-form" [loading]="saving()" [disabled]="saving()">
+        {{ creating() ? text().drawer.create : text().drawer.save }}
+      </button>
+    }
   </div>
 </holita-route-drawer>

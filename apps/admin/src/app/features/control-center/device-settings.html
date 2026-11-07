@@ -1,10 +1,14 @@
 <section class="app-card" [attr.aria-label]="text().title">
   <h2>{{ text().title }}</h2>
   <p class="app-muted">{{ text().hint }}</p>
-  @if (!primary()) {
+  @if (!primary() && !isBatch()) {
     <p-message severity="warn">{{ text().primaryRequired }}</p-message>
   }
-  @if (!writesEnabled()) {
+  @if (mode() === 'READ_EDATA' ? !canRead() : !canWrite()) {
+    <p-message severity="info">{{
+      mode() === 'READ_EDATA' ? text().readRoleRequired : text().writeRoleRequired
+    }}</p-message>
+  } @else if (!writesEnabled()) {
     <p-message severity="info">{{ text().writesDisabled }}</p-message>
   }
   @if (error(); as error) {
@@ -78,17 +82,71 @@
         }
         @case ('PARAMETER') {
           <holita-form-field [label]="text().parameter" controlId="erm-settings-parameter">
-            <input
-              pInputText
-              id="erm-settings-parameter"
+            <p-select
+              inputId="erm-settings-parameter"
               formControlName="parameter"
-              pattern="[0-9]{4}"
+              [options]="parameterOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+              [ariaLabel]="text().parameter"
               required
             />
           </holita-form-field>
           <holita-form-field [label]="text().value" controlId="erm-settings-value">
             <input pInputText id="erm-settings-value" formControlName="value" />
           </holita-form-field>
+        }
+        @case ('PARAMETERS') {
+          <holita-form-field [label]="text().parameters" controlId="erm-settings-parameters">
+            <p-select
+              inputId="erm-settings-parameters"
+              [formControl]="parameterSelection"
+              [options]="parameterOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+              [multiple]="true"
+              [pt]="selectMultiplePt"
+              [ariaLabel]="text().parameters"
+            />
+          </holita-form-field>
+          <div class="app-inline">
+            <p-checkbox inputId="erm-settings-batch" formControlName="batch" [binary]="true" />
+            <label for="erm-settings-batch">{{ text().batch }}</label>
+          </div>
+          @if (isBatch()) {
+            <holita-form-field
+              [label]="text().batchDevices"
+              controlId="erm-settings-devices"
+              [hint]="text().batchHint"
+            >
+              <p-select
+                inputId="erm-settings-devices"
+                formControlName="deviceIds"
+                [options]="deviceOptions()"
+                optionLabel="label"
+                optionValue="value"
+                optionDisabled="disabled"
+                [filter]="true"
+                [multiple]="true"
+                [pt]="selectMultiplePt"
+                [loading]="devicesLoading()"
+                [ariaLabel]="text().batchDevices"
+              />
+            </holita-form-field>
+            @if (devices().length < devicesTotal()) {
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [loading]="devicesLoading()"
+                (click)="loadMoreDevices()"
+              >
+                {{ text().batchMore }}
+              </button>
+            }
+          }
         }
       }
       @if (mode() !== 'READ_EDATA') {
@@ -102,29 +160,153 @@
         </div>
       }
     </div>
+    @if (mode() === 'PARAMETER' || mode() === 'PARAMETERS') {
+      <p class="app-muted">{{ text().parameterCatalogHint }}</p>
+    }
+    @if (mode() === 'PARAMETERS') {
+      <div formArrayName="parameters" class="app-form-grid">
+        @for (
+          entry of form.controls.parameters.controls;
+          track entry.controls.parameter.value;
+          let index = $index
+        ) {
+          <div [formGroupName]="index">
+            <holita-form-field
+              [label]="entry.controls.parameter.value + ' · ' + text().plannedValue"
+              [controlId]="'erm-settings-value-' + index"
+            >
+              <input pInputText [id]="'erm-settings-value-' + index" formControlName="value" />
+            </holita-form-field>
+          </div>
+        }
+      </div>
+    }
+    @if (plannedChange().length) {
+      <ng-container [ngTemplateOutlet]="parameterPlan" />
+    }
     <div class="app-inline">
       <button
         pButton
         type="submit"
         [disabled]="
-          !primary() ||
-          running() ||
-          submitting() ||
-          form.invalid ||
-          (mode() !== 'READ_EDATA' && !writesEnabled())
+          disabledReason() !== null || running() || batchRunning() || submitting() || form.invalid
         "
         [loading]="submitting()"
       >
         {{ text().start }}
       </button>
+      @if (disabledReason(); as reason) {
+        <span class="app-muted">{{ reason }}</span>
+      }
     </div>
   </form>
-  <p-confirmdialog [pt]="confirmPt()">
+  <p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(64rem, calc(100vw - 2rem))' }">
     <ng-template #message
-      ><p id="erm-settings-confirm-message">{{ confirmationMessage() }}</p></ng-template
+      ><div id="erm-settings-confirm-message">
+        <p>{{ confirmationMessage() }}</p>
+        @if (plannedChange().length) {
+          <ng-container [ngTemplateOutlet]="parameterPlan" />
+        }
+        @if (isBatch()) {
+          <ol>
+            @for (id of form.controls.deviceIds.value; track id) {
+              @for (device of devices(); track device.id) {
+                @if (device.id === id) {
+                  <li>{{ device.vehicle?.licensePlate ?? device.imei }} · {{ device.imei }}</li>
+                }
+              }
+            }
+          </ol>
+        }
+      </div></ng-template
     >
   </p-confirmdialog>
 </section>
+@if (batch(); as batch) {
+  <p role="status">{{ batchProgress() }}</p>
+  @if (batch.stoppedAt) {
+    <p-message severity="info">{{ text().batchStopped }}</p-message>
+  }
+  <holita-table-panel
+    mode="local"
+    [heading]="text().batch"
+    [total]="batch.changes.length"
+    [columns]="batchColumns()"
+    [view]="{ kind: 'rows' }"
+    tableMinWidth="36rem"
+  >
+    @if (batchRunning()) {
+      <button
+        panelActions
+        pButton
+        type="button"
+        severity="secondary"
+        [disabled]="!canWrite() || !!batch.stoppedAt"
+        [loading]="stoppingBatch()"
+        (click)="stopBatch()"
+      >
+        {{ text().batchStop }}
+      </button>
+    }
+    <p-table
+      [value]="batchRows()"
+      [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().batch } }"
+      [scrollable]="true"
+      [tableStyle]="{ 'min-width': '36rem' }"
+    >
+      <ng-template #header
+        ><tr>
+          <th scope="col">{{ auditText().target }}</th>
+          <th scope="col">{{ common().status }}</th>
+        </tr></ng-template
+      >
+      <ng-template #body let-change
+        ><tr>
+          <td>{{ change.unitId }}</td>
+          <td>
+            <p-tag [value]="stateLabel(change.status)" [severity]="severity(change.status)" />
+          </td></tr
+      ></ng-template>
+    </p-table>
+  </holita-table-panel>
+}
+<ng-template #parameterPlan>
+  @if (isBatch()) {
+    <p class="app-muted">{{ batchBaselineHint() }}</p>
+  }
+  <holita-table-panel
+    mode="local"
+    [heading]="text().plannedChange"
+    [total]="plannedChange().length"
+    [columns]="planColumns()"
+    [view]="{ kind: 'rows' }"
+    tableMinWidth="42rem"
+  >
+    <p-table
+      [value]="plannedChange()"
+      [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().plannedChange } }"
+      [scrollable]="true"
+      [tableStyle]="{ 'min-width': '42rem' }"
+    >
+      <ng-template #header
+        ><tr>
+          <th scope="col">{{ text().parameter }}</th>
+          <th scope="col">{{ text().currentValue }}</th>
+          <th scope="col">{{ text().plannedValue }}</th>
+        </tr></ng-template
+      >
+      <ng-template #body let-entry
+        ><tr>
+          <td>
+            <strong>{{ entry.parameter }}</strong> · {{ entry.title }}
+          </td>
+          <td>{{ entry.current ?? text().noCurrentValue }}</td>
+          <td>{{ entry.value }}</td>
+        </tr></ng-template
+      >
+    </p-table>
+  </holita-table-panel>
+</ng-template>
 <holita-table-panel
   #historyPanel
   mode="local"
@@ -261,12 +443,22 @@
         </dl>
       </section>
       @if (run.failureReason) {
-        <p-message severity="warn">{{ run.failureReason }}</p-message>
+        <p-message severity="warn">{{ failureReason(run.failureReason) }}</p-message>
       }
       <details class="app-card">
         <summary>{{ text().technical }}</summary>
         <div class="app-card__body">
           <dl class="app-facts">
+            <div>
+              <dt>{{ text().auditIntent }}</dt>
+              <dd>{{ run.intent ?? '—' }}</dd>
+            </div>
+            @if (run.failureReason) {
+              <div>
+                <dt>{{ common().status }}</dt>
+                <dd>{{ run.failureReason }}</dd>
+              </div>
+            }
             <div>
               <dt>{{ auditText().actor }}</dt>
               <dd class="app-mono">{{ run.actorId ?? '—' }}</dd>

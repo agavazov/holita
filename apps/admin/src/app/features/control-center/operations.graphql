@@ -285,6 +285,7 @@ fragment AdminControlCenterSnapshotFields on ErmParameterSnapshot {
   startedAt
   finishedAt
   parameterCount
+  unreadParameters
   readCount
   failureReason
 }
@@ -301,6 +302,7 @@ query AdminControlCenterSnapshots($id: ID!, $input: ErmDevicePageInput) {
           parameter
           title
           value
+          outcome
           resultCode
         }
         changes {
@@ -330,6 +332,10 @@ fragment AdminControlCenterConfigurationChangeFields on ErmConfigurationChange {
   actorId
   intent
   parameter
+  operation
+  parameters
+  batchId
+  batchIndex
   status
   startedAt
   finishedAt
@@ -363,6 +369,12 @@ fragment AdminControlCenterCommandRequestFields on ErmCommandRequest {
   deviceId
   unitId
   actorId
+  cancelledByActorId
+  waitingReason
+  waitingSince
+  batchId
+  batchIndex
+  retryOfId
   intent
   action
   actionCode
@@ -489,6 +501,143 @@ query AdminControlCenterDeviceProblems($id: ID!, $offset: Int! = 0) {
       alertId
       ermEventId
       commandRequestId
+    }
+  }
+}
+
+query AdminControlCenterBranchCommandRequests(
+  $offset: Int! = 0
+  $limit: Int! = 20
+  $filter: ErmCommandRequestsFilter
+) {
+  ermCommandRequests(offset: $offset, limit: $limit, filter: $filter) {
+    total
+    offset
+    limit
+    items {
+      ...AdminControlCenterCommandRequestFields
+    }
+  }
+}
+mutation AdminControlCenterRetryCommand($input: RetryErmDeviceCommandInput!) {
+  retryErmDeviceCommand(input: $input) {
+    ...AdminControlCenterCommandRequestFields
+  }
+}
+fragment AdminControlCenterCommandBatchFields on ErmCommandBatch {
+  id
+  actorId
+  action
+  createdAt
+  stoppedAt
+  stoppedByActorId
+  counts {
+    status
+    count
+  }
+  requests {
+    ...AdminControlCenterCommandRequestFields
+  }
+}
+query AdminControlCenterCommandBatch($id: ID!) {
+  ermCommandBatch(id: $id) {
+    ...AdminControlCenterCommandBatchFields
+  }
+}
+mutation AdminControlCenterStartCommandBatch($input: StartErmCommandBatchInput!) {
+  startErmCommandBatch(input: $input) {
+    ...AdminControlCenterCommandBatchFields
+  }
+}
+mutation AdminControlCenterStopCommandBatch($id: ID!) {
+  stopErmCommandBatch(id: $id) {
+    ...AdminControlCenterCommandBatchFields
+  }
+}
+query AdminControlCenterParameterBaseline($id: ID!) {
+  fleetDevice(id: $id) {
+    id
+    ermParameterSnapshots(input: { pageSize: 1 }) {
+      items {
+        id
+        startedAt
+        status
+        unreadParameters
+        values {
+          parameter
+          title
+          value
+          outcome
+        }
+      }
+    }
+  }
+}
+query AdminControlCenterSettingsDevices($offset: Int! = 0) {
+  fleetDevices(
+    offset: $offset
+    limit: 100
+    sort: { field: VEHICLE_LICENSE_PLATE, direction: ASC }
+  ) {
+    total
+    offset
+    limit
+    items {
+      id
+      imei
+      vehicle {
+        id
+        licensePlate
+      }
+      ermConfigurationWritesEnabled
+      ermState {
+        online
+        mode
+      }
+    }
+  }
+}
+fragment AdminControlCenterConfigurationBatchFields on ErmConfigurationBatch {
+  id
+  actorId
+  createdAt
+  finishedAt
+  stoppedAt
+  stoppedByActorId
+  changes {
+    ...AdminControlCenterConfigurationChangeFields
+  }
+}
+query AdminControlCenterConfigurationBatch($id: ID!) {
+  ermConfigurationBatch(id: $id) {
+    ...AdminControlCenterConfigurationBatchFields
+  }
+}
+mutation AdminControlCenterStartParametersChange($input: StartErmParametersChangeInput!) {
+  startErmParametersChange(input: $input) {
+    ...AdminControlCenterConfigurationChangeFields
+  }
+}
+mutation AdminControlCenterStartParameterBatch($input: StartErmParameterBatchInput!) {
+  startErmParameterBatch(input: $input) {
+    ...AdminControlCenterConfigurationBatchFields
+  }
+}
+mutation AdminControlCenterStopConfigurationBatch($id: ID!) {
+  stopErmConfigurationBatch(id: $id) {
+    ...AdminControlCenterConfigurationBatchFields
+  }
+}
+
+query AdminControlCenterQueueDeviceLabels($ids: [ID!]!) {
+  fleetDevices(ids: $ids, limit: 100) {
+    items {
+      id
+      imei
+      vehicle {
+        id
+        licensePlate
+      }
     }
   }
 }

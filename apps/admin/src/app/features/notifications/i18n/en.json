@@ -68,6 +68,46 @@
     "codeSuffix": " (code {code})",
     "command": "{command}: {outcome}{reason}.",
     "reasonSuffix": "; {reason}",
-    "unknownNotification": "A fleet notification was recorded."
-  }
+    "unknownNotification": "A fleet notification was recorded.",
+    "configurationOutcome": "{operation}: {outcome}.",
+    "snapshotOutcome": "Parameter snapshot: {outcome}{reason}.",
+    "unknownConfiguration": "Configuration change",
+    "unknownOutcome": "outcome unavailable",
+    "snapshotStates": {
+      "RUNNING": "reading",
+      "COMPLETE": "complete",
+      "PARTIAL": "partially read",
+      "FAILED": "failed"
+    },
+    "snapshotReasons": {
+      "UNREAD_PARAMETERS": "some parameters could not be read",
+      "SNAPSHOT_INTERRUPTED": "the read was interrupted by a service restart",
+      "PRIMARY_REQUIRED": "the unit needs an available primary connection",
+      "PARAMETER_READ_TIMEOUT": "the parameter read timed out",
+      "PARAMETER_READ_FAILED": "a parameter could not be read",
+      "GATEWAY_UNAVAILABLE": "the device gateway is unavailable",
+      "SNAPSHOT_FAILED": "the snapshot could not be completed"
+    },
+    "configurationOperations": {
+      "READ_EDATA": "Read eData configuration",
+      "INTERVAL": "Change one eData interval",
+      "ADD_DEFINITION": "Add one eData definition",
+      "GLOBALS": "Change eData globals (302)",
+      "PARAMETER": "Change one StarLink parameter (04)",
+      "PARAMETERS": "Change several StarLink parameters (46)"
+    },
+    "configurationStates": {
+      "RUNNING": "Running",
+      "READ": "Read complete",
+      "VERIFIED": "Verified",
+      "MISMATCH": "Readback mismatch",
+      "RESTORED": "Baseline restored",
+      "RESTORE_FAILED": "Restoration failed",
+      "UNCERTAIN": "Uncertain — operator review required",
+      "REFUSED": "Refused",
+      "FAILED": "Failed"
+    }
+  },
+  "configurationSource": "Configuration run",
+  "snapshotSource": "Parameter snapshot"
 }

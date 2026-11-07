@@ -1,7 +1,7 @@
 {
   "title": "Users",
   "guidance": "Manage the people who can sign in to this organization.",
-  "scope": "Users belong to the organization and have the same access to every fleet. Every user can manage other users.",
+  "scope": "Roles apply to every fleet in this organization. Only Administrators can manage users.",
   "heading": "Organization users",
   "new": "Create user",
   "name": "Name",
@@ -32,7 +32,7 @@
     },
     "confirmReactivate": {
       "title": "Reactivate this user?",
-      "detail": "The user will be able to sign in with their existing password and will have the same access as everyone else.",
+      "detail": "The user will be able to sign in with their existing password and assigned role.",
       "accept": "Reactivate"
     }
   },
@@ -40,7 +40,7 @@
     "createTitle": "Create user",
     "editTitle": "Edit {name}",
     "editFallback": "Edit user",
-    "guidance": "Set the name and email used for this person's account.",
+    "guidance": "Set the account name, email and organization role.",
     "password": "Initial password",
     "passwordHint": "Use 12–128 characters. Share this password securely; the user can change it in Profile.",
     "emailInUse": "This email is already in use.",
@@ -48,6 +48,16 @@
     "saveError": "The user could not be saved. Check the form and try again.",
     "cancel": "Cancel",
     "create": "Create user",
-    "save": "Save changes"
-  }
+    "save": "Save changes",
+    "roleHint": "Viewer: read only. Operator: device reads and fleet operations. Engineer: configuration writes and snapshots. Administrator: all actions, users and fleet settings.",
+    "ownRole": "You cannot change your own role. Another Administrator must do this."
+  },
+  "role": "Role",
+  "roles": {
+    "VIEWER": "Viewer",
+    "OPERATOR": "Operator",
+    "ENGINEER": "Engineer",
+    "ADMINISTRATOR": "Administrator"
+  },
+  "administratorRequired": "An Administrator role is required to create, edit, deactivate or reactivate users."
 }

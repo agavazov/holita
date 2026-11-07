@@ -9,6 +9,23 @@ import { graphqlOptions } from '../../core/graphql/graphql-options';
 import type { Language } from '../../i18n/messages';
 import {
   AdminControlCenterConfigurationChangesDocument,
+  AdminControlCenterBranchCommandRequestsDocument,
+  AdminControlCenterRetryCommandDocument,
+  AdminControlCenterCommandBatchDocument,
+  AdminControlCenterStartCommandBatchDocument,
+  AdminControlCenterStopCommandBatchDocument,
+  AdminControlCenterParameterBaselineDocument,
+  AdminControlCenterSettingsDevicesDocument,
+  AdminControlCenterQueueDeviceLabelsDocument,
+  AdminControlCenterConfigurationBatchDocument,
+  AdminControlCenterStartParametersChangeDocument,
+  AdminControlCenterStartParameterBatchDocument,
+  AdminControlCenterStopConfigurationBatchDocument,
+  type AdminControlCenterBranchCommandRequestsQueryVariables,
+  type RetryErmDeviceCommandInput,
+  type StartErmCommandBatchInput,
+  type StartErmParametersChangeInput,
+  type StartErmParameterBatchInput,
   AdminControlCenterStartEdataChangeDocument,
   AdminControlCenterStartParameterChangeDocument,
   type StartErmEdataChangeInput,
@@ -246,6 +263,145 @@ export class ControlCenterApi implements OnDestroy {
       throw new Error('Missing sendErmDeviceCommand result.');
     }
     return result.data.sendErmDeviceCommand;
+  }
+
+  watchBranchCommandRequests(
+    variables: AdminControlCenterBranchCommandRequestsQueryVariables,
+    skipPoll: () => boolean = () => false,
+  ) {
+    return this.client().watchQuery({
+      query: AdminControlCenterBranchCommandRequestsDocument,
+      variables,
+      fetchPolicy: 'network-only',
+      pollInterval: 5_000,
+      skipPollAttempt: () => document.hidden || skipPoll(),
+    });
+  }
+
+  watchQueueDeviceLabels(ids: string[]) {
+    return this.client().watchQuery({
+      query: AdminControlCenterQueueDeviceLabelsDocument,
+      variables: { ids },
+      fetchPolicy: 'network-only',
+    });
+  }
+
+  watchQueueDevices(offset = 0) {
+    return this.watchSettingsDevices(offset);
+  }
+
+  watchSettingsDevices(offset = 0) {
+    return this.client().watchQuery({
+      query: AdminControlCenterSettingsDevicesDocument,
+      variables: { offset },
+      fetchPolicy: 'network-only',
+    });
+  }
+
+  watchParameterBaseline(id: string) {
+    return this.client().watchQuery({
+      query: AdminControlCenterParameterBaselineDocument,
+      variables: { id },
+      fetchPolicy: 'network-only',
+    });
+  }
+
+  watchCommandBatch(id: string, skipPoll: () => boolean) {
+    return this.client().watchQuery({
+      query: AdminControlCenterCommandBatchDocument,
+      variables: { id },
+      fetchPolicy: 'network-only',
+      pollInterval: 5_000,
+      skipPollAttempt: () => document.hidden || skipPoll(),
+    });
+  }
+
+  watchConfigurationBatch(id: string, skipPoll: () => boolean) {
+    return this.client().watchQuery({
+      query: AdminControlCenterConfigurationBatchDocument,
+      variables: { id },
+      fetchPolicy: 'network-only',
+      pollInterval: 5_000,
+      skipPollAttempt: () => document.hidden || skipPoll(),
+    });
+  }
+
+  async retryCommand(input: RetryErmDeviceCommandInput) {
+    const result = await firstValueFrom(
+      this.client().mutate({
+        mutation: AdminControlCenterRetryCommandDocument,
+        variables: { input },
+      }),
+    );
+    if (!result.data?.retryErmDeviceCommand) {
+      throw new Error('Missing command retry result.');
+    }
+    return result.data.retryErmDeviceCommand;
+  }
+
+  async startCommandBatch(input: StartErmCommandBatchInput) {
+    const result = await firstValueFrom(
+      this.client().mutate({
+        mutation: AdminControlCenterStartCommandBatchDocument,
+        variables: { input },
+      }),
+    );
+    if (!result.data?.startErmCommandBatch) {
+      throw new Error('Missing command batch result.');
+    }
+    return result.data.startErmCommandBatch;
+  }
+
+  async stopCommandBatch(id: string) {
+    const result = await firstValueFrom(
+      this.client().mutate({
+        mutation: AdminControlCenterStopCommandBatchDocument,
+        variables: { id },
+      }),
+    );
+    if (!result.data?.stopErmCommandBatch) {
+      throw new Error('Missing command batch stop result.');
+    }
+    return result.data.stopErmCommandBatch;
+  }
+
+  async startParametersChange(input: StartErmParametersChangeInput) {
+    const result = await firstValueFrom(
+      this.client().mutate({
+        mutation: AdminControlCenterStartParametersChangeDocument,
+        variables: { input },
+      }),
+    );
+    if (!result.data?.startErmParametersChange) {
+      throw new Error('Missing parameters change result.');
+    }
+    return result.data.startErmParametersChange;
+  }
+
+  async startParameterBatch(input: StartErmParameterBatchInput) {
+    const result = await firstValueFrom(
+      this.client().mutate({
+        mutation: AdminControlCenterStartParameterBatchDocument,
+        variables: { input },
+      }),
+    );
+    if (!result.data?.startErmParameterBatch) {
+      throw new Error('Missing parameter batch result.');
+    }
+    return result.data.startErmParameterBatch;
+  }
+
+  async stopConfigurationBatch(id: string) {
+    const result = await firstValueFrom(
+      this.client().mutate({
+        mutation: AdminControlCenterStopConfigurationBatchDocument,
+        variables: { id },
+      }),
+    );
+    if (!result.data?.stopErmConfigurationBatch) {
+      throw new Error('Missing configuration batch stop result.');
+    }
+    return result.data.stopErmConfigurationBatch;
   }
 
   ngOnDestroy(): void {

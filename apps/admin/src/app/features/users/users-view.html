@@ -3,12 +3,17 @@
   [description]="text().guidance"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? rows().length : null"
 >
-  <button headerActions pButton type="button" [disabled]="busy()" (click)="create.emit()">
-    {{ text().new }}
-  </button>
+  @if (canManage()) {
+    <button headerActions pButton type="button" [disabled]="busy()" (click)="create.emit()">
+      {{ text().new }}
+    </button>
+  }
 </holita-page-header>
 
 <p-message severity="info">{{ text().scope }}</p-message>
+@if (!canManage()) {
+  <p-message severity="secondary">{{ text().administratorRequired }}</p-message>
+}
 
 <holita-table-panel
   #panel
@@ -27,7 +32,9 @@
   (action)="action.emit($event)"
   (retry)="retry.emit()"
 >
-  <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  @if (canManage()) {
+    <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  }
   <p-table
     class="app-responsive-table"
     [value]="tableRows()"
@@ -55,6 +62,7 @@
       <tr>
         <th scope="col" class="app-col-identity">{{ text().name }}</th>
         <th scope="col">{{ text().email }}</th>
+        <th scope="col">{{ text().role }}</th>
         <th scope="col">{{ text().status }}</th>
         <th scope="col" class="app-col-secondary">{{ text().lastSignIn }}</th>
         <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
@@ -66,15 +74,19 @@
       <tr>
         <td class="app-col-identity">
           <span class="app-cell-identity">
-            <button
-              type="button"
-              class="app-link app-cell-truncate"
-              [title]="row.name"
-              [attr.aria-label]="editLabel(row)"
-              (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
-            >
-              {{ row.name }}
-            </button>
+            @if (canManage()) {
+              <button
+                type="button"
+                class="app-link app-cell-truncate"
+                [title]="row.name"
+                [attr.aria-label]="editLabel(row)"
+                (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
+              >
+                {{ row.name }}
+              </button>
+            } @else {
+              <strong class="app-cell-truncate" [title]="row.name">{{ row.name }}</strong>
+            }
           </span>
           <span class="app-table-mobile-actions">
             <holita-row-actions
@@ -87,6 +99,7 @@
         <td>
           <span class="app-cell-truncate" [title]="row.email">{{ row.email }}</span>
         </td>
+        <td>{{ roleLabel(row) }}</td>
         <td>
           <span class="app-cell-status">
             <p-tag

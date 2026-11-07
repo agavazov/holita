@@ -500,11 +500,15 @@
                 />
               }
               @case ('sms-commands') {
-                <holita-control-center-sms
-                  [branchId]="branchId()"
-                  [language]="language()"
-                  [deviceId]="recordId()"
-                />
+                @if (!canOperate()) {
+                  <p-message severity="info">{{ text().branchQueue.operatorRequired }}</p-message>
+                } @else {
+                  <holita-control-center-sms
+                    [branchId]="branchId()"
+                    [language]="language()"
+                    [deviceId]="recordId()"
+                  />
+                }
               }
               @case ('parameters') {
                 <holita-device-settings
@@ -517,6 +521,9 @@
                   <h2>{{ text().snapshots.title }}</h2>
                   <p class="app-muted">{{ text().snapshots.hint }}</p>
                   <p class="app-muted">{{ text().snapshots.secretNote }}</p>
+                  @if (!canConfigure()) {
+                    <p-message severity="info">{{ text().settings.writeRoleRequired }}</p-message>
+                  }
                   @if (!canSend()) {
                     <p-message severity="secondary">{{
                       text().settings.primaryRequired
@@ -526,7 +533,9 @@
                     <button
                       pButton
                       type="button"
-                      [disabled]="!canSend() || snapshotRunning() || startingSnapshot()"
+                      [disabled]="
+                        !canConfigure() || !canSend() || snapshotRunning() || startingSnapshot()
+                      "
                       [loading]="startingSnapshot()"
                       (click)="startSnapshot()"
                     >
@@ -1080,6 +1089,17 @@
           @if (detail.value.failureReason) {
             <p-message severity="error">{{ detail.value.failureReason }}</p-message>
           }
+          @if (detail.value.unreadParameters.length) {
+            <section class="app-card" [attr.aria-label]="text().snapshots.unread">
+              <h3>{{ text().snapshots.unread }}</h3>
+              <p class="app-muted">{{ text().snapshots.unreadHint }}</p>
+              <ul>
+                @for (id of detail.value.unreadParameters; track id) {
+                  <li>{{ parameter(id) }}</li>
+                }
+              </ul>
+            </section>
+          }
           <holita-table-panel
             mode="local"
             [heading]="text().snapshots.changes"
@@ -1178,7 +1198,9 @@
                   </td>
                   <td>
                     <span class="app-cell-identity" [title]="row.value ?? row.resultCode ?? ''">{{
-                      row.value ?? row.resultCode ?? text().snapshots.noValue
+                      row.outcome === 'READ'
+                        ? (row.value ?? text().snapshots.noValue)
+                        : snapshotOutcome(row.outcome)
                     }}</span>
                   </td>
                 </tr></ng-template

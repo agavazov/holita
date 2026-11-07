@@ -40,3 +40,101 @@ export function returnToHolitaError(error: unknown, language: Language): string 
       return text.returnUnconfirmed;
   }
 }
+
+/** Translate protocol refusals while keeping the original reason in the audit. */
+export function controlCenterReason(reason: string | null | undefined, language: Language): string {
+  const text = controlCenterText[language].errors;
+  if (!reason) {
+    return text.failed;
+  }
+  if (reason.includes('configuration writes are disabled')) {
+    return text.disabled;
+  }
+  if (reason.includes('Operator role')) {
+    return text.readRole;
+  }
+  if (reason.includes('Engineer role')) {
+    return text.writeRole;
+  }
+  if (reason.includes('restoration') || reason.includes('restore')) {
+    return text.restoration;
+  }
+  if (
+    reason.includes('UNCERTAIN') ||
+    reason.includes('outcome is unknown') ||
+    reason.includes('readback is incomplete') ||
+    reason.includes('read the affected parameters') ||
+    reason.includes('fresh eData read')
+  ) {
+    return reason.includes('eData') ? text.freshEdata : text.freshParameters;
+  }
+  if (reason.includes('primary mode')) {
+    return text.primary;
+  }
+  if (reason.includes('workflow is already running')) {
+    return text.running;
+  }
+  if (reason.includes('queued requests can be cancelled')) {
+    return text.cancel;
+  }
+  if (reason.includes('can be retried')) {
+    return text.retry;
+  }
+  if (reason.includes('writable') || reason.includes('protected parameters')) {
+    return text.parameters;
+  }
+  if (reason.includes('Choose one eData')) {
+    return text.edata;
+  }
+  if (reason.includes('complete parameter snapshot')) {
+    return text.snapshot;
+  }
+  if (reason.includes('interval is unchanged')) {
+    return text.unchanged;
+  }
+  if (
+    reason.includes('session changed') ||
+    reason.includes('Preflight') ||
+    reason.includes('baseline') ||
+    reason.includes('TARGET_CHANGED') ||
+    reason.includes('ownership or IMEI changed')
+  ) {
+    return text.changed;
+  }
+  return text.failed;
+}
+
+export function controlCenterError(error: unknown, language: Language, fallback?: string): string {
+  const text = controlCenterText[language].errors;
+  if (!CombinedGraphQLErrors.is(error)) {
+    return fallback ?? text.unavailable;
+  }
+  const failure = error.errors[0];
+  if (!failure) {
+    return fallback ?? text.unavailable;
+  }
+  const reason = controlCenterReason(failure.message, language);
+  if (reason !== text.failed) {
+    return reason;
+  }
+  switch (failure.extensions?.['code']) {
+    case 'FORBIDDEN':
+      return text.forbidden;
+    case 'UNAUTHENTICATED':
+      return text.session;
+    case 'BAD_USER_INPUT':
+      return text.invalid;
+    case 'NOT_FOUND':
+      return text.notFound;
+    case 'CONFLICT':
+      return text.conflict;
+    case 'SERVICE_UNAVAILABLE':
+      return text.unavailable;
+    default:
+      return fallback ?? text.unavailable;
+  }
+}
+
+export function commandError(error: unknown, language: Language): string {
+  return controlCenterError(error, language, controlCenterText[language].queue.unavailable);
+}

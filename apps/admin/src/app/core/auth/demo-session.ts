@@ -13,6 +13,7 @@ import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import type {
   AdminAccountFragment,
   AdminDemoLoginMutation,
+  UserRole,
 } from '../../../generated/graphql/operations';
 import { AuthApi } from './auth-api';
 
@@ -24,6 +25,12 @@ export type AccountSession = AdminDemoLoginMutation['demoLogin'] & {
 export type SessionNotice = 'expired' | 'passwordChanged' | 'signOutFailed';
 const storageKey = 'holita.admin.session';
 const legacyStorageKey = 'holita.admin.demo-session';
+const roleRank: Readonly<Record<UserRole, number>> = {
+  VIEWER: 0,
+  OPERATOR: 1,
+  ENGINEER: 2,
+  ADMINISTRATOR: 3,
+};
 
 type StoredSession = AccountSession & { branchId: string | null };
 
@@ -117,6 +124,11 @@ export class DemoSession {
   );
   readonly current = this.state.asReadonly();
   readonly user = computed(() => this.current()?.user ?? null);
+  // A demo session has no user and acts as an Administrator, as the backend treats it.
+  readonly role = computed<UserRole | null>(() => {
+    const session = this.current();
+    return session ? (session.user ? session.user.role : 'ADMINISTRATOR') : null;
+  });
   private readonly token = computed(() => this.current()?.token ?? null);
   private readonly selectedBranch = signal<string | null>(
     typeof this.restored === 'object' ? (this.restored?.branchId ?? null) : null,
@@ -191,6 +203,11 @@ export class DemoSession {
     });
   }
 
+  hasRole(minimum: UserRole): boolean {
+    const role = this.role();
+    return role !== null && roleRank[role] >= roleRank[minimum];
+  }
+
   start(session: AccountSession, branchId: string | null = null): void {
     this.notice.set(null);
     this.selectedBranch.set(branchId);
@@ -199,10 +216,11 @@ export class DemoSession {
     this.scheduleExpiry();
   }
 
-  updateUser(user: AdminAccountFragment): void {
+  updateUser(user: Omit<AdminAccountFragment, 'role'> & { readonly role?: UserRole }): void {
     const current = this.current();
-    if (current && current.tenant.id === user.tenant.id) {
-      this.state.set({ ...current, user });
+    const role = user.role ?? current?.user?.role;
+    if (current && current.tenant.id === user.tenant.id && role !== undefined) {
+      this.state.set({ ...current, user: { ...user, role } });
     }
   }
 

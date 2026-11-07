@@ -3,6 +3,7 @@ fragment AdminAccount on User {
   name
   email
   active
+  role
   lastSignInAt
   createdAt
   updatedAt

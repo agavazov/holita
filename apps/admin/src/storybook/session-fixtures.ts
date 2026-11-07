@@ -28,6 +28,7 @@ export const fixtureAccount = {
   id: '30000000-0000-4000-8000-000000000001',
   name: 'Alex Morgan',
   email: 'alex@example.test',
+  role: 'ADMINISTRATOR',
   active: true,
   lastSignInAt: '2026-10-18T06:50:00.000Z',
   createdAt: '2026-09-01T08:00:00.000Z',

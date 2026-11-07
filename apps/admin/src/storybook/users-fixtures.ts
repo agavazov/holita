@@ -5,6 +5,7 @@ import {
   AdminUpdateUserDocument,
   AdminUsersDocument,
   type AdminUserDetailsFragment,
+  type UserRole,
 } from '../generated/graphql/operations';
 import {
   fixtureError,
@@ -21,6 +22,7 @@ export const fixtureUsers: readonly WithTypename<AdminUserDetailsFragment>[] = [
     tenant: fixtureTenant,
     name: 'Alex Morgan',
     email: 'alex@example.test',
+    role: 'ADMINISTRATOR',
     active: true,
     lastSignInAt: '2026-10-18T06:45:00.000Z',
     createdAt: '2026-01-01T00:00:00.000Z',
@@ -32,6 +34,7 @@ export const fixtureUsers: readonly WithTypename<AdminUserDetailsFragment>[] = [
     tenant: fixtureTenant,
     name: 'Мария Иванова',
     email: 'maria.ivanova@example.test',
+    role: 'ENGINEER',
     active: true,
     lastSignInAt: '2026-10-17T13:12:00.000Z',
     createdAt: '2026-01-02T00:00:00.000Z',
@@ -43,6 +46,7 @@ export const fixtureUsers: readonly WithTypename<AdminUserDetailsFragment>[] = [
     tenant: fixtureTenant,
     name: 'Jordan Taylor',
     email: 'jordan.taylor@example.test',
+    role: 'OPERATOR',
     active: false,
     lastSignInAt: '2026-09-09T10:00:00.000Z',
     createdAt: '2026-01-03T00:00:00.000Z',
@@ -54,6 +58,7 @@ export const fixtureUsers: readonly WithTypename<AdminUserDetailsFragment>[] = [
     tenant: fixtureTenant,
     name: 'Samira Anderson with a longer account display name',
     email: 'samira.anderson.operations@example.test',
+    role: 'VIEWER',
     active: true,
     lastSignInAt: null,
     createdAt: '2026-10-18T06:55:00.000Z',
@@ -84,8 +89,15 @@ function savedUser(variables: FixtureVariables): WithTypename<AdminUserDetailsFr
       { path: 'email', message: 'Email is already in use.', code: 'DUPLICATE' },
     ]);
   }
+  const role = variables.requiredString('role');
+  const roles: readonly UserRole[] = ['VIEWER', 'OPERATOR', 'ENGINEER', 'ADMINISTRATOR'];
+  const selectedRole = roles.find((candidate) => candidate === role);
+  if (!selectedRole) {
+    throw fixtureError('BAD_USER_INPUT', 'A valid user role is required.');
+  }
   return {
     ...base,
+    role: selectedRole,
     id: variables.has('id') ? base.id : '31000000-0000-4000-8000-000000000005',
     name: variables.requiredString('name'),
     email,

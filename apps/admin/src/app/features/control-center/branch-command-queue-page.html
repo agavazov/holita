@@ -1,0 +1,311 @@
+<holita-page-header [title]="text().title" [description]="text().description" />
+@if (!canOperate()) {
+  <p-message severity="info">{{ text().operatorRequired }}</p-message>
+}
+@if (actionError(); as error) {
+  <p-message severity="warn" role="alert">{{ error }}</p-message>
+}
+<section class="app-card" [attr.aria-label]="text().batch">
+  <h2>{{ text().batch }}</h2>
+  <p class="app-muted">{{ text().batchHint }}</p>
+  <div class="app-form-grid" [formGroup]="batchForm">
+    <holita-form-field [label]="text().batchUnits" controlId="command-batch-units">
+      <p-select
+        inputId="command-batch-units"
+        formControlName="deviceIds"
+        [options]="deviceOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [multiple]="true"
+        [pt]="selectMultiplePt"
+        [filter]="true"
+        [loading]="devicesLoading()"
+        [placeholder]="text().batchUnits"
+      />
+    </holita-form-field>
+    <holita-form-field [label]="text().batchAction" controlId="command-batch-action">
+      <p-select
+        inputId="command-batch-action"
+        formControlName="action"
+        [options]="actionOptions()"
+        optionLabel="label"
+        optionValue="value"
+      />
+    </holita-form-field>
+    <holita-form-field [label]="text().intent" controlId="command-batch-intent">
+      <input pInputText id="command-batch-intent" formControlName="intent" maxlength="200" />
+    </holita-form-field>
+    <holita-form-field [label]="text().expiry" controlId="command-batch-expiry">
+      <input
+        pInputText
+        id="command-batch-expiry"
+        formControlName="expiryMinutes"
+        type="number"
+        min="1"
+        max="1440"
+        step="1"
+      />
+    </holita-form-field>
+  </div>
+  @if (devicesError(); as error) {
+    <p-message severity="warn">{{ error }}</p-message>
+  }
+  @if (devices().length < deviceTotal() || devicesError()) {
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [loading]="devicesLoading()"
+      (click)="loadMoreDevices()"
+    >
+      {{ text().loadMoreUnits }}
+    </button>
+  }
+  <button
+    pButton
+    type="button"
+    [disabled]="!canOperate() || batchFormStatus() !== 'VALID' || busy() !== null || batchRunning()"
+    [loading]="busy() === 'batch'"
+    [title]="canOperate() ? text().batchHint : text().operatorRequired"
+    (click)="startBatch()"
+  >
+    {{ text().batchStart }}
+  </button>
+  @if (batch(); as batch) {
+    <div class="app-form-section" aria-live="polite">
+      <h3>{{ batchState() }}</h3>
+      <p role="status">{{ batchProgress() }}</p>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().batchAction }}</dt>
+          <dd>{{ catalog().actions[batch.action] }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().actor }}</dt>
+          <dd>{{ batch.actorId }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().requested }}</dt>
+          <dd>{{ format.dateTime(batch.createdAt) }}</dd>
+        </div>
+      </dl>
+      @for (entry of batchCounts(); track entry.status) {
+        <p-tag [value]="entry.label" [severity]="entry.severity" />
+      }
+      @if (batchRunning() && !batch.stoppedAt) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="!canOperate() || busy() !== null"
+          [loading]="busy() === 'stop'"
+          [title]="canOperate() ? text().batchStopConfirm : text().operatorRequired"
+          (click)="stopBatch()"
+        >
+          {{ text().batchStop }}
+        </button>
+      }
+      <dl class="app-facts">
+        @for (request of batch.requests; track request.id) {
+          <div>
+            <dt>
+              <a [routerLink]="deviceLink(request)">{{ target(request) }} · {{ request.unitId }}</a>
+            </dt>
+            <dd>{{ text().statuses[request.status] }}</dd>
+          </div>
+        }
+      </dl>
+    </div>
+  }
+</section>
+<section class="app-card" [attr.aria-label]="text().requests">
+  <div class="app-form-grid">
+    <holita-form-field [label]="text().status" controlId="command-queue-status">
+      <p-select
+        inputId="command-queue-status"
+        [options]="statusOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [multiple]="true"
+        [pt]="selectMultiplePt"
+        [placeholder]="text().allStatuses"
+        [ngModel]="url.state().filter.statuses ?? []"
+        (ngModelChange)="url.patchFilter({ statuses: $event })"
+      />
+    </holita-form-field>
+    <holita-form-field [label]="text().unit" controlId="command-queue-unit">
+      <p-select
+        inputId="command-queue-unit"
+        [options]="deviceOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [multiple]="true"
+        [pt]="selectMultiplePt"
+        [filter]="true"
+        [loading]="devicesLoading()"
+        [placeholder]="text().allUnits"
+        [ngModel]="url.state().filter.devices ?? []"
+        (ngModelChange)="url.patchFilter({ devices: $event })"
+      />
+    </holita-form-field>
+  </div>
+</section>
+<holita-table-panel
+  #panel
+  [heading]="text().requests"
+  [view]="view()"
+  [total]="page()?.total ?? null"
+  [page]="tablePage()"
+  [busy]="loading() || busy() !== null"
+  [errorText]="loadError()"
+  [emptyTitle]="text().empty"
+  [emptyDescription]="text().emptyHint"
+  [columns]="columns()"
+  tableMinWidth="102rem"
+  [actions]="actions()"
+  [actionContext]="url.state()"
+  (action)="run($event)"
+  (pageChange)="url.setPage($event)"
+  (clearFilters)="url.clearFilters()"
+  (retry)="refresh()"
+>
+  <button
+    panelActions
+    pButton
+    type="button"
+    severity="secondary"
+    [outlined]="true"
+    [loading]="loading()"
+    (click)="refresh()"
+  >
+    {{ text().refresh }}
+  </button>
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="rows()"
+    dataKey="id"
+    [rowTrackBy]="trackById"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+          <col
+            [style.width]="
+              column.className === 'app-col-identity'
+                ? 'var(--app-table-identity-width, ' + column.width + ')'
+                : column.width
+            "
+            [class]="column.className ?? ''"
+          />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        @for (column of columns(); track column.id) {
+          <th
+            scope="col"
+            [class]="column.className ?? ''"
+            pFrozenColumn
+            [frozen]="column.kind === 'actions'"
+            alignFrozen="right"
+          >
+            {{ column.label }}
+          </th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-cell-identity">
+            <button
+              type="button"
+              class="app-link"
+              [title]="row.purpose"
+              (click)="panel.run('details', [row.record], $event.currentTarget)"
+            >
+              {{ row.purpose }}
+            </button>
+            <span [title]="row.target + ' · ' + row.request.unitId"
+              >{{ row.target }} · {{ row.request.unitId }}</span
+            >
+          </div>
+          <div class="app-table-mobile-actions">
+            <holita-row-actions
+              [actions]="actions()"
+              [record]="row.record"
+              (choose)="panel.run($event.action, [row.record], $event.origin)"
+            />
+          </div>
+        </td>
+        <td>
+          <div class="app-cell-identity">
+            <a [routerLink]="deviceLink(row.request)">{{ row.target }}</a
+            ><span>{{ row.request.unitId }}</span>
+          </div>
+        </td>
+        <td>
+          <div class="app-cell-identity">
+            <p-tag [value]="row.status" [severity]="row.severity" /><span [title]="row.outcome">{{
+              row.outcome
+            }}</span>
+          </div>
+        </td>
+        <td>
+          <div class="app-cell-identity">
+            <span>{{ row.waiting ?? '—' }}</span
+            ><span class="app-cell-date" [title]="row.waitingSince.title">{{
+              row.waitingSince.text
+            }}</span>
+          </div>
+        </td>
+        <td>
+          <span class="app-cell-truncate" [title]="row.request.actorId">{{
+            row.request.actorId
+          }}</span>
+        </td>
+        <td>
+          <div class="app-cell-identity">
+            <span class="app-cell-date" [title]="row.requested.title">{{ row.requested.text }}</span
+            ><span class="app-cell-date" [title]="row.expires.title">{{ row.expires.text }}</span>
+          </div>
+        </td>
+        <td>
+          <div class="app-cell-identity">
+            <span class="app-cell-date" [title]="row.answered.title">{{ row.answered.text }}</span
+            ><span class="app-cell-date" [title]="row.completed.title">{{
+              row.completed.text
+            }}</span>
+          </div>
+        </td>
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <holita-row-actions
+            [actions]="actions()"
+            [record]="row.record"
+            (choose)="panel.run($event.action, [row.record], $event.origin)"
+          />
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</holita-table-panel>
+<holita-command-details
+  [request]="selected()"
+  [language]="language()"
+  [target]="target(selected())"
+  [canCancel]="canOperate()"
+  [cancelling]="busy() !== null && busy() === selected()?.id"
+  [error]="error()"
+  (closed)="selected.set(null)"
+  (cancelRequest)="cancelSelected($event)"
+/>
+<p-confirmdialog [pt]="confirmPt()"
+  ><ng-template #message
+    ><p id="branch-command-confirm-message">{{ confirmationMessage() }}</p></ng-template
+  ></p-confirmdialog
+>

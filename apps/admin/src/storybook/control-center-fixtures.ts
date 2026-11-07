@@ -1,4 +1,8 @@
 import {
+  AdminControlCenterQueueDeviceLabelsDocument,
+  AdminControlCenterParameterBaselineDocument,
+  type AdminControlCenterParameterBaselineQuery,
+  AdminControlCenterSettingsDevicesDocument,
   AdminControlCenterConfigurationChangesDocument,
   type AdminControlCenterConfigurationChangesQuery,
   AdminControlCenterCommandRequestsDocument,
@@ -23,6 +27,11 @@ import {
   type AdminControlCenterSmsDevicesQuery,
 } from '../generated/graphql/operations';
 import { graphqlFixture, type WithTypename } from './graphql-fixtures';
+import {
+  settingsWritableDeviceId,
+  settingsBatchDeviceId,
+  settingsBatchRunFixture,
+} from './device-settings-fixtures';
 import { fixtureDevice, fixtureLiveDevice } from './devices-fixtures';
 import { fixtureAlert } from './alerts-fixtures';
 import {
@@ -379,7 +388,10 @@ const overviewDevices = [
 ];
 graphqlFixture(AdminControlCenterDeviceDocument, (variables) => ({
   fleetDevice:
-    overviewDevices.find((device) => device.id === variables.string('id')) ?? detailDevice,
+    overviewDevices.find((device) => device.id === variables.string('id')) ??
+    ([settingsWritableDeviceId, settingsBatchDeviceId].includes(variables.string('id') ?? '')
+      ? { ...detailDevice, id: variables.requiredString('id') }
+      : detailDevice),
 }));
 graphqlFixture(
   AdminControlCenterReturnToHolitaDocument,
@@ -541,32 +553,46 @@ graphqlFixture(AdminControlCenterDevicesDocument, () => ({
   },
 }));
 
-graphqlFixture(AdminControlCenterConfigurationChangesDocument, () => ({
+graphqlFixture(AdminControlCenterConfigurationChangesDocument, (variables) => ({
   fleetDevice: {
     __typename: 'FleetDevice',
-    id: fixtureDevice.id,
-    ermConfigurationWritesEnabled: false,
-    ermConfigurationChanges: [
-      {
-        __typename: 'ErmConfigurationChange',
-        id: 'settings-read-edata',
-        unitId: fixtureDevice.imei,
-        actorId: 'demo-tenant:sample-tenant',
-        intent: 'Read eData configuration',
-        parameter: null,
-        status: 'READ',
-        startedAt: '2026-10-20T06:45:00.000Z',
-        finishedAt: '2026-10-20T06:45:12.000Z',
-        failureReason: null,
-        baseline: { profile: 'eData' },
-        intended: null,
-        steps: [
-          { name: 'profile', time: '2026-10-20T06:45:12.000Z', outcome: 'READ', payload: null },
-        ],
-      },
-    ] satisfies WithTypename<
-      AdminControlCenterConfigurationChangesQuery['fleetDevice']['ermConfigurationChanges']
-    >,
+    id: variables.requiredString('id'),
+    ermConfigurationWritesEnabled: [settingsWritableDeviceId, settingsBatchDeviceId].includes(
+      variables.string('id') ?? '',
+    ),
+    ermConfigurationChanges:
+      variables.string('id') === settingsBatchDeviceId
+        ? [settingsBatchRunFixture]
+        : ([
+            {
+              __typename: 'ErmConfigurationChange',
+              id: 'settings-read-edata',
+              unitId: fixtureDevice.imei,
+              actorId: 'demo-tenant:sample-tenant',
+              intent: 'Read eData configuration',
+              operation: 'READ_EDATA',
+              parameters: [],
+              batchId: null,
+              batchIndex: null,
+              parameter: null,
+              status: 'READ',
+              startedAt: '2026-10-20T06:45:00.000Z',
+              finishedAt: '2026-10-20T06:45:12.000Z',
+              failureReason: null,
+              baseline: { profile: 'eData' },
+              intended: null,
+              steps: [
+                {
+                  name: 'profile',
+                  time: '2026-10-20T06:45:12.000Z',
+                  outcome: 'READ',
+                  payload: null,
+                },
+              ],
+            },
+          ] satisfies WithTypename<
+            AdminControlCenterConfigurationChangesQuery['fleetDevice']['ermConfigurationChanges']
+          >),
   },
 }));
 
@@ -751,7 +777,8 @@ graphqlFixture(AdminControlCenterSnapshotsDocument, () => ({
           status: 'COMPLETE',
           startedAt: '2026-10-20T07:00:00.000Z',
           finishedAt: '2026-10-20T07:00:15.000Z',
-          parameterCount: 1,
+          parameterCount: 2,
+          unreadParameters: [107],
           readCount: 1,
           failureReason: null,
           values: [
@@ -759,7 +786,16 @@ graphqlFixture(AdminControlCenterSnapshotsDocument, () => ({
               __typename: 'ErmParameterValue',
               parameter: 593,
               title: 'Simple SMS password',
+              outcome: 'READ',
               value: 'password',
+              resultCode: null,
+            },
+            {
+              __typename: 'ErmParameterValue',
+              parameter: 107,
+              title: 'GPRS authentication mode',
+              outcome: 'OMITTED',
+              value: null,
               resultCode: null,
             },
           ],
@@ -783,6 +819,7 @@ graphqlFixture(AdminControlCenterSnapshotsDocument, () => ({
           startedAt: '2026-10-19T07:00:00.000Z',
           finishedAt: '2026-10-19T07:00:15.000Z',
           parameterCount: 1,
+          unreadParameters: [],
           readCount: 1,
           failureReason: null,
           values: [
@@ -790,6 +827,7 @@ graphqlFixture(AdminControlCenterSnapshotsDocument, () => ({
               __typename: 'ErmParameterValue',
               parameter: 593,
               title: 'Simple SMS password',
+              outcome: 'READ',
               value: 'previouspassword',
               resultCode: null,
             },
@@ -800,5 +838,88 @@ graphqlFixture(AdminControlCenterSnapshotsDocument, () => ({
         AdminControlCenterSnapshotsQuery['fleetDevice']['ermParameterSnapshots']['items']
       >,
     },
+  },
+}));
+
+graphqlFixture(AdminControlCenterSettingsDevicesDocument, (variables) => ({
+  fleetDevices: {
+    __typename: 'FleetDevicePage',
+    total: overviewDevices.length,
+    offset: variables.int('offset', 0),
+    limit: 100,
+    items: overviewDevices
+      .slice(variables.int('offset', 0), variables.int('offset', 0) + 100)
+      .map((device) => ({
+        __typename: 'FleetDevice',
+        id: device.id,
+        imei: device.imei,
+        vehicle: device.vehicle,
+        ermConfigurationWritesEnabled: true,
+        ermState: device.ermState
+          ? {
+              __typename: 'ErmUnitState',
+              online: device.ermState.online,
+              mode: device.ermState.mode,
+            }
+          : null,
+      })),
+  },
+}));
+graphqlFixture(
+  AdminControlCenterParameterBaselineDocument,
+  (variables): WithTypename<AdminControlCenterParameterBaselineQuery> => ({
+    fleetDevice: {
+      __typename: 'FleetDevice',
+      id: variables.requiredString('id'),
+      ermParameterSnapshots: {
+        __typename: 'ErmParameterSnapshotsPage',
+        items: [
+          {
+            __typename: 'ErmParameterSnapshot',
+            id: 'parameter-baseline-settings',
+            startedAt: '2026-10-20T07:00:00.000Z',
+            status: 'COMPLETE',
+            unreadParameters: [107],
+            values: [
+              {
+                __typename: 'ErmParameterValue',
+                parameter: 22,
+                title: 'Automatic tracking interval',
+                value: '300',
+                outcome: 'READ',
+              },
+              {
+                __typename: 'ErmParameterValue',
+                parameter: 106,
+                title: 'TCP keep-alive interval',
+                value: '60',
+                outcome: 'READ',
+              },
+              {
+                __typename: 'ErmParameterValue',
+                parameter: 107,
+                title: 'GPRS authentication mode',
+                value: null,
+                outcome: 'OMITTED',
+              },
+            ],
+          },
+        ],
+      },
+    },
+  }),
+);
+
+graphqlFixture(AdminControlCenterQueueDeviceLabelsDocument, (variables) => ({
+  fleetDevices: {
+    __typename: 'FleetDevicePage',
+    items: overviewDevices
+      .filter((device) => variables.strings('ids')?.includes(device.id))
+      .map((device) => ({
+        __typename: 'FleetDevice',
+        id: device.id,
+        imei: device.imei,
+        vehicle: device.vehicle,
+      })),
   },
 }));
