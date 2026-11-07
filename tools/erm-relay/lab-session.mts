@@ -7,8 +7,8 @@ import { inflateContainer } from './starlink-container.mjs';
 // Runs a script of StarLink commands in one configuration-server session (command 98 queued through
 // Karma, pointing at --port) and records every frame. Each script line is "<command>,<fields...>";
 // lines starting with "//" are comments. Reads are always allowed. Parameter writes (04/46), eData
-// messages (30) and tracking (22) need --allow-writes, and 0049-0054, 0059 and 0060 are never
-// written: route-unit owns the routing. Replies to the script are confirmed, so the unit does not
+// messages (30) and tracking (22) need --allow-writes. Routing 0049-0054 and the gateway's protected
+// lock, SIM and authentication parameters are never written. Replies to the script are confirmed, so the unit does not
 // resend them to its primary server; events are not, so the unit still delivers them to that server.
 // Frames inside $SLC containers are handled like plain ones. Frames may hold secrets, so they go only
 // to the capture file.
@@ -65,7 +65,7 @@ const readCommands = new Set([
   '64',
 ]);
 const writeCommands = new Set(['04', '22', '30', '46']);
-const lockedParameters = new Set([49, 50, 51, 52, 53, 54, 59, 60]);
+const lockedParameters = new Set([49, 50, 51, 52, 53, 54, 59, 60, 61, 187, 524, 525, 593]);
 const steps = readFileSync(options.script, 'utf8')
   .split('\n')
   .map((line) => line.trim())

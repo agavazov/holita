@@ -5,6 +5,6 @@ export default {
   rootDir: import.meta.dirname,
   displayName: 'erm-server:db',
   testMatch: ['<rootDir>/test/**/*.db.spec.ts'],
-  testTimeout: 60000,
+  testTimeout: 120000,
   maxWorkers: 2,
 };

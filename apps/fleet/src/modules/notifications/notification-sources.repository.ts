@@ -67,7 +67,8 @@ export class NotificationSourcesRepository {
           item.sourceKind === 'COMMAND' || item.sourceId.startsWith('karma-routing:')
             ? null
             : item.sourceId,
-        commandRequestId: item.sourceKind === 'COMMAND' ? item.sourceId : null,
+        commandRequestId:
+          item.sourceKind === 'COMMAND' && !item.sourceId.includes(':') ? item.sourceId : null,
       }));
       if (data.length) {
         await transaction.fleetNotification.createMany({ data, skipDuplicates: true });

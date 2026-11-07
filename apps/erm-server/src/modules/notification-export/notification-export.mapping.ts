@@ -1,4 +1,9 @@
-import type { ErmCommandRequest, ErmKarmaRouting } from '../../generated/prisma/client.js';
+import type {
+  ErmCommandRequest,
+  ErmConfigurationChange,
+  ErmKarmaRouting,
+  ErmParameterSnapshot,
+} from '../../generated/prisma/client.js';
 import type { ErmCommand } from '../../generated/graphql/types.js';
 import { starlinkEvents } from '../../starlink/event-catalog.js';
 import { commandRequestView } from '../telemetry/command-request-view.js';
@@ -129,5 +134,66 @@ export function karmaRoutingNotification(
     parameters: { eventKind: routing.notificationKind },
     target: { kind: 'DEVICE', id: scope.deviceId },
     recorded: true,
+  };
+}
+
+export function configurationNotification(
+  change: ErmConfigurationChange,
+  scope: NotificationExportScope,
+): NotificationExportItem {
+  if (change.finishedAt === null) {
+    throw new Error('Terminal configuration notification requires completion time');
+  }
+  return {
+    sourceKind: 'COMMAND',
+    sourceKey: `erm-configuration:${change.id}:${change.status}`,
+    sourceId: `configuration:${change.id}`,
+    occurredAt: change.finishedAt.toISOString(),
+    severity: change.status === 'RESTORE_FAILED' ? 'CRITICAL' : 'WARNING',
+    wordingKey: 'notification.configurationOutcome',
+    parameters: {
+      eventKind: 'CONFIGURATION_OUTCOME',
+      commandKind: change.operation,
+      commandStatus: change.status,
+      reasonCode: change.status,
+    },
+    target: { kind: 'DEVICE', id: scope.deviceId },
+    recorded: false,
+  };
+}
+
+export function snapshotNotification(
+  snapshot: ErmParameterSnapshot,
+  scope: NotificationExportScope,
+): NotificationExportItem {
+  if (snapshot.finishedAt === null) {
+    throw new Error('Terminal snapshot notification requires completion time');
+  }
+  const reasons: Readonly<Record<string, string>> = {
+    'interrupted by an api restart': 'SNAPSHOT_INTERRUPTED',
+    'Unit is not connected in primary mode or is busy': 'PRIMARY_REQUIRED',
+    'Parameter read timed out': 'PARAMETER_READ_TIMEOUT',
+    'Parameter read failed': 'PARAMETER_READ_FAILED',
+    'ERM gateway is unavailable': 'GATEWAY_UNAVAILABLE',
+  };
+  const status = snapshot.status === 'COMPLETE' ? 'PARTIAL' : snapshot.status;
+  return {
+    sourceKind: 'COMMAND',
+    sourceKey: `erm-snapshot:${snapshot.id}:${status}`,
+    sourceId: `snapshot:${snapshot.id}`,
+    occurredAt: snapshot.finishedAt.toISOString(),
+    severity: 'WARNING',
+    wordingKey: 'notification.snapshotOutcome',
+    parameters: {
+      eventKind: 'PARAMETER_SNAPSHOT_OUTCOME',
+      commandKind: 'PARAMETER_SNAPSHOT',
+      commandStatus: status,
+      reasonCode:
+        status === 'PARTIAL'
+          ? 'UNREAD_PARAMETERS'
+          : (reasons[snapshot.failureReason ?? ''] ?? 'SNAPSHOT_FAILED'),
+    },
+    target: { kind: 'DEVICE', id: scope.deviceId },
+    recorded: false,
   };
 }

@@ -88,6 +88,79 @@ export class NotificationExportRepository {
     });
   }
 
+  configurations(
+    scope: NotificationExportScope,
+    since: Date,
+    after: NotificationExportCursor,
+    limit: number,
+  ) {
+    return this.prisma.client.ermConfigurationChange.findMany({
+      where: {
+        tenantId: scope.tenantId,
+        branchId: scope.branchId,
+        deviceId: scope.deviceId,
+        unitId: scope.imei,
+        actorId: { not: null },
+        status: { in: ['RESTORE_FAILED', 'MISMATCH', 'UNCERTAIN'] },
+        finishedAt: { gte: since },
+        ...(after.configurationFinishedAt !== null && after.configurationId !== null
+          ? {
+              OR: [
+                { finishedAt: { gt: new Date(after.configurationFinishedAt) } },
+                {
+                  finishedAt: new Date(after.configurationFinishedAt),
+                  id: { gt: after.configurationId },
+                },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ finishedAt: 'asc' }, { id: 'asc' }],
+      take: limit + 1,
+    });
+  }
+
+  snapshots(
+    scope: NotificationExportScope,
+    since: Date,
+    after: NotificationExportCursor,
+    limit: number,
+  ) {
+    return this.prisma.client.ermParameterSnapshot.findMany({
+      where: {
+        tenantId: scope.tenantId,
+        branchId: scope.branchId,
+        deviceId: scope.deviceId,
+        unitId: scope.imei,
+        actorId: { not: null },
+        AND: [
+          {
+            OR: [
+              { status: 'FAILED' },
+              { status: 'COMPLETE', values: { some: { outcome: { not: 'READ' } } } },
+            ],
+          },
+          ...(after.snapshotFinishedAt !== null && after.snapshotId !== null
+            ? [
+                {
+                  OR: [
+                    { finishedAt: { gt: new Date(after.snapshotFinishedAt) } },
+                    {
+                      finishedAt: new Date(after.snapshotFinishedAt),
+                      id: { gt: after.snapshotId },
+                    },
+                  ],
+                },
+              ]
+            : []),
+        ],
+        finishedAt: { gte: since },
+      },
+      orderBy: [{ finishedAt: 'asc' }, { id: 'asc' }],
+      take: limit + 1,
+    });
+  }
+
   karmaRouting(imei: string, since: Date, after: string, limit: number) {
     return this.prisma.client.ermKarmaRouting.findMany({
       where: {

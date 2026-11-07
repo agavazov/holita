@@ -172,6 +172,19 @@ enum ErmParameterSnapshotStatus {
   COMPLETE
   FAILED
 }
+enum ErmParameterReadOutcome {
+  READ
+  REJECTED
+  OMITTED
+}
+enum ErmConfigurationOperation {
+  READ_EDATA
+  INTERVAL
+  ADD_DEFINITION
+  GLOBALS
+  PARAMETER
+  PARAMETERS
+}
 enum ErmConfigurationChangeStatus {
   RUNNING
   READ
@@ -198,12 +211,41 @@ input StartErmParameterChangeInput {
   value: String!
   restoreAfter: Boolean = false
 }
+input ErmParameterWriteInput {
+  parameter: String!
+  value: String!
+}
+input StartErmParametersChangeInput {
+  deviceId: ID!
+  parameters: [ErmParameterWriteInput!]!
+  restoreAfter: Boolean = false
+}
+input StartErmParameterBatchInput {
+  deviceIds: [ID!]!
+  parameters: [ErmParameterWriteInput!]!
+  restoreAfter: Boolean = false
+}
+"Sequential verified parameter workflows, retained in the command batch audit."
+type ErmConfigurationBatch {
+  id: ID!
+  actorId: String!
+  createdAt: DateTime!
+  finishedAt: DateTime
+  stoppedAt: DateTime
+  stoppedByActorId: String
+  "Every selected Device has a run; unattempted runs are refused after a stop."
+  changes: [ErmConfigurationChange!]!
+}
 type ErmConfigurationChange {
   id: ID!
   unitId: ID!
   actorId: String
   intent: String
   parameter: Int
+  operation: ErmConfigurationOperation!
+  parameters: [Int!]!
+  batchId: ID
+  batchIndex: Int
   status: ErmConfigurationChangeStatus!
   startedAt: DateTime!
   finishedAt: DateTime
@@ -282,7 +324,7 @@ input StartErmParameterSnapshotInput {
   "A Fleet Device of the active Branch, connected in primary mode."
   deviceId: ID!
 }
-"One parameter read, including unmasked values that may contain secrets."
+"One parameter read; protected values are masked for Viewers."
 type ErmParameterValue {
   parameter: Int!
   "Title from the archived StarLink parameter catalog."
@@ -291,6 +333,7 @@ type ErmParameterValue {
   value: String
   "Unit error result code when an individual read was rejected."
   resultCode: String
+  outcome: ErmParameterReadOutcome!
 }
 "A captured value differing from the unit's previous COMPLETE snapshot."
 type ErmParameterChange {
@@ -313,9 +356,11 @@ type ErmParameterSnapshot {
   "Number of parameters with a stored value or read outcome."
   readCount: Int!
   failureReason: String
-  "Captured values are stored and returned unmasked, including secrets."
+  "Captured values; protected values are masked for Viewers."
   values: [ErmParameterValue!]!
-  "Changes among captured values; empty without a previous COMPLETE snapshot."
+  "Parameters unread in this or the previous COMPLETE snapshot, excluded from changes."
+  unreadParameters: [Int!]!
+  "Changes among values read in both snapshots; empty without a previous COMPLETE snapshot."
   changes: [ErmParameterChange!]!
 }
 type ErmEvent {
@@ -503,7 +548,7 @@ type FleetDevice @key(fields: "id") {
   ermEvents(input: ErmDeviceEventsInput): ErmEventsPage! @requires(fields: "imei")
   ermCommands(input: ErmDevicePageInput): ErmCommandsPage! @requires(fields: "imei")
   ermFrames(input: ErmDevicePageInput): ErmFramesPage! @requires(fields: "imei")
-  "Parameter snapshot history, including unmasked secret values, for this Branch's Device."
+  "Parameter snapshot history for this Branch's Device; Viewer secrets are masked."
   ermParameterSnapshots(input: ErmDevicePageInput): ErmParameterSnapshotsPage!
     @requires(fields: "imei")
   "Newest twenty controlled configuration runs for this Device."
@@ -597,6 +642,7 @@ type Query {
     filter: ErmCommandRequestsFilter
   ): ErmCommandRequestsPage!
   ermCommandBatch(id: ID!): ErmCommandBatch
+  ermConfigurationBatch(id: ID!): ErmConfigurationBatch
 }
 type Mutation {
   "Queues an allowlisted read for the Device's next primary connection, with expiry and no ambiguous replay."
@@ -615,4 +661,10 @@ type Mutation {
   startErmEdataChange(input: StartErmEdataChangeInput!): ErmConfigurationChange!
   "Starts a single guarded 04 parameter change with snapshot, baseline and readback."
   startErmParameterChange(input: StartErmParameterChangeInput!): ErmConfigurationChange!
+  "Engineer: one guarded 46 write of an explicit set, with exact-set baseline and verification."
+  startErmParametersChange(input: StartErmParametersChangeInput!): ErmConfigurationChange!
+  "Engineer: verified 46 workflows in Device order; stops at the first non-VERIFIED result."
+  startErmParameterBatch(input: StartErmParameterBatchInput!): ErmConfigurationBatch!
+  "Engineer: finishes the active unit and refuses the remaining batch runs."
+  stopErmConfigurationBatch(id: ID!): ErmConfigurationBatch!
 }

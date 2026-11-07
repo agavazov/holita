@@ -30,7 +30,7 @@ const edataReads = new Set([
   '19,0,19,301,0,1,1,0802BC',
 ]);
 // Lock codes, the SIM PIN, the authentication secret, operator/SIM locks and the Simple SMS password.
-const protectedParameters = new Set([59, 60, 61, 187, 524, 525, 593]);
+export const protectedParameters: ReadonlySet<number> = new Set([59, 60, 61, 187, 524, 525, 593]);
 
 function parameterNumber(value: string): boolean {
   return /^\d{1,4}$/.test(value) && Number(value) > 0;

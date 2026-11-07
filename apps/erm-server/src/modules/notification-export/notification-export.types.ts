@@ -10,6 +10,10 @@ export interface NotificationExportCursor {
   karmaRoutingId: string;
   commandCompletedAt: string | null;
   commandId: string | null;
+  configurationFinishedAt: string | null;
+  configurationId: string | null;
+  snapshotFinishedAt: string | null;
+  snapshotId: string | null;
 }
 
 export interface NotificationExportItem {

@@ -41,7 +41,7 @@ import { redecodeFrames } from '../src/modules/devices/redecode.js';
 import { DEFAULT_EVENT_STRUCTURE } from '../src/starlink/event.js';
 import { DevicesService } from '../src/modules/devices/devices.service.js';
 import { InternalDevicesGuard } from '../src/modules/devices/internal-devices.guard.js';
-import { validateCommand } from '../src/modules/devices/command.js';
+import { protectedParameters, validateCommand } from '../src/modules/devices/command.js';
 import { LiveDevicesService } from '../src/modules/telemetry/live-devices.service.js';
 import { FleetClient } from '../src/modules/telemetry/fleet.client.js';
 import { ParameterSnapshotsRepository } from '../src/modules/telemetry/parameter-snapshots.repository.js';
@@ -55,7 +55,12 @@ import {
   assembleEdataConfiguration,
   splitEdataDefinitions,
 } from '../src/starlink/edata-configuration.js';
-import { runEdataChange, runParameterChange } from '../src/modules/telemetry/edata-change.js';
+import {
+  runEdataChange,
+  runParameterChange,
+  runParametersChange,
+  validateParametersChangeOptions,
+} from '../src/modules/telemetry/edata-change.js';
 import { EdataChangeRepository } from '../src/modules/telemetry/edata-change.repository.js';
 import { InternalTelemetryController } from '../src/modules/telemetry/internal-telemetry.controller.js';
 import { InternalTelemetryGuard } from '../src/modules/telemetry/internal-telemetry.guard.js';
@@ -552,6 +557,7 @@ it('persists captured connection lifecycle and raw frames through the production
     const context = {
       requestId: randomUUID(),
       tenantId: readDemoTenant(`Bearer ${issueDemoToken(tenantId)}`),
+      role: 'ADMINISTRATOR' as const,
     };
     const unauthenticated = { requestId: randomUUID(), tenantId: undefined };
     const reference = (imei = unitId): DeviceReference => ({
@@ -704,6 +710,7 @@ it('persists captured connection lifecycle and raw frames through the production
     let fleetCalls = 0;
     let gatewayReads = 0;
     let gatewayOnline = true;
+    let configurationBatchUnitId: string | undefined;
     let gatewayUnavailable = false;
     let targetMatches = true;
     let targetUnavailable = false;
@@ -727,14 +734,23 @@ it('persists captured connection lifecycle and raw frames through the production
     let parameterGateway:
       | {
           value: string;
+          values?: Record<string, string>;
+          unitValues?: Record<string, Record<string, string>>;
           mismatch?: boolean;
+          restoreMismatch?: boolean;
           uncertain?: boolean;
           unread?: boolean;
+          unreadAfterWrite?: boolean;
+          unreadAfterRestore?: boolean;
+          omitted?: boolean;
+          preflightMismatch?: boolean;
+          reads?: number;
           rejected?: boolean;
           writes: number;
           commands: ReturnType<typeof validateCommand>[];
         }
       | undefined;
+    const parameterUnitCommands: { unitId: string; command: string }[] = [];
     let snapshotBatch = 0;
     let snapshotFallbackParameters: string[] = [];
     let snapshotBatchSeen: (() => void) | undefined;
@@ -796,19 +812,41 @@ it('persists captured connection lifecycle and raw frames through the production
             res.end(JSON.stringify({ data: { fleetDevices: { items } } }));
             return;
           }
+          if (
+            typeof body !== 'object' ||
+            body === null ||
+            !('variables' in body) ||
+            typeof body.variables !== 'object' ||
+            body.variables === null ||
+            !('id' in body.variables) ||
+            typeof body.variables.id !== 'string'
+          ) {
+            throw new Error('Expected a Fleet device lookup');
+          }
+          const requestedDeviceId = body.variables.id;
           expect(body).toEqual({
             query: print(ErmFleetDeviceDocument),
-            variables: { id: deviceId },
+            variables: { id: requestedDeviceId },
           });
           expect(req.headers.authorization).toBe(scopedContext.authorization);
           expect(req.headers['x-request-id']).toBe(scopedContext.requestId);
           const code =
-            fleetError ?? (req.headers['x-branch-id'] === branchId ? undefined : 'NOT_FOUND');
+            fleetError ??
+            (req.headers['x-branch-id'] === branchId && fleetDeviceImeis.has(requestedDeviceId)
+              ? undefined
+              : 'NOT_FOUND');
           res.end(
             JSON.stringify(
               code
                 ? { errors: [{ message: 'Private upstream details', extensions: { code } }] }
-                : { data: { fleetDevice: { id: deviceId, imei: fleetDeviceImeis.get(deviceId) } } },
+                : {
+                    data: {
+                      fleetDevice: {
+                        id: requestedDeviceId,
+                        imei: fleetDeviceImeis.get(requestedDeviceId),
+                      },
+                    },
+                  },
             ),
           );
           return;
@@ -820,15 +858,15 @@ it('persists captured connection lifecycle and raw frames through the production
           res.end(
             JSON.stringify(
               gatewayOnline
-                ? [
-                    {
-                      unitId,
+                ? [unitId, ...(configurationBatchUnitId ? [configurationBatchUnitId] : [])].map(
+                    (primaryUnitId) => ({
+                      unitId: primaryUnitId,
                       mode: 'primary',
                       peer,
                       connectedSince: sentAt.toISOString(),
                       lastFrameAt: sentAt.toISOString(),
-                    },
-                  ]
+                    }),
+                  )
                 : [],
             ),
           );
@@ -839,8 +877,11 @@ it('persists captured connection lifecycle and raw frames through the production
           req.url?.startsWith(globalsPath) && req.url.endsWith('/globals')
             ? req.url.slice(globalsPath.length, -'/globals'.length)
             : undefined;
+        const commandUnitId =
+          req.url?.match(/^\/internal\/units\/(\d{15})\/commands$/)?.[1] ?? unitId;
         if (globalsChangeId === undefined) {
-          expect(req.url).toBe(`/internal/units/${unitId}/commands`);
+          expect([unitId, configurationBatchUnitId]).toContain(commandUnitId);
+          expect(req.url).toBe(`/internal/units/${commandUnitId}/commands`);
         }
         if (gatewayStatus !== 200) {
           res.statusCode = gatewayStatus;
@@ -969,33 +1010,79 @@ it('persists captured connection lifecycle and raw frames through the production
           );
           return;
         }
-        if (parameterGateway && (command.command === '03' || command.command === '04')) {
+        if (parameterGateway && ['03', '04', '45', '46'].includes(command.command)) {
           const fixture = parameterGateway;
+          const values = fixture.unitValues?.[commandUnitId] ?? fixture.values;
           fixture.commands.push(command);
-          if (command.command === '04' && !fixture.rejected) {
+          parameterUnitCommands.push({ unitId: commandUnitId, command: command.command });
+          const writing = command.command === '04' || command.command === '46';
+          if (writing && !fixture.rejected) {
             fixture.writes++;
-            fixture.value =
-              fixture.mismatch && fixture.writes === 1 ? '999' : (command.fields[1] ?? '');
+            for (let index = 0; index < command.fields.length; index += 2) {
+              const parameter = command.fields[index] ?? '';
+              const value =
+                (fixture.mismatch && fixture.writes === 1) ||
+                (fixture.restoreMismatch && fixture.writes === 2)
+                  ? '999'
+                  : (command.fields[index + 1] ?? '');
+              if (values) {
+                values[parameter] = value;
+              } else {
+                fixture.value = value;
+              }
+            }
           }
-          const timeout = fixture.uncertain && command.command === '04';
+          if (!writing) {
+            fixture.reads = (fixture.reads ?? 0) + 1;
+          }
+          const timeout = fixture.uncertain && writing;
+          const unread =
+            fixture.unread ||
+            (fixture.unreadAfterWrite && fixture.writes > 0) ||
+            (fixture.unreadAfterRestore && fixture.writes > 1);
+          const resultCode = timeout
+            ? null
+            : !writing && unread
+              ? '02'
+              : writing
+                ? fixture.rejected
+                  ? '02'
+                  : '01'
+                : null;
+          const fields =
+            writing || unread
+              ? []
+              : command.fields
+                  .filter((_, index) => !fixture.omitted || index !== command.fields.length - 1)
+                  .flatMap((parameter) => [
+                    parameter,
+                    `"${fixture.preflightMismatch && fixture.reads === 2 ? '999' : (values?.[parameter] ?? fixture.value)}"`,
+                  ]);
+          const recorded = await database.client.ermCommand.create({
+            data: {
+              connectionId: stored.id,
+              unitId: commandUnitId,
+              reference: String(900020000 + sent.length),
+              ...command,
+              sentAt: new Date(),
+              status: timeout ? 'TIMEOUT' : 'ANSWERED',
+              answeredAt: timeout ? null : new Date(),
+              resultCode,
+              response:
+                !writing && !unread
+                  ? Buffer.from(
+                      `$SLU${commandUnitId},${command.command},900020000,${fields.join(',')}`,
+                    )
+                  : null,
+            },
+          });
           res.end(
             JSON.stringify({
-              id: randomUUID(),
-              reference: '900020000',
+              id: recorded.id,
+              reference: recorded.reference,
               status: timeout ? 'timeout' : 'answered',
-              resultCode: timeout
-                ? null
-                : fixture.unread
-                  ? '02'
-                  : command.command === '04'
-                    ? fixture.rejected
-                      ? '02'
-                      : '01'
-                    : null,
-              fields:
-                command.command === '03' && !fixture.unread
-                  ? [command.fields[0], `"${fixture.value}"`]
-                  : [],
+              resultCode,
+              fields,
             }),
           );
           return;
@@ -1146,6 +1233,33 @@ it('persists captured connection lifecycle and raw frames through the production
     }
     expect(sent).toHaveLength(0);
     fleetError = undefined;
+    const requestsBeforeRoleRefusals = await database.client.ermCommandRequest.count();
+    for (const role of [undefined, 'VIEWER'] as const) {
+      const deniedContext = { ...scopedContext, role };
+      for (const operation of [
+        () => requests.request({ deviceId, action: 'READ_STATUS' }, deniedContext),
+        () => requests.cancel({ deviceId, requestId: randomUUID() }, deniedContext),
+        () => requests.retry({ requestId: randomUUID() }, deniedContext),
+        () => requests.startBatch({ deviceIds: [deviceId], action: 'READ_STATUS' }, deniedContext),
+        () => requests.stopBatch(randomUUID(), deniedContext),
+      ]) {
+        try {
+          await operation();
+          throw new Error('Expected the command role refusal');
+        } catch (error) {
+          expect(error).toMatchObject({ status: 403 });
+          const formatted = formatGraphqlError(
+            { message: 'Upstream' },
+            new GraphQLError('Upstream', {
+              originalError: error instanceof Error ? error : undefined,
+            }),
+          );
+          expect(formatted.extensions?.['code']).toBe('FORBIDDEN');
+        }
+      }
+      expect((await requests.list({}, deniedContext)).total).toBe(requestsBeforeRoleRefusals);
+    }
+    expect(await database.client.ermCommandRequest.count()).toBe(requestsBeforeRoleRefusals);
     const actions: [ErmDeviceAction, string, string[]][] = [
       ['REQUEST_LOCATION', '05', []],
       ['READ_STATUS', '48', ['IGN=#IGN#;ENG=#ENG#;VIN=#VIN#;VBAT=#VBAT#;CSS=#CSS#;JAM=#JAM#']],
@@ -1155,8 +1269,9 @@ it('persists captured connection lifecycle and raw frames through the production
       ['READ_EDATA_FAULTS', '30', ['19', '0', '19', '301', '0', '1', '1', '19']],
     ];
     let acknowledgedRequestId = '';
-    for (const [action, command, fields] of actions) {
-      const queued = await api.sendDeviceCommand({ deviceId, action }, scopedContext);
+    for (const [index, [action, command, fields]] of actions.entries()) {
+      const role = (['OPERATOR', 'ENGINEER', 'ADMINISTRATOR'] as const)[index % 3];
+      const queued = await api.sendDeviceCommand({ deviceId, action }, { ...scopedContext, role });
       expect(queued).toMatchObject({
         status: 'QUEUED',
         actorId: `demo-tenant:${tenantId}`,
@@ -1421,7 +1536,7 @@ it('persists captured connection lifecycle and raw frames through the production
       createdAt: new Date(Date.UTC(2020, 0, 1, 0, 0, 49)),
     });
     const retryActor = randomUUID();
-    const retryContext = { ...scopedContext, userId: retryActor };
+    const retryContext = { ...scopedContext, userId: retryActor, role: 'OPERATOR' as const };
     await expect(
       requests.retry({ requestId: offlineQueue.id }, scopedContext),
     ).rejects.toMatchObject({ status: 409 });
@@ -1453,7 +1568,7 @@ it('persists captured connection lifecycle and raw frames through the production
     }
     const batchIssuer = randomUUID();
     const batchStopper = randomUUID();
-    const batchContext = { ...scopedContext, userId: batchIssuer };
+    const batchContext = { ...scopedContext, userId: batchIssuer, role: 'OPERATOR' as const };
     for (const deviceIds of [
       [deviceId, deviceId],
       [deviceId, randomUUID()],
@@ -1759,6 +1874,41 @@ it('persists captured connection lifecycle and raw frames through the production
       module.get(UnitWorkflowsService),
     );
     const configurations = configurationService;
+    process.env.ERM_CONFIGURATION_WRITES_ENABLED = 'true';
+    for (const role of [undefined, 'VIEWER', 'OPERATOR'] as const) {
+      const deniedContext = { ...scopedContext, role };
+      for (const operation of [
+        () =>
+          configurations.startParameter(
+            { deviceId, parameter: '0774', value: '120' },
+            deniedContext,
+          ),
+        () =>
+          configurations.startParameters(
+            { deviceId, parameters: [{ parameter: '0774', value: '120' }] },
+            deniedContext,
+          ),
+        () =>
+          configurations.startBatch(
+            { deviceIds: [deviceId], parameters: [{ parameter: '0774', value: '120' }] },
+            deniedContext,
+          ),
+        () => configurations.stopBatch(randomUUID(), deniedContext),
+        () =>
+          configurations.startEdata(
+            { deviceId, parameterId: 1910, intervalSeconds: 60 },
+            deniedContext,
+          ),
+      ]) {
+        await expect(operation()).rejects.toMatchObject({ status: 403 });
+      }
+      if (role !== 'OPERATOR') {
+        await expect(
+          configurations.startEdata({ deviceId, read: true }, deniedContext),
+        ).rejects.toMatchObject({ status: 403 });
+      }
+    }
+    process.env.ERM_CONFIGURATION_WRITES_ENABLED = 'false';
     const resolver = new ErmDeviceResolver(api, snapshots, configurations, requests);
     const eventResolver = new ErmEventResolver();
     const telemetryResolver = new TelemetryResolver(api, snapshots, configurations, requests);
@@ -2028,6 +2178,108 @@ it('persists captured connection lifecycle and raw frames through the production
     });
     await database.client.ermCommand.deleteMany({
       where: { id: { in: dataConfirmations.map((confirmation) => confirmation.commandId) } },
+    });
+    const secretFields = [...protectedParameters].flatMap((parameter) => [
+      String(parameter).padStart(4, '0'),
+      `secret-${String(parameter)}`,
+    ]);
+    const secretResponse = Buffer.from(`$SLU${unitId},45,8603,${secretFields.join(',')}`);
+    const secretCommands = await Promise.all(
+      ['45', '46'].map((command) =>
+        database.client.ermCommand.create({
+          data: {
+            connectionId: stored.id,
+            unitId,
+            reference: command === '45' ? '900009010' : '900009011',
+            command,
+            fields:
+              command === '45' ? secretFields.filter((_, index) => index % 2 === 0) : secretFields,
+            status: 'ANSWERED',
+            sentAt: new Date(),
+            answeredAt: new Date(),
+            response: command === '45' ? secretResponse : null,
+          },
+        }),
+      ),
+    );
+    const secretFrames = await Promise.all(
+      secretCommands.map((command) =>
+        database.client.ermFrame.create({
+          data: {
+            connectionId: stored.id,
+            unitId,
+            direction: command.command === '45' ? 'DEVICE' : 'HOLITA',
+            receivedAt: new Date(),
+            command: command.command,
+            reference: command.reference,
+            checksum: 'ABSENT',
+            raw:
+              command.command === '45'
+                ? secretResponse
+                : buildServerFrame(unitId, '46', command.reference, command.fields),
+          },
+        }),
+      ),
+    );
+    for (const role of ['VIEWER', 'OPERATOR', 'ENGINEER', 'ADMINISTRATOR'] as const) {
+      const protectedContract = await graphql({
+        schema,
+        source: `query($representations: [_Any!]!) {
+          _entities(representations: $representations) { ... on FleetDevice {
+            ermCommands(input: { pageSize: 100 }) { items { id fields responseText responseHex } }
+            ermFrames(input: { pageSize: 100 }) { items { id displayText rawHex } }
+          } }
+        }`,
+        variableValues: {
+          representations: [{ __typename: 'FleetDevice', id: deviceId, imei: unitId }],
+        },
+        contextValue: { ...scopedContext, role },
+      });
+      expect(protectedContract.errors).toBeUndefined();
+      const serialized = JSON.stringify(protectedContract.data);
+      if (role === 'VIEWER') {
+        for (const parameter of protectedParameters) {
+          expect(serialized).not.toContain(`secret-${String(parameter)}`);
+        }
+        expect(protectedContract.data?.['_entities']).toMatchObject([
+          {
+            ermCommands: {
+              items: expect.arrayContaining([
+                expect.objectContaining({
+                  id: secretCommands[0]?.id,
+                  responseText: '[REDACTED]',
+                  responseHex: null,
+                }),
+                expect.objectContaining({
+                  id: secretCommands[1]?.id,
+                  fields: secretFields.map((field, index) =>
+                    index % 2 === 1 ? '[REDACTED]' : field,
+                  ),
+                }),
+              ]),
+            },
+            ermFrames: {
+              items: expect.arrayContaining(
+                secretFrames.map(({ id }) => ({
+                  id: String(id),
+                  displayText: '[REDACTED]',
+                  rawHex: '',
+                })),
+              ),
+            },
+          },
+        ]);
+      } else {
+        for (const parameter of protectedParameters) {
+          expect(serialized).toContain(`secret-${String(parameter)}`);
+        }
+      }
+    }
+    await database.client.ermFrame.deleteMany({
+      where: { id: { in: secretFrames.map(({ id }) => id) } },
+    });
+    await database.client.ermCommand.deleteMany({
+      where: { id: { in: secretCommands.map(({ id }) => id) } },
     });
     for (const foreignScope of [
       { tenantId: randomUUID(), branchId },
@@ -2413,12 +2665,15 @@ it('persists captured connection lifecycle and raw frames through the production
         status: 'COMPLETE',
         startedAt: new Date(Date.now() - 2000),
         finishedAt: new Date(Date.now() - 1000),
-        parameterCount: 2,
-        readCount: 2,
+        parameterCount: 5,
+        readCount: 5,
         values: {
           create: [
-            { parameter: 1, value: 'previous unit id' },
-            { parameter: 2, value: 'read-0002' },
+            { parameter: 1, value: 'previous unit id', outcome: 'READ' },
+            { parameter: 2, value: 'read-0002', outcome: 'READ' },
+            { parameter: 3, value: null, outcome: 'OMITTED' },
+            { parameter: snapshotParameters[19] ?? 0, value: 'formerly read', outcome: 'READ' },
+            { parameter: snapshotParameters[21] ?? 0, value: 'formerly read', outcome: 'READ' },
           ],
         },
       },
@@ -2452,6 +2707,11 @@ it('persists captured connection lifecycle and raw frames through the production
     let runningSnapshotId: string;
     try {
       await expect(snapshots.start(deviceId, unauthenticated)).rejects.toThrow('Sign in');
+      for (const role of ['VIEWER', 'OPERATOR'] as const) {
+        await expect(snapshots.start(deviceId, { ...scopedContext, role })).rejects.toMatchObject({
+          status: 403,
+        });
+      }
       const running = await snapshots.start(deviceId, scopedContext);
       runningSnapshotId = running.id;
       expect(running).toMatchObject({
@@ -2459,7 +2719,9 @@ it('persists captured connection lifecycle and raw frames through the production
         parameterCount: snapshotParameters.length,
         readCount: 0,
         finishedAt: null,
-        values: [],
+        values: expect.arrayContaining([
+          expect.objectContaining({ parameter: 1, outcome: 'OMITTED', value: null }),
+        ]),
       });
       await firstSnapshotBatch;
       expect(snapshotCommands).toHaveLength(1);
@@ -2513,27 +2775,48 @@ it('persists captured connection lifecycle and raw frames through the production
       failureReason: null,
       finishedAt: expect.any(Date),
       values: expect.arrayContaining([
-        { parameter: 1, title: 'Unit ID selection', value: 'read-0001', resultCode: null },
-        { parameter: 2, title: 'High communication rate', value: 'read-0002', resultCode: null },
+        {
+          parameter: 1,
+          title: 'Unit ID selection',
+          value: 'read-0001',
+          resultCode: null,
+          outcome: 'READ',
+        },
+        {
+          parameter: 2,
+          title: 'High communication rate',
+          value: 'read-0002',
+          resultCode: null,
+          outcome: 'READ',
+        },
         {
           parameter: snapshotParameters[19],
           title: parameterCatalog.get(snapshotParameters[19] ?? 0),
           value: null,
           resultCode: null,
+          outcome: 'OMITTED',
         },
         {
           parameter: snapshotParameters[20],
           title: parameterCatalog.get(snapshotParameters[20] ?? 0),
           value: 'single,reply',
           resultCode: null,
+          outcome: 'READ',
         },
         {
           parameter: snapshotParameters[21],
           title: parameterCatalog.get(snapshotParameters[21] ?? 0),
           value: null,
           resultCode: '02',
+          outcome: 'REJECTED',
         },
-        { parameter: 593, title: parameterCatalog.get(593), value: 'read-0593', resultCode: null },
+        {
+          parameter: 593,
+          title: parameterCatalog.get(593),
+          value: 'read-0593',
+          resultCode: null,
+          outcome: 'READ',
+        },
       ]),
       changes: expect.arrayContaining([
         {
@@ -2545,7 +2828,21 @@ it('persists captured connection lifecycle and raw frames through the production
       ]),
     });
     expect(completedSnapshot?.values).toHaveLength(snapshotParameters.length);
-    expect(completedSnapshot?.changes.some(({ parameter }) => parameter === 2)).toBe(false);
+    expect(completedSnapshot?.changes.map(({ parameter }) => parameter)).toEqual([1]);
+    expect(completedSnapshot?.unreadParameters).toEqual(
+      expect.arrayContaining([3, snapshotParameters[19], snapshotParameters[21]]),
+    );
+    const viewerSnapshots = await snapshots.deviceSnapshots(
+      { ...reference(), id: deviceId },
+      { pageSize: 25 },
+      { ...scopedContext, role: 'VIEWER' },
+    );
+    expect(
+      viewerSnapshots?.items[0]?.values.find(({ parameter }) => parameter === 593),
+    ).toMatchObject({
+      value: '[REDACTED]',
+      outcome: 'READ',
+    });
     expect(snapshotCommands.filter(({ command }) => command === '45')).toHaveLength(
       Math.ceil(snapshotParameters.length / 20),
     );
@@ -3183,6 +3480,7 @@ it('persists captured connection lifecycle and raw frames through the production
         name: 'parameter uncertain',
         value: '60',
         uncertain: true,
+        unreadAfterWrite: true,
         restoreAfter: true,
         status: 'UNCERTAIN',
         commands: ['03', '04', '03'],
@@ -3210,7 +3508,7 @@ it('persists captured connection lifecycle and raw frames through the production
       if (scenario.uncertain) {
         expect(change.steps).toEqual(
           expect.arrayContaining([
-            expect.objectContaining({ name: 'uncertain-readback', payload: '120' }),
+            expect.objectContaining({ name: 'uncertain-readback', outcome: 'UNREAD' }),
           ]),
         );
       }
@@ -3219,6 +3517,8 @@ it('persists captured connection lifecycle and raw frames through the production
         expect(parameterGateway.value).toBe('60');
       }
     }
+    const changesRepository = new EdataChangeRepository(database.client);
+    const parameterReads = new LiveDevicesService();
     const blockedParameter = await runParameterChange(
       database.client,
       { unitId, parameter: '0774', value: '121' },
@@ -3226,13 +3526,162 @@ it('persists captured connection lifecycle and raw frames through the production
     );
     expect(blockedParameter.status).toBe('REFUSED');
     expect(blockedParameter.failureReason).toContain('UNCERTAIN');
+    await changesRepository
+      .create(unitId, null, 'READ_EDATA')
+      .then((change) =>
+        changesRepository.save(change.id, [], { status: 'READ', finishedAt: new Date() }),
+      );
+    expect(await changesRepository.needsFreshRead(unitId, [774])).toBe(true);
+    expect(await changesRepository.needsFreshRead(unitId, [775])).toBe(false);
+    expect(await changesRepository.needsFreshRead(unitId)).toBe(false);
+    // A different parameter read cannot reconcile 0774; its own fresh direct response does.
+    parameterGateway = { value: '120', commands: [], writes: 0 };
+    await parameterReads.sendCommand(unitId, { command: '03', fields: ['0775'] });
+    expect(await changesRepository.needsFreshRead(unitId, [774])).toBe(true);
+    await parameterReads.sendCommand(unitId, { command: '03', fields: ['0774'] });
+    expect(await changesRepository.needsFreshRead(unitId, [774])).toBe(false);
+
+    for (const scenario of [
+      { name: 'verified set', status: 'VERIFIED', commands: ['45', '45', '46', '45'] },
+      {
+        name: 'explicit set restoration',
+        restoreAfter: true,
+        status: 'RESTORED',
+        commands: ['45', '45', '46', '45', '46', '45'],
+      },
+      {
+        name: 'mismatched set restores',
+        mismatch: true,
+        status: 'RESTORED',
+        commands: ['45', '45', '46', '45', '46', '45'],
+      },
+      {
+        name: 'set restoration fails',
+        mismatch: true,
+        restoreMismatch: true,
+        status: 'RESTORE_FAILED',
+        commands: ['45', '45', '46', '45', '46', '45'],
+      },
+      { name: 'incomplete baseline', omitted: true, status: 'FAILED', commands: ['45'] },
+      {
+        name: 'changed preflight',
+        preflightMismatch: true,
+        status: 'REFUSED',
+        commands: ['45', '45'],
+      },
+      {
+        name: 'uncertain set',
+        uncertain: true,
+        unreadAfterWrite: true,
+        status: 'UNCERTAIN',
+        commands: ['45', '45', '46', '45'],
+      },
+      {
+        name: 'unread restored set',
+        restoreAfter: true,
+        unreadAfterRestore: true,
+        status: 'UNCERTAIN',
+        commands: ['45', '45', '46', '45', '46', '45'],
+      },
+    ]) {
+      const baseline = [
+        { parameter: '0774', value: '60' },
+        { parameter: '0775', value: '90' },
+      ];
+      const targets = [
+        { parameter: '0774', value: '120' },
+        { parameter: '0775', value: '180' },
+      ];
+      parameterGateway = {
+        ...scenario,
+        value: '',
+        values: Object.fromEntries(baseline.map(({ parameter, value }) => [parameter, value])),
+        commands: [],
+        writes: 0,
+      };
+      const change = await runParametersChange(
+        database.client,
+        {
+          unitId,
+          parameters: targets,
+          restoreAfter: scenario.restoreAfter ?? false,
+        },
+        configurationRuntime,
+      );
+      expect({ name: scenario.name, status: change.status }).toEqual({
+        name: scenario.name,
+        status: scenario.status,
+      });
+      expect(change).toMatchObject({
+        operation: 'PARAMETERS',
+        parameter: null,
+        parameters: [774, 775],
+      });
+      expect(parameterGateway.commands.map(({ command }) => command)).toEqual(scenario.commands);
+      expect(
+        parameterGateway.commands
+          .filter(({ command }) => command === '46')
+          .map(({ fields }) => fields),
+      ).toEqual(
+        scenario.status === 'REFUSED' || scenario.status === 'FAILED'
+          ? []
+          : scenario.restoreAfter || scenario.mismatch
+            ? [
+                targets.flatMap(({ parameter, value }) => [parameter, value]),
+                baseline.flatMap(({ parameter, value }) => [parameter, value]),
+              ]
+            : [targets.flatMap(({ parameter, value }) => [parameter, value])],
+      );
+      if (scenario.status === 'RESTORED') {
+        expect(parameterGateway.values).toEqual({ '0774': '60', '0775': '90' });
+      }
+      if (scenario.unreadAfterRestore) {
+        expect(change.failureReason).toContain(
+          'restoration was accepted but readback is incomplete',
+        );
+      } else if (scenario.status === 'UNCERTAIN') {
+        parameterGateway = { value: '120', commands: [], writes: 0 };
+        await parameterReads.sendCommand(unitId, { command: '45', fields: ['0774', '0775'] });
+        expect(await changesRepository.needsFreshRead(unitId, [774, 775])).toBe(false);
+      }
+    }
+    expect(await changesRepository.needsFreshRead(unitId, [774, 775])).toBe(true);
+    parameterGateway = { value: '120', commands: [], writes: 0 };
+    await parameterReads.sendCommand(unitId, { command: '03', fields: ['0774'] });
+    expect(await changesRepository.needsFreshRead(unitId, [774])).toBe(false);
+    expect(await changesRepository.needsFreshRead(unitId, [775])).toBe(true);
+    await parameterReads.sendCommand(unitId, { command: '03', fields: ['0775'] });
+    expect(await changesRepository.needsFreshRead(unitId, [774, 775])).toBe(false);
+    for (const parameter of [
+      '0049',
+      '0050',
+      '0051',
+      '0052',
+      '0053',
+      '0054',
+      '0059',
+      '0060',
+      '0061',
+      '0187',
+      '0524',
+      '0525',
+      '0593',
+    ]) {
+      expect(() => {
+        validateParametersChangeOptions({ unitId, parameters: [{ parameter, value: '1' }] });
+      }).toThrow();
+    }
+    expect(() => {
+      validateParametersChangeOptions({
+        unitId,
+        parameters: [
+          { parameter: '0774', value: '1' },
+          { parameter: '0774', value: '2' },
+        ],
+      });
+    }).toThrow();
     parameterGateway = undefined;
 
-    // Retire only the test fixture's parameter ambiguity before testing the eData barrier.
-    await database.client.ermConfigurationChange.updateMany({
-      where: { unitId, status: 'UNCERTAIN' },
-      data: { status: 'READ' },
-    });
     await expect(
       configurations.startParameter({ deviceId, parameter: '0774', value: '120' }, unauthenticated),
     ).rejects.toMatchObject({ status: 401 });
@@ -3279,7 +3728,11 @@ it('persists captured connection lifecycle and raw frames through the production
         }),
       ]),
     );
-    expect(parameterGateway.commands.map(({ command }) => command)).toEqual(['03', '04', '03']);
+    expect(
+      parameterGateway.commands
+        .filter(({ command }) => command !== '45')
+        .map(({ command }) => command),
+    ).toEqual(['03', '04', '03']);
     parameterGateway = undefined;
     const configurationContract = await graphql({
       schema,
@@ -3320,6 +3773,7 @@ it('persists captured connection lifecycle and raw frames through the production
           unitId,
           actorId: 'foreign-session',
           intent: 'Foreign configuration run',
+          operation: 'READ_EDATA',
           status: 'READ',
           baseline: { private: 'other scope' },
           steps: [],
@@ -3335,6 +3789,7 @@ it('persists captured connection lifecycle and raw frames through the production
         deviceId: queueHistoryDeviceId,
         actorId: `demo-tenant:${tenantId}`,
         intent: 'Scoped configuration fixture',
+        operation: 'READ_EDATA' as const,
         parameter,
         status: 'READ' as const,
         startedAt: new Date(Date.UTC(2020, 0, 1, 0, 0, parameter)),
@@ -3369,6 +3824,65 @@ it('persists captured connection lifecycle and raw frames through the production
     expect(otherChanges.map(({ parameter }) => parameter)).toEqual(
       Array.from({ length: 20 }, (_, index) => 20 - index),
     );
+    // Configuration batches use the verified workflow for one Branch unit at a time.
+    configurationBatchUnitId = fleetDeviceImeis.get(neverConnectedDeviceId);
+    if (!configurationBatchUnitId) {
+      throw new Error('Expected the second batch unit');
+    }
+    const batchParameters = [
+      { parameter: '0774', value: '120' },
+      { parameter: '0775', value: '180' },
+    ];
+    for (const mismatch of [false, true]) {
+      parameterGateway = {
+        value: '60',
+        unitValues: {
+          [unitId]: { '0774': '60', '0775': '90' },
+          [configurationBatchUnitId]: { '0774': '60', '0775': '90' },
+        },
+        mismatch,
+        commands: [],
+        writes: 0,
+      };
+      const firstUnitCommand = parameterUnitCommands.length;
+      const batch = await configurations.startBatch(
+        { deviceIds: [deviceId, neverConnectedDeviceId], parameters: batchParameters },
+        scopedContext,
+      );
+      expect(batch.changes).toHaveLength(2);
+      await configurations.onModuleDestroy();
+      const completed = await configurations.batch(batch.id, scopedContext);
+      expect(completed).toMatchObject({ finishedAt: expect.any(Date) });
+      expect(completed?.changes.map(({ status }) => status)).toEqual(
+        mismatch ? ['RESTORED', 'REFUSED'] : ['VERIFIED', 'VERIFIED'],
+      );
+      const commands = parameterUnitCommands.slice(firstUnitCommand);
+      const writes = commands.filter(({ command }) => command === '46');
+      expect(writes.map(({ unitId: target }) => target)).toEqual(
+        mismatch ? [unitId, unitId] : [unitId, configurationBatchUnitId],
+      );
+      const secondUnitStart = commands.findIndex(
+        ({ unitId: target }) => target === configurationBatchUnitId,
+      );
+      if (mismatch) {
+        expect(secondUnitStart).toBe(-1);
+      } else {
+        expect(secondUnitStart).toBeGreaterThan(0);
+        expect(
+          commands.slice(0, secondUnitStart).every(({ unitId: target }) => target === unitId),
+        ).toBe(true);
+        expect(
+          commands
+            .slice(secondUnitStart)
+            .every(({ unitId: target }) => target === configurationBatchUnitId),
+        ).toBe(true);
+      }
+      expect(
+        await configurations.batch(batch.id, { ...scopedContext, branchId: randomUUID() }),
+      ).toBeNull();
+    }
+    parameterGateway = undefined;
+    configurationBatchUnitId = undefined;
     configurationGateway = {
       definitions: [firstDefinition, secondDefinition],
       commands: [],
@@ -3390,6 +3904,7 @@ it('persists captured connection lifecycle and raw frames through the production
     const interruptedChanges = await database.client.ermConfigurationChange.createManyAndReturn({
       data: (['RUNNING', 'UNCERTAIN'] as const).map((status) => ({
         unitId: '123456789012345',
+        operation: 'INTERVAL',
         status,
         baseline: {},
         steps: [],
@@ -3726,6 +4241,86 @@ it('persists captured connection lifecycle and raw frames through the production
         },
       });
     }
+    const notificationConfigurations =
+      await database.client.ermConfigurationChange.createManyAndReturn({
+        data: (['RESTORE_FAILED', 'MISMATCH', 'UNCERTAIN'] as const).map((status) => ({
+          tenantId,
+          branchId,
+          deviceId,
+          unitId: notificationImei,
+          actorId: `demo-tenant:${tenantId}`,
+          intent: 'Set parameter 0002',
+          operation: 'PARAMETER',
+          parameter: 2,
+          status,
+          startedAt: notificationAt,
+          finishedAt: notificationAt,
+          baseline: {},
+          steps: [],
+        })),
+      });
+    const notificationSnapshots: Awaited<
+      ReturnType<typeof database.client.ermParameterSnapshot.create>
+    >[] = [];
+    for (const status of ['FAILED', 'COMPLETE'] as const) {
+      notificationSnapshots.push(
+        await database.client.ermParameterSnapshot.create({
+          data: {
+            tenantId,
+            branchId,
+            deviceId,
+            unitId: notificationImei,
+            actorId: `demo-tenant:${tenantId}`,
+            intent: 'Read parameter snapshot',
+            status,
+            startedAt: notificationAt,
+            finishedAt: notificationAt,
+            parameterCount: 1,
+            readCount: status === 'COMPLETE' ? 1 : 0,
+            failureReason: status === 'FAILED' ? 'Parameter read timed out' : null,
+            values: { create: [{ parameter: 2, outcome: 'OMITTED' }] },
+          },
+        }),
+      );
+    }
+    for (const excluded of [
+      { tenantId: randomUUID() },
+      { branchId: randomUUID() },
+      { deviceId: randomUUID() },
+      { unitId: '862129080368889' },
+      { actorId: null },
+      { finishedAt: new Date(notificationSince.getTime() - 1) },
+      { finishedAt: null },
+    ]) {
+      await database.client.ermConfigurationChange.create({
+        data: {
+          tenantId,
+          branchId,
+          deviceId,
+          unitId: notificationImei,
+          actorId: 'foreign-or-unfinished',
+          operation: 'PARAMETER',
+          status: 'UNCERTAIN',
+          finishedAt: notificationAt,
+          baseline: {},
+          steps: [],
+          ...excluded,
+        },
+      });
+      await database.client.ermParameterSnapshot.create({
+        data: {
+          tenantId,
+          branchId,
+          deviceId,
+          unitId: notificationImei,
+          actorId: 'foreign-or-unfinished',
+          status: 'FAILED',
+          finishedAt: notificationAt,
+          parameterCount: 1,
+          ...excluded,
+        },
+      });
+    }
     const notificationQuery = {
       tenantId,
       branchId,
@@ -3746,11 +4341,11 @@ it('persists captured connection lifecycle and raw frames through the production
         break;
       }
     }
-    expect(exported).toHaveLength(14);
-    expect(new Set(exported.map((item) => item.sourceKey)).size).toBe(14);
+    expect(exported).toHaveLength(19);
+    expect(new Set(exported.map((item) => item.sourceKey)).size).toBe(19);
     expect(
       exported
-        .filter((item) => item.sourceKind === 'COMMAND')
+        .filter((item) => item.sourceKey.startsWith('erm-command:'))
         .map((item) => item.parameters['commandStatus'])
         .sort(),
     ).toEqual([
@@ -3764,6 +4359,35 @@ it('persists captured connection lifecycle and raw frames through the production
       'REJECTED',
       'RESPONSE_RECEIVED',
     ]);
+    for (const change of notificationConfigurations) {
+      expect(exported.find((item) => item.sourceId === `configuration:${change.id}`)).toMatchObject(
+        {
+          sourceKind: 'COMMAND',
+          recorded: false,
+          wordingKey: 'notification.configurationOutcome',
+          parameters: {
+            eventKind: 'CONFIGURATION_OUTCOME',
+            commandKind: 'PARAMETER',
+            commandStatus: change.status,
+            reasonCode: change.status,
+          },
+        },
+      );
+    }
+    for (const snapshot of notificationSnapshots) {
+      expect(exported.find((item) => item.sourceId === `snapshot:${snapshot.id}`)).toMatchObject({
+        sourceKind: 'COMMAND',
+        recorded: false,
+        wordingKey: 'notification.snapshotOutcome',
+        parameters: {
+          eventKind: 'PARAMETER_SNAPSHOT_OUTCOME',
+          commandKind: 'PARAMETER_SNAPSHOT',
+          commandStatus: snapshot.status === 'COMPLETE' ? 'PARTIAL' : 'FAILED',
+          reasonCode:
+            snapshot.status === 'COMPLETE' ? 'UNREAD_PARAMETERS' : 'PARAMETER_READ_TIMEOUT',
+        },
+      });
+    }
     for (const outcome of notificationTransportOutcomes) {
       expect(exported.find((item) => item.sourceId === outcome.requestId)).toMatchObject({
         sourceKind: 'COMMAND',

@@ -4,7 +4,10 @@ import type {
   ErmCommandWaitingReason,
 } from '../../generated/graphql/types.js';
 import type { ErmCommandRequest as StoredRequest } from '../../generated/prisma/client.js';
+import type { RequestContext } from '../../graphql/request-context.js';
 import type { CommandRequestRelations } from './command-requests.repository.js';
+import { maskCommandEvidence, maskFrameEvidence } from './command-evidence.js';
+import { maskConfigurationChange } from './configuration-change-view.js';
 
 const recordedReasons: Readonly<Record<string, string>> = {
   'Submission was interrupted; the command may have reached the unit and will not be replayed':
@@ -20,8 +23,14 @@ const recordedReasons: Readonly<Record<string, string>> = {
 export function commandRequestView(
   request: StoredRequest,
   related?: CommandRequestRelations,
+  context?: RequestContext,
 ): ErmCommandRequest {
-  const transport = request.commandId ? (related?.commands.get(request.commandId) ?? null) : null;
+  const storedTransport = request.commandId
+    ? (related?.commands.get(request.commandId) ?? null)
+    : null;
+  const transport = storedTransport ? maskCommandEvidence(storedTransport, context) : null;
+  const sentFrame = request.commandId ? (related?.frames.get(request.commandId) ?? null) : null;
+  const verification = related?.configurations.get(request.id) ?? null;
   const reasonCode =
     request.failureReason === null
       ? null
@@ -70,8 +79,8 @@ export function commandRequestView(
     outcomeCode: outcomes[request.status],
     reasonCode,
     transportCommand: transport,
-    configurationVerification: related?.configurations.get(request.id) ?? null,
-    sentFrame: request.commandId ? (related?.frames.get(request.commandId) ?? null) : null,
+    configurationVerification: verification ? maskConfigurationChange(verification, context) : null,
+    sentFrame: sentFrame ? maskFrameEvidence(sentFrame, context) : null,
     receivedFrameHex: transport?.responseHex ?? null,
   };
 }

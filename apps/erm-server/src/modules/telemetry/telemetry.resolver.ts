@@ -29,6 +29,10 @@ import type {
   FleetDeviceErmParameterSnapshotsArgs,
   MutationStartErmEdataChangeArgs,
   MutationStartErmParameterChangeArgs,
+  MutationStartErmParametersChangeArgs,
+  MutationStartErmParameterBatchArgs,
+  MutationStopErmConfigurationBatchArgs,
+  QueryErmConfigurationBatchArgs,
   MutationCancelErmDeviceCommandArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
@@ -121,6 +125,38 @@ export class TelemetryResolver {
     @Context() context: RequestContext,
   ) {
     return this.configurations.startParameter(args.input, context);
+  }
+
+  @Mutation('startErmParametersChange')
+  startParametersChange(
+    @Args() args: MutationStartErmParametersChangeArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.configurations.startParameters(args.input, context);
+  }
+
+  @Mutation('startErmParameterBatch')
+  startParameterBatch(
+    @Args() args: MutationStartErmParameterBatchArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.configurations.startBatch(args.input, context);
+  }
+
+  @Query('ermConfigurationBatch')
+  configurationBatch(
+    @Args() args: QueryErmConfigurationBatchArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.configurations.batch(args.id, context);
+  }
+
+  @Mutation('stopErmConfigurationBatch')
+  stopConfigurationBatch(
+    @Args() args: MutationStopErmConfigurationBatchArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.configurations.stopBatch(args.id, context);
   }
 
   @Mutation('startErmParameterSnapshot')

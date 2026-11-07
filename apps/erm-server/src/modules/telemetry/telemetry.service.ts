@@ -553,7 +553,7 @@ export class TelemetryService {
                   upstreamClosesLast24h: row.upstreamClosesLast24h,
                   karmaRoutingWritesLast24h: row.karmaRoutingWritesLast24h,
                   latestKarmaRoutingWrite: row.latestKarmaRoutingWrite
-                    ? frameView(row.latestKarmaRoutingWrite)
+                    ? frameView(row.latestKarmaRoutingWrite, context)
                     : null,
                 },
               },
@@ -611,7 +611,7 @@ export class TelemetryService {
                 query.unitId,
                 telemetryPage(
                   frames.map((frame) => ({
-                    ...frameView(frame),
+                    ...frameView(frame, context),
                     acknowledgement: frame.acknowledgement,
                   })),
                   query,
@@ -636,17 +636,18 @@ export class TelemetryService {
     let page = request.commands.get(key);
     if (!page) {
       const queries = deviceTelemetryQueries('commands', request.unitIds, input);
-      page = this.repository
-        .deviceCommands(queries)
-        .then(
-          (rows) =>
-            new Map(
-              rows.map(({ query, rows: commands }) => [
-                query.unitId,
-                telemetryPage(commands.map(commandView), query),
-              ]),
-            ),
-        );
+      page = this.repository.deviceCommands(queries).then(
+        (rows) =>
+          new Map(
+            rows.map(({ query, rows: commands }) => [
+              query.unitId,
+              telemetryPage(
+                commands.map((command) => commandView(command, context)),
+                query,
+              ),
+            ]),
+          ),
+      );
       request.commands.set(key, page);
     }
     return (await page).get(device.imei);

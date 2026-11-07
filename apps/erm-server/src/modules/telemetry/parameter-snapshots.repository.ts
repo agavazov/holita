@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { sqlNullableText, sqlRows, sqlText } from '../../database/sql.js';
-import { Prisma } from '../../generated/prisma/client.js';
+import { Prisma, type ErmParameterReadOutcome } from '../../generated/prisma/client.js';
 import type { TelemetryQuery } from './telemetry-query.js';
 import type { OperatorAudit, OperatorScope } from './operator-audit.js';
 
@@ -23,12 +23,20 @@ export class ParameterSnapshotsRepository {
 
   async create(
     unitId: string,
-    parameterCount: number,
+    parameters: readonly number[],
     startedAt: Date,
     audit?: OperatorAudit,
   ): Promise<StoredParameterSnapshot> {
     const snapshot = await this.prisma.client.ermParameterSnapshot.create({
-      data: { unitId, parameterCount, startedAt, ...audit },
+      data: {
+        unitId,
+        parameterCount: parameters.length,
+        startedAt,
+        ...audit,
+        values: {
+          createMany: { data: parameters.map((parameter) => ({ parameter, outcome: 'OMITTED' })) },
+        },
+      },
       include: { values: { orderBy: { parameter: 'asc' } } },
     });
     const previousSnapshot = await this.prisma.client.ermParameterSnapshot.findFirst({
@@ -49,9 +57,17 @@ export class ParameterSnapshotsRepository {
 
   async saveValues(
     id: string,
-    entries: { parameter: number; value: string | null; resultCode: string | null }[],
+    entries: {
+      parameter: number;
+      value: string | null;
+      resultCode: string | null;
+      outcome: ErmParameterReadOutcome;
+    }[],
   ): Promise<void> {
     await this.prisma.client.$transaction([
+      this.prisma.client.ermParameterValue.deleteMany({
+        where: { snapshotId: id, parameter: { in: entries.map(({ parameter }) => parameter) } },
+      }),
       this.prisma.client.ermParameterValue.createMany({
         data: entries.map((entry) => ({ snapshotId: id, ...entry })),
       }),

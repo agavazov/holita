@@ -1,8 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   commandNotification,
+  configurationNotification,
   eventNotifications,
   karmaRoutingNotification,
+  snapshotNotification,
 } from './notification-export.mapping.js';
 import { NotificationExportRepository } from './notification-export.repository.js';
 import type {
@@ -26,9 +28,28 @@ function utcDate(value: unknown): value is string {
   );
 }
 
+function terminalPosition(time: unknown, id: unknown): { time: string | null; id: string | null } {
+  if ((time === undefined && id === undefined) || (time === null && id === null)) {
+    return { time: null, id: null };
+  }
+  if (!utcDate(time) || typeof id !== 'string' || !uuid.test(id)) {
+    throw invalid();
+  }
+  return { time, id };
+}
+
 function cursor(value: unknown): NotificationExportCursor {
   if (value === undefined) {
-    return { eventId: '0', karmaRoutingId: '0', commandCompletedAt: null, commandId: null };
+    return {
+      eventId: '0',
+      karmaRoutingId: '0',
+      commandCompletedAt: null,
+      commandId: null,
+      configurationFinishedAt: null,
+      configurationId: null,
+      snapshotFinishedAt: null,
+      snapshotId: null,
+    };
   }
   if (typeof value !== 'string') {
     throw invalid();
@@ -61,11 +82,23 @@ function cursor(value: unknown): NotificationExportCursor {
   ) {
     throw invalid();
   }
+  const configuration = terminalPosition(
+    'configurationFinishedAt' in decoded ? decoded.configurationFinishedAt : undefined,
+    'configurationId' in decoded ? decoded.configurationId : undefined,
+  );
+  const snapshot = terminalPosition(
+    'snapshotFinishedAt' in decoded ? decoded.snapshotFinishedAt : undefined,
+    'snapshotId' in decoded ? decoded.snapshotId : undefined,
+  );
   return {
     eventId: decoded.eventId,
     karmaRoutingId: 'karmaRoutingId' in decoded ? String(decoded.karmaRoutingId) : '0',
     commandCompletedAt: decoded.commandCompletedAt,
     commandId: decoded.commandId,
+    configurationFinishedAt: configuration.time,
+    configurationId: configuration.id,
+    snapshotFinishedAt: snapshot.time,
+    snapshotId: snapshot.id,
   };
 }
 
@@ -111,14 +144,19 @@ export class NotificationExportService {
     const after = cursor(query.after);
     const since = new Date(query.since);
     const limit = Number(pageSize);
-    const [eventRows, commandRows, karmaRoutingRows] = await Promise.all([
-      this.repository.events(imei, since, after.eventId, limit),
-      this.repository.commands(scope, since, after, limit),
-      this.repository.karmaRouting(imei, since, after.karmaRoutingId, limit),
-    ]);
+    const [eventRows, commandRows, karmaRoutingRows, configurationRows, snapshotRows] =
+      await Promise.all([
+        this.repository.events(imei, since, after.eventId, limit),
+        this.repository.commands(scope, since, after, limit),
+        this.repository.karmaRouting(imei, since, after.karmaRoutingId, limit),
+        this.repository.configurations(scope, since, after, limit),
+        this.repository.snapshots(scope, since, after, limit),
+      ]);
     const events = eventRows.slice(0, limit);
     const commands = commandRows.slice(0, limit);
     const routing = karmaRoutingRows.slice(0, limit);
+    const configurations = configurationRows.slice(0, limit);
+    const snapshots = snapshotRows.slice(0, limit);
     const transportCommands = await this.repository.transportCommands(scope, commands);
     const lastCommand = commands.at(-1);
     const next: NotificationExportCursor = {
@@ -126,16 +164,27 @@ export class NotificationExportService {
       karmaRoutingId: routing.at(-1)?.id.toString() ?? after.karmaRoutingId,
       commandCompletedAt: lastCommand?.completedAt?.toISOString() ?? after.commandCompletedAt,
       commandId: lastCommand?.id ?? after.commandId,
+      configurationFinishedAt:
+        configurations.at(-1)?.finishedAt?.toISOString() ?? after.configurationFinishedAt,
+      configurationId: configurations.at(-1)?.id ?? after.configurationId,
+      snapshotFinishedAt: snapshots.at(-1)?.finishedAt?.toISOString() ?? after.snapshotFinishedAt,
+      snapshotId: snapshots.at(-1)?.id ?? after.snapshotId,
     };
     return {
       items: [
         ...events.flatMap((event) => eventNotifications(event, scope)),
         ...commands.map((request) => commandNotification(request, transportCommands)),
         ...routing.map((row) => karmaRoutingNotification(row, scope)),
+        ...configurations.map((row) => configurationNotification(row, scope)),
+        ...snapshots.map((row) => snapshotNotification(row, scope)),
       ],
       next: Buffer.from(JSON.stringify(next)).toString('base64url'),
       hasMore:
-        eventRows.length > limit || commandRows.length > limit || karmaRoutingRows.length > limit,
+        eventRows.length > limit ||
+        commandRows.length > limit ||
+        karmaRoutingRows.length > limit ||
+        configurationRows.length > limit ||
+        snapshotRows.length > limit,
     };
   }
 }

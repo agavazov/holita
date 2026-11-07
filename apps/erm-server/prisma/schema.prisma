@@ -31,6 +31,23 @@ enum ErmParameterSnapshotStatus {
   @@map("ermParameterSnapshotStatus")
 }
 
+enum ErmParameterReadOutcome {
+  READ @map("read")
+  REJECTED @map("rejected")
+  OMITTED @map("omitted")
+  @@map("ermParameterReadOutcome")
+}
+
+enum ErmConfigurationOperation {
+  READ_EDATA @map("readEdata")
+  INTERVAL @map("interval")
+  ADD_DEFINITION @map("addDefinition")
+  GLOBALS @map("globals")
+  PARAMETER @map("parameter")
+  PARAMETERS @map("parameters")
+  @@map("ermConfigurationOperation")
+}
+
 enum ErmConfigurationChangeStatus {
   RUNNING @map("running")
   READ @map("read")
@@ -203,6 +220,7 @@ model ErmParameterValue {
   parameter Int
   value String?
   resultCode String?
+  outcome ErmParameterReadOutcome @default(OMITTED)
   @@id([snapshotId, parameter])
   @@map("ermParameterValue")
 }
@@ -216,6 +234,11 @@ model ErmConfigurationChange {
   intent String? @db.VarChar(200)
   unitId String @db.VarChar(15)
   parameter Int?
+  operation ErmConfigurationOperation
+  parameters Int[] @default([])
+  batchId String? @db.Uuid
+  batchIndex Int?
+  batch ErmCommandBatch? @relation(fields: [tenantId, branchId, batchId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
   status ErmConfigurationChangeStatus
   startedAt DateTime @default(now()) @db.Timestamptz(3)
   finishedAt DateTime? @db.Timestamptz(3)
@@ -225,6 +248,7 @@ model ErmConfigurationChange {
   steps Json
   @@index([unitId, startedAt(sort: Desc)])
   @@index([tenantId, branchId, deviceId, startedAt(sort: Desc)])
+  @@unique([batchId, batchIndex])
   @@map("ermConfigurationChange")
 }
 
@@ -268,7 +292,9 @@ model ErmCommandBatch {
   tenantId String @db.Uuid
   branchId String @db.Uuid
   actorId String @db.VarChar(128)
-  action ErmDeviceAction
+  action ErmDeviceAction?
+  configurationChanges ErmConfigurationChange[]
+  finishedAt DateTime? @db.Timestamptz(3)
   createdAt DateTime @db.Timestamptz(3)
   stoppedAt DateTime? @db.Timestamptz(3)
   stoppedByActorId String? @db.VarChar(128)

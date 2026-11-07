@@ -25,6 +25,7 @@ import { deviceActions } from './device-actions.js';
 import { FleetClient } from './fleet.client.js';
 import { LiveDevicesService } from './live-devices.service.js';
 import { auditId, operatorActor, operatorAudit, operatorScope } from './operator-audit.js';
+import { requireOperator } from './operator-roles.js';
 import type { DeviceReference } from './telemetry.service.js';
 import { UnitWorkflowsService } from './unit-workflows.service.js';
 import {
@@ -65,6 +66,7 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
     input: SendErmDeviceCommandInput,
     context: RequestContext,
   ): Promise<ErmCommandRequest> {
+    requireOperator(context);
     const scope = operatorScope(context);
     const unitId = await this.fleet.deviceImei(input.deviceId, context);
     validateCommand(deviceActions[input.action]);
@@ -77,13 +79,14 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
       createdAt,
       new Date(createdAt.getTime() + seconds * 1000),
     );
-    return commandRequestView(request);
+    return commandRequestView(request, undefined, context);
   }
 
   async cancel(
     input: CancelErmDeviceCommandInput,
     context: RequestContext,
   ): Promise<ErmCommandRequest> {
+    requireOperator(context);
     const scope = operatorScope(context);
     await this.fleet.deviceImei(input.deviceId, context);
     const deviceId = auditId(input.deviceId),
@@ -99,13 +102,14 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
     if (!cancelled) {
       throw new NotFoundException('Command request was not found in the active Branch');
     }
-    return commandRequestView(cancelled);
+    return commandRequestView(cancelled, undefined, context);
   }
 
   async retry(
     input: RetryErmDeviceCommandInput,
     context: RequestContext,
   ): Promise<ErmCommandRequest> {
+    requireOperator(context);
     const scope = operatorScope(context);
     const original = await this.repository.findById(scope, auditId(input.requestId));
     if (!original) {
@@ -132,7 +136,7 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
       new Date(createdAt.getTime() + options.seconds * 1000),
       original.id,
     );
-    return commandRequestView(request);
+    return commandRequestView(request, undefined, context);
   }
 
   async list(
@@ -142,13 +146,17 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
     const scope = operatorScope(context);
     const page = await this.repository.list(scope, commandRequestsQuery(args));
     const related = await this.repository.related(scope, page.items);
-    return { ...page, items: page.items.map((request) => commandRequestView(request, related)) };
+    return {
+      ...page,
+      items: page.items.map((request) => commandRequestView(request, related, context)),
+    };
   }
 
   async startBatch(
     input: StartErmCommandBatchInput,
     context: RequestContext,
   ): Promise<ErmCommandBatch> {
+    requireOperator(context);
     const scope = operatorScope(context);
     const deviceIds = commandDeviceIds(input.deviceIds);
     const { seconds, intent } = commandRequestOptions(input);
@@ -181,7 +189,7 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
   async batch(id: string, context: RequestContext): Promise<ErmCommandBatch | null> {
     const scope = operatorScope(context);
     const batch = await this.repository.batch(scope, auditId(id));
-    if (!batch) {
+    if (!batch || batch.action === null) {
       return null;
     }
     const related = await this.repository.related(scope, batch.requests);
@@ -196,15 +204,17 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
     ];
     return {
       ...batch,
+      action: batch.action,
       counts: statuses.map((status) => ({
         status,
         count: batch.requests.filter((request) => request.status === status).length,
       })),
-      requests: batch.requests.map((request) => commandRequestView(request, related)),
+      requests: batch.requests.map((request) => commandRequestView(request, related, context)),
     };
   }
 
   async stopBatch(id: string, context: RequestContext): Promise<ErmCommandBatch> {
+    requireOperator(context);
     const scope = operatorScope(context);
     const batchId = auditId(id);
     if (!(await this.repository.stopBatch(scope, batchId, operatorActor(context), new Date()))) {
@@ -224,7 +234,7 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
       return null;
     }
     await this.fleet.deviceImei(request.deviceId, context);
-    return commandRequestView(request, await this.repository.related(scope, [request]));
+    return commandRequestView(request, await this.repository.related(scope, [request]), context);
   }
 
   async deviceRequests(device: DeviceReference, context: RequestContext) {
@@ -236,7 +246,9 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
       return new Map(
         deviceIds.map((id) => [
           id,
-          rows.filter((row) => row.deviceId === id).map((row) => commandRequestView(row, related)),
+          rows
+            .filter((row) => row.deviceId === id)
+            .map((row) => commandRequestView(row, related, context)),
         ]),
       );
     });

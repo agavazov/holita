@@ -3,9 +3,11 @@ import type { DeviceCommand } from '../devices/command.js';
 import type {
   ErmConfigurationChange,
   ErmConfigurationChangeStatus,
+  ErmConfigurationOperation,
   PrismaClient,
 } from '../../generated/prisma/client.js';
 import type { EdataConfiguration } from '../../starlink/edata-configuration.js';
+import { parseFrame } from '../../starlink/protocol.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { sqlRows, sqlText } from '../../database/sql.js';
 import type { OperatorAudit, OperatorScope } from './operator-audit.js';
@@ -29,12 +31,20 @@ function configurationJson(configuration: EdataConfiguration) {
 export class EdataChangeRepository {
   constructor(private readonly client: PrismaClient) {}
 
-  create(unitId: string, parameter: number | null, audit?: OperatorAudit) {
+  create(
+    unitId: string,
+    parameter: number | null,
+    operation: ErmConfigurationOperation,
+    audit?: OperatorAudit,
+    parameters: number[] = [],
+  ) {
     return this.client.ermConfigurationChange.create({
       data: {
         unitId,
         ...audit,
         parameter,
+        operation,
+        parameters,
         status: 'RUNNING',
         baseline: {},
         steps: [],
@@ -110,7 +120,11 @@ export class EdataChangeRepository {
       status?: ErmConfigurationChangeStatus;
       failureReason?: string | null;
       finishedAt?: Date;
-      baseline?: EdataConfiguration | { globals: string } | { parameter: string; value: string };
+      baseline?:
+        | EdataConfiguration
+        | { globals: string }
+        | { parameter: string; value: string }
+        | { parameters: { parameter: string; value: string }[] };
       intended?: string;
     } = {},
   ) {
@@ -153,12 +167,81 @@ export class EdataChangeRepository {
     return { command: '30', fields: ['19', '0', '19', '302', '0', '1', '1', step['payload']] };
   }
 
-  async needsFreshRead(unitId: string): Promise<boolean> {
-    const previous = await this.client.ermConfigurationChange.findFirst({
-      where: { unitId, status: { in: ['READ', 'UNCERTAIN'] } },
-      orderBy: { startedAt: 'desc' },
+  async needsFreshRead(unitId: string, parameters?: readonly number[]): Promise<boolean> {
+    if (parameters === undefined) {
+      const previous = await this.client.ermConfigurationChange.findFirst({
+        where: {
+          unitId,
+          operation: { notIn: ['PARAMETER', 'PARAMETERS'] },
+          status: { in: ['READ', 'UNCERTAIN'] },
+        },
+        orderBy: { startedAt: 'desc' },
+      });
+      return previous?.status === 'UNCERTAIN';
+    }
+    const uncertain = await this.client.ermConfigurationChange.findMany({
+      where: {
+        unitId,
+        operation: { in: ['PARAMETER', 'PARAMETERS'] },
+        status: 'UNCERTAIN',
+        OR: [{ parameters: { hasSome: [...parameters] } }, { parameter: { in: [...parameters] } }],
+      },
     });
-    return previous?.status === 'UNCERTAIN';
+    for (const change of uncertain) {
+      const blocked = new Set(
+        (change.parameters.length ? change.parameters : [change.parameter]).filter(
+          (parameter): parameter is number => parameter !== null && parameters.includes(parameter),
+        ),
+      );
+      // A process may have stopped during restoration, long after the original baseline read.
+      const submissions = Array.isArray(change.steps)
+        ? change.steps.flatMap((step) =>
+            typeof step === 'object' &&
+            step !== null &&
+            !Array.isArray(step) &&
+            step['outcome'] === 'SUBMITTING' &&
+            typeof step['time'] === 'string'
+              ? [new Date(step['time']).getTime()]
+              : [],
+          )
+        : [];
+      const since = new Date(Math.max(change.startedAt.getTime(), ...submissions));
+      const reads = await this.client.ermCommand.findMany({
+        where: {
+          unitId,
+          command: { in: ['03', '45'] },
+          status: 'ANSWERED',
+          resultCode: null,
+          sentAt: { gt: since },
+          response: { not: null },
+        },
+      });
+      for (const read of reads) {
+        const response =
+          read.response === null ? undefined : parseFrame(Buffer.from(read.response));
+        if (
+          response?.origin !== 'SLU' ||
+          response.unitId !== unitId ||
+          response.command !== read.command ||
+          response.fields.length % 2 !== 0
+        ) {
+          continue;
+        }
+        for (let index = 0; index < response.fields.length; index += 2) {
+          const parameter = response.fields[index]?.toString('latin1') ?? '';
+          if (
+            /^\d{1,4}$/.test(parameter) &&
+            read.fields.some((field) => Number(field) === Number(parameter))
+          ) {
+            blocked.delete(Number(parameter));
+          }
+        }
+      }
+      if (blocked.size > 0) {
+        return true;
+      }
+    }
+    return false;
   }
 
   async watermark(unitId: string): Promise<bigint> {

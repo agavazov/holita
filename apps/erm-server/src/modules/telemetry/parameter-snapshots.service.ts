@@ -23,6 +23,7 @@ import type { DeviceReference } from './telemetry.service.js';
 import { deviceTelemetryQueries, telemetryPage, telemetryQuery } from './telemetry-query.js';
 import { UnitWorkflowsService } from './unit-workflows.service.js';
 import { auditId, operatorAudit, operatorScope, type OperatorAudit } from './operator-audit.js';
+import { maskParameterValue, requireEngineer } from './operator-roles.js';
 
 const snapshotParameters = [...parameterCatalog.keys()].filter(
   (parameter) => parameter >= 1 && parameter <= 9999 && (parameter < 49 || parameter > 54),
@@ -32,9 +33,27 @@ function unquoted(value: string): string {
   return value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value;
 }
 
-function snapshotView(snapshot: StoredParameterSnapshot): ErmParameterSnapshot {
+function snapshotView(
+  snapshot: StoredParameterSnapshot,
+  context: RequestContext,
+): ErmParameterSnapshot {
   const previous = snapshot.previousSnapshot;
-  const previousValues = new Map(previous?.values.map((entry) => [entry.parameter, entry.value]));
+  const previousValues = new Map(previous?.values.map((entry) => [entry.parameter, entry]));
+  const unreadParameters = new Set(
+    snapshot.values.filter((entry) => entry.outcome !== 'READ').map((entry) => entry.parameter),
+  );
+  if (previous) {
+    for (const entry of snapshot.values) {
+      if (previousValues.get(entry.parameter)?.outcome !== 'READ') {
+        unreadParameters.add(entry.parameter);
+      }
+    }
+    for (const entry of previous.values) {
+      if (!snapshot.values.some((current) => current.parameter === entry.parameter)) {
+        unreadParameters.add(entry.parameter);
+      }
+    }
+  }
   return {
     id: snapshot.id,
     unitId: snapshot.unitId,
@@ -49,20 +68,26 @@ function snapshotView(snapshot: StoredParameterSnapshot): ErmParameterSnapshot {
     values: snapshot.values.map((entry) => ({
       parameter: entry.parameter,
       title: parameterCatalog.get(entry.parameter) ?? null,
-      value: entry.value,
+      value: maskParameterValue(entry.parameter, entry.value, context),
       resultCode: entry.resultCode,
+      outcome: entry.outcome,
     })),
+    unreadParameters: [...unreadParameters].sort((left, right) => left - right),
     changes: previous
       ? snapshot.values.flatMap((entry) => {
-          const previousValue = previousValues.get(entry.parameter) ?? null;
+          const previousEntry = previousValues.get(entry.parameter);
+          if (entry.outcome !== 'READ' || previousEntry?.outcome !== 'READ') {
+            return [];
+          }
+          const previousValue = previousEntry.value;
           return previousValue === entry.value
             ? []
             : [
                 {
                   parameter: entry.parameter,
                   title: parameterCatalog.get(entry.parameter) ?? null,
-                  previousValue,
-                  value: entry.value,
+                  previousValue: maskParameterValue(entry.parameter, previousValue, context),
+                  value: maskParameterValue(entry.parameter, entry.value, context),
                 },
               ];
         })
@@ -92,6 +117,7 @@ export class ParameterSnapshotsService implements OnModuleInit, OnModuleDestroy 
 
   async start(deviceId: string, context: RequestContext): Promise<ErmParameterSnapshot> {
     requireTenant(context);
+    requireEngineer(context);
     const unitId = await this.fleet.deviceImei(deviceId, context);
     await this.requirePrimary(unitId);
     this.workflows.acquire(unitId);
@@ -99,7 +125,7 @@ export class ParameterSnapshotsService implements OnModuleInit, OnModuleDestroy 
     try {
       snapshot = await this.repository.create(
         unitId,
-        snapshotParameters.length,
+        snapshotParameters,
         new Date(),
         operatorAudit(context, deviceId, 'Read parameter snapshot'),
       );
@@ -116,13 +142,13 @@ export class ParameterSnapshotsService implements OnModuleInit, OnModuleDestroy 
         this.jobs.delete(job);
       });
     this.jobs.add(job);
-    return snapshotView(snapshot);
+    return snapshotView(snapshot, context);
   }
 
   /** The configuration caller holds the shared unit lock while this snapshot is captured. */
   async captureForConfiguration(unitId: string, audit: OperatorAudit) {
     await this.requirePrimary(unitId);
-    const snapshot = await this.repository.create(unitId, snapshotParameters.length, new Date(), {
+    const snapshot = await this.repository.create(unitId, snapshotParameters, new Date(), {
       ...audit,
       intent: `Pre-write snapshot: ${audit.intent}`,
     });
@@ -150,17 +176,18 @@ export class ParameterSnapshotsService implements OnModuleInit, OnModuleDestroy 
           deviceId: id,
         })),
       );
-      page = this.repository
-        .history(queries, scope)
-        .then(
-          (rows) =>
-            new Map(
-              rows.map(({ query, rows: snapshots }) => [
-                query.deviceId,
-                telemetryPage(snapshots.map(snapshotView), query),
-              ]),
-            ),
-        );
+      page = this.repository.history(queries, scope).then(
+        (rows) =>
+          new Map(
+            rows.map(({ query, rows: snapshots }) => [
+              query.deviceId,
+              telemetryPage(
+                snapshots.map((snapshot) => snapshotView(snapshot, context)),
+                query,
+              ),
+            ]),
+          ),
+      );
       request.snapshots.set(key, page);
     }
     return (await page).get(device.id);
@@ -203,10 +230,20 @@ export class ParameterSnapshotsService implements OnModuleInit, OnModuleDestroy 
               {
                 parameter,
                 value:
-                  single.resultCode === null && Number(single.fields[0]) === parameter
+                  single.resultCode === null &&
+                  single.fields.length >= 2 &&
+                  Number(single.fields[0]) === parameter
                     ? unquoted(single.fields.slice(1).join(','))
                     : null,
                 resultCode: single.resultCode,
+                outcome:
+                  single.resultCode !== null && single.resultCode !== '01'
+                    ? 'REJECTED'
+                    : single.resultCode === null &&
+                        single.fields.length >= 2 &&
+                        Number(single.fields[0]) === parameter
+                      ? 'READ'
+                      : 'OMITTED',
               },
             ]);
           }
@@ -225,6 +262,7 @@ export class ParameterSnapshotsService implements OnModuleInit, OnModuleDestroy 
               parameter,
               value: values.get(parameter) ?? null,
               resultCode: null,
+              outcome: values.has(parameter) ? 'READ' : 'OMITTED',
             })),
           );
         }

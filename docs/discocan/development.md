@@ -48,8 +48,11 @@ changes remain available to every signed-in user.
 In Fleet, Viewers can read data with stored Device SMS passwords returned as null. Operators,
 Engineers and Administrators can edit master data, perform batch actions and act on alerts.
 Branch settings and Branch renaming require Administrator. Notification read state remains
-available to every real user. ERM receives the role for subsequent command and configuration
-authorization; this identity change does not yet restrict its telemetry operations.
+available to every real user. In ERM every role can read history; Viewers see protected parameter
+values masked. Operators and above may queue/cancel/retry device reads, start/stop read batches
+and read eData configuration. Engineers and Administrators may capture parameter snapshots and
+write configuration, including verified parameter batches and return from Karma. Role refusals
+use `FORBIDDEN`; the deployment write switch still applies.
 
 Fleet and ERM accept the bearer returned by Core's `signIn`. Configure `CORE_AUTH_VERIFY_URL`
 and the shared `CORE_INTERNAL_AUTH_TOKEN` in both services as described in
@@ -459,7 +462,10 @@ current `waitingReason` and the start of that wait (`waitingSince`): `GATEWAY_UN
 failure, `FLEET_VERIFICATION_UNAVAILABLE` for target-verification failure, or `UNIT_NOT_CONNECTED`
 when primary discovery succeeds without that unit. These reasons do not alter submission rules.
 Command notifications retain `REPLY_TIMEOUT` and `TRANSPORT_FAILED` when linked transport evidence
-is available, as command history does.
+is available, as command history does. The same Branch export includes settings runs ending in
+`RESTORE_FAILED`, `MISMATCH` or `UNCERTAIN`, failed snapshots and completed snapshots with unread
+parameters. These notifications link to the Device and retain the operation/outcome without
+exporting parameter values.
 
 The Commands tab shows readable request purpose, target, lifecycle times, expiry and outcome.
 Queued/offline and waiting states stay visible across polls, and details expose parameters,
@@ -483,7 +489,11 @@ the resulting device connection independently.
 
 The Device's **Parameters → Device settings** editor starts background controlled workflows
 through `startErmEdataChange` (read, one interval, one definition or globals `302`) and
-`startErmParameterChange` (one catalog parameter through `04`). Writes require
+`startErmParameterChange` (one catalog parameter through `04`) and
+`startErmParametersChange(input: {deviceId, parameters: [{parameter, value}], restoreAfter})`
+(one `46` containing only that explicit parameter set). Each run exposes the structured
+`operation` (`READ_EDATA`, `INTERVAL`, `ADD_DEFINITION`, `GLOBALS`, `PARAMETER` or `PARAMETERS`)
+for translated labels while retaining `intent` as audit text. Writes require
 `ERM_CONFIGURATION_WRITES_ENABLED=true` in the API process; reads remain available when off.
 Every write workflow captures a fresh parameter snapshot, then reads its exact target baseline,
 writes, independently reads back and restores the exact baseline on a mismatch or when requested.
@@ -491,15 +501,29 @@ Globals compare every written byte, including bytes 11–13. Only one snapshot, 
 or operator read can run per unit in the API process. Routing and protected parameters remain
 refused. Unit rejections, including unsupported event-description writes, appear in the run's
 steps and failure reason. A persisted `UNCERTAIN` write is never replayed; inspect the evidence
-and run a fresh eData read before making a new decision. The run list shows the latest 20 runs.
+and reconcile it before making a new decision: an uncertain eData write requires a fresh eData
+read; an uncertain `04` or `46` blocks writes of the same parameters until fresh `03`/`45` replies
+read those parameters successfully. An eData read cannot clear parameter uncertainty. The run list
+shows the latest 20 runs.
 
-Operators signed in to a Fleet Device's active Branch can call
+`startErmParameterBatch(input: {deviceIds, parameters: [{parameter, value}], restoreAfter})`
+starts the same verified `46` workflow for 1–100 unique Branch Devices in the supplied order.
+Only one unit runs at a time; any result other than `VERIFIED` stops the batch and refuses its
+remaining runs. Each unit rechecks current Fleet ownership, primary mode and the write switch.
+`ermConfigurationBatch(id)` reads the scoped progress, ordered changes and stop/completion audit.
+`stopErmConfigurationBatch(id)` lets the current unit finish safely and refuses remaining runs.
+An interrupted batch is retained and never replayed automatically.
+
+Engineers and Administrators signed in to a Fleet Device's active Branch can call
 `startErmParameterSnapshot(input: { deviceId })` while the unit is connected in primary mode,
 then read `ermParameterSnapshots` on that Device. The api reads catalog parameters 0001–9999
 except routing 0049–0054 in about 70 sequential commands, with individual retries for rejected
 batches; completion time depends on the unit's replies. Tracker replies also reach Karma inside
-`$SLC`. Snapshots include titles and changes against the previous COMPLETE snapshot; values are
-stored and shown unmasked, including secrets such as 0593. An api restart marks snapshots left
+`$SLC`. Snapshots record each parameter as `READ`, `REJECTED` or `OMITTED`. `COMPLETE` means the sweep
+finished, and `readCount` counts processed outcomes; it does not promise every value was read.
+Changes compare only parameters read in both snapshots; `unreadParameters` lists parameters
+excluded because either snapshot did not read them. Values remain stored in ERM; protected
+values such as 0593 are masked for Viewers and visible to Operators and above. An api restart marks snapshots left
 RUNNING as FAILED with `interrupted by an api restart`.
 
 For controlled single-record eData configuration changes, run the operator command from

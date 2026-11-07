@@ -235,14 +235,16 @@ export class CommandRequestsRepository {
 
   batch(scope: OperatorScope, id: string) {
     return this.prisma.client.ermCommandBatch.findFirst({
-      where: { ...scope, id },
+      where: { ...scope, id, action: { not: null } },
       include: { requests: { where: scope, orderBy: { batchIndex: 'asc' } } },
     });
   }
 
   async stopBatch(scope: OperatorScope, id: string, actorId: string, stoppedAt: Date) {
     return this.prisma.client.$transaction(async (client) => {
-      const batch = await client.ermCommandBatch.findFirst({ where: { ...scope, id } });
+      const batch = await client.ermCommandBatch.findFirst({
+        where: { ...scope, id, action: { not: null } },
+      });
       if (!batch) {
         return false;
       }

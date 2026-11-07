@@ -1,5 +1,9 @@
 import { setTimeout } from 'node:timers/promises';
-import type { ErmConfigurationChangeStatus, PrismaClient } from '../../generated/prisma/client.js';
+import type {
+  ErmConfigurationChangeStatus,
+  ErmConfigurationOperation,
+  PrismaClient,
+} from '../../generated/prisma/client.js';
 import {
   assembleEdataConfiguration,
   type EdataConfiguration,
@@ -25,6 +29,29 @@ export interface ParameterChangeOptions {
   parameter: string;
   value: string;
   restoreAfter?: boolean;
+}
+
+export interface ParametersChangeOptions {
+  unitId: string;
+  parameters: { parameter: string; value: string }[];
+  restoreAfter?: boolean;
+}
+
+export function validateParametersChangeOptions(options: ParametersChangeOptions): void {
+  if (
+    options.parameters.length === 0 ||
+    new Set(options.parameters.map(({ parameter }) => Number(parameter))).size !==
+      options.parameters.length
+  ) {
+    throw new Error('Expected an explicit set of distinct writable parameters');
+  }
+  for (const parameter of options.parameters) {
+    validateParameterChangeOptions({ unitId: options.unitId, ...parameter });
+  }
+  validateCommand({
+    command: '46',
+    fields: options.parameters.flatMap(({ parameter, value }) => [parameter, value]),
+  });
 }
 
 interface ChangeRuntime {
@@ -123,9 +150,18 @@ export function runParameterChange(
   return runConfigurationChange(client, options, runtime);
 }
 
+export function runParametersChange(
+  client: PrismaClient,
+  options: ParametersChangeOptions,
+  runtime: ChangeRuntime = {},
+) {
+  validateParametersChangeOptions(options);
+  return runConfigurationChange(client, options, runtime);
+}
+
 async function runConfigurationChange(
   client: PrismaClient,
-  options: EdataChangeOptions | ParameterChangeOptions,
+  options: EdataChangeOptions | ParameterChangeOptions | ParametersChangeOptions,
   runtime: ChangeRuntime,
 ) {
   const repository = new EdataChangeRepository(client);
@@ -133,13 +169,40 @@ async function runConfigurationChange(
   const log = runtime.log ?? console.info;
   const readTimeout = runtime.readTimeoutMs ?? 90_000;
   const pollInterval = runtime.pollIntervalMs ?? 500;
+  const parameterOptions =
+    'parameters' in options
+      ? options.parameters
+      : 'value' in options
+        ? [{ parameter: options.parameter, value: options.value }]
+        : undefined;
   const parameter =
-    'value' in options
-      ? Number(options.parameter)
-      : (options.parameter ?? (options.add ? Number.parseInt(options.add.slice(0, 4), 16) : null));
+    'parameters' in options
+      ? null
+      : 'value' in options
+        ? Number(options.parameter)
+        : (options.parameter ??
+          (options.add ? Number.parseInt(options.add.slice(0, 4), 16) : null));
+  const operation: ErmConfigurationOperation =
+    'parameters' in options
+      ? 'PARAMETERS'
+      : 'value' in options
+        ? 'PARAMETER'
+        : options.read
+          ? 'READ_EDATA'
+          : options.globals
+            ? 'GLOBALS'
+            : options.add
+              ? 'ADD_DEFINITION'
+              : 'INTERVAL';
   const change =
     runtime.changeId === undefined
-      ? await repository.create(options.unitId, parameter)
+      ? await repository.create(
+          options.unitId,
+          parameter,
+          operation,
+          undefined,
+          parameterOptions?.map(({ parameter }) => Number(parameter)) ?? [],
+        )
       : { id: runtime.changeId };
   const steps: EdataChangeStep[] = [...(runtime.initialSteps ?? [])];
   let phase = 'connected';
@@ -227,10 +290,9 @@ async function runConfigurationChange(
     });
     await repository.save(change.id, steps, {
       status: 'UNCERTAIN',
-      failureReason:
-        'value' in options
-          ? 'Submission outcome is unknown; operator review required'
-          : 'Submission outcome is unknown; take a fresh --read',
+      failureReason: parameterOptions
+        ? 'Submission outcome is unknown; read the affected parameters before another write'
+        : 'Submission outcome is unknown; take a fresh eData read',
     });
     if (preflightAt && Date.now() - preflightAt.getTime() > 120_000) {
       throw new Stopped('REFUSED', 'Preflight is older than 120 seconds');
@@ -244,7 +306,7 @@ async function runConfigurationChange(
     } catch {
       throw new Stopped(
         'UNCERTAIN',
-        `${name} submission failed or timed out; ${'value' in options ? 'operator review required' : 'take a fresh --read'}`,
+        `${name} submission failed or timed out; ${parameterOptions ? 'read the affected parameters before another write' : 'take a fresh eData read'}`,
       );
     }
     await record({
@@ -261,7 +323,7 @@ async function runConfigurationChange(
     if (result.status !== 'answered') {
       throw new Stopped(
         'UNCERTAIN',
-        `${name} submission failed or timed out; ${'value' in options ? 'operator review required' : 'take a fresh --read'}`,
+        `${name} submission failed or timed out; ${parameterOptions ? 'read the affected parameters before another write' : 'take a fresh eData read'}`,
       );
     }
     if (result.resultCode !== '01') {
@@ -303,21 +365,49 @@ async function runConfigurationChange(
   }
 
   try {
-    if (!('read' in options && options.read) && (await repository.needsFreshRead(options.unitId))) {
-      throw new Stopped('REFUSED', 'A previous submission is UNCERTAIN; take a fresh eData read');
+    if (
+      !('read' in options && options.read) &&
+      (await repository.needsFreshRead(
+        options.unitId,
+        parameterOptions?.map(({ parameter }) => Number(parameter)),
+      ))
+    ) {
+      throw new Stopped(
+        'REFUSED',
+        parameterOptions
+          ? 'A previous submission is UNCERTAIN; read the affected parameters before another write'
+          : 'A previous submission is UNCERTAIN; take a fresh eData read',
+      );
     }
-    if ('value' in options) {
-      const parameterOptions = options;
-      const target =
-        options.value.startsWith('"') && options.value.endsWith('"')
-          ? options.value.slice(1, -1)
-          : options.value;
-      async function readParameter(name: string) {
+    if ('parameters' in options || 'value' in options) {
+      const requestedParameters =
+        'parameters' in options
+          ? options.parameters
+          : [{ parameter: options.parameter, value: options.value }];
+      const multiple = 'parameters' in options;
+      const unquoted = (value: string) =>
+        value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value;
+      const targets = requestedParameters.map(({ parameter, value }) => ({
+        parameter,
+        value: unquoted(value),
+      }));
+      const payload = (values: typeof targets) =>
+        multiple ? JSON.stringify(values) : (values[0]?.value ?? '');
+      const equal = (left: typeof targets, right: typeof targets) =>
+        left.every(
+          (entry, index) =>
+            entry.parameter === right[index]?.parameter && entry.value === right[index].value,
+        );
+      async function readParameters(name: string) {
         phase = name;
         await requirePrimary();
+        const requestedAt = new Date();
         const result = await gateway.sendCommand(
-          parameterOptions.unitId,
-          validateCommand({ command: '03', fields: [parameterOptions.parameter] }),
+          options.unitId,
+          validateCommand({
+            command: multiple ? '45' : '03',
+            fields: requestedParameters.map(({ parameter }) => parameter),
+          }),
         );
         await record({
           name,
@@ -325,43 +415,78 @@ async function runConfigurationChange(
           time: new Date().toISOString(),
           outcome: result.status.toUpperCase(),
         });
-        const raw = result.fields[1];
+        const values = new Map<number, string>();
         if (
-          result.status !== 'answered' ||
-          result.resultCode !== null ||
-          Number(result.fields[0]) !== Number(parameterOptions.parameter) ||
-          result.fields.length !== 2 ||
-          raw === undefined
+          result.status === 'answered' &&
+          result.resultCode === null &&
+          result.fields.length === requestedParameters.length * 2
         ) {
-          throw new Stopped('FAILED', `${name} parameter is unread`);
+          for (let index = 0; index < result.fields.length; index += 2) {
+            const parameter = result.fields[index];
+            const raw = result.fields[index + 1];
+            if (
+              parameter !== undefined &&
+              /^\d{1,4}$/.test(parameter) &&
+              raw !== undefined &&
+              !values.has(Number(parameter))
+            ) {
+              values.set(Number(parameter), unquoted(raw));
+            }
+          }
         }
-        const value = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
-        // The same guards must accept the captured value before it can be used for restoration.
-        validateParameterChangeOptions({ ...parameterOptions, value });
-        await valueStep(name, value);
-        return value;
+        const captured = requestedParameters.map(({ parameter }) => ({
+          parameter,
+          value: values.get(Number(parameter)),
+        }));
+        const complete: { parameter: string; value: string }[] = [];
+        for (const entry of captured) {
+          if (entry.value === undefined) {
+            throw new Stopped('FAILED', `${name} parameter set is unread or incomplete`);
+          }
+          // Captured values must pass the same guards before they can be restored.
+          validateParameterChangeOptions({
+            unitId: options.unitId,
+            parameter: entry.parameter,
+            value: entry.value,
+          });
+          complete.push({ parameter: entry.parameter, value: entry.value });
+        }
+        await valueStep(name, payload(complete));
+        return { values: complete, requestedAt };
       }
-      const baseline = await readParameter('before');
+      const baseline = await readParameters('before');
+      const storedBaseline = multiple ? { parameters: baseline.values } : baseline.values[0];
       await repository.save(change.id, steps, {
-        baseline: { parameter: parameterOptions.parameter, value: baseline },
-        intended: target,
+        ...(storedBaseline === undefined ? {} : { baseline: storedBaseline }),
+        intended: payload(targets),
       });
-      await valueStep('expected', target);
-      if (baseline === target) {
-        return await finish('VERIFIED', 'Parameter already equals the target; no write');
+      await valueStep('expected', payload(targets));
+      if (equal(baseline.values, targets)) {
+        return await finish('VERIFIED', 'Parameters already equal the target; no write');
       }
-      async function writeParameter(name: string, value: string) {
-        await valueStep(name === 'write' ? 'written' : 'restore-written', value);
+      let preflight = baseline;
+      if (multiple) {
+        preflight = await readParameters('preflight');
+        if (!equal(baseline.values, preflight.values)) {
+          throw new Stopped('REFUSED', 'Preflight differs from the baseline');
+        }
+      }
+      async function writeParameters(name: string, values: typeof targets, preflightAt?: Date) {
+        await valueStep(name === 'write' ? 'written' : 'restore-written', payload(values));
         try {
           await write(
             name,
-            validateCommand({ command: '04', fields: [parameterOptions.parameter, value] }),
+            validateCommand({
+              command: multiple ? '46' : '04',
+              fields: values.flatMap(({ parameter, value }) => [parameter, value]),
+            }),
+            preflightAt,
           );
         } catch (error) {
           if (error instanceof Stopped && error.status === 'UNCERTAIN') {
             // Observe once, but never repeat or restore an unconfirmed write.
             try {
-              await readParameter('uncertain-readback');
+              await readParameters('uncertain-readback');
             } catch {
               await record({
                 name: 'uncertain-readback',
@@ -374,10 +499,18 @@ async function runConfigurationChange(
           throw error;
         }
       }
-      await writeParameter('write', target);
-      const after = await readParameter('after');
-      const verified = after === target;
-      await valueStep('readback', after, verified ? 'VERIFIED' : 'MISMATCH');
+      await writeParameters('write', targets, preflight.requestedAt);
+      let after: Awaited<ReturnType<typeof readParameters>>;
+      try {
+        after = await readParameters('after');
+      } catch {
+        throw new Stopped(
+          'UNCERTAIN',
+          'Parameter write was accepted but readback is incomplete; read the affected parameters',
+        );
+      }
+      const verified = equal(after.values, targets);
+      await valueStep('readback', payload(after.values), verified ? 'VERIFIED' : 'MISMATCH');
       await repository.save(change.id, steps, {
         status: verified ? 'VERIFIED' : 'MISMATCH',
         failureReason: verified ? null : 'Readback differs from the expected value',
@@ -385,16 +518,25 @@ async function runConfigurationChange(
       if (verified && !options.restoreAfter) {
         return await finish('VERIFIED');
       }
-      await writeParameter('restore', baseline);
-      const restored = await readParameter('restore-readback');
+      await writeParameters('restore', baseline.values);
+      let restored: Awaited<ReturnType<typeof readParameters>>;
+      try {
+        restored = await readParameters('restore-readback');
+      } catch {
+        throw new Stopped(
+          'UNCERTAIN',
+          'Parameter restoration was accepted but readback is incomplete; read the affected parameters',
+        );
+      }
+      const matches = equal(restored.values, baseline.values);
       await valueStep(
         'restore-readback',
-        restored,
-        restored === baseline ? 'RESTORED' : 'RESTORE_FAILED',
+        payload(restored.values),
+        matches ? 'RESTORED' : 'RESTORE_FAILED',
       );
       return await finish(
-        restored === baseline ? 'RESTORED' : 'RESTORE_FAILED',
-        restored === baseline ? null : 'Parameter restoration differs from the baseline',
+        matches ? 'RESTORED' : 'RESTORE_FAILED',
+        matches ? null : 'Parameter restoration differs from the baseline',
       );
     }
     await requirePrimary();
