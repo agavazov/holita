@@ -12,9 +12,9 @@
   "heading": "Measured heading",
   "positionTime": "Position recorded",
   "positionAge": "Position age",
-  "problemSummary": "{attention} need attention · {recorded} recorded",
+  "problemSummary": "{warnings} current warnings · {recorded} recorded",
   "viewProblems": "View problems",
-  "problemKpi": "Need attention",
+  "problemKpi": "Current warnings",
   "problems": {
     "heading": "Vehicle problems",
     "empty": "No problems in this period",
@@ -24,7 +24,10 @@
     "problem": "Problem",
     "source": "Source",
     "state": "State",
-    "occurred": "Occurred"
+    "occurred": "Occurred",
+    "observations": "First / last observation",
+    "code": "Recorded code",
+    "additionalCodes": "+{count} more recorded codes"
   },
   "sources": {
     "FLEET_ALERT": "Fleet alert",

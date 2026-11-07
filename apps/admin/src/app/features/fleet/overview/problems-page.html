@@ -1,11 +1,14 @@
-<holita-page-header [title]="text().title" [count]="page()?.total ?? null">
+<holita-page-header
+  [title]="text().title"
+  [count]="page() && warningVehicles() ? (historyTotal() ?? 0) + warnings().length : null"
+>
   <span headerMeta class="app-muted">{{ branch().name }}</span>
   <button
     headerActions
     pButton
     type="button"
     severity="secondary"
-    [disabled]="loading()"
+    [disabled]="loading() || warningsLoading()"
     (click)="refresh()"
   >
     <svg data-p-icon="refresh" aria-hidden="true"></svg>
@@ -18,11 +21,11 @@
     <div class="app-inline" [attr.aria-label]="text().filtered">
       <p-tag
         severity="warn"
-        [value]="text().attention + ': ' + (counts.requiringAttention | holitaNumber)"
+        [value]="text().attention + ': ' + (attentionCount() | holitaNumber)"
       />
       <p-tag
         severity="secondary"
-        [value]="text().recorded + ': ' + (counts.recorded | holitaNumber)"
+        [value]="text().recorded + ': ' + (recordedCount() | holitaNumber)"
       />
       <span class="app-muted" [title]="format.utc(counts.asOf)"
         >{{ text().updated }} {{ format.dateTime(counts.asOf) }}</span
@@ -38,6 +41,19 @@
 
 <div class="app-card" role="group" [attr.aria-label]="text().filters.label">
   <div class="problem-filters">
+    <holita-form-field controlId="problems-system" [label]="faultText().system">
+      <p-select
+        inputId="problems-system"
+        [options]="systems()"
+        optionLabel="label"
+        optionValue="value"
+        [multiple]="true"
+        [pt]="selectMultiplePt"
+        [placeholder]="text().filters.allSystems"
+        [ngModel]="url.state().filter.system ?? []"
+        (ngModelChange)="systemChanged($event)"
+      />
+    </holita-form-field>
     <holita-form-field controlId="problems-source" [label]="text().filters.source">
       <p-select
         inputId="problems-source"
@@ -110,9 +126,67 @@
 </div>
 
 <holita-table-panel
+  [heading]="faultText().currentWarnings"
+  [total]="warningVehicles() ? warnings().length : null"
+  [columns]="warningColumns()"
+  tableMinWidth="48rem"
+  [view]="warningsView()"
+  [busy]="warningsLoading()"
+  [errorText]="warningsFailure()"
+  [emptyTitle]="faultText().noCurrentWarnings"
+  [emptyDescription]="text().warningsHint"
+  mode="local"
+  (retry)="refresh()"
+  (clearFilters)="url.clearFilters()"
+>
+  <p-table
+    class="app-responsive-table"
+    [value]="warnings()"
+    dataKey="id"
+    [rowTrackBy]="trackById"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': faultText().currentWarnings } }"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of warningColumns(); track column.id) {
+          <col [style.width]="column.width" />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col">{{ text().table.target }}</th>
+        <th scope="col">{{ faultText().lamp }} / {{ faultText().system }}</th>
+        <th scope="col">{{ faultText().state }}</th>
+        <th scope="col">{{ faultText().since }}</th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
+        <td>
+          <a class="app-link app-plate" [routerLink]="vehicleLink(row.vehicleId)">{{
+            row.licensePlate
+          }}</a>
+        </td>
+        <td>
+          <span class="app-cell-identity"
+            ><span>{{ row.lamp }}</span
+            ><span>{{ row.system }}</span></span
+          >
+        </td>
+        <td><p-tag [severity]="row.severity" [value]="row.state" /></td>
+        <td class="app-cell-date" [title]="row.since.title">{{ row.since.text }}</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</holita-table-panel>
+
+<holita-table-panel
   #panel
   [heading]="text().table.heading"
-  [total]="page()?.total ?? null"
+  [total]="historyTotal()"
   [columns]="columns()"
   [tableMinWidth]="tableMinWidth"
   [view]="view()"
@@ -122,7 +196,7 @@
   [emptyDescription]="text().table.emptyDescription"
   [actions]="actions()"
   [actionContext]="url.state()"
-  [page]="{ page: url.state().page, pageSize: url.state().pageSize, total: page()?.total ?? 0 }"
+  [page]="{ page: url.state().page, pageSize: url.state().pageSize, total: historyTotal() ?? 0 }"
   (action)="run($event)"
   (pageChange)="url.setPage($event)"
   (clearFilters)="url.clearFilters()"
@@ -160,7 +234,8 @@
         <th scope="col" class="app-col-secondary">{{ text().table.source }}</th>
         <th scope="col">{{ text().table.severity }}</th>
         <th scope="col">{{ text().table.state }}</th>
-        <th scope="col">{{ text().table.time }}</th>
+        <th scope="col">{{ faultText().firstObserved }}</th>
+        <th scope="col">{{ faultText().lastObserved }}</th>
         <th scope="col">{{ text().table.target }}</th>
         <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
           <span class="app-visually-hidden">{{ text().table.actions }}</span>
@@ -171,23 +246,33 @@
       <tr>
         <td class="app-col-identity">
           <span class="app-cell-identity">
-            @if (row.alertId || row.deviceId || row.vehicleId) {
+            @if (row.diagnostics.length || row.alertId || row.deviceId || row.vehicleId) {
               <button
                 type="button"
                 class="app-link"
                 [title]="row.title"
                 [attr.aria-label]="
-                  row.alertId ? text().table.openAlert + ': ' + row.title : row.title
+                  row.diagnostics.length
+                    ? text().table.details + ': ' + row.title
+                    : row.alertId
+                      ? text().table.openAlert + ': ' + row.title
+                      : row.title
                 "
-                (click)="panel.run('open', [recordOf(row)], $event.currentTarget)"
+                (click)="
+                  panel.run(
+                    row.diagnostics.length ? 'details' : 'open',
+                    [recordOf(row)],
+                    $event.currentTarget
+                  )
+                "
               >
                 {{ row.title }}
               </button>
             } @else {
               <span [title]="row.title">{{ row.title }}</span>
             }
-            <span [title]="row.code + (row.detail ? ' · ' + row.detail : '')">{{
-              row.detail || row.sourceLabel
+            <span [title]="row.diagnosticSummary || row.detail || row.sourceLabel">{{
+              row.diagnosticSummary || row.detail || row.sourceLabel
             }}</span>
           </span>
           <div class="app-table-mobile-actions">
@@ -211,7 +296,8 @@
             ><p-tag [severity]="row.stateSeverity" [value]="row.stateLabel"
           /></span>
         </td>
-        <td class="app-cell-date" [title]="row.date.title">{{ row.date.text }}</td>
+        <td class="app-cell-date" [title]="row.first.title">{{ row.first.text }}</td>
+        <td class="app-cell-date" [title]="row.last.title">{{ row.last.text }}</td>
         <td>
           <span class="app-cell-identity">
             @if (row.vehicleId) {
@@ -251,4 +337,50 @@
     </ng-template>
   </p-table>
 </holita-table-panel>
+<p-dialog
+  [visible]="selectedProblem() !== null"
+  (visibleChange)="!$event && selectedProblem.set(null)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [header]="text().table.details"
+  [closeAriaLabel]="uiText().close"
+  [style]="{ width: 'min(48rem, calc(100vw - 2rem))' }"
+>
+  @if (selectedProblem(); as problem) {
+    <div class="app-view">
+      <p class="app-muted">{{ faultText().historyHint }}</p>
+      <p>{{ problem.vehicle?.licensePlate ?? problem.deviceImei ?? text().table.noTarget }}</p>
+      @for (diagnostic of selectedDiagnostics(); track $index) {
+        <section class="app-card">
+          <h3>{{ diagnostic.description }}</h3>
+          <dl class="app-facts">
+            <div>
+              <dt>{{ faultText().system }}</dt>
+              <dd>{{ diagnostic.system }}</dd>
+            </div>
+            @if (diagnostic.fmi) {
+              <div>
+                <dt>FMI</dt>
+                <dd>{{ diagnostic.fmi }}</dd>
+              </div>
+            }
+            <div>
+              <dt>{{ faultText().firstObserved }}</dt>
+              <dd [title]="diagnostic.first.title">{{ diagnostic.first.text }}</dd>
+            </div>
+            <div>
+              <dt>{{ faultText().lastObserved }}</dt>
+              <dd [title]="diagnostic.last.title">{{ diagnostic.last.text }}</dd>
+            </div>
+            <div>
+              <dt>{{ faultText().catalogVersion }}</dt>
+              <dd>{{ diagnostic.catalogVersion }}</dd>
+            </div>
+          </dl>
+        </section>
+      }
+    </div>
+  }
+</p-dialog>
 <router-outlet [routerOutletData]="drawerHost" />

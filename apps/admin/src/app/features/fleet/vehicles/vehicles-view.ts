@@ -4,6 +4,7 @@ import { FleetNow } from '../../../ui/fleet-live/fleet-now';
 import { injectFleetNow } from '../../../ui/fleet-live/fleet-clock';
 import { FleetLiveSummary } from '../../../ui/fleet-live/fleet-live-summary';
 import { fleetLiveText, type FleetLiveDevice } from '../../../ui/fleet-live/fleet-live';
+import type { FleetWarning } from '../../../ui/fleet-live/fault-wording';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Skeleton } from 'primeng/skeleton';
@@ -59,13 +60,10 @@ export interface VehicleRow {
     readonly lastReportedAt: string | null;
   }[];
   readonly liveDevices?: readonly FleetLiveDevice[];
+  readonly currentWarnings: readonly FleetWarning[];
   readonly positionAt?: string | null;
   readonly positionAgeSeconds?: number | null;
   readonly mapAsOf?: string | null;
-  readonly problemCount?: number;
-  readonly problemSeverity?: 'INFO' | 'WARNING' | 'CRITICAL' | null;
-  readonly problemRecorded?: number;
-  readonly problemAttention?: number;
   readonly fleetNumber: string | null;
   readonly type: VehicleTypeCode | null;
   readonly make: string;
@@ -389,33 +387,28 @@ export class VehiclesView {
   }
 
   protected problemLabel(row: VehicleRow): string {
-    if (row.problemCount === undefined) {
-      return this.listText().loadingProblems;
-    }
-    return row.problemCount
+    return row.currentWarnings.length
       ? interpolate(this.listText().problemCount, {
-          severity: this.listText().severities[row.problemSeverity ?? 'INFO'],
-          count: formatNumber(row.problemCount, this.language()),
+          count: formatNumber(row.currentWarnings.length, this.language()),
         })
       : this.listText().noProblems;
   }
 
   protected problemTitle(row: VehicleRow): string {
-    return row.problemCount === undefined
-      ? this.listText().loadingProblems
-      : interpolate(this.listText().problemScope, {
-          attention: formatNumber(row.problemAttention ?? 0, this.language()),
-          recorded: formatNumber(row.problemRecorded ?? 0, this.language()),
-        });
+    return interpolate(this.listText().problemScope, {
+      count: formatNumber(row.currentWarnings.length, this.language()),
+    });
   }
 
   protected problemTone(row: VehicleRow) {
     return toneSeverity(
-      row.problemSeverity === 'CRITICAL'
+      row.currentWarnings.some((warning) => warning.state === 'RED')
         ? 'danger'
-        : row.problemSeverity === 'WARNING'
+        : row.currentWarnings.some((warning) => warning.state === 'YELLOW')
           ? 'warn'
-          : 'neutral',
+          : row.currentWarnings.length
+            ? 'info'
+            : 'neutral',
     );
   }
 

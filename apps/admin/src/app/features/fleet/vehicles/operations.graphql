@@ -37,6 +37,9 @@ fragment AdminVehicleDetails on FleetVehicle {
     imei
     lastReportedAt
   }
+  currentWarnings {
+    ...AdminWarningLamp
+  }
   openAlertCount
   state {
     activity
@@ -253,6 +256,9 @@ fragment AdminVehicleProfile on FleetVehicle {
   devices {
     ...AdminFleetLiveDevice
   }
+  warningLamps {
+    ...AdminWarningLamp
+  }
   nextService {
     ...AdminVehicleProfileServiceDetails
   }
@@ -260,6 +266,12 @@ fragment AdminVehicleProfile on FleetVehicle {
 query AdminVehicleProfile($id: ID!) {
   fleetVehicle(id: $id) {
     ...AdminVehicleProfile
+  }
+  recordedFaultReports: fleetEvents(
+    limit: 1
+    filter: { vehicleIds: [$id], kinds: [DIAGNOSTIC_TROUBLE_CODE], actionable: false }
+  ) {
+    total
   }
   fleetDataClock {
     asOf
@@ -365,6 +377,9 @@ query AdminVehiclesLive($ids: [ID!]!) {
   fleetVehicles(ids: $ids, limit: 100) {
     items {
       id
+      currentWarnings {
+        ...AdminWarningLamp
+      }
       devices {
         ...AdminFleetLiveDevice
       }
@@ -403,6 +418,9 @@ fragment AdminVehicleProblemDetails on FleetProblem {
   requiringAttention
   code
   details
+  diagnostics {
+    ...AdminFaultDiagnostic
+  }
   vehicleId
   deviceId
   deviceImei

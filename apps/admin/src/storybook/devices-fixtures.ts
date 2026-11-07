@@ -7,6 +7,7 @@ import {
   AdminDeviceVehiclesDocument,
   AdminUpdateDeviceDocument,
   type AdminDeviceDetailsFragment,
+  type AdminWarningLampFragment,
   type AdminDevicesLiveQuery,
 } from '../generated/graphql/operations';
 import {
@@ -109,16 +110,22 @@ graphqlFixture(AdminDevicesDocument, (variables) => {
     },
   };
 });
-export const fixtureLiveDevice: WithTypename<
-  AdminDevicesLiveQuery['fleetDevices']['items'][number]
-> = {
+const liveLamps: WithTypename<AdminWarningLampFragment>[] = fixtureDevice.warningLamps.map(
+  (lamp) => ({
+    ...lamp,
+    deviceId: fixtureDevice.id,
+    stateSince: lamp.recordedAt,
+  }),
+);
+export const fixtureLiveDevice = {
   __typename: 'FleetDevice',
   id: fixtureDevice.id,
   imei: fixtureDevice.imei,
   vehicleId: fixtureDevice.vehicleId,
   status: 'ONLINE',
   lastReportedAt: fixtureDevice.lastReportedAt,
-  warningLamps: fixtureDevice.warningLamps,
+  warningLamps: liveLamps,
+  currentWarnings: [],
   diagnostics: { __typename: 'FleetDeviceDiagnosticSummary', count: 0, latest: null },
   routing: 'HOLITA',
   routingHealth: null,
@@ -159,7 +166,7 @@ export const fixtureLiveDevice: WithTypename<
       lastCloseReason: null,
     },
   },
-};
+} satisfies WithTypename<AdminDevicesLiveQuery['fleetDevices']['items'][number]>;
 const liveListDevices: readonly WithTypename<
   AdminDevicesLiveQuery['fleetDevices']['items'][number]
 >[] = [
@@ -169,10 +176,13 @@ const liveListDevices: readonly WithTypename<
     id: '60000000-0000-4000-8000-000000000002',
     imei: '001234567890124',
     lastReportedAt: '2026-10-20T07:00:00.000Z',
-    warningLamps: fixtureDevice.warningLamps.map((lamp) => ({
+    warningLamps: liveLamps.map((lamp) => ({
       ...lamp,
       state: lamp.parameterId === 1896 ? 'RED' : lamp.state,
     })),
+    currentWarnings: liveLamps
+      .filter((lamp) => lamp.parameterId === 1896)
+      .map((lamp) => ({ ...lamp, state: 'RED' })),
     routing: 'KARMA_BACKUP',
     routingHealth: {
       __typename: 'FleetDeviceRoutingHealth',
@@ -210,7 +220,7 @@ const liveListDevices: readonly WithTypename<
     vehicleId: null,
     status: 'IN_STOCK',
     lastReportedAt: null,
-    warningLamps: fixtureDevice.warningLamps.map((lamp) => ({
+    warningLamps: liveLamps.map((lamp) => ({
       ...lamp,
       state: 'UNKNOWN',
       recordedAt: null,

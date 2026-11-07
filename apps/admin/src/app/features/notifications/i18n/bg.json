@@ -106,7 +106,9 @@
       "UNCERTAIN": "Неясен резултат — необходима е проверка от оператор",
       "REFUSED": "Отказано",
       "FAILED": "Неуспешно"
-    }
+    },
+    "warningLampEntered": "{lamp}: {state} (преди: {previousState}).",
+    "warningLampOff": "{lamp}: лампата е изключена (преди: {previousState})."
   },
   "configurationSource": "Изпълнение на настройка",
   "snapshotSource": "Снимка на параметрите"

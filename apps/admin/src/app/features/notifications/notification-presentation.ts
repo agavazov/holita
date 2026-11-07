@@ -2,6 +2,7 @@ import type { AdminNotificationFragment } from '../../../generated/graphql/opera
 import type { Language } from '../../i18n/messages';
 import type { StatusTone } from '../../theme/status-tones';
 import { interpolate } from '../../ui/i18n/messages';
+import { faultsText } from '../../ui/fleet-live/fault-wording';
 import { alertsText } from '../fleet/alerts/i18n/messages';
 import { commandText } from '../fleet/commands/command-presentation';
 import { notificationsText } from './i18n/messages';
@@ -45,6 +46,19 @@ export function notificationSentence(
 ): string {
   const text = notificationsText(language).wording;
   const parameters = notification.parameters;
+  if (isLampNotification(notification)) {
+    const faults = faultsText(language);
+    return interpolate(
+      notification.wordingKey === 'notification.warningLampOff'
+        ? text.warningLampOff
+        : text.warningLampEntered,
+      {
+        lamp: translated(faults.lamps, parameters.lamp, faults.lamp),
+        state: translated(faults.states, parameters.state, faults.states.UNKNOWN),
+        previousState: translated(faults.states, parameters.previousState, faults.states.UNKNOWN),
+      },
+    );
+  }
   if (
     parameters.eventKind === 'CONFIGURATION_OUTCOME' ||
     notification.wordingKey === 'notification.configurationOutcome'
@@ -133,6 +147,13 @@ export function notificationTone(severity: NotificationRow['severity']): StatusT
   return severity === 'CRITICAL' ? 'danger' : severity === 'WARNING' ? 'warn' : 'info';
 }
 
+function isLampNotification(notification: AdminNotificationFragment): boolean {
+  return (
+    notification.wordingKey === 'notification.warningLampEntered' ||
+    notification.wordingKey === 'notification.warningLampOff'
+  );
+}
+
 export function notificationIcon(category: NotificationRow['category']) {
   return category === 'ALERT'
     ? 'exclamation-triangle'
@@ -149,14 +170,21 @@ export function notificationRow(
   const text = notificationsText(language);
   const base = `/${language}/${branchId}/fleet`;
   const links: NotificationLink[] = [];
+  const lampNotification = isLampNotification(notification);
+  const vehicleId = notification.vehicleId ?? notification.parameters.vehicleId;
+  const deviceId = notification.deviceId ?? notification.parameters.deviceId;
   function add(kind: NotificationLink['kind'], id: string, url: string): void {
     links.push({ kind, label: text.targets[kind], title: `${text.targets[kind]} ${id}`, url });
   }
-  if (notification.vehicleId) {
-    add('vehicle', notification.vehicleId, `${base}/vehicles/${notification.vehicleId}/overview`);
+  if (vehicleId) {
+    add(
+      'vehicle',
+      vehicleId,
+      `${base}/vehicles/${vehicleId}/${lampNotification ? 'problems' : 'overview'}`,
+    );
   }
-  if (notification.deviceId) {
-    add('device', notification.deviceId, `${base}/devices/${notification.deviceId}/overview`);
+  if (deviceId) {
+    add('device', deviceId, `${base}/devices/${deviceId}/overview`);
   }
   if (notification.alertId) {
     add('alert', notification.alertId, `${base}/dashboard/problems/${notification.alertId}`);
@@ -184,11 +212,13 @@ export function notificationRow(
     }
   }
   const primary = links.find((link) =>
-    notification.sourceKind === 'FLEET_ALERT'
-      ? link.kind === 'alert'
-      : notification.sourceKind === 'COMMAND'
-        ? link.kind === 'command'
-        : link.kind === 'device',
+    lampNotification && vehicleId
+      ? link.kind === 'vehicle'
+      : notification.sourceKind === 'FLEET_ALERT'
+        ? link.kind === 'alert'
+        : notification.sourceKind === 'COMMAND'
+          ? link.kind === 'command'
+          : link.kind === 'device',
   );
   return {
     id: notification.id,
@@ -205,10 +235,11 @@ export function notificationRow(
       (primary
         ? {
             label: text.sources[notification.sourceKind],
-            url:
-              (notification.sourceKind === 'DIAGNOSTIC' || notification.sourceKind === 'ALARM') &&
-              notification.deviceId
-                ? `${base}/devices/${notification.deviceId}/problems`
+            url: lampNotification
+              ? primary.url
+              : (notification.sourceKind === 'DIAGNOSTIC' || notification.sourceKind === 'ALARM') &&
+                  deviceId
+                ? `${base}/devices/${deviceId}/problems`
                 : primary.url,
           }
         : null),

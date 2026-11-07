@@ -184,8 +184,9 @@ export function overviewFixtures(
           periodFrom: variables.requiredString('from'),
           periodTo: variables.requiredString('to'),
           total: dashboardProblems.length,
-          requiringAttention: 5,
-          recorded: 2,
+          requiringAttention: dashboardProblems.filter((problem) => problem.requiringAttention)
+            .length,
+          recorded: dashboardProblems.filter((problem) => problem.state === 'RECORDED').length,
         },
       },
       fleetOverview: {

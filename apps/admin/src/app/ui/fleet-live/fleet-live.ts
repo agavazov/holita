@@ -37,12 +37,9 @@ export function fleetRecordedValue(
     age: formatRelative(recordedAt, now, language),
   });
 }
-/** Recorded DTC/CAN faults or a critical unit alarm; WARNING diagnostic reports (event 02) alone are not faults. */
+/** Only current warning lamps contribute to danger indicators. */
 export function hasFleetFaults(device: FleetLiveDevice): boolean {
-  return (
-    !!device &&
-    (device.diagnostics.count > 0 || device.ermState?.latestAlarm?.severity === 'CRITICAL')
-  );
+  return !!device?.currentWarnings.length;
 }
 
 /** Stable close reasons translated for both compact lists and the Device profile. */

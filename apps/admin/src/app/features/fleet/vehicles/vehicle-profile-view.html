@@ -146,9 +146,9 @@
                   ><svg kpiIcon data-p-icon="chart-line"
                 /></holita-kpi-tile>
                 <holita-kpi-tile
-                  [label]="v2().problemKpi"
-                  [value]="problemCounts()?.requiringAttention | holitaNumber"
-                  [tone]="problemCounts()?.requiringAttention ? 'warn' : 'neutral'"
+                  [label]="faults().currentWarnings"
+                  [value]="vehicle.currentWarnings.length | holitaNumber"
+                  [tone]="currentWarningTone()"
                   ><svg kpiIcon data-p-icon="exclamation-triangle"
                 /></holita-kpi-tile>
                 <holita-kpi-tile
@@ -395,6 +395,10 @@
 
           <p-tabpanel value="problems">
             <div class="app-tab-content">
+              <holita-fleet-current-warnings
+                [warnings]="vehicle.currentWarnings"
+                [language]="language()"
+              />
               <p class="app-muted">{{ v2().problems.note }}</p>
               @if (problemCounts(); as counts) {
                 <p class="app-muted">
@@ -404,11 +408,11 @@
                 </p>
               }
               <holita-table-panel
-                [heading]="v2().problems.heading"
+                [heading]="faults().history"
                 [total]="problemPage()?.total ?? problems().length"
                 [page]="problemPage()"
                 [columns]="problemColumns()"
-                tableMinWidth="62rem"
+                tableMinWidth="80rem"
                 [errorText]="problemError()"
                 [view]="problemView()"
                 [emptyTitle]="v2().problems.empty"
@@ -446,11 +450,9 @@
                             [value]="severityLabel(problem.severity)"
                         /></span>
                       </td>
+                      <td>{{ problemSystemLabel(problem) }}</td>
                       <td>
-                        <span
-                          class="app-cell-identity"
-                          [title]="problem.code + (problem.details ? ' · ' + problem.details : '')"
-                        >
+                        <span class="app-cell-identity" [title]="problemLabel(problem)">
                           @if (problem.alertId; as alertId) {
                             <button
                               type="button"
@@ -464,7 +466,11 @@
                           } @else {
                             <span>{{ problemLabel(problem) }}</span>
                           }
-                          <span class="app-muted">{{ problem.details ?? '—' }}</span>
+                          @if (problemAdditionalDiagnostics(problem); as additional) {
+                            <span class="app-muted">{{ additional }}</span>
+                          } @else if (!problem.diagnostics.length) {
+                            <span class="app-muted">{{ problem.details ?? '—' }}</span>
+                          }
                         </span>
                       </td>
                       <td>
@@ -483,16 +489,104 @@
                         /></span>
                       </td>
                       <td class="app-cell-date">
-                        <time
-                          [attr.datetime]="problem.occurredAt"
-                          [title]="units.dateTimeCell(problem.occurredAt).title"
-                          >{{ units.dateTimeCell(problem.occurredAt).text }}</time
-                        >
+                        @if (problem.diagnostics.length) {
+                          <span class="app-cell-identity">
+                            <span
+                              >{{ faults().firstObserved }}:
+                              <time
+                                [attr.datetime]="problemFirstObserved(problem)"
+                                [title]="units.utc(problemFirstObserved(problem))"
+                                >{{ units.dateTime(problemFirstObserved(problem)) }}</time
+                              >
+                            </span>
+                            <span
+                              >{{ faults().lastObserved }}:
+                              <time
+                                [attr.datetime]="problemLastObserved(problem)"
+                                [title]="units.utc(problemLastObserved(problem))"
+                                >{{ units.dateTime(problemLastObserved(problem)) }}</time
+                              >
+                            </span>
+                          </span>
+                        } @else {
+                          <time
+                            [attr.datetime]="problem.occurredAt"
+                            [title]="units.utc(problem.occurredAt)"
+                            >{{ units.dateTime(problem.occurredAt) }}</time
+                          >
+                        }
                       </td>
                     </tr></ng-template
                   >
                 </p-table>
               </holita-table-panel>
+              @if (diagnosticProblems().length) {
+                <details class="app-card vehicle-profile__technical">
+                  <summary>{{ v2().technical }}</summary>
+                  <div class="app-card__body">
+                    @for (problem of diagnosticProblems(); track problem.id) {
+                      @for (diagnostic of problem.diagnostics; track $index) {
+                        <section>
+                          <h3 class="app-card__title">
+                            {{ faultDescription(diagnostic, language()) }}
+                          </h3>
+                          <dl class="app-facts">
+                            <div>
+                              <dt>{{ faults().system }}</dt>
+                              <dd>{{ faultSystem(diagnostic.systemKey, language()) }}</dd>
+                            </div>
+                            <div>
+                              <dt>{{ v2().problems.code }}</dt>
+                              <dd class="app-mono">
+                                @if (diagnostic.spn !== null) {
+                                  SPN {{ diagnostic.spn }} / FMI {{ diagnostic.fmi ?? '—' }}
+                                } @else {
+                                  {{ diagnostic.troubleCode ?? problem.code }}
+                                }
+                              </dd>
+                            </div>
+                            @if (diagnostic.fmi !== null) {
+                              <div class="app-facts--wide">
+                                <dt>FMI {{ diagnostic.fmi }}</dt>
+                                <dd>{{ faultFmi(diagnostic.fmi, language()) }}</dd>
+                              </div>
+                            }
+                            <div>
+                              <dt>{{ faults().firstObserved }}</dt>
+                              <dd>
+                                <time
+                                  [attr.datetime]="diagnostic.firstObservedAt"
+                                  [title]="units.utc(diagnostic.firstObservedAt)"
+                                  >{{ units.dateTime(diagnostic.firstObservedAt) }}</time
+                                >
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{{ faults().lastObserved }}</dt>
+                              <dd>
+                                <time
+                                  [attr.datetime]="diagnostic.lastObservedAt"
+                                  [title]="units.utc(diagnostic.lastObservedAt)"
+                                  >{{ units.dateTime(diagnostic.lastObservedAt) }}</time
+                                >
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>{{ faults().catalogVersion }}</dt>
+                              <dd>{{ diagnostic.catalogVersion }}</dd>
+                            </div>
+                          </dl>
+                        </section>
+                      }
+                    }
+                  </div>
+                </details>
+              }
+              <holita-fleet-fault-coverage
+                [lamps]="vehicle.warningLamps"
+                [language]="language()"
+                [hasFaultReports]="hasFaultReports()"
+              />
             </div>
           </p-tabpanel>
 

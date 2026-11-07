@@ -21,6 +21,11 @@ const parameters: AdminNotificationFragment['parameters'] = {
   commandKind: null,
   commandStatus: null,
   reasonCode: null,
+  lamp: null,
+  state: null,
+  previousState: null,
+  deviceId: null,
+  vehicleId: null,
 };
 const alert: WithTypename<AdminNotificationFragment> = {
   __typename: 'FleetNotification',
@@ -43,6 +48,44 @@ const alert: WithTypename<AdminNotificationFragment> = {
 };
 
 export const fixtureNotifications: readonly WithTypename<AdminNotificationFragment>[] = [
+  {
+    ...alert,
+    id: 'a1000000-0000-4000-8000-000000000007',
+    sourceKind: 'DIAGNOSTIC',
+    sourceKey: 'warning-lamp:brake:red',
+    category: 'DEVICE',
+    severity: 'CRITICAL',
+    wordingKey: 'notification.warningLampEntered',
+    parameters: {
+      ...parameters,
+      lamp: 'BRAKE_SYSTEM',
+      state: 'RED',
+      previousState: 'UNKNOWN',
+      deviceId,
+      vehicleId,
+    },
+    alertId: null,
+    deviceId,
+  },
+  {
+    ...alert,
+    id: 'a1000000-0000-4000-8000-000000000008',
+    sourceKind: 'DIAGNOSTIC',
+    sourceKey: 'warning-lamp:engine:off',
+    category: 'DEVICE',
+    severity: 'INFO',
+    wordingKey: 'notification.warningLampOff',
+    parameters: {
+      ...parameters,
+      lamp: 'ENGINE',
+      state: 'OFF',
+      previousState: 'YELLOW',
+      deviceId,
+      vehicleId,
+    },
+    alertId: null,
+    deviceId,
+  },
   alert,
   {
     ...alert,

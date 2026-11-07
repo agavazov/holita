@@ -451,6 +451,7 @@
     }
   },
   "detail": {
+    "observations": "Наблюдения",
     "connection": "Връзка",
     "connected": "Свързано",
     "disconnected": "Няма връзка",
@@ -459,11 +460,11 @@
     "reportingGaps": "Прекъсвания в отчетите (24 ч)",
     "assignedTrips": "Пътувания на зачисления автомобил",
     "deviceSections": "Раздели на устройството",
-    "problemSummary": "{attention} изискват внимание · {recorded} записани наблюдения",
+    "problemSummary": "Текущи предупреждения: {warnings} · {attention} изискват внимание · {recorded} записани наблюдения",
     "problemsUnknown": "Проблемите още не са проверени",
     "problem": "Проблем",
-    "problemPeriod": "Текущи предупреждения и записани данни за",
-    "noProblems": "Няма предупреждения или записани проблеми за периода.",
+    "problemPeriod": "Записани данни за",
+    "noProblems": "Няма записани проблеми за периода.",
     "details": "Виж подробности",
     "actions": "Действия",
     "confirmation": "Потвърждение на команда {reference} — резултат {result}",

@@ -11,7 +11,6 @@ import {
   AdminVehiclesDocument,
   AdminVehiclesLiveDocument,
   AdminVehicleMapDocument,
-  AdminVehiclesProblemsDocument,
   AdminVehicleDocument,
   AdminCreateVehicleDocument,
   AdminUpdateVehicleDocument,
@@ -26,14 +25,12 @@ import {
   type AdminVehicleGroupsQueryVariables,
   type AdminVehicleDriversQueryVariables,
   type AdminVehicleMapQuery,
-  type AdminVehiclesProblemsQuery,
 } from '../../../../generated/graphql/operations';
 
 export interface VehiclesContext {
   readonly ids: readonly string[];
   readonly positions: readonly AdminVehicleMapQuery['fleetMap']['items'][number][];
   readonly mapAsOf: string;
-  readonly problems: readonly AdminVehiclesProblemsQuery['fleetProblems']['items'][number][];
 }
 
 @Injectable()
@@ -85,8 +82,8 @@ export class VehiclesApi implements OnDestroy {
   }
 
   async loadContext(ids: readonly string[]): Promise<VehiclesContext> {
-    const [map, problems] = await Promise.all([this.loadPositions(ids), this.loadProblems(ids)]);
-    return { ...map, problems, ids };
+    const map = await this.loadPositions(ids);
+    return { ...map, ids };
   }
 
   private async loadPositions(ids: readonly string[]) {
@@ -122,33 +119,6 @@ export class VehiclesApi implements OnDestroy {
       offset = page.offset + page.limit;
     }
     return { positions, mapAsOf };
-  }
-
-  private async loadProblems(ids: readonly string[]) {
-    const apollo = this.apollo;
-    if (!apollo || this.destroyed) {
-      throw new Error('An active Vehicles workspace is required.');
-    }
-    const problems: AdminVehiclesProblemsQuery['fleetProblems']['items'] = [];
-    let offset = 0;
-    let total: number;
-    do {
-      const result = await firstValueFrom(
-        apollo.query({
-          query: AdminVehiclesProblemsDocument,
-          variables: { ids: [...ids], offset, limit: 100 },
-          fetchPolicy: 'network-only',
-        }),
-      );
-      if (!result.data) {
-        throw new Error('Missing fleetProblems result.');
-      }
-      const page = result.data.fleetProblems;
-      problems.push(...page.items);
-      offset = page.offset + page.limit;
-      total = page.total;
-    } while (offset < total);
-    return problems;
   }
 
   watchSummary() {

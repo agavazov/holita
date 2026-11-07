@@ -23,10 +23,11 @@
     "recordedOnly": "Recorded reports only",
     "clear": "Clear filters",
     "vehicleScope": "Filtered by vehicle",
-    "deviceScope": "Filtered by device"
+    "deviceScope": "Filtered by device",
+    "allSystems": "All systems"
   },
   "table": {
-    "heading": "Problems and recorded reports",
+    "heading": "History and other problems",
     "problem": "Problem / report",
     "source": "Source",
     "severity": "Severity",
@@ -44,7 +45,8 @@
     "openAlert": "Open alert and actions",
     "openVehicle": "Open vehicle",
     "openDevice": "Open device",
-    "sourceIdentity": "Source identity"
+    "sourceIdentity": "Source identity",
+    "details": "Fault report details"
   },
   "sources": {
     "FLEET_ALERT": "Fleet alert",
@@ -72,5 +74,7 @@
     "ALARM": "Recorded alarm report",
     "REPORTING_GAP": "Expected report missing",
     "COMMAND": "Device operation needs follow-up"
-  }
+  },
+  "warningsHint": "Warning lamps show the latest observed state. Missing lamp values and fault-report coverage are shown on each truck.",
+  "warningsError": "Current warning lamps could not be loaded."
 }

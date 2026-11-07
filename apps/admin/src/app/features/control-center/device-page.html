@@ -113,8 +113,8 @@
                   @if (hasProblems()) {
                     <div
                       class="app-problem-panel"
-                      [class.app-problem-panel--warn]="!!problems()?.counts?.requiringAttention"
-                      [class.app-problem-panel--info]="!problems()?.counts?.requiringAttention"
+                      [class.app-problem-panel--warn]="device.currentWarnings.length > 0"
+                      [class.app-problem-panel--info]="device.currentWarnings.length === 0"
                     >
                       <a class="app-link" [routerLink]="deviceLink('problems')">{{
                         problemSummary()
@@ -396,6 +396,11 @@
                 }
               }
               @case ('problems') {
+                <holita-fleet-current-warnings
+                  [warnings]="device.currentWarnings"
+                  [language]="language()"
+                />
+                <p class="app-muted">{{ faultText().historyHint }}</p>
                 <p class="app-muted">
                   {{ text().detail.problemPeriod }}
                   {{
@@ -403,16 +408,19 @@
                   }}
                 </p>
                 <holita-table-panel
-                  [heading]="text().detail.tabs.problems"
+                  #problemsPanel
+                  [heading]="faultText().history"
                   [view]="problemView()"
                   [busy]="problemsLoading()"
                   [columns]="problemColumns()"
-                  tableMinWidth="52rem"
+                  tableMinWidth="73rem"
                   [total]="problems()?.total ?? null"
                   [page]="{ page: problemPage(), pageSize: 20, total: problems()?.total ?? 0 }"
                   [pageSizes]="[20]"
                   [errorText]="problemFailure()"
                   [emptyTitle]="text().detail.noProblems"
+                  [actions]="actions()"
+                  (action)="openDetail($event.ids[0])"
                   (pageChange)="problemPage.set($event.page)"
                   (retry)="refresh()"
                 >
@@ -446,7 +454,7 @@
                     >
                     <ng-template #body let-row
                       ><tr>
-                        <td>
+                        <td class="app-col-identity">
                           <div class="app-cell-identity">
                             @if (problemLink(row); as link) {
                               <a
@@ -458,17 +466,73 @@
                                 >{{ problemLabel(row) }}</a
                               >
                             } @else {
-                              <strong>{{ problemLabel(row) }}</strong>
+                              <button
+                                class="app-link"
+                                type="button"
+                                (click)="
+                                  problemsPanel.run(
+                                    'details',
+                                    [record(row.id, problemLabel(row))],
+                                    $event.currentTarget
+                                  )
+                                "
+                              >
+                                {{ problemLabel(row) }}
+                              </button>
                             }
-                            <span class="app-muted" [title]="row.details ?? ''">{{
-                              row.details ?? problemLabel(row)
-                            }}</span>
+                            @for (diagnostic of row.diagnostics; track $index) {
+                              <strong>{{ faultDescription(diagnostic, language()) }}</strong>
+                              @if (diagnostic.fmi !== null) {
+                                <span class="app-muted">{{
+                                  faultFmi(diagnostic.fmi, language())
+                                }}</span>
+                              }
+                            } @empty {
+                              <span class="app-muted" [title]="row.details ?? ''">{{
+                                row.details ?? problemLabel(row)
+                              }}</span>
+                            }
+                          </div>
+                          <div class="app-table-mobile-actions">
+                            <holita-row-actions
+                              [actions]="actions()"
+                              [record]="record(row.id, problemLabel(row))"
+                              (choose)="
+                                problemsPanel.run(
+                                  $event.action,
+                                  [record(row.id, problemLabel(row))],
+                                  $event.origin
+                                )
+                              "
+                            />
                           </div>
                         </td>
                         <td>
-                          <span class="app-cell-date" [title]="fmt.utc(row.occurredAt)">{{
-                            fmt.dateTime(row.occurredAt)
-                          }}</span>
+                          <div class="app-cell-identity">
+                            @for (diagnostic of row.diagnostics; track $index) {
+                              <span>{{ faultSystem(diagnostic.systemKey, language()) }}</span>
+                            } @empty {
+                              <span>—</span>
+                            }
+                          </div>
+                        </td>
+                        <td>
+                          @for (diagnostic of row.diagnostics; track $index) {
+                            <div class="app-cell-date">
+                              <span [title]="fmt.utc(diagnostic.firstObservedAt)">
+                                {{ faultText().firstObserved }}:
+                                {{ fmt.dateTime(diagnostic.firstObservedAt, true) }}
+                              </span>
+                              <span [title]="fmt.utc(diagnostic.lastObservedAt)">
+                                {{ faultText().lastObserved }}:
+                                {{ fmt.dateTime(diagnostic.lastObservedAt, true) }}
+                              </span>
+                            </div>
+                          } @empty {
+                            <span class="app-cell-date" [title]="fmt.utc(row.occurredAt)">{{
+                              fmt.dateTime(row.occurredAt)
+                            }}</span>
+                          }
                         </td>
                         <td>
                           <div class="app-cell-status">
@@ -485,10 +549,28 @@
                               [severity]="toneSeverity(row.requiringAttention ? 'warn' : 'info')"
                             />
                           </div>
+                        </td>
+                        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+                          <holita-row-actions
+                            [actions]="actions()"
+                            [record]="record(row.id, problemLabel(row))"
+                            (choose)="
+                              problemsPanel.run(
+                                $event.action,
+                                [record(row.id, problemLabel(row))],
+                                $event.origin
+                              )
+                            "
+                          />
                         </td></tr
                     ></ng-template>
                   </p-table>
                 </holita-table-panel>
+                <holita-fleet-fault-coverage
+                  [lamps]="device.warningLamps"
+                  [hasFaultReports]="hasFaultReports()"
+                  [language]="language()"
+                />
               }
               @case ('commands') {
                 <holita-device-command-queue
@@ -1011,6 +1093,48 @@
   @if (detail(); as detail) {
     <div class="app-view">
       @switch (detail.kind) {
+        @case ('problem') {
+          <h3>{{ problemLabel(detail.value) }}</h3>
+          @for (diagnostic of detail.value.diagnostics; track $index) {
+            <section class="app-card">
+              <h3>{{ faultDescription(diagnostic, language()) }}</h3>
+              @if (diagnostic.fmi !== null) {
+                <p>{{ faultFmi(diagnostic.fmi, language()) }}</p>
+              }
+              <dl class="app-facts">
+                <div>
+                  <dt>{{ faultText().system }}</dt>
+                  <dd>{{ faultSystem(diagnostic.systemKey, language()) }}</dd>
+                </div>
+                <div>
+                  <dt>SPN / FMI</dt>
+                  <dd>{{ diagnostic.spn ?? '—' }} / {{ diagnostic.fmi ?? '—' }}</dd>
+                </div>
+                <div>
+                  <dt>{{ faultText().firstObserved }}</dt>
+                  <dd [title]="fmt.utc(diagnostic.firstObservedAt)">
+                    {{ fmt.dateTime(diagnostic.firstObservedAt, true) }}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{{ faultText().lastObserved }}</dt>
+                  <dd [title]="fmt.utc(diagnostic.lastObservedAt)">
+                    {{ fmt.dateTime(diagnostic.lastObservedAt, true) }}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{{ faultText().catalogVersion }}</dt>
+                  <dd>{{ diagnostic.catalogVersion }}</dd>
+                </div>
+              </dl>
+            </section>
+          } @empty {
+            <time [title]="fmt.utc(detail.value.occurredAt)">{{
+              fmt.dateTime(detail.value.occurredAt, true)
+            }}</time>
+            <p>{{ detail.value.details ?? problemLabel(detail.value) }}</p>
+          }
+        }
         @case ('event') {
           <h3>{{ detail.value.name ?? text().unknownEvent }}</h3>
           <time [title]="fmt.utc(detail.value.eventTime)">{{

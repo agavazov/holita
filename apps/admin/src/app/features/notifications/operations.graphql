@@ -18,6 +18,11 @@ fragment AdminNotification on FleetNotification {
     commandKind
     commandStatus
     reasonCode
+    lamp
+    state
+    previousState
+    deviceId
+    vehicleId
   }
   vehicleId
   deviceId

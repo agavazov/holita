@@ -102,10 +102,11 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
         ...AdminControlCenterReturnAttempt
       }
     }
+    currentWarnings {
+      ...AdminWarningLamp
+    }
     warningLamps {
-      parameterId
-      state
-      recordedAt
+      ...AdminWarningLamp
     }
     routingHealth {
       backupSince
@@ -495,6 +496,9 @@ query AdminControlCenterDeviceProblems($id: ID!, $offset: Int! = 0) {
       requiringAttention
       code
       details
+      diagnostics {
+        ...AdminFaultDiagnostic
+      }
       deviceId
       deviceImei
       vehicleId

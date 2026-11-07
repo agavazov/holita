@@ -2,8 +2,10 @@ import { inject, Injectable, NgZone, type OnDestroy } from '@angular/core';
 import { ApolloClient } from '@apollo/client/core';
 import { ApolloBase } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
+import { EMPTY, expand, last, map, scan } from 'rxjs';
 import {
   AdminDashboardProblemsDocument,
+  AdminDashboardCurrentWarningsDocument,
   type AdminDashboardProblemsQueryVariables,
 } from '../../../../generated/graphql/operations';
 import { DemoSession } from '../../../core/auth/demo-session';
@@ -38,15 +40,67 @@ export class ProblemsApi implements OnDestroy {
     );
   }
 
-  watch(variables: AdminDashboardProblemsQueryVariables) {
+  problems(variables: AdminDashboardProblemsQueryVariables) {
+    return this.problemPage(variables, 0).pipe(
+      expand((page) =>
+        page.offset + page.limit < page.total
+          ? this.problemPage(variables, page.offset + page.limit)
+          : EMPTY,
+      ),
+      scan((previous, page) => ({ ...page, items: [...previous.items, ...page.items] })),
+      last(),
+    );
+  }
+
+  currentWarnings() {
+    return this.warningPage(0).pipe(
+      expand((page) =>
+        page.offset + page.limit < page.total ? this.warningPage(page.offset + page.limit) : EMPTY,
+      ),
+      scan((previous, page) => ({ ...page, items: [...previous.items, ...page.items] })),
+      last(),
+    );
+  }
+
+  private problemPage(variables: AdminDashboardProblemsQueryVariables, offset: number) {
+    return this.activeClient()
+      .query({
+        query: AdminDashboardProblemsDocument,
+        variables: { ...variables, offset, limit: 100 },
+        fetchPolicy: 'network-only',
+      })
+      .pipe(
+        map((result) => {
+          if (!result.data) {
+            throw new Error('Fleet problems are unavailable.');
+          }
+          return result.data.fleetProblems;
+        }),
+      );
+  }
+
+  private warningPage(offset: number) {
+    return this.activeClient()
+      .query({
+        query: AdminDashboardCurrentWarningsDocument,
+        variables: { offset, limit: 100 },
+        fetchPolicy: 'network-only',
+      })
+      .pipe(
+        map((result) => {
+          if (!result.data) {
+            throw new Error('Current warnings are unavailable.');
+          }
+          return result.data.fleetVehicles;
+        }),
+      );
+  }
+
+  private activeClient(): ApolloBase {
     if (!this.client || this.destroyed) {
       throw new Error('An active Problems workspace is required.');
     }
-    return this.client.watchQuery({
-      query: AdminDashboardProblemsDocument,
-      variables,
-      fetchPolicy: 'network-only',
-    });
+    return this.client;
   }
 
   ngOnDestroy(): void {

@@ -106,7 +106,9 @@
       "UNCERTAIN": "Uncertain — operator review required",
       "REFUSED": "Refused",
       "FAILED": "Failed"
-    }
+    },
+    "warningLampEntered": "{lamp}: {state} (previously: {previousState}).",
+    "warningLampOff": "{lamp}: lamp switched off (previously: {previousState})."
   },
   "configurationSource": "Configuration run",
   "snapshotSource": "Parameter snapshot"

@@ -21,6 +21,16 @@ import { Tag } from 'primeng/tag';
 import { ColumnSeries, type SeriesPoint } from '../../../ui/charts/column-series';
 import { EmptyState } from '../../../ui/empty-state/empty-state';
 import { FleetNow } from '../../../ui/fleet-live/fleet-now';
+import { FleetCurrentWarnings } from '../../../ui/fleet-live/fleet-current-warnings';
+import { FleetFaultCoverage } from '../../../ui/fleet-live/fleet-fault-coverage';
+import {
+  faultsText,
+  faultDescription,
+  faultFmi,
+  faultSystem,
+  warningTone,
+  type FleetWarning,
+} from '../../../ui/fleet-live/fault-wording';
 import { injectFleetNow } from '../../../ui/fleet-live/fleet-clock';
 import { fleetObservationIsRecent, fleetRecordedValue } from '../../../ui/fleet-live/fleet-live';
 import {
@@ -72,6 +82,7 @@ export interface VehicleProfile extends VehicleRow {
   readonly longitude: number | null;
   readonly headingDeg: number | null;
   readonly createdAt: string;
+  readonly warningLamps: readonly FleetWarning[];
 }
 
 /** Counts of unverified raw observations, without assigning physical meaning to their values. */
@@ -127,6 +138,8 @@ function listView(rows: readonly unknown[]): TableView {
     ColumnSeries,
     EmptyState,
     FleetNow,
+    FleetCurrentWarnings,
+    FleetFaultCoverage,
     FormatDurationPipe,
     FormatMoneyPipe,
     FormatNumberPipe,
@@ -175,6 +188,7 @@ export class VehicleProfileView {
   readonly trips = input<readonly TripRow[]>([]);
   readonly problems = input<readonly VehicleProblem[]>([]);
   readonly problemCounts = input<VehicleProblemCounts | null>(null);
+  readonly hasFaultReports = input<boolean | null>(null);
   readonly service = input<readonly ServiceTaskRow[]>([]);
   readonly nextServiceTask = input<ServiceTaskRow | null | undefined>(undefined);
   readonly tripPage = input<TablePage | null>(null);
@@ -207,6 +221,10 @@ export class VehicleProfileView {
   private readonly vehicles = computed(() => vehiclesText(this.language()));
   protected readonly text = computed(() => this.vehicles().profile);
   protected readonly v2 = computed(() => (this.language() === 'bg' ? bg : en));
+  protected readonly faults = computed(() => faultsText(this.language()));
+  protected readonly faultDescription = faultDescription;
+  protected readonly faultFmi = faultFmi;
+  protected readonly faultSystem = faultSystem;
   protected readonly staleFuelText = computed(() => this.vehicles().table.staleFuel);
   protected readonly tripText = computed(() => {
     const table = tripsText(this.language()).table;
@@ -269,11 +287,23 @@ export class VehicleProfileView {
       ? fleetRecordedValue(vehicle.location, vehicle.lastReportedAt, this.now(), this.language())
       : '—';
   });
+  protected readonly currentWarningTone = computed(() => {
+    const warnings = this.vehicle()?.currentWarnings ?? [];
+    return warningTone(
+      warnings.some((warning) => warning.state === 'RED')
+        ? 'RED'
+        : warnings.some((warning) => warning.state === 'YELLOW')
+          ? 'YELLOW'
+          : warnings.length
+            ? 'INFORMATION'
+            : 'OFF',
+    );
+  });
   protected readonly problemSummary = computed(() => {
     const counts = this.problemCounts();
     return counts
       ? interpolate(this.v2().problemSummary, {
-          attention: counts.requiringAttention,
+          warnings: this.vehicle()?.currentWarnings.length ?? 0,
           recorded: counts.recorded,
         })
       : this.v2().viewProblems;
@@ -326,6 +356,9 @@ export class VehicleProfileView {
   );
   protected readonly tripRows = computed(() => [...this.trips()]);
   protected readonly problemRows = computed(() => [...this.problems()]);
+  protected readonly diagnosticProblems = computed(() =>
+    this.problems().filter((problem) => problem.diagnostics.length),
+  );
   protected readonly serviceRows = computed(() => [...this.service()]);
   protected readonly edataRows = computed(() => [...this.edataObservations()]);
   protected readonly selectedDeviceId = linkedSignal<VehicleProfile | null, string>({
@@ -351,10 +384,11 @@ export class VehicleProfileView {
   ]);
   protected readonly problemColumns = computed<readonly TableColumn[]>(() => [
     { id: 'severity', label: this.v2().problems.severity, width: '8rem', kind: 'status' },
-    { id: 'problem', label: this.v2().problems.problem, width: '22rem', kind: 'identity' },
+    { id: 'system', label: this.faults().system, width: '10rem' },
+    { id: 'problem', label: this.v2().problems.problem, width: '26rem', kind: 'identity' },
     { id: 'source', label: this.v2().problems.source, width: '10rem' },
     { id: 'state', label: this.v2().problems.state, width: '10rem', kind: 'status' },
-    { id: 'occurred', label: this.v2().problems.occurred, width: '12rem', kind: 'date' },
+    { id: 'observed', label: this.v2().problems.observations, width: '15rem', kind: 'date' },
   ]);
   protected readonly serviceColumns = computed<readonly TableColumn[]>(() => [
     { id: 'task', label: this.serviceTable().task, width: '20rem', kind: 'identity' },
@@ -426,7 +460,45 @@ export class VehicleProfileView {
     return this.alertCatalog().severities[severity];
   }
 
+  protected problemSystemLabel(problem: VehicleProblem): string {
+    return (
+      [
+        ...new Set(
+          problem.diagnostics.map((diagnostic) =>
+            faultSystem(diagnostic.systemKey, this.language()),
+          ),
+        ),
+      ].join(' · ') || '—'
+    );
+  }
+
+  protected problemFirstObserved(problem: VehicleProblem): string {
+    return (
+      problem.diagnostics.map((diagnostic) => diagnostic.firstObservedAt).sort()[0] ??
+      problem.occurredAt
+    );
+  }
+
+  protected problemLastObserved(problem: VehicleProblem): string {
+    return (
+      problem.diagnostics
+        .map((diagnostic) => diagnostic.lastObservedAt)
+        .sort()
+        .at(-1) ?? problem.occurredAt
+    );
+  }
+
+  protected problemAdditionalDiagnostics(problem: VehicleProblem): string | null {
+    return problem.diagnostics.length > 1
+      ? interpolate(this.v2().problems.additionalCodes, { count: problem.diagnostics.length - 1 })
+      : null;
+  }
+
   protected problemLabel(problem: VehicleProblem): string {
+    const diagnostic = problem.diagnostics[0];
+    if (diagnostic) {
+      return faultDescription(diagnostic, this.language());
+    }
     const kind = Object.entries(this.alertCatalog().kinds).find(([code]) => code === problem.code);
     return (
       kind?.[1] ??

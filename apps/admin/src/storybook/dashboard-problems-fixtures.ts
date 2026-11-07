@@ -1,6 +1,8 @@
 import {
   AdminDashboardProblemsDocument,
+  AdminDashboardCurrentWarningsDocument,
   type AdminDashboardProblemsQuery,
+  type AdminDashboardCurrentWarningsQuery,
 } from '../generated/graphql/operations';
 import { fixtureAlert } from './alerts-fixtures';
 import { fixtureDevice } from './devices-fixtures';
@@ -21,6 +23,7 @@ const alert: Problem = {
   requiringAttention: true,
   code: fixtureAlert.kind,
   details: fixtureAlert.details,
+  diagnostics: [],
   vehicleId: fixtureAlert.vehicleId,
   vehicle: fixtureAlert.vehicle,
   deviceId: null,
@@ -100,12 +103,80 @@ export const dashboardProblems: readonly Problem[] = [
     sourceId: '92000000-0000-4000-8000-000000000001',
     state: 'RECORDED',
     requiringAttention: false,
-    code: 'P0130',
-    details: 'An oxygen sensor circuit diagnostic was recorded; current fault state is unknown.',
+    code: 'DIAGNOSTIC_TROUBLE_CODE',
+    details: null,
+    diagnostics: [
+      {
+        __typename: 'FleetProblemDiagnostic',
+        kind: 'DIAGNOSTIC_TROUBLE_CODE',
+        troubleCode: 'SPN 100 / FMI 1',
+        status: 'ADDED',
+        report: 418,
+        spn: 100,
+        fmi: 1,
+        systemKey: 'ENGINE',
+        descriptionKey: 'faults.spn.oilPressure',
+        catalogVersion: 'holita-2026-11',
+        firstObservedAt: '2026-10-18T06:10:00.000Z',
+        lastObservedAt: '2026-10-18T06:20:00.000Z',
+        occurredAt: '2026-10-18T06:20:00.000Z',
+        receivedAt: '2026-10-18T06:21:00.000Z',
+      },
+      {
+        __typename: 'FleetProblemDiagnostic',
+        kind: 'DIAGNOSTIC_TROUBLE_CODE',
+        troubleCode: 'SPN 23806 / FMI 15',
+        status: 'DELETED',
+        report: 419,
+        spn: 23806,
+        fmi: 15,
+        systemKey: 'OTHER',
+        descriptionKey: null,
+        catalogVersion: 'holita-2026-11',
+        firstObservedAt: '2026-10-18T06:10:00.000Z',
+        lastObservedAt: '2026-10-18T06:20:00.000Z',
+        occurredAt: '2026-10-18T06:20:00.000Z',
+        receivedAt: '2026-10-18T06:21:00.000Z',
+      },
+    ],
     occurredAt: '2026-10-18T06:20:00.000Z',
     deviceId: fixtureDevice.id,
     deviceImei: fixtureDevice.imei,
     ermEventId: '92000000-0000-4000-8000-000000000001',
+    alertId: null,
+    fleetEventId: null,
+  },
+  {
+    ...alert,
+    id: 'DIAGNOSTIC:92000000-0000-4000-8000-000000000003',
+    sourceKind: 'DIAGNOSTIC',
+    sourceId: '92000000-0000-4000-8000-000000000003',
+    state: 'RECORDED',
+    requiringAttention: false,
+    code: 'CAN_DISCONNECTED',
+    details: null,
+    occurredAt: '2026-10-18T06:15:00.000Z',
+    diagnostics: [
+      {
+        __typename: 'FleetProblemDiagnostic',
+        kind: 'CAN_DISCONNECTED',
+        troubleCode: null,
+        status: null,
+        report: 417,
+        spn: null,
+        fmi: null,
+        systemKey: 'OTHER',
+        descriptionKey: null,
+        catalogVersion: 'holita-2026-11',
+        firstObservedAt: '2026-10-18T06:00:00.000Z',
+        lastObservedAt: '2026-10-18T06:15:00.000Z',
+        occurredAt: '2026-10-18T06:15:00.000Z',
+        receivedAt: '2026-10-18T06:16:00.000Z',
+      },
+    ],
+    deviceId: fixtureDevice.id,
+    deviceImei: fixtureDevice.imei,
+    ermEventId: '92000000-0000-4000-8000-000000000003',
     alertId: null,
     fleetEventId: null,
   },
@@ -194,6 +265,45 @@ graphqlFixture(AdminDashboardProblemsDocument, (variables) => {
           }),
         ),
       },
+    },
+  };
+});
+
+graphqlFixture(AdminDashboardCurrentWarningsDocument, (variables) => {
+  const rows: WithTypename<AdminDashboardCurrentWarningsQuery['fleetVehicles']['items']> = [
+    {
+      __typename: 'FleetVehicle',
+      id: '50000000-0000-4000-8000-000000000001',
+      licensePlate: alert.vehicle?.licensePlate ?? 'CB 1001 AX',
+      currentWarnings: [
+        {
+          __typename: 'FleetWarningLamp',
+          deviceId: fixtureDevice.id,
+          parameterId: 1896,
+          state: 'RED',
+          recordedAt: '2026-10-18T06:59:00.000Z',
+          stateSince: '2026-10-18T06:50:00.000Z',
+        },
+        {
+          __typename: 'FleetWarningLamp',
+          deviceId: fixtureDevice.id,
+          parameterId: 1906,
+          state: 'YELLOW',
+          recordedAt: '2026-10-18T06:59:00.000Z',
+          stateSince: '2026-10-18T06:45:00.000Z',
+        },
+      ],
+    },
+  ];
+  const offset = variables.int('offset', 0);
+  const limit = variables.int('limit', 100);
+  return {
+    fleetVehicles: {
+      __typename: 'FleetVehiclePage',
+      items: rows.slice(offset, offset + limit),
+      total: rows.length,
+      offset,
+      limit,
     },
   };
 });

@@ -12,9 +12,9 @@
   "heading": "Измерена посока",
   "positionTime": "Запис на позицията",
   "positionAge": "Възраст на позицията",
-  "problemSummary": "{attention} изискват внимание · {recorded} записани",
+  "problemSummary": "{warnings} текущи предупреждения · {recorded} записани",
   "viewProblems": "Вижте проблемите",
-  "problemKpi": "Изискват внимание",
+  "problemKpi": "Текущи предупреждения",
   "problems": {
     "heading": "Проблеми на автомобила",
     "empty": "Няма проблеми за този период",
@@ -24,7 +24,10 @@
     "problem": "Проблем",
     "source": "Източник",
     "state": "Състояние",
-    "occurred": "Възникнал"
+    "occurred": "Възникнал",
+    "observations": "Първо / последно наблюдение",
+    "code": "Записан код",
+    "additionalCodes": "+{count} други записани кода"
   },
   "sources": {
     "FLEET_ALERT": "Сигнал на автопарка",

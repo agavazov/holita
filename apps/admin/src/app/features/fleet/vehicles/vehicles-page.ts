@@ -105,30 +105,13 @@ export class VehiclesPage implements OnInit {
     return (this.page()?.items ?? [])
       .filter((vehicle) => !this.removed().has(vehicle.id))
       .map<VehicleRow>((vehicle) => {
-        const problems = context?.ids.includes(vehicle.id)
-          ? context.problems.filter((problem) => problem.vehicleId === vehicle.id)
-          : undefined;
-        const severity = problems?.some((problem) => problem.severity === 'CRITICAL')
-          ? 'CRITICAL'
-          : problems?.some((problem) => problem.severity === 'WARNING')
-            ? 'WARNING'
-            : problems?.length
-              ? 'INFO'
-              : null;
         const position = positions.get(vehicle.id)?.position;
         return {
           ...vehicleRow(vehicle),
           positionAt: position?.recordedAt ?? null,
           positionAgeSeconds: position?.ageSeconds ?? null,
           mapAsOf: context?.mapAsOf ?? null,
-          ...(problems === undefined
-            ? {}
-            : {
-                problemCount: problems.length,
-                problemSeverity: severity,
-                problemRecorded: problems.filter((problem) => problem.state === 'RECORDED').length,
-                problemAttention: problems.filter((problem) => problem.requiringAttention).length,
-              }),
+          currentWarnings: live.get(vehicle.id)?.currentWarnings ?? vehicle.currentWarnings,
           liveDevices: vehicle.devices.map((device) =>
             live.get(vehicle.id)?.devices.find((value) => value.id === device.id),
           ),

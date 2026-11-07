@@ -34,7 +34,10 @@ function routed(tab: DeviceTab, recordId = fixtureDevice.id): NonNullable<Story[
   });
 }
 export const Overview: Story = { render: routed('overview') };
-export const Problems: Story = { render: routed('problems') };
+export const Problems: Story = {
+  name: 'Problems — Current warnings, history and coverage',
+  render: routed('problems', karmaBackupDeviceId),
+};
 export const Commands: Story = { render: routed('commands') };
 export const SmsCommands: Story = { name: 'SMS commands', render: routed('sms-commands') };
 export const Parameters: Story = { render: routed('parameters', settingsWritableDeviceId) };

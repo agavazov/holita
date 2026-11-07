@@ -10,21 +10,43 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { Refresh } from '@primeicons/angular/refresh';
 import { MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { Select } from 'primeng/select';
+import { Dialog } from 'primeng/dialog';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
-import { EMPTY, catchError, switchMap } from 'rxjs';
+import {
+  EMPTY,
+  Subject,
+  catchError,
+  combineLatest,
+  distinctUntilChanged,
+  map,
+  startWith,
+  switchMap,
+} from 'rxjs';
 import type {
   AdminBranchesQuery,
   AdminDashboardProblemsQuery,
+  AdminDashboardCurrentWarningsQuery,
   FleetEventSeverity,
+  FleetFaultSystem,
   FleetProblemSourceKind,
   FleetProblemState,
 } from '../../../../generated/graphql/operations';
+import {
+  faultsText,
+  faultDescription,
+  faultFmi,
+  faultSystem,
+  warningLampLabel,
+  warningLampSystem,
+  warningStateLabel,
+  warningTone,
+} from '../../../ui/fleet-live/fault-wording';
 import { requestError } from '../../../core/graphql/request-error';
 import type { Language } from '../../../i18n/messages';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
@@ -37,6 +59,7 @@ import {
   type ListAction,
   type ListActionRequest,
 } from '../../../ui/list/list-actions';
+import { uiMessages } from '../../../ui/i18n/messages';
 import { UrlListState } from '../../../ui/list/url-list-state';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
@@ -54,24 +77,27 @@ import {
 import {
   problemDefinition,
   problemSeverities,
+  problemSystems,
   problemSources,
   problemStates,
   problemVariables,
 } from './problems-query';
 
 type Problem = AdminDashboardProblemsQuery['fleetProblems']['items'][number];
-type ProblemAction = 'open' | 'vehicle' | 'device';
+type ProblemAction = 'details' | 'open' | 'vehicle' | 'device';
 
 @Component({
   selector: 'holita-problems-page',
   imports: [
     ButtonDirective,
+    Dialog,
     FormField,
     FormatNumberPipe,
     FormsModule,
     PageHeader,
     Refresh,
     RouterOutlet,
+    RouterLink,
     RowActions,
     Select,
     TableModule,
@@ -97,8 +123,19 @@ export class ProblemsPage implements OnInit {
   protected readonly text = computed(() => problemsText(this.language()));
   protected readonly selectMultiplePt = selectMultiplePt;
   protected readonly trackById = trackById;
-  protected readonly tableMinWidth = '68rem';
-  private query: ReturnType<ProblemsApi['watch']> | undefined;
+  protected readonly tableMinWidth = '79rem';
+  private readonly reload = new Subject<void>();
+  protected readonly selectedProblem = signal<Problem | null>(null);
+  protected readonly uiText = computed(() => uiMessages[this.language()]);
+  protected readonly faultText = computed(() => faultsText(this.language()));
+  protected readonly warningVehicles = signal<
+    AdminDashboardCurrentWarningsQuery['fleetVehicles'] | null
+  >(null);
+  protected readonly warningsLoading = signal(true);
+  private readonly warningsError = signal<unknown>(null);
+  protected readonly warningsFailure = computed(() =>
+    requestError(this.warningsError(), this.text().warningsError),
+  );
   protected readonly page = signal<AdminDashboardProblemsQuery['fleetProblems'] | null>(null);
   protected readonly loading = signal(true);
   private readonly error = signal<unknown>(null);
@@ -106,6 +143,7 @@ export class ProblemsPage implements OnInit {
   protected readonly filtered = computed(() => {
     const filter = this.url.state().filter;
     return !!(
+      filter.system?.length ||
       filter.source?.length ||
       filter.severity?.length ||
       filter.state?.length ||
@@ -116,18 +154,125 @@ export class ProblemsPage implements OnInit {
       filter.to
     );
   });
-  protected readonly rows = computed(() =>
-    (this.page()?.items ?? []).map((problem) => ({
-      ...problem,
-      title: problemTitle(problem, this.language()),
-      detail: problem.details ?? '',
-      sourceLabel: this.text().sources[problem.sourceKind],
-      sourceTitle: `${this.text().table.sourceIdentity}: ${problem.sourceKind} · ${problem.sourceId}`,
-      severityLabel: this.text().severities[problem.severity],
-      severitySeverity: toneSeverity(problemSeverityTones[problem.severity]),
-      stateLabel: this.text().states[problem.state],
-      stateSeverity: toneSeverity(problemStateTones[problem.state]),
-      date: this.format.dateTimeCell(problem.occurredAt),
+  protected readonly history = computed(() => {
+    const systems = this.url.state().filter.system;
+    return (this.page()?.items ?? []).filter(
+      (problem) =>
+        !systems?.length ||
+        problem.diagnostics.some((diagnostic) => systems.includes(diagnostic.systemKey)),
+    );
+  });
+  protected readonly attentionCount = computed(
+    () =>
+      this.warnings().length +
+      this.history().filter((problem) => problem.requiringAttention).length,
+  );
+  protected readonly recordedCount = computed(
+    () => this.history().filter((problem) => problem.state === 'RECORDED').length,
+  );
+  protected readonly historyTotal = computed(() => (this.page() ? this.history().length : null));
+  protected readonly rows = computed(() => {
+    const state = this.url.state();
+    return this.history()
+      .slice((state.page - 1) * state.pageSize, state.page * state.pageSize)
+      .map((problem) => ({
+        ...problem,
+        title: problemTitle(problem, this.language()),
+        detail: problem.diagnostics.length ? '' : (problem.details ?? ''),
+        first: this.format.dateTimeCell(
+          problem.diagnostics.length
+            ? problem.diagnostics.map((diagnostic) => diagnostic.firstObservedAt).sort()[0]
+            : problem.occurredAt,
+        ),
+        last: this.format.dateTimeCell(
+          problem.diagnostics.length
+            ? problem.diagnostics
+                .map((diagnostic) => diagnostic.lastObservedAt)
+                .sort()
+                .at(-1)
+            : problem.occurredAt,
+        ),
+        diagnosticSummary: problem.diagnostics
+          .map((diagnostic) =>
+            [
+              faultSystem(diagnostic.systemKey, this.language()),
+              ...(diagnostic.fmi === null ? [] : [faultFmi(diagnostic.fmi, this.language())]),
+            ].join(' · '),
+          )
+          .join(' · '),
+        sourceLabel: this.text().sources[problem.sourceKind],
+        sourceTitle: `${this.text().table.sourceIdentity}: ${problem.sourceKind} · ${problem.sourceId}`,
+        severityLabel: this.text().severities[problem.severity],
+        severitySeverity: toneSeverity(problemSeverityTones[problem.severity]),
+        stateLabel: this.text().states[problem.state],
+        stateSeverity: toneSeverity(problemStateTones[problem.state]),
+      }));
+  });
+  protected readonly selectedDiagnostics = computed(() =>
+    (this.selectedProblem()?.diagnostics ?? []).map((diagnostic) => ({
+      description: faultDescription(diagnostic, this.language()),
+      system: faultSystem(diagnostic.systemKey, this.language()),
+      fmi:
+        diagnostic.fmi === null
+          ? null
+          : `FMI ${String(diagnostic.fmi)} · ${faultFmi(diagnostic.fmi, this.language())}`,
+      first: this.format.dateTimeCell(diagnostic.firstObservedAt),
+      last: this.format.dateTimeCell(diagnostic.lastObservedAt),
+      catalogVersion: diagnostic.catalogVersion,
+    })),
+  );
+  protected readonly warnings = computed(() => {
+    const filter = this.url.state().filter;
+    if (
+      filter.attention === false ||
+      filter.source?.length ||
+      (filter.state?.length && !filter.state.includes('OPEN'))
+    ) {
+      return [];
+    }
+    return (this.warningVehicles()?.items ?? []).flatMap((vehicle) =>
+      vehicle.currentWarnings
+        .filter((warning) => {
+          const severity =
+            warning.state === 'RED' ? 'CRITICAL' : warning.state === 'YELLOW' ? 'WARNING' : 'INFO';
+          return (
+            (!filter.system?.length ||
+              filter.system.includes(warningLampSystem(warning.parameterId))) &&
+            (!filter.severity?.length || filter.severity.includes(severity)) &&
+            (!filter.vehicleIds?.length || filter.vehicleIds.includes(vehicle.id)) &&
+            (!filter.deviceIds?.length || filter.deviceIds.includes(warning.deviceId))
+          );
+        })
+        .map((warning) => ({
+          id: `${vehicle.id}:${warning.deviceId}:${String(warning.parameterId)}`,
+          vehicleId: vehicle.id,
+          licensePlate: vehicle.licensePlate,
+          lamp: warningLampLabel(warning.parameterId, this.language()),
+          system: faultSystem(warningLampSystem(warning.parameterId), this.language()),
+          state: warningStateLabel(warning.state, this.language()),
+          severity: toneSeverity(warningTone(warning.state)),
+          since: this.format.dateTimeCell(warning.stateSince),
+        })),
+    );
+  });
+  protected readonly warningsView = computed(() =>
+    tableView({
+      loading: this.warningsLoading(),
+      error: this.warningsError(),
+      rows: this.warningVehicles() ? this.warnings().length : null,
+      filtered: this.filtered(),
+    }),
+  );
+  protected readonly warningColumns = computed<readonly TableColumn[]>(() => [
+    { id: 'vehicle', label: this.text().table.target, width: '13rem', kind: 'identity' },
+    { id: 'lamp', label: this.faultText().lamp, width: '16rem', kind: 'text' },
+    { id: 'state', label: this.faultText().state, width: '10rem', kind: 'status' },
+    { id: 'since', label: this.faultText().since, width: '14rem', kind: 'date' },
+  ]);
+  protected readonly systems = computed(() =>
+    problemSystems.map((value) => ({
+      value,
+      label: faultSystem(value, this.language()),
     })),
   );
   protected readonly view = computed(() =>
@@ -168,7 +313,8 @@ export class ProblemsPage implements OnInit {
     },
     { id: 'severity', label: this.text().table.severity, width: '8rem', kind: 'status' },
     { id: 'state', label: this.text().table.state, width: '10rem', kind: 'status' },
-    { id: 'time', label: this.text().table.time, width: '11rem', kind: 'date' },
+    { id: 'first', label: this.faultText().firstObserved, width: '11rem', kind: 'date' },
+    { id: 'last', label: this.faultText().lastObserved, width: '11rem', kind: 'date' },
     { id: 'target', label: this.text().table.target, width: '10rem', kind: 'identity' },
     {
       id: 'actions',
@@ -179,6 +325,11 @@ export class ProblemsPage implements OnInit {
     },
   ]);
   protected readonly actions = computed<readonly ListAction<ProblemAction, Problem>[]>(() => [
+    {
+      id: 'details',
+      label: this.text().table.details,
+      appliesTo: (problem) => problem.diagnostics.length > 0,
+    },
     {
       id: 'open',
       label: this.text().table.open,
@@ -206,13 +357,16 @@ export class ProblemsPage implements OnInit {
 
   ngOnInit(): void {
     this.api.initialize(this.branch().id, this.language());
-    this.url.changes
+    const requests = this.url.changes.pipe(
+      map((state) => problemVariables({ ...state, page: 1, pageSize: 100 })),
+      distinctUntilChanged((previous, next) => JSON.stringify(previous) === JSON.stringify(next)),
+    );
+    combineLatest([requests, this.reload.pipe(startWith(undefined))])
       .pipe(
-        switchMap((state) => {
+        switchMap(([variables]) => {
           this.loading.set(true);
           this.error.set(null);
-          this.query = this.api.watch(problemVariables(state));
-          return this.query.valueChanges.pipe(
+          return this.api.problems(variables).pipe(
             catchError((error: unknown) => {
               this.error.set(error);
               this.loading.set(false);
@@ -222,18 +376,41 @@ export class ProblemsPage implements OnInit {
         }),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe((result) => {
-        this.loading.set(result.loading);
-        this.error.set(result.error ?? null);
-        if (result.dataState === 'complete' && !result.error && !result.loading) {
-          this.acceptPage(result.data.fleetProblems);
-        }
+      .subscribe((page) => {
+        this.loading.set(false);
+        this.page.set(page);
+        this.url.correctPage(
+          Math.max(1, Math.ceil(this.history().length / this.url.state().pageSize)),
+        );
+      });
+    this.reload
+      .pipe(
+        startWith(undefined),
+        switchMap(() => {
+          this.warningsLoading.set(true);
+          this.warningsError.set(null);
+          return this.api.currentWarnings().pipe(
+            catchError((error: unknown) => {
+              this.warningsLoading.set(false);
+              this.warningsError.set(error);
+              return EMPTY;
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((page) => {
+        this.warningVehicles.set(page);
+        this.warningsLoading.set(false);
       });
   }
 
-  private acceptPage(page: AdminDashboardProblemsQuery['fleetProblems']): void {
-    this.page.set(page);
-    this.url.correctPage(Math.max(1, Math.ceil(page.total / this.url.state().pageSize)));
+  protected systemChanged(value: readonly FleetFaultSystem[] | null): void {
+    this.url.patchFilter({ system: value ?? [] });
+  }
+
+  protected vehicleLink(id: string): readonly string[] {
+    return ['/', this.language(), this.branch().id, 'fleet', 'vehicles', id, 'problems'];
   }
 
   protected sourceChanged(value: readonly FleetProblemSourceKind[] | null): void {
@@ -271,12 +448,20 @@ export class ProblemsPage implements OnInit {
     if (!problem) {
       return;
     }
+    if (action === 'details') {
+      this.selectedProblem.set(problem);
+      return;
+    }
     if (action === 'open' && problem.alertId) {
       void this.router.navigate([problem.alertId], {
         relativeTo: this.route,
         queryParamsHandling: 'preserve',
         preserveFragment: true,
       });
+      return;
+    }
+    if (action === 'open' && problem.vehicleId && problem.sourceKind === 'DIAGNOSTIC') {
+      void this.router.navigate([...this.vehicleLink(problem.vehicleId)]);
       return;
     }
     if ((action === 'device' || action === 'open') && problem.deviceId) {
@@ -289,9 +474,11 @@ export class ProblemsPage implements OnInit {
         problem.deviceId,
         ...(problem.commandRequestId
           ? ['commands']
-          : problem.ermEventId
-            ? ['technical-details', 'events']
-            : ['overview']),
+          : problem.sourceKind === 'DIAGNOSTIC'
+            ? ['problems']
+            : problem.ermEventId
+              ? ['technical-details', 'events']
+              : ['overview']),
       ]);
       return;
     }
@@ -309,27 +496,6 @@ export class ProblemsPage implements OnInit {
   }
 
   refresh(): void {
-    const query = this.query;
-    if (!query) {
-      return;
-    }
-    this.loading.set(true);
-    void query
-      .refetch()
-      .then((result) => {
-        if (!this.destroyRef.destroyed && this.query === query) {
-          this.loading.set(false);
-          this.error.set(result.error ?? null);
-          if (result.data && !result.error) {
-            this.acceptPage(result.data.fleetProblems);
-          }
-        }
-      })
-      .catch((error: unknown) => {
-        if (!this.destroyRef.destroyed && this.query === query) {
-          this.error.set(error);
-          this.loading.set(false);
-        }
-      });
+    this.reload.next();
   }
 }

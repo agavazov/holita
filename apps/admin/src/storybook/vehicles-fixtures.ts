@@ -29,6 +29,41 @@ import { delay, of, type Observable } from 'rxjs';
 import { FixtureHttpBackend } from './graphql-fixtures';
 
 const at = '2026-10-18T07:00:00.000Z';
+const fixtureCurrentWarnings = [
+  {
+    __typename: 'FleetWarningLamp',
+    deviceId: '60000000-0000-4000-8000-000000000001',
+    parameterId: 1896,
+    state: 'RED',
+    value: 1,
+    valueHex: '01',
+    recordedAt: at,
+    stateSince: '2026-10-18T06:30:00.000Z',
+  },
+  {
+    __typename: 'FleetWarningLamp',
+    deviceId: '60000000-0000-4000-8000-000000000001',
+    parameterId: 1906,
+    state: 'YELLOW',
+    value: 2,
+    valueHex: '02',
+    recordedAt: at,
+    stateSince: '2026-10-18T06:45:00.000Z',
+  },
+] as const;
+const fixtureWarningLamps = [
+  ...fixtureCurrentWarnings,
+  {
+    __typename: 'FleetWarningLamp',
+    deviceId: '60000000-0000-4000-8000-000000000001',
+    parameterId: 1910,
+    state: 'UNKNOWN',
+    value: null,
+    valueHex: null,
+    recordedAt: null,
+    stateSince: null,
+  },
+] as const;
 const group = {
   __typename: 'FleetVehicleGroup',
   id: '30000000-0000-4000-8000-000000000001',
@@ -53,7 +88,9 @@ export const fixtureVehicleLiveDevices: readonly [WithTypename<AdminFleetLiveDev
     routing: 'HOLITA',
     routingHealth: null,
     lastReportedAt: at,
-    diagnostics: { __typename: 'FleetDeviceDiagnosticSummary', count: 0, latest: null },
+    diagnostics: { __typename: 'FleetDeviceDiagnosticSummary', count: 2, latest: null },
+    currentWarnings: fixtureCurrentWarnings,
+    warningLamps: fixtureWarningLamps,
     ermState: {
       __typename: 'ErmUnitState',
       online: true,
@@ -104,6 +141,7 @@ export const fixtureVehicle: WithTypename<AdminVehicleDetailsFragment> = {
   deviceCount: 1,
   devices: fixtureVehicleLiveDevices,
   openAlertCount: 2,
+  currentWarnings: fixtureCurrentWarnings,
   notes: 'International line\nWorkshop contact confirmed.',
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: at,
@@ -236,6 +274,7 @@ graphqlFixture(AdminVehiclesLiveDocument, (): WithTypename<AdminVehiclesLiveQuer
       {
         __typename: 'FleetVehicle',
         id: fixtureVehicle.id,
+        currentWarnings: fixtureCurrentWarnings,
         devices: fixtureVehicleLiveDevices,
       },
     ],
@@ -338,6 +377,7 @@ graphqlFixture(
         {
           __typename: 'FleetProblem',
           id: 'alert:storybook-alert',
+          diagnostics: [],
           sourceKind: 'FLEET_ALERT',
           sourceId: 'storybook-alert',
           severity: 'WARNING',
@@ -357,6 +397,7 @@ graphqlFixture(
         {
           __typename: 'FleetProblem',
           id: 'diagnostic:storybook-dtc',
+          diagnostics: [],
           sourceKind: 'DIAGNOSTIC',
           sourceId: 'storybook-dtc',
           severity: 'WARNING',

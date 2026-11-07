@@ -47,6 +47,14 @@ import { confirmAction, confirmDialogPt } from '../../ui/confirm';
 import { EmptyState } from '../../ui/empty-state/empty-state';
 import { FleetNow } from '../../ui/fleet-live/fleet-now';
 import { FleetLastReport } from '../../ui/fleet-live/fleet-last-report';
+import { FleetCurrentWarnings } from '../../ui/fleet-live/fleet-current-warnings';
+import { FleetFaultCoverage } from '../../ui/fleet-live/fleet-fault-coverage';
+import {
+  faultsText,
+  faultDescription,
+  faultFmi,
+  faultSystem,
+} from '../../ui/fleet-live/fault-wording';
 import { injectFleetFormat } from '../../ui/format/fleet-format';
 import { formatDuration, formatNumber } from '../../ui/format/format';
 import { interpolate, uiMessages } from '../../ui/i18n/messages';
@@ -90,7 +98,8 @@ type Problems = AdminControlCenterDeviceProblemsQuery['fleetProblems'];
 type Detail =
   | { kind: 'event'; value: Events['items'][number] }
   | { kind: 'frame'; value: Frames['items'][number] }
-  | { kind: 'snapshot'; value: Snapshots['items'][number] };
+  | { kind: 'snapshot'; value: Snapshots['items'][number] }
+  | { kind: 'problem'; value: Problems['items'][number] };
 interface HistoryRead {
   loading: boolean;
   error: unknown;
@@ -117,6 +126,8 @@ interface HistoryRead {
     EmptyState,
     FleetNow,
     FleetLastReport,
+    FleetCurrentWarnings,
+    FleetFaultCoverage,
     LocationMap,
     PageHeader,
     RowActions,
@@ -137,6 +148,10 @@ export class DevicePage implements OnInit {
   readonly tab = input.required<DeviceTab>();
   readonly text = computed(() => controlCenterText[this.language()]);
   readonly uiText = computed(() => uiMessages[this.language()]);
+  readonly faultText = computed(() => faultsText(this.language()));
+  readonly faultDescription = faultDescription;
+  readonly faultFmi = faultFmi;
+  readonly faultSystem = faultSystem;
   readonly fmt = injectFleetFormat();
   readonly primaryTabs = [
     'overview',
@@ -289,16 +304,35 @@ export class DevicePage implements OnInit {
       filtered: false,
     }),
   );
+  readonly hasFaultReports = computed<boolean | null>(() => {
+    const problems = this.problems();
+    if (!problems) {
+      return null;
+    }
+    if (
+      problems.items.some((problem) =>
+        problem.diagnostics.some((diagnostic) => diagnostic.kind === 'DIAGNOSTIC_TROUBLE_CODE'),
+      )
+    ) {
+      return true;
+    }
+    return problems.total === problems.items.length ? false : null;
+  });
   readonly problemFailure = computed(() =>
     requestError(this.problemsError(), this.text().unavailable),
   );
   readonly hasProblems = computed(() => {
     const counts = this.problems()?.counts;
-    return (counts?.requiringAttention ?? 0) > 0 || (counts?.recorded ?? 0) > 0;
+    return (
+      (this.device()?.currentWarnings.length ?? 0) > 0 ||
+      (counts?.requiringAttention ?? 0) > 0 ||
+      (counts?.recorded ?? 0) > 0
+    );
   });
   readonly problemSummary = computed(() =>
     this.problems()
       ? interpolate(this.text().detail.problemSummary, {
+          warnings: this.device()?.currentWarnings.length ?? 0,
           attention: this.problems()?.counts.requiringAttention ?? 0,
           recorded: this.problems()?.counts.recorded ?? 0,
         })
@@ -442,9 +476,17 @@ export class DevicePage implements OnInit {
       kind: 'identity',
       className: 'app-col-identity',
     },
-    { id: 'time', label: this.text().time, width: '12rem', kind: 'date' },
+    { id: 'system', label: this.faultText().system, width: '11rem', kind: 'text' },
+    { id: 'time', label: this.text().detail.observations, width: '15rem', kind: 'date' },
     { id: 'severity', label: this.text().severity, width: '9rem', kind: 'status' },
     { id: 'status', label: this.text().status, width: '11rem', kind: 'status' },
+    {
+      id: 'actions',
+      label: this.text().detail.actions,
+      width: '5rem',
+      kind: 'actions',
+      className: 'app-col-actions',
+    },
   ]);
   readonly valueColumns = computed<readonly TableColumn[]>(() => [
     {
@@ -693,7 +735,12 @@ export class DevicePage implements OnInit {
     }
   }
   openDetail(id: string | undefined): void {
-    if (this.tab() === 'events') {
+    if (this.tab() === 'problems') {
+      const row = this.problems()?.items.find((row) => row.id === id);
+      if (row) {
+        this.detail.set({ kind: 'problem', value: row });
+      }
+    } else if (this.tab() === 'events') {
       const row = this.events()?.items.find((row) => row.id === id);
       if (row) {
         this.detail.set({ kind: 'event', value: row });

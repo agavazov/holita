@@ -451,6 +451,7 @@
     }
   },
   "detail": {
+    "observations": "Observations",
     "connection": "Connection",
     "connected": "Connected",
     "disconnected": "Not connected",
@@ -459,11 +460,11 @@
     "reportingGaps": "Reporting gaps (24 h)",
     "assignedTrips": "Assigned vehicle’s trips",
     "deviceSections": "Device sections",
-    "problemSummary": "Need attention: {attention} · recorded observations: {recorded}",
+    "problemSummary": "Current warnings: {warnings} · need attention: {attention} · recorded observations: {recorded}",
     "problemsUnknown": "Problems have not been checked yet",
     "problem": "Problem",
-    "problemPeriod": "Current warnings and recorded evidence for",
-    "noProblems": "No warnings or recorded problems in this period.",
+    "problemPeriod": "Recorded evidence for",
+    "noProblems": "No recorded problems in this period.",
     "details": "View details",
     "actions": "Actions",
     "confirmation": "Confirmation of command {reference} — result {result}",

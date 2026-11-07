@@ -8,6 +8,12 @@ fragment AdminFleetLiveDevice on FleetDevice {
     backupSince
   }
   lastReportedAt
+  currentWarnings {
+    ...AdminWarningLamp
+  }
+  warningLamps {
+    ...AdminWarningLamp
+  }
   diagnostics {
     count
     latest {
@@ -45,4 +51,28 @@ fragment AdminFleetLiveDevice on FleetDevice {
       lastCloseReason
     }
   }
+}
+
+fragment AdminWarningLamp on FleetWarningLamp {
+  deviceId
+  parameterId
+  state
+  recordedAt
+  stateSince
+}
+
+fragment AdminFaultDiagnostic on FleetProblemDiagnostic {
+  kind
+  troubleCode
+  status
+  report
+  spn
+  fmi
+  systemKey
+  descriptionKey
+  catalogVersion
+  firstObservedAt
+  lastObservedAt
+  occurredAt
+  receivedAt
 }

@@ -23,6 +23,7 @@ export function vehicleProfile(vehicle: AdminVehicleProfileFragment): VehiclePro
     longitude: vehicle.state.longitude,
     headingDeg: vehicle.state.headingDeg,
     liveDevices: vehicle.devices,
+    warningLamps: vehicle.warningLamps,
     createdAt: vehicle.createdAt,
   };
 }

@@ -22,8 +22,8 @@
   "recordedFaults": "{count} CAN / DTC",
   "diagnostics": "Open diagnostics",
   "summary": "Visible rows",
-  "summaryScope": "Online summary for the rows shown; CAN / DTC counts refer to recorded history.",
-  "withFaults": "With recorded faults",
+  "summaryScope": "Summary for the rows shown; warnings count current lamps only.",
+  "withFaults": "With current warnings",
   "withoutDevice": "Without device",
   "kinds": {
     "DIAGNOSTIC_TROUBLE_CODE": "Diagnostic trouble code",

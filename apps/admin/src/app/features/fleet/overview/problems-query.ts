@@ -1,6 +1,7 @@
 import type {
   AdminDashboardProblemsQueryVariables,
   FleetEventSeverity,
+  FleetFaultSystem,
   FleetProblemSourceKind,
   FleetProblemState,
 } from '../../../../generated/graphql/operations';
@@ -18,6 +19,13 @@ export const problemSources = [
   'REPORTING_GAP',
   'COMMAND',
 ] as const satisfies readonly FleetProblemSourceKind[];
+export const problemSystems = [
+  'ENGINE',
+  'BRAKES',
+  'ABS_EBS',
+  'AFTERTREATMENT',
+  'OTHER',
+] as const satisfies readonly FleetFaultSystem[];
 export const problemSeverities = [
   'CRITICAL',
   'WARNING',
@@ -33,6 +41,7 @@ export const problemStates = [
 ] as const satisfies readonly FleetProblemState[];
 
 export interface ProblemFilters {
+  readonly system: readonly FleetFaultSystem[];
   readonly source: readonly FleetProblemSourceKind[];
   readonly severity: readonly FleetEventSeverity[];
   readonly state: readonly FleetProblemState[];
@@ -62,6 +71,7 @@ export const problemDefinition: ListDefinition<ProblemFilters, 'occurredAt'> = {
   sorts: [],
   defaultSort: { field: 'occurredAt', direction: 'DESC' },
   filters: {
+    system: codecs.enumList(problemSystems),
     source: codecs.enumList(problemSources),
     severity: codecs.enumList(problemSeverities),
     state: codecs.enumList(problemStates),

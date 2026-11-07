@@ -120,6 +120,7 @@ const samePage = (left: ProfilePage, right: ProfilePage) =>
       (retryTrips)="retryTrips.next()"
       [problems]="problems()"
       [problemCounts]="problemData()?.counts ?? null"
+      [hasFaultReports]="hasFaultReports()"
       [problemPage]="problemPage()"
       [problemState]="problemView()"
       [problemError]="problemFailure()"
@@ -271,6 +272,10 @@ export class VehicleProfilePage implements OnInit {
     (this.tripData()?.items ?? []).map((trip) => tripRow(trip, this.language())),
   );
   protected readonly problems = computed(() => this.problemData()?.items ?? []);
+  protected readonly hasFaultReports = computed(() => {
+    const record = this.record();
+    return record ? record.recordedFaultReports.total > 0 : null;
+  });
   protected readonly service = computed(() =>
     (this.serviceData()?.items ?? []).map((task) => serviceTaskRow(task, this.language())),
   );
