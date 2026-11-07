@@ -16,44 +16,37 @@ follows the [ERM roadmap safety rules](erm-roadmap.md#safety-rules) and test lev
 - **Truck faults:** everything needed to show and act on diagnostic faults such as a brake or an
   engine problem.
 
-## Remaining facts (2026-11-06)
+## Remaining facts (2026-11-08)
 
-- ERM knows Connected, Reporting and Live per unit, plus voltages, GSM signal, observed firmware
-  and network changes, but the Device page hides most of them. Test trucks CB5636XP and CB5640XP
-  sat on their Karma backup unnoticed from 2026-11-05 ~13:50 UTC until a manual return on
-  2026-11-06; the new detection covers such cases once the admin shows it.
 - Faults: since 2026-11-03, no truck has sent a `413`, `418` or `419` fault record to holita.
   CB1147TP reported SPN 4339/7, 1247/11 and 23806/15 through Karma on 2026-10-28/29. The
   stored-fault read (`30` `301/19`) returned `154,0` (not acknowledged) on CB1147TP and CB1344XH,
-  so faults come only from automatic reports and warning lamps until ERM explains that read. There
-  is no description source, and the active/cleared lifecycle is unproven.
-- Defects left for the packages below: a successful direct read shows "Outcome unknown" in the
-  admin; snapshot diffs treat an unread value as a change; a fresh eData read clears the gate of an
-  uncertain `04` write; `lab-session` allows protected parameter writes that the gateway refuses.
+  so faults come only from automatic reports and warning lamps until ERM explains that read. The
+  active/cleared lifecycle is unproven, and descriptions are holita's own wording.
+- Warning lamps: only CB5636XP has the definitions (since 2026-11-06). It had not driven by
+  2026-11-07 22:00 UTC, so no lamp value has arrived yet.
 
 ## Packages
 
 Delivered on 2026-11-06: the Branch command queue with retry and batch reads, Tenant-wide roles,
 Karma backup detection with the return to holita, and the structured fault pipeline with warning
-lamps (see [Discocan development](../discocan/development.md)). Remaining:
+lamps. Delivered on 2026-11-08: ERM role enforcement with controlled `46` writes and configuration
+batches, the Device status workspace, the admin command queue with the `46` form and role-aware
+controls, fault meanings with current warnings and lamp notifications, and the truck faults view
+(see [Discocan development](../discocan/development.md)). Remaining:
 
-| ID  | Package                 | Scope                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Depends | Device level | Codex     |
-| --- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------ | --------- |
-| F1  | Warning lamps on trucks | Operations by Claude: eData 1896, 1906 and 1910 (FMS1 brake system, engine/MIL and ABS telltales, 180 s) were added and verified on CB5636XP on 2026-11-06; verify their `405` values on its next drive, then add them to the other trucks one at a time through the guarded GraphQL workflow with writes enabled only for each run                                                                                                                                    | —       | L1, then L3  | —         |
-| W1  | Controlled `46` writes  | ERM: enforce roles on commands, batches, retries and configuration (Operator and Engineer); fix snapshot read outcomes and per-parameter reconciliation, align `lab-session` protections, notify failed restorations; `46` with an exact baseline, preflight, one scoped change, whole-set readback and restoration; batch writes reuse it one unit at a time; give `ErmConfigurationChange` a structured operation, since it has only the English `intent` audit text | —       | L0, then L1  | sol/ultra |
-| A1  | Device status workspace | Admin Devices list and Device overview: last signal, online state, Karma routing with the return button (pending and uncertain attempts), warning lamps, observed firmware, voltage and GSM signal, grouped and readable                                                                                                                                                                                                                                               | —       | none         | sol/ultra |
-| A2  | Command center          | Admin: Branch command queue page with cancel, retry and batches; the `46` form with a readable planned change; correct received-response state; translated errors; translated operation names in the device's settings runs (the BG UI shows the English `intent`, such as "Add eData parameter 1910"); user roles in Users and role-aware controls                                                                                                                    | W1      | none         | sol/ultra |
-| F3  | Fault meanings          | Fleet: holita's own BG/EN wording for FMI and vehicle systems, descriptions of observed codes from ERM/vendor sources (no copied SAE tables), current warnings from lamp states and history from fault records; notifications on warning-lamp changes                                                                                                                                                                                                                  | F1      | none         | sol/ultra |
-| A3  | Truck faults view       | Admin: readable faults per truck and fleet in Problems, Vehicle and Device pages and notifications, separating current warnings, history and missing coverage                                                                                                                                                                                                                                                                                                          | F3      | none         | sol/ultra |
+| ID  | Package                 | Scope                                                                                                                                                                                                                           | Depends | Device level | Codex     |
+| --- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------ | --------- |
+| F1  | Warning lamps on trucks | Operations by Claude: verify the `405` values of eData 1896, 1906 and 1910 on CB5636XP's next drive, then add them to the other trucks one at a time through the guarded GraphQL workflow with writes enabled only for each run | —       | L1, then L3  | —         |
+| W2  | `46` proof              | Operations by Claude: one controlled `46` change with readback and restoration on a parked test truck, writes enabled only for the run, before batch writes reach the other trucks                                              | —       | L1           | —         |
+| A4  | Fleet role controls     | Admin: hide or disable Fleet editing (Vehicles, Devices, Drivers, maintenance, Settings) above the signed-in role; the server already refuses it                                                                                | —       | none         | sol/ultra |
+| K2  | Karma polling           | ERM: read Karma in parallel or widen the staleness window, so slow reads (7–29 s) do not leave units UNKNOWN between passes                                                                                                     | —       | none         | sol/ultra |
 
 ## Order
 
-1. **Next (backend):** W1. The admin packages wait until the UI v2 visual review is committed.
-2. **Then:** A1 and A2 on separate admin folders; F1 after CB5636XP's next drive.
-3. **Last:** F3 and A3.
-
-ERM packages share `apps/erm-server/prisma/schema.prisma` and the telemetry SDL, so only one ERM
-package edits them at a time.
+1. **Next:** F1 and W2 on the test trucks (operations by Claude); A4 and K2 can run at any time.
+2. The owner reviews the Device status, command queue and faults screens together with the UI v2
+   acceptance.
 
 ## Decisions (owner, 2026-11-06)
 
