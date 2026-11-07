@@ -549,7 +549,15 @@ export class DeviceSettings {
     this.reload.update((value) => value + 1);
   }
   protected operation(run: Run): string {
-    return this.text().modes[run.operation];
+    const label = this.text().modes[run.operation];
+    const targets = run.parameters.length
+      ? run.parameters
+      : run.parameter === null
+        ? []
+        : [run.parameter];
+    return targets.length
+      ? `${label} · ${targets.map((value) => this.parameter(value)).join(', ')}`
+      : label;
   }
   protected failureReason(reason: string): string {
     return controlCenterReason(reason, this.language());
