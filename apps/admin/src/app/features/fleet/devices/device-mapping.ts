@@ -1,17 +1,17 @@
 import type { Language } from '../../../i18n/messages';
 import type {
   AdminDeviceDetailsFragment,
+  AdminDevicesLiveQuery,
   CreateFleetDeviceInput,
 } from '../../../../generated/graphql/operations';
 import { fleetFieldErrors } from '../field-errors';
 import type { DeviceField, DeviceForm } from './device-drawer';
 import type { DeviceRow } from './devices-view';
-import type { FleetLiveDevice } from '../../../ui/fleet-live/fleet-live';
 import { deviceModels, deviceOptions } from './device-query';
 
 /** Live records by ID; absence means the live request is unavailable. */
 export interface DevicesLive {
-  readonly devices: ReadonlyMap<string, NonNullable<FleetLiveDevice>>;
+  readonly devices: ReadonlyMap<string, AdminDevicesLiveQuery['fleetDevices']['items'][number]>;
 }
 
 /** A missing `live` or device ID means the holita state is unknown. */
@@ -32,6 +32,7 @@ export function deviceRow(
     plate: device.vehicle?.licensePlate ?? null,
     status: device.status,
     lastSeenAt: device.lastReportedAt,
+    warningLamps: live?.devices.get(device.id)?.warningLamps ?? device.warningLamps,
     notes: device.notes ?? '',
     live: live?.devices.get(device.id),
   };

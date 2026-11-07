@@ -98,5 +98,21 @@
     "STARLINK_TRACKER": "StarLink Tracker",
     "STARLINK_SCOUT": "StarLink Scout",
     "OTHER": "Друг"
+  },
+  "status": {
+    "lastSignal": "Последен сигнал",
+    "routing": "Маршрут",
+    "warningLamps": "Предупредителни лампи",
+    "offline": "Офлайн",
+    "viaHolita": "чрез holita",
+    "viaKarma": "чрез Karma",
+    "karmaBackup": "Karma резерва",
+    "since": "От {time}",
+    "routingUnknown": "Неизвестен маршрут",
+    "activeLamps": "{count} активни",
+    "noLampReports": "Състоянията на лампите са недостъпни",
+    "lampCoverage": "Лампи с известно състояние: {count} от {total}",
+    "noHolitaConnection": "Все още няма връзка с holita",
+    "reportingOffline": "Скорошен отчет · офлайн"
   }
 }

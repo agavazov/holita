@@ -92,6 +92,21 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
     notes
     options
     routing
+    ermRouting {
+      state
+      since
+      observedAt
+      latestKarmaReportAt
+      parked
+      latestReturnAttempt {
+        ...AdminControlCenterReturnAttempt
+      }
+    }
+    warningLamps {
+      parameterId
+      state
+      recordedAt
+    }
     routingHealth {
       backupSince
       lastBackupStartedAt
@@ -159,6 +174,25 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
         }
       }
     }
+  }
+}
+fragment AdminControlCenterReturnAttempt on ErmKarmaReturnAttempt {
+  id
+  requestedAt
+  status
+  pending
+  holitaConnectedAt
+  recovery {
+    id
+    startedAt
+    finishedAt
+    outcome
+    reason
+  }
+}
+mutation AdminControlCenterReturnToHolita($deviceId: ID!) {
+  returnErmDeviceToHolita(deviceId: $deviceId) {
+    ...AdminControlCenterReturnAttempt
   }
 }
 query AdminControlCenterSmsDevices($ids: [ID!]) {

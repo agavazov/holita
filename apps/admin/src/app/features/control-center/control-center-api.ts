@@ -15,6 +15,7 @@ import {
   type StartErmParameterChangeInput,
   AdminControlCenterDevicesDocument,
   AdminControlCenterDeviceDocument,
+  AdminControlCenterReturnToHolitaDocument,
   AdminControlCenterEventsDocument,
   AdminControlCenterCommandsDocument,
   AdminControlCenterFramesDocument,
@@ -96,6 +97,19 @@ export class ControlCenterApi implements OnDestroy {
       variables: { ids: deviceId ? [deviceId] : undefined },
       fetchPolicy: 'network-only',
     });
+  }
+
+  async returnToHolita(deviceId: string) {
+    const result = await firstValueFrom(
+      this.client().mutate({
+        mutation: AdminControlCenterReturnToHolitaDocument,
+        variables: { deviceId },
+      }),
+    );
+    if (!result.data?.returnErmDeviceToHolita) {
+      throw new Error('Missing returnErmDeviceToHolita result.');
+    }
+    return result.data.returnErmDeviceToHolita;
   }
 
   watchEvents(variables: AdminControlCenterEventsQueryVariables) {

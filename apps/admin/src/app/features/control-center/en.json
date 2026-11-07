@@ -468,5 +468,97 @@
       "UNCERTAIN": "Outcome unknown",
       "EXPIRED": "Expired"
     }
+  },
+  "deviceStatus": {
+    "connection": "Connection",
+    "lastSignal": "Last signal to holita",
+    "socket": "Connection to holita",
+    "reporting": "Reporting",
+    "connected": "Connected",
+    "disconnected": "Offline",
+    "reportRecent": "Reporting recently",
+    "reportOverdue": "Report overdue",
+    "unknown": "No observation yet",
+    "connectionStates": {
+      "LIVE": "Online · connected and reporting",
+      "CONNECTED": "Connected · waiting for report",
+      "REPORTING": "Reporting · currently disconnected",
+      "OFFLINE": "Offline · report overdue",
+      "UNKNOWN": "No holita signal yet"
+    },
+    "networkChanges": "Network changes (24 h)",
+    "networkType": "Network",
+    "operator": "Mobile operator",
+    "routing": "Routing",
+    "routeStates": {
+      "HOLITA": "holita",
+      "KARMA_BACKUP": "Karma backup",
+      "UNKNOWN": "Routing unknown"
+    },
+    "routeSince": "Route since",
+    "observedAt": "Routing checked",
+    "karmaReport": "Last signal to Karma",
+    "parked": "Parked on Karma",
+    "parkedYes": "Confirmed parked",
+    "parkedNo": "Not parked",
+    "parkedUnknown": "Parking not confirmed",
+    "returnButton": "Return to holita",
+    "returnConfirmTitle": "Return this unit to holita?",
+    "returnConfirm": "Request {unit} to return from Karma backup to holita. The unit must be parked. This requires Engineer or Administrator access; acceptance does not confirm the return.",
+    "returnSubmitting": "Submitting return request",
+    "returnPending": "A return is pending. Wait for its outcome; an uncertain request must not be repeated.",
+    "returnNotParked": "Return is available only while the unit is parked.",
+    "returnParkingUnknown": "Return is unavailable until parking is confirmed.",
+    "returnBackupRequired": "Return requires a unit on Karma backup.",
+    "returnFailed": "The return request could not be confirmed",
+    "returnUnconfirmed": "Refresh the routing status before trying again; the request may have been accepted.",
+    "returnEngineer": "Engineer or Administrator access is required to return a unit to holita.",
+    "returnConflict": "The unit must still be parked on Karma backup with no pending return. Refresh its status.",
+    "returnUnavailable": "The Karma return service is unavailable. Refresh the status before another attempt.",
+    "returnSession": "Sign in again before requesting a return.",
+    "returnRecorded": "Return request recorded",
+    "returnAttempt": "Latest return attempt",
+    "requestedAt": "Requested",
+    "recoveryOutcome": "Recovery outcome",
+    "recoveryFinished": "Recovery checked",
+    "holitaConnectedAt": "Connected to holita",
+    "returnStates": {
+      "SUBMITTING": "Submitting",
+      "QUEUED": "Queued · waiting for the unit",
+      "UNCERTAIN": "Uncertain · do not repeat",
+      "RETURNED": "Returned to holita",
+      "NEEDS_OPERATOR": "Operator review required",
+      "FAILED": "Failed"
+    },
+    "powerSignal": "Power and signal",
+    "gsm": "GSM signal quality",
+    "voltage": "{value} V",
+    "gsmValue": "{value} (reported quality)",
+    "firmware": "Firmware",
+    "observedFirmware": "Observed version",
+    "registeredFirmware": "Registry version",
+    "observedVersionAt": "Version observed",
+    "firmwareStates": {
+      "MATCH": "Matches registry",
+      "DIFFERENT": "Differs from registry",
+      "UNKNOWN": "Comparison unavailable"
+    },
+    "warningLamps": "Warning lamps · latest reports",
+    "lampNames": {
+      "1896": "Brake system",
+      "1906": "Engine / MIL",
+      "1910": "ABS"
+    },
+    "lampStates": {
+      "UNKNOWN": "No value yet",
+      "OFF": "Off",
+      "RED": "Red warning",
+      "YELLOW": "Yellow warning",
+      "INFORMATION": "Information active",
+      "NOT_AVAILABLE": "Not available",
+      "RESERVED": "Reserved value"
+    },
+    "lastObserved": "Last observed",
+    "noRecovery": "No recovery outcome yet"
   }
 }

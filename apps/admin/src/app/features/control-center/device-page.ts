@@ -35,13 +35,14 @@ import type {
   ErmFrameChecksum,
   ErmEventSeverity,
   ErmParameterSnapshotStatus,
+  FleetWarningLampState,
+  ErmKarmaReturnStatus,
 } from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
 import type { Language } from '../../i18n/messages';
 import { injectPageRecord } from '../../layout/page-record';
 import { confirmAction, confirmDialogPt } from '../../ui/confirm';
 import { EmptyState } from '../../ui/empty-state/empty-state';
-import { FleetConnection } from '../../ui/fleet-live/fleet-connection';
 import { FleetNow } from '../../ui/fleet-live/fleet-now';
 import { FleetLastReport } from '../../ui/fleet-live/fleet-last-report';
 import { injectFleetFormat } from '../../ui/format/fleet-format';
@@ -57,7 +58,12 @@ import { tableView } from '../../ui/table-panel/table-view';
 import { toneSeverity } from '../../ui/tones';
 import { deviceModelLabel } from '../fleet/devices/i18n/messages';
 import { ControlCenterApi } from './control-center-api';
-import { controlCenterText, ermLanguage, severityTone } from './control-center-text';
+import {
+  controlCenterText,
+  ermLanguage,
+  returnToHolitaError,
+  severityTone,
+} from './control-center-text';
 import { DeviceCommandQueue } from './device-command-queue';
 import { DeviceSettings } from './device-settings';
 import { SmsPage } from './sms-page';
@@ -106,7 +112,6 @@ interface HistoryRead {
     TabPanels,
     TabPanel,
     EmptyState,
-    FleetConnection,
     FleetNow,
     FleetLastReport,
     LocationMap,
@@ -171,6 +176,62 @@ export class DevicePage implements OnInit {
     requestError(this.deviceError(), this.text().deviceUnavailable),
   );
   readonly state = computed(() => this.device()?.ermState ?? null);
+  readonly connection = computed(() => {
+    const state = this.state();
+    const labels = this.text().deviceStatus.connectionStates;
+    if (state?.online) {
+      return state.lastFrameAt && !state.health.overdue
+        ? { label: labels.LIVE, severity: toneSeverity('success') }
+        : { label: labels.CONNECTED, severity: toneSeverity('info') };
+    }
+    if (state?.lastFrameAt) {
+      return state.health.overdue
+        ? { label: labels.OFFLINE, severity: toneSeverity('warn') }
+        : { label: labels.REPORTING, severity: toneSeverity('warn') };
+    }
+    return { label: labels.UNKNOWN, severity: toneSeverity('neutral') };
+  });
+  readonly routing = computed(() => this.device()?.ermRouting ?? null);
+  readonly returning = signal(false);
+  readonly returnFailure = signal<string | null>(null);
+  readonly returnDisabledReason = computed(() => {
+    const route = this.routing();
+    const text = this.text().deviceStatus;
+    if (this.returning()) {
+      return text.returnSubmitting;
+    }
+    if (route?.latestReturnAttempt?.pending) {
+      return text.returnPending;
+    }
+    if (route?.state !== 'KARMA_BACKUP') {
+      return text.returnBackupRequired;
+    }
+    return route.parked === true
+      ? null
+      : route.parked === false
+        ? text.returnNotParked
+        : text.returnParkingUnknown;
+  });
+  readonly recovery = computed(() => {
+    const attempt = this.routing()?.latestReturnAttempt;
+    return attempt ? attempt.recovery : (this.state()?.recovery ?? null);
+  });
+  readonly firmwareComparison = computed(() => {
+    const observed = this.state()?.firmwareVersion?.value;
+    const registered = this.device()?.firmwareVersion;
+    return !observed || !registered ? 'UNKNOWN' : observed === registered ? 'MATCH' : 'DIFFERENT';
+  });
+  readonly warningLamps = computed(() =>
+    ([1896, 1906, 1910] as const).map((parameterId) => {
+      const lamp = this.device()?.warningLamps.find((row) => row.parameterId === parameterId);
+      return {
+        parameterId,
+        name: this.text().deviceStatus.lampNames[parameterId],
+        state: lamp?.state ?? 'UNKNOWN',
+        recordedAt: lamp?.recordedAt ?? null,
+      };
+    }),
+  );
   readonly title = computed(
     () => this.device()?.vehicle?.licensePlate ?? this.device()?.imei ?? this.text().devices,
   );
@@ -294,9 +355,9 @@ export class DevicePage implements OnInit {
     () => this.snapshots()?.items.some((row) => row.status === 'RUNNING') ?? false,
   );
   readonly startingSnapshot = signal(false);
-  readonly snapshotConfirmation = signal('');
+  readonly actionConfirmation = signal('');
   readonly confirmPt = computed(() =>
-    confirmDialogPt(this.language(), 'erm-snapshot-confirm-message'),
+    confirmDialogPt(this.language(), 'erm-device-confirm-message'),
   );
   readonly columns = computed<readonly TableColumn[]>(() =>
     this.tab() === 'events'
@@ -571,6 +632,40 @@ export class DevicePage implements OnInit {
   duration(value: number | null): string {
     return formatDuration(value, this.language());
   }
+  voltage(value: number | null | undefined): string {
+    return value == null
+      ? '—'
+      : interpolate(this.text().deviceStatus.voltage, { value: this.number(value, 1) });
+  }
+  gsmSignal(value: number | null | undefined): string {
+    return value == null
+      ? '—'
+      : interpolate(this.text().deviceStatus.gsmValue, { value: this.number(value, 1) });
+  }
+  returnSeverity(value: ErmKarmaReturnStatus) {
+    return toneSeverity(
+      value === 'RETURNED'
+        ? 'success'
+        : value === 'FAILED'
+          ? 'danger'
+          : value === 'UNCERTAIN' || value === 'NEEDS_OPERATOR'
+            ? 'warn'
+            : 'info',
+    );
+  }
+  lampSeverity(value: FleetWarningLampState) {
+    return toneSeverity(
+      value === 'RED'
+        ? 'danger'
+        : value === 'YELLOW'
+          ? 'warn'
+          : value === 'INFORMATION'
+            ? 'info'
+            : value === 'OFF'
+              ? 'success'
+              : 'neutral',
+    );
+  }
   record(id: string, label: string): ListRecord<'details'> {
     return { id, label, unavailable: [] };
   }
@@ -651,7 +746,7 @@ export class DevicePage implements OnInit {
   }
   async startSnapshot(): Promise<void> {
     const text = this.text();
-    this.snapshotConfirmation.set(
+    this.actionConfirmation.set(
       interpolate(text.snapshots.confirmMessage, { unit: this.unitName() }),
     );
     const accepted = await confirmAction(this.confirmation, this.language(), {
@@ -679,6 +774,50 @@ export class DevicePage implements OnInit {
     } finally {
       if (this.alive()) {
         this.startingSnapshot.set(false);
+        this.refresh();
+      }
+    }
+  }
+
+  async returnToHolita(): Promise<void> {
+    if (this.returnDisabledReason()) {
+      return;
+    }
+    const text = this.text().deviceStatus;
+    const language = this.language();
+    const deviceId = this.recordId();
+    this.actionConfirmation.set(interpolate(text.returnConfirm, { unit: this.unitName() }));
+    const accepted = await confirmAction(this.confirmation, language, {
+      header: text.returnConfirmTitle,
+      acceptLabel: text.returnButton,
+      danger: false,
+    });
+    if (!accepted || !this.alive() || this.returnDisabledReason()) {
+      return;
+    }
+    this.returning.set(true);
+    this.returnFailure.set(null);
+    try {
+      const attempt = await this.api.returnToHolita(deviceId);
+      if (this.alive()) {
+        this.device.update((device) =>
+          device
+            ? { ...device, ermRouting: { ...device.ermRouting, latestReturnAttempt: attempt } }
+            : device,
+        );
+        this.notifications.add({
+          severity: attempt.status === 'UNCERTAIN' || attempt.status === 'FAILED' ? 'warn' : 'info',
+          summary: text.returnRecorded,
+          detail: text.returnStates[attempt.status],
+        });
+      }
+    } catch (error: unknown) {
+      if (this.alive()) {
+        this.returnFailure.set(returnToHolitaError(error, language));
+      }
+    } finally {
+      if (this.alive()) {
+        this.returning.set(false);
         this.refresh();
       }
     }

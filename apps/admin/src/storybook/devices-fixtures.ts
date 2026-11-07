@@ -39,6 +39,26 @@ export const fixtureDevice: WithTypename<AdminDeviceDetailsFragment> = {
   notes: 'Cab tracker',
   status: 'ONLINE',
   lastReportedAt: '2026-10-20T08:00:00.000Z',
+  warningLamps: [
+    {
+      __typename: 'FleetWarningLamp',
+      parameterId: 1896,
+      state: 'OFF',
+      recordedAt: '2026-10-20T08:00:00.000Z',
+    },
+    {
+      __typename: 'FleetWarningLamp',
+      parameterId: 1906,
+      state: 'OFF',
+      recordedAt: '2026-10-20T08:00:00.000Z',
+    },
+    {
+      __typename: 'FleetWarningLamp',
+      parameterId: 1910,
+      state: 'OFF',
+      recordedAt: '2026-10-20T08:00:00.000Z',
+    },
+  ],
   vehicleId: '50000000-0000-4000-8000-000000000001',
   vehicle: { ...vehicle, __typename: 'FleetVehicleRef' },
   createdAt: '2026-01-01T08:00:00.000Z',
@@ -53,6 +73,10 @@ const listDevices: readonly WithTypename<AdminDeviceDetailsFragment>[] = [
     imei: '001234567890124',
     model: 'STARLINK_SCOUT',
     lastReportedAt: '2026-10-20T07:00:00.000Z',
+    warningLamps: fixtureDevice.warningLamps.map((lamp) => ({
+      ...lamp,
+      state: lamp.parameterId === 1896 ? 'RED' : lamp.state,
+    })),
   },
   {
     ...fixtureDevice,
@@ -63,6 +87,11 @@ const listDevices: readonly WithTypename<AdminDeviceDetailsFragment>[] = [
     status: 'IN_STOCK',
     installedAt: null,
     lastReportedAt: null,
+    warningLamps: fixtureDevice.warningLamps.map((lamp) => ({
+      ...lamp,
+      state: 'UNKNOWN',
+      recordedAt: null,
+    })),
   },
 ];
 
@@ -89,9 +118,16 @@ export const fixtureLiveDevice: WithTypename<
   vehicleId: fixtureDevice.vehicleId,
   status: 'ONLINE',
   lastReportedAt: fixtureDevice.lastReportedAt,
+  warningLamps: fixtureDevice.warningLamps,
   diagnostics: { __typename: 'FleetDeviceDiagnosticSummary', count: 0, latest: null },
   routing: 'HOLITA',
   routingHealth: null,
+  ermRouting: {
+    __typename: 'ErmDeviceRouting',
+    state: 'HOLITA',
+    since: null,
+    latestKarmaReportAt: null,
+  },
   ermState: {
     __typename: 'ErmUnitState',
     online: true,
@@ -133,6 +169,21 @@ const liveListDevices: readonly WithTypename<
     id: '60000000-0000-4000-8000-000000000002',
     imei: '001234567890124',
     lastReportedAt: '2026-10-20T07:00:00.000Z',
+    warningLamps: fixtureDevice.warningLamps.map((lamp) => ({
+      ...lamp,
+      state: lamp.parameterId === 1896 ? 'RED' : lamp.state,
+    })),
+    routing: 'KARMA_BACKUP',
+    routingHealth: {
+      __typename: 'FleetDeviceRoutingHealth',
+      backupSince: '2026-10-20T07:05:00.000Z',
+    },
+    ermRouting: {
+      __typename: 'ErmDeviceRouting',
+      state: 'KARMA_BACKUP',
+      since: '2026-10-20T07:05:00.000Z',
+      latestKarmaReportAt: '2026-10-20T08:00:00.000Z',
+    },
     ermState: {
       ...fixtureLiveDevice.ermState,
       __typename: 'ErmUnitState',
@@ -159,6 +210,17 @@ const liveListDevices: readonly WithTypename<
     vehicleId: null,
     status: 'IN_STOCK',
     lastReportedAt: null,
+    warningLamps: fixtureDevice.warningLamps.map((lamp) => ({
+      ...lamp,
+      state: 'UNKNOWN',
+      recordedAt: null,
+    })),
+    ermRouting: {
+      __typename: 'ErmDeviceRouting',
+      state: 'UNKNOWN',
+      since: null,
+      latestKarmaReportAt: null,
+    },
     ermState: null,
   },
 ];

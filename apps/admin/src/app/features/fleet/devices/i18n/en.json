@@ -98,5 +98,21 @@
     "STARLINK_TRACKER": "StarLink Tracker",
     "STARLINK_SCOUT": "StarLink Scout",
     "OTHER": "Other"
+  },
+  "status": {
+    "lastSignal": "Last signal",
+    "routing": "Routing",
+    "warningLamps": "Warning lamps",
+    "offline": "Offline",
+    "viaHolita": "via holita",
+    "viaKarma": "via Karma",
+    "karmaBackup": "Karma backup",
+    "since": "Since {time}",
+    "routingUnknown": "Routing unknown",
+    "activeLamps": "{count} active",
+    "noLampReports": "Lamp states unavailable",
+    "lampCoverage": "Known lamp states: {count} of {total}",
+    "noHolitaConnection": "No holita connection yet",
+    "reportingOffline": "Reporting · offline"
   }
 }

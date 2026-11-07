@@ -7,10 +7,12 @@ import {
   AdminControlCenterCommandsDocument,
   AdminControlCenterSnapshotsDocument,
   AdminControlCenterDeviceDocument,
+  AdminControlCenterReturnToHolitaDocument,
   AdminControlCenterEventsDocument,
   AdminControlCenterFramesDocument,
   AdminControlCenterDeviceProblemsDocument,
   type AdminControlCenterDeviceQuery,
+  type AdminControlCenterReturnToHolitaMutation,
   type AdminControlCenterDevicesQuery,
   type AdminControlCenterEventsQuery,
   type AdminControlCenterFramesQuery,
@@ -127,6 +129,35 @@ const detailDevice: WithTypename<AdminControlCenterDeviceQuery['fleetDevice']> =
       source: 'ERM',
     },
   },
+  ermRouting: {
+    __typename: 'ErmDeviceRouting',
+    state: 'HOLITA',
+    since: '2026-10-20T07:00:00.000Z',
+    observedAt: '2026-10-20T08:00:05.000Z',
+    latestKarmaReportAt: null,
+    parked: null,
+    latestReturnAttempt: null,
+  },
+  warningLamps: [
+    {
+      __typename: 'FleetWarningLamp',
+      parameterId: 1896,
+      state: 'OFF',
+      recordedAt: detailEvent.eventTime,
+    },
+    {
+      __typename: 'FleetWarningLamp',
+      parameterId: 1906,
+      state: 'OFF',
+      recordedAt: detailEvent.eventTime,
+    },
+    {
+      __typename: 'FleetWarningLamp',
+      parameterId: 1910,
+      state: 'OFF',
+      recordedAt: detailEvent.eventTime,
+    },
+  ],
   routingHealth: null,
   ermState: {
     __typename: 'ErmUnitState',
@@ -173,8 +204,13 @@ const detailDevice: WithTypename<AdminControlCenterDeviceQuery['fleetDevice']> =
     health: {
       __typename: 'ErmUnitHealth',
       gapsLast24h: [],
-      networkChangesLast24h: 0,
-      latestNetworkChange: null,
+      networkChangesLast24h: 2,
+      latestNetworkChange: {
+        __typename: 'ErmNetworkChange',
+        at: '2026-10-20T07:50:00.000Z',
+        networkType: 'LTE',
+        operatorCode: '28401',
+      },
       lastFrameAgeSeconds: 5,
       expectedIntervalSeconds: 300,
       overdue: false,
@@ -203,9 +239,163 @@ const reportingDevice: typeof detailDevice = {
       }
     : null,
 };
+export const karmaBackupDeviceId = '60000000-0000-4000-8000-000000000003';
+export const uncertainReturnDeviceId = '60000000-0000-4000-8000-000000000004';
+export const unobservedDeviceId = '60000000-0000-4000-8000-000000000005';
+const backupLastFrameAt = '2026-10-20T07:30:00.000Z';
+const backupEvent = {
+  ...detailEvent,
+  eventTime: backupLastFrameAt,
+  positionTime: backupLastFrameAt,
+};
+const earlierRecovery = {
+  __typename: 'ErmRecoverySession',
+  id: 'recovery-needs-operator',
+  startedAt: '2026-10-20T07:40:00.000Z',
+  finishedAt: '2026-10-20T07:40:12.000Z',
+  outcome: 'NEEDS_OPERATOR',
+  reason: 'The primary server configuration requires an operator.',
+} as const;
+const karmaBackupDevice: typeof detailDevice = {
+  ...detailDevice,
+  id: karmaBackupDeviceId,
+  imei: '001234567890125',
+  lastReportedAt: backupLastFrameAt,
+  routing: 'KARMA_BACKUP',
+  ermRouting: {
+    __typename: 'ErmDeviceRouting',
+    state: 'KARMA_BACKUP',
+    since: '2026-10-20T07:35:00.000Z',
+    observedAt: '2026-10-20T08:00:05.000Z',
+    latestKarmaReportAt: detailEvent.eventTime,
+    parked: true,
+    latestReturnAttempt: {
+      __typename: 'ErmKarmaReturnAttempt',
+      id: 'return-needs-operator',
+      requestedAt: '2026-10-20T07:38:00.000Z',
+      status: 'NEEDS_OPERATOR',
+      pending: false,
+      holitaConnectedAt: null,
+      recovery: earlierRecovery,
+    },
+  },
+  warningLamps: [
+    {
+      __typename: 'FleetWarningLamp',
+      parameterId: 1896,
+      state: 'RED',
+      recordedAt: backupLastFrameAt,
+    },
+    {
+      __typename: 'FleetWarningLamp',
+      parameterId: 1906,
+      state: 'YELLOW',
+      recordedAt: backupLastFrameAt,
+    },
+    { __typename: 'FleetWarningLamp', parameterId: 1910, state: 'UNKNOWN', recordedAt: null },
+  ],
+  ermState: detailDevice.ermState
+    ? {
+        ...detailDevice.ermState,
+        unitId: '001234567890125',
+        online: false,
+        connectedSince: null,
+        lastFrameAt: backupLastFrameAt,
+        latestEvent: backupEvent,
+        lastPosition: backupEvent,
+        latestAlarm: {
+          ...backupEvent,
+          category: 'ALARM',
+          severity: 'WARNING',
+          name: 'Driver alarm',
+        },
+        mainVoltage: { __typename: 'ErmReading', value: 24.8, observedAt: backupLastFrameAt },
+        backupVoltage: { __typename: 'ErmReading', value: 3.8, observedAt: backupLastFrameAt },
+        signalQuality: { __typename: 'ErmReading', value: 9, observedAt: backupLastFrameAt },
+        firmwareVersion: {
+          __typename: 'ErmTextReading',
+          value: '2.25.0',
+          observedAt: backupLastFrameAt,
+        },
+        edataMeasurements: [],
+        health: {
+          ...detailDevice.ermState.health,
+          lastFrameAgeSeconds: 1805,
+          overdue: true,
+          lastClosedAt: backupLastFrameAt,
+        },
+      }
+    : null,
+};
+const uncertainReturnDevice: typeof detailDevice = {
+  ...karmaBackupDevice,
+  id: uncertainReturnDeviceId,
+  imei: '001234567890126',
+  ermRouting: {
+    ...karmaBackupDevice.ermRouting,
+    latestReturnAttempt: {
+      __typename: 'ErmKarmaReturnAttempt',
+      id: 'return-uncertain',
+      requestedAt: '2026-10-20T07:58:00.000Z',
+      status: 'UNCERTAIN',
+      pending: true,
+      holitaConnectedAt: null,
+      recovery: null,
+    },
+  },
+  ermState: karmaBackupDevice.ermState
+    ? { ...karmaBackupDevice.ermState, unitId: '001234567890126', recovery: earlierRecovery }
+    : null,
+};
+const unobservedDevice: typeof detailDevice = {
+  ...detailDevice,
+  id: unobservedDeviceId,
+  imei: '001234567890127',
+  status: 'IN_STOCK',
+  lastReportedAt: null,
+  ermRouting: {
+    __typename: 'ErmDeviceRouting',
+    state: 'UNKNOWN',
+    since: null,
+    observedAt: null,
+    latestKarmaReportAt: null,
+    parked: null,
+    latestReturnAttempt: null,
+  },
+  warningLamps: [
+    { __typename: 'FleetWarningLamp', parameterId: 1896, state: 'UNKNOWN', recordedAt: null },
+    { __typename: 'FleetWarningLamp', parameterId: 1906, state: 'UNKNOWN', recordedAt: null },
+    { __typename: 'FleetWarningLamp', parameterId: 1910, state: 'UNKNOWN', recordedAt: null },
+  ],
+  diagnostics: { __typename: 'FleetDeviceDiagnosticSummary', count: 0, latest: null },
+  ermState: null,
+};
+const overviewDevices = [
+  detailDevice,
+  reportingDevice,
+  karmaBackupDevice,
+  uncertainReturnDevice,
+  unobservedDevice,
+];
 graphqlFixture(AdminControlCenterDeviceDocument, (variables) => ({
-  fleetDevice: variables.string('id') === reportingDeviceId ? reportingDevice : detailDevice,
+  fleetDevice:
+    overviewDevices.find((device) => device.id === variables.string('id')) ?? detailDevice,
 }));
+graphqlFixture(
+  AdminControlCenterReturnToHolitaDocument,
+  () =>
+    ({
+      returnErmDeviceToHolita: {
+        __typename: 'ErmKarmaReturnAttempt',
+        id: 'return-queued',
+        requestedAt: '2026-10-20T08:00:05.000Z',
+        status: 'QUEUED',
+        pending: true,
+        holitaConnectedAt: null,
+        recovery: null,
+      },
+    }) satisfies WithTypename<AdminControlCenterReturnToHolitaMutation>,
+);
 const detailEvents: WithTypename<AdminControlCenterEventsQuery['fleetDevice']['ermEvents']> = {
   __typename: 'ErmEventsPage',
   cursor: null,

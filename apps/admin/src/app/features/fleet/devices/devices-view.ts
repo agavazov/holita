@@ -22,9 +22,16 @@ import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-pane
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { deviceModelLabel, devicesText } from './i18n/messages';
-import { FleetConnection } from '../../../ui/fleet-live/fleet-connection';
 import { FleetFaults } from '../../../ui/fleet-live/fleet-faults';
-import { fleetLiveText, type FleetLiveDevice } from '../../../ui/fleet-live/fleet-live';
+import { fleetLiveText } from '../../../ui/fleet-live/fleet-live';
+import { Tag } from 'primeng/tag';
+import type {
+  AdminDeviceDetailsFragment,
+  AdminDevicesLiveQuery,
+} from '../../../../generated/graphql/operations';
+import { formatNumber, formatRelative } from '../../../ui/format/format';
+import { injectFleetNow } from '../../../ui/fleet-live/fleet-clock';
+import { toneSeverity, type StatusTone } from '../../../ui/tones';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 
 export const deviceStatuses = ['ONLINE', 'OFFLINE', 'IN_STOCK'] as const;
@@ -47,7 +54,8 @@ export interface DeviceRow {
   readonly lastSeenAt: string | null;
   readonly notes: string;
   /** Undefined while live state is unavailable. */
-  readonly live: FleetLiveDevice;
+  readonly live: AdminDevicesLiveQuery['fleetDevices']['items'][number] | undefined;
+  readonly warningLamps: AdminDeviceDetailsFragment['warningLamps'];
 }
 
 /**
@@ -63,7 +71,7 @@ export interface DeviceRow {
     TableModule,
     Skeleton,
     FilterBuilder,
-    FleetConnection,
+    Tag,
     FleetFaults,
     PageHeader,
     RowActions,
@@ -98,6 +106,8 @@ export class DevicesView {
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly format = injectFleetFormat();
+  private readonly now = injectFleetNow();
+  protected readonly toneSeverity = toneSeverity;
   private readonly sortReady = injectSortReady();
   protected modelLabel(model: string): string {
     return deviceModelLabel(this.language(), model);
@@ -105,7 +115,7 @@ export class DevicesView {
   protected readonly text = computed(() => devicesText(this.language()));
   protected readonly liveText = computed(() => fleetLiveText(this.language()));
   protected readonly uiText = computed(() => uiMessages[this.language()]);
-  protected readonly tableMinWidth = '58rem';
+  protected readonly tableMinWidth = '79rem';
   protected readonly columns = computed<readonly TableColumn[]>(() => [
     {
       id: 'select',
@@ -121,8 +131,10 @@ export class DevicesView {
       kind: 'identity',
       className: 'app-col-identity',
     },
-    { id: 'connection', label: this.liveText().connection, width: '13rem', kind: 'status' },
-    { id: 'lastReport', label: this.liveText().lastReport, width: '12rem', kind: 'date' },
+    { id: 'connection', label: this.liveText().connection, width: '12rem', kind: 'status' },
+    { id: 'lastReport', label: this.text().status.lastSignal, width: '11rem', kind: 'date' },
+    { id: 'routing', label: this.text().status.routing, width: '13rem', kind: 'status' },
+    { id: 'lamps', label: this.text().status.warningLamps, width: '10rem', kind: 'status' },
     { id: 'problems', label: this.text().table.problems, width: '10rem', kind: 'problems' },
     {
       id: 'actions',
@@ -249,10 +261,83 @@ export class DevicesView {
     return base ? [...base, row.id, 'problems'] : null;
   }
 
-  protected reportCell(row: DeviceRow) {
-    return this.format.dateTimeCell(
-      row.live?.ermState?.lastFrameAt ?? row.live?.lastReportedAt ?? row.lastSeenAt,
+  protected connectionStatus(row: DeviceRow): { label: string; tone: StatusTone } {
+    const state = row.live?.ermState;
+    const text = this.liveText();
+    if (!row.live) {
+      return { label: text.unavailable, tone: 'neutral' };
+    }
+    if (state?.online) {
+      return state.lastFrameAt && !state.health.overdue
+        ? { label: text.live, tone: 'success' }
+        : { label: text.connected, tone: 'info' };
+    }
+    if (state?.lastFrameAt) {
+      return state.health.overdue
+        ? { label: this.text().status.offline, tone: 'danger' }
+        : { label: this.text().status.reportingOffline, tone: 'warn' };
+    }
+    return { label: this.text().status.noHolitaConnection, tone: 'neutral' };
+  }
+
+  protected lastSignal(row: DeviceRow): { at: string | null; source: string | null } {
+    const holita = row.live?.ermState?.lastFrameAt ?? null;
+    const karma = row.live?.ermRouting.latestKarmaReportAt ?? null;
+    const candidates = [
+      { at: holita, source: this.text().status.viaHolita },
+      { at: karma, source: this.text().status.viaKarma },
+      { at: row.live?.lastReportedAt ?? row.lastSeenAt, source: null },
+    ];
+    return candidates.reduce<{ at: string | null; source: string | null }>(
+      (latest, candidate) =>
+        candidate.at && (!latest.at || Date.parse(candidate.at) > Date.parse(latest.at))
+          ? candidate
+          : latest,
+      { at: null, source: null },
     );
+  }
+
+  protected reportCell(row: DeviceRow) {
+    const at = this.lastSignal(row).at;
+    return {
+      text: formatRelative(at, this.now(), this.language()),
+      title: this.format.dateTimeCell(at, true).title,
+    };
+  }
+
+  protected backupSince(row: DeviceRow): { text: string; title: string } {
+    const at = row.live?.ermRouting.since;
+    return {
+      text: interpolate(this.text().status.since, { time: this.format.dateTime(at) }),
+      title: this.format.dateTimeCell(at, true).title,
+    };
+  }
+
+  protected lampStatus(row: DeviceRow): { label: string; tone: StatusTone; title: string } {
+    const lamps = row.warningLamps;
+    const active = lamps.filter(
+      (lamp) => lamp.state === 'RED' || lamp.state === 'YELLOW' || lamp.state === 'INFORMATION',
+    );
+    const reported = lamps.filter(
+      (lamp) =>
+        lamp.state === 'OFF' ||
+        lamp.state === 'RED' ||
+        lamp.state === 'YELLOW' ||
+        lamp.state === 'INFORMATION',
+    ).length;
+    return {
+      label: reported
+        ? interpolate(this.text().status.activeLamps, {
+            count: formatNumber(active.length, this.language()),
+          })
+        : this.text().status.noLampReports,
+      tone: active.some((lamp) => lamp.state === 'RED')
+        ? 'danger'
+        : active.length
+          ? 'warn'
+          : 'neutral',
+      title: interpolate(this.text().status.lampCoverage, { count: reported, total: lamps.length }),
+    };
   }
 
   protected label(template: string, row: DeviceRow): string {

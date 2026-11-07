@@ -1,5 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
-import { reportingDeviceId } from '../../../storybook/control-center-fixtures';
+import {
+  karmaBackupDeviceId,
+  uncertainReturnDeviceId,
+  unobservedDeviceId,
+} from '../../../storybook/control-center-fixtures';
 import { fixtureDevice } from '../../../storybook/devices-fixtures';
 import { defaultBranchId } from '../../../storybook/session-fixtures';
 import { routeAt, StoryApp, type StoryFixtures } from '../../../storybook/story-config';
@@ -32,7 +36,16 @@ export const SmsCommands: Story = { name: 'SMS commands', render: routed('sms-co
 export const Parameters: Story = { render: routed('parameters') };
 export const Events: Story = { name: 'Technical details — Events', render: routed('events') };
 export const Frames: Story = { name: 'Technical details — Frames', render: routed('frames') };
-export const Narrow: Story = {
+export const KarmaBackup: Story = {
+  name: 'Overview — Karma backup and warning lamps',
+  render: routed('overview', karmaBackupDeviceId),
+};
+export const ReturnUncertain: Story = {
+  name: 'Overview — Uncertain return',
   globals: { viewport: { value: 'mobile375', isRotated: false } },
-  render: routed('overview', reportingDeviceId),
+  render: routed('overview', uncertainReturnDeviceId),
+};
+export const NoObservation: Story = {
+  name: 'Overview — No observations',
+  render: routed('overview', unobservedDeviceId),
 };

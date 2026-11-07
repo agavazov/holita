@@ -36,19 +36,78 @@
           <div class="app-tab-content">
             @switch (tab()) {
               @case ('overview') {
-                <section class="app-card" [attr.aria-label]="text().liveState">
+                <section class="app-card" [attr.aria-label]="text().deviceStatus.connection">
+                  <h2>{{ text().deviceStatus.connection }}</h2>
                   <dl class="app-facts control-center__status">
                     <div>
-                      <dt>{{ text().detail.connection }}</dt>
-                      <dd><holita-fleet-connection [device]="device" /></dd>
+                      <dt>{{ text().liveState }}</dt>
+                      <dd>
+                        <p-tag [value]="connection().label" [severity]="connection().severity" />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{{ text().deviceStatus.lastSignal }}</dt>
+                      <dd><holita-fleet-last-report [device]="device" /></dd>
                     </div>
                     <div>
                       <dt>{{ text().now }}</dt>
                       <dd><holita-fleet-now [device]="device" /></dd>
                     </div>
                     <div>
-                      <dt>{{ text().lastReport }}</dt>
-                      <dd><holita-fleet-last-report [device]="device" /></dd>
+                      <dt>{{ text().deviceStatus.socket }}</dt>
+                      <dd>
+                        {{
+                          state()
+                            ? state()!.online
+                              ? text().deviceStatus.connected
+                              : text().deviceStatus.disconnected
+                            : text().deviceStatus.unknown
+                        }}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{{ text().deviceStatus.reporting }}</dt>
+                      <dd>
+                        {{
+                          state()?.lastFrameAt
+                            ? state()!.health.overdue
+                              ? text().deviceStatus.reportOverdue
+                              : text().deviceStatus.reportRecent
+                            : text().deviceStatus.unknown
+                        }}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{{ text().since }}</dt>
+                      <dd [title]="fmt.utc(state()?.connectedSince)">
+                        {{ fmt.dateTime(state()?.connectedSince, true) }}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{{ text().detail.expectedReport }}</dt>
+                      <dd>{{ duration(state()?.health?.expectedIntervalSeconds ?? null) }}</dd>
+                    </div>
+                    <div>
+                      <dt>{{ text().detail.reportingGaps }}</dt>
+                      <dd>{{ number(state()?.health?.gapsLast24h?.length) }}</dd>
+                    </div>
+                    <div>
+                      <dt>{{ text().deviceStatus.networkChanges }}</dt>
+                      <dd>{{ number(state()?.health?.networkChangesLast24h) }}</dd>
+                    </div>
+                    <div>
+                      <dt>{{ text().latestNetworkChange }}</dt>
+                      <dd [title]="fmt.utc(state()?.health?.latestNetworkChange?.at)">
+                        {{ fmt.dateTime(state()?.health?.latestNetworkChange?.at, true) }}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{{ text().deviceStatus.networkType }}</dt>
+                      <dd>{{ state()?.health?.latestNetworkChange?.networkType ?? '—' }}</dd>
+                    </div>
+                    <div>
+                      <dt>{{ text().deviceStatus.operator }}</dt>
+                      <dd>{{ state()?.health?.latestNetworkChange?.operatorCode ?? '—' }}</dd>
                     </div>
                   </dl>
                   @if (hasProblems()) {
@@ -67,6 +126,195 @@
                   }
                 </section>
                 <div class="app-card-grid control-center__overview">
+                  <section class="app-card" [attr.aria-label]="text().deviceStatus.routing">
+                    <h2>{{ text().deviceStatus.routing }}</h2>
+                    @if (routing(); as routing) {
+                      <p-tag
+                        [value]="text().deviceStatus.routeStates[routing.state]"
+                        [severity]="
+                          toneSeverity(
+                            routing.state === 'KARMA_BACKUP'
+                              ? 'warn'
+                              : routing.state === 'HOLITA'
+                                ? 'success'
+                                : 'neutral'
+                          )
+                        "
+                      />
+                      <dl class="app-facts">
+                        <div>
+                          <dt>{{ text().deviceStatus.routeSince }}</dt>
+                          <dd [title]="fmt.utc(routing.since)">
+                            {{ fmt.dateTime(routing.since, true) }}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>{{ text().deviceStatus.observedAt }}</dt>
+                          <dd [title]="fmt.utc(routing.observedAt)">
+                            {{ fmt.dateTime(routing.observedAt, true) }}
+                          </dd>
+                        </div>
+                        @if (routing.state === 'KARMA_BACKUP' || routing.latestKarmaReportAt) {
+                          <div>
+                            <dt>{{ text().deviceStatus.karmaReport }}</dt>
+                            <dd [title]="fmt.utc(routing.latestKarmaReportAt)">
+                              {{ fmt.dateTime(routing.latestKarmaReportAt, true) }}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().deviceStatus.parked }}</dt>
+                            <dd>
+                              {{
+                                routing.parked === true
+                                  ? text().deviceStatus.parkedYes
+                                  : routing.parked === false
+                                    ? text().deviceStatus.parkedNo
+                                    : text().deviceStatus.parkedUnknown
+                              }}
+                            </dd>
+                          </div>
+                        }
+                      </dl>
+                      @if (routing.latestReturnAttempt; as attempt) {
+                        <h3>{{ text().deviceStatus.returnAttempt }}</h3>
+                        <p-tag
+                          [value]="text().deviceStatus.returnStates[attempt.status]"
+                          [severity]="returnSeverity(attempt.status)"
+                        />
+                        <dl class="app-facts">
+                          <div>
+                            <dt>{{ text().deviceStatus.requestedAt }}</dt>
+                            <dd [title]="fmt.utc(attempt.requestedAt)">
+                              {{ fmt.dateTime(attempt.requestedAt, true) }}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().deviceStatus.holitaConnectedAt }}</dt>
+                            <dd [title]="fmt.utc(attempt.holitaConnectedAt)">
+                              {{ fmt.dateTime(attempt.holitaConnectedAt, true) }}
+                            </dd>
+                          </div>
+                        </dl>
+                      }
+                      @if (recovery(); as recovery) {
+                        <dl class="app-facts">
+                          <div>
+                            <dt>{{ text().deviceStatus.recoveryOutcome }}</dt>
+                            <dd>{{ text().recoveryStates[recovery.outcome] }}</dd>
+                          </div>
+                          <div>
+                            <dt>{{ text().deviceStatus.recoveryFinished }}</dt>
+                            <dd [title]="fmt.utc(recovery.finishedAt)">
+                              {{ fmt.dateTime(recovery.finishedAt, true) }}
+                            </dd>
+                          </div>
+                        </dl>
+                      } @else if (routing.latestReturnAttempt) {
+                        <p class="app-muted">{{ text().deviceStatus.noRecovery }}</p>
+                      }
+                      @if (
+                        routing.state === 'KARMA_BACKUP' || routing.latestReturnAttempt?.pending
+                      ) {
+                        <div class="control-center__actions">
+                          <button
+                            pButton
+                            type="button"
+                            [disabled]="!!returnDisabledReason()"
+                            [attr.aria-describedby]="
+                              returnDisabledReason() ? 'erm-return-disabled' : null
+                            "
+                            [attr.title]="returnDisabledReason()"
+                            (click)="returnToHolita()"
+                          >
+                            {{ text().deviceStatus.returnButton }}
+                          </button>
+                        </div>
+                        @if (returnDisabledReason(); as reason) {
+                          <p id="erm-return-disabled" class="app-muted">{{ reason }}</p>
+                        }
+                      }
+                      @if (returnFailure(); as failure) {
+                        <p-message severity="error">{{ failure }}</p-message>
+                      }
+                    }
+                  </section>
+                  <section class="app-card" [attr.aria-label]="text().deviceStatus.powerSignal">
+                    <h2>{{ text().deviceStatus.powerSignal }}</h2>
+                    <dl class="app-facts">
+                      <div>
+                        <dt>{{ text().mainVoltage }}</dt>
+                        <dd>{{ voltage(state()?.mainVoltage?.value) }}</dd>
+                        <dd class="app-muted" [title]="fmt.utc(state()?.mainVoltage?.observedAt)">
+                          {{ fmt.dateTime(state()?.mainVoltage?.observedAt, true) }}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>{{ text().backupVoltage }}</dt>
+                        <dd>{{ voltage(state()?.backupVoltage?.value) }}</dd>
+                        <dd class="app-muted" [title]="fmt.utc(state()?.backupVoltage?.observedAt)">
+                          {{ fmt.dateTime(state()?.backupVoltage?.observedAt, true) }}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>{{ text().deviceStatus.gsm }}</dt>
+                        <dd>{{ gsmSignal(state()?.signalQuality?.value) }}</dd>
+                        <dd class="app-muted" [title]="fmt.utc(state()?.signalQuality?.observedAt)">
+                          {{ fmt.dateTime(state()?.signalQuality?.observedAt, true) }}
+                        </dd>
+                      </div>
+                    </dl>
+                  </section>
+                  <section class="app-card" [attr.aria-label]="text().deviceStatus.firmware">
+                    <h2>{{ text().deviceStatus.firmware }}</h2>
+                    <p-tag
+                      [value]="text().deviceStatus.firmwareStates[firmwareComparison()]"
+                      [severity]="
+                        toneSeverity(
+                          firmwareComparison() === 'MATCH'
+                            ? 'success'
+                            : firmwareComparison() === 'DIFFERENT'
+                              ? 'warn'
+                              : 'neutral'
+                        )
+                      "
+                    />
+                    <dl class="app-facts">
+                      <div>
+                        <dt>{{ text().deviceStatus.observedFirmware }}</dt>
+                        <dd>{{ state()?.firmwareVersion?.value ?? '—' }}</dd>
+                      </div>
+                      <div>
+                        <dt>{{ text().deviceStatus.registeredFirmware }}</dt>
+                        <dd>{{ device.firmwareVersion ?? '—' }}</dd>
+                      </div>
+                      <div>
+                        <dt>{{ text().deviceStatus.observedVersionAt }}</dt>
+                        <dd [title]="fmt.utc(state()?.firmwareVersion?.observedAt)">
+                          {{ fmt.dateTime(state()?.firmwareVersion?.observedAt, true) }}
+                        </dd>
+                      </div>
+                    </dl>
+                  </section>
+                  <section class="app-card" [attr.aria-label]="text().deviceStatus.warningLamps">
+                    <h2>{{ text().deviceStatus.warningLamps }}</h2>
+                    <dl class="app-facts">
+                      @for (lamp of warningLamps(); track lamp.parameterId) {
+                        <div>
+                          <dt>{{ lamp.name }} · {{ lamp.parameterId }}</dt>
+                          <dd>
+                            <p-tag
+                              [value]="text().deviceStatus.lampStates[lamp.state]"
+                              [severity]="lampSeverity(lamp.state)"
+                            />
+                          </dd>
+                          <dd [title]="fmt.utc(lamp.recordedAt)">
+                            {{ text().deviceStatus.lastObserved }}:
+                            {{ fmt.dateTime(lamp.recordedAt, true) }}
+                          </dd>
+                        </div>
+                      }
+                    </dl>
+                  </section>
                   <section class="app-card" [attr.aria-label]="text().registry">
                     <h2>{{ text().registry }}</h2>
                     <dl class="app-facts">
@@ -113,39 +361,6 @@
                         [routerLink]="link('fleet', 'devices', recordId(), 'edit')"
                         >{{ text().editInFleet }}</a
                       >
-                    </div>
-                  </section>
-                  <section class="app-card" [attr.aria-label]="text().health">
-                    <h2>{{ text().health }}</h2>
-                    @if (state(); as state) {
-                      <dl class="app-facts">
-                        <div>
-                          <dt>{{ text().since }}</dt>
-                          <dd [title]="fmt.utc(state.connectedSince)">
-                            {{ fmt.dateTime(state.connectedSince, true) }}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().frameAge }}</dt>
-                          <dd>{{ duration(state.health.lastFrameAgeSeconds) }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().detail.expectedReport }}</dt>
-                          <dd>{{ duration(state.health.expectedIntervalSeconds) }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().detail.reportingGaps }}</dt>
-                          <dd>{{ number(state.health.gapsLast24h.length) }}</dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().alarms24h }}</dt>
-                          <dd>{{ number(state.alarmsLast24h) }}</dd>
-                        </div>
-                      </dl>
-                    } @else {
-                      <p class="app-muted">{{ text().neverConnectedState }}</p>
-                    }
-                    <div class="control-center__actions">
                       <a pButton [routerLink]="deviceLink('commands')">{{
                         text().detail.tabs.commands
                       }}</a>
@@ -772,7 +987,7 @@
 </section>
 <p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }"
   ><ng-template #message
-    ><p id="erm-snapshot-confirm-message">{{ snapshotConfirmation() }}</p></ng-template
+    ><p id="erm-device-confirm-message">{{ actionConfirmation() }}</p></ng-template
   ></p-confirmdialog
 >
 <p-dialog

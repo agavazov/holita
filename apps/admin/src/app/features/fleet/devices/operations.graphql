@@ -25,6 +25,11 @@ fragment AdminDeviceDetails on FleetDevice {
   installedAt
   notes
   lastReportedAt
+  warningLamps {
+    parameterId
+    state
+    recordedAt
+  }
 }
 
 query AdminDevices(
@@ -55,6 +60,16 @@ query AdminDevicesLive($ids: [ID!]!) {
   fleetDevices(ids: $ids, limit: 100) {
     items {
       ...AdminFleetLiveDevice
+      warningLamps {
+        parameterId
+        state
+        recordedAt
+      }
+      ermRouting {
+        state
+        since
+        latestKarmaReportAt
+      }
     }
   }
 }

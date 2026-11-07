@@ -101,7 +101,9 @@
           {{ text().table.device }} <p-sort-icon field="imei" />
         </th>
         <th scope="col">{{ liveText().connection }}</th>
-        <th scope="col">{{ liveText().lastReport }}</th>
+        <th scope="col">{{ text().status.lastSignal }}</th>
+        <th scope="col">{{ text().status.routing }}</th>
+        <th scope="col">{{ text().status.warningLamps }}</th>
         <th scope="col">{{ text().table.problems }}</th>
         <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
           <span class="app-visually-hidden">{{ text().table.actions }}</span>
@@ -156,18 +158,60 @@
             <span class="app-visually-hidden">{{ uiText().loading }}</span>
             <p-skeleton width="7rem" height="1.5rem" />
           } @else {
-            <holita-fleet-connection mode="table" [device]="row.live" />
+            @let connection = connectionStatus(row);
+            <p-tag [value]="connection.label" [severity]="toneSeverity(connection.tone)" />
           }
         </td>
-        <td class="app-cell-date">
+        <td>
           @let reported = reportCell(row);
-          <time
-            [attr.title]="reported.title"
-            [attr.datetime]="
-              row.live?.ermState?.lastFrameAt ?? row.live?.lastReportedAt ?? row.lastSeenAt
-            "
-            >{{ reported.text }}</time
-          >
+          @let signal = lastSignal(row);
+          <span class="app-cell-stack">
+            <time class="app-cell-date" [attr.title]="reported.title" [attr.datetime]="signal.at">{{
+              reported.text
+            }}</time>
+            @if (signal.source) {
+              <span>{{ signal.source }}</span>
+            }
+          </span>
+        </td>
+        <td [attr.aria-busy]="liveLoading()">
+          @if (liveLoading()) {
+            <span class="app-visually-hidden">{{ uiText().loading }}</span>
+            <p-skeleton width="7rem" height="1.5rem" />
+          } @else {
+            <span class="app-cell-stack">
+              @switch (row.live?.ermRouting?.state) {
+                @case ('KARMA_BACKUP') {
+                  <span
+                    ><p-tag [value]="text().status.karmaBackup" [severity]="toneSeverity('warn')"
+                  /></span>
+                  @if (row.live?.ermRouting?.since; as since) {
+                    @let backup = backupSince(row);
+                    <time
+                      class="app-cell-date"
+                      [attr.datetime]="since"
+                      [attr.title]="backup.title"
+                      >{{ backup.text }}</time
+                    >
+                  }
+                }
+                @case ('HOLITA') {
+                  <span>holita</span>
+                }
+                @default {
+                  <span class="app-muted">{{ text().status.routingUnknown }}</span>
+                }
+              }
+            </span>
+          }
+        </td>
+        <td>
+          @let lamps = lampStatus(row);
+          <p-tag
+            [value]="lamps.label"
+            [severity]="toneSeverity(lamps.tone)"
+            [attr.title]="lamps.title"
+          />
         </td>
         <td>
           <holita-fleet-faults mode="table" [device]="row.live" [link]="diagnosticsLink(row)" />
