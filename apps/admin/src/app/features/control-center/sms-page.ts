@@ -8,6 +8,7 @@ import {
   signal,
   type OnInit,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Copy } from '@primeicons/angular/copy';
 import { Envelope } from '@primeicons/angular/envelope';
@@ -15,16 +16,18 @@ import { MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { Skeleton } from 'primeng/skeleton';
-import { Tag } from 'primeng/tag';
+import { TableModule } from 'primeng/table';
+import { Tooltip } from 'primeng/tooltip';
 import type { AdminControlCenterSmsDevicesQuery } from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
 import type { Language } from '../../i18n/messages';
 import { EmptyState } from '../../ui/empty-state/empty-state';
 import { interpolate } from '../../ui/i18n/messages';
-import { toneSeverity } from '../../ui/tones';
+import { trackById } from '../../ui/list/list-actions';
+import { TablePanel, type TableColumn } from '../../ui/table-panel/table-panel';
 import { ControlCenterApi } from './control-center-api';
 import { controlCenterText } from './control-center-text';
-import { smsGroups, smsMaxBytes, smsTexts, type SmsGroup } from './sms-texts';
+import { smsGroups, smsMaxBytes, smsTexts, type SmsText } from './sms-texts';
 import bg from './sms-ui.bg.json';
 import en from './sms-ui.en.json';
 
@@ -34,7 +37,19 @@ const smsUiText: Record<Language, typeof en> = { bg, en };
 /** Prepares supported SMS texts for the current device; sending happens in the phone app. */
 @Component({
   selector: 'holita-control-center-sms',
-  imports: [RouterLink, Copy, Envelope, ButtonDirective, Message, Skeleton, Tag, EmptyState],
+  imports: [
+    NgTemplateOutlet,
+    RouterLink,
+    Copy,
+    Envelope,
+    ButtonDirective,
+    Message,
+    Skeleton,
+    TableModule,
+    Tooltip,
+    EmptyState,
+    TablePanel,
+  ],
   providers: [ControlCenterApi],
   templateUrl: './sms-page.html',
   styleUrl: './control-center.css',
@@ -42,26 +57,20 @@ const smsUiText: Record<Language, typeof en> = { bg, en };
     :host {
       display: block;
     }
-    .sms-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
-      gap: var(--p-app-stack-gap);
+    .sms-message {
+      display: flex;
+      align-items: center;
+      gap: var(--p-app-space-2);
     }
-    .sms-card {
-      border-block-start: var(--p-app-space-1) solid var(--p-app-tone-info-solid);
+    .sms-message code {
+      flex: 1;
+      min-inline-size: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    .sms-card--route {
-      border-block-start-color: var(--p-app-accent-solid);
-    }
-    .sms-card--karma {
-      border-block-start-color: var(--p-app-tone-warn-solid);
-    }
-    .sms-card h3,
-    .sms-card p {
-      margin: 0;
-    }
-    .sms-card code {
-      display: block;
+    .sms-message button {
+      flex: none;
     }
     .sms-replies {
       display: grid;
@@ -88,6 +97,25 @@ export class SmsPage implements OnInit {
   private readonly api = inject(ControlCenterApi);
   private readonly notifications = inject(MessageService);
   readonly maxBytes = smsMaxBytes;
+  readonly trackById = trackById;
+  readonly tableMinWidth = '52rem';
+  readonly columns = computed<readonly TableColumn[]>(() => [
+    {
+      id: 'command',
+      label: this.ui().command,
+      width: '18rem',
+      kind: 'identity',
+      className: 'app-col-identity',
+    },
+    { id: 'message', label: this.ui().message, width: '29rem', kind: 'text' },
+    {
+      id: 'actions',
+      label: this.text().detail.actions,
+      width: '5rem',
+      kind: 'actions',
+      className: 'app-col-actions',
+    },
+  ]);
   readonly device = signal<SmsDevice | null>(null);
   readonly loading = signal(true);
   readonly error = signal<unknown>(null);
@@ -140,8 +168,12 @@ export class SmsPage implements OnInit {
   format(template: string, values: Readonly<Record<string, string | number>>): string {
     return interpolate(template, values);
   }
-  severity(group: SmsGroup) {
-    return toneSeverity(group === 'karma' ? 'warn' : group === 'route' ? 'accent' : 'info');
+  purpose(item: SmsText): string {
+    return this.sms().texts[item.id].purpose;
+  }
+  commandHint(item: SmsText): string {
+    const text = this.sms().texts[item.id];
+    return `${text.purpose}. ${text.when}`;
   }
   editLink(device: SmsDevice): string[] {
     return ['/', this.language(), this.branchId(), 'fleet', 'devices', device.id, 'edit'];

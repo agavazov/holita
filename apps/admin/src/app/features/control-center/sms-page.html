@@ -8,7 +8,7 @@
     </p-message>
   }
   @if (device(); as current) {
-    <section class="app-card app-card--accent" [attr.aria-label]="sms().title">
+    <section class="app-card" [attr.aria-label]="sms().title">
       <div class="app-inline">
         <span class="app-icon-well app-icon-well--accent" aria-hidden="true">
           <svg data-p-icon="envelope"></svg>
@@ -36,96 +36,156 @@
     </section>
 
     @for (entry of groups(); track entry.group) {
-      <section class="app-tab-content" [attr.aria-labelledby]="'sms-group-' + entry.group">
+      <section class="app-tab-content" [attr.aria-label]="sms().groups[entry.group].title">
         <div class="app-stack">
-          <h2 [id]="'sms-group-' + entry.group">{{ sms().groups[entry.group].title }}</h2>
           <p class="app-muted">{{ sms().groups[entry.group].description }}</p>
           @if (entry.group === 'karma') {
             <p-message severity="warn">{{ sms().karmaWarning }}</p-message>
           }
         </div>
-        <div class="sms-grid">
-          @for (item of entry.texts; track item.id) {
-            <article
-              class="app-card sms-card"
-              [class.sms-card--route]="entry.group === 'route'"
-              [class.sms-card--karma]="entry.group === 'karma'"
-              [attr.aria-labelledby]="'sms-command-' + item.id"
-            >
-              <p-tag [value]="ui().groups[entry.group]" [severity]="severity(entry.group)" />
-              <h3 [id]="'sms-command-' + item.id">{{ sms().texts[item.id].purpose }}</h3>
-              <p class="app-muted">{{ sms().texts[item.id].when }}</p>
-              <dl class="app-facts">
-                <div>
-                  <dt>{{ sms().sendTo }}</dt>
-                  <dd class="app-mono">{{ current.simPhoneNumber ?? sms().noSim }}</dd>
-                </div>
-              </dl>
-              <div class="app-card__body">
-                <strong>{{ ui().message }}</strong>
-                <code #code class="control-center__sms-text">{{ item.text }}</code>
-                <span class="app-muted app-num">{{
-                  format(ui().bytes, { bytes: item.bytes, max: maxBytes })
-                }}</span>
-                @if (item.bytes > maxBytes) {
-                  <p-message severity="warn">{{
-                    format(sms().tooLong, { bytes: item.bytes })
-                  }}</p-message>
+        <holita-table-panel
+          mode="local"
+          [heading]="sms().groups[entry.group].title"
+          [total]="entry.texts.length"
+          [view]="{ kind: 'rows' }"
+          [busy]="loading()"
+          [columns]="columns()"
+          [tableMinWidth]="tableMinWidth"
+        >
+          <p-table
+            class="app-responsive-table"
+            [value]="entry.texts"
+            dataKey="id"
+            [rowTrackBy]="trackById"
+            [scrollable]="true"
+            [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+            [pt]="{
+              tableContainer: { tabindex: '0', 'aria-label': sms().groups[entry.group].title },
+            }"
+          >
+            <ng-template #colgroup>
+              <colgroup>
+                @for (column of columns(); track column.id) {
+                  <col
+                    [style.width]="
+                      column.className === 'app-col-identity'
+                        ? 'var(--app-table-identity-width, ' + column.width + ')'
+                        : column.width
+                    "
+                    [class]="column.className ?? ''"
+                  />
                 }
-                <div class="app-inline">
-                  <button
+              </colgroup>
+            </ng-template>
+            <ng-template #header>
+              <tr>
+                <th scope="col" class="app-col-identity">{{ ui().command }}</th>
+                <th scope="col">{{ ui().message }}</th>
+                <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+                  <span class="app-visually-hidden">{{ text().detail.actions }}</span>
+                </th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-item>
+              <tr>
+                <td class="app-col-identity">
+                  <div class="app-cell-identity">
+                    <button
+                      type="button"
+                      class="app-link"
+                      [pTooltip]="commandHint(item)"
+                      tooltipEvent="both"
+                      tooltipPosition="top"
+                    >
+                      {{ item.name }}
+                    </button>
+                    <span [title]="purpose(item)">{{ purpose(item) }}</span>
+                  </div>
+                  <div class="app-table-mobile-actions">
+                    <ng-container [ngTemplateOutlet]="openSms" />
+                  </div>
+                </td>
+                <td>
+                  <div class="sms-message control-center__sms-text">
+                    <code #code [title]="item.text">{{ item.text }}</code>
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      severity="secondary"
+                      [text]="true"
+                      [iconOnly]="true"
+                      [disabled]="item.bytes > maxBytes"
+                      [attr.aria-label]="format(ui().copyPurpose, { purpose: purpose(item) })"
+                      [pTooltip]="sms().copy"
+                      tooltipEvent="both"
+                      tooltipPosition="top"
+                      (click)="copy(item.text, code)"
+                    >
+                      <svg data-p-icon="copy" aria-hidden="true"></svg>
+                    </button>
+                  </div>
+                  @if (item.bytes > maxBytes) {
+                    <p-message severity="warn">{{
+                      format(sms().tooLong, { bytes: item.bytes })
+                    }}</p-message>
+                  }
+                </td>
+                <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+                  <ng-container [ngTemplateOutlet]="openSms" />
+                </td>
+              </tr>
+              <ng-template #openSms>
+                @if (current.simPhoneNumber && item.bytes <= maxBytes) {
+                  <a
                     pButton
-                    type="button"
                     size="small"
                     severity="secondary"
-                    [outlined]="true"
-                    [disabled]="item.bytes > maxBytes"
+                    [text]="true"
+                    [iconOnly]="true"
+                    [href]="smsLink(current.simPhoneNumber, item.text)"
                     [attr.aria-label]="
-                      format(ui().copyPurpose, { purpose: sms().texts[item.id].purpose })
+                      format(ui().openPurpose, {
+                        purpose: purpose(item),
+                        sim: current.simPhoneNumber,
+                      })
                     "
-                    (click)="copy(item.text, code)"
-                  >
-                    <svg data-p-icon="copy" aria-hidden="true"></svg>{{ sms().copy }}
-                  </button>
-                  @if (current.simPhoneNumber && item.bytes <= maxBytes) {
-                    <a
-                      pButton
-                      size="small"
-                      [href]="smsLink(current.simPhoneNumber, item.text)"
-                      [attr.aria-label]="
-                        format(ui().openPurpose, {
-                          purpose: sms().texts[item.id].purpose,
-                          sim: current.simPhoneNumber,
-                        })
-                      "
-                    >
-                      <svg data-p-icon="envelope" aria-hidden="true"></svg>{{ sms().openSms }}
-                    </a>
-                  }
-                </div>
+                    [pTooltip]="sms().openSms"
+                    tooltipEvent="both"
+                    tooltipPosition="top"
+                    ><svg data-p-icon="envelope" aria-hidden="true"></svg
+                  ></a>
+                }
+              </ng-template>
+            </ng-template>
+          </p-table>
+        </holita-table-panel>
+        <details class="app-card">
+          <summary>{{ sms().reply }}</summary>
+          <dl class="sms-replies">
+            @for (item of entry.texts; track item.id) {
+              <div>
+                <dt>{{ purpose(item) }}</dt>
+                <dd>{{ ui().replies[item.id] }}</dd>
               </div>
-              <dl class="sms-replies">
-                <div>
-                  <dt>{{ sms().reply }}</dt>
-                  <dd>{{ ui().replies[item.id] }}</dd>
-                </div>
-                <div>
-                  <dt>{{ ui().otherReply }}</dt>
-                  <dd>{{ ui().otherReplyMeaning }}</dd>
-                </div>
-                <div>
-                  <dt>{{ ui().noReply }}</dt>
-                  <dd>{{ ui().noReplyMeaning }}</dd>
-                </div>
-              </dl>
-            </article>
-          }
-        </div>
+            }
+          </dl>
+        </details>
       </section>
     }
     <details class="app-card">
       <summary>{{ sms().rulesTitle }}</summary>
       <p>{{ sms().syntax }} {{ sms().caseInsensitive }}</p>
+      <dl class="sms-replies">
+        <div>
+          <dt>{{ ui().otherReply }}</dt>
+          <dd>{{ ui().otherReplyMeaning }}</dd>
+        </div>
+        <div>
+          <dt>{{ ui().noReply }}</dt>
+          <dd>{{ ui().noReplyMeaning }}</dd>
+        </div>
+      </dl>
     </details>
   } @else if (loading()) {
     <section class="app-card" [attr.aria-label]="ui().loading">

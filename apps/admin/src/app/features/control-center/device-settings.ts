@@ -118,12 +118,18 @@ export class DeviceSettings {
   });
   protected readonly runs = signal<readonly Run[]>([]);
   protected readonly trackById = trackById;
-  protected readonly tableMinWidth = '58rem';
+  protected readonly tableMinWidth = '60rem';
   protected readonly actions = computed<readonly ListAction<'details', Run>[]>(() => [
     { id: 'details', label: this.text().details },
   ]);
   protected readonly columns = computed<readonly TableColumn[]>(() => [
-    { id: 'operation', label: this.text().operation, width: '18rem', kind: 'identity' },
+    {
+      id: 'operation',
+      label: this.text().operation,
+      width: '18rem',
+      kind: 'identity',
+      className: 'app-col-identity',
+    },
     { id: 'started', label: this.text().started, width: '12rem', kind: 'date' },
     { id: 'status', label: this.common().status, width: '13rem', kind: 'status' },
     {
@@ -136,7 +142,7 @@ export class DeviceSettings {
     {
       id: 'actions',
       label: this.text().actions,
-      width: '3rem',
+      width: '5rem',
       kind: 'actions',
       className: 'app-col-actions',
     },

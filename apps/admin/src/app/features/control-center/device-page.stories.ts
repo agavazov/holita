@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
-import '../../../storybook/control-center-fixtures';
+import { reportingDeviceId } from '../../../storybook/control-center-fixtures';
 import { fixtureDevice } from '../../../storybook/devices-fixtures';
 import { defaultBranchId } from '../../../storybook/session-fixtures';
 import { routeAt, StoryApp, type StoryFixtures } from '../../../storybook/story-config';
@@ -34,5 +34,5 @@ export const Events: Story = { name: 'Technical details — Events', render: rou
 export const Frames: Story = { name: 'Technical details — Frames', render: routed('frames') };
 export const Narrow: Story = {
   globals: { viewport: { value: 'mobile375', isRotated: false } },
-  render: routed('overview'),
+  render: routed('overview', reportingDeviceId),
 };

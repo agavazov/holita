@@ -25,32 +25,6 @@
         </button></p-message
       >
     }
-    <section class="app-card" [attr.aria-label]="text().liveState">
-      <dl class="app-facts control-center__status">
-        <div>
-          <dt>{{ text().detail.connection }}</dt>
-          <dd><holita-fleet-connection [device]="device" /></dd>
-        </div>
-        <div>
-          <dt>{{ text().now }}</dt>
-          <dd><holita-fleet-now [device]="device" /></dd>
-        </div>
-        <div>
-          <dt>{{ text().lastReport }}</dt>
-          <dd><holita-fleet-last-report [device]="device" /></dd>
-        </div>
-      </dl>
-      <div
-        class="app-problem-panel"
-        [class.app-problem-panel--warn]="!!problems()?.counts?.requiringAttention"
-        [class.app-problem-panel--info]="!problems()?.counts?.requiringAttention"
-      >
-        <a class="app-link" [routerLink]="deviceLink('problems')">{{ problemSummary() }}</a>
-        @if (problemsError()) {
-          <span role="alert">{{ problemFailure() }}</span>
-        }
-      </div>
-    </section>
     <p-tabs [value]="activeTab()" (valueChange)="selectTab($event)">
       <p-tablist [pt]="{ content: { 'aria-label': text().detail.deviceSections } }">
         @for (item of primaryTabs; track item) {
@@ -60,11 +34,40 @@
       <p-tabpanels>
         <p-tabpanel [value]="activeTab()">
           <div class="app-tab-content">
-            <p class="app-muted">{{ text().detail.hints[tab()] }}</p>
             @switch (tab()) {
               @case ('overview') {
+                <section class="app-card" [attr.aria-label]="text().liveState">
+                  <dl class="app-facts control-center__status">
+                    <div>
+                      <dt>{{ text().detail.connection }}</dt>
+                      <dd><holita-fleet-connection [device]="device" /></dd>
+                    </div>
+                    <div>
+                      <dt>{{ text().now }}</dt>
+                      <dd><holita-fleet-now [device]="device" /></dd>
+                    </div>
+                    <div>
+                      <dt>{{ text().lastReport }}</dt>
+                      <dd><holita-fleet-last-report [device]="device" /></dd>
+                    </div>
+                  </dl>
+                  @if (hasProblems()) {
+                    <div
+                      class="app-problem-panel"
+                      [class.app-problem-panel--warn]="!!problems()?.counts?.requiringAttention"
+                      [class.app-problem-panel--info]="!problems()?.counts?.requiringAttention"
+                    >
+                      <a class="app-link" [routerLink]="deviceLink('problems')">{{
+                        problemSummary()
+                      }}</a>
+                    </div>
+                  }
+                  @if (problemsError()) {
+                    <p-message severity="error">{{ problemFailure() }}</p-message>
+                  }
+                </section>
                 <div class="app-card-grid control-center__overview">
-                  <section class="app-card app-card--accent" [attr.aria-label]="text().registry">
+                  <section class="app-card" [attr.aria-label]="text().registry">
                     <h2>{{ text().registry }}</h2>
                     <dl class="app-facts">
                       <div>
@@ -335,6 +338,9 @@
                   <p-table
                     class="app-responsive-table"
                     [value]="snapshots()?.items ?? []"
+                    [pt]="{
+                      tableContainer: { tabindex: '0', 'aria-label': text().snapshots.history },
+                    }"
                     dataKey="id"
                     [rowTrackBy]="trackById"
                     [scrollable]="true"
@@ -356,7 +362,19 @@
                     <ng-template #header
                       ><tr>
                         @for (column of columns(); track column.id) {
-                          <th scope="col" [class]="column.className ?? ''">{{ column.label }}</th>
+                          <th
+                            scope="col"
+                            [class]="column.className ?? ''"
+                            pFrozenColumn
+                            [frozen]="column.kind === 'actions'"
+                            alignFrozen="right"
+                          >
+                            @if (column.kind === 'actions') {
+                              <span class="app-visually-hidden">{{ column.label }}</span>
+                            } @else {
+                              {{ column.label }}
+                            }
+                          </th>
                         }
                       </tr></ng-template
                     >
@@ -857,13 +875,22 @@
             [emptyTitle]="text().snapshots.noChanges"
           >
             <p-table
+              class="app-responsive-table"
               [value]="detail.value.changes"
+              [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().snapshots.changes } }"
               [scrollable]="true"
-              [tableStyle]="{ 'min-width': '54rem' }"
+              [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
               ><ng-template #colgroup
                 ><colgroup>
                   @for (column of changeColumns(); track column.id) {
-                    <col [style.width]="column.width" [class]="column.className ?? ''" />
+                    <col
+                      [style.width]="
+                        column.className === 'app-col-identity'
+                          ? 'var(--app-table-identity-width, ' + column.width + ')'
+                          : column.width
+                      "
+                      [class]="column.className ?? ''"
+                    />
                   }</colgroup></ng-template
               ><ng-template #header
                 ><tr>
@@ -873,7 +900,7 @@
                 </tr></ng-template
               ><ng-template #body let-row
                 ><tr>
-                  <td>
+                  <td class="app-col-identity">
                     <div class="app-cell-identity">
                       <strong>{{ parameter(row.parameter) }}</strong
                       ><span [title]="row.title ?? ''">{{ row.title ?? '—' }}</span>
@@ -903,13 +930,22 @@
             [emptyTitle]="text().snapshots.noValue"
           >
             <p-table
+              class="app-responsive-table"
               [value]="detail.value.values"
+              [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().snapshots.values } }"
               [scrollable]="true"
-              [tableStyle]="{ 'min-width': '42rem' }"
+              [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
               ><ng-template #colgroup
                 ><colgroup>
                   @for (column of valueColumns(); track column.id) {
-                    <col [style.width]="column.width" [class]="column.className ?? ''" />
+                    <col
+                      [style.width]="
+                        column.className === 'app-col-identity'
+                          ? 'var(--app-table-identity-width, ' + column.width + ')'
+                          : column.width
+                      "
+                      [class]="column.className ?? ''"
+                    />
                   }</colgroup></ng-template
               ><ng-template #header
                 ><tr>
@@ -919,7 +955,7 @@
                 </tr></ng-template
               ><ng-template #body let-row
                 ><tr>
-                  <td>
+                  <td class="app-col-identity">
                     <div class="app-cell-identity">
                       <strong>{{ parameter(row.parameter) }}</strong
                       ><span [title]="row.title ?? ''">{{ row.title ?? '—' }}</span>

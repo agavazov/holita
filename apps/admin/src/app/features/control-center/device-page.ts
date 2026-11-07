@@ -222,6 +222,10 @@ export class DevicePage implements OnInit {
   readonly problemFailure = computed(() =>
     requestError(this.problemsError(), this.text().unavailable),
   );
+  readonly hasProblems = computed(() => {
+    const counts = this.problems()?.counts;
+    return (counts?.requiringAttention ?? 0) > 0 || (counts?.recorded ?? 0) > 0;
+  });
   readonly problemSummary = computed(() =>
     this.problems()
       ? interpolate(this.text().detail.problemSummary, {

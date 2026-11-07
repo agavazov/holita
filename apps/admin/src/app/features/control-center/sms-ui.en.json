@@ -1,16 +1,11 @@
 {
   "phoneOnly": "Prepare the message here, then send it from your phone. This page cannot confirm sending, delivery or a reply.",
   "noSimHint": "Add this device’s SIM number to open the message in your SMS app. You can still copy its text.",
-  "message": "Complete message",
+  "message": "SMS text",
   "bytes": "{bytes} / {max} bytes",
   "copyPurpose": "Copy message: {purpose}",
   "openPurpose": "Open message for {purpose} in the SMS app, addressed to {sim}",
   "loading": "Loading this device’s SMS details",
-  "groups": {
-    "check": "Read only",
-    "route": "Change reporting server",
-    "karma": "Emergency routing"
-  },
   "otherReply": "A different reply",
   "otherReplyMeaning": "An unfamiliar or error reply does not confirm the requested result. Keep the exact reply for support; do not repeat a settings change automatically.",
   "noReply": "No reply",
@@ -26,5 +21,6 @@
     "route50": "ok#setparam confirms that the port setting was accepted. Check the address and port by SMS, then check this device’s connection in holita.",
     "karma49": "ok#setparam confirms that the address setting was accepted. It does not confirm a connection. Wait for this reply before preparing step 2.",
     "karma50": "ok#setparam confirms that the port setting was accepted. Read the address and port back to check the settings; this reply does not prove that Karma is receiving data."
-  }
+  },
+  "command": "Command"
 }
