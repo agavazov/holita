@@ -1047,9 +1047,56 @@ describe('ERM telemetry import with PostgreSQL', () => {
         })),
       },
     });
+    const lampNotifications = () =>
+      database.client.fleetNotification.findMany({
+        where: { ...scopeA, deviceId: lampDevice.id },
+        orderBy: [{ occurredAt: 'asc' }, { sourceKey: 'asc' }],
+      });
+    const startupEvents: FeedEvent[] = [];
+    events.set(lampDevice.imei, startupEvents);
+    for (const [id, seconds, engineOn, brake, state] of [
+      ['97', 0, false, '01', 'UNKNOWN'],
+      ['98', 1, true, '00', 'OFF'],
+    ] as const) {
+      startupEvents.push({ ...lampEvent(id, seconds, brake), engineOn });
+      await jobs.tick();
+      expect(
+        await database.client.vehicleEdataMeasurement.findMany({
+          where: { ...scopeA, vehicleId: lampVehicle.id, sourceEventId: BigInt(id) },
+          select: { parameterId: true, valueHex: true },
+          orderBy: { parameterId: 'asc' },
+        }),
+      ).toEqual(
+        engineOn ? [1896, 1906, 1910].map((parameterId) => ({ parameterId, valueHex: '00' })) : [],
+      );
+      expect(await lampNotifications()).toEqual([]);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${issueDemoToken(scopeA.tenantId)}`,
+          'x-branch-id': scopeA.branchId,
+        },
+        body: JSON.stringify({
+          query:
+            'query($id:ID!){fleetDevice(id:$id){warningLamps{parameterId state} currentWarnings{parameterId}}}',
+          variables: { id: lampDevice.id },
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      expect(await response.json()).toEqual({
+        data: {
+          fleetDevice: {
+            warningLamps: [1896, 1906, 1910].map((parameterId) => ({ parameterId, state })),
+            currentWarnings: [],
+          },
+        },
+      });
+    }
     events.set(lampDevice.imei, [
-      lampEvent('100', 0, '00'),
-      lampEvent('101', 10, '01'),
+      ...startupEvents,
+      lampEvent('100', 2, '00'),
+      { ...lampEvent('101', 10, '01'), engineOn: true },
       lampEvent('102', 20, '01'),
       lampEvent('103', 30, '00'),
       lampEvent('104', 40, '02'),
@@ -1064,11 +1111,6 @@ describe('ERM telemetry import with PostgreSQL', () => {
       lampEvent('113', 120, '00'),
     ]);
     await jobs.tick();
-    const lampNotifications = () =>
-      database.client.fleetNotification.findMany({
-        where: { ...scopeA, deviceId: lampDevice.id },
-        orderBy: [{ occurredAt: 'asc' }, { sourceKey: 'asc' }],
-      });
     const lampTransitions = await lampNotifications();
     expect(lampTransitions).toHaveLength(11);
     expect(lampTransitions).toEqual(

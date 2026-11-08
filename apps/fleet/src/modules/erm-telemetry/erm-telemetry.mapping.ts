@@ -1,5 +1,6 @@
 import type { Device, Prisma } from '../../generated/prisma/client.js';
 import type { ErmTelemetryEvent } from '../../integrations/erm/erm-telemetry.client.js';
+import { WARNING_LAMP_PARAMETER_IDS } from '../devices/warning-lamps.js';
 
 export type ErmTelemetryDevice = Pick<
   Device,
@@ -29,6 +30,13 @@ export function ermEdataMeasurements(
       continue;
     }
     for (const measurement of event.edata.measurements) {
+      // Ignition-on telltales can be red before the engine builds brake air pressure.
+      if (
+        event.engineOn === false &&
+        WARNING_LAMP_PARAMETER_IDS.some((id) => id === measurement.parameterId)
+      ) {
+        continue;
+      }
       measurements.push({
         tenantId: device.tenantId,
         branchId: device.branchId,

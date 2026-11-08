@@ -77,8 +77,10 @@ requested period through `diagnostics`; deletion does not establish a repair. De
 `warningLamps` expose the latest stored brake, engine/MIL and ABS telltales and current state start
 time, with unknown coverage when measurements are absent. `currentWarnings` contains their RED,
 YELLOW and INFORMATION subset; only these contribute to Device diagnostic counts. Lamp entry
-to RED/YELLOW and return to OFF create Branch notifications once per transition. Operators add
-MANUAL odometer readings.
+to RED/YELLOW and return to OFF create Branch notifications once per transition. Telltales from
+reports with the engine off are not stored, because trucks show red lamps at ignition-on before
+the engine builds brake air pressure; reports with an unknown engine state still count. Operators
+add MANUAL odometer readings.
 Samples, trips and events store the reporting IMEI as a snapshot instead of a Device foreign key,
 so devices can be replaced, reassigned or deleted without rewriting history. A sample's history
 belongs to the (vehicle, IMEI) pair at reporting time.
