@@ -23,8 +23,9 @@ follows the [ERM roadmap safety rules](erm-roadmap.md#safety-rules) and test lev
   stored-fault read (`30` `301/19`) returned `154,0` (not acknowledged) on CB1147TP and CB1344XH,
   so faults come only from automatic reports and warning lamps until ERM explains that read. The
   active/cleared lifecycle is unproven, and descriptions are holita's own wording.
-- Warning lamps: only CB5636XP has the definitions (since 2026-11-06). It had not driven by
-  2026-11-07 22:00 UTC, so no lamp value has arrived yet.
+- Warning lamps: only CB5636XP has the definitions (since 2026-11-06). On 2026-11-08 its reports
+  carried 1896 only; 1906 and 1910 never arrived. 1896 read RED at every ignition-on while the engine
+  was off, so Fleet now ignores lamp values reported with the engine off.
 
 ## Packages
 
@@ -35,16 +36,17 @@ batches, the Device status workspace, the admin command queue with the `46` form
 controls, fault meanings with current warnings and lamp notifications, and the truck faults view
 (see [Discocan development](../discocan/development.md)). Remaining:
 
-| ID  | Package                 | Scope                                                                                                                                                                                                                           | Depends | Device level | Codex     |
-| --- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------ | --------- |
-| F1  | Warning lamps on trucks | Operations by Claude: verify the `405` values of eData 1896, 1906 and 1910 on CB5636XP's next drive, then add them to the other trucks one at a time through the guarded GraphQL workflow with writes enabled only for each run | —       | L1, then L3  | —         |
-| W2  | `46` proof              | Operations by Claude: one controlled `46` change with readback and restoration on a parked test truck, writes enabled only for the run, before batch writes reach the other trucks                                              | —       | L1           | —         |
-| A4  | Fleet role controls     | Admin: hide or disable Fleet editing (Vehicles, Devices, Drivers, maintenance, Settings) above the signed-in role; the server already refuses it                                                                                | —       | none         | sol/ultra |
-| K2  | Karma polling           | ERM: read Karma in parallel or widen the staleness window, so slow reads (7–29 s) do not leave units UNKNOWN between passes                                                                                                     | —       | none         | sol/ultra |
+| ID  | Package                 | Scope                                                                                                                                                                                                                                                     | Depends | Device level | Codex     |
+| --- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------ | --------- |
+| F1  | Warning lamps on trucks | Operations by Claude: after CB5636XP's next start, confirm that it raises no CRITICAL brake notification, then add eData 1896, 1906 and 1910 to the other trucks one at a time through the guarded GraphQL workflow with writes enabled only for each run | —       | L1, then L3  | —         |
+| W2  | `46` proof              | Operations by Claude after the owner's explicit approval: one controlled `46` change with readback and restoration on a parked test truck, writes enabled only for the run, before batch writes reach the other trucks                                    | —       | L1           | —         |
+| A4  | Fleet role controls     | Admin: hide or disable Fleet editing (Vehicles, Devices, Drivers, maintenance, Settings) above the signed-in role; the server already refuses it                                                                                                          | —       | none         | sol/ultra |
+| K2  | Karma polling           | ERM: read Karma in parallel or widen the staleness window, so slow reads (7–29 s) do not leave units UNKNOWN between passes                                                                                                                               | —       | none         | sol/ultra |
 
 ## Order
 
-1. **Next:** F1 and W2 on the test trucks (operations by Claude); A4 and K2 can run at any time.
+1. **Next:** F1 after CB5636XP's next start and W2 after the owner's approval (operations by
+   Claude); A4 and K2 can run at any time.
 2. The owner reviews the Device status, command queue and faults screens together with the UI v2
    acceptance.
 
