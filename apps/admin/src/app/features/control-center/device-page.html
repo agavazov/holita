@@ -598,6 +598,7 @@
                   [language]="language()"
                   [target]="unitName()"
                   [primary]="canSend()"
+                  [completedSnapshotId]="completedSnapshotId()"
                 />
                 <section class="app-card">
                   <h2>{{ text().snapshots.title }}</h2>
@@ -1105,6 +1106,19 @@
                 <div>
                   <dt>{{ faultText().system }}</dt>
                   <dd>{{ faultSystem(diagnostic.systemKey, language()) }}</dd>
+                </div>
+                <div>
+                  <dt>{{ faultText().reportedStatus }}</dt>
+                  <dd>
+                    <p-tag
+                      severity="secondary"
+                      [value]="
+                        diagnostic.status === null
+                          ? '—'
+                          : faultText().reportedStatuses[diagnostic.status]
+                      "
+                    />
+                  </dd>
                 </div>
                 <div>
                   <dt>SPN / FMI</dt>

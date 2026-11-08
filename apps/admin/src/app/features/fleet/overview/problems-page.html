@@ -359,6 +359,10 @@
               <dt>{{ faultText().system }}</dt>
               <dd>{{ diagnostic.system }}</dd>
             </div>
+            <div>
+              <dt>{{ faultText().reportedStatus }}</dt>
+              <dd><p-tag severity="secondary" [value]="diagnostic.status" /></dd>
+            </div>
             @if (diagnostic.fmi) {
               <div>
                 <dt>FMI</dt>

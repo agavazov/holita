@@ -212,6 +212,8 @@ export class ProblemsPage implements OnInit {
     (this.selectedProblem()?.diagnostics ?? []).map((diagnostic) => ({
       description: faultDescription(diagnostic, this.language()),
       system: faultSystem(diagnostic.systemKey, this.language()),
+      status:
+        diagnostic.status === null ? '—' : this.faultText().reportedStatuses[diagnostic.status],
       fmi:
         diagnostic.fmi === null
           ? null

@@ -349,6 +349,9 @@ export class DevicePage implements OnInit {
   readonly events = signal<Events | null>(null);
   readonly frames = signal<Frames | null>(null);
   readonly snapshots = signal<Snapshots | null>(null);
+  readonly completedSnapshotId = computed(
+    () => this.snapshots()?.items.find((snapshot) => snapshot.status !== 'RUNNING')?.id ?? null,
+  );
   readonly historyLoading = signal(false);
   readonly historyError = signal<unknown>(null);
   readonly historyFailure = computed(() =>

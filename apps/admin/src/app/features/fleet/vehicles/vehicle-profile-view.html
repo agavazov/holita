@@ -536,6 +536,19 @@
                               <dd>{{ faultSystem(diagnostic.systemKey, language()) }}</dd>
                             </div>
                             <div>
+                              <dt>{{ faults().reportedStatus }}</dt>
+                              <dd>
+                                <p-tag
+                                  severity="secondary"
+                                  [value]="
+                                    diagnostic.status === null
+                                      ? '—'
+                                      : faults().reportedStatuses[diagnostic.status]
+                                  "
+                                />
+                              </dd>
+                            </div>
+                            <div>
                               <dt>{{ v2().problems.code }}</dt>
                               <dd class="app-mono">
                                 @if (diagnostic.spn !== null) {

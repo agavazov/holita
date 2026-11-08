@@ -34,6 +34,7 @@ import {
 } from './device-settings-fixtures';
 import { fixtureDevice, fixtureLiveDevice } from './devices-fixtures';
 import { fixtureAlert } from './alerts-fixtures';
+import { queueRequests } from './queue-fixtures';
 import {
   commandPendingFixture,
   commandAcknowledgedFixture,
@@ -663,7 +664,9 @@ graphqlFixture(
 
 graphqlFixture(AdminControlCenterCommandRequestDocument, (variables) => ({
   ermCommandRequest:
-    commandRequests.find((request) => request.id === variables.requiredString('id')) ?? null,
+    queueRequests.find((request) => request.id === variables.requiredString('id')) ??
+    commandRequests.find((request) => request.id === variables.requiredString('id')) ??
+    null,
 }));
 
 graphqlFixture(

@@ -25,7 +25,7 @@ const waitingRequest = commandFixture({
   waitingReason: 'UNIT_NOT_CONNECTED',
   waitingSince: '2026-10-20T07:58:00.000Z',
 });
-const requests = [
+export const queueRequests = [
   waitingRequest,
   commandAcknowledgedFixture,
   commandFailedFixture,
@@ -57,7 +57,7 @@ graphqlFixture(AdminControlCenterBranchCommandRequestsDocument, (variables) => {
   const filter = variables.object('filter');
   const statuses = filter.strings('statuses');
   const ids = filter.strings('deviceIds');
-  const filtered = requests.filter(
+  const filtered = queueRequests.filter(
     (request) =>
       (!statuses?.length || statuses.includes(request.status)) &&
       (!ids?.length || ids.includes(request.deviceId)),

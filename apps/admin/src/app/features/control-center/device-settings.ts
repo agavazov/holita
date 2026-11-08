@@ -103,6 +103,7 @@ export class DeviceSettings {
   readonly language = input.required<Language>();
   readonly target = input.required<string>();
   readonly primary = input(false);
+  readonly completedSnapshotId = input<string | null>(null);
   protected readonly text = computed(() => controlCenterText[this.language()].settings);
   protected readonly common = computed(() => controlCenterText[this.language()]);
   protected readonly auditText = computed(() => controlCenterText[this.language()].queue);
@@ -357,6 +358,7 @@ export class DeviceSettings {
     });
     effect((onCleanup) => {
       this.reload();
+      this.completedSnapshotId();
       const subscription = this.api.watchParameterBaseline(this.deviceId()).valueChanges.subscribe({
         next: (result) => {
           if (result.error) {

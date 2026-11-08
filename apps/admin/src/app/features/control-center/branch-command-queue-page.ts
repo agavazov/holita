@@ -7,7 +7,6 @@ import {
   inject,
   input,
   signal,
-  untracked,
   type OnInit,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -166,6 +165,7 @@ export class BranchCommandQueue implements OnInit {
     [...new Set(this.page()?.items.map((request) => request.deviceId) ?? [])].sort().join(','),
   );
   protected readonly selected = signal<CommandRequest | null>(null);
+  private readonly selectedId = computed(() => this.selected()?.id ?? null);
   protected readonly batch = signal<CommandBatch | null>(null);
   private readonly batchId = signal<string | null>(null);
   protected readonly confirmationMessage = signal('');
@@ -345,15 +345,6 @@ export class BranchCommandQueue implements OnInit {
           this.loadError.set(result.error ? commandError(result.error, this.language()) : null);
           if (result.dataState === 'complete' && !result.error) {
             this.page.set(result.data.ermCommandRequests);
-            const selectedId = untracked(this.selected)?.id;
-            if (selectedId) {
-              const next = result.data.ermCommandRequests.items.find(
-                (request) => request.id === selectedId,
-              );
-              if (next) {
-                this.selected.set(next);
-              }
-            }
             this.url.correctPage(
               Math.max(1, Math.ceil(result.data.ermCommandRequests.total / state.pageSize)),
             );
@@ -362,6 +353,39 @@ export class BranchCommandQueue implements OnInit {
         error: (error: unknown) => {
           this.loading.set(false);
           this.loadError.set(commandError(error, this.language()));
+        },
+      });
+      const visible = () => {
+        if (!document.hidden) {
+          void query.refetch().catch(() => undefined);
+        }
+      };
+      document.addEventListener('visibilitychange', visible);
+      onCleanup(() => {
+        subscription.unsubscribe();
+        document.removeEventListener('visibilitychange', visible);
+      });
+    });
+    effect((onCleanup) => {
+      this.reload();
+      const id = this.selectedId();
+      if (!id) {
+        return;
+      }
+      const query = this.api.watchCommandRequest(id, () => {
+        const request = this.selected();
+        return request !== null && !commandPending(request);
+      });
+      const subscription = query.valueChanges.subscribe({
+        next: (result) => {
+          if (result.error) {
+            this.actionError.set(commandError(result.error, this.language()));
+          } else if (result.dataState === 'complete') {
+            this.selected.set(result.data.ermCommandRequest);
+          }
+        },
+        error: (error: unknown) => {
+          this.actionError.set(commandError(error, this.language()));
         },
       });
       const visible = () => {

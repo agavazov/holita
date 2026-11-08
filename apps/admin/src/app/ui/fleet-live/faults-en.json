@@ -3,6 +3,11 @@
   "history": "Recorded history",
   "coverage": "Coverage",
   "system": "System",
+  "reportedStatus": "Reported status",
+  "reportedStatuses": {
+    "ADDED": "Added",
+    "DELETED": "Deleted"
+  },
   "description": "Description",
   "firstObserved": "First observed",
   "lastObserved": "Last observed",
@@ -13,7 +18,7 @@
   "noCurrentWarnings": "No current warning lamps reported",
   "noFaultReports": "No fault reports received in this history period.",
   "noLampValue": "No value received",
-  "historyHint": "Recorded faults and CAN loss are observations, not a confirmed current fault state.",
+  "historyHint": "Recorded faults and CAN loss are observations, not a confirmed current fault state. A deletion report does not prove a repair or the current ECU state.",
   "coverageHint": "Missing lamp values do not establish whether the truck has a fault.",
   "lampValuesReceived": "All supported lamps have values.",
   "noLamps": "No lamp coverage available.",
