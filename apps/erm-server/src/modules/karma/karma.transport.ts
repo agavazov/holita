@@ -1,12 +1,26 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { karmaConfig, type KarmaConfig } from './karma.config.js';
 
-function unavailable(): ServiceUnavailableException {
-  return new ServiceUnavailableException('Karma routing is unavailable');
+function unavailable(reason = 'unavailable'): ServiceUnavailableException {
+  return new ServiceUnavailableException('Karma routing is unavailable', reason);
 }
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function karmaFailureReason(error: unknown): string {
+  if (error instanceof ServiceUnavailableException) {
+    const response = error.getResponse();
+    const reason = record(response) ? response['error'] : undefined;
+    if (
+      typeof reason === 'string' &&
+      /^(missing car mapping|timeout|HTTP [1-5]\d{2}|not logged in)$/.test(reason)
+    ) {
+      return reason;
+    }
+  }
+  return 'unavailable';
 }
 
 function identifier(value: unknown): string {
@@ -150,7 +164,7 @@ export class KarmaTransport {
         }
         if (!response.ok) {
           await response.body?.cancel();
-          throw unavailable();
+          throw unavailable(`HTTP ${String(response.status)}`);
         }
         const data: unknown = await response.json();
         if (record(data) && data['error'] === 'Not logged in') {
@@ -159,10 +173,10 @@ export class KarmaTransport {
         }
         return data;
       }
-      throw unavailable();
-    } catch {
+      throw unavailable('not logged in');
+    } catch (error) {
       // Upstream URLs/errors can contain account credentials or session IDs.
-      throw unavailable();
+      throw unavailable(signal.aborted ? 'timeout' : karmaFailureReason(error));
     }
   }
 
@@ -187,11 +201,11 @@ export class KarmaTransport {
     });
     if (!response.ok) {
       await response.body?.cancel();
-      throw unavailable();
+      throw unavailable(`HTTP ${String(response.status)}`);
     }
     const data: unknown = await response.json();
     if (!record(data) || typeof data['session_id'] !== 'string' || !data['session_id']) {
-      throw unavailable();
+      throw unavailable('not logged in');
     }
     this.session = data['session_id'];
     return this.session;

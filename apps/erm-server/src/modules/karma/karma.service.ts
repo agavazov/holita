@@ -16,10 +16,13 @@ import { auditId, operatorActor, operatorScope } from '../telemetry/operator-aud
 import type { DeviceReference } from '../telemetry/telemetry.service.js';
 import { karmaEnabled } from './karma.config.js';
 import { KarmaRepository, type KarmaAttempt } from './karma.repository.js';
-import { KarmaTransport } from './karma.transport.js';
+import { karmaFailureReason, KarmaTransport } from './karma.transport.js';
 
 const POLL_INTERVAL = 5 * 60_000;
 const LOOKUP_WINDOW = 30 * 60_000;
+// A pass can take 19 min (cars + 9 units with two 60 s reads), rounded to 20 min by ticks.
+// observedAt is the pass start: allow the successful pass, one failed pass and recovery.
+const ROUTING_MAX_AGE = 60 * 60_000;
 
 function primaryUnits(): string[] {
   return [
@@ -53,7 +56,6 @@ export class KarmaService implements OnModuleInit, OnModuleDestroy {
     DeviceTelemetryRequest,
     Promise<Map<string, ErmDeviceRouting>>
   >();
-  private readonly unavailableUnits = new Set<string>();
   private timer: ReturnType<typeof setInterval> | undefined;
   private running: Promise<void> | undefined;
 
@@ -82,8 +84,10 @@ export class KarmaService implements OnModuleInit, OnModuleDestroy {
 
   tick(now = new Date()): Promise<void> {
     this.running ??= this.poll(now)
-      .catch(() => {
-        this.logger.warn('Karma routing observation failed; retrying on the next tick.');
+      .catch((error: unknown) => {
+        this.logger.warn(
+          `Karma routing observation failed (${karmaFailureReason(error)}); retrying on the next tick.`,
+        );
       })
       .finally(() => {
         this.running = undefined;
@@ -99,23 +103,21 @@ export class KarmaService implements OnModuleInit, OnModuleDestroy {
     for (const unitId of units) {
       await this.repository.reconcile(unitId);
     }
-    let cars: Awaited<ReturnType<KarmaTransport['readCars']>>;
-    try {
-      cars = await this.transport.readCars();
-    } catch {
-      units.forEach((unitId) => this.unavailableUnits.add(unitId));
-      throw new ServiceUnavailableException('Karma routing is unavailable');
-    }
+    const cars = await this.transport.readCars();
     for (const unitId of units) {
       try {
         const car = cars.find((candidate) => candidate.unitId === unitId);
         if (!car) {
-          throw new ServiceUnavailableException('Karma car mapping is unavailable');
+          throw new ServiceUnavailableException(
+            'Karma car mapping is unavailable',
+            'missing car mapping',
+          );
         }
         await this.observe(unitId, car.carId, now);
-      } catch {
-        this.unavailableUnits.add(unitId);
-        this.logger.warn(`Karma routing observation failed for unit ${unitId}.`);
+      } catch (error) {
+        this.logger.warn(
+          `Karma routing observation failed for unit ${unitId} (${karmaFailureReason(error)}).`,
+        );
       }
     }
   }
@@ -168,7 +170,6 @@ export class KarmaService implements OnModuleInit, OnModuleDestroy {
       latestKarmaReportAt,
       parked: latest?.parked ?? previous?.parked ?? null,
     });
-    this.unavailableUnits.delete(unitId);
     return observation;
   }
 
@@ -186,9 +187,8 @@ export class KarmaService implements OnModuleInit, OnModuleDestroy {
             const known =
               karmaEnabled() &&
               units.includes(target.imei) &&
-              !this.unavailableUnits.has(target.imei) &&
               route !== undefined &&
-              Date.now() - route.observedAt.getTime() <= POLL_INTERVAL * 2;
+              Date.now() - route.observedAt.getTime() <= ROUTING_MAX_AGE;
             return [
               target.id,
               {

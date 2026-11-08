@@ -4567,6 +4567,31 @@ it('persists captured connection lifecycle and raw frames through the production
       latestKarmaReportAt,
       parked: false,
     });
+    const routingClock = jest.spyOn(Date, 'now');
+    try {
+      routingClock.mockReturnValue(karmaObservedAt.getTime() + 20 * 60_000);
+      karmaReads.mockRejectedValueOnce(new Error('Synthetic Karma read failure'));
+      await karma.tick(new Date(Date.now()));
+      for (const ageMinutes of [20, 60]) {
+        routingClock.mockReturnValue(karmaObservedAt.getTime() + ageMinutes * 60_000);
+        expect(await karma.deviceRouting(karmaDevice(), engineerContext)).toMatchObject({
+          state: 'KARMA_BACKUP',
+          since: firstKarmaReportAt,
+          observedAt: karmaObservedAt,
+          latestKarmaReportAt,
+          parked: false,
+        });
+      }
+      routingClock.mockReturnValue(karmaObservedAt.getTime() + 60 * 60_000 + 1);
+      expect(await karma.deviceRouting(karmaDevice(), engineerContext)).toMatchObject({
+        state: 'UNKNOWN',
+        since: null,
+        observedAt: karmaObservedAt,
+        parked: null,
+      });
+    } finally {
+      routingClock.mockRestore();
+    }
     for (const role of [undefined, 'VIEWER', 'OPERATOR'] as const) {
       try {
         await karma.requestReturn(deviceId, { ...engineerContext, role });
