@@ -19,6 +19,7 @@ import type {
   AdminDriversQuery,
   AdminDriverSummaryQuery,
 } from '../../../../generated/graphql/operations';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import { messages, type Language } from '../../../i18n/messages';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
@@ -51,6 +52,8 @@ export class DriversPage implements OnInit {
   readonly language = input.required<Language>();
   readonly api = inject(DriversApi);
   readonly url = new UrlListState(driverDefinition);
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
   readonly businessDate = signal<string | null>(null);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -182,7 +185,7 @@ export class DriversPage implements OnInit {
   }
 
   open(id: string | null, mode: 'view' | 'edit' | 'scorecard' = 'edit'): void {
-    if (this.acting()) {
+    if (this.acting() || (!this.canOperate() && (id === null || mode === 'edit'))) {
       return;
     }
     this.url.cancelPending();
@@ -196,7 +199,11 @@ export class DriversPage implements OnInit {
   }
 
   async run({ action, ids }: ListActionRequest<DriverActionId>): Promise<void> {
-    if (this.acting() || !this.isCurrent()) {
+    if (
+      this.acting() ||
+      !this.isCurrent() ||
+      (!this.canOperate() && action !== 'view' && action !== 'scorecard')
+    ) {
       return;
     }
     const [id] = ids;

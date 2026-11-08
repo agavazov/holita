@@ -96,6 +96,7 @@ export class MaintenanceView {
   readonly vehicles = input<readonly MaintenanceOption[]>([]);
   readonly selection = input<readonly ListRecord<MaintenanceActionId>[]>([]);
   readonly busy = input(false);
+  readonly canEdit = input(true);
   readonly searchError = input<string | null>(null);
   readonly errorText = input<string | null>(null);
   readonly stateChange = output<ListQuery>();
@@ -249,8 +250,12 @@ export class MaintenanceView {
   protected readonly actions = computed<readonly ListAction<MaintenanceActionId, ServiceTaskRow>[]>(
     () => {
       const text = this.text().actions;
-      return [
-        { id: 'view', label: text.view, appliesTo: (row) => row.status !== 'PLANNED' },
+      const actions: readonly ListAction<MaintenanceActionId, ServiceTaskRow>[] = [
+        {
+          id: 'view',
+          label: text.view,
+          appliesTo: (row) => !this.canEdit() || row.status !== 'PLANNED',
+        },
         { id: 'edit', label: text.edit, appliesTo: (row) => row.status === 'PLANNED' },
         {
           id: 'complete',
@@ -275,6 +280,9 @@ export class MaintenanceView {
           appliesTo: (row) => row.status !== 'DONE',
         },
       ];
+      return this.canEdit()
+        ? actions
+        : actions.filter((action) => action.id === 'view' || action.id === 'vehicle');
     },
   );
   private readonly records = computed(
@@ -375,6 +383,9 @@ export class MaintenanceView {
   }
 
   protected select(rows: readonly ServiceTaskRow[] | null): void {
+    if (!this.canEdit()) {
+      return;
+    }
     this.selectionChange.emit((rows ?? []).slice(0, 100).map((row) => this.recordOf(row)));
   }
 

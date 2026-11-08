@@ -14,6 +14,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EMPTY, Subject, catchError, startWith, switchMap } from 'rxjs';
 import type { AdminAlertDetailsFragment } from '../../../../generated/graphql/operations';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import { injectDrawerHost } from '../../../ui/drawer/drawer-host';
 import { drawerParam } from '../../../ui/drawer/drawer-route';
@@ -39,6 +40,7 @@ import { alertsText } from './i18n/messages';
       [loadError]="loadFailure()"
       [closeLink]="listLink"
       [busy]="busy()"
+      [canOperate]="canOperate()"
       [pendingWrite]="pendingWrite()"
       [saveError]="saveFailure()"
       [fieldError]="fieldError()"
@@ -58,6 +60,8 @@ export class AlertDetailPage implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = injectDrawerHost();
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
   private readonly baseLinks = fleetRecordLinks(
     this.language(),
     drawerParam(this.route, 'branchId') ?? '',
@@ -188,7 +192,7 @@ export class AlertDetailPage implements OnInit {
   }
   async apply(action: AlertAction, remark: string): Promise<void> {
     const record = this.record();
-    if (this.busy() || this.state() !== 'ready' || !record?.alertStatus) {
+    if (this.busy() || this.state() !== 'ready' || !record?.alertStatus || !this.canOperate()) {
       return;
     }
     this.busy.set(action);

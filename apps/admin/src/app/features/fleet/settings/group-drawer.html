@@ -91,7 +91,13 @@
     >
       {{ text().cancel }}
     </button>
-    <button pButton type="submit" form="group-form" [loading]="saving()" [disabled]="saving()">
+    <button
+      pButton
+      type="submit"
+      form="group-form"
+      [loading]="saving()"
+      [disabled]="saving() || !canEdit()"
+    >
       {{ group() ? text().save : text().create }}
     </button>
   </div>

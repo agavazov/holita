@@ -13,6 +13,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { EMPTY, Subject, catchError, startWith, switchMap } from 'rxjs';
 import type { AdminVehicleOdometerQuery } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { injectDrawerHost } from '../../../ui/drawer/drawer-host';
 import { drawerParam } from '../../../ui/drawer/drawer-route';
 import type { RouteDrawerState } from '../../../ui/drawer/route-drawer';
@@ -41,6 +42,7 @@ import {
       [inactive]="inactive()"
       [latestAllowedAt]="latestAllowedAt()"
       [saving]="saving()"
+      [canEdit]="canOperate()"
       [saveError]="saveFailure()"
       [fieldErrors]="fieldErrors()"
       (save)="save($event)"
@@ -51,6 +53,8 @@ import {
 })
 export class VehicleOdometerPage implements OnInit {
   private readonly api = inject(VehicleProfileApi);
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly language = inject(UI_LANGUAGE);
@@ -142,6 +146,7 @@ export class VehicleOdometerPage implements OnInit {
 
   async save(reading: OdometerReading): Promise<void> {
     if (
+      !this.canOperate() ||
       this.saving() ||
       this.state() !== 'ready' ||
       !this.id ||

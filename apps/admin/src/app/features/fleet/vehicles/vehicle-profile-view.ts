@@ -157,6 +157,7 @@ function listView(rows: readonly unknown[]): TableView {
   host: { class: 'app-view' },
 })
 export class VehicleProfileView {
+  readonly canOperate = input(true);
   readonly branchId = input.required<string>();
   readonly deviceLinkBase = input<readonly string[]>([]);
   readonly recordLinks = input<FleetRecordLinks | null>(null);

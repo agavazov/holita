@@ -12,6 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, catchError, EMPTY, startWith, switchMap } from 'rxjs';
 import { requestError } from '../../../core/graphql/request-error';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { drawerParam, drawerRouteData } from '../../../ui/drawer/drawer-route';
 import { injectDrawerHost } from '../../../ui/drawer/drawer-host';
 import type { RouteDrawerState } from '../../../ui/drawer/route-drawer';
@@ -39,6 +40,7 @@ import { vehiclesText } from './i18n/messages';
       [choicesError]="choicesFailure()"
       (retryChoices)="choices.load()"
       [saving]="saving()"
+      [canEdit]="canOperate()"
       [saveError]="saveFailure()"
       [fieldErrors]="fieldErrors()"
       (save)="save($event)"
@@ -49,6 +51,8 @@ import { vehiclesText } from './i18n/messages';
 })
 export class VehicleEditorPage implements OnInit {
   private readonly api = inject(VehiclesApi);
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
   protected readonly choices = inject(VehicleChoices);
   private readonly language = inject(UI_LANGUAGE);
   private readonly route = inject(ActivatedRoute);
@@ -141,7 +145,7 @@ export class VehicleEditorPage implements OnInit {
   }
 
   async save(form: VehicleForm): Promise<void> {
-    if (this.saving() || this.state() !== 'ready') {
+    if (!this.canOperate() || this.saving() || this.state() !== 'ready') {
       return;
     }
     this.saving.set(true);

@@ -22,6 +22,7 @@ import type {
   AdminVehicleSummaryQuery,
 } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { messages, type Language } from '../../../i18n/messages';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
 import { interpolate, uiMessages } from '../../../ui/i18n/messages';
@@ -54,6 +55,8 @@ export class VehiclesPage implements OnInit {
   readonly language = input.required<Language>();
   readonly api = inject(VehiclesApi);
   readonly choices = inject(VehicleChoices);
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
   readonly url = new UrlListState(vehicleDefinition);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -264,7 +267,7 @@ export class VehiclesPage implements OnInit {
   }
 
   openEditor(id: string | null): void {
-    if (this.acting()) {
+    if (!this.canOperate() || this.acting()) {
       return;
     }
     this.url.cancelPending();
@@ -277,7 +280,7 @@ export class VehiclesPage implements OnInit {
   }
 
   async run({ action, ids }: ListActionRequest<VehicleActionId>): Promise<void> {
-    if (this.acting() || !this.isCurrent()) {
+    if ((action !== 'profile' && !this.canOperate()) || this.acting() || !this.isCurrent()) {
       return;
     }
     const [id] = ids;

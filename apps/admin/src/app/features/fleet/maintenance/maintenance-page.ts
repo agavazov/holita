@@ -20,6 +20,7 @@ import type {
   AdminServiceTasksQuery,
   AdminServiceSummaryQuery,
 } from '../../../../generated/graphql/operations';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import { messages, type Language } from '../../../i18n/messages';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
@@ -72,6 +73,7 @@ import { maintenanceKpis, serviceTaskRow } from './service-task-mapping';
       [vehicles]="choices.vehicles()"
       [selection]="selected()"
       [busy]="loading() || acting()"
+      [canEdit]="canOperate()"
       [searchError]="searchError()"
       [errorText]="failure()"
       (stateChange)="changeState($event)"
@@ -93,6 +95,8 @@ export class MaintenancePage implements OnInit {
   readonly api = inject(MaintenanceApi);
   readonly choices = inject(MaintenanceChoices);
   readonly url = new UrlListState(maintenanceDefinition);
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -222,7 +226,7 @@ export class MaintenancePage implements OnInit {
     }
   }
   openRecord(id: string | null, action: 'edit' | 'complete' | 'view' = 'edit'): void {
-    if (this.acting()) {
+    if (this.acting() || (!this.canOperate() && (id === null || action !== 'view'))) {
       return;
     }
     this.url.cancelPending();
@@ -235,7 +239,12 @@ export class MaintenancePage implements OnInit {
   }
   async run({ action, ids }: ListActionRequest<MaintenanceActionId>): Promise<void> {
     const [id] = ids;
-    if (!id || this.acting() || !this.isCurrent()) {
+    if (
+      !id ||
+      this.acting() ||
+      !this.isCurrent() ||
+      (!this.canOperate() && action !== 'view' && action !== 'vehicle')
+    ) {
       return;
     }
     if (action === 'edit' || action === 'complete' || action === 'view') {

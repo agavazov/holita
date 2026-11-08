@@ -93,6 +93,7 @@ export class OdometerDrawer {
   readonly inactive = input(false);
   readonly latestAllowedAt = input.required<string>();
   readonly saving = input(false);
+  readonly canEdit = input(true);
   readonly saveError = input<string | null>(null);
   readonly fieldErrors = input<Partial<Record<OdometerField, string>>>({});
   readonly save = output<OdometerReading>();
@@ -194,7 +195,8 @@ export class OdometerDrawer {
     });
     let locked = false;
     effect(() => {
-      const saving = this.saving() || !!this.unavailable() || this.state() !== 'ready';
+      const saving =
+        !this.canEdit() || this.saving() || !!this.unavailable() || this.state() !== 'ready';
       untracked(() => {
         if (saving === locked) {
           return;
@@ -257,7 +259,7 @@ export class OdometerDrawer {
   }
 
   protected submit(): void {
-    if (this.saving() || this.unavailable() || this.state() !== 'ready') {
+    if (!this.canEdit() || this.saving() || this.unavailable() || this.state() !== 'ready') {
       return;
     }
     this.submitted = true;

@@ -35,18 +35,18 @@ lamps. Delivered on 2026-11-08: ERM role enforcement with controlled `46` writes
 batches, the Device status workspace, the admin command queue with the `46` form and role-aware
 controls, fault meanings with current warnings and lamp notifications, and the truck faults view
 (see [Discocan development](../discocan/development.md)), then Karma routing that keeps its last
-observation through slow or failed reads. Remaining:
+observation through slow or failed reads, and Fleet editing offered only to the roles the server
+permits. Remaining:
 
-| ID  | Package                 | Scope                                                                                                                                                                                                                                                     | Depends | Device level | Codex     |
-| --- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------ | --------- |
-| F1  | Warning lamps on trucks | Operations by Claude: after CB5636XP's next start, confirm that it raises no CRITICAL brake notification, then add eData 1896, 1906 and 1910 to the other trucks one at a time through the guarded GraphQL workflow with writes enabled only for each run | —       | L1, then L3  | —         |
-| W2  | `46` proof              | Operations by Claude after the owner's explicit approval: one controlled `46` change with readback and restoration on a parked test truck, writes enabled only for the run, before batch writes reach the other trucks                                    | —       | L1           | —         |
-| A4  | Fleet role controls     | Admin: hide or disable Fleet editing (Vehicles, Devices, Drivers, maintenance, Settings) above the signed-in role; the server already refuses it                                                                                                          | —       | none         | sol/ultra |
+| ID  | Package                 | Scope                                                                                                                                                                                                                                                     | Depends | Device level | Codex |
+| --- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------ | ----- |
+| F1  | Warning lamps on trucks | Operations by Claude: after CB5636XP's next start, confirm that it raises no CRITICAL brake notification, then add eData 1896, 1906 and 1910 to the other trucks one at a time through the guarded GraphQL workflow with writes enabled only for each run | —       | L1, then L3  | —     |
+| W2  | `46` proof              | Operations by Claude after the owner's explicit approval: one controlled `46` change with readback and restoration on a parked test truck, writes enabled only for the run, before batch writes reach the other trucks                                    | —       | L1           | —     |
 
 ## Order
 
 1. **Next:** F1 after CB5636XP's next start and W2 after the owner's approval (operations by
-   Claude); A4 can run at any time.
+   Claude).
 2. The owner reviews the Device status, command queue and faults screens together with the UI v2
    acceptance.
 

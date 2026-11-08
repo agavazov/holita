@@ -122,6 +122,7 @@ export class ServiceCompletionDrawer {
   /** The service business date, independent of the telemetry data clock. */
   readonly businessDate = input<string | null>(null);
   readonly saving = input(false);
+  readonly canEdit = input(true);
   readonly saveError = input<string | null>(null);
   readonly state = input<RouteDrawerState>('ready');
   readonly loadError = input<string | null>(null);
@@ -216,7 +217,7 @@ export class ServiceCompletionDrawer {
     });
     let locked = false;
     effect(() => {
-      const saving = this.saving();
+      const saving = this.saving() || !this.canEdit();
       untracked(() => {
         if (saving === locked) {
           return;
@@ -284,7 +285,13 @@ export class ServiceCompletionDrawer {
   }
 
   protected submit(): void {
-    if (this.saving() || this.completed() || this.state() !== 'ready' || !this.task()) {
+    if (
+      !this.canEdit() ||
+      this.saving() ||
+      this.completed() ||
+      this.state() !== 'ready' ||
+      !this.task()
+    ) {
       return;
     }
     if (!this.hasNext()) {

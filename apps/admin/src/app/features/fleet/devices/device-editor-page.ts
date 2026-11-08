@@ -12,6 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EMPTY, Subject, catchError, startWith, switchMap } from 'rxjs';
 import type { AdminDeviceDetailsFragment } from '../../../../generated/graphql/operations';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import { drawerParam, drawerRouteData } from '../../../ui/drawer/drawer-route';
 import { injectDrawerHost } from '../../../ui/drawer/drawer-host';
@@ -40,6 +41,7 @@ import { devicesText } from './i18n/messages';
     [vehicles]="choices.vehicles()"
     [choicesError]="choicesFailure()"
     [saving]="saving()"
+    [canEdit]="canOperate()"
     [saveError]="saveFailure()"
     [fieldErrors]="fieldErrors()"
     (save)="save($event)"
@@ -50,6 +52,8 @@ import { devicesText } from './i18n/messages';
 })
 export class DeviceEditorPage implements OnInit {
   private readonly api = inject(DevicesApi);
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
   protected readonly choices = inject(DeviceChoices);
   private readonly language = inject(UI_LANGUAGE);
   private readonly route = inject(ActivatedRoute);
@@ -157,7 +161,7 @@ export class DeviceEditorPage implements OnInit {
     this.state.set(errorCode(error) === 'NOT_FOUND' ? 'not-found' : 'error');
   }
   async save(form: DeviceForm): Promise<void> {
-    if (this.saving() || this.state() !== 'ready') {
+    if (!this.canOperate() || this.saving() || this.state() !== 'ready') {
       return;
     }
     this.saving.set(true);

@@ -133,6 +133,7 @@ export class DriversView {
   readonly state = input.required<ListQuery>();
   readonly kpis = input<DriverKpis | null>(null);
   readonly busy = input(false);
+  readonly canEdit = input(true);
   readonly searchError = input<string | null>(null);
   readonly errorText = input<string | null>(null);
   readonly selection = input<readonly ListRecord<DriverActionId>[]>([]);
@@ -276,7 +277,7 @@ export class DriversView {
   /** The list's actions, once for the row menu and the bulk bar. */
   protected readonly actions = computed<readonly ListAction<DriverActionId, DriverRow>[]>(() => {
     const text = this.text().actions;
-    return [
+    const actions: readonly ListAction<DriverActionId, DriverRow>[] = [
       { id: 'view', label: text.view },
       { id: 'scorecard', label: text.scorecard },
       { id: 'edit', label: text.edit },
@@ -288,6 +289,9 @@ export class DriversView {
       },
       { id: 'delete', label: text.delete, bulk: true, danger: true, confirm: text.confirmDelete },
     ];
+    return this.canEdit()
+      ? actions
+      : actions.filter((action) => action.id === 'view' || action.id === 'scorecard');
   });
   private readonly records = computed(
     () => new Map(this.rows().map((row) => [row.id, this.toRecord(row)])),
@@ -386,6 +390,9 @@ export class DriversView {
   }
 
   protected select(rows: readonly DriverRow[] | null): void {
+    if (!this.canEdit()) {
+      return;
+    }
     this.selectionChange.emit((rows ?? []).map((row) => this.recordOf(row)));
   }
 

@@ -119,6 +119,7 @@
           <p-table-header-checkbox
             inputId="alerts-select-page"
             [ariaLabel]="text().table.selectPage"
+            [disabled]="!canOperate()"
           />
         </th>
         <th scope="col" class="app-col-identity">{{ text().table.alert }}</th>
@@ -141,7 +142,11 @@
     <ng-template #body let-row>
       <tr>
         <td class="app-col-check">
-          <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row)" />
+          <p-table-checkbox
+            [value]="row"
+            [ariaLabel]="label(text().table.selectRow, row)"
+            [disabled]="!canOperate()"
+          />
         </td>
         <td class="app-col-identity">
           <span class="app-cell-identity">

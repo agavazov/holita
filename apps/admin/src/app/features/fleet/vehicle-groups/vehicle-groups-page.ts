@@ -16,6 +16,7 @@ import type {
   AdminBranchesQuery,
   AdminVehicleGroupsListQuery,
 } from '../../../../generated/graphql/operations';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import { messages, type Language } from '../../../i18n/messages';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
@@ -48,6 +49,7 @@ const groupDefinition: ListDefinition<Record<string, never>, 'name'> = {
       [page]="pagination()"
       [view]="view()"
       [busy]="loading() || acting()"
+      [canEdit]="canOperate()"
       [errorText]="failure()"
       [actionContext]="url.state()"
       (create)="openEditor(null)"
@@ -64,6 +66,8 @@ export class VehicleGroupsPage implements OnInit {
   readonly language = input.required<Language>();
   readonly api = inject(VehicleGroupsApi);
   readonly url = new UrlListState(groupDefinition);
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -141,7 +145,7 @@ export class VehicleGroupsPage implements OnInit {
   }
 
   openEditor(id: string | null): void {
-    if (this.acting()) {
+    if (!this.canOperate() || this.acting()) {
       return;
     }
     void this.router.navigate(id ? [id, 'edit'] : ['new'], {
@@ -153,7 +157,7 @@ export class VehicleGroupsPage implements OnInit {
 
   async run({ action, ids }: ListActionRequest<GroupActionId>): Promise<void> {
     const [id] = ids;
-    if (!id || this.acting() || !this.current()) {
+    if (!this.canOperate() || !id || this.acting() || !this.current()) {
       return;
     }
     if (action === 'edit') {

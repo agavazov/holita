@@ -11,6 +11,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, catchError, EMPTY, startWith, switchMap } from 'rxjs';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import { drawerParam, drawerRouteData } from '../../../ui/drawer/drawer-route';
 import { injectDrawerHost } from '../../../ui/drawer/drawer-host';
@@ -33,6 +34,7 @@ import { fleetRecordLinks, type FleetRecordLinks } from '../fleet-record-links';
       [recordLinks]="recordLinks"
       [driver]="driver()"
       [startEditing]="editing"
+      [canEdit]="canOperate()"
       [businessDate]="businessDate()"
       [state]="state()"
       [loadError]="loadFailure()"
@@ -53,6 +55,8 @@ import { fleetRecordLinks, type FleetRecordLinks } from '../fleet-record-links';
 })
 export class DriverEditorPage implements OnInit {
   private readonly api = inject(DriversApi);
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
   private readonly language = inject(UI_LANGUAGE);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -143,7 +147,7 @@ export class DriverEditorPage implements OnInit {
   }
 
   async save(form: DriverForm): Promise<void> {
-    if (this.saving() || this.state() !== 'ready' || !this.editing) {
+    if (!this.canOperate() || this.saving() || this.state() !== 'ready' || !this.editing) {
       return;
     }
     this.saving.set(true);
@@ -179,7 +183,7 @@ export class DriverEditorPage implements OnInit {
   }
 
   edit(): void {
-    if (this.id) {
+    if (this.id && this.canOperate()) {
       void this.navigate([...this.listLink, this.id, 'edit']);
     }
   }

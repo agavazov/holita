@@ -87,6 +87,7 @@ export class DevicesView {
   /** The device page route without the record ID and tab. */
   readonly deviceLinkBase = input<readonly string[] | null>(null);
   readonly busy = input(false);
+  readonly canEdit = input(true);
   readonly liveLoading = input(false);
   readonly searchError = input<string | null>(null);
   readonly errorText = input<string | null>(null);
@@ -197,22 +198,24 @@ export class DevicesView {
   /** The list's actions, once for the row menu and the bulk bar. */
   protected readonly actions = computed<readonly ListAction<DeviceActionId, DeviceRow>[]>(() => {
     const text = this.text().actions;
-    const actions: ListAction<DeviceActionId, DeviceRow>[] = [
-      { id: 'open', label: text.open },
-      { id: 'edit', label: text.edit },
-      {
-        id: 'vehicle',
-        label: text.vehicle,
-        appliesTo: (row) => row.vehicleId !== null,
-      },
-    ];
+    const actions: ListAction<DeviceActionId, DeviceRow>[] = [{ id: 'open', label: text.open }];
+    if (this.canEdit()) {
+      actions.push({ id: 'edit', label: text.edit });
+    }
     actions.push({
-      id: 'delete',
-      label: text.delete,
-      bulk: true,
-      danger: true,
-      confirm: text.confirmDelete,
+      id: 'vehicle',
+      label: text.vehicle,
+      appliesTo: (row) => row.vehicleId !== null,
     });
+    if (this.canEdit()) {
+      actions.push({
+        id: 'delete',
+        label: text.delete,
+        bulk: true,
+        danger: true,
+        confirm: text.confirmDelete,
+      });
+    }
     return actions;
   });
   private readonly records = computed(
@@ -375,6 +378,9 @@ export class DevicesView {
   }
 
   protected select(rows: readonly DeviceRow[] | null): void {
+    if (!this.canEdit()) {
+      return;
+    }
     this.selectionChange.emit((rows ?? []).map((row) => this.recordOf(row)));
   }
 

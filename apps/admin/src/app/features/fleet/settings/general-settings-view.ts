@@ -105,6 +105,7 @@ export class GeneralSettingsView {
   readonly state = input<'loading' | 'error' | 'ready'>('ready');
   readonly loadError = input<string | null>(null);
   readonly saving = input(false);
+  readonly canEdit = input(true);
   readonly saveError = input<string | null>(null);
   /** Update the persisted baseline without replacing a failed, editable draft. */
   readonly retainDraft = input(false);
@@ -262,7 +263,7 @@ export class GeneralSettingsView {
     });
     let locked = false;
     effect(() => {
-      const busy = this.saving() || this.state() !== 'ready';
+      const busy = !this.canEdit() || this.saving() || this.state() !== 'ready';
       untracked(() => {
         if (busy) {
           this.form.disable();
@@ -348,7 +349,7 @@ export class GeneralSettingsView {
   }
 
   protected submit(): void {
-    if (this.saving() || this.state() !== 'ready' || !this.settings()) {
+    if (!this.canEdit() || this.saving() || this.state() !== 'ready' || !this.settings()) {
       return;
     }
     this.submitted = true;

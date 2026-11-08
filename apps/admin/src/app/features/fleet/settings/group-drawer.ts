@@ -59,6 +59,7 @@ const fieldOrder: readonly GroupField[] = ['name', 'slot', 'description'];
 export class GroupDrawer {
   readonly group = input<GroupForm | null>(null);
   readonly saving = input(false);
+  readonly canEdit = input(true);
   readonly state = input<RouteDrawerState>('ready');
   readonly loadError = input<string | null>(null);
   readonly saveError = input<string | null>(null);
@@ -132,7 +133,7 @@ export class GroupDrawer {
     });
     lockWhileSaving(
       this.form,
-      () => this.saving(),
+      () => this.saving() || !this.canEdit(),
       () => {
         const form = this.formElement()?.nativeElement;
         if (!form || !focusFirstInvalid(form, fieldOrder, 'group-')) {
@@ -156,7 +157,7 @@ export class GroupDrawer {
   }
 
   protected submit(): void {
-    if (this.saving() || this.state() !== 'ready') {
+    if (!this.canEdit() || this.saving() || this.state() !== 'ready') {
       return;
     }
     this.submitted = true;

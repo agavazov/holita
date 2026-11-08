@@ -93,6 +93,7 @@ export class DeviceDrawer {
   readonly models = input<readonly string[]>([]);
   readonly vehicles = input<readonly { readonly id: string; readonly name: string }[]>([]);
   readonly saving = input(false);
+  readonly canEdit = input(true);
   readonly saveError = input<string | null>(null);
   readonly fieldErrors = input<Partial<Record<DeviceField, string>>>({});
   readonly save = output<DeviceForm>();
@@ -238,7 +239,7 @@ export class DeviceDrawer {
     });
     lockWhileSaving(
       this.form,
-      () => this.saving(),
+      () => this.saving() || !this.canEdit(),
       () => {
         this.focusInvalid();
       },
@@ -263,7 +264,7 @@ export class DeviceDrawer {
   }
 
   protected submit(): void {
-    if (this.saving()) {
+    if (!this.canEdit() || this.saving()) {
       return;
     }
     this.submitted = true;

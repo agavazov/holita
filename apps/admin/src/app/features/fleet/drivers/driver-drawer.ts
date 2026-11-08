@@ -134,6 +134,7 @@ export class DriverDrawer {
   readonly startEditing = input(false);
   readonly businessDate = input.required<string | null>();
   readonly saving = input(false);
+  readonly canEdit = input(true);
   readonly state = input<RouteDrawerState>('ready');
   readonly loadError = input<string | null>(null);
   readonly closeLink = input<readonly unknown[] | null>(null);
@@ -158,7 +159,9 @@ export class DriverDrawer {
   protected readonly text = computed(() => this.catalog().drawer);
 
   /** A new record, or a saved one reopening, decides between the record and the form. */
-  protected readonly editing = linkedSignal(() => this.driver() === null || this.startEditing());
+  protected readonly editing = linkedSignal(
+    () => this.driver() === null || (this.canEdit() && this.startEditing()),
+  );
 
   protected readonly form = new FormGroup({
     firstName: new FormControl('', {
@@ -268,7 +271,7 @@ export class DriverDrawer {
     });
     lockWhileSaving(
       this.form,
-      () => this.saving(),
+      () => this.saving() || !this.canEdit(),
       () => {
         const form = this.formElement()?.nativeElement;
         if (!form || !focusFirstInvalid(form, fieldOrder, 'driver-')) {
@@ -324,6 +327,9 @@ export class DriverDrawer {
   }
 
   protected edit(): void {
+    if (!this.canEdit()) {
+      return;
+    }
     if (this.routed()) {
       this.editRequest.emit();
       return;
@@ -332,7 +338,7 @@ export class DriverDrawer {
   }
 
   protected submit(): void {
-    if (this.saving()) {
+    if (!this.canEdit() || this.saving()) {
       return;
     }
     this.submitted = true;

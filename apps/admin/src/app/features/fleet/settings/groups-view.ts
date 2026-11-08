@@ -45,6 +45,7 @@ export class GroupsView {
   readonly page = input.required<TablePage>();
   readonly view = input.required<TableView>();
   readonly busy = input(false);
+  readonly canEdit = input(true);
   readonly errorText = input<string | null>(null);
   readonly actionContext = input<unknown>(null);
   readonly create = output();
@@ -86,13 +87,13 @@ export class GroupsView {
   protected readonly actions = computed<readonly ListAction<GroupActionId, GroupRow>[]>(() => {
     const text = this.text().actions;
     return [
-      { id: 'edit', label: text.edit },
+      { id: 'edit', label: text.edit, appliesTo: () => this.canEdit() },
       {
         id: 'delete',
         label: text.delete,
         danger: true,
         confirm: text.confirmDelete,
-        appliesTo: (row) => row.vehicles === 0,
+        appliesTo: (row) => this.canEdit() && row.vehicles === 0,
       },
     ];
   });

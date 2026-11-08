@@ -96,6 +96,7 @@ export class ServiceTaskDrawer {
   readonly readOnly = input(false);
   readonly vehicles = input<readonly MaintenanceOption[]>([]);
   readonly saving = input(false);
+  readonly canEdit = input(true);
   readonly saveError = input<string | null>(null);
   readonly state = input<RouteDrawerState>('ready');
   readonly loadError = input<string | null>(null);
@@ -210,7 +211,7 @@ export class ServiceTaskDrawer {
     });
     lockWhileSaving(
       this.form,
-      () => this.saving(),
+      () => this.saving() || !this.canEdit(),
       () => {
         this.drawer().keepFocusInside();
       },
@@ -236,7 +237,7 @@ export class ServiceTaskDrawer {
   }
 
   protected submit(): void {
-    if (this.saving() || this.readOnly() || this.state() !== 'ready') {
+    if (!this.canEdit() || this.saving() || this.readOnly() || this.state() !== 'ready') {
       return;
     }
     this.submitted = true;

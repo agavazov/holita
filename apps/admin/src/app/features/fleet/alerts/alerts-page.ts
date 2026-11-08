@@ -20,6 +20,7 @@ import type {
   AdminAlertsQuery,
   AdminBranchesQuery,
 } from '../../../../generated/graphql/operations';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import { messages, type Language } from '../../../i18n/messages';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
@@ -78,6 +79,7 @@ import { alertsText } from './i18n/messages';
       [vehicles]="choices.vehicles()"
       [selection]="selected()"
       [busy]="loading() || acting()"
+      [canOperate]="canOperate()"
       [searchError]="searchError()"
       [errorText]="failure()"
       (stateChange)="changeState($event)"
@@ -103,6 +105,8 @@ export class AlertsPage implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly notices = inject(MessageService);
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
   private query: ReturnType<AlertsApi['watch']> | undefined;
   private countsQuery: ReturnType<AlertsApi['watchCounts']> | undefined;
   private clockQuery: ReturnType<AlertsApi['watchClock']> | undefined;
@@ -279,7 +283,7 @@ export class AlertsPage implements OnInit {
     if (!id) {
       return;
     }
-    if (action === 'open' || action === 'resolve') {
+    if (action === 'open') {
       this.openAlert(id);
       return;
     }
@@ -307,6 +311,13 @@ export class AlertsPage implements OnInit {
           ...(link.fragment !== undefined ? { fragment: link.fragment } : {}),
         });
       }
+      return;
+    }
+    if (!this.canOperate()) {
+      return;
+    }
+    if (action === 'resolve') {
+      this.openAlert(id);
       return;
     }
     this.acting.set(true);

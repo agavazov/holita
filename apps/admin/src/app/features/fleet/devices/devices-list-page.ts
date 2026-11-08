@@ -18,6 +18,7 @@ import type {
   AdminBranchesQuery,
   AdminDevicesQuery,
 } from '../../../../generated/graphql/operations';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import { messages, type Language } from '../../../i18n/messages';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
@@ -60,6 +61,7 @@ import { devicesText } from './i18n/messages';
       [models]="models"
       [selection]="selected()"
       [busy]="acting() || loading()"
+      [canEdit]="canOperate()"
       [searchError]="searchError()"
       [errorText]="failure()"
       (stateChange)="changeState($event)"
@@ -92,6 +94,8 @@ export class DevicesPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly notifications = inject(MessageService);
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
   private query: ReturnType<DevicesApi['watch']> | undefined;
   readonly page = signal<AdminDevicesQuery['fleetDevices'] | null>(null);
   readonly loading = signal(true);
@@ -226,7 +230,7 @@ export class DevicesPage implements OnInit {
   }
 
   open(id: string | null): void {
-    if (this.acting()) {
+    if (!this.canOperate() || this.acting()) {
       return;
     }
     this.url.cancelPending();
@@ -270,7 +274,7 @@ export class DevicesPage implements OnInit {
       }
       return;
     }
-    if (!ids.length) {
+    if (!this.canOperate() || !ids.length) {
       return;
     }
     this.acting.set(true);

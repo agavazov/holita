@@ -4,7 +4,9 @@
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
   [description]="text().hint"
 >
-  <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  @if (canEdit()) {
+    <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  }
 </holita-page-header>
 
 <p class="app-muted">{{ description() }}</p>
@@ -78,7 +80,9 @@
   (retry)="retry.emit()"
   (clearSelection)="selectionChange.emit([])"
 >
-  <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  @if (canEdit()) {
+    <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  }
   <holita-list-sort-menu
     panelActions
     [fields]="sortFields()"
@@ -120,7 +124,7 @@
           <label class="app-visually-hidden" for="drivers-select-page">{{
             text().table.selectPage
           }}</label>
-          <p-table-header-checkbox inputId="drivers-select-page" />
+          <p-table-header-checkbox inputId="drivers-select-page" [disabled]="!canEdit()" />
         </th>
         <th scope="col" class="app-col-identity" pSortableColumn="name">
           {{ text().table.name }} <p-sort-icon field="name" />
@@ -154,7 +158,11 @@
     <ng-template #body let-row>
       <tr>
         <td class="app-col-check">
-          <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row.name)" />
+          <p-table-checkbox
+            [value]="row"
+            [ariaLabel]="label(text().table.selectRow, row.name)"
+            [disabled]="!canEdit()"
+          />
         </td>
         <td class="app-col-identity">
           <span class="app-cell-identity">

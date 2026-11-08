@@ -37,6 +37,7 @@ import type {
   AdminVehicleProfileServiceQuery,
 } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
+import { DemoSession } from '../../../core/auth/demo-session';
 import type { Language } from '../../../i18n/messages';
 import { injectPageRecord } from '../../../layout/page-record';
 import type { DrawerHost } from '../../../ui/drawer/drawer-host';
@@ -78,6 +79,7 @@ const samePage = (left: ProfilePage, right: ProfilePage) =>
   providers: [VehicleProfileApi],
   template: `
     <holita-vehicle-profile-view
+      [canOperate]="canOperate()"
       [branchId]="branch().id"
       [recordLinks]="recordLinks()"
       [deviceLinkBase]="['/', language(), branch().id, 'fleet', 'devices']"
@@ -149,6 +151,8 @@ export class VehicleProfilePage implements OnInit {
   readonly branch = input.required<AdminBranchesQuery['branches'][number]>();
   readonly language = input.required<Language>();
   private readonly api = inject(VehicleProfileApi);
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -411,7 +415,7 @@ export class VehicleProfilePage implements OnInit {
   }
 
   open(kind: 'edit' | 'odometer'): void {
-    if (this.state() !== 'ready') {
+    if (!this.canOperate() || this.state() !== 'ready') {
       return;
     }
     void this.router.navigate([kind], {

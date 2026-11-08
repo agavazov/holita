@@ -131,52 +131,54 @@
       >
         {{ text().close }}
       </button>
-      @switch (alert.status) {
-        @case ('OPEN') {
-          <button
-            pButton
-            type="button"
-            severity="secondary"
-            [outlined]="true"
-            [loading]="busy() === 'acknowledge'"
-            [disabled]="!!busy()"
-            (click)="apply('acknowledge')"
-          >
-            {{ text().acknowledge }}
-          </button>
-          <button
-            pButton
-            type="button"
-            [loading]="busy() === 'resolve'"
-            [disabled]="!!busy()"
-            (click)="apply('resolve')"
-          >
-            {{ text().resolve }}
-          </button>
-        }
-        @case ('ACKNOWLEDGED') {
-          <button
-            pButton
-            type="button"
-            [loading]="busy() === 'resolve'"
-            [disabled]="!!busy()"
-            (click)="apply('resolve')"
-          >
-            {{ text().resolve }}
-          </button>
-        }
-        @case ('RESOLVED') {
-          <button
-            pButton
-            type="button"
-            severity="secondary"
-            [outlined]="true"
-            [loading]="busy() === 'reopen'"
-            [disabled]="!!busy()"
-            (click)="apply('reopen')"
-          >
-            {{ text().reopen }}
-          </button>
+      @if (canOperate()) {
+        @switch (alert.status) {
+          @case ('OPEN') {
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [outlined]="true"
+              [loading]="busy() === 'acknowledge'"
+              [disabled]="!!busy()"
+              (click)="apply('acknowledge')"
+            >
+              {{ text().acknowledge }}
+            </button>
+            <button
+              pButton
+              type="button"
+              [loading]="busy() === 'resolve'"
+              [disabled]="!!busy()"
+              (click)="apply('resolve')"
+            >
+              {{ text().resolve }}
+            </button>
+          }
+          @case ('ACKNOWLEDGED') {
+            <button
+              pButton
+              type="button"
+              [loading]="busy() === 'resolve'"
+              [disabled]="!!busy()"
+              (click)="apply('resolve')"
+            >
+              {{ text().resolve }}
+            </button>
+          }
+          @case ('RESOLVED') {
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [outlined]="true"
+              [loading]="busy() === 'reopen'"
+              [disabled]="!!busy()"
+              (click)="apply('reopen')"
+            >
+              {{ text().reopen }}
+            </button>
+          }
         }
       }
     }

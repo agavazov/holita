@@ -13,6 +13,7 @@ import {
 import { MessageService } from 'primeng/api';
 import type { AdminBranchesQuery } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
+import { DemoSession } from '../../../core/auth/demo-session';
 import type { Language } from '../../../i18n/messages';
 import { BranchContext } from '../../branches/branch-context';
 import { FleetPreferences } from './fleet-preferences';
@@ -35,6 +36,7 @@ import { settingsText } from './i18n/messages';
       [settings]="settings()"
       [state]="settings() ? 'ready' : 'loading'"
       [saving]="saving()"
+      [canEdit]="canManage()"
       [retainDraft]="retainDraft()"
       [saveError]="failure()"
       [fieldErrors]="fieldErrors()"
@@ -48,6 +50,8 @@ export class GeneralSettingsPage implements OnInit {
   readonly branch = input.required<AdminBranchesQuery['branches'][number]>();
   readonly language = input.required<Language>();
   private readonly api = inject(GeneralSettingsApi);
+  private readonly session = inject(DemoSession);
+  protected readonly canManage = computed(() => this.session.hasRole('ADMINISTRATOR'));
   private readonly preferences = inject(FleetPreferences);
   private readonly branches = inject(BranchContext);
   private readonly notices = inject(MessageService);
@@ -87,7 +91,7 @@ export class GeneralSettingsPage implements OnInit {
   /** Fleet preferences and the Core name are separate writes, never an atomic save. */
   async save(form: GeneralSettings): Promise<void> {
     const canonical = this.settings();
-    if (!canonical || this.saving()) {
+    if (!this.canManage() || !canonical || this.saving()) {
       return;
     }
     const branchId = this.branch().id;

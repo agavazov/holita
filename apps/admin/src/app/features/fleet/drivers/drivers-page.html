@@ -16,6 +16,7 @@
   [kpis]="kpis()"
   [selection]="selected()"
   [busy]="acting() || loading()"
+  [canEdit]="canOperate()"
   [searchError]="searchError()"
   [errorText]="failure()"
   (stateChange)="changeState($event)"

@@ -116,6 +116,7 @@ export class AlertsView {
   readonly vehicles = input<readonly AlertOption[]>([]);
   readonly selection = input<readonly ListRecord<AlertActionId>[]>([]);
   readonly busy = input(false);
+  readonly canOperate = input(true);
   readonly searchError = input<string | null>(null);
   readonly errorText = input<string | null>(null);
   readonly stateChange = output<ListQuery>();
@@ -206,22 +207,27 @@ export class AlertsView {
    */
   protected readonly actions = computed<readonly ListAction<AlertActionId, AlertRow>[]>(() => {
     const text = this.text().actions;
-    return [
-      { id: 'open', label: text.open },
-      {
-        id: 'acknowledge',
-        label: text.acknowledge,
-        bulk: true,
-        appliesTo: (row) => row.status === 'OPEN',
-      },
-      { id: 'resolve', label: text.resolve, appliesTo: (row) => row.status !== 'RESOLVED' },
+    const actions: ListAction<AlertActionId, AlertRow>[] = [{ id: 'open', label: text.open }];
+    if (this.canOperate()) {
+      actions.push(
+        {
+          id: 'acknowledge',
+          label: text.acknowledge,
+          bulk: true,
+          appliesTo: (row) => row.status === 'OPEN',
+        },
+        { id: 'resolve', label: text.resolve, appliesTo: (row) => row.status !== 'RESOLVED' },
+      );
+    }
+    actions.push(
       { id: 'vehicle', label: text.vehicle },
       {
         id: 'driver',
         label: text.driver,
         appliesTo: (row) => !!row.driverId && !!this.recordLinks()?.driver(row.driverId),
       },
-    ];
+    );
+    return actions;
   });
   private readonly records = computed(
     () => new Map(this.rows().map((row) => [row.id, this.toRecord(row)])),
@@ -309,6 +315,9 @@ export class AlertsView {
   }
 
   protected select(rows: readonly AlertRow[] | null): void {
+    if (!this.canOperate()) {
+      return;
+    }
     this.selectionChange.emit((rows ?? []).slice(0, 100).map((row) => this.recordOf(row)));
   }
 

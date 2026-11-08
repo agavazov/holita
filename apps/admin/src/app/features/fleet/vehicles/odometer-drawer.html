@@ -92,7 +92,7 @@
       type="submit"
       form="odometer-form"
       [loading]="saving()"
-      [disabled]="saving() || !!unavailable() || state() !== 'ready'"
+      [disabled]="!canEdit() || saving() || !!unavailable() || state() !== 'ready'"
     >
       {{ text().save }}
     </button>

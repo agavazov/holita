@@ -4,9 +4,11 @@
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
   [description]="description()"
 >
-  <button headerActions pButton type="button" [disabled]="busy()" (click)="create.emit()">
-    {{ text().new }}
-  </button>
+  @if (canEdit()) {
+    <button headerActions pButton type="button" [disabled]="busy()" (click)="create.emit()">
+      {{ text().new }}
+    </button>
+  }
 </holita-page-header>
 
 <holita-filter-builder
@@ -59,7 +61,9 @@
     [sort]="state().sort"
     (sortChange)="changeSort($event)"
   />
-  <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  @if (canEdit()) {
+    <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  }
   <p-table
     class="app-responsive-table"
     [value]="tableRows()"
@@ -95,7 +99,7 @@
           <label class="app-visually-hidden" for="devices-select-page">{{
             text().table.selectPage
           }}</label>
-          <p-table-header-checkbox inputId="devices-select-page" />
+          <p-table-header-checkbox inputId="devices-select-page" [disabled]="!canEdit()" />
         </th>
         <th scope="col" class="app-col-identity" pSortableColumn="imei">
           {{ text().table.device }} <p-sort-icon field="imei" />
@@ -113,7 +117,11 @@
     <ng-template #body let-row>
       <tr>
         <td class="app-col-check">
-          <p-table-checkbox [value]="row" [ariaLabel]="label(text().table.selectRow, row)" />
+          <p-table-checkbox
+            [value]="row"
+            [ariaLabel]="label(text().table.selectRow, row)"
+            [disabled]="!canEdit()"
+          />
         </td>
         <td class="app-col-identity">
           <span class="app-cell-identity" [attr.title]="modelLabel(row.model)">

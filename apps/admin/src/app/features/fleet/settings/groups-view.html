@@ -4,7 +4,9 @@
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? page().total : null"
   [description]="guidance()"
 >
-  <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  @if (canEdit()) {
+    <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  }
 </holita-page-header>
 
 <holita-table-panel
@@ -25,7 +27,9 @@
   (retry)="retry.emit()"
   (pageChange)="pageChange.emit($event)"
 >
-  <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  @if (canEdit()) {
+    <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
+  }
   <p-table
     class="app-responsive-table"
     [value]="tableRows()"
@@ -70,6 +74,7 @@
                 type="button"
                 class="app-link app-cell-truncate"
                 [attr.aria-label]="editLabel(row)"
+                [disabled]="!canEdit()"
                 (click)="panel.run('edit', [recordOf(row)], $event.currentTarget)"
               >
                 {{ row.name }}

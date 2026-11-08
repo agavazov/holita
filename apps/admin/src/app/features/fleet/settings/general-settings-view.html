@@ -215,7 +215,7 @@
           >
             {{ text().discard }}
           </button>
-          <button pButton type="submit" [loading]="saving()" [disabled]="saving()">
+          <button pButton type="submit" [loading]="saving()" [disabled]="!canEdit() || saving()">
             {{ text().save }}
           </button>
         </span>

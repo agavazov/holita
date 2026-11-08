@@ -404,7 +404,13 @@
         >
           {{ text().cancel }}
         </button>
-        <button pButton type="submit" form="driver-form" [loading]="saving()" [disabled]="saving()">
+        <button
+          pButton
+          type="submit"
+          form="driver-form"
+          [loading]="saving()"
+          [disabled]="saving() || !canEdit()"
+        >
           {{ driver() ? text().save : text().create }}
         </button>
       } @else {
@@ -427,7 +433,9 @@
         >
           {{ text().scorecard }}
         </button>
-        <button pButton type="button" (click)="edit()">{{ text().edit }}</button>
+        @if (canEdit()) {
+          <button pButton type="button" (click)="edit()">{{ text().edit }}</button>
+        }
       }
     </div>
   }

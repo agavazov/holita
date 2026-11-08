@@ -242,7 +242,13 @@
     >
       {{ text().cancel }}
     </button>
-    <button pButton type="submit" form="vehicle-form" [loading]="saving()" [disabled]="saving()">
+    <button
+      pButton
+      type="submit"
+      form="vehicle-form"
+      [loading]="saving()"
+      [disabled]="!canEdit() || saving()"
+    >
       {{ vehicle() ? text().save : text().create }}
     </button>
   </div>

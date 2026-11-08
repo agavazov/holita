@@ -122,6 +122,7 @@ export class VehicleDrawer {
   readonly groups = input<readonly VehicleOption[]>([]);
   readonly drivers = input<readonly VehicleOption[]>([]);
   readonly saving = input(false);
+  readonly canEdit = input(true);
   readonly state = input<RouteDrawerState>('ready');
   readonly loadError = input<string | null>(null);
   readonly choicesError = input<string | null>(null);
@@ -235,7 +236,7 @@ export class VehicleDrawer {
     });
     lockWhileSaving(
       this.form,
-      () => this.saving(),
+      () => this.saving() || !this.canEdit(),
       () => {
         const form = this.formElement()?.nativeElement;
         if (!form || !focusFirstInvalid(form, fieldOrder, 'vehicle-')) {
@@ -264,7 +265,7 @@ export class VehicleDrawer {
   }
 
   protected submit(): void {
-    if (this.saving()) {
+    if (!this.canEdit() || this.saving()) {
       return;
     }
     this.submitted = true;

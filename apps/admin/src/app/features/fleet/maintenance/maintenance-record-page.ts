@@ -13,6 +13,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EMPTY, Subject, catchError, filter, forkJoin, of, startWith, switchMap, take } from 'rxjs';
 import type { AdminServiceTaskDetailsFragment } from '../../../../generated/graphql/operations';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import { injectDrawerHost } from '../../../ui/drawer/drawer-host';
 import { drawerParam, drawerRouteData } from '../../../ui/drawer/drawer-route';
@@ -53,6 +54,7 @@ import {
         [loadError]="loadFailure()"
         [closeLink]="listLink"
         [saving]="saving()"
+        [canEdit]="canOperate()"
         [saveError]="saveFailure()"
         [fieldErrors]="completionErrors()"
         (retry)="retry.next()"
@@ -70,6 +72,7 @@ import {
         [closeLink]="listLink"
         [choicesError]="choicesFailure()"
         [saving]="saving()"
+        [canEdit]="canOperate()"
         [saveError]="saveFailure()"
         [fieldErrors]="taskErrors()"
         (retry)="retry.next()"
@@ -82,6 +85,8 @@ import {
 })
 export class MaintenanceRecordPage implements OnInit {
   private readonly api = inject(MaintenanceApi);
+  private readonly session = inject(DemoSession);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
   protected readonly choices = inject(MaintenanceChoices);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -138,6 +143,7 @@ export class MaintenanceRecordPage implements OnInit {
   );
   readonly readOnly = computed(
     () =>
+      !this.canOperate() ||
       this.routeData.mode === 'view' ||
       (this.record() !== null && this.record()?.status !== 'PLANNED'),
   );
@@ -299,6 +305,7 @@ export class MaintenanceRecordPage implements OnInit {
   async complete(form: ServiceCompletionForm): Promise<void> {
     const record = this.record();
     if (
+      !this.canOperate() ||
       this.state() !== 'ready' ||
       this.saving() ||
       !this.completionAction ||

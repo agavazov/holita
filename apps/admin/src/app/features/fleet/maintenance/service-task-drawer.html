@@ -258,7 +258,13 @@
       >
         {{ text().cancel }}
       </button>
-      <button pButton type="submit" form="task-form" [loading]="saving()" [disabled]="saving()">
+      <button
+        pButton
+        type="submit"
+        form="task-form"
+        [loading]="saving()"
+        [disabled]="saving() || !canEdit()"
+      >
         {{ task() ? text().save : text().create }}
       </button>
     }

@@ -67,6 +67,7 @@ export class AlertDrawer {
   readonly dataAsOf = input.required<string>();
   /** The action being applied, if any. */
   readonly busy = input<AlertAction | null>(null);
+  readonly canOperate = input(true);
   /** Separates a submitted write from a busy conflict read; examples can supply only busy. */
   readonly pendingWrite = input<boolean>();
   readonly saveError = input<string | null>(null);
@@ -147,7 +148,7 @@ export class AlertDrawer {
     });
     lockWhileSaving(
       this.remark,
-      () => this.busy() !== null,
+      () => this.busy() !== null || !this.canOperate(),
       () => {
         this.drawer().keepFocusInside();
       },
@@ -171,7 +172,7 @@ export class AlertDrawer {
   }
 
   protected apply(action: AlertAction): void {
-    if (this.busy() || this.state() !== 'ready' || !this.alert()) {
+    if (this.busy() || this.state() !== 'ready' || !this.alert() || !this.canOperate()) {
       return;
     }
     this.remark.markAsTouched();

@@ -30,6 +30,7 @@
   [drivers]="choices.drivers()"
   [selection]="selected()"
   [busy]="acting() || loading()"
+  [canEdit]="canOperate()"
   [profileEnabled]="true"
   [searchError]="searchError()"
   [errorText]="failure()"

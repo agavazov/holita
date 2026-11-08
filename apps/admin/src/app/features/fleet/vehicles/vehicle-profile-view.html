@@ -80,8 +80,12 @@
           [severity]="statusSeverity(vehicle.status)"
           [value]="statusLabel(vehicle.status)"
         />
-        <button headerActions pButton type="button" (click)="edit.emit()">{{ text().edit }}</button>
-        @if (vehicle.status !== 'INACTIVE') {
+        @if (canOperate()) {
+          <button headerActions pButton type="button" (click)="edit.emit()">
+            {{ text().edit }}
+          </button>
+        }
+        @if (canOperate() && vehicle.status !== 'INACTIVE') {
           <button
             headerActions
             pButton
@@ -801,13 +805,15 @@
                       <a pButton [routerLink]="deviceLink(selected.id, 'commands')">{{
                         v2().commands.open
                       }}</a>
-                      <a
-                        pButton
-                        severity="secondary"
-                        [outlined]="true"
-                        [routerLink]="deviceLink(selected.id, 'sms-commands')"
-                        >{{ v2().commands.sms }}</a
-                      >
+                      @if (canOperate()) {
+                        <a
+                          pButton
+                          severity="secondary"
+                          [outlined]="true"
+                          [routerLink]="deviceLink(selected.id, 'sms-commands')"
+                          >{{ v2().commands.sms }}</a
+                        >
+                      }
                     </div>
                   }
                 } @else {

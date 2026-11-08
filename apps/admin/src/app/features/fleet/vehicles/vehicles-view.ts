@@ -125,6 +125,7 @@ export class VehiclesView {
   readonly drivers = input<readonly VehicleOption[]>([]);
   readonly selection = input<readonly ListRecord<VehicleActionId>[]>([]);
   readonly busy = input(false);
+  readonly canEdit = input(true);
   readonly liveLoading = input(false);
   readonly profileEnabled = input(true);
   readonly searchError = input<string | null>(null);
@@ -297,16 +298,26 @@ export class VehiclesView {
   /** The list's actions, once for the row menu and the bulk bar. */
   protected readonly actions = computed<readonly ListAction<VehicleActionId, VehicleRow>[]>(() => {
     const text = this.text().actions;
-    return [
-      ...(this.profileEnabled() ? [{ id: 'profile' as const, label: text.profile }] : []),
-      { id: 'edit', label: text.edit },
+    const edits: readonly ListAction<VehicleActionId, VehicleRow>[] = [
+      { id: 'edit', label: text.edit, appliesTo: () => this.canEdit() },
       {
         id: 'deactivate',
         label: text.deactivate,
         bulk: true,
-        appliesTo: (row) => row.status !== 'INACTIVE',
+        appliesTo: (row) => this.canEdit() && row.status !== 'INACTIVE',
       },
-      { id: 'delete', label: text.delete, bulk: true, danger: true, confirm: text.confirmDelete },
+      {
+        id: 'delete',
+        label: text.delete,
+        bulk: true,
+        danger: true,
+        confirm: text.confirmDelete,
+        appliesTo: () => this.canEdit(),
+      },
+    ];
+    return [
+      ...(this.profileEnabled() ? [{ id: 'profile' as const, label: text.profile }] : []),
+      ...(this.canEdit() || !this.profileEnabled() ? edits : []),
     ];
   });
   private readonly records = computed(
@@ -459,6 +470,9 @@ export class VehiclesView {
   }
 
   protected select(rows: readonly VehicleRow[] | null): void {
+    if (!this.canEdit()) {
+      return;
+    }
     this.selectionChange.emit((rows ?? []).map((row) => this.recordOf(row)));
   }
 
