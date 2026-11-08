@@ -3,6 +3,15 @@ import { requireTenant } from '../../auth/demo-auth.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { protectedParameters } from '../devices/command.js';
 
+const secretParameters: ReadonlySet<number> = new Set([
+  ...protectedParameters,
+  99,
+  1916,
+  2481,
+  5635,
+  5641,
+]);
+
 export function requireOperator(context: RequestContext): void {
   requireTenant(context);
   if (
@@ -26,7 +35,7 @@ export function isViewer(context: RequestContext | undefined): boolean {
 }
 
 export function protectedParameter(parameter: number | string): boolean {
-  return protectedParameters.has(Number(parameter));
+  return secretParameters.has(Number(parameter));
 }
 
 export function maskParameterValue(
