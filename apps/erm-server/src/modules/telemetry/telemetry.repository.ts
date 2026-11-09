@@ -10,7 +10,7 @@ import {
 import { Prisma } from '../../generated/prisma/client.js';
 import type {
   ErmDataGap,
-  ErmEventCategory,
+  ErmDeviceEventsInput,
   ErmNetworkChange,
   ErmEventSeverity,
   ErmFleetProblemSourceKind,
@@ -654,7 +654,8 @@ export class TelemetryRepository {
     });
   }
 
-  async deviceEvents(queries: TelemetryQuery[], categories?: readonly ErmEventCategory[] | null) {
+  async deviceEvents(queries: TelemetryQuery[], input?: ErmDeviceEventsInput | null) {
+    const categories = input?.categories;
     const ids = categories ? categoryEventIds(categories) : [];
     const known = [...starlinkEvents.keys()];
     const filter = !categories
@@ -667,17 +668,37 @@ export class TelemetryRepository {
           : Prisma.sql`false`
       }
     )`;
+    const critical = [...starlinkEvents]
+      .filter(([, event]) => event.severity === 'CRITICAL')
+      .map(([id]) => id);
+    const warning = [...starlinkEvents]
+      .filter(([, event]) => event.severity === 'WARNING')
+      .map(([id]) => id);
+    const status = Prisma.sql`CASE WHEN event."eventId" IN (${Prisma.join(critical)}) THEN 'CRITICAL'
+      WHEN event."eventId" IN (${Prisma.join(warning)}) THEN 'WARNING' ELSE 'INFO' END`;
+    const severityFilter = input?.severities?.length
+      ? Prisma.sql`${status} IN (${Prisma.join(input.severities)})`
+      : Prisma.sql`true`;
+    const direction = input?.sort?.direction === 'ASC' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
+    const field =
+      input?.sort?.field === 'EVENT_TYPE'
+        ? Prisma.sql`event."eventId"`
+        : input?.sort?.field === 'STATUS'
+          ? Prisma.sql`CASE ${status} WHEN 'CRITICAL' THEN 2 WHEN 'WARNING' THEN 1 ELSE 0 END`
+          : Prisma.sql`event."eventTime"`;
+    const order = Prisma.sql`${field} ${direction} NULLS LAST, event.id ${direction}`;
     const selected = sqlRows(
       await this.prisma.client.$queryRaw(Prisma.sql`
       SELECT q."unitId", h.id::text AS id FROM
       jsonb_to_recordset(${JSON.stringify(queries)}::jsonb) q("unitId" text, "offset" integer, "pageSize" integer, snapshot timestamptz)
       CROSS JOIN LATERAL (
-        SELECT event.id, event."eventTime" FROM ${this.table('ermEvent')} event
+        SELECT event.id, row_number() OVER (ORDER BY ${order}) AS ordinal
+        FROM ${this.table('ermEvent')} event
         JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
-        WHERE event."unitId" = q."unitId" AND frame."receivedAt" <= q.snapshot AND ${filter}
-        ORDER BY event."eventTime" DESC NULLS LAST, event.id DESC
+        WHERE event."unitId" = q."unitId" AND frame."receivedAt" <= q.snapshot AND ${filter} AND ${severityFilter}
+        ORDER BY ${order}
         LIMIT q."pageSize" + 1 OFFSET q."offset"
-      ) h ORDER BY q."unitId", h."eventTime" DESC NULLS LAST, h.id DESC
+      ) h ORDER BY q."unitId", h.ordinal
     `),
     );
     const rows = new Map(

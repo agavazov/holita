@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import type { ErmDevicePageInput, ErmEventCategory } from '../../generated/graphql/types.js';
+import type { ErmDeviceEventsInput, ErmEventCategory } from '../../generated/graphql/types.js';
 
 function invalid(): never {
   throw new BadRequestException('Invalid ERM unit, page size or cursor');
@@ -7,7 +7,7 @@ function invalid(): never {
 
 export function telemetryQuery(
   kind: 'events' | 'frames' | 'commands' | 'parameterSnapshots',
-  input: ErmDevicePageInput & { unitId: string },
+  input: ErmDeviceEventsInput & { unitId: string },
   categories?: readonly ErmEventCategory[] | null,
 ) {
   const pageSize = input.pageSize ?? 50;
@@ -15,11 +15,27 @@ export function telemetryQuery(
   if (![25, 50, 100].includes(pageSize) || !/^(?:[0-9A-Fa-f]{6}|\d{15})$/.test(unitId)) {
     invalid();
   }
+  if (
+    kind === 'events' &&
+    (input.severities?.some((value) => !['INFO', 'WARNING', 'CRITICAL'].includes(value)) ||
+      (input.sort &&
+        (!['TIME', 'EVENT_TYPE', 'STATUS'].includes(input.sort.field ?? 'TIME') ||
+          !['ASC', 'DESC'].includes(input.sort.direction ?? 'DESC'))))
+  ) {
+    invalid();
+  }
   const scope = JSON.stringify([
     kind,
     unitId,
     pageSize,
     ...(categories ? [[...new Set(categories)].sort()] : []),
+    ...(kind === 'events'
+      ? [
+          [...new Set(input.severities ?? [])].sort(),
+          input.sort?.field ?? 'TIME',
+          input.sort?.direction ?? 'DESC',
+        ]
+      : []),
   ]);
   let offset = 0;
   let snapshot = new Date();
@@ -61,7 +77,7 @@ export type TelemetryQuery = ReturnType<typeof telemetryQuery>;
 export function deviceTelemetryQueries(
   kind: 'events' | 'frames' | 'commands' | 'parameterSnapshots',
   unitIds: string[],
-  input: ErmDevicePageInput | null | undefined,
+  input: ErmDeviceEventsInput | null | undefined,
   categories?: readonly ErmEventCategory[] | null,
 ): TelemetryQuery[] {
   return unitIds.flatMap((unitId) => {

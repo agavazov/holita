@@ -681,6 +681,58 @@ it('persists captured connection lifecycle and raw frames through the production
         false,
       );
     }
+    for (const field of ['TIME', 'EVENT_TYPE', 'STATUS'] as const) {
+      for (const direction of ['ASC', 'DESC'] as const) {
+        const sort = { field, direction };
+        const first = await telemetry.deviceEvents(reference(), { pageSize: 25, sort }, context);
+        const second = first?.nextCursor
+          ? await telemetry.deviceEvents(
+              reference(),
+              { pageSize: 25, sort, cursor: first.nextCursor },
+              context,
+            )
+          : null;
+        const items = [...(first?.items ?? []), ...(second?.items ?? [])];
+        expect(items.length).toBeGreaterThan(25);
+        expect(new Set(items.map((item) => item.id)).size).toBe(items.length);
+        const rank = { INFO: 0, WARNING: 1, CRITICAL: 2 };
+        const values = items.map((item) =>
+          field === 'TIME'
+            ? (item.eventTime?.getTime() ?? 0)
+            : field === 'STATUS'
+              ? rank[item.severity]
+              : Number(item.eventId ?? 0),
+        );
+        expect(values).toEqual(
+          [...values].sort((left, right) => (direction === 'ASC' ? left - right : right - left)),
+        );
+        if (first?.nextCursor) {
+          await expect(
+            telemetry.deviceEvents(
+              reference(),
+              {
+                pageSize: 25,
+                sort,
+                severities: ['WARNING'],
+                cursor: first.nextCursor,
+              },
+              context,
+            ),
+          ).rejects.toThrow('Invalid ERM unit');
+        }
+      }
+    }
+    for (const severities of [['WARNING'], ['INFO', 'CRITICAL']] as const) {
+      const page = await telemetry.deviceEvents(
+        reference(),
+        { severities: [...severities] },
+        context,
+      );
+      expect(page?.items.length).toBeGreaterThan(0);
+      expect(
+        page?.items.every((item) => severities.some((severity) => severity === item.severity)),
+      ).toBe(true);
+    }
     for (const input of [{ pageSize: 101 }, { cursor: 'invalid' }]) {
       await expect(telemetry.deviceEvents(reference(), input, context)).rejects.toThrow(
         'Invalid ERM unit',
@@ -2303,6 +2355,7 @@ it('persists captured connection lifecycle and raw frames through the production
       ermEvents(input: { pageSize: 25 }) { items { id } hasMore nextCursor }
       alarms: ermEvents(input: { categories: [ALARM] }) { items { eventId category } }
       other: ermEvents(input: { categories: [OTHER] }) { items { eventId } }
+      warnings: ermEvents(input: { severities: [WARNING, CRITICAL], sort: { field: STATUS, direction: DESC } }) { items { eventId severity } }
       ermFrames(input: { pageSize: 25 }) { items { id } hasMore }
       ermCommands(input: { pageSize: 25 }) { items { id } hasMore }
     } } }`;
@@ -2355,6 +2408,7 @@ it('persists captured connection lifecycle and raw frames through the production
         ermEvents: { hasMore: true },
         alarms: { items: expect.arrayContaining([{ eventId: '09', category: 'ALARM' }]) },
         other: { items: [{ eventId: '999' }, { eventId: '00' }] },
+        warnings: { items: expect.arrayContaining([{ eventId: '09', severity: 'WARNING' }]) },
         ermFrames: { hasMore: true },
         ermCommands: { hasMore: true },
       },

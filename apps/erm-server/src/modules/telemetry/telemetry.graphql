@@ -303,11 +303,28 @@ enum ErmDeviceAction {
   "eData fault logger."
   READ_EDATA_FAULTS
 }
+enum ErmEventSortField {
+  TIME
+  EVENT_TYPE
+  STATUS
+}
+enum ErmEventSortDirection {
+  ASC
+  DESC
+}
+input ErmEventSort {
+  field: ErmEventSortField! = TIME
+  direction: ErmEventSortDirection! = DESC
+}
 input ErmDeviceEventsInput {
   pageSize: Int = 50
   cursor: String
   "Only these categories; every category when omitted."
   categories: [ErmEventCategory!]
+  "Only these severity statuses; every status when omitted."
+  severities: [ErmEventSeverity!]
+  "Applied before cursor pagination; defaults to newest first."
+  sort: ErmEventSort
 }
 input ErmDevicePageInput {
   pageSize: Int = 50

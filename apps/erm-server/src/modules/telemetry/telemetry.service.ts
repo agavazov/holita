@@ -575,7 +575,7 @@ export class TelemetryService {
     if (!page) {
       const queries = deviceTelemetryQueries('events', request.unitIds, input, input?.categories);
       page = this.repository
-        .deviceEvents(queries, input?.categories)
+        .deviceEvents(queries, input)
         .then(
           (rows) =>
             new Map(
