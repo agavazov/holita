@@ -46,7 +46,7 @@ export type AlertAction = 'acknowledge' | 'resolve' | 'reopen';
  * the action and passes back `busy` and `saveError`.
  */
 @Component({
-  selector: 'holita-alert-drawer',
+  selector: 'discocan-alert-drawer',
   imports: [
     RouterLink,
     ReactiveFormsModule,

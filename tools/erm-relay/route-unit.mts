@@ -4,16 +4,16 @@ import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { inflateContainer } from './starlink-container.mjs';
 
-// Moves one StarLink unit's primary server (parameters 0049/0050) between Karma and holita.
+// Moves one StarLink unit's primary server (parameters 0049/0050) between Karma and discocan.
 // The unit reaches this tool through a configuration-server session (command 98, queued through
-// Karma) or, when its primary server is already holita, through its next ordinary connection.
+// Karma) or, when its primary server is already discocan, through its next ordinary connection.
 // The tool reads 0049-0052 (45), writes 0049/0050 (46), reads them back and writes the previous
 // values again when the result differs. It confirms the 45 replies and sends no other command.
 const { values: options } = parseArgs({
   options: {
     unit: { type: 'string' },
     to: { type: 'string' },
-    holita: { type: 'string' },
+    discocan: { type: 'string' },
     karma: { type: 'string', default: 'in.karma.online:500' },
     port: { type: 'string', default: '11500' },
     'wait-minutes': { type: 'string', default: '140' },
@@ -22,8 +22,8 @@ const { values: options } = parseArgs({
 const unit = options.unit ?? '';
 const port = Number(options.port);
 const waitMinutes = Number(options['wait-minutes']);
-if (!/^([0-9A-F]{6}|\d{15})$/.test(unit) || (options.to !== 'holita' && options.to !== 'karma')) {
-  throw new Error('Usage: --unit <6-hex or 15-digit ID> --to holita|karma --holita <host:port>');
+if (!/^([0-9A-F]{6}|\d{15})$/.test(unit) || (options.to !== 'discocan' && options.to !== 'karma')) {
+  throw new Error('Usage: --unit <6-hex or 15-digit ID> --to discocan|karma --discocan <host:port>');
 }
 if (!Number.isInteger(port) || port < 1 || port > 65535 || !(waitMinutes > 0)) {
   throw new Error('--port must be 1-65535 and --wait-minutes positive');
@@ -31,13 +31,13 @@ if (!Number.isInteger(port) || port < 1 || port > 65535 || !(waitMinutes > 0)) {
 function server(value: string | undefined): { host: string; port: string } {
   const match = /^([A-Za-z0-9.-]+):(\d{1,5})$/.exec(value ?? '');
   if (!match?.[1] || !match[2] || Number(match[2]) < 1 || Number(match[2]) > 65535) {
-    throw new Error('--holita and --karma must be host:port');
+    throw new Error('--discocan and --karma must be host:port');
   }
   return { host: match[1], port: match[2] };
 }
-const holita = server(options.holita);
+const discocan = server(options.discocan);
 const karma = server(options.karma);
-const [from, to] = options.to === 'holita' ? [karma, holita] : [holita, karma];
+const [from, to] = options.to === 'discocan' ? [karma, discocan] : [discocan, karma];
 const captureDirectory = resolve(process.env.ERM_RELAY_CAPTURE_DIR ?? '.references/erm-relay');
 mkdirSync(captureDirectory, { recursive: true, mode: 0o700 });
 
@@ -174,7 +174,7 @@ const listener = net.createServer((socket) => {
     step = next;
     pending = String(++reference);
     const frame = serverFrame(command, pending, fields);
-    record({ connection, from: 'holita', frame: frame.subarray(0, -2).toString('latin1') });
+    record({ connection, from: 'discocan', frame: frame.subarray(0, -2).toString('latin1') });
     socket.write(frame);
     clearTimeout(timer);
     timer = setTimeout(timeout, 30_000);
@@ -248,7 +248,7 @@ const listener = net.createServer((socket) => {
           const confirmation = serverFrame('02', String(++reference), [frame.reference, '01']);
           record({
             connection,
-            from: 'holita',
+            from: 'discocan',
             frame: confirmation.subarray(0, -2).toString('latin1'),
           });
           socket.write(confirmation);

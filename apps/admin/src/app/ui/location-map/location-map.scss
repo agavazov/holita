@@ -1,6 +1,6 @@
 @use 'breakpoints' as bp;
 
-holita-location-map {
+discocan-location-map {
   display: block;
   min-inline-size: 0;
 
@@ -131,7 +131,7 @@ holita-location-map {
 }
 
 @include bp.below(md) {
-  holita-location-map .location-map__canvas {
+  discocan-location-map .location-map__canvas {
     block-size: clamp(18rem, 45vh, 28rem);
   }
 }

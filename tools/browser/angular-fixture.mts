@@ -8,7 +8,7 @@ import { createFederationFixture } from '../graphql/federation-fixture.mjs';
 
 export async function chooseBranch(page: Page, name: string): Promise<void> {
   await page
-    .locator('holita-admin-topbar')
+    .locator('discocan-admin-topbar')
     .getByRole('button', { name: /^(Branch|Клон):/ })
     .click();
   await chooseMenuItem(page, name);
@@ -29,7 +29,7 @@ export async function chooseMenuItem(page: Page, name: string | RegExp): Promise
 
 export async function chooseLanguage(page: Page, name: 'English' | 'Български'): Promise<void> {
   await page
-    .locator('holita-admin-topbar')
+    .locator('discocan-admin-topbar')
     .getByRole('button', { name: /^(Language|Език):/ })
     .click();
   await chooseMenuItem(page, name);
@@ -37,7 +37,7 @@ export async function chooseLanguage(page: Page, name: 'English' | 'Българ
 
 export async function signOut(page: Page): Promise<void> {
   await page
-    .locator('holita-admin-topbar')
+    .locator('discocan-admin-topbar')
     .getByRole('button', { name: /^(Account|Профил):/ })
     .click();
   await chooseMenuItem(page, /^(Sign out|Изход)$/);
@@ -146,7 +146,7 @@ export const test = base.extend<
     if (signedIn) {
       await page.addInitScript(
         (session) => {
-          sessionStorage.setItem('holita.admin.session', JSON.stringify(session));
+          sessionStorage.setItem('discocan.admin.session', JSON.stringify(session));
         },
         { ...app.account.session, branchId: app.branchA.id },
       );

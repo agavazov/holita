@@ -36,7 +36,7 @@ export type {
 const messages: Readonly<Record<Language, typeof en>> = { bg, en };
 
 @Component({
-  selector: 'holita-chart-panel',
+  selector: 'discocan-chart-panel',
   imports: [ChartModule],
   templateUrl: './chart-panel.html',
   styleUrl: './chart-panel.scss',

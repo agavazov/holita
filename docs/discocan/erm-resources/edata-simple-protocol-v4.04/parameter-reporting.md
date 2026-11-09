@@ -7,7 +7,7 @@ the supplied Monitor **9.56** catalog, and observed device responses through
 [Karma API v2](../../../archive/karma/karma-api-v2/README.md).
 
 This reference records device configuration procedures and observed responses, including manual
-upstream examples. The current holita workflow uses the
+upstream examples. The current discocan workflow uses the
 [ERM control center](../../development.md#erm-device-server) for snapshots and controlled changes.
 Protocol examples here do not authorize a device write.
 
@@ -149,7 +149,7 @@ The supplied Monitor 9.56 handles `154,1` by continuing to wait and `154,0` by e
 parameter/rule loading (`Is_Special_Ack_Recieved`, `Is_Special_Nck_Recieved`,
 `Process_Recieved_Can_Engine_Parameters` and `Process_Recieved_Can_Engine_Rules`).
 Its terminal branch does not replace the existing definitions, so `154,0` alone does not
-establish an empty set. Holita preserves this response and reports a read without
+establish an empty set. DiscoCan preserves this response and reports a read without
 configuration when no complete definitions were returned.
 
 If submission times out or its result is lost, first inspect the queue where its

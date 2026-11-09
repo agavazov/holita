@@ -1,5 +1,5 @@
 <p class="app-muted">{{ text().historyHint }}</p>
-<holita-table-panel
+<discocan-table-panel
   #panel
   mode="local"
   [heading]="text().history"
@@ -78,7 +78,7 @@
             <span [title]="target()">{{ target() }}</span>
           </div>
           <div class="app-table-mobile-actions">
-            <holita-row-actions
+            <discocan-row-actions
               [actions]="actions()"
               [record]="row.record"
               (choose)="panel.run($event.action, [row.record], $event.origin)"
@@ -100,7 +100,7 @@
           <span class="app-cell-truncate" [title]="row.outcome">{{ row.outcome }}</span>
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-          <holita-row-actions
+          <discocan-row-actions
             [actions]="actions()"
             [record]="row.record"
             (choose)="panel.run($event.action, [row.record], $event.origin)"
@@ -109,4 +109,4 @@
       </tr>
     </ng-template>
   </p-table>
-</holita-table-panel>
+</discocan-table-panel>

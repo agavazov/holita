@@ -58,7 +58,7 @@
     "Exact ERM SKU and firmware remain unknown.",
     "Component datasheets do not establish complete tracker capabilities.",
     "CAN, pinout, I/O ratings and OTA compatibility are unverified for this device.",
-    "Software architecture, lifecycle and JSON models in the original are proposals and examples, not implemented holita contracts.",
+    "Software architecture, lifecycle and JSON models in the original are proposals and examples, not implemented discocan contracts.",
     "Source photographs are not embedded or linked in the supplied Markdown.",
     "Illustrative source timestamps are not publication-date evidence."
   ]

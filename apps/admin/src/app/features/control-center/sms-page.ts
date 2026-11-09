@@ -36,7 +36,7 @@ const smsUiText: Record<Language, typeof en> = { bg, en };
 
 /** Prepares supported SMS texts for the current device; sending happens in the phone app. */
 @Component({
-  selector: 'holita-control-center-sms',
+  selector: 'discocan-control-center-sms',
   imports: [
     NgTemplateOutlet,
     RouterLink,

@@ -28,7 +28,7 @@ const examples = {
 } satisfies Record<string, ToastMessageOptions>;
 
 @Component({
-  selector: 'holita-notifications-demo',
+  selector: 'discocan-notifications-demo',
   imports: [ButtonDirective],
   template: `
     <h1>Operation feedback</h1>

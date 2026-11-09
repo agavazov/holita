@@ -164,7 +164,7 @@ function guardedTestUrl(service: 'core' | 'fleet' | 'erm', value: string): URL {
   } catch {
     throw new Error('A valid dedicated local test URL is required');
   }
-  const name = `holita_${service}_test`;
+  const name = `discocan_${service}_test`;
   if (
     !['postgresql:', 'postgres:'].includes(url.protocol) ||
     !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ||
@@ -180,7 +180,7 @@ function guardedTestUrl(service: 'core' | 'fleet' | 'erm', value: string): URL {
 }
 
 async function prepareDatabase(service: 'core' | 'fleet' | 'erm') {
-  const name = `holita_${service}_test`;
+  const name = `discocan_${service}_test`;
   const url = guardedTestUrl(
     service,
     process.env[`${service.toUpperCase()}_TEST_DATABASE_URL`] ??
@@ -376,7 +376,7 @@ async function insertErmRecords(databaseUrl: string, schemaName: string) {
     await connection.query(
       `INSERT INTO ${schema}."ermFrame"
        ("connectionId", "receivedAt", "direction", "unitId", "command", "reference", "checksum", "raw")
-       VALUES ($1, $2, 'holita', $3, '03', '900000001', 'ok', $4)`,
+       VALUES ($1, $2, 'discocan', $3, '03', '900000001', 'ok', $4)`,
       [connectionId, at, unitId, Buffer.from('$SRV862129080366630,03,900000001,0774*00')],
     );
     await connection.query(
@@ -674,7 +674,7 @@ export async function createFederationFixture(options: { adminOrigin?: string } 
     const ermDatabase = await prepareDatabase('erm');
     cleanup.push(ermDatabase.close);
     await insertErmRecords(ermDatabase.databaseUrl, ermDatabase.schema);
-    const captureDirectory = await mkdtemp(join(tmpdir(), 'holita-erm-federation-'));
+    const captureDirectory = await mkdtemp(join(tmpdir(), 'discocan-erm-federation-'));
     cleanup.push(() => rm(captureDirectory, { recursive: true, force: true }));
     const internalAuthToken = randomBytes(32).toString('base64url');
     const core = await startApplication('core', {

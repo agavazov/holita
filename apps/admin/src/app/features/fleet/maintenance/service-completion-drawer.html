@@ -1,4 +1,4 @@
-<holita-route-drawer
+<discocan-route-drawer
   [title]="title()"
   [subtitle]="task()?.plate ?? null"
   [saving]="saving()"
@@ -39,7 +39,7 @@
         </div>
         <div>
           <dt>{{ text().cost }}</dt>
-          <dd>{{ record.costCents | holitaMoney }}</dd>
+          <dd>{{ record.costCents | discocanMoney }}</dd>
         </div>
         <div>
           <dt>{{ text().workshop }}</dt>
@@ -64,7 +64,7 @@
         <h3>{{ text().details }}</h3>
         <p>{{ text().odometerHint }}</p>
         <div class="app-form-grid">
-          <holita-form-field
+          <discocan-form-field
             [label]="text().completedOn"
             controlId="completion-completedOn"
             [required]="true"
@@ -79,8 +79,8 @@
               [invalid]="!!errorOf('completedOn')"
               [pt]="inputPt('completedOn')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().completedOdometerKm"
             controlId="completion-completedOdometerKm"
             [error]="errorOf('completedOdometerKm')"
@@ -92,8 +92,8 @@
               [invalid]="!!errorOf('completedOdometerKm')"
               [pt]="inputPt('completedOdometerKm')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().cost"
             controlId="completion-costCents"
             [error]="errorOf('costCents')"
@@ -108,8 +108,8 @@
               [invalid]="!!errorOf('costCents')"
               [pt]="inputPt('costCents')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().workshop"
             controlId="completion-workshop"
             [error]="errorOf('workshop')"
@@ -122,8 +122,8 @@
               [attr.aria-invalid]="errorOf('workshop') ? 'true' : null"
               [attr.aria-describedby]="describedBy('workshop')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             class="app-form-grid--wide"
             [label]="text().replacedParts"
             controlId="completion-replacedParts"
@@ -138,8 +138,8 @@
               [attr.aria-invalid]="errorOf('replacedParts') ? 'true' : null"
               [attr.aria-describedby]="describedBy('replacedParts')"
             ></textarea>
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             class="app-form-grid--wide"
             [label]="text().notes"
             controlId="completion-notes"
@@ -154,7 +154,7 @@
               [attr.aria-invalid]="errorOf('notes') ? 'true' : null"
               [attr.aria-describedby]="describedBy('notes')"
             ></textarea>
-          </holita-form-field>
+          </discocan-form-field>
         </div>
       </section>
       @if (allowNext()) {
@@ -162,7 +162,7 @@
           <h3>{{ text().next }}</h3>
           <p>{{ text().nextHint }}</p>
           <div class="app-form-grid">
-            <holita-form-field
+            <discocan-form-field
               [label]="text().nextDueOn"
               controlId="completion-nextDueOn"
               [error]="errorOf('nextDueOn')"
@@ -176,8 +176,8 @@
                 [invalid]="!!errorOf('nextDueOn')"
                 [pt]="inputPt('nextDueOn')"
               />
-            </holita-form-field>
-            <holita-form-field
+            </discocan-form-field>
+            <discocan-form-field
               [label]="text().nextDueOdometerKm"
               controlId="completion-nextDueOdometerKm"
               [error]="errorOf('nextDueOdometerKm')"
@@ -189,9 +189,9 @@
                 [invalid]="!!errorOf('nextDueOdometerKm')"
                 [pt]="inputPt('nextDueOdometerKm')"
               />
-            </holita-form-field>
+            </discocan-form-field>
             @if (hasNext()) {
-              <holita-form-field
+              <discocan-form-field
                 class="app-form-grid--wide"
                 [label]="text().nextTitle"
                 controlId="completion-nextTitle"
@@ -206,7 +206,7 @@
                   [attr.aria-invalid]="errorOf('nextTitle') ? 'true' : null"
                   [attr.aria-describedby]="describedBy('nextTitle')"
                 />
-              </holita-form-field>
+              </discocan-form-field>
             }
           </div>
         </section>
@@ -249,4 +249,4 @@
       </button>
     }
   </div>
-</holita-route-drawer>
+</discocan-route-drawer>

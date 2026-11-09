@@ -49,10 +49,10 @@ const someConditions: readonly FilterCondition[] = [
 
 /** Keeps search and conditions in local state, as a list page keeps them in its URL. */
 @Component({
-  selector: 'holita-filter-builder-demo',
+  selector: 'discocan-filter-builder-demo',
   imports: [FilterBuilder],
   template: `
-    <holita-filter-builder
+    <discocan-filter-builder
       searchLabel="Search plate, model or notes"
       [search]="search()"
       [fields]="fields"

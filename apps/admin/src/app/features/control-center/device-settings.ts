@@ -74,7 +74,7 @@ interface Step {
 }
 
 @Component({
-  selector: 'holita-device-settings',
+  selector: 'discocan-device-settings',
   imports: [
     JsonPipe,
     NgTemplateOutlet,

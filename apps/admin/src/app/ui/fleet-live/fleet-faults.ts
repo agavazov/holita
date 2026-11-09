@@ -11,7 +11,7 @@ import { faultsText, warningLampLabel, warningStateLabel } from './fault-wording
 import { fleetLiveText, type FleetLiveDevice, type FleetLiveMode } from './fleet-live';
 
 @Component({
-  selector: 'holita-fleet-faults',
+  selector: 'discocan-fleet-faults',
   imports: [RouterLink, ExternalLink, Tag],
   template: `
     <span class="live-cell">

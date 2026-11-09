@@ -1,6 +1,6 @@
 # Testing
 
-holita keeps a small test budget: at most 60 test cases in the whole repository, checked by
+discocan keeps a small test budget: at most 60 test cases in the whole repository, checked by
 `npm run test:budget`. Tests exist only where a silent failure is expensive:
 
 - Tenant/Branch isolation;
@@ -130,7 +130,7 @@ The suite covers:
 - Maintenance.
 
 Failure traces stay under the ignored `test-results/` directory. Failure screenshots are opt-in
-with `HOLITA_BROWSER_SCREENSHOTS=1`.
+with `DISCOCAN_BROWSER_SCREENSHOTS=1`.
 
 ## Storybook
 

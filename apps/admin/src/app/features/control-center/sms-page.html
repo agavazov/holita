@@ -43,7 +43,7 @@
             <p-message severity="warn">{{ sms().karmaWarning }}</p-message>
           }
         </div>
-        <holita-table-panel
+        <discocan-table-panel
           mode="local"
           [heading]="sms().groups[entry.group].title"
           [total]="entry.texts.length"
@@ -159,7 +159,7 @@
               </ng-template>
             </ng-template>
           </p-table>
-        </holita-table-panel>
+        </discocan-table-panel>
         <details class="app-card">
           <summary>{{ sms().reply }}</summary>
           <dl class="sms-replies">
@@ -193,6 +193,6 @@
       <p-skeleton width="100%" height="4rem" />
     </section>
   } @else if (!error()) {
-    <holita-empty-state kind="not-found" [title]="text().deviceUnavailable" />
+    <discocan-empty-state kind="not-found" [title]="text().deviceUnavailable" />
   }
 </section>

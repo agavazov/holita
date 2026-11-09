@@ -47,11 +47,11 @@ const storyMessages = {
 };
 
 @Component({
-  selector: 'holita-chart-panel-demo',
+  selector: 'discocan-chart-panel-demo',
   imports: [ChartPanel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <holita-chart-panel
+    <discocan-chart-panel
       [kind]="kind()"
       [title]="kind() === 'donut' ? text().live : text().distance"
       [summary]="kind() === 'donut' ? text().liveSummary : text().distanceSummary"
@@ -133,24 +133,24 @@ export default meta;
 type Story = StoryObj;
 
 export const Donut: Story = {
-  render: () => ({ template: '<holita-chart-panel-demo kind="donut" />' }),
+  render: () => ({ template: '<discocan-chart-panel-demo kind="donut" />' }),
 };
 export const Line: Story = {
-  render: () => ({ template: '<holita-chart-panel-demo kind="line" />' }),
+  render: () => ({ template: '<discocan-chart-panel-demo kind="line" />' }),
 };
 export const Bar: Story = {
-  render: () => ({ template: '<holita-chart-panel-demo kind="bar" />' }),
+  render: () => ({ template: '<discocan-chart-panel-demo kind="bar" />' }),
 };
 export const Empty: Story = {
-  render: () => ({ template: '<holita-chart-panel-demo [empty]="true" />' }),
+  render: () => ({ template: '<discocan-chart-panel-demo [empty]="true" />' }),
 };
 export const Gaps: Story = {
-  render: () => ({ template: '<holita-chart-panel-demo kind="line" [gaps]="true" />' }),
+  render: () => ({ template: '<discocan-chart-panel-demo kind="line" [gaps]="true" />' }),
 };
 export const Dark: Story = {
   globals: { theme: 'dark' },
-  render: () => ({ template: '<holita-chart-panel-demo kind="bar" />' }),
+  render: () => ({ template: '<discocan-chart-panel-demo kind="bar" />' }),
 };
 export const Loading: Story = {
-  render: () => ({ template: '<holita-chart-panel-demo [loading]="true" />' }),
+  render: () => ({ template: '<discocan-chart-panel-demo [loading]="true" />' }),
 };

@@ -15,10 +15,10 @@ import { NotificationBell, type ShellNotification } from './notification-bell';
 type State = 'empty' | 'unread' | 'many';
 
 @Component({
-  selector: 'holita-notification-bell-preview',
+  selector: 'discocan-notification-bell-preview',
   imports: [NotificationBell],
   template: `
-    <holita-notification-bell
+    <discocan-notification-bell
       [language]="language()"
       [notifications]="notifications()"
       [unreadCount]="unreadCount()"
@@ -129,7 +129,7 @@ function preview(state: State): NonNullable<Story['render']> {
   return () => ({
     moduleMetadata: { imports: [NotificationBellPreview] },
     props: { state },
-    template: '<holita-notification-bell-preview [state]="state" />',
+    template: '<discocan-notification-bell-preview [state]="state" />',
   });
 }
 

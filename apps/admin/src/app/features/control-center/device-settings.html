@@ -8,7 +8,7 @@
   }
   <form [formGroup]="form" (ngSubmit)="submit()" class="app-form-section">
     <div class="app-form-grid">
-      <holita-form-field [label]="text().operation" controlId="erm-settings-mode">
+      <discocan-form-field [label]="text().operation" controlId="erm-settings-mode">
         <p-select
           inputId="erm-settings-mode"
           formControlName="mode"
@@ -17,10 +17,10 @@
           optionLabel="label"
           optionValue="value"
         />
-      </holita-form-field>
+      </discocan-form-field>
       @switch (mode()) {
         @case ('INTERVAL') {
-          <holita-form-field [label]="text().parameterId" controlId="erm-settings-id">
+          <discocan-form-field [label]="text().parameterId" controlId="erm-settings-id">
             <input
               pInputText
               id="erm-settings-id"
@@ -30,8 +30,8 @@
               max="65535"
               required
             />
-          </holita-form-field>
-          <holita-form-field [label]="text().interval" controlId="erm-settings-interval">
+          </discocan-form-field>
+          <discocan-form-field [label]="text().interval" controlId="erm-settings-interval">
             <input
               pInputText
               id="erm-settings-interval"
@@ -41,10 +41,10 @@
               max="65000"
               required
             />
-          </holita-form-field>
+          </discocan-form-field>
         }
         @case ('ADD_DEFINITION') {
-          <holita-form-field [label]="text().definition" controlId="erm-settings-definition">
+          <discocan-form-field [label]="text().definition" controlId="erm-settings-definition">
             <input
               pInputText
               id="erm-settings-definition"
@@ -52,10 +52,10 @@
               pattern="[0-9A-Fa-f]{44}"
               required
             />
-          </holita-form-field>
+          </discocan-form-field>
         }
         @case ('GLOBALS') {
-          <holita-form-field [label]="text().globals" controlId="erm-settings-globals">
+          <discocan-form-field [label]="text().globals" controlId="erm-settings-globals">
             <input
               pInputText
               id="erm-settings-globals"
@@ -63,10 +63,10 @@
               pattern="[0-9A-Fa-f]{98}"
               required
             />
-          </holita-form-field>
+          </discocan-form-field>
         }
         @case ('PARAMETER') {
-          <holita-form-field [label]="text().parameter" controlId="erm-settings-parameter">
+          <discocan-form-field [label]="text().parameter" controlId="erm-settings-parameter">
             <p-select
               inputId="erm-settings-parameter"
               formControlName="parameter"
@@ -80,13 +80,13 @@
               [ariaLabel]="text().parameter"
               required
             />
-          </holita-form-field>
-          <holita-form-field [label]="text().value" controlId="erm-settings-value">
+          </discocan-form-field>
+          <discocan-form-field [label]="text().value" controlId="erm-settings-value">
             <input pInputText id="erm-settings-value" formControlName="value" />
-          </holita-form-field>
+          </discocan-form-field>
         }
         @case ('PARAMETERS') {
-          <holita-form-field [label]="text().parameters" controlId="erm-settings-parameters">
+          <discocan-form-field [label]="text().parameters" controlId="erm-settings-parameters">
             <p-select
               inputId="erm-settings-parameters"
               [formControl]="parameterSelection"
@@ -98,8 +98,8 @@
               [pt]="selectMultiplePt"
               [ariaLabel]="text().parameters"
             />
-          </holita-form-field>
-          <holita-form-field [label]="text().freeParameter" controlId="erm-settings-free-parameter">
+          </discocan-form-field>
+          <discocan-form-field [label]="text().freeParameter" controlId="erm-settings-free-parameter">
             <div class="app-inline">
               <input
                 pInputText
@@ -121,13 +121,13 @@
                 {{ text().addParameter }}
               </button>
             </div>
-          </holita-form-field>
+          </discocan-form-field>
           <div class="app-inline">
             <p-checkbox inputId="erm-settings-batch" formControlName="batch" [binary]="true" />
             <label for="erm-settings-batch">{{ text().batch }}</label>
           </div>
           @if (isBatch()) {
-            <holita-form-field [label]="text().batchDevices" controlId="erm-settings-devices">
+            <discocan-form-field [label]="text().batchDevices" controlId="erm-settings-devices">
               <p-select
                 inputId="erm-settings-devices"
                 formControlName="deviceIds"
@@ -141,7 +141,7 @@
                 [loading]="devicesLoading()"
                 [ariaLabel]="text().batchDevices"
               />
-            </holita-form-field>
+            </discocan-form-field>
             @if (devices().length < devicesTotal()) {
               <button
                 pButton
@@ -175,12 +175,12 @@
           let index = $index
         ) {
           <div [formGroupName]="index">
-            <holita-form-field
+            <discocan-form-field
               [label]="entry.controls.parameter.value + ' · ' + text().plannedValue"
               [controlId]="'erm-settings-value-' + index"
             >
               <input pInputText [id]="'erm-settings-value-' + index" formControlName="value" />
-            </holita-form-field>
+            </discocan-form-field>
           </div>
         }
       </div>
@@ -229,7 +229,7 @@
   @if (batch.stoppedAt) {
     <p-message severity="info">{{ text().batchStopped }}</p-message>
   }
-  <holita-table-panel
+  <discocan-table-panel
     mode="local"
     [heading]="text().batch"
     [total]="batch.changes.length"
@@ -270,10 +270,10 @@
           </td></tr
       ></ng-template>
     </p-table>
-  </holita-table-panel>
+  </discocan-table-panel>
 }
 <ng-template #parameterPlan>
-  <holita-table-panel
+  <discocan-table-panel
     mode="local"
     [heading]="text().plannedChange"
     [total]="plannedChange().length"
@@ -304,9 +304,9 @@
         </tr></ng-template
       >
     </p-table>
-  </holita-table-panel>
+  </discocan-table-panel>
 </ng-template>
-<holita-table-panel
+<discocan-table-panel
   #historyPanel
   mode="local"
   [heading]="text().history"
@@ -381,7 +381,7 @@
             <span [title]="target()">{{ target() }}</span>
           </span>
           <span class="app-table-mobile-actions">
-            <holita-row-actions
+            <discocan-row-actions
               [actions]="actions()"
               [record]="record(run)"
               (choose)="historyPanel.run($event.action, [record(run)], $event.origin)"
@@ -404,7 +404,7 @@
           </span>
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-          <holita-row-actions
+          <discocan-row-actions
             [actions]="actions()"
             [record]="record(run)"
             (choose)="historyPanel.run($event.action, [record(run)], $event.origin)"
@@ -413,7 +413,7 @@
       </tr>
     </ng-template>
   </p-table>
-</holita-table-panel>
+</discocan-table-panel>
 
 <p-dialog
   [header]="text().history"

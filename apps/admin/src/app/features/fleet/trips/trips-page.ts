@@ -34,7 +34,7 @@ import { tripDefinition, tripQueryState, tripVariables, tripViewQuery } from './
 import { TripsApi } from './trips-api';
 import { TripsView, type TripActionId } from './trips-view';
 @Component({
-  selector: 'holita-trips-page',
+  selector: 'discocan-trips-page',
   providers: [TripsApi, TripChoices],
   imports: [TripsView, RouterOutlet, Message, ButtonDirective],
   template: `
@@ -54,7 +54,7 @@ import { TripsView, type TripActionId } from './trips-view';
         </button></p-message
       >
     }
-    <holita-trips-view
+    <discocan-trips-view
       [recordLinks]="recordLinks()"
       [branchName]="branch().name"
       [rows]="rows()"

@@ -37,7 +37,7 @@
   "qualifications": [
     "The cover says December 2018; the internal footers say November 2018. Neither date has been silently substituted for the other.",
     "The original repeats section numbers 2 and 3. Original headings are retained; PDF page anchors provide unambiguous navigation.",
-    "UI screenshots describe this historical release. They do not prove current NC2 behavior, API field semantics, current feature availability or holita implementation.",
+    "UI screenshots describe this historical release. They do not prove current NC2 behavior, API field semantics, current feature availability or discocan implementation.",
     "Illustrative trip, fuel and driving charts are examples; their displayed values are not live measurements."
   ],
   "pages": [

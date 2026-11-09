@@ -11,7 +11,7 @@ export type CaptureRecord = ConnectionRecord &
     | { event: 'upstream-close'; reason: string }
     | { event: 'close'; seconds: number; deviceBytes: number; serverBytes: number }
     | {
-        from: 'device' | 'server' | 'holita';
+        from: 'device' | 'server' | 'discocan';
         unit?: string;
         command?: string;
         reference?: string;

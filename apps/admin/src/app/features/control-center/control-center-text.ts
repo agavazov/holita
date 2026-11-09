@@ -24,7 +24,7 @@ export function deviceLabel(device: {
   return device.vehicle?.licensePlate ?? device.imei;
 }
 
-export function returnToHolitaError(error: unknown, language: Language): string {
+export function returnToDiscoCanError(error: unknown, language: Language): string {
   const text = controlCenterText[language].deviceStatus;
   const code = CombinedGraphQLErrors.is(error) ? error.errors[0]?.extensions?.['code'] : null;
   switch (code) {

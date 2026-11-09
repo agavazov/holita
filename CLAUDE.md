@@ -1,4 +1,4 @@
-# holita contributor instructions
+# discocan contributor instructions
 
 @AGENTS.md
 

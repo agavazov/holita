@@ -60,12 +60,12 @@ export interface DeviceRow {
 }
 
 /**
- * The Devices list page: live holita connection, installation, SIM and firmware of the trackers,
+ * The Devices list page: live discocan connection, installation, SIM and firmware of the trackers,
  * with row actions and bulk actions; the primary record action opens its read-only overview. Presentation only: the
  * host owns data and editing.
  */
 @Component({
-  selector: 'holita-devices-view',
+  selector: 'discocan-devices-view',
   imports: [
     RouterLink,
     ButtonDirective,
@@ -283,14 +283,14 @@ export class DevicesView {
         ? { label: this.text().status.offline, tone: 'danger' }
         : { label: this.text().status.reportingOffline, tone: 'warn' };
     }
-    return { label: this.text().status.noHolitaConnection, tone: 'neutral' };
+    return { label: this.text().status.noDiscoCanConnection, tone: 'neutral' };
   }
 
   protected lastSignal(row: DeviceRow): { at: string | null; source: string | null } {
-    const holita = row.live?.ermState?.lastFrameAt ?? null;
+    const discocan = row.live?.ermState?.lastFrameAt ?? null;
     const karma = row.live?.ermRouting.latestKarmaReportAt ?? null;
     const candidates = [
-      { at: holita, source: this.text().status.viaHolita },
+      { at: discocan, source: this.text().status.viaDiscoCan },
       { at: karma, source: this.text().status.viaKarma },
       { at: row.live?.lastReportedAt ?? row.lastSeenAt, source: null },
     ];

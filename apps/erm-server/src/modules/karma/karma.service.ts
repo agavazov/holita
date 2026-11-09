@@ -44,8 +44,8 @@ function attemptView(attempt: KarmaAttempt): ErmKarmaReturnAttempt {
     status: attempt.status,
     pending: attempt.pending,
     recovery: attempt.recovery,
-    holitaConnectionId: attempt.holitaConnectionId,
-    holitaConnectedAt: attempt.holitaConnection?.openedAt ?? null,
+    discocanConnectionId: attempt.discocanConnectionId,
+    discocanConnectedAt: attempt.discocanConnection?.openedAt ?? null,
   };
 }
 
@@ -136,7 +136,7 @@ export class KarmaService implements OnModuleInit, OnModuleDestroy {
     const state = backup
       ? 'KARMA_BACKUP'
       : lastFrameAt !== null || latestKarmaReportAt !== null
-        ? 'HOLITA'
+        ? 'DISCOCAN'
         : 'UNKNOWN';
     let since =
       previous?.state === state
@@ -224,7 +224,7 @@ export class KarmaService implements OnModuleInit, OnModuleDestroy {
     }
     await this.repository.reconcile(unitId);
     if (await this.repository.pending(unitId)) {
-      throw new ConflictException('A return to holita is already pending');
+      throw new ConflictException('A return to discocan is already pending');
     }
     const car = (await this.transport.readCars()).find((candidate) => candidate.unitId === unitId);
     if (!car) {

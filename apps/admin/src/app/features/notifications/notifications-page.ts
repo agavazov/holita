@@ -32,7 +32,7 @@ import {
 import { NotificationsView } from './notifications-view';
 
 @Component({
-  selector: 'holita-notifications-workspace',
+  selector: 'discocan-notifications-workspace',
   imports: [NotificationsView],
   providers: [
     GeneralSettingsApi,
@@ -144,11 +144,11 @@ export class NotificationsWorkspace implements OnInit {
 }
 
 @Component({
-  selector: 'holita-notifications-page',
+  selector: 'discocan-notifications-page',
   imports: [NotificationsWorkspace],
   template: `
     @for (scope of scopes(); track scope.token + ':' + scope.branchId + ':' + scope.language) {
-      <holita-notifications-workspace [connection]="scope" />
+      <discocan-notifications-workspace [connection]="scope" />
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

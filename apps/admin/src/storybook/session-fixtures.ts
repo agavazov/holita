@@ -21,7 +21,7 @@ export const fixtureBranches = [
 export const defaultBranchId = fixtureBranches[0].id;
 
 // Synthetic opaque bearer; Storybook never sends it to a real backend.
-export const fixtureToken = `holita-session.${'storybook_fixture_session_'.padEnd(43, '0')}`;
+export const fixtureToken = `discocan-session.${'storybook_fixture_session_'.padEnd(43, '0')}`;
 
 export const fixtureAccount = {
   __typename: 'User',
@@ -39,7 +39,7 @@ export const fixtureAccount = {
 /** Seeds the stored session before the application bootstraps. */
 export function seedSession(branchId: string | null): void {
   localStorage.setItem(
-    'holita.admin.session',
+    'discocan.admin.session',
     JSON.stringify({
       token: fixtureToken,
       tenant: { id: fixtureTenant.id, name: fixtureTenant.name },
@@ -50,9 +50,9 @@ export function seedSession(branchId: string | null): void {
 }
 
 export function clearSession(): void {
-  localStorage.removeItem('holita.admin.session');
-  sessionStorage.removeItem('holita.admin.session');
-  sessionStorage.removeItem('holita.admin.demo-session');
+  localStorage.removeItem('discocan.admin.session');
+  sessionStorage.removeItem('discocan.admin.session');
+  sessionStorage.removeItem('discocan.admin.demo-session');
 }
 
 graphqlFixture(AdminBranchesDocument, () => ({ branches: [...fixtureBranches] }));

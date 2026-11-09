@@ -217,7 +217,7 @@ export class DevicesService {
           (row.routingObservedAt === null || primaryReceivedAt > row.routingObservedAt);
         const routing: FleetDeviceRouting | null = primaryAfterObservation
           ? primaryReceivedAt.getTime() >= freshAfter
-            ? 'HOLITA'
+            ? 'DISCOCAN'
             : null
           : row.routingObservedAt !== null && row.routingObservedAt.getTime() >= freshAfter
             ? row.routing

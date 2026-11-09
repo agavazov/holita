@@ -1,4 +1,4 @@
-<holita-route-drawer
+<discocan-route-drawer
   [title]="title()"
   [subtitle]="modelSubtitle()"
   [saving]="saving()"
@@ -25,7 +25,7 @@
       <section class="app-form-section">
         <h3>{{ text().installation }}</h3>
         <div class="app-form-grid">
-          <holita-form-field
+          <discocan-form-field
             [label]="text().imei"
             controlId="device-imei"
             [hint]="text().imeiHint"
@@ -42,8 +42,8 @@
               [attr.aria-invalid]="errorOf('imei') ? 'true' : null"
               [attr.aria-describedby]="describedBy('imei')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().serialNumber"
             controlId="device-serialNumber"
             [hint]="text().serialNumberHint"
@@ -58,8 +58,8 @@
               [attr.aria-invalid]="errorOf('serialNumber') ? 'true' : null"
               [attr.aria-describedby]="describedBy('serialNumber')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().model"
             controlId="device-model"
             [error]="errorOf('model')"
@@ -81,8 +81,8 @@
                 },
               }"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().options"
             controlId="device-options"
             [error]="errorOf('options')"
@@ -99,8 +99,8 @@
               [ariaLabel]="text().options"
               [invalid]="!!errorOf('options')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().firmware"
             controlId="device-firmwareVersion"
             [error]="errorOf('firmwareVersion')"
@@ -113,8 +113,8 @@
               [attr.aria-invalid]="errorOf('firmwareVersion') ? 'true' : null"
               [attr.aria-describedby]="describedBy('firmwareVersion')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().edataModule"
             controlId="device-edataModule"
             [hint]="text().edataModuleHint"
@@ -128,8 +128,8 @@
               [attr.aria-invalid]="errorOf('edataModule') ? 'true' : null"
               [attr.aria-describedby]="describedBy('edataModule')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().simPhone"
             controlId="device-simPhoneNumber"
             [error]="errorOf('simPhoneNumber')"
@@ -142,8 +142,8 @@
               [attr.aria-invalid]="errorOf('simPhoneNumber') ? 'true' : null"
               [attr.aria-describedby]="describedBy('simPhoneNumber')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().smsPassword"
             controlId="device-smsPassword"
             [hint]="text().smsPasswordHint"
@@ -159,8 +159,8 @@
               [attr.aria-invalid]="errorOf('smsPassword') ? 'true' : null"
               [attr.aria-describedby]="describedBy('smsPassword')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().installedAt"
             controlId="device-installedAt"
             [hint]="installedAtHint()"
@@ -176,8 +176,8 @@
               [attr.aria-invalid]="errorOf('installedAt') ? 'true' : null"
               [attr.aria-describedby]="describedBy('installedAt')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().sim"
             controlId="device-simIccid"
             [hint]="text().simHint"
@@ -193,8 +193,8 @@
               [attr.aria-invalid]="errorOf('simIccid') ? 'true' : null"
               [attr.aria-describedby]="describedBy('simIccid')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().vehicle"
             controlId="device-vehicleId"
             [error]="errorOf('vehicleId')"
@@ -216,8 +216,8 @@
                 },
               }"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             class="app-form-grid--wide"
             [label]="text().notes"
             controlId="device-notes"
@@ -233,7 +233,7 @@
               [attr.aria-invalid]="errorOf('notes') ? 'true' : null"
               [attr.aria-describedby]="describedBy('notes')"
             ></textarea>
-          </holita-form-field>
+          </discocan-form-field>
         </div>
       </section>
     </form>
@@ -261,4 +261,4 @@
       </button>
     </div>
   }
-</holita-route-drawer>
+</discocan-route-drawer>

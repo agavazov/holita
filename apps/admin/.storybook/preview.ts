@@ -28,11 +28,11 @@ let license: Promise<string | undefined> | undefined;
  * metadata key, so the renderer bootstraps the story again with the new brand, density, theme and language
  * instead of patching a running application.
  */
-const holitaApplication: Decorator = (story, context) => {
+const discocanApplication: Decorator = (story, context) => {
   applyStoryGlobals(context.globals);
   const choice = storyThemeChoice(context.globals);
   const language = storyLanguage(context.globals);
-  const fixtures = readStoryFixtures(context.parameters['holita']);
+  const fixtures = readStoryFixtures(context.parameters['discocan']);
   const primeUiLicense: unknown = context.loaded['primeUiLicense'];
   const result = applicationConfig(
     storybookApplicationConfig(choice, {
@@ -59,7 +59,7 @@ const holitaApplication: Decorator = (story, context) => {
 
 const preview: Preview = {
   decorators: [
-    holitaApplication,
+    discocanApplication,
     moduleMetadata({ imports: storyToastImports }),
     componentWrapperDecorator((story) => `${storyToastTemplate}${story}`),
   ],
@@ -168,7 +168,7 @@ const preview: Preview = {
     a11y: { context: { exclude: ['#p-license-host'] } },
   },
   beforeEach: ({ globals, parameters }) => {
-    prepareStory(parameters['holita'], globals);
+    prepareStory(parameters['discocan'], globals);
   },
 };
 

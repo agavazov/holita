@@ -1,7 +1,7 @@
 <a class="app-skip-link" href="#main-content">{{ text().skipNavigation }}</a>
 <div class="app-shell" [class.app-shell--rail]="rail() && !mobile()">
   <header class="app-topbar">
-    <holita-admin-topbar
+    <discocan-admin-topbar
       class="app-topbar__bar"
       [language]="language()"
       [languages]="languages()"
@@ -33,7 +33,7 @@
   </header>
   @if (!mobile()) {
     <aside class="app-sidebar" id="desktop-navigation" [attr.aria-label]="text().navigation">
-      <holita-admin-sidebar
+      <discocan-admin-sidebar
         [navigation]="navigation()"
         [language]="language()"
         [homeLink]="homeLink()"
@@ -71,11 +71,11 @@
   <ng-template #header>
     <span class="app-logo" aria-hidden="true">
       <span class="app-logo__mark">h</span>
-      <span class="app-logo__word">holita</span>
+      <span class="app-logo__word">discocan</span>
     </span>
   </ng-template>
   <div id="mobile-navigation" class="app-nav-drawer__content">
-    <holita-admin-sidebar
+    <discocan-admin-sidebar
       [navigation]="navigation()"
       [language]="language()"
       [homeLink]="homeLink()"
@@ -86,4 +86,4 @@
   </div>
 </p-drawer>
 
-<holita-module-info-dialog />
+<discocan-module-info-dialog />

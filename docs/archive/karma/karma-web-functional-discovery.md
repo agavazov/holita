@@ -6,7 +6,7 @@ treat them as active work. Open ERM engineering and vendor questions belong in t
 
 The [functional research report](karma-api-v2/web-functionality-research.md)
 owns the 36-function classic inventory, NC2 console findings, internal web-method
-references, API recipes, calculation rules, proposed holita presentation and bounded
+references, API recipes, calculation rules, proposed discocan presentation and bounded
 live evidence. Keep further source findings there instead
 of copying the catalog into this backlog. This file holds the remaining work;
 implemented navigation belongs to [Discocan architecture](architecture.md#karma-client).
@@ -308,7 +308,7 @@ active-trip finality are not implied by this remaining prerequisite.
 | Historical retrieval and latency | All period reports, X02/X06                                  | Agree a bounded retrieval strategy, row/cursor completeness and caller/service budgets. Two investigated query forms exceeded 20 seconds; the current history service has a four-second operation budget. Do not replace these failures with empty data or whole-period totals.                                                               |
 | Driver attribution               | D01–D07, S01                                                 | Obtain a nonempty driver model and historical assignment evidence. The inspected account has no drivers/assignments; do not create vendor fixtures or map local Fleet Drivers automatically.                                                                                                                                                  |
 | Hardware-dependent readings      | V04, V07–V10                                                 | Obtain real external sensor, accident-report ID and camera/media evidence. Clarify dedicated fuel/temperature reports versus CAN sources, plus battery-health/starter fields. Do not change configuration just to manufacture research data.                                                                                                  |
-| Vendor-owned resources           | R01–R03, N01–N03, S03/S06/S10/S12                            | Ask ERM whether the discovered internal `/i/` operations have a supported external contract before choosing vendor synchronization. Otherwise select explicitly holita-owned workflows. Questions is query-use reporting; Application configures Weight/IO Extender/DTC/ePoly/StarLink Inputs/eMix presentation, not integration credentials. |
+| Vendor-owned resources           | R01–R03, N01–N03, S03/S06/S10/S12                            | Ask ERM whether the discovered internal `/i/` operations have a supported external contract before choosing vendor synchronization. Otherwise select explicitly discocan-owned workflows. Questions is query-use reporting; Application configures Weight/IO Extender/DTC/ePoly/StarLink Inputs/eMix presentation, not integration credentials. |
 | Rich entity writes               | S01/S02/S04/S05                                              | Decide whether writes are required, prove permissions and map only documented payload fields. Current reads do not establish assignment, photo, odometer, user/role or application-write contracts.                                                                                                                                           |
 | NC2 technical read models        | K01–K06                                                      | Obtain supported schemas for firmware/hardware, cached parameters, incoming diagnostics and transport statistics. The saved web login works in NC2; API-session/permission equivalence is still unverified. Do not substitute a device query for a cached read.                                                                               |
 | Data-gated action evidence       | Coverage matrix, V07/V09/V10, D01–D07, R01–R03, N01–N03, S12 | Obtain existing populated examples without creating vendor fixtures: driver assignments, external sensor readings, accident/media records, POIs/routes/geofences, notification ACK/history and configured telemetry modules. Verify export contents and scheduled delivery only as a separately selected acceptance exercise.                 |
@@ -399,7 +399,7 @@ list into automatic implementation scope or start a new analytics platform.
 
 - Exact activity/driver parity waits for source dictionaries, interval/time
   semantics and historical assignment data; it is not a renamed trip-duration sum.
-- Holita-owned POIs/geofences/notification rules or manual fuel/service/tire
+- DiscoCan-owned POIs/geofences/notification rules or manual fuel/service/tire
   records require an explicit ownership and persistence decision. Vendor
   synchronization instead requires ERM's supported contract.
 - Accident/media, query-use history, telemetry application definitions and
@@ -410,7 +410,7 @@ list into automatic implementation scope or start a new analytics platform.
 ## Scope rules for future work
 
 - Karma account reads retain their current signed-session scope without Branch
-  filtering. Source project and holita Branch are not interchangeable identities.
+  filtering. Source project and discocan Branch are not interchangeable identities.
 - Local business records/rules use verified Tenant/Branch ownership and explicit
   associations to source identities; do not automatically synchronize by registration.
 - Credentials/sessions remain server-side. A new public GraphQL field or operation

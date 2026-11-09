@@ -76,7 +76,7 @@ let nextId = 0;
  * both confirm the same way before `action` is emitted with the IDs the action applies to.
  */
 @Component({
-  selector: 'holita-table-panel',
+  selector: 'discocan-table-panel',
   imports: [
     ButtonDirective,
     ConfirmDialog,

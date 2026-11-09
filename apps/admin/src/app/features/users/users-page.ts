@@ -34,14 +34,14 @@ import { UsersApi } from './users-api';
 import { UsersView, type UserActionId } from './users-view';
 
 @Component({
-  selector: 'holita-users-content',
+  selector: 'discocan-users-content',
   imports: [UsersView, RouterOutlet],
   providers: [
     UsersApi,
     { provide: FLEET_DISPLAY, useFactory: () => inject(UsersContent).displayPreferences },
   ],
   template: `
-    <holita-users-view
+    <discocan-users-view
       [rows]="users() ?? []"
       [view]="view()"
       [busy]="loading() || displayLoading() || acting()"
@@ -256,11 +256,11 @@ export class UsersContent implements OnInit {
 
 /** Account screens retire their clients on a session or language change without needing a Branch. */
 @Component({
-  selector: 'holita-users-page',
+  selector: 'discocan-users-page',
   imports: [UsersContent],
   template: `
     @for (scope of scopes(); track scope.key) {
-      <holita-users-content [language]="scope.language" />
+      <discocan-users-content [language]="scope.language" />
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

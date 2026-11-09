@@ -4,7 +4,7 @@ BEGIN;
 ALTER TYPE "fleetEventKind" ADD VALUE 'unitOnBackup';
 
 -- CreateEnum
-CREATE TYPE "fleetDeviceRouting" AS ENUM ('holita', 'karmaBackup', 'silent');
+CREATE TYPE "fleetDeviceRouting" AS ENUM ('discocan', 'karmaBackup', 'silent');
 
 -- AlterTable
 ALTER TABLE "karmaMonitoringTruck"

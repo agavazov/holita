@@ -1,7 +1,7 @@
 enum FleetDataSource {
   DEMO
   MANUAL
-  "Imported from holita's ERM device server."
+  "Imported from discocan's ERM device server."
   ERM
 }
 enum FleetActivityStatus {

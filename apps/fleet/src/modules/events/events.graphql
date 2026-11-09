@@ -19,7 +19,7 @@ enum FleetEventKind {
   "eData 411 CAN error flag, not proof of a disconnection."
   CAN_ERROR
   DEVICE_OFFLINE
-  "Karma received newer data on two consecutive polls while holita's import lagged."
+  "Karma received newer data on two consecutive polls while discocan's import lagged."
   UNIT_ON_BACKUP
   DIAGNOSTIC_TROUBLE_CODE
   CRASH_DETECTED
@@ -217,9 +217,9 @@ type FleetProblemDiagnostic {
   "SPN uses Float to retain unsigned 32-bit values beyond GraphQL Int."
   spn: Float
   fmi: Int
-  "Vehicle-system translation key from holita's versioned catalog; unknown codes use OTHER."
+  "Vehicle-system translation key from discocan's versioned catalog; unknown codes use OTHER."
   systemKey: FleetFaultSystem!
-  "Holita component-description translation key, when the code has a supported meaning."
+  "DiscoCan component-description translation key, when the code has a supported meaning."
   descriptionKey: String
   catalogVersion: String!
   "For recorded diagnostics, first and last observations of this code/kind/report on the same vehicle/IMEI within the requested evidence period, across added/deleted observations. Alert-backed diagnostics use their own observation time."

@@ -10,7 +10,7 @@ function key(): string {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('DEMO_AUTH_SECRET must contain at least 32 characters.');
   }
-  return 'holita-local-demo-only-change-before-deployment';
+  return 'discocan-local-demo-only-change-before-deployment';
 }
 export function demoAuthEnabled(): boolean {
   return (
@@ -22,7 +22,7 @@ export function issueDemoToken(tenantId: string): string {
   if (!demoAuthEnabled()) {
     throw new UnauthorizedException('Demo login is disabled');
   }
-  const payload = `holita-demo.${tenantId}.${String(Math.floor(Date.now() / 1000) + 28800)}`;
+  const payload = `discocan-demo.${tenantId}.${String(Math.floor(Date.now() / 1000) + 28800)}`;
   return `${payload}.${createHmac('sha256', key()).update(payload).digest('base64url')}`;
 }
 export function readDemoTenant(authorization: unknown): string | undefined {
@@ -30,7 +30,7 @@ export function readDemoTenant(authorization: unknown): string | undefined {
     return undefined;
   }
   const match =
-    /^Bearer (holita-demo\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.([0-9]{10}))\.([A-Za-z0-9_-]{43})$/.exec(
+    /^Bearer (discocan-demo\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.([0-9]{10}))\.([A-Za-z0-9_-]{43})$/.exec(
       authorization,
     );
   if (!match) {

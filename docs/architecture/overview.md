@@ -1,6 +1,6 @@
 # Shared workspace architecture
 
-The repository uses npm workspaces and Nx, with five applications and the shared `@holita/edata-rules` package.
+The repository uses npm workspaces and Nx, with five applications and the shared `@discocan/edata-rules` package.
 Applications never import another application's implementation, Prisma models or generated client.
 
 `packages/edata-rules` provides the rule expression parser and binary record codec for device
@@ -48,7 +48,7 @@ configuration and GraphQL transport. Feature clients and caches retain their mou
 
 | Application | Responsibility                                                                                                       | Local port                                                   |
 | ----------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| admin       | Standalone Angular, PrimeNG with the holita design system, Branch discovery, Fleet management and ERM device control | 11000                                                        |
+| admin       | Standalone Angular, PrimeNG with the discocan design system, Branch discovery, Fleet management and ERM device control | 11000                                                        |
 | gateway     | Native Apollo Router federation, `/graphql`; `/health` on 11016                                                      | 11010                                                        |
 | core        | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                        | 11011                                                        |
 | fleet       | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database    | 11013                                                        |

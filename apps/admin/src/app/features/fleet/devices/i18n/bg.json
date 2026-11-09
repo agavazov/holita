@@ -77,8 +77,8 @@
     "edataModule": "eData модул",
     "edataModuleHint": "Модул и версия, например eData Fms 6.56"
   },
-  "liveError": "Връзката с holita в реално време не е достъпна в момента; регистърът на устройствата е актуален.",
-  "liveStale": "Връзката с holita в реално време не можа да се обнови; показано е състоянието от {time}.",
+  "liveError": "Връзката с discocan в реално време не е достъпна в момента; регистърът на устройствата е актуален.",
+  "liveStale": "Връзката с discocan в реално време не можа да се обнови; показано е състоянието от {time}.",
   "optionLabels": {
     "CELLULAR_4G": "Мобилна връзка 4G",
     "SAFETY_SF": "Безопасност (SF)",
@@ -104,7 +104,7 @@
     "routing": "Маршрут",
     "warningLamps": "Предупредителни лампи",
     "offline": "Офлайн",
-    "viaHolita": "чрез holita",
+    "viaDiscoCan": "чрез discocan",
     "viaKarma": "чрез Karma",
     "karmaBackup": "Karma резерва",
     "since": "От {time}",
@@ -112,7 +112,7 @@
     "activeLamps": "{count} активни",
     "noLampReports": "Няма данни за лампите",
     "lampCoverage": "Лампи с известно състояние: {count} от {total}",
-    "noHolitaConnection": "Все още няма връзка с holita",
+    "noDiscoCanConnection": "Все още няма връзка с discocan",
     "reportingOffline": "Скорошен отчет · офлайн",
     "lampNames": {
       "1896": "Спирачки",

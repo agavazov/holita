@@ -1,4 +1,4 @@
-@layer holita {
+@layer discocan {
   // These fallbacks are available before Angular installs the theme tokens.
   :root {
     --app-startup-background: light-dark(#f1f5f9, #020617);
@@ -63,7 +63,7 @@
   }
 
   // The first lazy route loads before a workspace exists to render its progress bar.
-  holita-root:has(> router-outlet:only-child)::before {
+  discocan-root:has(> router-outlet:only-child)::before {
     content: '';
     position: fixed;
     inset: 0 auto auto 0;

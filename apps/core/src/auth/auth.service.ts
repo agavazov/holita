@@ -33,7 +33,7 @@ export class AuthService {
     if (!credentials?.active || !(await verifyPassword(password, credentials.passwordHash))) {
       throw new UnauthorizedException(signInFailure);
     }
-    const token = `holita-session.${randomBytes(32).toString('base64url')}`;
+    const token = `discocan-session.${randomBytes(32).toString('base64url')}`;
     const now = new Date();
     const expiresAt = new Date(now.getTime() + sessionLifetimeMs);
     const user = await this.auth.createSession(
@@ -49,7 +49,7 @@ export class AuthService {
   async verifyAuthorization(
     authorization: string | undefined,
   ): Promise<SessionIdentity | undefined> {
-    const match = /^Bearer (holita-session\.[A-Za-z0-9_-]{43})$/i.exec(authorization ?? '');
+    const match = /^Bearer (discocan-session\.[A-Za-z0-9_-]{43})$/i.exec(authorization ?? '');
     const token = match?.[1];
     if (!token) {
       return undefined;

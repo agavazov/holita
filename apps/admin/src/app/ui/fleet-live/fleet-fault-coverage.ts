@@ -3,7 +3,7 @@ import type { Language } from '../../i18n/messages';
 import { faultsText, warningLampLabel, type FleetWarning } from './fault-wording';
 
 @Component({
-  selector: 'holita-fleet-fault-coverage',
+  selector: 'discocan-fleet-fault-coverage',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="app-card" [attr.aria-label]="text().coverage">

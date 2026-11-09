@@ -23,8 +23,8 @@ export type AccountSession = AdminDemoLoginMutation['demoLogin'] & {
   readonly expiresAt?: string;
 };
 export type SessionNotice = 'expired' | 'passwordChanged' | 'signOutFailed';
-const storageKey = 'holita.admin.session';
-const legacyStorageKey = 'holita.admin.demo-session';
+const storageKey = 'discocan.admin.session';
+const legacyStorageKey = 'discocan.admin.demo-session';
 const roleRank: Readonly<Record<UserRole, number>> = {
   VIEWER: 0,
   OPERATOR: 1,
@@ -42,8 +42,8 @@ function readSession(stored: string | null, allowDemo: boolean): StoredSession |
       typeof value !== 'object' ||
       !('token' in value) ||
       typeof value.token !== 'string' ||
-      (!value.token.startsWith('holita-session.') &&
-        !(allowDemo && value.token.startsWith('holita-demo.'))) ||
+      (!value.token.startsWith('discocan-session.') &&
+        !(allowDemo && value.token.startsWith('discocan-demo.'))) ||
       !('tenant' in value) ||
       !value.tenant ||
       typeof value.tenant !== 'object' ||
@@ -57,7 +57,7 @@ function readSession(stored: string | null, allowDemo: boolean): StoredSession |
     const expiresAt =
       'expiresAt' in value && typeof value.expiresAt === 'string' ? value.expiresAt : undefined;
     const demoExpiry =
-      allowDemo && value.token.startsWith('holita-demo.')
+      allowDemo && value.token.startsWith('discocan-demo.')
         ? Number(value.token.split('.')[2]) * 1000
         : NaN;
     const expiry = expiresAt ? Date.parse(expiresAt) : demoExpiry;
@@ -87,7 +87,7 @@ function restoredSession(): StoredSession | 'expired' | null {
         (isDevMode() ? sessionStorage.getItem(legacyStorageKey) : null),
       isDevMode(),
     );
-    if (tab && tab !== 'expired' && tab.token.startsWith('holita-demo.')) {
+    if (tab && tab !== 'expired' && tab.token.startsWith('discocan-demo.')) {
       return tab;
     }
   } catch {
@@ -144,7 +144,7 @@ export class DemoSession {
   constructor() {
     if (this.restored === 'expired') {
       this.clear();
-    } else if (this.current()?.token.startsWith('holita-session.')) {
+    } else if (this.current()?.token.startsWith('discocan-session.')) {
       // Promote real sessions from the previous tab-only storage format.
       this.persist();
     }
@@ -153,7 +153,7 @@ export class DemoSession {
       if (
         event.storageArea !== localStorage ||
         (event.key !== storageKey && event.key !== null) ||
-        this.current()?.token.startsWith('holita-demo.')
+        this.current()?.token.startsWith('discocan-demo.')
       ) {
         return;
       }
@@ -165,7 +165,7 @@ export class DemoSession {
           this.state.set(restored);
           this.scheduleExpiry();
         }
-      } else if (this.current()?.token.startsWith('holita-session.')) {
+      } else if (this.current()?.token.startsWith('discocan-session.')) {
         this.clear();
         this.notice.set(restored === 'expired' ? 'expired' : null);
         this.showSignIn();
@@ -174,7 +174,7 @@ export class DemoSession {
     window.addEventListener('storage', synchronize);
     effect((onCleanup) => {
       const token = this.token();
-      if (!token || !token.startsWith('holita-session.')) {
+      if (!token || !token.startsWith('discocan-session.')) {
         return;
       }
       const { query, close } = this.api.watch(untracked(() => this.capture()));
@@ -234,7 +234,7 @@ export class DemoSession {
   private persist(): void {
     const current = this.current();
     try {
-      const real = current?.token.startsWith('holita-session.');
+      const real = current?.token.startsWith('discocan-session.');
       const storage = real ? localStorage : sessionStorage;
       storage.setItem(
         storageKey,
@@ -262,7 +262,7 @@ export class DemoSession {
     const scope = this.capture();
     this.clear();
     this.notice.set(null);
-    if (current.token.startsWith('holita-session.')) {
+    if (current.token.startsWith('discocan-session.')) {
       void this.revoke(scope);
     }
   }
@@ -310,7 +310,7 @@ export class DemoSession {
     void this.router.navigate(['/', language, 'sign-in'], { replaceUrl: true });
   }
 
-  private clear(shared = this.current()?.token.startsWith('holita-session.') ?? false): void {
+  private clear(shared = this.current()?.token.startsWith('discocan-session.') ?? false): void {
     this.state.set(null);
     this.selectedBranch.set(null);
     clearTimeout(this.expiryTimer);

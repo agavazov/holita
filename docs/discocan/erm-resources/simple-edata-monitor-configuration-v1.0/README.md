@@ -55,4 +55,4 @@ Removal distinguishes monitor state from device state. Settings are saved as INI
 
 ## Conversion coverage
 
-All **28 PDF pages** are represented in [content.md](content.md). The [image catalog](images.md) contains **54 described assets** and **7 context captures**. Standalone decorative artwork, publisher logos and generic note/support markers are omitted. The original PDF remains the authority for layout, screenshot microtext and ambiguous source wording. This reference describes the supplied vendor document; it does not change holita behavior or verify the present-day vendor service.
+All **28 PDF pages** are represented in [content.md](content.md). The [image catalog](images.md) contains **54 described assets** and **7 context captures**. Standalone decorative artwork, publisher logos and generic note/support markers are omitted. The original PDF remains the authority for layout, screenshot microtext and ambiguous source wording. This reference describes the supplied vendor document; it does not change discocan behavior or verify the present-day vendor service.

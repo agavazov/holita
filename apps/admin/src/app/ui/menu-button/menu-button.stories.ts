@@ -4,10 +4,10 @@ import { onFrame } from '../../../storybook/story-config';
 import { MenuButton, type MenuChoice, type MenuOption } from './menu-button';
 
 @Component({
-  selector: 'holita-menu-button-story',
+  selector: 'discocan-menu-button-story',
   imports: [MenuButton],
   template: `
-    <holita-menu-button
+    <discocan-menu-button
       variant="text"
       ariaLabel="Choose branch: Sofia Fleet"
       [options]="options"
@@ -15,7 +15,7 @@ import { MenuButton, type MenuChoice, type MenuOption } from './menu-button';
       (choose)="chosen.set($event)"
     >
       Sofia Fleet
-    </holita-menu-button>
+    </discocan-menu-button>
     <p role="status" class="app-muted">Last choice: {{ chosen()?.id ?? 'None' }}</p>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

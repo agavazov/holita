@@ -28,11 +28,11 @@ import { AlertsApi } from './alerts-api';
 import { alertsText } from './i18n/messages';
 
 @Component({
-  selector: 'holita-alert-detail-page',
+  selector: 'discocan-alert-detail-page',
   imports: [AlertDrawer],
   providers: [AlertsApi],
   template: `
-    <holita-alert-drawer
+    <discocan-alert-drawer
       [recordLinks]="recordLinks"
       [alert]="alert()"
       [dataAsOf]="dataAsOf() ?? ''"

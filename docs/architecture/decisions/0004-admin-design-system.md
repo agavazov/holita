@@ -22,14 +22,14 @@ reviewed against a running backend.
 ## Decision
 
 - **One theme module.** `apps/admin/src/app/theme/` holds the only visual decisions:
-  `holitaPreset(choice)` = `definePreset` over standard Aura with brand ramps, density tokens,
+  `discocanPreset(choice)` = `definePreset` over standard Aura with brand ramps, density tokens,
   status tones, component tokens and the `extend.app` tokens (`--p-app-*`). `appTheme` in
   `theme-choice.ts` is the application's single configured choice of brand (`cobalt`, `ember`,
   `pine`) and density (`compact`, `comfortable`). The text, border and status-mark pairs the admin
   relies on are checked for WCAG AA by a unit spec from the Aura primitives (`theme/contrast.ts`).
 - **CSS layers and one dark-mode mechanism.** Global styles live in `src/styles/` in the layers
-  `holita-reset, primeng, holita`; PrimeNG emits its tokens into `primeng`. Every value that
-  differs between schemes is a `light-dark()` token, so `.app-dark` switches PrimeNG and holita
+  `discocan-reset, primeng, discocan`; PrimeNG emits its tokens into `primeng`. Every value that
+  differs between schemes is a `light-dark()` token, so `.app-dark` switches PrimeNG and discocan
   tokens alike. Breakpoints are declared once in Sass and exposed to TypeScript as `--app-bp-*`.
 - **A new shell** (canvas, grouped sidebar with a rail, framed topbar and content) replaces the
   Sakai layout; it reads no business data.

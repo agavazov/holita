@@ -8,7 +8,7 @@ import { UsersPage } from './users-page';
 const meta: Meta = {
   title: 'Admin/System/Users',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: true } satisfies StoryFixtures },
 };
 export default meta;
 type Story = StoryObj;
@@ -18,7 +18,7 @@ function routed(suffix = ''): NonNullable<Story['render']> {
   return () => ({
     ...render(),
     moduleMetadata: { imports: [StoryApp, AdminWorkspace, UsersPage, UserEditorPage] },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 
@@ -27,7 +27,7 @@ export const Default: Story = { render: routed() };
 export const Loading: Story = {
   render: routed(),
   parameters: {
-    holita: { scenario: { failures: { AdminUsers: 'pending' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminUsers: 'pending' } } } satisfies StoryFixtures,
   },
 };
 
@@ -35,7 +35,7 @@ export const ErrorState: Story = {
   name: 'Error',
   render: routed(),
   parameters: {
-    holita: { scenario: { failures: { AdminUsers: 'network' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminUsers: 'network' } } } satisfies StoryFixtures,
   },
 };
 
@@ -50,7 +50,7 @@ export const MissingUser: Story = { render: routed('/31000000-0000-4000-8000-000
 export const PreferencesError: Story = {
   render: routed(),
   parameters: {
-    holita: {
+    discocan: {
       scenario: { failures: { AdminFleetPreferences: 'network' } },
     } satisfies StoryFixtures,
   },
@@ -59,6 +59,6 @@ export const PreferencesError: Story = {
 export const SaveError: Story = {
   render: routed('/31000000-0000-4000-8000-000000000002/edit'),
   parameters: {
-    holita: { scenario: { failures: { AdminUpdateUser: 'network' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminUpdateUser: 'network' } } } satisfies StoryFixtures,
   },
 };

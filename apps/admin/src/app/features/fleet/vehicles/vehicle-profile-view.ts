@@ -119,7 +119,7 @@ function listView(rows: readonly unknown[]): TableView {
 
 /** Vehicle record presentation. The routed adapter owns fetching, paging and business drawers. */
 @Component({
-  selector: 'holita-vehicle-profile-view',
+  selector: 'discocan-vehicle-profile-view',
   imports: [
     RouterLink,
     ChartLine,

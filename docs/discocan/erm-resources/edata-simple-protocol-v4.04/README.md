@@ -46,7 +46,7 @@ The response catalog distinguishes periodic parameter reports, rule-triggered re
 The separate [parameter configuration reference](parameter-reporting.md)
 describes reading, adding and changing reporting definitions through Karma,
 preserving other settings, confirming measurements and restoring a change. It supplements
-the source conversion; it is not a command interface implemented in holita.
+the source conversion; it is not a command interface implemented in discocan.
 
 The [diagnostics and fault-reporting reference](diagnostics-and-fault-reporting.md)
 records ERM-TEST-01's source confirmation of the stored-fault read, the separate
@@ -68,5 +68,5 @@ logos, page-template decoration and page-number shadows are omitted from the
 Markdown resource; they remain in the complete [original PDF](source/original.pdf).
 Protocol definitions and examples are represented as text and tables. The PDF
 remains the authority for layout, color grouping and ambiguous source wording.
-This reference does not change holita behavior or verify the present-day vendor
+This reference does not change discocan behavior or verify the present-day vendor
 service.

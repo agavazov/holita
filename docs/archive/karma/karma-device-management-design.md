@@ -55,5 +55,5 @@ estimates. Broader performance work remains in [review corrections](review-corre
 - Provider queue behavior and permissions remain in [the Karma backlog](karma-api-v2.md);
   named-operator accountability remains in [production access](../../todo/erm-roadmap.md#open-engineering-work).
 
-Follow [focused validation](../../../.agents/skills/holita-focused-validation/SKILL.md) and the test
+Follow [focused validation](../../../.agents/skills/discocan-focused-validation/SKILL.md) and the test
 budget. Preserve the production forms, generated contracts, scoped clients and original imports.

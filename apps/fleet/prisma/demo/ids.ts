@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 /** UUID v5 layout in the private, deterministic Fleet demo namespace. */
 export function demoId(table: string, key: string): string {
   const bytes = createHash('sha1')
-    .update(`holita:fleet-demo:v1:${table}:${key}`)
+    .update(`discocan:fleet-demo:v1:${table}:${key}`)
     .digest()
     .subarray(0, 16);
   bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x50;

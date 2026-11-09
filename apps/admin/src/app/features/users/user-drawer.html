@@ -1,4 +1,4 @@
-<holita-route-drawer
+<discocan-route-drawer
   [title]="title()"
   [saving]="saving()"
   [dirty]="dirty()"
@@ -16,7 +16,7 @@
     }
     <form #formElement id="user-form" [formGroup]="form" (ngSubmit)="submit()">
       <section class="app-form-section">
-        <holita-form-field
+        <discocan-form-field
           [label]="text().name"
           controlId="user-name"
           [required]="true"
@@ -31,8 +31,8 @@
             [attr.aria-invalid]="errorOf('name') ? 'true' : null"
             aria-describedby="user-name-hint user-name-error"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().email"
           controlId="user-email"
           [required]="true"
@@ -48,17 +48,17 @@
             [attr.aria-invalid]="errorOf('email') ? 'true' : null"
             aria-describedby="user-email-hint user-email-error"
           />
-        </holita-form-field>
+        </discocan-form-field>
         @if (ownAccount()) {
-          <holita-form-field
+          <discocan-form-field
             [label]="text().role"
             controlId="user-role"
             [hint]="text().drawer.ownRole"
           >
             <p id="user-role">{{ text().roles[form.controls.role.value] }}</p>
-          </holita-form-field>
+          </discocan-form-field>
         } @else {
-          <holita-form-field
+          <discocan-form-field
             [label]="text().role"
             controlId="user-role"
             [required]="true"
@@ -76,10 +76,10 @@
               [invalid]="!!errorOf('role')"
               aria-describedby="user-role-hint user-role-error"
             />
-          </holita-form-field>
+          </discocan-form-field>
         }
         @if (creating()) {
-          <holita-form-field
+          <discocan-form-field
             [label]="text().drawer.password"
             controlId="user-password"
             [hint]="text().drawer.passwordHint"
@@ -96,7 +96,7 @@
               [attr.aria-invalid]="errorOf('password') ? 'true' : null"
               aria-describedby="user-password-hint user-password-error"
             />
-          </holita-form-field>
+          </discocan-form-field>
         }
       </section>
     </form>
@@ -118,4 +118,4 @@
       </button>
     }
   </div>
-</holita-route-drawer>
+</discocan-route-drawer>

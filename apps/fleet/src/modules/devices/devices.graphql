@@ -27,8 +27,8 @@ enum FleetDeviceStatus {
 
 "Observed destination; null when the last available observation is older than 70 minutes."
 enum FleetDeviceRouting {
-  "The device reported to holita after the retained routing observation."
-  HOLITA
+  "The device reported to discocan after the retained routing observation."
+  DISCOCAN
   "The retained observation established use of the Karma backup."
   KARMA_BACKUP
   "The retained observation established that neither destination received recent data."
@@ -45,7 +45,7 @@ type FleetDevice @key(fields: "id") {
   vehicle: FleetVehicleRef
   "Unassigned means IN_STOCK; assigned devices are ONLINE when their current pair reported within the configured not-reporting hours of the Branch data clock."
   status: FleetDeviceStatus!
-  "A fresh ERM receipt after the retained observation establishes HOLITA. Otherwise the retained observation expires after 70 minutes; null means unknown or ERM import disabled."
+  "A fresh ERM receipt after the retained observation establishes DISCOCAN. Otherwise the retained observation expires after 70 minutes; null means unknown or ERM import disabled."
   routing: FleetDeviceRouting
   "Retained backup history at the last stored routing observation; null without one."
   routingHealth: FleetDeviceRoutingHealth

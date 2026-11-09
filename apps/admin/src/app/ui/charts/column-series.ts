@@ -12,7 +12,7 @@ export interface SeriesPoint {
 
 /** Vertical bars scaled to the largest value, with a visually hidden data table. */
 @Component({
-  selector: 'holita-column-series',
+  selector: 'discocan-column-series',
   template: `
     <div class="column-series__plot" aria-hidden="true">
       @for (bar of bars(); track bar.key) {

@@ -1,6 +1,6 @@
 # Historical Fleet integration through Karma
 
-Deprecated reference only; retained for comparison while holita replaces Karma.
+Deprecated reference only; retained for comparison while discocan replaces Karma.
 
 ## Background device configuration reads
 

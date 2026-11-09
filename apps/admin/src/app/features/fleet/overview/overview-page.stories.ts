@@ -16,7 +16,7 @@ import { OverviewPage } from './overview-page';
 const meta: Meta = {
   title: 'Admin/Dashboard/Overview',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: true } satisfies StoryFixtures },
   beforeEach: () => overviewFixtures(),
 };
 export default meta;
@@ -25,7 +25,7 @@ const route = routeAt(`${defaultBranchId}/fleet/dashboard/overview`);
 const render: NonNullable<Story['render']> = () => ({
   ...route(),
   moduleMetadata: { imports: [StoryApp, AdminWorkspace, DashboardWorkspace, OverviewPage] },
-  template: '<holita-story-app [url]="url" />',
+  template: '<discocan-story-app [url]="url" />',
 });
 
 export const Default: Story = { render };
@@ -42,7 +42,7 @@ export const NoPositions: Story = {
 export const Loading: Story = {
   render,
   parameters: {
-    holita: {
+    discocan: {
       scenario: { failures: { AdminFleetOverview: 'pending', AdminOverviewMap: 'pending' } },
     } satisfies StoryFixtures,
   },
@@ -51,7 +51,7 @@ export const ErrorState: Story = {
   name: 'Error',
   render,
   parameters: {
-    holita: {
+    discocan: {
       scenario: { failures: { AdminFleetOverview: 'network', AdminOverviewMap: 'network' } },
     } satisfies StoryFixtures,
   },

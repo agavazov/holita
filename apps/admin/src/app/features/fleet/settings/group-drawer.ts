@@ -42,7 +42,7 @@ const fieldOrder: readonly GroupField[] = ['name', 'slot', 'description'];
 
 /** Create or edit a vehicle group in the right-hand drawer (a small form, `md` size). */
 @Component({
-  selector: 'holita-group-drawer',
+  selector: 'discocan-group-drawer',
   imports: [
     ReactiveFormsModule,
     ButtonDirective,

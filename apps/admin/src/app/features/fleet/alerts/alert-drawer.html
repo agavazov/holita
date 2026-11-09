@@ -1,4 +1,4 @@
-<holita-route-drawer
+<discocan-route-drawer
   [title]="title()"
   [subtitle]="subtitle()"
   [saving]="pendingWrite() ?? !!busy()"
@@ -45,7 +45,7 @@
             <dt>{{ text().occurred }}</dt>
             <dd [title]="format.dateTimeCell(alert.occurredAt).title">
               {{ format.dateTimeCell(alert.occurredAt).text }}
-              <span class="app-muted">({{ alert.occurredAt | holitaRelative: dataAsOf() }})</span>
+              <span class="app-muted">({{ alert.occurredAt | discocanRelative: dataAsOf() }})</span>
             </dd>
           </div>
           <div>
@@ -98,7 +98,7 @@
       </section>
       <section class="app-card">
         <h3 class="app-card__title">{{ text().handling }}</h3>
-        <holita-form-field
+        <discocan-form-field
           [label]="text().remark"
           controlId="alert-remark"
           [hint]="text().remarkHint"
@@ -115,7 +115,7 @@
             [attr.aria-invalid]="remarkError() ? 'true' : null"
             aria-describedby="alert-remark-hint alert-remark-error"
           ></textarea>
-        </holita-form-field>
+        </discocan-form-field>
       </section>
     }
   </div>
@@ -183,4 +183,4 @@
       }
     }
   </div>
-</holita-route-drawer>
+</discocan-route-drawer>

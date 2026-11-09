@@ -86,7 +86,7 @@ type Problem = AdminDashboardProblemsQuery['fleetProblems']['items'][number];
 type ProblemAction = 'details' | 'open' | 'vehicle' | 'device';
 
 @Component({
-  selector: 'holita-problems-page',
+  selector: 'discocan-problems-page',
   imports: [
     ButtonDirective,
     Dialog,

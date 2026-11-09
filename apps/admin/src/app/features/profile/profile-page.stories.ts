@@ -14,7 +14,7 @@ import { ProfileView } from './profile-view';
 const meta: Meta = {
   title: 'Admin/Profile',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: true } satisfies StoryFixtures },
 };
 export default meta;
 type Story = StoryObj;
@@ -24,7 +24,7 @@ function routed(): NonNullable<Story['render']> {
   return () => ({
     ...render(),
     moduleMetadata: { imports: [StoryApp, AdminWorkspace, ProfilePage] },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 
@@ -33,14 +33,14 @@ export const Default: Story = { render: routed() };
 export const Loading: Story = {
   render: routed(),
   parameters: {
-    holita: { scenario: { failures: { AdminProfile: 'pending' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminProfile: 'pending' } } } satisfies StoryFixtures,
   },
 };
 
 export const LoadError: Story = {
   render: routed(),
   parameters: {
-    holita: { scenario: { failures: { AdminProfile: 'network' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminProfile: 'network' } } } satisfies StoryFixtures,
   },
 };
 
@@ -55,7 +55,7 @@ export const SaveError: Story = {
       },
       moduleMetadata: { imports: [ProfileView] },
       template:
-        '<holita-profile-view [user]="user" [saveError]="error" [fieldErrors]="fieldErrors" />',
+        '<discocan-profile-view [user]="user" [saveError]="error" [fieldErrors]="fieldErrors" />',
     };
   },
 };
@@ -71,7 +71,7 @@ export const PasswordError: Story = {
       },
       moduleMetadata: { imports: [ProfileView] },
       template:
-        '<holita-profile-view [user]="user" [passwordError]="error" [passwordFieldErrors]="fieldErrors" />',
+        '<discocan-profile-view [user]="user" [passwordError]="error" [passwordFieldErrors]="fieldErrors" />',
     };
   },
 };
@@ -80,7 +80,7 @@ export const SavingDetails: Story = {
   render: () => ({
     props: { user: fixtureProfile },
     moduleMetadata: { imports: [ProfileView] },
-    template: '<holita-profile-view [user]="user" [saving]="true" />',
+    template: '<discocan-profile-view [user]="user" [saving]="true" />',
   }),
 };
 
@@ -88,7 +88,7 @@ export const ChangingPassword: Story = {
   render: () => ({
     props: { user: fixtureProfile },
     moduleMetadata: { imports: [ProfileView] },
-    template: '<holita-profile-view [user]="user" [changingPassword]="true" />',
+    template: '<discocan-profile-view [user]="user" [changingPassword]="true" />',
   }),
 };
 
@@ -96,6 +96,6 @@ export const Saved: Story = {
   render: () => ({
     props: { user: fixtureProfile },
     moduleMetadata: { imports: [ProfileView] },
-    template: '<holita-profile-view [user]="user" [saved]="true" />',
+    template: '<discocan-profile-view [user]="user" [saved]="true" />',
   }),
 };

@@ -4,7 +4,7 @@ import { UI_LANGUAGE } from '../ui/ui-language';
 
 /** Neutral page geometry while Branch preferences load, without a temporary page title. */
 @Component({
-  selector: 'holita-page-loading',
+  selector: 'discocan-page-loading',
   template: `
     <div class="app-page-loading" role="status" aria-busy="true" [attr.aria-label]="text().loading">
       <div class="app-page-loading__heading" aria-hidden="true"></div>

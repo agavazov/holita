@@ -26,14 +26,14 @@
   "installed": "Installed",
   "notes": "Notes",
   "state": "State",
-  "neverConnectedState": "Never connected to holita",
+  "neverConnectedState": "Never connected to discocan",
   "routing": {
-    "HOLITA": "Data arrives through holita",
+    "DISCOCAN": "Data arrives through discocan",
     "KARMA_BACKUP": "On Karma backup",
     "SILENT": "Silent"
   },
   "onBackup": "On Karma backup",
-  "backupHint": "The unit sends its data to Karma's backup server instead of holita. Check parameter 0049 by SMS.",
+  "backupHint": "The unit sends its data to Karma's backup server instead of discocan. Check parameter 0049 by SMS.",
   "silentHint": "No recent data has arrived from this unit.",
   "overdue": "Overdue",
   "routeWrites": "Karma changed the route ×{count} (24 h)",
@@ -48,7 +48,7 @@
   "karmaRouteWrites": "Karma writes to the route, 0049–0054 (24 h)",
   "routeChanged": "Route changed",
   "latestRouteWrite": "Latest Karma write to the route",
-  "notOnHolita": "This unit has never connected to holita. Route it to holita using SMS commands to receive its data.",
+  "notOnDiscoCan": "This unit has never connected to discocan. Route it to discocan using SMS commands to receive its data.",
   "mode": "Mode",
   "mirror": "Mirror",
   "primary": "Primary",
@@ -65,7 +65,7 @@
   "latestValues": "Latest event values",
   "edataMeasurements": "Latest eData measurements",
   "edataMeasurementsHint": "Latest 405 report per parameter, with its report time. Values are reported bytes in hexadecimal. Catalog units are reference labels; values have not been converted.",
-  "edataMeasurementsEmpty": "No eData 405 measurements have been received by holita. This unit may not have eData, or may not have sent a measurement report.",
+  "edataMeasurementsEmpty": "No eData 405 measurements have been received by discocan. This unit may not have eData, or may not have sent a measurement report.",
   "edataParameterId": "ID {id}",
   "edataCatalogUnit": "Catalog unit: {unit}",
   "speed": "Speed",
@@ -120,7 +120,7 @@
   },
   "commandsHint": "Only allowlisted reads; they do not change the unit's configuration.",
   "commandsOffline": "The unit is offline, so a command cannot reach it now.",
-  "commandsMirror": "holita only mirrors this unit for Karma, so it cannot send commands. Route the unit to holita first (SMS commands).",
+  "commandsMirror": "discocan only mirrors this unit for Karma, so it cannot send commands. Route the unit to discocan first (SMS commands).",
   "commandHistory": "Command history",
   "commandsEmpty": "No commands were sent to this unit.",
   "command": "Command",
@@ -145,7 +145,7 @@
   "directions": {
     "DEVICE": "Device",
     "UPSTREAM": "Upstream",
-    "HOLITA": "holita"
+    "DISCOCAN": "discocan"
   },
   "checksums": {
     "OK": "OK",
@@ -183,15 +183,15 @@
     "tooLong": "{bytes} bytes: longer than 64 bytes, so the unit does not accept it.",
     "reply": "Expected reply",
     "firstDevices": "The Branch has {total} devices; this page lists the first {shown}.",
-    "karmaWarning": "Emergency only. After these texts the unit reports to Karma, and holita receives none of its data until you route it back to holita.",
+    "karmaWarning": "Emergency only. After these texts the unit reports to Karma, and discocan receives none of its data until you route it back to discocan.",
     "groups": {
       "check": {
         "title": "Check the unit",
         "description": "These texts only read; they change nothing on the unit. Use them to see whether the unit answers and which server it reports to."
       },
       "route": {
-        "title": "Route to holita",
-        "description": "Makes holita (65.108.137.165, port 11500) the unit's primary server. Send the two texts in this order and send the second one only after the reply ok#setparam to the first. About 10 minutes later check the result with getparam 49 and 50. If the unit does not come online, call its SIM number to wake it."
+        "title": "Route to discocan",
+        "description": "Makes discocan (65.108.137.165, port 11500) the unit's primary server. Send the two texts in this order and send the second one only after the reply ok#setparam to the first. About 10 minutes later check the result with getparam 49 and 50. If the unit does not come online, call its SIM number to wake it."
       },
       "karma": {
         "title": "Emergency: back to Karma",
@@ -212,12 +212,12 @@
       "getparam49": {
         "purpose": "Primary server address (parameter 0049)",
         "when": "To see which server the unit sends its data to.",
-        "reply": "65.108.137.165 when the unit is routed to holita; in.karma.online when it reports to Karma."
+        "reply": "65.108.137.165 when the unit is routed to discocan; in.karma.online when it reports to Karma."
       },
       "getparam50": {
         "purpose": "Primary server port (parameter 0050)",
         "when": "Together with parameter 0049.",
-        "reply": "11500 when the unit is routed to holita; 500 when it reports to Karma."
+        "reply": "11500 when the unit is routed to discocan; 500 when it reports to Karma."
       },
       "getparam51": {
         "purpose": "Backup server address (parameter 0051)",
@@ -230,14 +230,14 @@
         "reply": "500, the port of the Karma backup server."
       },
       "route49": {
-        "purpose": "Step 1: holita's address as the primary server",
-        "when": "The first text when you route the unit to holita.",
+        "purpose": "Step 1: discocan's address as the primary server",
+        "when": "The first text when you route the unit to discocan.",
         "reply": "ok#setparam"
       },
       "route50": {
-        "purpose": "Step 2: holita's port 11500",
+        "purpose": "Step 2: discocan's port 11500",
         "when": "Send it after the reply to step 1.",
-        "reply": "ok#setparam. The unit then connects to holita."
+        "reply": "ok#setparam. The unit then connects to discocan."
       },
       "karma49": {
         "purpose": "Step 1: Karma's address as the primary server",
@@ -253,11 +253,11 @@
   },
   "snapshots": {
     "title": "Read parameters",
-    "hint": "holita reads the unit's stored parameters one by one, except the routing parameters 0049–0054. It takes a few minutes and changes nothing on the unit.",
+    "hint": "discocan reads the unit's stored parameters one by one, except the routing parameters 0049–0054. It takes a few minutes and changes nothing on the unit.",
     "secretNote": "Protected values are masked for Viewers.",
     "start": "Read all parameters",
     "confirmHeader": "Read all parameters?",
-    "confirmMessage": "holita now reads the stored parameters of {unit} one by one. Nothing on the unit changes.",
+    "confirmMessage": "discocan now reads the stored parameters of {unit} one by one. Nothing on the unit changes.",
     "started": "Parameter read started",
     "startFailed": "The parameter read did not start",
     "history": "Parameter read history",
@@ -301,7 +301,7 @@
   "diagnosticsEmpty": "No DTC or CAN faults are recorded for this truck and IMEI.",
   "source": "Source",
   "sources": {
-    "ERM": "holita device server",
+    "ERM": "discocan device server",
     "MANUAL": "Manual",
     "DEMO": "Demo"
   },
@@ -317,7 +317,7 @@
   "recovery": "Return from Karma backup",
   "recoveryReading": "Reading primary settings",
   "recoveryStates": {
-    "ALREADY_HOLITA": "Primary already points to holita; nothing written",
+    "ALREADY_DISCOCAN": "Primary already points to discocan; nothing written",
     "NEEDS_OPERATOR": "Recovery needs an operator"
   },
   "gaps24h": "{count} gaps in 24 h · {duration}",
@@ -329,7 +329,7 @@
   "settings": {
     "title": "Device settings",
     "hint": "One controlled change per unit. A write first reads the parameters again, reads the baseline, writes and reads back. A mismatch restores the exact baseline. An uncertain submission is never replayed.",
-    "primaryRequired": "A primary connection to holita is required.",
+    "primaryRequired": "A primary connection to discocan is required.",
     "writesDisabled": "Configuration writes are disabled by the server. Read-only eData inspection is available.",
     "operation": "Operation",
     "parameterId": "eData parameter ID",
@@ -504,8 +504,8 @@
   },
   "deviceStatus": {
     "connection": "Connection",
-    "lastSignal": "Last signal to holita",
-    "socket": "Connection to holita",
+    "lastSignal": "Last signal to discocan",
+    "socket": "Connection to discocan",
     "reporting": "Reporting",
     "connected": "Connected",
     "disconnected": "Offline",
@@ -517,14 +517,14 @@
       "CONNECTED": "Connected · waiting for report",
       "REPORTING": "Reporting · currently disconnected",
       "OFFLINE": "Offline · report overdue",
-      "UNKNOWN": "No holita signal yet"
+      "UNKNOWN": "No discocan signal yet"
     },
     "networkChanges": "Network changes (24 h)",
     "networkType": "Network",
     "operator": "Mobile operator",
     "routing": "Routing",
     "routeStates": {
-      "HOLITA": "holita",
+      "DISCOCAN": "discocan",
       "KARMA_BACKUP": "Karma backup",
       "UNKNOWN": "Routing unknown"
     },
@@ -535,9 +535,9 @@
     "parkedYes": "Confirmed parked",
     "parkedNo": "Not parked",
     "parkedUnknown": "Parking not confirmed",
-    "returnButton": "Return to holita",
-    "returnConfirmTitle": "Return this unit to holita?",
-    "returnConfirm": "Request {unit} to return from Karma backup to holita. The unit must be parked. This requires Engineer or Administrator access; acceptance does not confirm the return.",
+    "returnButton": "Return to discocan",
+    "returnConfirmTitle": "Return this unit to discocan?",
+    "returnConfirm": "Request {unit} to return from Karma backup to discocan. The unit must be parked. This requires Engineer or Administrator access; acceptance does not confirm the return.",
     "returnSubmitting": "Submitting return request",
     "returnPending": "A return is pending. Wait for its outcome; an uncertain request must not be repeated.",
     "returnNotParked": "Return is available only while the unit is parked.",
@@ -545,7 +545,7 @@
     "returnBackupRequired": "Return requires a unit on Karma backup.",
     "returnFailed": "The return request could not be confirmed",
     "returnUnconfirmed": "Refresh the routing status before trying again; the request may have been accepted.",
-    "returnEngineer": "Engineer or Administrator access is required to return a unit to holita.",
+    "returnEngineer": "Engineer or Administrator access is required to return a unit to discocan.",
     "returnConflict": "The unit must still be parked on Karma backup with no pending return. Refresh its status.",
     "returnUnavailable": "The Karma return service is unavailable. Refresh the status before another attempt.",
     "returnSession": "Sign in again before requesting a return.",
@@ -554,12 +554,12 @@
     "requestedAt": "Requested",
     "recoveryOutcome": "Recovery outcome",
     "recoveryFinished": "Recovery checked",
-    "holitaConnectedAt": "Connected to holita",
+    "discocanConnectedAt": "Connected to discocan",
     "returnStates": {
       "SUBMITTING": "Submitting",
       "QUEUED": "Queued · waiting for the unit",
       "UNCERTAIN": "Uncertain · do not repeat",
-      "RETURNED": "Returned to holita",
+      "RETURNED": "Returned to discocan",
       "NEEDS_OPERATOR": "Operator review required",
       "FAILED": "Failed"
     },
@@ -658,7 +658,7 @@
     "disabled": "Configuration writes are disabled by the server.",
     "freshParameters": "The previous write is uncertain. Read the affected parameters again before starting another write.",
     "freshEdata": "The previous eData write is uncertain. Read the eData configuration again before starting another write.",
-    "primary": "The unit must be connected to holita in primary mode.",
+    "primary": "The unit must be connected to discocan in primary mode.",
     "running": "A workflow is already running for this unit. Wait for its result.",
     "cancel": "Only requests that are still queued can be cancelled. Refresh the queue.",
     "retry": "Only failed, expired, uncertain or cancelled requests can be retried.",
@@ -694,7 +694,7 @@
     },
     "smsCommands": {
       "title": "SMS commands",
-      "body": "This tab prepares SMS text for the selected device using its SIM number and password. Messages are sent from a phone, rather than from this page. Device replies are not added automatically to the holita queue."
+      "body": "This tab prepares SMS text for the selected device using its SIM number and password. Messages are sent from a phone, rather than from this page. Device replies are not added automatically to the discocan queue."
     },
     "parameters": {
       "title": "Device parameters",

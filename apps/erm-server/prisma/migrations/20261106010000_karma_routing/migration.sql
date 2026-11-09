@@ -1,4 +1,4 @@
-CREATE TYPE "ermKarmaRoutingState" AS ENUM ('unknown', 'holita', 'karmaBackup');
+CREATE TYPE "ermKarmaRoutingState" AS ENUM ('unknown', 'discocan', 'karmaBackup');
 CREATE TYPE "ermKarmaReturnStatus" AS ENUM ('submitting', 'queued', 'uncertain', 'returned', 'needsOperator', 'failed');
 
 CREATE TABLE "ermKarmaRouting" (
@@ -15,7 +15,7 @@ CREATE TABLE "ermKarmaRouting" (
     CONSTRAINT "ermKarmaRouting_notificationKind_check" CHECK (
       "notificationKind" IS NULL
       OR ("notificationKind" = 'UNIT_ON_BACKUP' AND "state" = 'karmaBackup')
-      OR ("notificationKind" = 'UNIT_RETURNED_TO_HOLITA' AND "state" = 'holita')
+      OR ("notificationKind" = 'UNIT_RETURNED_TO_DISCOCAN' AND "state" = 'discocan')
     )
 );
 
@@ -31,7 +31,7 @@ CREATE TABLE "ermKarmaReturnAttempt" (
     "status" "ermKarmaReturnStatus" NOT NULL DEFAULT 'submitting',
     "pending" BOOLEAN NOT NULL DEFAULT true,
     "recoverySessionId" UUID,
-    "holitaConnectionId" UUID,
+    "discocanConnectionId" UUID,
     CONSTRAINT "ermKarmaReturnAttempt_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "ermKarmaReturnAttempt_pending_check" CHECK (
       "pending" = ("status" IN ('submitting', 'queued', 'uncertain'))
@@ -45,4 +45,4 @@ CREATE INDEX "ermKarmaReturnAttempt_unitId_requestedAt_idx" ON "ermKarmaReturnAt
 CREATE UNIQUE INDEX "ermKarmaReturnAttempt_pending_unit_key" ON "ermKarmaReturnAttempt"("unitId") WHERE "pending";
 
 ALTER TABLE "ermKarmaReturnAttempt" ADD CONSTRAINT "ermKarmaReturnAttempt_recoverySessionId_fkey" FOREIGN KEY ("recoverySessionId") REFERENCES "ermRecoverySession"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
-ALTER TABLE "ermKarmaReturnAttempt" ADD CONSTRAINT "ermKarmaReturnAttempt_holitaConnectionId_fkey" FOREIGN KEY ("holitaConnectionId") REFERENCES "ermConnection"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE "ermKarmaReturnAttempt" ADD CONSTRAINT "ermKarmaReturnAttempt_discocanConnectionId_fkey" FOREIGN KEY ("discocanConnectionId") REFERENCES "ermConnection"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;

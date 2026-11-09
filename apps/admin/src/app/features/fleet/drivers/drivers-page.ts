@@ -41,7 +41,7 @@ import { DriversView, type DriverActionId, type DriverKpis } from './drivers-vie
 import { driversText } from './i18n/messages';
 
 @Component({
-  selector: 'holita-drivers-page',
+  selector: 'discocan-drivers-page',
   providers: [DriversApi],
   imports: [DriversView, RouterOutlet, Message, ButtonDirective],
   templateUrl: './drivers-page.html',

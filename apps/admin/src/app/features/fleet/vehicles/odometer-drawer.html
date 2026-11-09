@@ -1,4 +1,4 @@
-<holita-route-drawer
+<discocan-route-drawer
   [title]="title()"
   [saving]="saving()"
   [dirty]="dirty()"
@@ -25,7 +25,7 @@
           </div>
           <div>
             <dt>{{ text().recordedAt }}</dt>
-            <dd>{{ previous.recordedAt | holitaDateTime: units.preferences().timeZone : true }}</dd>
+            <dd>{{ previous.recordedAt | discocanDateTime: units.preferences().timeZone : true }}</dd>
           </div>
           <div>
             <dt>{{ text().source }}</dt>
@@ -37,10 +37,10 @@
       }
       <p class="app-muted">
         {{ text().latestAllowed }}:
-        {{ latestAllowedAt() | holitaDateTime: units.preferences().timeZone : true }}
+        {{ latestAllowedAt() | discocanDateTime: units.preferences().timeZone : true }}
       </p>
       <div class="app-form-grid">
-        <holita-form-field
+        <discocan-form-field
           [label]="odometerLabel()"
           controlId="odometer-odometerKm"
           [required]="true"
@@ -54,8 +54,8 @@
             [invalid]="!!errorOf('odometerKm')"
             [pt]="numberPt()"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().recordedAt"
           controlId="odometer-recordedAt"
           [required]="true"
@@ -72,7 +72,7 @@
             [attr.aria-invalid]="errorOf('recordedAt') ? 'true' : null"
             aria-describedby="odometer-recordedAt-hint odometer-recordedAt-error"
           />
-        </holita-form-field>
+        </discocan-form-field>
       </div>
     </section>
   </form>
@@ -97,4 +97,4 @@
       {{ text().save }}
     </button>
   </div>
-</holita-route-drawer>
+</discocan-route-drawer>

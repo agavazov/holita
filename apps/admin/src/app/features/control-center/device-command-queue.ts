@@ -44,7 +44,7 @@ const actions: readonly ErmDeviceAction[] = [
 ];
 
 @Component({
-  selector: 'holita-device-command-queue',
+  selector: 'discocan-device-command-queue',
   imports: [
     ReactiveFormsModule,
     ButtonDirective,

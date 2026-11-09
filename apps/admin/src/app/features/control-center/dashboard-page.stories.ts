@@ -11,7 +11,7 @@ import { ProblemsPage } from '../fleet/overview/problems-page';
 const meta: Meta = {
   title: 'Admin/Dashboard/Problems',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: true } satisfies StoryFixtures },
 };
 export default meta;
 type Story = StoryObj;
@@ -24,6 +24,6 @@ export const CombinedFeed: Story = {
     moduleMetadata: {
       imports: [StoryApp, AdminWorkspace, DashboardWorkspace, ProblemsPage, AlertDetailPage],
     },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   }),
 };

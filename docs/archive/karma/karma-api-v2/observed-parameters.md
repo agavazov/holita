@@ -3,7 +3,7 @@
 This is a **partial observed catalog**, extracted from `GET /edata` with `showdesc=1`. It records metadata returned by sampled latest-message batches, not telemetry values or vehicle identities. The machine-readable evidence is [edata-parameter-metadata.json](source/edata-parameter-metadata.json).
 
 Thirteen parameter IDs were encountered, including parameter 781 during the
-[web functionality research](web-functionality-research.md) on 2026-10-27. This is not the complete supported-ID list or a vehicle-model capability matrix. A parameter absent here may still be supported. Holita accepts unknown positive parameter IDs and does not use this table as an enum, filter allowlist or conversion rule.
+[web functionality research](web-functionality-research.md) on 2026-10-27. This is not the complete supported-ID list or a vehicle-model capability matrix. A parameter absent here may still be supported. DiscoCan accepts unknown positive parameter IDs and does not use this table as an enum, filter allowlist or conversion rule.
 
 | Parameter ID | Original source description                     | Observed JSON value type |
 | ------------ | ----------------------------------------------- | ------------------------ |

@@ -1,6 +1,6 @@
 @switch (state()) {
   @case ('not-found') {
-    <holita-empty-state
+    <discocan-empty-state
       kind="not-found"
       [title]="text().notFoundTitle"
       [description]="text().notFoundDescription"
@@ -13,10 +13,10 @@
         [fragment]="backFragment() ?? undefined"
         >{{ text().back }}</a
       >
-    </holita-empty-state>
+    </discocan-empty-state>
   }
   @case ('error') {
-    <holita-empty-state
+    <discocan-empty-state
       kind="error"
       [title]="text().errorTitle"
       [description]="errorText() ?? text().errorDescription"
@@ -32,10 +32,10 @@
         [fragment]="backFragment() ?? undefined"
         >{{ text().back }}</a
       >
-    </holita-empty-state>
+    </discocan-empty-state>
   }
   @case ('loading') {
-    <holita-page-header
+    <discocan-page-header
       [title]="text().title"
       [backLink]="backLink()"
       [backLabel]="text().back"
@@ -43,27 +43,27 @@
       [backFragment]="backFragment()"
       [moduleInfo]="text().moduleInfo"
     />
-    <holita-kpi-strip [label]="text().summary" [loading]="true">
-      <holita-kpi-tile [label]="text().drivingScore" [loading]="true" category="c3"
+    <discocan-kpi-strip [label]="text().summary" [loading]="true">
+      <discocan-kpi-tile [label]="text().drivingScore" [loading]="true" category="c3"
         ><svg kpiIcon data-p-icon="star"
-      /></holita-kpi-tile>
-      <holita-kpi-tile [label]="text().ecoScore" [loading]="true" tone="success"
+      /></discocan-kpi-tile>
+      <discocan-kpi-tile [label]="text().ecoScore" [loading]="true" tone="success"
         ><svg kpiIcon data-p-icon="chart-line"
-      /></holita-kpi-tile>
-      <holita-kpi-tile [label]="text().distance" [loading]="true" category="c4"
+      /></discocan-kpi-tile>
+      <discocan-kpi-tile [label]="text().distance" [loading]="true" category="c4"
         ><svg kpiIcon data-p-icon="compass"
-      /></holita-kpi-tile>
-      <holita-kpi-tile [label]="text().trips" [loading]="true" category="c2"
+      /></discocan-kpi-tile>
+      <discocan-kpi-tile [label]="text().trips" [loading]="true" category="c2"
         ><svg kpiIcon data-p-icon="map"
-      /></holita-kpi-tile>
-      <holita-kpi-tile [label]="text().maneuversPer100Km" [loading]="true" tone="warn"
+      /></discocan-kpi-tile>
+      <discocan-kpi-tile [label]="text().maneuversPer100Km" [loading]="true" tone="warn"
         ><svg kpiIcon data-p-icon="exclamation-triangle"
-      /></holita-kpi-tile>
-    </holita-kpi-strip>
+      /></discocan-kpi-tile>
+    </discocan-kpi-strip>
   }
   @case ('ready') {
     @if (scorecard(); as card) {
-      <holita-page-header
+      <discocan-page-header
         [title]="card.name"
         [backLink]="backLink()"
         [backLabel]="text().back"
@@ -101,51 +101,51 @@
       </section>
 
       @if (!card.asOf) {
-        <holita-empty-state
+        <discocan-empty-state
           kind="no-telemetry"
           [title]="text().noTelemetryTitle"
           [description]="text().noTelemetryDescription"
         />
       } @else {
-        <holita-kpi-strip [label]="text().summary">
-          <holita-kpi-tile
+        <discocan-kpi-strip [label]="text().summary">
+          <discocan-kpi-tile
             [label]="text().drivingScore"
-            [value]="card.averageDrivingScore | holitaNumber: 1"
+            [value]="card.averageDrivingScore | discocanNumber: 1"
             [footnote]="text().outOf100"
             category="c3"
             ><svg kpiIcon data-p-icon="star"
-          /></holita-kpi-tile>
-          <holita-kpi-tile
+          /></discocan-kpi-tile>
+          <discocan-kpi-tile
             [label]="text().ecoScore"
-            [value]="card.averageEcoScore | holitaNumber: 1"
+            [value]="card.averageEcoScore | discocanNumber: 1"
             [footnote]="text().outOf100"
             tone="success"
             ><svg kpiIcon data-p-icon="chart-line"
-          /></holita-kpi-tile>
-          <holita-kpi-tile
+          /></discocan-kpi-tile>
+          <discocan-kpi-tile
             [label]="text().distance"
             [value]="units.distance(card.distanceKm, false, 1)"
             [unit]="units.distanceUnit()"
             category="c4"
             ><svg kpiIcon data-p-icon="compass"
-          /></holita-kpi-tile>
-          <holita-kpi-tile
+          /></discocan-kpi-tile>
+          <discocan-kpi-tile
             [label]="text().trips"
-            [value]="card.tripCount | holitaNumber"
+            [value]="card.tripCount | discocanNumber"
             [footnote]="coverage()"
             category="c2"
             ><svg kpiIcon data-p-icon="map"
-          /></holita-kpi-tile>
-          <holita-kpi-tile
+          /></discocan-kpi-tile>
+          <discocan-kpi-tile
             [label]="text().maneuversPer100Km"
-            [value]="maneuverRate() | holitaNumber: 1"
+            [value]="maneuverRate() | discocanNumber: 1"
             tone="warn"
             ><svg kpiIcon data-p-icon="exclamation-triangle"
-          /></holita-kpi-tile>
-        </holita-kpi-strip>
+          /></discocan-kpi-tile>
+        </discocan-kpi-strip>
 
         @if (!card.tripCount) {
-          <holita-empty-state
+          <discocan-empty-state
             kind="empty"
             [title]="text().noTripsTitle"
             [description]="text().noTripsDescription"
@@ -157,13 +157,13 @@
         <div class="app-card-grid scorecard__details">
           <section class="app-card">
             <h2 class="app-card__title app-card__header">{{ text().maneuvers }}</h2>
-            <holita-stacked-bars
+            <discocan-stacked-bars
               [label]="text().maneuvers"
               [rows]="maneuverRows()"
               [legend]="legend()"
             />
             <p class="app-muted scorecard__total">
-              {{ text().maneuverTotal }} {{ card.maneuverCount | holitaNumber }}
+              {{ text().maneuverTotal }} {{ card.maneuverCount | discocanNumber }}
             </p>
           </section>
           <section class="app-card">
@@ -195,7 +195,7 @@
               </div>
               <div>
                 <dt>{{ text().scoredTrips }}</dt>
-                <dd>{{ card.scoredTripCount | holitaNumber }}</dd>
+                <dd>{{ card.scoredTripCount | discocanNumber }}</dd>
               </div>
             </dl>
           </section>

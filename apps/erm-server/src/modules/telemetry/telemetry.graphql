@@ -11,7 +11,7 @@ enum ErmSessionMode {
 enum ErmFrameDirection {
   DEVICE
   UPSTREAM
-  HOLITA
+  DISCOCAN
 }
 enum ErmFrameChecksum {
   OK
@@ -153,7 +153,7 @@ input CancelErmDeviceCommandInput {
   requestId: ID!
 }
 enum ErmRecoveryOutcome {
-  ALREADY_HOLITA
+  ALREADY_DISCOCAN
   NEEDS_OPERATOR
 }
 "Result of a read-only configuration session on the fixed recovery listener."
@@ -471,10 +471,10 @@ type ErmUnitHealth {
   "Latest upstream frame writing a routing parameter 0049–0054."
   latestKarmaRoutingWrite: ErmFrame
 }
-"Live state of a unit on holita's device server."
+"Live state of a unit on discocan's device server."
 type ErmUnitState {
   unitId: ID!
-  "The unit has an open connection to holita now."
+  "The unit has an open connection to discocan now."
   online: Boolean!
   mode: ErmSessionMode
   connectedSince: DateTime
@@ -556,11 +556,11 @@ type ErmParameterSnapshotsPage {
   nextCursor: String
   hasMore: Boolean!
 }
-"Fleet's Device, resolved by its IMEI on holita's device server."
+"Fleet's Device, resolved by its IMEI on discocan's device server."
 type FleetDevice @key(fields: "id") {
   id: ID!
   imei: String! @external
-  "Null when the unit has never connected to holita."
+  "Null when the unit has never connected to discocan."
   ermState: ErmUnitState @requires(fields: "imei")
   ermEvents(input: ErmDeviceEventsInput): ErmEventsPage! @requires(fields: "imei")
   ermCommands(input: ErmDevicePageInput): ErmCommandsPage! @requires(fields: "imei")

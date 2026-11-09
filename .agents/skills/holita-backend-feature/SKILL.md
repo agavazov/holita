@@ -1,6 +1,6 @@
 ---
-name: holita-backend-feature
-description: Implement holita backend GraphQL features using the Fleet modules, the standard list contract, generated contracts and scoped persistence. Use for backend work, not frontend-only changes.
+name: discocan-backend-feature
+description: Implement discocan backend GraphQL features using the Fleet modules, the standard list contract, generated contracts and scoped persistence. Use for backend work, not frontend-only changes.
 ---
 
 # Backend feature reference
@@ -50,7 +50,7 @@ repositories require the verified Tenant and Branch scope on every operation. In
 ## Checks
 
 After SDL or operation changes, run codegen and schema:check. Choose the remaining checks with
-[focused validation](../holita-focused-validation/SKILL.md):
+[focused validation](../discocan-focused-validation/SKILL.md):
 
 - raw SQL, scoping and constraint changes run the owning `test:fleet:db -- <file>` case;
 - do not add tests beyond the [delivery policy](../../../AGENTS.md#delivery-policy).

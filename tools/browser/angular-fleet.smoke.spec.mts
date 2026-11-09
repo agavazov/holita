@@ -86,7 +86,7 @@ test.describe('Fleet adopted screens', () => {
     expiry.setUTCDate(expiry.getUTCDate() + 30);
     await page.goto(app.url + fleet + '/drivers');
     await page
-      .locator('holita-page-header')
+      .locator('discocan-page-header')
       .getByRole('button', { name: 'New driver', exact: true })
       .click();
     const create = page.getByRole('dialog', { name: 'New driver', exact: true });
@@ -158,7 +158,7 @@ test.describe('Fleet adopted screens', () => {
     const today = await businessDate(page, app);
     await page.goto(app.url + fleet + '/maintenance');
     await page
-      .locator('holita-page-header')
+      .locator('discocan-page-header')
       .getByRole('button', { name: 'New service task', exact: true })
       .click();
     const create = page.getByRole('dialog', { name: 'New service task', exact: true });

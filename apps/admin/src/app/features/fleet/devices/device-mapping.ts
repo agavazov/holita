@@ -14,7 +14,7 @@ export interface DevicesLive {
   readonly devices: ReadonlyMap<string, AdminDevicesLiveQuery['fleetDevices']['items'][number]>;
 }
 
-/** A missing `live` or device ID means the holita state is unknown. */
+/** A missing `live` or device ID means the discocan state is unknown. */
 export function deviceRow(
   device: AdminDeviceDetailsFragment,
   live?: DevicesLive | null,

@@ -26,11 +26,11 @@ import { OverviewView, type OverviewLinks } from './overview-view';
 import { overviewPeriod, type OverviewDays, type OverviewFilter } from './overview-period';
 
 @Component({
-  selector: 'holita-overview-page',
+  selector: 'discocan-overview-page',
   imports: [OverviewView],
   providers: [OverviewApi],
   template: `
-    <holita-overview-view
+    <discocan-overview-view
       [branchName]="branch().name"
       [data]="data()"
       [loading]="loading()"

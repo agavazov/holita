@@ -507,7 +507,7 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
       });
       const roles: readonly UserRole[] = ['VIEWER', 'OPERATOR', 'ENGINEER', 'ADMINISTRATOR'];
       for (const role of roles) {
-        const authorization = `Bearer holita-session.${randomBytes(32).toString('base64url')}`;
+        const authorization = `Bearer discocan-session.${randomBytes(32).toString('base64url')}`;
         sessions.set(authorization, {
           tenantId,
           userId: randomUUID(),
@@ -645,7 +645,7 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         'timeout',
       ] as const) {
         verification = mode;
-        const authorization = `Bearer holita-session.${randomBytes(32).toString('base64url')}`;
+        const authorization = `Bearer discocan-session.${randomBytes(32).toString('base64url')}`;
         expect({
           mode,
           value: await query('query{fleetSettings{timeZone}}', {}, { ...owner, authorization }),

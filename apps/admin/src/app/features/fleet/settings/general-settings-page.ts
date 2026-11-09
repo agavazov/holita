@@ -27,11 +27,11 @@ import { GeneralSettingsView, type GeneralSettings } from './general-settings-vi
 import { settingsText } from './i18n/messages';
 
 @Component({
-  selector: 'holita-general-settings-page',
+  selector: 'discocan-general-settings-page',
   imports: [GeneralSettingsView],
   providers: [GeneralSettingsApi],
   template: `
-    <holita-general-settings-view
+    <discocan-general-settings-view
       [branchName]="settings()?.name ?? branch().name"
       [settings]="settings()"
       [state]="settings() ? 'ready' : 'loading'"

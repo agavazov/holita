@@ -63,7 +63,7 @@ function hasLeaveGuard(component: unknown): component is LeavableDrawer {
 }
 
 @Component({
-  selector: 'holita-admin-workspace',
+  selector: 'discocan-admin-workspace',
   imports: [RouterOutlet, AdminShell, ButtonDirective, Message, Login, OperationToast],
   providers: [
     BranchContext,
@@ -241,7 +241,7 @@ export class AdminWorkspace {
             .filter(Boolean)
             .join(' · ')
         : text.signIn;
-      document.title = page ? `${page} · holita` : 'holita';
+      document.title = page ? `${page} · discocan` : 'discocan';
     });
   }
 

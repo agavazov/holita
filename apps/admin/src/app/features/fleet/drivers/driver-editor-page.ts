@@ -26,11 +26,11 @@ import { driversText } from './i18n/messages';
 import { fleetRecordLinks, type FleetRecordLinks } from '../fleet-record-links';
 
 @Component({
-  selector: 'holita-driver-editor-page',
+  selector: 'discocan-driver-editor-page',
   imports: [DriverDrawer],
   providers: [DriversApi],
   template: `
-    <holita-driver-drawer
+    <discocan-driver-drawer
       [recordLinks]="recordLinks"
       [driver]="driver()"
       [startEditing]="editing"

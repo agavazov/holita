@@ -11,7 +11,7 @@ const meta: Meta = {
   title: 'Admin/Devices/SMS commands',
   tags: ['!autodocs'],
   parameters: {
-    holita: { signedIn: true, now: '2026-10-20T08:00:05.000Z' } satisfies StoryFixtures,
+    discocan: { signedIn: true, now: '2026-10-20T08:00:05.000Z' } satisfies StoryFixtures,
   },
 };
 export default meta;
@@ -21,7 +21,7 @@ function routed(): NonNullable<Story['render']> {
   return () => ({
     ...render(),
     moduleMetadata: { imports: [StoryApp, AdminWorkspace, ControlCenterWorkspace, SmsPage] },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 export const Default: Story = {
@@ -34,7 +34,7 @@ export const Narrow: Story = {
 export const ErrorState: Story = {
   name: 'Error',
   parameters: {
-    holita: {
+    discocan: {
       scenario: { failures: { AdminControlCenterSmsDevices: 'network' } },
     } satisfies StoryFixtures,
   },

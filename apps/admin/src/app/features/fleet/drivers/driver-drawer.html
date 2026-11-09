@@ -1,4 +1,4 @@
-<holita-route-drawer
+<discocan-route-drawer
   size="lg"
   [title]="title()"
   [subtitle]="subtitle()"
@@ -115,7 +115,7 @@
                   [style.--app-meter-value]="driver.score + '%'"
                   aria-hidden="true"
                 ></span>
-                <span class="app-cell-number">{{ driver.score | holitaNumber: 1 }}</span>
+                <span class="app-cell-number">{{ driver.score | discocanNumber: 1 }}</span>
               </span>
             } @else {
               —
@@ -124,7 +124,7 @@
         </div>
         <div>
           <dt>{{ text().trips }}</dt>
-          <dd>{{ driver.trips30d | holitaNumber }}</dd>
+          <dd>{{ driver.trips30d | discocanNumber }}</dd>
         </div>
         <div>
           <dt>{{ text().distance }}</dt>
@@ -174,7 +174,7 @@
       <section class="app-form-section">
         <h3>{{ text().contact }}</h3>
         <div class="app-form-grid">
-          <holita-form-field
+          <discocan-form-field
             [label]="text().firstName"
             controlId="driver-firstName"
             [required]="true"
@@ -189,8 +189,8 @@
               [attr.aria-invalid]="errorOf('firstName') ? 'true' : null"
               [attr.aria-describedby]="describedBy('firstName')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().lastName"
             controlId="driver-lastName"
             [required]="true"
@@ -205,8 +205,8 @@
               [attr.aria-invalid]="errorOf('lastName') ? 'true' : null"
               [attr.aria-describedby]="describedBy('lastName')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().employeeNo"
             controlId="driver-employeeNo"
             [error]="errorOf('employeeNo')"
@@ -220,8 +220,8 @@
               [attr.aria-invalid]="errorOf('employeeNo') ? 'true' : null"
               [attr.aria-describedby]="describedBy('employeeNo')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().identificationKey"
             controlId="driver-identificationKey"
             [error]="errorOf('identificationKey')"
@@ -234,8 +234,8 @@
               [attr.aria-invalid]="errorOf('identificationKey') ? 'true' : null"
               [attr.aria-describedby]="describedBy('identificationKey')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().status"
             controlId="driver-status"
             [error]="errorOf('status')"
@@ -256,8 +256,8 @@
                 },
               }"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().phone"
             controlId="driver-phone"
             [error]="errorOf('phone')"
@@ -271,8 +271,8 @@
               [attr.aria-invalid]="errorOf('phone') ? 'true' : null"
               [attr.aria-describedby]="describedBy('phone')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().email"
             controlId="driver-email"
             [error]="errorOf('email')"
@@ -286,14 +286,14 @@
               [attr.aria-invalid]="errorOf('email') ? 'true' : null"
               [attr.aria-describedby]="describedBy('email')"
             />
-          </holita-form-field>
+          </discocan-form-field>
         </div>
       </section>
 
       <section class="app-form-section">
         <h3>{{ text().documents }}</h3>
         <div class="app-form-grid">
-          <holita-form-field
+          <discocan-form-field
             [label]="text().licenseNumber"
             controlId="driver-licenseNumber"
             [error]="errorOf('licenseNumber')"
@@ -306,8 +306,8 @@
               [attr.aria-invalid]="errorOf('licenseNumber') ? 'true' : null"
               [attr.aria-describedby]="describedBy('licenseNumber')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().licenseCategories"
             controlId="driver-licenseCategories"
           >
@@ -322,8 +322,8 @@
               [ariaLabel]="text().licenseCategories"
               appendTo="body"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().license"
             controlId="driver-licenseExpiresOn"
             [error]="errorOf('licenseExpiresOn')"
@@ -337,8 +337,8 @@
               [invalid]="!!errorOf('licenseExpiresOn')"
               [pt]="datePt().licenseExpiresOn"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().tachographCardNumber"
             controlId="driver-tachographCardNumber"
             [error]="errorOf('tachographCardNumber')"
@@ -351,8 +351,8 @@
               [attr.aria-invalid]="errorOf('tachographCardNumber') ? 'true' : null"
               [attr.aria-describedby]="describedBy('tachographCardNumber')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().tachoCard"
             controlId="driver-tachoCardExpiresOn"
             [error]="errorOf('tachoCardExpiresOn')"
@@ -366,12 +366,12 @@
               [invalid]="!!errorOf('tachoCardExpiresOn')"
               [pt]="datePt().tachoCardExpiresOn"
             />
-          </holita-form-field>
+          </discocan-form-field>
         </div>
       </section>
 
       <section class="app-form-section">
-        <holita-form-field
+        <discocan-form-field
           [label]="text().notes"
           controlId="driver-notes"
           [error]="errorOf('notes')"
@@ -386,7 +386,7 @@
             [attr.aria-invalid]="errorOf('notes') ? 'true' : null"
             [attr.aria-describedby]="describedBy('notes')"
           ></textarea>
-        </holita-form-field>
+        </discocan-form-field>
       </section>
     </form>
   }
@@ -439,4 +439,4 @@
       }
     </div>
   }
-</holita-route-drawer>
+</discocan-route-drawer>

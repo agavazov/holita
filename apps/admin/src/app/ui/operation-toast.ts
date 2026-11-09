@@ -10,7 +10,7 @@ import { UI_LANGUAGE } from './ui-language';
 
 /** Shared operation feedback: announcements retain focus on the user's active control. */
 @Component({
-  selector: 'holita-operation-toast',
+  selector: 'discocan-operation-toast',
   imports: [Toast, Check, ExclamationTriangle, InfoCircle, Times, TimesCircle],
   templateUrl: './operation-toast.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

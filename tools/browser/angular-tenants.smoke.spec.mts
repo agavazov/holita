@@ -42,13 +42,13 @@ test('sign-in gates deep links and business reads, survives reload, clears on lo
   await page.goto(`${app.url}/en/${app.branchB.id}/fleet/devices/new?search=old`);
   await expect(page).toHaveURL(`${app.url}/en/${app.branchB.id}/fleet/devices/new?search=old`);
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
-  await expect(page.locator('holita-admin-shell')).toHaveCount(0);
+  await expect(page.locator('discocan-admin-shell')).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: 'Choose a fleet', exact: true })).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: /^Email/ })).toBeVisible();
   expect(business).toEqual([]);
   await signIn(page, app.account);
   await expect(page.getByRole('heading', { name: 'Choose a fleet', exact: true })).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem('holita.admin.session') !== null)).toBe(
+  expect(await page.evaluate(() => localStorage.getItem('discocan.admin.session') !== null)).toBe(
     true,
   );
   await page.reload();
@@ -64,7 +64,7 @@ test('sign-in gates deep links and business reads, survives reload, clears on lo
   );
   await expect(page.getByRole('heading', { name: app.branchA.name, exact: true })).toBeVisible();
   expect(business.length).toBeGreaterThan(0);
-  expect(business.every((header) => header.startsWith('Bearer holita-session.'))).toBe(true);
+  expect(business.every((header) => header.startsWith('Bearer discocan-session.'))).toBe(true);
   await page.getByRole('link', { name: 'Vehicles', exact: true }).click();
   const firstTenantVehicle = page.getByRole('button', { name: 'Open FIRST-TENANT', exact: true });
   await expect(firstTenantVehicle).toBeVisible();
@@ -77,14 +77,14 @@ test('sign-in gates deep links and business reads, survives reload, clears on lo
   await signOut(page);
   await expect(sibling.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
   await sibling.close();
-  expect(await page.evaluate(() => localStorage.getItem('holita.admin.session'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('discocan.admin.session'))).toBeNull();
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
-  expect(await page.evaluate(() => sessionStorage.getItem('holita.admin.session'))).toBeNull();
+  expect(await page.evaluate(() => sessionStorage.getItem('discocan.admin.session'))).toBeNull();
   const isolationAccount = await app.createAccount('01000000-0000-4000-8000-000000000002');
   await signIn(page, isolationAccount);
   await expect(
     page
-      .locator('holita-admin-topbar')
+      .locator('discocan-admin-topbar')
       .getByRole('button', { name: 'Branch: Isolation branch', exact: true }),
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Isolation branch', exact: true })).toBeVisible();
@@ -93,9 +93,9 @@ test('sign-in gates deep links and business reads, survives reload, clears on lo
   await expect(page.getByText('No vehicles yet', { exact: true })).toBeVisible();
   await expect(firstTenantVehicle).toHaveCount(0);
   const restored: unknown = await page.evaluate(() => {
-    const session: unknown = JSON.parse(localStorage.getItem('holita.admin.session') ?? 'null');
+    const session: unknown = JSON.parse(localStorage.getItem('discocan.admin.session') ?? 'null');
     return session;
   });
   expect(restored).toHaveProperty('tenant.id', '01000000-0000-4000-8000-000000000002');
-  expect(business.at(-1)).toMatch(/^Bearer holita-session\./);
+  expect(business.at(-1)).toMatch(/^Bearer discocan-session\./);
 });

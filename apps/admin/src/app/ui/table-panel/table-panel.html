@@ -110,7 +110,7 @@
       </div>
     }
     @case ('empty') {
-      <holita-empty-state
+      <discocan-empty-state
         kind="empty"
         [title]="emptyTitle() ?? text().table.emptyTitle"
         [description]="emptyDescription()"
@@ -118,10 +118,10 @@
         <ng-container ngProjectAs="[emptyActions]">
           <ng-content select="[emptyActions]" />
         </ng-container>
-      </holita-empty-state>
+      </discocan-empty-state>
     }
     @case ('no-results') {
-      <holita-empty-state
+      <discocan-empty-state
         kind="no-results"
         [title]="text().table.noResultsTitle"
         [description]="text().table.noResultsDescription"
@@ -136,10 +136,10 @@
         >
           {{ text().table.clearFilters }}
         </button>
-      </holita-empty-state>
+      </discocan-empty-state>
     }
     @case ('error') {
-      <holita-empty-state
+      <discocan-empty-state
         kind="error"
         [title]="text().table.errorTitle"
         [description]="errorText()"
@@ -147,7 +147,7 @@
         <button emptyActions pButton type="button" (click)="retry.emit()">
           {{ text().retry }}
         </button>
-      </holita-empty-state>
+      </discocan-empty-state>
     }
     @case ('rows-error') {
       <div class="table-panel__inline-error">

@@ -1,4 +1,4 @@
-<holita-route-drawer
+<discocan-route-drawer
   [title]="title()"
   [subtitle]="subtitle()"
   [state]="state()"
@@ -62,7 +62,7 @@
           <div>
             <dt>{{ text().duration }}</dt>
             <dd>
-              {{ (record.durationMin === null ? null : record.durationMin * 60) | holitaDuration }}
+              {{ (record.durationMin === null ? null : record.durationMin * 60) | discocanDuration }}
             </dd>
           </div>
           <div>
@@ -97,7 +97,7 @@
                     [style.--app-meter-value]="record.score + '%'"
                     aria-hidden="true"
                   ></span>
-                  <span>{{ record.score | holitaNumber }}</span>
+                  <span>{{ record.score | discocanNumber }}</span>
                 </span>
               } @else {
                 —
@@ -147,4 +147,4 @@
       }
     }
   </div>
-</holita-route-drawer>
+</discocan-route-drawer>

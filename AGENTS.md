@@ -1,4 +1,4 @@
-# holita coding guide
+# discocan coding guide
 
 Also read `AGENTS.local.md` at the repository root if it exists. This optional,
 Git-ignored file holds instructions specific to the local checkout, including
@@ -7,7 +7,7 @@ Keep shared rules in this guide and never put credential values in agent instruc
 
 ## Delivery policy
 
-holita is an internal test release. Deliver what was asked quickly and correctly. This policy
+discocan is an internal test release. Deliver what was asked quickly and correctly. This policy
 overrides more detailed guidance in documentation and skills.
 
 - Make the smallest change that solves the task. Add no speculative hardening, such as race
@@ -37,12 +37,12 @@ overrides more detailed guidance in documentation and skills.
 
 ## Product identity
 
-- The repository, current packages and infrastructure resources are named `holita`.
+- The repository, current packages and infrastructure resources are named `discocan`.
   Discocan and Ecommerce identify the separate domains documented below.
 - `red.bg` is a temporary domain used to present the service. It is not the product,
   package, namespace or infrastructure name. Preserve it only when it refers to the
   actual domain or a required compatibility reference.
-- Use `holita` / `@holita/*` / `holita_*` for product labels, packages and resource
+- Use `discocan` / `@discocan/*` / `discocan_*` for product labels, packages and resource
   names. Preserve legacy identifiers only in explicit migration/rollback guidance and
   historical local artifacts.
 - Rename existing resources together with their configuration and documentation. Preserve
@@ -52,7 +52,7 @@ overrides more detailed guidance in documentation and skills.
 ## Domain boundaries and instruction routing
 
 - This repository supports two distinct domains: Discocan (fleet telemetry) and Ecommerce
-  (online shops). Documentation separation does not rename current holita packages or resources.
+  (online shops). Documentation separation does not rename current discocan packages or resources.
 - For telemetry, Vehicles/Devices and the current Fleet admin, read the
   [Discocan documentation](docs/discocan/README.md) and apply the
   [Discocan instructions](docs/discocan/instructions.md).
@@ -142,10 +142,10 @@ overrides more detailed guidance in documentation and skills.
 - When the user authorizes a checkpoint in `.tmp/`, update it with progress, exact check results
   and next steps.
 - Skills:
-  - [validation](.agents/skills/holita-focused-validation/SKILL.md)
-  - [backend](.agents/skills/holita-backend-feature/SKILL.md)
-  - [Angular admin](.agents/skills/holita-admin-development/SKILL.md)
-  - [admin design system](.agents/skills/holita-admin-design-system/SKILL.md)
+  - [validation](.agents/skills/discocan-focused-validation/SKILL.md)
+  - [backend](.agents/skills/discocan-backend-feature/SKILL.md)
+  - [Angular admin](.agents/skills/discocan-admin-development/SKILL.md)
+  - [admin design system](.agents/skills/discocan-admin-design-system/SKILL.md)
 
 ## Project backlog
 
@@ -184,7 +184,7 @@ overrides more detailed guidance in documentation and skills.
 
 ## Angular admin (apps/admin)
 
-- Meridian is visual inspiration only. Do not copy its source, assets or dependencies into holita.
+- Meridian is visual inspiration only. Do not copy its source, assets or dependencies into discocan.
 - Never read, print or commit `apps/admin/public/config.local.json`.
 - Follow the official [angular-developer](.agents/skills/angular-developer/SKILL.md) skill for
   framework conventions, and the PrimeNG plugin/MCP for current component APIs.

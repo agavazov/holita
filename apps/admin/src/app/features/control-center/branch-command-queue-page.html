@@ -1,4 +1,4 @@
-<holita-page-header
+<discocan-page-header
   [title]="text().title"
   [moduleInfo]="
     catalog().moduleInfo.branchQueue.body + (!canOperate() ? ' ' + text().operatorRequired : '')
@@ -12,7 +12,7 @@
 <section class="app-card" [attr.aria-label]="text().batch">
   <h2>{{ text().batch }}</h2>
   <div class="app-form-grid" [formGroup]="batchForm">
-    <holita-form-field [label]="text().batchUnits" controlId="command-batch-units">
+    <discocan-form-field [label]="text().batchUnits" controlId="command-batch-units">
       <p-select
         inputId="command-batch-units"
         formControlName="deviceIds"
@@ -25,8 +25,8 @@
         [loading]="devicesLoading()"
         [placeholder]="text().batchUnits"
       />
-    </holita-form-field>
-    <holita-form-field [label]="text().batchAction" controlId="command-batch-action">
+    </discocan-form-field>
+    <discocan-form-field [label]="text().batchAction" controlId="command-batch-action">
       <p-select
         inputId="command-batch-action"
         formControlName="action"
@@ -34,11 +34,11 @@
         optionLabel="label"
         optionValue="value"
       />
-    </holita-form-field>
-    <holita-form-field [label]="text().intent" controlId="command-batch-intent">
+    </discocan-form-field>
+    <discocan-form-field [label]="text().intent" controlId="command-batch-intent">
       <input pInputText id="command-batch-intent" formControlName="intent" maxlength="200" />
-    </holita-form-field>
-    <holita-form-field [label]="text().expiry" controlId="command-batch-expiry">
+    </discocan-form-field>
+    <discocan-form-field [label]="text().expiry" controlId="command-batch-expiry">
       <input
         pInputText
         id="command-batch-expiry"
@@ -48,7 +48,7 @@
         max="1440"
         step="1"
       />
-    </holita-form-field>
+    </discocan-form-field>
   </div>
   @if (devicesError(); as error) {
     <p-message severity="warn">{{ error }}</p-message>
@@ -125,7 +125,7 @@
 </section>
 <section class="app-card" [attr.aria-label]="text().requests">
   <div class="app-form-grid">
-    <holita-form-field [label]="text().status" controlId="command-queue-status">
+    <discocan-form-field [label]="text().status" controlId="command-queue-status">
       <p-select
         inputId="command-queue-status"
         [options]="statusOptions()"
@@ -137,8 +137,8 @@
         [ngModel]="url.state().filter.statuses ?? []"
         (ngModelChange)="url.patchFilter({ statuses: $event })"
       />
-    </holita-form-field>
-    <holita-form-field [label]="text().unit" controlId="command-queue-unit">
+    </discocan-form-field>
+    <discocan-form-field [label]="text().unit" controlId="command-queue-unit">
       <p-select
         inputId="command-queue-unit"
         [options]="deviceOptions()"
@@ -152,10 +152,10 @@
         [ngModel]="url.state().filter.devices ?? []"
         (ngModelChange)="url.patchFilter({ devices: $event })"
       />
-    </holita-form-field>
+    </discocan-form-field>
   </div>
 </section>
-<holita-table-panel
+<discocan-table-panel
   #panel
   [heading]="text().requests"
   [view]="view()"
@@ -228,7 +228,7 @@
             >
           </div>
           <div class="app-table-mobile-actions">
-            <holita-row-actions
+            <discocan-row-actions
               [actions]="actions()"
               [record]="row.record"
               (choose)="panel.run($event.action, [row.record], $event.origin)"
@@ -276,7 +276,7 @@
           </div>
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-          <holita-row-actions
+          <discocan-row-actions
             [actions]="actions()"
             [record]="row.record"
             (choose)="panel.run($event.action, [row.record], $event.origin)"
@@ -285,8 +285,8 @@
       </tr>
     </ng-template>
   </p-table>
-</holita-table-panel>
-<holita-command-details
+</discocan-table-panel>
+<discocan-command-details
   [request]="selected()"
   [language]="language()"
   [target]="target(selected())"

@@ -12,7 +12,7 @@ export type EmptyStateKind =
 
 /** Icon, title, description and actions for every "nothing to show" situation. */
 @Component({
-  selector: 'holita-empty-state',
+  selector: 'discocan-empty-state',
   imports: [Ban, CheckCircle, ExclamationTriangle, Inbox, QuestionCircle, Search, Wifi],
   templateUrl: './empty-state.html',
   styleUrl: './empty-state.scss',

@@ -22,7 +22,7 @@ and installation-specific evidence limits.
 | [Observed eData parameters](observed-parameters.md)             | Thirteen encountered parameter IDs and original descriptions, with evidence and interpretation limits                                       |
 | [Web functionality research](web-functionality-research.md)     | 36 classic menu functions, safe action coverage, NC2 technical console, public/internal API links, calculations and reproduction conditions |
 | [Transport and authentication](transport-and-authentication.md) | Sessions, wire encoding, time semantics, errors, deadlines and cursor mechanics                                                             |
-| [Holita integration](holita-integration.md)                     | Concrete modules, 15 public queries, routes, frontend lifecycle and test ownership                                                          |
+| [DiscoCan integration](discocan-integration.md)                     | Concrete modules, 15 public queries, routes, frontend lifecycle and test ownership                                                          |
 | [Limitations](limitations.md)                                   | Current endpoint/field gaps, adapter assumptions and evidence limits                                                                        |
 | [Reconstructed OpenAPI 3.1](openapi.reconstructed.json)         | Machine-readable reference for 20 paths and 32 declared HTTP operations                                                                     |
 | [Original source assets](source/README.md)                      | Downloaded vendor help, checksums and structural response evidence                                                                          |
@@ -46,12 +46,12 @@ not the absence of a private or differently located vendor specification.
 OpenAPI specification.** Request fields come from the public form definitions and
 helper. Read response models combine structural observations with the values
 accepted by the current adapter. Unknown write responses and unobserved payloads
-remain unconstrained. The schema records provenance and `x-holita-implemented`
+remain unconstrained. The schema records provenance and `x-discocan-implemented`
 metadata; it is documentation, not an input to current code generation or runtime
 validation.
 
 The schema retains the vendor's multi-value form metadata and also accepts the
-single `car` query value used by holita's five telemetry GET reads. Read-model
+single `car` query value used by discocan's five telemetry GET reads. Read-model
 identity fields retain the non-null scalar types checked by the adapter; this
 does not infer an exhaustive vendor required-property list.
 
@@ -73,8 +73,8 @@ The documentation distinguishes:
   array proves no element model; a null-only field proves no non-null model.
 - **Device configuration observation:** a scoped command, device readback and
   subsequent telemetry establish behavior for the documented installation/profile,
-  not a universal device capability or a general holita command interface.
-- **Implemented behavior:** a rule enforced by the linked holita source and its
+  not a universal device capability or a general discocan command interface.
+- **Implemented behavior:** a rule enforced by the linked discocan source and its
   deterministic fixtures. It can be narrower than upstream capability.
 - **Unresolved behavior:** an explicit limitation linked to the backlog, rather
   than a guessed API promise.
@@ -97,7 +97,7 @@ writes, `/parameters`, global/profile changes, deletion, arbitrary device comman
 and accident reports. See the [catalog](endpoint-catalog.md) and
 [limitations](limitations.md) for the precise boundary.
 
-Every Karma GraphQL query requires holita's verified signed session, including
+Every Karma GraphQL query requires discocan's verified signed session, including
 the public upstream version. All authenticated Tenants see the same configured
 Karma account; Branch selection does not filter it. This is the current intentional
 Karma scope and does not change Fleet Tenant/Branch isolation. The demo login is

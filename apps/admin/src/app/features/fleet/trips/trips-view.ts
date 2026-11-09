@@ -58,8 +58,8 @@ export interface TripRow {
   readonly durationMin: number | null;
   readonly maxSpeedKph: number | null;
   readonly inProgress?: boolean;
-  /** Imported from holita's ERM device server. */
-  readonly holita?: boolean;
+  /** Imported from discocan's ERM device server. */
+  readonly discocan?: boolean;
   readonly fuelUsedL: number | null;
   readonly score: number | null;
   readonly events: readonly TripEvent[];
@@ -92,7 +92,7 @@ export function worstTone(events: readonly TripEvent[]): StatusTone {
  * the host owns data and list state.
  */
 @Component({
-  selector: 'holita-trips-view',
+  selector: 'discocan-trips-view',
   imports: [
     ChartLine,
     Clock,

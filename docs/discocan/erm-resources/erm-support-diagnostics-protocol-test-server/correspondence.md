@@ -11,7 +11,7 @@ was found with sender **Oz Dori, oz@erm.co.il**, subject **RE: Device diagnostic
 protocol access and StarLink Test Server**, received **2026-10-25 08:39:01 UTC**.
 The received timestamp does not establish an exact sending timestamp. The reference
 date, 2026-10-27, is the analysis date. Statements below are attributed to ERM; they do not
-establish successful live tests in holita.
+establish successful live tests in discocan.
 
 ## Original request
 

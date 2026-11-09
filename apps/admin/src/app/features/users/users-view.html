@@ -1,4 +1,4 @@
-<holita-page-header
+<discocan-page-header
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? rows().length : null"
   [moduleInfo]="text().moduleInfo"
@@ -8,7 +8,7 @@
   (action)="create.emit()"
 />
 
-<holita-table-panel
+<discocan-table-panel
   #panel
   mode="local"
   [heading]="text().heading"
@@ -82,7 +82,7 @@
             }
           </span>
           <span class="app-table-mobile-actions">
-            <holita-row-actions
+            <discocan-row-actions
               [actions]="actions()"
               [record]="recordOf(row)"
               (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -111,7 +111,7 @@
           </span>
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-          <holita-row-actions
+          <discocan-row-actions
             [actions]="actions()"
             [record]="recordOf(row)"
             (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -120,4 +120,4 @@
       </tr>
     </ng-template>
   </p-table>
-</holita-table-panel>
+</discocan-table-panel>

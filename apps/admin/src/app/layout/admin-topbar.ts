@@ -40,7 +40,7 @@ export interface ShellAccount {
  * (theme, sign out). The topbar reads no business data.
  */
 @Component({
-  selector: 'holita-admin-topbar',
+  selector: 'discocan-admin-topbar',
   imports: [RouterLink, MenuButton, NotificationBell, Bars, ChevronRight, InfoCircle],
   templateUrl: './admin-topbar.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -115,7 +115,7 @@ export class AdminTopbar {
     })),
   );
   protected readonly accountName = computed(
-    () => this.account()?.name ?? this.accountContext?.()?.name ?? this.tenantName() ?? 'holita',
+    () => this.account()?.name ?? this.accountContext?.()?.name ?? this.tenantName() ?? 'discocan',
   );
   protected readonly accountLabel = computed(() =>
     interpolate(this.text().account, { name: this.accountName() }),

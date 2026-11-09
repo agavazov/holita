@@ -1,9 +1,9 @@
-<holita-page-header [title]="text().title" [moduleInfo]="text().moduleInfo" />
+<discocan-page-header [title]="text().title" [moduleInfo]="text().moduleInfo" />
 
 @if (state() === 'error') {
-  <holita-empty-state kind="error" [title]="text().loadError" [description]="loadError()">
+  <discocan-empty-state kind="error" [title]="text().loadError" [description]="loadError()">
     <button emptyActions pButton type="button" (click)="retry.emit()">{{ text().retry }}</button>
-  </holita-empty-state>
+  </discocan-empty-state>
 } @else if (state() === 'loading' || !user()) {
   <p role="status">{{ text().loading }}</p>
 } @else {
@@ -24,7 +24,7 @@
         <p-message severity="success" role="status">{{ text().saved }}</p-message>
       }
       <div class="app-form-grid">
-        <holita-form-field
+        <discocan-form-field
           [label]="text().name"
           controlId="profile-name"
           [required]="true"
@@ -39,8 +39,8 @@
             [attr.aria-invalid]="errorOf('name') ? 'true' : null"
             aria-describedby="profile-name-hint profile-name-error"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().email"
           controlId="profile-email"
           [required]="true"
@@ -56,7 +56,7 @@
             [attr.aria-invalid]="errorOf('email') ? 'true' : null"
             aria-describedby="profile-email-hint profile-email-error"
           />
-        </holita-form-field>
+        </discocan-form-field>
       </div>
       <div class="app-inline">
         <button pButton type="submit" [loading]="saving()" [disabled]="busy()">
@@ -80,7 +80,7 @@
         <p-message severity="error" role="alert">{{ error }}</p-message>
       }
       <div class="app-form-grid">
-        <holita-form-field
+        <discocan-form-field
           class="app-form-grid--wide"
           [label]="text().currentPassword"
           controlId="profile-currentPassword"
@@ -97,8 +97,8 @@
             [attr.aria-invalid]="passwordErrorOf('currentPassword') ? 'true' : null"
             aria-describedby="profile-currentPassword-hint profile-currentPassword-error"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().newPassword"
           controlId="profile-newPassword"
           [required]="true"
@@ -115,8 +115,8 @@
             [attr.aria-invalid]="passwordErrorOf('newPassword') ? 'true' : null"
             aria-describedby="profile-newPassword-hint profile-newPassword-error"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().confirmPassword"
           controlId="profile-confirmPassword"
           [required]="true"
@@ -132,7 +132,7 @@
             [attr.aria-invalid]="passwordErrorOf('confirmPassword') ? 'true' : null"
             aria-describedby="profile-confirmPassword-hint profile-confirmPassword-error"
           />
-        </holita-form-field>
+        </discocan-form-field>
       </div>
       <div class="app-inline">
         <button pButton type="submit" [loading]="changingPassword()" [disabled]="busy()">

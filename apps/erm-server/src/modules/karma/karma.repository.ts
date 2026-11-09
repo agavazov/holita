@@ -3,7 +3,7 @@ import { PrismaService } from '../../database/prisma.service.js';
 import { Prisma, type ErmKarmaRouting } from '../../generated/prisma/client.js';
 import type { OperatorScope } from '../telemetry/operator-audit.js';
 
-const attemptRelations = { recovery: true, holitaConnection: true } as const;
+const attemptRelations = { recovery: true, discocanConnection: true } as const;
 
 export type KarmaAttempt = Prisma.ErmKarmaReturnAttemptGetPayload<{
   include: typeof attemptRelations;
@@ -45,8 +45,8 @@ export class KarmaRepository {
         notificationKind:
           data.state === 'KARMA_BACKUP'
             ? 'UNIT_ON_BACKUP'
-            : data.state === 'HOLITA' && previous?.state === 'KARMA_BACKUP'
-              ? 'UNIT_RETURNED_TO_HOLITA'
+            : data.state === 'DISCOCAN' && previous?.state === 'KARMA_BACKUP'
+              ? 'UNIT_RETURNED_TO_DISCOCAN'
               : null,
       },
     });
@@ -87,7 +87,7 @@ export class KarmaRepository {
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new ConflictException('A return to holita is already pending');
+        throw new ConflictException('A return to discocan is already pending');
       }
       throw error;
     }
@@ -120,7 +120,7 @@ export class KarmaRepository {
       where: { unitId, status: { not: 'FAILED' } },
       orderBy: { requestedAt: 'desc' },
     });
-    if (!attempt || attempt.holitaConnectionId !== null) {
+    if (!attempt || attempt.discocanConnectionId !== null) {
       return;
     }
     const [recovery, connection] = await Promise.all([
@@ -140,7 +140,7 @@ export class KarmaRepository {
       where: { id: attempt.id },
       data: {
         ...(recovery ? { recoverySessionId: recovery.id } : {}),
-        ...(connection ? { holitaConnectionId: connection.id } : {}),
+        ...(connection ? { discocanConnectionId: connection.id } : {}),
         ...(connection
           ? { status: 'RETURNED', pending: false }
           : recovery?.outcome === 'NEEDS_OPERATOR'

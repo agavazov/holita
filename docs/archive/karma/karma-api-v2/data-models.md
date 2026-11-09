@@ -1,6 +1,6 @@
 # Data models and field mapping
 
-This dictionary describes the current holita adapter, with structural observations in [response-shapes.json](source/response-shapes.json). GraphQL `!` describes holita nullability, not a formal vendor required-field guarantee. The [reconstructed schema](openapi.reconstructed.json) deliberately permits additional source fields.
+This dictionary describes the current discocan adapter, with structural observations in [response-shapes.json](source/response-shapes.json). GraphQL `!` describes discocan nullability, not a formal vendor required-field guarantee. The [reconstructed schema](openapi.reconstructed.json) deliberately permits additional source fields.
 
 ## Common validation rules
 
@@ -9,7 +9,7 @@ This dictionary describes the current holita adapter, with structural observatio
 - Optional scalar helpers generally turn absent/null into null and reject incompatible types. Required text may still be empty unless explicitly checked.
 - Finite numbers preserve 0. Numeric strings are not silently converted to metrics or IDs.
 - Timestamp fields are nullable strings matching YYYY-MM-DD HH:MM:SS. Response validators check the pattern, not full calendar validity; input validators also check calendar round trips.
-- Unknown object properties are generally ignored by holita. The driving-profile score object is an exception: exactly nine known categories are required.
+- Unknown object properties are generally ignored by discocan. The driving-profile score object is an exception: exactly nine known categories are required.
 - Arrays are validated as whole responses. A malformed record generally rejects the whole read rather than silently dropping a row. No upstream record cache or raw-payload archive exists.
 
 ## Cars (`KarmaCar`)
@@ -88,7 +88,7 @@ Direct upstream `GET /location` and `GET /events` reads can return numeric `vin`
 and `vbat` when explicitly selected with repeated `fields[]` query parameters.
 These fields were observed on the StarLink Scout vehicle under investigation,
 including messages received while the eData diagnostic ignition state was off.
-Holita's current location/event adapters and GraphQL models do not request or
+DiscoCan's current location/event adapters and GraphQL models do not request or
 expose them.
 
 The field interpretation follows the [flespi ERM parser reference](https://flespi.com/protocols/erm):
@@ -207,7 +207,7 @@ Sources: [SDL](../../../../apps/karma-client/src/modules/references/references.g
 | Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                             |
 | -------------- | ------------- | ------------ | ------------------------------------------------------------------------------ |
 | `project_id`   | `id`          | `ID!`        | Positive safe integer as text; duplicate IDs reject the complete list.         |
-| `name`         | `name`        | `String!`    | Required source string; no relation to holita Tenant/Branch names is inferred. |
+| `name`         | `name`        | `String!`    | Required source string; no relation to discocan Tenant/Branch names is inferred. |
 
 ## Time zones (`KarmaTimeZone`)
 
@@ -233,7 +233,7 @@ Sources: [SDL](../../../../apps/karma-client/src/modules/accounts/accounts.graph
 | Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                                                            |
 | -------------- | ------------- | ------------ | ------------------------------------------------------------------------------------------------------------- |
 | `user_id`      | `id`          | `ID!`        | Positive safe integer as text; duplicate user IDs reject the complete list.                                   |
-| `user_name`    | `userName`    | `String!`    | Required string, including empty text. Not a holita login identity.                                           |
+| `user_name`    | `userName`    | `String!`    | Required string, including empty text. Not a discocan login identity.                                           |
 | `active`       | `active`      | `Float!`     | Required finite numeric flag; 0 preserved, no enabled/disabled interpretation.                                |
 | `expire_date`  | `expireDate`  | `String`     | Null or string. Missing property is rejected; no timestamp-format or expiry-timezone interpretation.          |
 | `role_id`      | `roleId`      | `ID!`        | Positive safe integer as text. Role lookup does not grant admin permissions.                                  |
@@ -258,11 +258,11 @@ Sources: [SDL](../../../../apps/karma-client/src/modules/accounts/accounts.graph
 - **Drivers:** public help specifies create/update input fields (project_id, first_name, last_name, phone_number), but only an empty GET response was observed. A Driver response schema cannot be established from request names.
 - **Sensors:** observed envelope fields are car_id, carnumber, device_id, edt, message_id and sensors. The sensors property was null in the sample, so nested reading types, sensor identifiers, units and decoding are unknown.
 - **Configuration parameters:** /parameters is separate from /edata. Its cached/query results, value types, device reply and errors are unknown.
-- **Commands / queues:** single-device command submissions returned numeric queue-ID arrays. Single-ID queue reads returned objects keyed by the ID, with `state_id` and `state_desc`, including `1` / `transmitted`. These are limited upstream observations, not implemented holita models or a complete delivery/acknowledgment contract. See the [configuration reference](../../../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md#command-submission-and-responses).
+- **Commands / queues:** single-device command submissions returned numeric queue-ID arrays. Single-ID queue reads returned objects keyed by the ID, with `state_id` and `state_desc`, including `1` / `transmitted`. These are limited upstream observations, not implemented discocan models or a complete delivery/acknowledgment contract. See the [configuration reference](../../../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md#command-submission-and-responses).
 - **Black box:** accident report structure, encoding, units, sampling, authorization and discovery are unknown.
 - **Writes:** create/update/delete response shapes and success codes were not inferred from read responses.
 - **Addresses / decode:** requested-address payloads and decoded external-device data have not been observed or integrated.
 
 ## Relationship boundaries
 
-Karma car_id, project_id, user_id, role_id, driver_id and zone_id belong to the upstream account. Fleet UUIDs, tenantId, branchId and Device.imei belong to holita. There is no persistent identity mapping, automatic synchronization or cross-domain foreign key. Project memberships and role descriptions are reference data; they do not authorize holita access.
+Karma car_id, project_id, user_id, role_id, driver_id and zone_id belong to the upstream account. Fleet UUIDs, tenantId, branchId and Device.imei belong to discocan. There is no persistent identity mapping, automatic synchronization or cross-domain foreign key. Project memberships and role descriptions are reference data; they do not authorize discocan access.

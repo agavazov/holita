@@ -12,7 +12,7 @@ import {
 import { injectFleetNow } from './fleet-clock';
 
 @Component({
-  selector: 'holita-fleet-now',
+  selector: 'discocan-fleet-now',
   template: `
     <span class="live-cell">
       <span class="live-cell__text" [attr.title]="exact()">{{ activity() }}</span>

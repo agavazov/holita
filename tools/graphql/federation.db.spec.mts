@@ -270,7 +270,7 @@ describe('Fleet through the actual federation boundary', () => {
           ermFrames: {
             items: [
               {
-                direction: 'HOLITA',
+                direction: 'DISCOCAN',
                 command: '03',
                 reference: '900000001',
                 checksum: 'OK',

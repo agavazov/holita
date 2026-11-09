@@ -1,4 +1,4 @@
-<holita-page-header
+<discocan-page-header
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
   [moduleInfo]="text().moduleInfo"
@@ -7,40 +7,40 @@
 />
 
 @if (kpis(); as kpis) {
-  <holita-kpi-strip [label]="text().kpis.label">
-    <holita-kpi-tile
+  <discocan-kpi-strip [label]="text().kpis.label">
+    <discocan-kpi-tile
       [label]="text().kpis.overdue"
-      [value]="kpis.overdue | holitaNumber"
+      [value]="kpis.overdue | discocanNumber"
       [tone]="kpis.overdue ? 'danger' : null"
     >
       <svg kpiIcon data-p-icon="exclamation-triangle" />
-    </holita-kpi-tile>
-    <holita-kpi-tile
+    </discocan-kpi-tile>
+    <discocan-kpi-tile
       [label]="text().kpis.dueSoon"
-      [value]="kpis.dueSoon | holitaNumber"
+      [value]="kpis.dueSoon | discocanNumber"
       [footnote]="text().kpis.dueSoonFootnote"
       [tone]="kpis.dueSoon ? 'warn' : null"
     >
       <svg kpiIcon data-p-icon="clock" />
-    </holita-kpi-tile>
-    <holita-kpi-tile
+    </discocan-kpi-tile>
+    <discocan-kpi-tile
       [label]="text().kpis.planned"
-      [value]="kpis.planned | holitaNumber"
+      [value]="kpis.planned | discocanNumber"
       category="c1"
     >
       <svg kpiIcon data-p-icon="calendar" />
-    </holita-kpi-tile>
-    <holita-kpi-tile
+    </discocan-kpi-tile>
+    <discocan-kpi-tile
       [label]="text().kpis.cost"
-      [value]="kpis.costCents | holitaMoney"
+      [value]="kpis.costCents | discocanMoney"
       category="c2"
     >
       <svg kpiIcon data-p-icon="wallet" />
-    </holita-kpi-tile>
-  </holita-kpi-strip>
+    </discocan-kpi-tile>
+  </discocan-kpi-strip>
 }
 
-<holita-filter-builder
+<discocan-filter-builder
   [searchLabel]="text().search"
   [search]="state().search"
   [searchError]="searchError()"
@@ -51,7 +51,7 @@
   (conditionsChange)="changeConditions($event)"
 />
 
-<holita-table-panel
+<discocan-table-panel
   #panel
   [heading]="text().table.heading"
   [total]="total()"
@@ -72,7 +72,7 @@
   (retry)="retry.emit()"
   (clearSelection)="selectionChange.emit([])"
 >
-  <holita-list-sort-menu
+  <discocan-list-sort-menu
     panelActions
     [fields]="sortFields()"
     [sort]="state().sort"
@@ -183,7 +183,7 @@
               >
             </div>
             <div class="app-table-mobile-actions">
-              <holita-row-actions
+              <discocan-row-actions
                 [actions]="actions()"
                 [record]="recordOf(row)"
                 (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -234,7 +234,7 @@
           </span>
         </td>
         <td class="app-num">
-          <span class="app-cell-number">{{ row.costCents | holitaMoney }}</span>
+          <span class="app-cell-number">{{ row.costCents | discocanMoney }}</span>
         </td>
         <td class="app-col-secondary">
           @if (row.notes) {
@@ -244,7 +244,7 @@
           }
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-          <holita-row-actions
+          <discocan-row-actions
             [actions]="actions()"
             [record]="recordOf(row)"
             (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -253,4 +253,4 @@
       </tr>
     </ng-template>
   </p-table>
-</holita-table-panel>
+</discocan-table-panel>

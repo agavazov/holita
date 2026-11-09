@@ -9,11 +9,11 @@ import { primeNgTranslation } from '../../workspace/primeng-translation';
 import { Login } from './login';
 
 @Component({
-  selector: 'holita-sign-in-page',
+  selector: 'discocan-sign-in-page',
   imports: [Login],
   providers: [{ provide: UI_LANGUAGE, useFactory: () => inject(SignInPage).language }],
   template:
-    '<holita-login [language]="language()" [languageUrl]="otherLanguageUrl()" (signedIn)="enter($event)" />',
+    '<discocan-login [language]="language()" [languageUrl]="otherLanguageUrl()" (signedIn)="enter($event)" />',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SignInPage {
@@ -32,7 +32,7 @@ export class SignInPage {
     effect(() => {
       const language = this.language();
       document.documentElement.lang = language;
-      document.title = `${messages[language].signIn} · holita`;
+      document.title = `${messages[language].signIn} · discocan`;
       this.primeNG.setTranslation(primeNgTranslation(language, this.primeNG.translation.aria));
     });
     effect(() => {

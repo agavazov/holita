@@ -1,6 +1,6 @@
 enum ErmKarmaRoutingState {
   UNKNOWN
-  HOLITA
+  DISCOCAN
   KARMA_BACKUP
 }
 
@@ -22,13 +22,13 @@ type ErmKarmaReturnAttempt {
   "An uncertain submission stays pending; it is never automatically replayed."
   pending: Boolean!
   recovery: ErmRecoverySession
-  holitaConnectionId: ID
-  holitaConnectedAt: DateTime
+  discocanConnectionId: ID
+  discocanConnectedAt: DateTime
 }
 
 type ErmDeviceRouting {
   state: ErmKarmaRoutingState!
-  "First report after the last holita frame, if found in the bounded Karma lookup."
+  "First report after the last discocan frame, if found in the bounded Karma lookup."
   since: DateTime
   observedAt: DateTime
   latestKarmaReportAt: DateTime
@@ -44,5 +44,5 @@ extend type FleetDevice {
 
 extend type Mutation {
   "Engineer/Administrator only: request a parked backup unit's read-only recovery session."
-  returnErmDeviceToHolita(deviceId: ID!): ErmKarmaReturnAttempt!
+  returnErmDeviceToDiscoCan(deviceId: ID!): ErmKarmaReturnAttempt!
 }

@@ -29,11 +29,11 @@ import {
 } from './vehicle-profile-mapping';
 
 @Component({
-  selector: 'holita-vehicle-odometer-page',
+  selector: 'discocan-vehicle-odometer-page',
   imports: [OdometerDrawer],
   providers: [VehicleProfileApi],
   template: `
-    <holita-odometer-drawer
+    <discocan-odometer-drawer
       [plate]="record()?.fleetVehicle.licensePlate ?? '…'"
       [state]="state()"
       [loadError]="loadFailure()"

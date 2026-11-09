@@ -8,13 +8,13 @@ Source: [original endpoint definitions](source/endpoints.js.txt), [request helpe
 - `required` is the vendor form metadata, not independently established server validation.
 - A number control is not proof of an integer/range constraint; the helper collects most values as strings.
 - A multi-value field is an array in the helper JSON body. Selecting one switches GET to POST, even for some entries declared GET-only. That helper behavior is not proof of additional supported server methods.
-- The Multiple column describes the vendor form. Holita's location/trips/events/profile/eData GET reads use one scalar `car`; the reconstructed schema includes that wire form alongside the multi-value form.
+- The Multiple column describes the vendor form. DiscoCan's location/trips/events/profile/eData GET reads use one scalar `car`; the reconstructed schema includes that wire form alongside the multi-value form.
 - GET/DELETE put `karma_sid` in the query; POST/PUT put it in JSON, according to the helper. `/version` and `/login` are public entry points.
 - Dates use `YYYY-MM-DD HH:MM:SS`. Only events/eData have a documented `date_type=utc` selector in this help.
 - The helper substitutes the first populated field into `{id}`. Queue IDs are marked multi-value, but array-to-path semantics are unspecified.
 - No generic limit, page, offset, sort or total field is declared. Current 500-row observations do not establish every endpoint's cap.
 
-## Operations and holita coverage
+## Operations and discocan coverage
 
 | Method | Path               | Current use                                                                                    |
 | ------ | ------------------ | ---------------------------------------------------------------------------------------------- |
@@ -22,31 +22,31 @@ Source: [original endpoint definitions](source/endpoints.js.txt), [request helpe
 | POST   | `/login`           | Internal server authentication                                                                 |
 | GET    | `/cars`            | `karmaCars` (see parameter limitations below)                                                  |
 | GET    | `/cars/{id}`       | `karmaCar` (see parameter limitations below)                                                   |
-| POST   | `/cars`            | Not implemented in holita                                                                      |
-| PUT    | `/cars/{id}`       | Not implemented in holita                                                                      |
-| DELETE | `/cars/{id}`       | Not implemented in holita                                                                      |
-| GET    | `/drivers`         | Not implemented in holita                                                                      |
-| POST   | `/drivers`         | Not implemented in holita                                                                      |
-| PUT    | `/drivers/{id}`    | Not implemented in holita                                                                      |
-| DELETE | `/drivers/{id}`    | Not implemented in holita                                                                      |
+| POST   | `/cars`            | Not implemented in discocan                                                                      |
+| PUT    | `/cars/{id}`       | Not implemented in discocan                                                                      |
+| DELETE | `/cars/{id}`       | Not implemented in discocan                                                                      |
+| GET    | `/drivers`         | Not implemented in discocan                                                                      |
+| POST   | `/drivers`         | Not implemented in discocan                                                                      |
+| PUT    | `/drivers/{id}`    | Not implemented in discocan                                                                      |
+| DELETE | `/drivers/{id}`    | Not implemented in discocan                                                                      |
 | GET    | `/projects`        | `karmaProjects` (see parameter limitations below)                                              |
-| POST   | `/projects`        | Not implemented in holita                                                                      |
+| POST   | `/projects`        | Not implemented in discocan                                                                      |
 | GET    | `/users`           | `karmaUsers` (see parameter limitations below)                                                 |
 | GET    | `/location`        | `karmaLocation` (see parameter limitations below)                                              |
-| POST   | `/location`        | Not implemented in holita                                                                      |
+| POST   | `/location`        | Not implemented in discocan                                                                      |
 | GET    | `/trips`           | `karmaTrips` (see parameter limitations below)                                                 |
-| POST   | `/trips`           | Not implemented in holita                                                                      |
+| POST   | `/trips`           | Not implemented in discocan                                                                      |
 | GET    | `/events`          | `karmaEvents`, bounded `karmaDiagnosticHistory` (see parameter limitations below)              |
-| POST   | `/events`          | Not implemented in holita                                                                      |
-| GET    | `/sensors`         | Not implemented in holita                                                                      |
-| POST   | `/sensors`         | Not implemented in holita                                                                      |
+| POST   | `/events`          | Not implemented in discocan                                                                      |
+| GET    | `/sensors`         | Not implemented in discocan                                                                      |
+| POST   | `/sensors`         | Not implemented in discocan                                                                      |
 | GET    | `/driving-profile` | `karmaDrivingProfile` (see parameter limitations below)                                        |
-| POST   | `/driving-profile` | Not implemented in holita                                                                      |
-| GET    | `/parameters`      | Not implemented in holita                                                                      |
-| PUT    | `/parameters`      | Not implemented in holita                                                                      |
+| POST   | `/driving-profile` | Not implemented in discocan                                                                      |
+| GET    | `/parameters`      | Not implemented in discocan                                                                      |
+| PUT    | `/parameters`      | Not implemented in discocan                                                                      |
 | POST   | `/commands`        | Fixed internal parameter/profile/rule/logger/diagnostic reads and single-parameter/rule writes |
 | GET    | `/edata`           | `karmaEdata` (see parameter limitations below)                                                 |
-| GET    | `/black_box/{id}`  | Not implemented in holita                                                                      |
+| GET    | `/black_box/{id}`  | Not implemented in discocan                                                                      |
 | GET    | `/queue/{id}`      | Fixed internal diagnostic-operation reconciliation                                             |
 | GET    | `/time-zones`      | `karmaTimeZones` (see parameter limitations below)                                             |
 | GET    | `/roles`           | `karmaRoles` (see parameter limitations below)                                                 |
@@ -55,7 +55,7 @@ Source: [original endpoint definitions](source/endpoints.js.txt), [request helpe
 
 Get API version information (no authentication required).
 
-Upstream GET is public; holita still requires its signed admin session. Only version text is exposed.
+Upstream GET is public; discocan still requires its signed admin session. Only version text is exposed.
 
 No endpoint-specific request fields are declared (session handling is separate).
 
@@ -86,7 +86,7 @@ GET is implemented without any upstream filters. POST is not implemented; Fleet 
 
 Retrieve detailed information for a specific car.
 
-GET returns an array, not an object, in the observed service. Holita accepts one matching record or a missing result. PUT/DELETE are not implemented. Update metadata lists only registration/type/year/color, not device/project/time zone.
+GET returns an array, not an object, in the observed service. DiscoCan accepts one matching record or a missing result. PUT/DELETE are not implemented. Update metadata lists only registration/type/year/color, not device/project/time zone.
 
 | Field    | Location    | Form type | Required | Multiple | Options / format |
 | -------- | ----------- | --------- | -------- | -------- | ---------------- |
@@ -112,7 +112,7 @@ GET is implemented without any upstream filters. POST is not implemented; Fleet 
 
 Update information for an existing car.
 
-GET returns an array, not an object, in the observed service. Holita accepts one matching record or a missing result. PUT/DELETE are not implemented. Update metadata lists only registration/type/year/color, not device/project/time zone.
+GET returns an array, not an object, in the observed service. DiscoCan accepts one matching record or a missing result. PUT/DELETE are not implemented. Update metadata lists only registration/type/year/color, not device/project/time zone.
 
 | Field        | Location    | Form type | Required | Multiple | Options / format |
 | ------------ | ----------- | --------- | -------- | -------- | ---------------- |
@@ -126,7 +126,7 @@ GET returns an array, not an object, in the observed service. Holita accepts one
 
 Remove a car from the system.
 
-GET returns an array, not an object, in the observed service. Holita accepts one matching record or a missing result. PUT/DELETE are not implemented. Update metadata lists only registration/type/year/color, not device/project/time zone.
+GET returns an array, not an object, in the observed service. DiscoCan accepts one matching record or a missing result. PUT/DELETE are not implemented. Update metadata lists only registration/type/year/color, not device/project/time zone.
 
 | Field    | Location    | Form type | Required | Multiple | Options / format |
 | -------- | ----------- | --------- | -------- | -------- | ---------------- |
@@ -210,12 +210,12 @@ GET is implemented as the complete account list. project_id filtering is not exp
 
 Retrieve last known location data for vehicles.
 
-Holita uses GET with one scalar car and fields[]=spd, odo, edt_tz, pdt. It does not expose device/bulk/date/address selectors or POST. The help has no date_type selector here.
+DiscoCan uses GET with one scalar car and fields[]=spd, odo, edt_tz, pdt. It does not expose device/bulk/date/address selectors or POST. The help has no date_type selector here.
 
 For a direct upstream voltage read, use `GET /location` with `car` and repeated
 `fields[]=vin`, `fields[]=vbat`, `fields[]=edt_tz` selectors, plus the usual session
 authentication. These observed tracker fields are not currently exposed by
-holita. See [voltage meanings and freshness limits](data-models.md#additional-upstream-voltage-fields).
+discocan. See [voltage meanings and freshness limits](data-models.md#additional-upstream-voltage-fields).
 
 | Field       | Location                                | Form type | Required | Multiple | Options / format                      |
 | ----------- | --------------------------------------- | --------- | -------- | -------- | ------------------------------------- |
@@ -230,7 +230,7 @@ holita. See [voltage meanings and freshness limits](data-models.md#additional-up
 
 Retrieve historical trip data with filtering options.
 
-Holita uses GET for one car, paired optional wall-clock dates and internal to_id pagination over trip_id. from_id, bulk/device/project selectors and POST are not exposed. No provider timezone or batch cap is established.
+DiscoCan uses GET for one car, paired optional wall-clock dates and internal to_id pagination over trip_id. from_id, bulk/device/project selectors and POST are not exposed. No provider timezone or batch cap is established.
 
 | Field        | Location                                | Form type | Required | Multiple | Options / format    |
 | ------------ | --------------------------------------- | --------- | -------- | -------- | ------------------- |
@@ -246,7 +246,7 @@ Holita uses GET for one car, paired optional wall-clock dates and internal to_id
 
 Retrieve historical event data with filtering options.
 
-Holita uses GET for one car, date_type=utc, fields[] selections, paired dates, event_type[] codes and internal to_id pagination over message_id. from_id, address, decode, bulk/device/project selection and POST are not exposed.
+DiscoCan uses GET for one car, date_type=utc, fields[] selections, paired dates, event_type[] codes and internal to_id pagination over message_id. from_id, address, decode, bulk/device/project selection and POST are not exposed.
 
 The separate internal configuration reader fixes `event_type[]=33`, verifies the
 selected car/device identity and UTC window, and reads at most four descending-ID
@@ -278,7 +278,7 @@ see [the observed voltage fields](data-models.md#additional-upstream-voltage-fie
 
 Retrieve sensor data with filtering options.
 
-No holita transport, schema or page exists. Read samples show a message envelope whose sensors field is null; this does not establish usable sensor readings or their structure.
+No discocan transport, schema or page exists. Read samples show a message envelope whose sensors field is null; this does not establish usable sensor readings or their structure.
 
 | Field        | Location                                | Form type | Required | Multiple | Options / format    |
 | ------------ | --------------------------------------- | --------- | -------- | -------- | ------------------- |
@@ -295,7 +295,7 @@ No holita transport, schema or page exists. Read samples show a message envelope
 
 Retrieve driving profile analytics data.
 
-Holita uses GET for one car and requires a from/to wall-clock period. Bulk/device/project selection and POST are not exposed. Nine category score/weight pairs are preserved without a combined rating.
+DiscoCan uses GET for one car and requires a from/to wall-clock period. Bulk/device/project selection and POST are not exposed. Nine category score/weight pairs are preserved without a combined rating.
 
 | Field        | Location                                | Form type | Required | Multiple | Options / format    |
 | ------------ | --------------------------------------- | --------- | -------- | -------- | ------------------- |
@@ -333,7 +333,7 @@ Neither GET nor PUT is implemented. These are device configuration parameters, d
 
 Send command message to one or more devices.
 
-Holita constructs only command `301` with payload `0702BC` (parameter read), `1F`
+DiscoCan constructs only command `301` with payload `0702BC` (parameter read), `1F`
 (profile read), `0802BC` (rule read), `02` followed by exactly one 22-byte parameter
 definition, or `04` followed by exactly one supported rule record. Diagnostic reads
 add fixed `301`/`19` (stored fault logger) and `306` with an empty payload
@@ -356,7 +356,7 @@ separate Fleet workflow, which also supports one-rule changes with parameter/rul
 baselines and full-set verification; public Karma GraphQL queries have no write interface.
 Version/global requests remain manual procedures; fixed logger and communication
 diagnostic reads use the internal endpoints described above. Raw source events and illustrative Diagnostics
-screens have [separate evidence limits](holita-integration.md#diagnostic-evidence-and-product-coverage).
+screens have [separate evidence limits](discocan-integration.md#diagnostic-evidence-and-product-coverage).
 See the [configuration procedure and evidence limits](../../../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md).
 This does not establish a universal command catalog, permissions, bulk behavior,
 acknowledgment correlation, idempotency or delivery guarantees.
@@ -370,7 +370,7 @@ acknowledgment correlation, idempotency or delivery guarantees.
 
 Request the received eData parameters.
 
-Holita uses GET for one scalar car, date_type=utc, showdesc=1, optional paired dates, parameter_id[] and internal to_id. from_id, bulk/device/project selectors are not exposed. Help.js can switch this GET-only entry to POST when arrays are selected; that POST capability is not established.
+DiscoCan uses GET for one scalar car, date_type=utc, showdesc=1, optional paired dates, parameter_id[] and internal to_id. from_id, bulk/device/project selectors are not exposed. Help.js can switch this GET-only entry to POST when arrays are selected; that POST capability is not established.
 
 | Field          | Location | Form type | Required | Multiple | Options / format                     |
 | -------------- | -------- | --------- | -------- | -------- | ------------------------------------ |
@@ -389,7 +389,7 @@ Holita uses GET for one scalar car, date_type=utc, showdesc=1, optional paired d
 
 Request a specific accident report.
 
-No holita implementation or report sample. Accident ID is a text path value. No accident discovery/list endpoint or report schema is supplied in the help.
+No discocan implementation or report sample. Accident ID is a text path value. No accident discovery/list endpoint or report schema is supplied in the help.
 
 | Field         | Location    | Form type | Required | Multiple | Options / format |
 | ------------- | ----------- | --------- | -------- | -------- | ---------------- |
@@ -399,7 +399,7 @@ No holita implementation or report sample. Accident ID is a text path value. No 
 
 Get status of queued messages.
 
-Holita's internal diagnostic workflow reads retained numeric queue IDs before a
+DiscoCan's internal diagnostic workflow reads retained numeric queue IDs before a
 subsequent submission and while observing replies. Unknown states remain unknown;
 state `0` remains queued. Direct `GET /queue/{id}` reads for a single numeric ID
 returned an object keyed by that ID with `state_id` and `state_desc`. Observed states

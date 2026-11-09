@@ -182,7 +182,7 @@ fragment AdminControlCenterReturnAttempt on ErmKarmaReturnAttempt {
   requestedAt
   status
   pending
-  holitaConnectedAt
+  discocanConnectedAt
   recovery {
     id
     startedAt
@@ -191,8 +191,8 @@ fragment AdminControlCenterReturnAttempt on ErmKarmaReturnAttempt {
     reason
   }
 }
-mutation AdminControlCenterReturnToHolita($deviceId: ID!) {
-  returnErmDeviceToHolita(deviceId: $deviceId) {
+mutation AdminControlCenterReturnToDiscoCan($deviceId: ID!) {
+  returnErmDeviceToDiscoCan(deviceId: $deviceId) {
     ...AdminControlCenterReturnAttempt
   }
 }

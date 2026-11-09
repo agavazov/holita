@@ -7,7 +7,7 @@
 This is a transcription and analysis of the attached **Commands file FMS Rental
 Sofia 60 seconds time interval.txt**, containing **29 commands**, in original
 order. The export is a vendor-provided configuration recipe, not a record that
-holita executed every command. Read, configuration replacement, deletion, clear,
+discocan executed every command. Read, configuration replacement, deletion, clear,
 reset and counter writes are separate operations. The reference does not submit
 any of them. The existing product exposes only its documented fixed operations.
 
@@ -23,7 +23,7 @@ any of them. The existing product exposes only its documented fixed operations.
 
 ERM says all three are required to apply changes made using this export. This
 sequence replaces the whole parameter set and selects profile 343. It must not be
-silently substituted for holita's separately verified `02` operation that changes
+silently substituted for discocan's separately verified `02` operation that changes
 one captured definition and preserves the other definitions. The applicability
 of the three-command rule to that operation remains an explicit vendor question.
 

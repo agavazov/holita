@@ -71,10 +71,10 @@ const rows = [
  * feature data: the frame, sidebar, rail, topbar and mobile navigation are what this story shows.
  */
 @Component({
-  selector: 'holita-shell-preview',
+  selector: 'discocan-shell-preview',
   imports: [AdminShell, PageHeader, KpiStrip, KpiTile, TablePanel, TableModule, Tag],
   template: `
-    <holita-admin-shell
+    <discocan-admin-shell
       [branches]="branches()"
       [branchId]="branchId"
       [language]="language()"
@@ -87,19 +87,19 @@ const rows = [
       [navigation]="navigation()"
       [context]="context()"
     >
-      <holita-page-header
+      <discocan-page-header
         [title]="context()?.page ?? ''"
         [count]="46"
         moduleInfo="This module shows the selected fleet records. You can inspect their details and manage them according to your role."
         [actions]="[{ id: 'create', label: 'New vehicle', primary: true }]"
       />
-      <holita-kpi-strip label="Summary">
-        <holita-kpi-tile label="In operation" value="38" secondary="in service: 4" />
-        <holita-kpi-tile label="Distance, 7 days" value="18,420" unit="km" />
-        <holita-kpi-tile label="Open alerts" value="7" tone="danger" />
-        <holita-kpi-tile label="Low fuel" value="3" tone="warn" />
-      </holita-kpi-strip>
-      <holita-table-panel
+      <discocan-kpi-strip label="Summary">
+        <discocan-kpi-tile label="In operation" value="38" secondary="in service: 4" />
+        <discocan-kpi-tile label="Distance, 7 days" value="18,420" unit="km" />
+        <discocan-kpi-tile label="Open alerts" value="7" tone="danger" />
+        <discocan-kpi-tile label="Low fuel" value="3" tone="warn" />
+      </discocan-kpi-strip>
+      <discocan-table-panel
         heading="Vehicles"
         [total]="46"
         [view]="{ kind: 'rows' }"
@@ -128,8 +128,8 @@ const rows = [
             </tr>
           </ng-template>
         </p-table>
-      </holita-table-panel>
-    </holita-admin-shell>
+      </discocan-table-panel>
+    </discocan-admin-shell>
   `,
 })
 class ShellPreview {
@@ -207,7 +207,7 @@ type Story = StoryObj;
 
 const preview: NonNullable<Story['render']> = () => ({
   moduleMetadata: { imports: [ShellPreview] },
-  template: '<holita-shell-preview />',
+  template: '<discocan-shell-preview />',
 });
 
 /** A routed story of the workspace states (session, Branch discovery, Fleet availability). */
@@ -216,7 +216,7 @@ function routed(path: string): NonNullable<Story['render']> {
   return () => ({
     ...render(),
     moduleMetadata: { imports: [StoryApp] },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 
@@ -228,7 +228,7 @@ export const DashboardNavigation: Story = {
   name: 'Dashboard tabs keep Dashboard selected',
   render: () => ({
     moduleMetadata: { imports: [ShellPreview] },
-    template: '<holita-shell-preview section="dashboard/problems" />',
+    template: '<discocan-shell-preview section="dashboard/problems" />',
   }),
 };
 
@@ -236,7 +236,7 @@ export const DevicesNavigation: Story = {
   name: 'Devices navigation',
   render: () => ({
     moduleMetadata: { imports: [ShellPreview] },
-    template: '<holita-shell-preview section="devices" />',
+    template: '<discocan-shell-preview section="devices" />',
   }),
 };
 
@@ -244,7 +244,7 @@ export const SettingsNavigation: Story = {
   name: 'Settings navigation',
   render: () => ({
     moduleMetadata: { imports: [ShellPreview] },
-    template: '<holita-shell-preview section="settings/general" />',
+    template: '<discocan-shell-preview section="settings/general" />',
   }),
 };
 
@@ -252,30 +252,30 @@ export const GroupsNavigation: Story = {
   name: 'Vehicle groups keep Settings selected',
   render: () => ({
     moduleMetadata: { imports: [ShellPreview] },
-    template: '<holita-shell-preview section="settings/groups" />',
+    template: '<discocan-shell-preview section="settings/groups" />',
   }),
 };
 
 export const VehicleBreadcrumb: Story = {
   render: () => ({
     moduleMetadata: { imports: [ShellPreview] },
-    template: '<holita-shell-preview section="vehicles/vehicle-1/commands" />',
+    template: '<discocan-shell-preview section="vehicles/vehicle-1/commands" />',
   }),
 };
 
 export const DeviceBreadcrumb: Story = {
   render: () => ({
     moduleMetadata: { imports: [ShellPreview] },
-    template: '<holita-shell-preview section="devices/device-1/commands" />',
+    template: '<discocan-shell-preview section="devices/device-1/commands" />',
   }),
 };
 
 export const Rail: Story = {
   render: preview,
   beforeEach: () => {
-    localStorage.setItem('holita.admin.sidebar', 'rail');
+    localStorage.setItem('discocan.admin.sidebar', 'rail');
     return () => {
-      localStorage.removeItem('holita.admin.sidebar');
+      localStorage.removeItem('discocan.admin.sidebar');
     };
   },
 };
@@ -289,7 +289,7 @@ export const Mobile: Story = {
 export const FleetDisabled: Story = {
   name: 'Fleet disabled',
   render: routed(vehicles),
-  parameters: { holita: { fleetEnabled: false } satisfies StoryFixtures },
+  parameters: { discocan: { fleetEnabled: false } satisfies StoryFixtures },
 };
 
 export const UnknownBranch: Story = {
@@ -301,7 +301,7 @@ export const BranchDiscoveryLoading: Story = {
   name: 'Branch discovery loading',
   render: routed(vehicles),
   parameters: {
-    holita: { scenario: { failures: { AdminBranches: 'pending' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminBranches: 'pending' } } } satisfies StoryFixtures,
   },
 };
 
@@ -309,13 +309,13 @@ export const BranchDiscoveryError: Story = {
   name: 'Branch discovery error',
   render: routed(vehicles),
   parameters: {
-    holita: { scenario: { failures: { AdminBranches: 'network' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminBranches: 'network' } } } satisfies StoryFixtures,
   },
 };
 
 const longNamesPreview: NonNullable<Story['render']> = () => ({
   moduleMetadata: { imports: [ShellPreview] },
-  template: '<holita-shell-preview [longNames]="true" />',
+  template: '<discocan-shell-preview [longNames]="true" />',
 });
 
 export const LongNamesMobile: Story = {

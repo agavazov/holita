@@ -135,7 +135,7 @@
     "noAlerts": "No alerts",
     "deviceEvents": {
       "heading": "Device events",
-      "note": "Dated reports imported from holita: the unit's eData fault logger, CAN errors and switches to Karma's backup server. They are not alerts: nobody acknowledges or resolves them, and a cleared code does not prove a repair.",
+      "note": "Dated reports imported from discocan: the unit's eData fault logger, CAN errors and switches to Karma's backup server. They are not alerts: nobody acknowledges or resolves them, and a cleared code does not prove a repair.",
       "empty": "No device events.",
       "latest": "Showing the latest {shown} of {total}.",
       "occurred": "Date",
@@ -175,7 +175,7 @@
     "sources": {
       "DEMO": "Device data",
       "MANUAL": "Manual",
-      "ERM": "Device data (holita)"
+      "ERM": "Device data (discocan)"
     },
     "noPrevious": "No previous odometer reading.",
     "latestAllowed": "Latest allowed reading time",

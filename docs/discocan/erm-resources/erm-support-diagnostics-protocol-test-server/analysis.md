@@ -196,7 +196,7 @@ Do not infer the following from the fork statement:
 
 Before a routing test, obtain the actual endpoint/access details, who performs the fork, which side owns acknowledgements and commands, and how the original production routing is preserved/restored. Changing a production server address without the confirmed fork procedure could interrupt the current Karma connection. The engineer has offered a mechanism for avoiding that disruption, but the procedure is not included here.
 
-Receiving raw StarLink traffic on our own server is a separate integration path from the existing holita UI reading Karma API. A new receiver is needed only if that direct-server path is in scope; it is not a prerequisite to proving the existing Karma-based parameter editor.
+Receiving raw StarLink traffic on our own server is a separate integration path from the existing discocan UI reading Karma API. A new receiver is needed only if that direct-server path is in scope; it is not a prerequisite to proving the existing Karma-based parameter editor.
 
 ## Evidence categories and acceptance limits
 

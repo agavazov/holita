@@ -1,8 +1,8 @@
-@use 'styles/layers'; // only `@layer holita-reset, primeng, holita;`
+@use 'styles/layers'; // only `@layer discocan-reset, primeng, discocan;`
 @use 'styles/fonts'; // locally served Lato
 @use 'styles/breakpoint-properties'; // --app-bp-* once (the mixin module emits nothing)
-@use 'styles/reset'; // @layer holita-reset
-@use 'styles/base'; // @layer holita: document, headings, links, focus, skip link, reduced motion
-@use 'styles/shell'; // @layer holita: canvas, sidebar, frame, topbar, rail, mobile navigation
-@use 'styles/patterns'; // @layer holita: shared presentation classes
-@use 'styles/toast'; // @layer holita: operation feedback outside the page flow
+@use 'styles/reset'; // @layer discocan-reset
+@use 'styles/base'; // @layer discocan: document, headings, links, focus, skip link, reduced motion
+@use 'styles/shell'; // @layer discocan: canvas, sidebar, frame, topbar, rail, mobile navigation
+@use 'styles/patterns'; // @layer discocan: shared presentation classes
+@use 'styles/toast'; // @layer discocan: operation feedback outside the page flow

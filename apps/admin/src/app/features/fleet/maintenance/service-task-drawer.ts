@@ -72,7 +72,7 @@ const fieldOrder: readonly ServiceTaskField[] = [
  * and `saveError`.
  */
 @Component({
-  selector: 'holita-service-task-drawer',
+  selector: 'discocan-service-task-drawer',
   imports: [
     RouterLink,
     ReactiveFormsModule,

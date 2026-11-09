@@ -61,7 +61,7 @@ export type MaintenanceActionId = 'view' | 'edit' | 'complete' | 'cancel' | 'veh
  * data, list state and editing.
  */
 @Component({
-  selector: 'holita-maintenance-view',
+  selector: 'discocan-maintenance-view',
   imports: [
     Calendar,
     Clock,

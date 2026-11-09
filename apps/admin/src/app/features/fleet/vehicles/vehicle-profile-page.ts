@@ -74,11 +74,11 @@ const samePage = (left: ProfilePage, right: ProfilePage) =>
   left.page === right.page && left.pageSize === right.pageSize;
 
 @Component({
-  selector: 'holita-vehicle-profile-page',
+  selector: 'discocan-vehicle-profile-page',
   imports: [VehicleProfileView, RouterOutlet],
   providers: [VehicleProfileApi],
   template: `
-    <holita-vehicle-profile-view
+    <discocan-vehicle-profile-view
       [canOperate]="canOperate()"
       [branchId]="branch().id"
       [recordLinks]="recordLinks()"

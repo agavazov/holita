@@ -6,36 +6,36 @@ import { UI_LANGUAGE } from '../ui-language';
 import { fleetLiveText, hasFleetFaults, type FleetLiveDevice } from './fleet-live';
 
 @Component({
-  selector: 'holita-fleet-live-summary',
+  selector: 'discocan-fleet-live-summary',
   imports: [KpiStrip, KpiTile, FormatNumberPipe],
   template: `
-    <holita-kpi-strip [label]="text().summary" [loading]="loading()">
-      <holita-kpi-tile
+    <discocan-kpi-strip [label]="text().summary" [loading]="loading()">
+      <discocan-kpi-tile
         [label]="text().online"
-        [value]="counts().online | holitaNumber"
+        [value]="counts().online | discocanNumber"
         tone="success"
       />
-      <holita-kpi-tile
+      <discocan-kpi-tile
         [label]="text().overdue"
-        [value]="counts().overdue | holitaNumber"
+        [value]="counts().overdue | discocanNumber"
         tone="warn"
       />
-      <holita-kpi-tile
+      <discocan-kpi-tile
         [label]="text().backup"
-        [value]="counts().backup | holitaNumber"
+        [value]="counts().backup | discocanNumber"
         tone="warn"
       />
-      <holita-kpi-tile
+      <discocan-kpi-tile
         [label]="text().withFaults"
-        [value]="counts().faults | holitaNumber"
+        [value]="counts().faults | discocanNumber"
         tone="danger"
       />
-      <holita-kpi-tile
+      <discocan-kpi-tile
         [label]="unassigned() === 'vehicles' ? text().withoutDevice : text().unassigned"
-        [value]="counts().unassigned | holitaNumber"
+        [value]="counts().unassigned | discocanNumber"
         tone="neutral"
       />
-    </holita-kpi-strip>
+    </discocan-kpi-strip>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-view' },

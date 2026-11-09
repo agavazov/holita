@@ -2,13 +2,13 @@
 // `--p-app-*` tokens; only the breakpoints switch layouts.
 @use 'breakpoints' as bp;
 
-@layer holita {
-  holita-admin-shell,
-  holita-admin-topbar {
+@layer discocan {
+  discocan-admin-shell,
+  discocan-admin-topbar {
     display: block;
   }
 
-  holita-admin-sidebar {
+  discocan-admin-sidebar {
     display: flex;
     flex: 1 0 auto;
     flex-direction: column;

@@ -1,11 +1,11 @@
 {
-  "name": "@holita/erm-server",
+  "name": "@discocan/erm-server",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "nest build",
-    "dev": "ERM_ROLE=api PORT=11017 node --env-file-if-exists=/home/sysadmin/.config/holita/erm-server.env ../../node_modules/@nestjs/cli/bin/nest.js start --watch",
+    "dev": "ERM_ROLE=api PORT=11017 node --env-file-if-exists=/home/sysadmin/.config/discocan/erm-server.env ../../node_modules/@nestjs/cli/bin/nest.js start --watch",
     "start:prod": "node dist/main.js",
     "redecode": "node dist/redecode.js",
     "edata-change": "node dist/edata-change.js",

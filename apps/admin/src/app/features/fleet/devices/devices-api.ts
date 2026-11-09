@@ -67,7 +67,7 @@ export class DevicesApi implements OnDestroy {
     });
   }
 
-  /** The live holita state is a separate request, so an unavailable device server keeps the list. */
+  /** The live discocan state is a separate request, so an unavailable device server keeps the list. */
   async live(ids: readonly string[]) {
     if (!this.apollo || this.destroyed) {
       throw new Error('An active Devices workspace is required.');

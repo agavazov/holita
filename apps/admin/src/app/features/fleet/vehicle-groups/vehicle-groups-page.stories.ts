@@ -9,7 +9,7 @@ import { VehicleGroupEditorPage } from './vehicle-group-editor-page';
 const meta: Meta = {
   title: 'Admin/System/Settings/Vehicle groups',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: true } satisfies StoryFixtures },
 };
 export default meta;
 type Story = StoryObj;
@@ -25,7 +25,7 @@ function routed(suffix = ''): NonNullable<Story['render']> {
   return () => ({
     ...render(),
     moduleMetadata: { imports: [StoryApp, AdminWorkspace, FleetWorkspace, VehicleGroupEditorPage] },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 
@@ -40,7 +40,7 @@ export const SecondPage: Story = {
 export const Loading: Story = {
   render: routed(),
   parameters: {
-    holita: {
+    discocan: {
       scenario: { failures: { AdminVehicleGroupsList: 'pending' } },
     } satisfies StoryFixtures,
   },
@@ -54,7 +54,7 @@ export const ErrorState: Story = {
   name: 'Error',
   render: routed(),
   parameters: {
-    holita: {
+    discocan: {
       scenario: { failures: { AdminVehicleGroupsList: 'network' } },
     } satisfies StoryFixtures,
   },

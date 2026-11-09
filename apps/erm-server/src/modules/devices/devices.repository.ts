@@ -69,7 +69,7 @@ export class DevicesRepository {
         direction: {
           device: ErmDirection.DEVICE,
           server: ErmDirection.UPSTREAM,
-          holita: ErmDirection.HOLITA,
+          discocan: ErmDirection.DISCOCAN,
         }[entry.from],
         unitId: entry.unit ?? null,
         command: entry.command ?? null,

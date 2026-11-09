@@ -6,7 +6,7 @@ import { FleetWorkspace } from '../features/fleet/fleet-workspace';
 import { AdminWorkspace } from './admin-workspace';
 
 @Component({
-  selector: 'holita-devices-workspace',
+  selector: 'discocan-devices-workspace',
   imports: [FleetWorkspace, Message],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-view' },
@@ -14,7 +14,7 @@ import { AdminWorkspace } from './admin-workspace';
     @if (query().get('hint') === 'choose-device-sms') {
       <p-message severity="info">{{ workspace.text().chooseDeviceSms }}</p-message>
     }
-    <holita-fleet-workspace />
+    <discocan-fleet-workspace />
   `,
 })
 export class DevicesWorkspace {

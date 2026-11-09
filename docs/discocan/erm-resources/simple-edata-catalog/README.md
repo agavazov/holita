@@ -27,7 +27,7 @@ Run from the repository root. Set the EXE and independent operator-supplied labe
 ```bash
 exe='resources/discocan/Simple eData FMS Monitor/Simple eData FMS Monitor v9.56.exe'
 label='v9.56'
-work=$(mktemp -d -t holita-edata-XXXXXX)
+work=$(mktemp -d -t discocan-edata-XXXXXX)
 node --import tsx tools/erm-edata/catalog.mts inspect "$exe" > "$work/inspection.json"
 ```
 
@@ -84,7 +84,7 @@ masters/ranges remain available beside each follower.
 
 ## Migrate, preview, import and verify
 
-The CLI supports only the local development database `holita_fleet` using the Fleet
+The CLI supports only the local development database `discocan_fleet` using the Fleet
 role and `apps/fleet/.env`/`FLEET_DATABASE_URL` through the existing connection config.
 Other/nonlocal databases and URL options are rejected. Passwords are never logged.
 Provision PostgreSQL and development/test roles using [workspace setup](../../../development.md#postgresql-and-prisma).

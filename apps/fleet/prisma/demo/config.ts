@@ -41,9 +41,9 @@ export function demoOptions(args: readonly string[], environment: DemoEnvironmen
   } catch {
     throw new Error('Fleet demo seed requires valid local database and Core URLs.');
   }
-  const development = database.pathname === '/holita_fleet' && database.username === 'holita_fleet';
+  const development = database.pathname === '/discocan_fleet' && database.username === 'discocan_fleet';
   const test =
-    database.pathname === '/holita_fleet_test' && database.username === 'holita_fleet_test';
+    database.pathname === '/discocan_fleet_test' && database.username === 'discocan_fleet_test';
   const schema = database.searchParams.get('schema') ?? 'public';
   if (
     !['postgres:', 'postgresql:'].includes(database.protocol) ||
@@ -57,7 +57,7 @@ export function demoOptions(args: readonly string[], environment: DemoEnvironmen
     (test && !/^test_[0-9a-f]{32}$/.test(schema))
   ) {
     throw new Error(
-      'Fleet demo seed requires local holita_fleet development scope or an isolated holita_fleet_test schema.',
+      'Fleet demo seed requires local discocan_fleet development scope or an isolated discocan_fleet_test schema.',
     );
   }
   if (

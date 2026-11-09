@@ -1,5 +1,5 @@
 <section class="app-view">
-  <holita-page-header
+  <discocan-page-header
     [title]="title()"
     [moduleInfo]="moduleInfo().body"
     [moduleInfoTitle]="tabTitle()"
@@ -39,11 +39,11 @@
                     </div>
                     <div>
                       <dt>{{ text().deviceStatus.lastSignal }}</dt>
-                      <dd><holita-fleet-last-report [device]="device" /></dd>
+                      <dd><discocan-fleet-last-report [device]="device" /></dd>
                     </div>
                     <div>
                       <dt>{{ text().now }}</dt>
-                      <dd><holita-fleet-now [device]="device" /></dd>
+                      <dd><discocan-fleet-now [device]="device" /></dd>
                     </div>
                     <div>
                       <dt>{{ text().deviceStatus.socket }}</dt>
@@ -127,7 +127,7 @@
                           toneSeverity(
                             routing.state === 'KARMA_BACKUP'
                               ? 'warn'
-                              : routing.state === 'HOLITA'
+                              : routing.state === 'DISCOCAN'
                                 ? 'success'
                                 : 'neutral'
                           )
@@ -181,9 +181,9 @@
                             </dd>
                           </div>
                           <div>
-                            <dt>{{ text().deviceStatus.holitaConnectedAt }}</dt>
-                            <dd [title]="fmt.utc(attempt.holitaConnectedAt)">
-                              {{ fmt.dateTime(attempt.holitaConnectedAt, true) }}
+                            <dt>{{ text().deviceStatus.discocanConnectedAt }}</dt>
+                            <dd [title]="fmt.utc(attempt.discocanConnectedAt)">
+                              {{ fmt.dateTime(attempt.discocanConnectedAt, true) }}
                             </dd>
                           </div>
                         </dl>
@@ -216,7 +216,7 @@
                               returnDisabledReason() ? 'erm-return-disabled' : null
                             "
                             [attr.title]="returnDisabledReason()"
-                            (click)="returnToHolita()"
+                            (click)="returnToDiscoCan()"
                           >
                             {{ text().deviceStatus.returnButton }}
                           </button>
@@ -370,7 +370,7 @@
                   </section>
                 </div>
                 @defer (on immediate) {
-                  <holita-location-map
+                  <discocan-location-map
                     [language]="language()"
                     [title]="text().position"
                     [records]="mapRecords()"
@@ -388,7 +388,7 @@
                 }
               }
               @case ('problems') {
-                <holita-fleet-current-warnings
+                <discocan-fleet-current-warnings
                   [warnings]="device.currentWarnings"
                   [language]="language()"
                 />
@@ -398,7 +398,7 @@
                     fmt.dateTimeRange(problems()?.counts?.periodFrom, problems()?.counts?.periodTo)
                   }}
                 </p>
-                <holita-table-panel
+                <discocan-table-panel
                   #problemsPanel
                   [heading]="faultText().history"
                   [view]="problemView()"
@@ -485,7 +485,7 @@
                             }
                           </div>
                           <div class="app-table-mobile-actions">
-                            <holita-row-actions
+                            <discocan-row-actions
                               [actions]="actions()"
                               [record]="record(row.id, problemLabel(row))"
                               (choose)="
@@ -542,7 +542,7 @@
                           </div>
                         </td>
                         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-                          <holita-row-actions
+                          <discocan-row-actions
                             [actions]="actions()"
                             [record]="record(row.id, problemLabel(row))"
                             (choose)="
@@ -556,15 +556,15 @@
                         </td></tr
                     ></ng-template>
                   </p-table>
-                </holita-table-panel>
-                <holita-fleet-fault-coverage
+                </discocan-table-panel>
+                <discocan-fleet-fault-coverage
                   [lamps]="device.warningLamps"
                   [hasFaultReports]="hasFaultReports()"
                   [language]="language()"
                 />
               }
               @case ('commands') {
-                <holita-device-command-queue
+                <discocan-device-command-queue
                   [deviceId]="recordId()"
                   [language]="language()"
                   [target]="unitName()"
@@ -576,7 +576,7 @@
                 @if (!canOperate()) {
                   <p-message severity="info">{{ text().branchQueue.operatorRequired }}</p-message>
                 } @else {
-                  <holita-control-center-sms
+                  <discocan-control-center-sms
                     [branchId]="branchId()"
                     [language]="language()"
                     [deviceId]="recordId()"
@@ -591,7 +591,7 @@
                       : text().settings.primaryRequired
                   }}</p-message>
                 }
-                <holita-device-settings
+                <discocan-device-settings
                   [deviceId]="recordId()"
                   [language]="language()"
                   [target]="unitName()"
@@ -614,7 +614,7 @@
                     </button>
                   </div>
                 </section>
-                <holita-table-panel
+                <discocan-table-panel
                   #snapshotsPanel
                   mode="cursor"
                   [heading]="text().snapshots.history"
@@ -693,7 +693,7 @@
                             </button>
                           </div>
                           <div class="app-table-mobile-actions">
-                            <holita-row-actions
+                            <discocan-row-actions
                               [actions]="actions()"
                               [record]="record(row.id, fmt.dateTime(row.startedAt))"
                               (choose)="
@@ -723,7 +723,7 @@
                           <span class="app-cell-number">{{ number(row.changes.length) }}</span>
                         </td>
                         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-                          <holita-row-actions
+                          <discocan-row-actions
                             [actions]="actions()"
                             [record]="record(row.id, fmt.dateTime(row.startedAt))"
                             (choose)="
@@ -737,7 +737,7 @@
                         </td></tr
                     ></ng-template>
                   </p-table>
-                </holita-table-panel>
+                </discocan-table-panel>
               }
               @default {
                 <p-tabs [value]="tab()" (valueChange)="selectTab($event)">
@@ -751,7 +751,7 @@
                     <p-tabpanel [value]="tab()">
                       <div class="app-tab-content">
                         @if (tab() === 'events') {
-                          <holita-filter-builder
+                          <discocan-filter-builder
                             [searchLabel]="text().tabs.events"
                             [searchable]="false"
                             [fields]="eventFields()"
@@ -789,7 +789,7 @@
                                 </button>
                               }
                             </div>
-                          </holita-filter-builder>
+                          </discocan-filter-builder>
                         } @else {
                           <div
                             class="control-center__actions"
@@ -848,7 +848,7 @@
                             }
                           </div>
                         }
-                        <holita-table-panel
+                        <discocan-table-panel
                           #technicalPanel
                           mode="cursor"
                           [heading]="tab() === 'events' ? text().tabs.events : text().tabs.frames"
@@ -944,7 +944,7 @@
                                     }}</span>
                                   </div>
                                   <div class="app-table-mobile-actions">
-                                    <holita-row-actions
+                                    <discocan-row-actions
                                       [actions]="actions()"
                                       [record]="
                                         record(
@@ -1003,7 +1003,7 @@
                                   </div>
                                 </td>
                                 <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-                                  <holita-row-actions
+                                  <discocan-row-actions
                                     [actions]="actions()"
                                     [record]="
                                       record(
@@ -1024,7 +1024,7 @@
                                 </td></tr
                             ></ng-template>
                           </p-table>
-                        </holita-table-panel>
+                        </discocan-table-panel>
                         <details class="app-card">
                           <summary>{{ text().detail.registryTechnical }}</summary>
                           <dl class="app-facts">
@@ -1085,7 +1085,7 @@
   } @else if (deviceLoading()) {
     <p-skeleton height="12rem" />
   } @else {
-    <holita-empty-state kind="error" [title]="failure()" />
+    <discocan-empty-state kind="error" [title]="failure()" />
   }
 </section>
 <p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }"
@@ -1248,7 +1248,7 @@
               </ul>
             </section>
           }
-          <holita-table-panel
+          <discocan-table-panel
             mode="local"
             [heading]="text().snapshots.changes"
             [view]="detail.value.changes.length ? { kind: 'rows' } : { kind: 'empty' }"
@@ -1302,8 +1302,8 @@
                 </tr></ng-template
               ></p-table
             >
-          </holita-table-panel>
-          <holita-table-panel
+          </discocan-table-panel>
+          <discocan-table-panel
             mode="local"
             [heading]="text().snapshots.values"
             [view]="detail.value.values.length ? { kind: 'rows' } : { kind: 'empty' }"
@@ -1354,7 +1354,7 @@
                 </tr></ng-template
               ></p-table
             >
-          </holita-table-panel>
+          </discocan-table-panel>
           <details class="app-card">
             <summary>{{ text().detail.tabs['technical-details'] }}</summary>
             <dl class="app-facts">

@@ -48,7 +48,7 @@ export function loginFixtures(
     return {
       demoLogin: {
         __typename: 'DemoSession',
-        token: `holita-demo.${tenant.id}.4102444800.${'storybook_fixture_signature_'.padEnd(43, '0')}`,
+        token: `discocan-demo.${tenant.id}.4102444800.${'storybook_fixture_signature_'.padEnd(43, '0')}`,
         tenant,
       },
     };

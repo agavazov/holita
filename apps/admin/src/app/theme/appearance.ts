@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable, signal } from '@angular/core';
 
-const storageKey = 'holita.admin.theme';
+const storageKey = 'discocan.admin.theme';
 
 @Injectable({ providedIn: 'root' })
 export class Appearance {

@@ -12,7 +12,7 @@
       "schematics": {},
       "root": "",
       "sourceRoot": "src",
-      "prefix": "holita",
+      "prefix": "discocan",
       "architect": {
         "build": {
           "builder": "@angular/build:application",

@@ -17,7 +17,7 @@ export interface FieldCounter {
  * `ariaLabelledBy="<id>-label"`.
  */
 @Component({
-  selector: 'holita-form-field',
+  selector: 'discocan-form-field',
   imports: [Message],
   templateUrl: './form-field.html',
   styleUrl: './form-field.scss',

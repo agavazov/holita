@@ -48,4 +48,4 @@ This is a marketing/specification reference with a version inconsistency. It doe
 
 ## Conversion coverage
 
-All **3 PDF pages** are represented in [content.md](content.md). The [image catalog](images.md) contains **5 described assets**. The original PDF remains the authority for layout, screenshot microtext and ambiguous source wording. This reference describes the supplied vendor document; it does not change holita behavior or verify the present-day vendor service.
+All **3 PDF pages** are represented in [content.md](content.md). The [image catalog](images.md) contains **5 described assets**. The original PDF remains the authority for layout, screenshot microtext and ambiguous source wording. This reference describes the supplied vendor document; it does not change discocan behavior or verify the present-day vendor service.

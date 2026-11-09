@@ -15,8 +15,8 @@ traffic, but it has no application-owned persistence for connection and frame in
 
 ## Decision
 
-Add one independent NestJS host application, `apps/erm-server` (`@holita/erm-server`), with its own
-`holita_erm` database, login role, Prisma client and migrations. Run compiled output as a separate
+Add one independent NestJS host application, `apps/erm-server` (`@discocan/erm-server`), with its own
+`discocan_erm` database, login role, Prisma client and migrations. Run compiled output as a separate
 service outside `npm run dev` and `npm run kill`. HTTP exposes health and an internal API on
 loopback protected by a bearer token; the device listener uses a separate TCP port.
 The same HTTP listener exposes a schema-first read-only subgraph through Router. It verifies
@@ -24,15 +24,15 @@ the shared signed session and exposes provider-level data without Branch filteri
 shows units and their events, raw frames and command history; it has no command-sending UI.
 
 Units stay in byte-for-byte mirror mode unless selected by `ERM_PRIMARY_UNITS`. In primary mode,
-holita acknowledges configured device messages and sends allowlisted commands through the internal
+discocan acknowledges configured device messages and sends allowlisted commands through the internal
 API. Karma remains connected for mirrored ingestion, authentication answers and its own commands;
-duplicate acknowledgements and device confirmations of holita's commands are filtered. Whole-frame device writes
+duplicate acknowledgements and device confirmations of discocan's commands are filtered. Whole-frame device writes
 share one queue.
 
-The application asynchronously records connections, exact frames (including holita's), command
+The application asynchronously records connections, exact frames (including discocan's), command
 outcomes and decoded device events. Database or decoding errors do not interrupt forwarding or
 acknowledgements. Private daily JSON Lines captures retain the relay's record format, adding
-`holita` as a frame origin. These provider-level records have no Tenant/Branch columns. Fleet
+`discocan` as a frame origin. These provider-level records have no Tenant/Branch columns. Fleet
 business records retain their existing scope.
 
 This is the smallest application boundary that gives device sessions an independent lifecycle and

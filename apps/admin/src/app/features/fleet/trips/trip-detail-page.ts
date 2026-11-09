@@ -23,11 +23,11 @@ import { TripDrawer } from './trip-drawer';
 import { tripRow } from './trip-mapping';
 import { TripsApi } from './trips-api';
 @Component({
-  selector: 'holita-trip-detail-page',
+  selector: 'discocan-trip-detail-page',
   imports: [TripDrawer],
   providers: [TripsApi],
   template:
-    '<holita-trip-drawer [recordLinks]="recordLinks" [trip]="trip()" [state]="state()" [loadError]="failure()" [closeLink]="listLink" (retry)="retry.next()" (openVehicle)="openVehicle($event)" />',
+    '<discocan-trip-drawer [recordLinks]="recordLinks" [trip]="trip()" [state]="state()" [loadError]="failure()" [closeLink]="listLink" (retry)="retry.next()" (openVehicle)="openVehicle($event)" />',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TripDetailPage implements OnInit {

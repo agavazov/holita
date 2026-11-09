@@ -42,7 +42,7 @@ import {
 import { MaintenanceView, type MaintenanceActionId } from './maintenance-view';
 import { maintenanceKpis, serviceTaskRow } from './service-task-mapping';
 @Component({
-  selector: 'holita-maintenance-page',
+  selector: 'discocan-maintenance-page',
   providers: [MaintenanceApi, MaintenanceChoices],
   imports: [MaintenanceView, RouterOutlet, Message, ButtonDirective],
   template: `
@@ -62,7 +62,7 @@ import { maintenanceKpis, serviceTaskRow } from './service-task-mapping';
         </button></p-message
       >
     }
-    <holita-maintenance-view
+    <discocan-maintenance-view
       [recordLinks]="recordLinks()"
       [branchName]="branch().name"
       [rows]="rows()"

@@ -1,5 +1,5 @@
 import { Args, Context, Mutation, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import type { MutationReturnErmDeviceToHolitaArgs } from '../../generated/graphql/types.js';
+import type { MutationReturnErmDeviceToDiscoCanArgs } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import type { DeviceReference } from '../telemetry/telemetry.service.js';
 import { KarmaService } from './karma.service.js';
@@ -13,9 +13,9 @@ export class KarmaResolver {
     return this.karma.deviceRouting(device, context);
   }
 
-  @Mutation('returnErmDeviceToHolita')
-  returnToHolita(
-    @Args() args: MutationReturnErmDeviceToHolitaArgs,
+  @Mutation('returnErmDeviceToDiscoCan')
+  returnToDiscoCan(
+    @Args() args: MutationReturnErmDeviceToDiscoCanArgs,
     @Context() context: RequestContext,
   ) {
     return this.karma.requestReturn(args.deviceId, context);

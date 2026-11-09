@@ -12,7 +12,7 @@ export interface RecoveryResult {
   peer: string;
   startedAt: Date;
   finishedAt: Date;
-  outcome: 'ALREADY_HOLITA' | 'NEEDS_OPERATOR';
+  outcome: 'ALREADY_DISCOCAN' | 'NEEDS_OPERATOR';
   reason: string;
   primaryHost: string | null;
   primaryPort: string | null;
@@ -120,12 +120,12 @@ export class RecoveryListener {
             }
             const primaryHost = values.get('49') ?? null;
             const primaryPort = values.get('50') ?? null;
-            const alreadyHolita = primaryHost === '65.108.137.165' && primaryPort === '11500';
+            const alreadyDiscoCan = primaryHost === '65.108.137.165' && primaryPort === '11500';
             finish(
-              alreadyHolita ? 'ALREADY_HOLITA' : 'NEEDS_OPERATOR',
-              alreadyHolita
-                ? 'Primary routing already points to holita; nothing was written.'
-                : 'Primary routing differs from holita or the routing read was incomplete; nothing was written.',
+              alreadyDiscoCan ? 'ALREADY_DISCOCAN' : 'NEEDS_OPERATOR',
+              alreadyDiscoCan
+                ? 'Primary routing already points to discocan; nothing was written.'
+                : 'Primary routing differs from discocan or the routing read was incomplete; nothing was written.',
               primaryHost,
               primaryPort,
             );

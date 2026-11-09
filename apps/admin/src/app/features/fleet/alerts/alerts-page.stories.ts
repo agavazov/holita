@@ -10,7 +10,7 @@ import { AlertDetailPage } from './alert-detail-page';
 const meta: Meta = {
   title: 'Admin/Dashboard/Problems',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: true } satisfies StoryFixtures },
 };
 export default meta;
 type Story = StoryObj;
@@ -22,7 +22,7 @@ function routed(suffix = ''): NonNullable<Story['render']> {
     moduleMetadata: {
       imports: [StoryApp, AdminWorkspace, DashboardWorkspace, ProblemsPage, AlertDetailPage],
     },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 export const Default: Story = {
@@ -35,7 +35,7 @@ export const ErrorState: Story = {
   name: 'Error',
   render: routed(),
   parameters: {
-    holita: {
+    discocan: {
       scenario: { failures: { AdminDashboardProblems: 'network' } },
     } satisfies StoryFixtures,
   },
@@ -43,7 +43,7 @@ export const ErrorState: Story = {
 export const Loading: Story = {
   render: routed(),
   parameters: {
-    holita: {
+    discocan: {
       scenario: { failures: { AdminDashboardProblems: 'pending' } },
     } satisfies StoryFixtures,
   },

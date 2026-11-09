@@ -92,7 +92,7 @@ function signal(pid: number, value: NodeJS.Signals | 0): boolean {
 }
 
 if (targets.size === 0) {
-  console.log('No running holita applications found.');
+  console.log('No running discocan applications found.');
 } else {
   for (const pid of targets) {
     signal(pid, 'SIGTERM');
@@ -111,5 +111,5 @@ if (targets.size === 0) {
   for (const pid of targets) {
     signal(pid, 'SIGKILL');
   }
-  console.log('Stopped holita applications and their watchers. PostgreSQL remains running.');
+  console.log('Stopped discocan applications and their watchers. PostgreSQL remains running.');
 }

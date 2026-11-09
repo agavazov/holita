@@ -5,9 +5,9 @@ replacement parity. Read it only when relevant to the current task. It is exclud
 repository-wide documentation updates and does not define current product behavior or authorize
 repeating old device commands, tests or account actions.
 
-- [Karma](karma/README.md): API/interface sources, historical holita integration, former backlogs
+- [Karma](karma/README.md): API/interface sources, historical discocan integration, former backlogs
   and the device-management handoff. Karma code remains in place, deprecated and view-only until
-  holita recreates every needed function.
+  discocan recreates every needed function.
 
 Current protocol, hardware and ERM correspondence references remain in
 [Discocan ERM resources](../discocan/erm-resources/README.md). Active engineering work belongs to

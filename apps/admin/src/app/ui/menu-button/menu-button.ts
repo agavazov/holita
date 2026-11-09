@@ -62,7 +62,7 @@ let nextId = 0;
  * a filterable picker instead.
  */
 @Component({
-  selector: 'holita-menu-button',
+  selector: 'discocan-menu-button',
   imports: [Menu, Check, ChevronDown, RouterLink],
   templateUrl: './menu-button.html',
   styleUrl: './menu-button.scss',

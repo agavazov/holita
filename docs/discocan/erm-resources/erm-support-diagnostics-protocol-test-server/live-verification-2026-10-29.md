@@ -2,7 +2,7 @@
 
 Campaign date: **2026-10-29**. User-facing times use Europe/Sofia (UTC+2 on this date); tables explicitly use **UTC**. [Current register](README.md#verification-register) · [Reply analysis](reply-2026-10-29.md) · [Machine-readable evidence](source/2026-10-29-diagnostic-evidence.json).
 
-**Result: real vehicle fault data can be read through Karma and holita’s existing Gateway.** Independently retrieved CB1147TP event `7177124308` contains two added SPN/FMI records; a separate current-day event `7179721665` contains a third. Both exact raw records passed through `karmaEvents`. Fresh fixed logger requests reached five of the ten trucks and produced negative special ACKs; five remained queued at the observation cutoff. Additional fixed diagnostic reads produced five actual `411` responses. These are separate outcomes.
+**Result: real vehicle fault data can be read through Karma and discocan’s existing Gateway.** Independently retrieved CB1147TP event `7177124308` contains two added SPN/FMI records; a separate current-day event `7179721665` contains a third. Both exact raw records passed through `karmaEvents`. Fresh fixed logger requests reached five of the ten trucks and produced negative special ACKs; five remained queued at the observation cutoff. Additional fixed diagnostic reads produced five actual `411` responses. These are separate outcomes.
 
 ## Positive fault evidence through the actual project
 

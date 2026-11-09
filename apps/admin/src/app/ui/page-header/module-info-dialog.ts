@@ -6,7 +6,7 @@ import { ModuleInfo } from './module-info';
 
 /** One dialog host in the shell for both module-information entry points. */
 @Component({
-  selector: 'holita-module-info-dialog',
+  selector: 'discocan-module-info-dialog',
   imports: [Dialog],
   template: `
     <p-dialog

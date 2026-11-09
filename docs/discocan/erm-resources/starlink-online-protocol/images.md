@@ -6,7 +6,7 @@
 Analysis date: **2026-10-16** (Europe/Sofia). The following user-supplied screenshots
 are preserved without pixel changes. Their capture dates and capturing account
 are unknown. They are source evidence, not screenshots of a session accessed by
-holita or during this analysis.
+discocan or during this analysis.
 
 ## Home page
 

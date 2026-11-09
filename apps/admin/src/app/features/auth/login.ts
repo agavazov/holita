@@ -31,7 +31,7 @@ import bg from './login.bg.json';
 import en from './login.en.json';
 
 @Component({
-  selector: 'holita-login',
+  selector: 'discocan-login',
   imports: [
     RouterLink,
     ReactiveFormsModule,
@@ -99,7 +99,7 @@ export class Login {
       const token = this.sessionToken();
       untracked(() => {
         const current = this.session.current();
-        if (token?.startsWith('holita-session.') && current) {
+        if (token?.startsWith('discocan-session.') && current) {
           this.loadBranches(current, this.language());
         } else if (!token) {
           this.closeBranches?.();
@@ -265,7 +265,7 @@ export class Login {
     this.branchesLoading.set(false);
     this.failure.set(null);
     this.form.enable();
-    if (session?.token.startsWith('holita-session.')) {
+    if (session?.token.startsWith('discocan-session.')) {
       this.session.logout();
     }
   }

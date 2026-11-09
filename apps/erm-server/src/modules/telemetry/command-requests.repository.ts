@@ -286,7 +286,7 @@ export class CommandRequestsRepository {
     const frames = commands.length
       ? await this.prisma.client.ermFrame.findMany({
           where: {
-            direction: 'HOLITA',
+            direction: 'DISCOCAN',
             partial: false,
             OR: commands.map((command) => ({
               unitId: command.unitId,

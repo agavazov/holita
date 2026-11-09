@@ -11,7 +11,7 @@ if [[ "$(uname -s)" != 'Linux' || "$(uname -m)" != 'x86_64' ]]; then
 fi
 
 router_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-download_dir="$(mktemp -d -t holita-router.XXXXXXXX)"
+download_dir="$(mktemp -d -t discocan-router.XXXXXXXX)"
 readonly router_dir download_dir
 trap 'rm -rf -- "$download_dir"' EXIT
 

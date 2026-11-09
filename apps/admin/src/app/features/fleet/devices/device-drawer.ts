@@ -68,7 +68,7 @@ const fieldOrder: readonly DeviceField[] = [
 
 /** Device registration and installation editor. Live diagnostics belong to the device page. */
 @Component({
-  selector: 'holita-device-drawer',
+  selector: 'discocan-device-drawer',
   imports: [
     ReactiveFormsModule,
     ButtonDirective,

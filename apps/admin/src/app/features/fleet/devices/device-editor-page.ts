@@ -28,10 +28,10 @@ import { DevicesApi } from './devices-api';
 import { devicesText } from './i18n/messages';
 
 @Component({
-  selector: 'holita-device-editor-page',
+  selector: 'discocan-device-editor-page',
   imports: [DeviceDrawer],
   providers: [DevicesApi, DeviceChoices],
-  template: `<holita-device-drawer
+  template: `<discocan-device-drawer
     [device]="row()"
     [value]="value()"
     [state]="state()"

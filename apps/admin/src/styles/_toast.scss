@@ -1,6 +1,6 @@
 @use 'breakpoints' as bp;
 
-@layer holita {
+@layer discocan {
   .app-toast {
     --app-toast-inset: var(--p-app-gutter);
     --app-toast-top: calc(

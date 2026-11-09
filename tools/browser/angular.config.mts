@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-const screenshots = process.env['HOLITA_BROWSER_SCREENSHOTS'] === '1';
+const screenshots = process.env['DISCOCAN_BROWSER_SCREENSHOTS'] === '1';
 
 export default defineConfig({
   testDir: '.',

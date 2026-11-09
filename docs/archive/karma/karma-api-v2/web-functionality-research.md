@@ -2,7 +2,7 @@
 
 Research date: **2026-10-27**. Scope: the supplied Karma web account, the separately
 stored API connection, all **36 visible classic-web submenu entries**, the 14
-search-help topics, the accessible **NC2** interface and the existing holita
+search-help topics, the accessible **NC2** interface and the existing discocan
 integration. The follow-up pass opened the menu destinations, inspected safe
 drill-downs and canceled unsaved editors. This is a research report and a proposed
 functional specification, not an implementation or certification of every role,
@@ -14,7 +14,7 @@ credential, permission or device configuration was saved or changed.
 The API supplies enough data for vehicle discovery, locations, trip lists,
 distance reports, eData charts and substantial event/behavior analysis. A
 functional equivalent can also include our own POIs, geofences, notifications,
-fuel records, service records and tires. Those require holita-owned records and
+fuel records, service records and tires. Those require discocan-owned records and
 processing; their existence does not imply synchronization with Karma's records.
 
 Three distinctions matter:
@@ -67,7 +67,7 @@ Supporting sources:
 
 - [Endpoint catalog](endpoint-catalog.md), [field dictionary](data-models.md),
   [transport/time/cursor rules](transport-and-authentication.md),
-  [parameter metadata](observed-parameters.md) and [integration boundaries](holita-integration.md).
+  [parameter metadata](observed-parameters.md) and [integration boundaries](discocan-integration.md).
 - Current [admin routes](../../../../apps/admin/src/app/features/karma-client/karma.routes.ts),
   [history service](../../../../apps/karma-client/src/modules/history/history.service.ts),
   [history SDL](../../../../apps/karma-client/src/modules/history/history.graphql)
@@ -133,7 +133,7 @@ The latency probe's event window was a UTC day, while the report comparison used
 the provider's wall-clock trip day. No event-to-web parity is claimed across those
 different windows. Browser screens were inspected, but live screenshots/private
 transcripts were not exported into the repository. Historical illustrations are
-linked above. The running holita GraphQL/admin was not exercised for parity;
+linked above. The running discocan GraphQL/admin was not exercised for parity;
 its baseline was inspected in source.
 
 ### Daily report source proof
@@ -202,16 +202,16 @@ activation/password changes, Send, output controls, firmware/configuration actio
 and scheduled delivery were not executed. PDF/Excel/CSV contents were not
 downloaded or compared. Those limits are not counted as successful action tests.
 
-## API methods and the existing holita boundary
+## API methods and the existing discocan boundary
 
 Paths below are relative to `https://karma.online/apiv2/`. Authentication stays in
 the existing server connection. Query recipes omit session values deliberately.
 
-| Method                                                 | Inputs relevant to reproduction                                                                                      | Current holita use / required extension                                                                                                                                       |
+| Method                                                 | Inputs relevant to reproduction                                                                                      | Current discocan use / required extension                                                                                                                                       |
 | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /cars`, `GET /cars/{id}`                          | Optional list project/car/device selectors; detail path ID.                                                          | `karmaCars` / `karmaCar` exist. Lists currently load the account array and filter locally. Raw driver identities and several metadata fields are not exposed.                 |
-| `GET /projects`, `/time-zones`                         | Reference lists.                                                                                                     | Existing queries resolve names and timezone IDs. A project is not automatically a holita Branch.                                                                              |
-| `GET /users`, `/roles`                                 | Optional project selector for users.                                                                                 | Existing read-only account views; roles are reference data, not holita authorization grants.                                                                                  |
+| `GET /projects`, `/time-zones`                         | Reference lists.                                                                                                     | Existing queries resolve names and timezone IDs. A project is not automatically a discocan Branch.                                                                              |
+| `GET /users`, `/roles`                                 | Optional project selector for users.                                                                                 | Existing read-only account views; roles are reference data, not discocan authorization grants.                                                                                  |
 | `GET /drivers`                                         | Optional `project_id`.                                                                                               | No Karma driver query/mapper yet. Empty responses provide no nonempty row schema. Local Fleet Drivers are separate records.                                                   |
 | `GET /location`                                        | Scalar `car`; repeated `fields[]` such as `spd`, `odo`, `edt_tz`, `pdt`, `vin`, `vbat`; documented address selector. | `karmaLocation` exists with fixed fields. Voltages, addresses and bulk selection need a specific extension and mapping.                                                       |
 | `POST /location`                                       | JSON car-ID array and selected fields.                                                                               | Two-car read verified. No current bulk GraphQL operation; do not issue one request per map marker when a proven bulk read is available.                                       |
@@ -240,7 +240,7 @@ not call vendor endpoints directly or receive vendor sessions.
 
 ## Calculation rules
 
-These rules specify proposed holita behavior. A source field or sample relationship
+These rules specify proposed discocan behavior. A source field or sample relationship
 is identified explicitly; an unverified Karma formula is not silently replaced.
 
 | Rule                  | Calculation and qualification                                                                                                                                                                                                                                                                                                                        |
@@ -254,7 +254,7 @@ is identified explicitly; an unverified Karma formula is not silently replaced.
 | C07: consumption/cost | After units and coverage are known, L/100 km = 100 × liters used / distance in km. Estimated cost = distance/100 × configured L/100 km × configured price/L. Actual receipt cost needs recorded prices/amounts; volume alone is insufficient. Missing inputs yield no estimate.                                                                      |
 | C08: gauges/charts    | Show latest reading with its own timestamp; min/max describe the covered samples. Separate CAN oil/coolant, external temperature channels, tracker supply voltage and tracker internal battery. Do not substitute one sensor family for another.                                                                                                     |
 | C09: odometer/hours   | Use a chosen source counter and its unit. CAN 152 is labeled meters; API envelope `odo` and trip metrics have separate semantics. Engine counter 64 differs from ignition-on duration. Deltas require the same counter/source segment.                                                                                                               |
-| C10: behavior         | Count events by proven maneuver/severity and period. Events per 100 km is a possible explicitly holita-defined metric after distance units are known. Keep vendor score/weight pairs intact; an arithmetic or weighted average is not proven to equal Karma's grade.                                                                                 |
+| C10: behavior         | Count events by proven maneuver/severity and period. Events per 100 km is a possible explicitly discocan-defined metric after distance units are known. Keep vendor score/weight pairs intact; an arithmetic or weighted average is not proven to equal Karma's grade.                                                                                 |
 | C11: geography        | For nearest vehicles/POIs and circular geofences, use coordinate distance with an explicit meter/km unit. Straight-line proximity is not road distance or ETA. Entry/exit/dwell derived from sampled positions has the resolution of those samples.                                                                                                  |
 | C12: freshness        | Age = current UTC time − a proven source event timestamp. Show age/last report time. A selected stale threshold is our rule, not proof of provider disconnection; `pdt` is not a verified substitute.                                                                                                                                                |
 | C13: local records    | Service due dates/odometers compare the next target with the agreed business date/odometer. Tire mileage accumulates fitted-use segments. Fuel receipts, service records and tire history are independently stored business facts.                                                                                                                   |
@@ -436,7 +436,7 @@ Vehicle-level results remain useful and must not be relabeled as driver results.
 - **API:** `/trips.max_speed`, `/events.spd` and confirmed overspeed event types;
   `/drivers` for attribution.
 - **Calculate:** maximum of reported maxima; overspeed counts/durations only from
-  a verified event definition or an explicitly holita-defined sampled threshold.
+  a verified event definition or an explicitly discocan-defined sampled threshold.
   Do not infer the maximum between sparse samples.
 - **Show:** maximum-speed KPI, speed chart, threshold control and event/map list.
 - **Condition:** source `spd` units and a legal/road speed limit are separate
@@ -486,7 +486,7 @@ Vehicle-level results remain useful and must not be relabeled as driver results.
   map and ordered stop list. The live five-stage wizard is Name/Dates/Vehicle →
   Start Place → End Place → Places → Advised Route, with an optional Notifications
   checkbox. Its Start Place step offered the empty POI list and Add new POI.
-- **Condition:** plans/assignments would be holita-owned unless ERM supplies a
+- **Condition:** plans/assignments would be discocan-owned unless ERM supplies a
   supported management contract. Route notifications are an additional local
   workflow, not a reason to submit arbitrary device commands. End/place/route
   results were not generated: that would first require a saved POI in this account.
@@ -501,7 +501,7 @@ Vehicle-level results remain useful and must not be relabeled as driver results.
   visit history links back to the source messages and selected period. The live
   list/editor exposes Address, Name, Description, Radius in meters, Color and
   View; the route selector also shows Fleet. A blank POI draft was canceled.
-- **Condition:** this can be a holita feature without mirroring Karma's POI list.
+- **Condition:** this can be a discocan feature without mirroring Karma's POI list.
   Import/export and sharing scope need a selected requirement, not an assumed API.
 
 ### R03 — Geofence
@@ -578,11 +578,11 @@ No notification or message was sent during this research.
   sustained duration, dates/weekdays/time or Forever, message text, popup Info/ACK
   and color. The inspected Notify By step offered Email Message; do not advertise
   SMS availability merely because a historical guide or hidden template mentions it.
-- **Condition:** create holita-owned rules or obtain an ERM rule-management
+- **Condition:** create discocan-owned rules or obtain an ERM rule-management
   contract. The device rule editor is a different workflow; do not repurpose its
   device writes for application email/push rules. The vendor's optional Command
   to Send Automatically field is a separate device-control capability and must
-  not become an unrestricted text field in holita.
+  not become an unrestricted text field in discocan.
 
 ## Settings: twelve functions
 
@@ -596,7 +596,7 @@ No notification or message was sent during this research.
   The live empty table also had birth date, driver ID, code, created and photo.
 - **Condition:** declared writes cover names/phone/project, not every visible
   field or vehicle assignment. Obtain a nonempty driver schema and explain which
-  fields would remain in holita. Existing local Fleet Drivers are not synchronized.
+  fields would remain in discocan. Existing local Fleet Drivers are not synchronized.
 
 ### S02 — Vehicles
 
@@ -605,7 +605,7 @@ No notification or message was sent during this research.
 - **Calculate:** reference labels, assigned-driver count and local list filters.
   Do not infer an identity from registration or map every device ID to a Fleet IMEI.
 - **Show:** reuse the current truck list/detail and source drawer. A later editor
-  separates source-supported fields from holita-owned extensions. Observed web
+  separates source-supported fields from discocan-owned extensions. Observed web
   fields included VIN, transmission, fuel settings, SIM/camera details and photo.
 - **Condition:** a richer web editor does not expand the documented PUT payload.
   No vendor car was created, updated or deleted in this work.
@@ -636,7 +636,7 @@ No notification or message was sent during this research.
   Template and Units Convertor: Date, Hour, Week first day, Distance, Volume,
   Temperature and Air pressure. These are not application registrations.
 - **Condition:** web Fleet and sampled API Project matched in E01. This does not
-  authorize treating a provider Project as a holita Branch or making them identical.
+  authorize treating a provider Project as a discocan Branch or making them identical.
 
 ### S05 — Users
 
@@ -646,9 +646,9 @@ No notification or message was sent during this research.
 - **Show:** current account table/detail with memberships and source role text.
   The inspected classic editor includes Allow Sending Commands, fleet references
   for units and applications, timezone, country and expiry. Those settings must
-  not silently become holita authorization grants.
+  not silently become discocan authorization grants.
 - **Condition:** user editing, role assignment, invitations and membership changes
-  need another vendor contract or a separate holita identity workflow. Role text
+  need another vendor contract or a separate discocan identity workflow. Role text
   is not a machine-readable authorization policy.
 
 ### S06 — Hierarchy
@@ -708,7 +708,7 @@ No notification or message was sent during this research.
 
 - **API:** `/users` can label users. No query-history/count/last-access method is
   declared in API v2.
-- **Calculate:** if holita query-use reporting is selected, count its own recorded
+- **Calculate:** if discocan query-use reporting is selected, count its own recorded
   searches/reports by user/period and show last observed access. Provider totals
   cannot be calculated from vehicle telemetry.
 - **Show:** user/period selector and User / Questions / Last Access table, as
@@ -743,12 +743,12 @@ No notification or message was sent during this research.
   A DTC draft exposed Confirmed, Current and Permanent Trouble Codes and Live Event,
   each with selection/rename/unit fields. It was canceled before Finish.
 - **Condition:** the account has no saved applications, so populated module
-  dashboards were not available. For holita, expose only proven module signals,
+  dashboards were not available. For discocan, expose only proven module signals,
   reuse the separate diagnostic-contract investigation for actual DTC layouts,
   and keep any local display definitions explicitly local. Do not build an OAuth
   client registry from this menu or equate it with the Battery/Starter report.
 
-## Shared views and the proposed holita presentation
+## Shared views and the proposed discocan presentation
 
 These functions span menu entries and reuse existing views rather than producing
 36 disconnected business screens.
@@ -761,7 +761,7 @@ These functions span menu entries and reuse existing views rather than producing
   Status colors need their actual state definition; speed zero is insufficient.
 - **Show:** searchable project/vehicle list beside a clustered map; select a row
   or marker to open the same vehicle header/details. Keep per-vehicle source times.
-- **Condition:** existing holita point/endpoint map previews are reusable. A true
+- **Condition:** existing discocan point/endpoint map previews are reusable. A true
   multi-marker map, traffic and Street View require an appropriate map-provider
   interface; a directions iframe is not the same capability.
 
@@ -837,7 +837,7 @@ These functions span menu entries and reuse existing views rather than producing
   known. Keep original values in source details. The live Fleet editor, not the
   Application menu, supplies the observed unit/date-format preferences.
 - **Show:** reuse BG/EN catalogs, current themes and existing settings patterns.
-  A user must be able to tell whether an edit is saved in holita or sent to Karma.
+  A user must be able to tell whether an edit is saved in discocan or sent to Karma.
 - **Condition:** shared Karma account data remains available under its current
   signed-session scope, without a Branch filter. New local rules/records must use
   verified Tenant/Branch ownership and explicit source identity association. No
@@ -960,7 +960,7 @@ The names below are static client references. They were not replayed manually,
 their payload/response/permission contracts were not validated, and some report
 families have several variants. Exact naming/case, including vendor misspellings,
 is preserved. The public alternative column points to the methods proposed for
-holita; **internal** is not a recommendation to expose arbitrary `qT` dispatch.
+discocan; **internal** is not a recommendation to expose arbitrary `qT` dispatch.
 
 | Function  | Internal source-only operation family                                                                                                                                   | Public API v2 alternative or gap                                                                                          |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -991,7 +991,7 @@ holita; **internal** is not a recommendation to expose arbitrary `qT` dispatch.
 | S04       | `SaveProject`, `DelProject`, `GetUnitsConversion`, `GetNotificationTemplates`                                                                                           | `/projects` read/create only; update/delete, conversions and templates need a supported contract.                         |
 | S05       | `GetUsers`, `SaveUser`, `DelUser`                                                                                                                                       | `/users`, `/roles`, `/projects`, `/time-zones` reads; no user/permission mutation.                                        |
 | S06       | `getUserHierarchy`                                                                                                                                                      | `/projects` + `/cars` for basic grouping only.                                                                            |
-| S07       | `ManualData_Fuel_Get`, `ManualData_Fuel_Add`, `MANUALDATA_FUEL_DEL`, `ManualData_Fuel_GetImage`                                                                         | No receipt CRUD/image method; holita-owned records are independent.                                                       |
+| S07       | `ManualData_Fuel_Get`, `ManualData_Fuel_Add`, `MANUALDATA_FUEL_DEL`, `ManualData_Fuel_GetImage`                                                                         | No receipt CRUD/image method; discocan-owned records are independent.                                                       |
 | S08       | `ManualData_Service_Get`, `ManualData_Service_Add`, `MANUALDATA_SERVICE_DEL`, `ManualData_Service_GetImage`                                                             | No vendor maintenance CRUD; reuse suitable local Fleet service tasks.                                                     |
 | S09       | `GetTires`, `SaveTire`, `ChangeTirePosition`, `DelTire`                                                                                                                 | No tire CRUD/fitment interface.                                                                                           |
 | S10       | `GetUsersQuestions`, `GetUserQuestionsDeatails`, `GetUserQuestionsGraph`                                                                                                | No query-audit API. `/users` supplies labels only.                                                                        |
@@ -1004,7 +1004,7 @@ holita; **internal** is not a recommendation to expose arbitrary `qT` dispatch.
 This discovery makes an ERM-supported richer integration plausible, but does not
 establish that undocumented web calls are stable or licensed for external use.
 The smallest supported approach remains public API data plus explicitly owned
-holita workflows. For exact vendor synchronization, obtain ERM's contract before
+discocan workflows. For exact vendor synchronization, obtain ERM's contract before
 choosing an internal operation instead of guessing its inputs from the client.
 
 ## NC2 technical console
@@ -1026,7 +1026,7 @@ from using the same website credential pair.
   `KC_ToggleUserActivation` and `SaveUser` are consequential mutations.
 - **Public API:** `/users`, `/roles`, `/time-zones` provide only their observed
   reference models. No public activation/password/user-edit operation exists.
-- **Calculate and show in holita:** source-user list and resolved references can
+- **Calculate and show in discocan:** source-user list and resolved references can
   reuse current account views. Last Login requires its actual source; do not
   replace it with telemetry time or query Last Access. Local identity management
   is a separate security workflow, not a clone of vendor roles. Password changes
@@ -1043,7 +1043,7 @@ from using the same website credential pair.
 - **Public API:** `/cars`, `/projects` and `/location` cover proven identities,
   grouping and last-known facts. The richer firmware/hardware inventory is not
   established by the current public car DTO; do not infer it from make/model.
-- **Calculate and show in holita:** selection counts, filtered inventory and
+- **Calculate and show in discocan:** selection counts, filtered inventory and
   source age; separate tracker firmware, eFuel/eSafe versions and hardware model
   when a real supported source is supplied. No version comparison should imply
   that a firmware upgrade is available or authorized.
@@ -1058,7 +1058,7 @@ from using the same website credential pair.
   include `KC_GetEvents`. These are not API v2 aliases with established schemas.
 - **Public API:** `/events` with supported fields, and `/location` for a current
   point. Some additional NC2 columns still need actual field/unit confirmation.
-- **Calculate and show in holita:** preserve source message identity and both
+- **Calculate and show in discocan:** preserve source message identity and both
   clocks, decode only proven fields and calculate source age independently.
   Extend the existing event table/source drawer rather than creating another
   telemetry store. Keep command composition outside the read-only monitor.
@@ -1073,7 +1073,7 @@ from using the same website credential pair.
   Selected `/events` extra payloads may contain independently documented device
   responses. Public `/parameters?query=...` is a device-query mechanism and must
   not be substituted as an ordinary cached read.
-- **Calculate and show in holita:** display cached observation time and raw
+- **Calculate and show in discocan:** display cached observation time and raw
   parameter identity/value only with its catalog/definition; never interpret
   every parameter ID as an eData measurement ID. Reuse persisted, controlled
   device-read evidence when appropriate. An empty Diagnostics table establishes
@@ -1089,8 +1089,8 @@ from using the same website credential pair.
   source helper spells the catalog `GetCommandPairs`; no equivalence was tested.
 - **Public API:** `POST /commands` and subsequent source responses/queue state
   are the relevant family, not a read-only business query. Only already approved
-  fixed Fleet operations should remain available in holita's current design.
-- **Calculate and show in holita:** the existing persisted command intent,
+  fixed Fleet operations should remain available in discocan's current design.
+- **Calculate and show in discocan:** the existing persisted command intent,
   preflight/submission/readback lifecycle, with observation evidence and clear
   uncertain outcomes. Do not add a generic command text box, automatically replay
   an uncertain send, or expose reset/delete/default actions merely for visual parity.
@@ -1106,7 +1106,7 @@ from using the same website credential pair.
   does not establish API v2 date-bound semantics.
 - **Public API:** no transport/server-compression statistics endpoint is declared.
   Counting a downloaded event page would not reproduce these server counters.
-- **Calculate and show in holita:** an equivalent requires provider counters or
+- **Calculate and show in discocan:** an equivalent requires provider counters or
   explicitly local transport instrumentation. Preserve source counters; calculate
   ratios only after units and denominators are defined. Current empty data does
   not support a compression percentage or delivery-success rate.
@@ -1143,7 +1143,7 @@ concepts, not an API v2 event dictionary: a trigger item's HTML ID must not be
 passed as an `event_type` solely because both are numbers. W03 separately refers
 to camera, eData, DLT and StarLink trigger dictionaries.
 
-| Family                   | Observed condition choices                                                                                                                                           | Public data and calculation needed for holita                                                                             |
+| Family                   | Observed condition choices                                                                                                                                           | Public data and calculation needed for discocan                                                                             |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | Accident                 | Real Accident Notification; Accident Suspicious                                                                                                                      | Proven accident event/reference and, where available, `/black_box/{id}`. Suspicion is not a confirmed accident.           |
 | Battery                  | Voltage, charge, life                                                                                                                                                | Proven voltage fields or actual charge/health source; do not derive all three from voltage alone.                         |
@@ -1287,7 +1287,7 @@ requirements, distinct from existing Embed configuration.
 ### Product opportunity boundary
 
 The inspected classic interface already has maps, Street View access, reports
-and historical activity views. They are not novel features merely because holita
+and historical activity views. They are not novel features merely because discocan
 can expose them in more places. The useful opportunities are an integrated,
 accessible experience and additional analysis of the same data:
 

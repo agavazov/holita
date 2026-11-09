@@ -85,7 +85,7 @@ export const fixtureVehicleLiveDevices: readonly [WithTypename<AdminFleetLiveDev
     imei: '001234567890123',
     vehicleId: '50000000-0000-4000-8000-000000000001',
     status: 'ONLINE',
-    routing: 'HOLITA',
+    routing: 'DISCOCAN',
     routingHealth: null,
     lastReportedAt: at,
     diagnostics: { __typename: 'FleetDeviceDiagnosticSummary', count: 2, latest: null },

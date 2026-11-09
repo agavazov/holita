@@ -103,11 +103,11 @@ fn supergraph_service(service) {
         } else {
             uuid_v4()
         };
-        request.context["holita.request_id"] = request_id;
+        request.context["discocan.request_id"] = request_id;
         request.headers["x-request-id"] = request_id;
     });
     service.map_response(|response| {
-        let request_id = response.context["holita.request_id"];
+        let request_id = response.context["discocan.request_id"];
         if response.is_primary() { response.headers["x-request-id"] = request_id; }
         let errors = [];
         for error in response.body.errors {

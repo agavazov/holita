@@ -4,9 +4,9 @@ import type { ListQuery } from './list-query';
 import { ListSortMenu } from './list-sort-menu';
 
 @Component({
-  selector: 'holita-sort-menu-story',
+  selector: 'discocan-sort-menu-story',
   imports: [ListSortMenu],
-  template: `<holita-list-sort-menu
+  template: `<discocan-list-sort-menu
     [fields]="fields"
     [sort]="sort()"
     (sortChange)="sort.set($event)"

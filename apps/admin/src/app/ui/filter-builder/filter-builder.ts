@@ -65,7 +65,7 @@ let nextCondition = 0;
  * Opening focuses Column; closing restores the opener unless focus moved outside the editor.
  */
 @Component({
-  selector: 'holita-filter-builder',
+  selector: 'discocan-filter-builder',
   imports: [
     ReactiveFormsModule,
     ButtonDirective,

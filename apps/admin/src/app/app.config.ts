@@ -18,7 +18,7 @@ import {
   type AdminRuntimeConfig,
 } from './core/config/admin-config';
 import { graphqlOptions } from './core/graphql/graphql-options';
-import { provideHolitaTheme } from './theme/provide-holita-theme';
+import { provideDiscoCanTheme } from './theme/provide-discocan-theme';
 import { appTheme, type ThemeChoice } from './theme/theme-choice';
 
 /** The application providers; `theme` is `appTheme` except in Storybook's brand/density review. */
@@ -32,7 +32,7 @@ export function appConfig(
       { provide: ErrorHandler, useClass: AdminErrorHandler },
       provideBrowserGlobalErrorListeners(),
       provideHttpClient(withInterceptors([(request, next) => next(request).pipe(timeout(10_000))])),
-      provideHolitaTheme(theme, config.primeUiLicense),
+      provideDiscoCanTheme(theme, config.primeUiLicense),
       provideApollo(() => graphqlOptions(inject(HttpLink), inject(AdminConfig).graphqlUrl)),
       provideRouter(routes),
       { provide: RouteReuseStrategy, useClass: FleetRouteReuseStrategy },

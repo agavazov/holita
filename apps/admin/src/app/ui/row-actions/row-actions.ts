@@ -16,12 +16,12 @@ export interface RowChoice<A extends string> {
  * to the record disabled, so lists never show a destructive button next to the data.
  */
 @Component({
-  selector: 'holita-row-actions',
+  selector: 'discocan-row-actions',
   imports: [MenuButton, EllipsisV],
   template: `
-    <holita-menu-button [ariaLabel]="label()" [options]="options()" (choose)="chosen($event)">
+    <discocan-menu-button [ariaLabel]="label()" [options]="options()" (choose)="chosen($event)">
       <svg data-p-icon="ellipsis-v" aria-hidden="true"></svg>
-    </holita-menu-button>
+    </discocan-menu-button>
   `,
   styleUrl: './row-actions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

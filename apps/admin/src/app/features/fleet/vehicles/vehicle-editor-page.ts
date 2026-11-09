@@ -26,11 +26,11 @@ import { VehiclesApi } from './vehicles-api';
 import { vehiclesText } from './i18n/messages';
 
 @Component({
-  selector: 'holita-vehicle-editor-page',
+  selector: 'discocan-vehicle-editor-page',
   imports: [VehicleDrawer],
   providers: [VehiclesApi, VehicleChoices],
   template: `
-    <holita-vehicle-drawer
+    <discocan-vehicle-drawer
       [vehicle]="vehicle()"
       [state]="state()"
       [loadError]="loadFailure()"

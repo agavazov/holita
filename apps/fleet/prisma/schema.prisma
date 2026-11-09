@@ -99,7 +99,7 @@ enum FleetDeviceOption {
 }
 
 enum FleetDeviceRouting {
-  HOLITA @map("holita")
+  DISCOCAN @map("discocan")
   KARMA_BACKUP @map("karmaBackup")
   SILENT @map("silent")
   @@map("fleetDeviceRouting")

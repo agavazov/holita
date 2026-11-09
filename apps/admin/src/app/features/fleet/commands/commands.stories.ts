@@ -32,7 +32,7 @@ function modal(request: CommandRequest): NonNullable<Story['render']> {
   return (_args, context) => ({
     props: { request, target, language: storyLanguage(context.globals) },
     template:
-      '<holita-command-details [request]="request" [target]="target" [language]="language" (closed)="request = null" />',
+      '<discocan-command-details [request]="request" [target]="target" [language]="language" (closed)="request = null" />',
   });
 }
 
@@ -40,7 +40,7 @@ export const History: Story = {
   render: (_args, context) => ({
     props: { requests, target, language: storyLanguage(context.globals), selected: null },
     template:
-      '<holita-command-history [requests]="requests" [target]="target" [language]="language" (inspect)="selected = $event" /><holita-command-details [request]="selected" [target]="target" [language]="language" (closed)="selected = null" />',
+      '<discocan-command-history [requests]="requests" [target]="target" [language]="language" (inspect)="selected = $event" /><discocan-command-details [request]="selected" [target]="target" [language]="language" (closed)="selected = null" />',
   }),
 };
 export const Pending: Story = { render: modal(commandPendingFixture) };
@@ -56,6 +56,6 @@ export const Loading: Story = {
   render: (_args, context) => ({
     props: { target, language: storyLanguage(context.globals) },
     template:
-      '<holita-command-history [requests]="[]" [loading]="true" [target]="target" [language]="language" />',
+      '<discocan-command-history [requests]="[]" [loading]="true" [target]="target" [language]="language" />',
   }),
 };

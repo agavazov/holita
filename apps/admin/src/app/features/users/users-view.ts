@@ -23,7 +23,7 @@ import { usersText } from './i18n/messages';
 export type UserActionId = 'edit' | 'deactivate' | 'reactivate';
 
 @Component({
-  selector: 'holita-users-view',
+  selector: 'discocan-users-view',
   imports: [ButtonDirective, TableModule, Tag, PageHeader, RowActions, TablePanel],
   templateUrl: './users-view.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

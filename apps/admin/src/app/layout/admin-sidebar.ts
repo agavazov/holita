@@ -24,7 +24,7 @@ import { navigationContext, type NavGroup } from './navigation';
 
 /** Logo, grouped navigation (full or rail) and the tenant line. Presentation only. */
 @Component({
-  selector: 'holita-admin-sidebar',
+  selector: 'discocan-admin-sidebar',
   imports: [
     RouterLink,
     Tooltip,

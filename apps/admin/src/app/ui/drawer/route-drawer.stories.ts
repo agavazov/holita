@@ -20,7 +20,7 @@ import { RouteDrawer, type RouteDrawerState } from './route-drawer';
 type DrawerMode = 'edit' | 'view' | 'view-edit';
 
 @Component({
-  selector: 'holita-route-drawer-demo',
+  selector: 'discocan-route-drawer-demo',
   imports: [
     RouteDrawer,
     ReactiveFormsModule,
@@ -33,7 +33,7 @@ type DrawerMode = 'edit' | 'view' | 'view-edit';
     Tag,
   ],
   template: `
-    <holita-route-drawer
+    <discocan-route-drawer
       [title]="editing() ? (mode() === 'edit' ? 'Edit CB 1004 AX' : 'Edit vehicle') : 'CB 1004 AX'"
       subtitle="T-04 · Tractor unit · Scania R 450"
       [state]="state()"
@@ -81,7 +81,7 @@ type DrawerMode = 'edit' | 'view' | 'view-edit';
           <section class="app-form-section">
             <h3>Identification</h3>
             <div class="app-form-grid">
-              <holita-form-field
+              <discocan-form-field
                 label="License plate"
                 controlId="plate"
                 [required]="true"
@@ -95,8 +95,8 @@ type DrawerMode = 'edit' | 'view' | 'view-edit';
                   [attr.aria-invalid]="errors() ? 'true' : null"
                   aria-describedby="plate-hint plate-error"
                 />
-              </holita-form-field>
-              <holita-form-field
+              </discocan-form-field>
+              <discocan-form-field
                 label="Fleet number"
                 controlId="fleetNumber"
                 hint="Internal number"
@@ -107,8 +107,8 @@ type DrawerMode = 'edit' | 'view' | 'view-edit';
                   formControlName="fleetNumber"
                   aria-describedby="fleetNumber-hint fleetNumber-error"
                 />
-              </holita-form-field>
-              <holita-form-field
+              </discocan-form-field>
+              <discocan-form-field
                 class="app-form-grid--wide"
                 label="VIN"
                 controlId="vin"
@@ -124,13 +124,13 @@ type DrawerMode = 'edit' | 'view' | 'view-edit';
                   [attr.aria-invalid]="errors() ? 'true' : null"
                   aria-describedby="vin-hint vin-error"
                 />
-              </holita-form-field>
+              </discocan-form-field>
             </div>
           </section>
           <section class="app-form-section">
             <h3>Operation</h3>
             <div class="app-form-grid">
-              <holita-form-field label="Status" controlId="status">
+              <discocan-form-field label="Status" controlId="status">
                 <p-select
                   inputId="status"
                   formControlName="status"
@@ -138,11 +138,11 @@ type DrawerMode = 'edit' | 'view' | 'view-edit';
                   appendTo="body"
                   ariaLabel="Status"
                 />
-              </holita-form-field>
-              <holita-form-field label="Fuel tank, L" controlId="tank">
+              </discocan-form-field>
+              <discocan-form-field label="Fuel tank, L" controlId="tank">
                 <p-inputnumber inputId="tank" formControlName="tank" [min]="0" [max]="1500" />
-              </holita-form-field>
-              <holita-form-field
+              </discocan-form-field>
+              <discocan-form-field
                 class="app-form-grid--wide"
                 label="Notes"
                 controlId="notes"
@@ -155,7 +155,7 @@ type DrawerMode = 'edit' | 'view' | 'view-edit';
                   rows="3"
                   aria-describedby="notes-hint notes-error"
                 ></textarea>
-              </holita-form-field>
+              </discocan-form-field>
             </div>
           </section>
         </form>
@@ -180,7 +180,7 @@ type DrawerMode = 'edit' | 'view' | 'view-edit';
           }
         }
       </div>
-    </holita-route-drawer>
+    </discocan-route-drawer>
   `,
 })
 class RouteDrawerDemo {

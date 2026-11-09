@@ -69,11 +69,11 @@ export const Charts: Story = {
       <div class="app-card-grid">
         <section class="app-card">
           <div class="app-card__header"><h2 class="app-card__title">Daily mileage</h2></div>
-          <holita-column-series label="Daily mileage, last 14 days" [points]="days" />
+          <discocan-column-series label="Daily mileage, last 14 days" [points]="days" />
         </section>
         <section class="app-card">
           <div class="app-card__header"><h2 class="app-card__title">Maneuvers</h2></div>
-          <holita-stacked-bars
+          <discocan-stacked-bars
             label="Maneuvers by vehicle"
             [rows]="maneuvers"
             [legend]="[{ key: 'braking', label: 'Harsh braking', tone: 'danger' }, { key: 'acceleration', label: 'Harsh acceleration', tone: 'warn' }, { key: 'turns', label: 'Sharp turns', tone: 'c4' }]"
@@ -81,7 +81,7 @@ export const Charts: Story = {
         </section>
         <section class="app-card">
           <div class="app-card__header"><h2 class="app-card__title">Speed, 48 h</h2></div>
-          <holita-sparkline label="Speed, last 48 h" [points]="speed" [from]="0" [to]="48 * hour" unit="km/h" />
+          <discocan-sparkline label="Speed, last 48 h" [points]="speed" [from]="0" [to]="48 * hour" unit="km/h" />
         </section>
       </div>
     `,

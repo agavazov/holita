@@ -20,7 +20,7 @@ import { DevicePage, deviceTabs } from './device-page';
  * fresh workspace for another scope, so its Fleet settings give the Branch's time zone and units.
  */
 @Component({
-  selector: 'holita-control-center-workspace',
+  selector: 'discocan-control-center-workspace',
   imports: [ButtonDirective, Message, DashboardPage, DevicePage],
   providers: [
     GeneralSettingsApi,
@@ -58,14 +58,14 @@ import { DevicePage, deviceTabs } from './device-page';
             }
           </section>
         } @else if (scope.recordId) {
-          <holita-control-center-device
+          <discocan-control-center-device
             [branchId]="scope.branchId"
             [language]="scope.language"
             [recordId]="scope.recordId"
             [tab]="scope.tab"
           />
         } @else {
-          <holita-control-center-dashboard
+          <discocan-control-center-dashboard
             [branchId]="scope.branchId"
             [language]="scope.language"
           />

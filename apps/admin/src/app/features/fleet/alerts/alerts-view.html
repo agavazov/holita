@@ -1,45 +1,45 @@
-<holita-page-header
+<discocan-page-header
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
   [moduleInfo]="text().moduleInfo"
 />
 
 @if (kpis(); as kpis) {
-  <holita-kpi-strip [label]="text().kpis.label">
-    <holita-kpi-tile
+  <discocan-kpi-strip [label]="text().kpis.label">
+    <discocan-kpi-tile
       [label]="text().kpis.critical"
-      [value]="kpis.critical | holitaNumber"
+      [value]="kpis.critical | discocanNumber"
       [tone]="kpis.critical ? 'danger' : null"
     >
       <svg kpiIcon data-p-icon="exclamation-triangle" aria-hidden="true"></svg>
-    </holita-kpi-tile>
-    <holita-kpi-tile
+    </discocan-kpi-tile>
+    <discocan-kpi-tile
       [label]="text().kpis.open"
-      [value]="kpis.open | holitaNumber"
+      [value]="kpis.open | discocanNumber"
       [tone]="kpis.open ? 'warn' : null"
     >
       <svg kpiIcon data-p-icon="bell" aria-hidden="true"></svg>
-    </holita-kpi-tile>
-    <holita-kpi-tile
+    </discocan-kpi-tile>
+    <discocan-kpi-tile
       [label]="text().kpis.acknowledged"
-      [value]="kpis.acknowledged | holitaNumber"
+      [value]="kpis.acknowledged | discocanNumber"
       [footnote]="text().kpis.acknowledgedFootnote"
       tone="info"
     >
       <svg kpiIcon data-p-icon="clock" aria-hidden="true"></svg>
-    </holita-kpi-tile>
-    <holita-kpi-tile
+    </discocan-kpi-tile>
+    <discocan-kpi-tile
       [label]="text().kpis.resolved"
-      [value]="kpis.resolved | holitaNumber"
+      [value]="kpis.resolved | discocanNumber"
       [footnote]="text().kpis.resolvedFootnote"
       tone="success"
     >
       <svg kpiIcon data-p-icon="check-circle" aria-hidden="true"></svg>
-    </holita-kpi-tile>
-  </holita-kpi-strip>
+    </discocan-kpi-tile>
+  </discocan-kpi-strip>
 }
 
-<holita-filter-builder
+<discocan-filter-builder
   [searchLabel]="text().search"
   [search]="state().search"
   [searchError]="searchError()"
@@ -50,7 +50,7 @@
   (conditionsChange)="changeConditions($event)"
 />
 
-<holita-table-panel
+<discocan-table-panel
   #panel
   [heading]="text().table.heading"
   [total]="total()"
@@ -71,7 +71,7 @@
   (retry)="retry.emit()"
   (clearSelection)="selectionChange.emit([])"
 >
-  <holita-list-sort-menu
+  <discocan-list-sort-menu
     panelActions
     [fields]="sortFields()"
     [sort]="state().sort"
@@ -159,7 +159,7 @@
             <span [title]="row.detail">{{ row.detail }}</span>
           </span>
           <div class="app-table-mobile-actions">
-            <holita-row-actions
+            <discocan-row-actions
               [actions]="actions()"
               [record]="recordOf(row)"
               (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -216,7 +216,7 @@
           }
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-          <holita-row-actions
+          <discocan-row-actions
             [actions]="actions()"
             [record]="recordOf(row)"
             (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -225,4 +225,4 @@
       </tr>
     </ng-template>
   </p-table>
-</holita-table-panel>
+</discocan-table-panel>

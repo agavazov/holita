@@ -1,4 +1,4 @@
-<holita-route-drawer
+<discocan-route-drawer
   [title]="title()"
   [saving]="saving()"
   [dirty]="dirty()"
@@ -72,7 +72,7 @@
       }
       <section class="app-form-section">
         <div class="app-form-grid">
-          <holita-form-field
+          <discocan-form-field
             class="app-form-grid--wide"
             [label]="text().serviceType"
             controlId="task-serviceType"
@@ -95,8 +95,8 @@
                 },
               }"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             class="app-form-grid--wide"
             [label]="text().task"
             controlId="task-title"
@@ -110,8 +110,8 @@
               [attr.aria-invalid]="errorOf('title') ? 'true' : null"
               [attr.aria-describedby]="describedBy('title')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             class="app-form-grid--wide"
             [label]="text().vehicle"
             controlId="task-vehicleId"
@@ -156,7 +156,7 @@
                 }"
               />
             }
-          </holita-form-field>
+          </discocan-form-field>
         </div>
       </section>
 
@@ -164,7 +164,7 @@
         <h3>{{ text().schedule }}</h3>
         <p>{{ text().scheduleHint }}</p>
         <div class="app-form-grid">
-          <holita-form-field
+          <discocan-form-field
             [label]="text().dueOn"
             controlId="task-dueOn"
             [error]="errorOf('dueOn')"
@@ -178,8 +178,8 @@
               [invalid]="!!errorOf('dueOn')"
               [pt]="inputPt().dueOn"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             [label]="text().dueKm"
             controlId="task-dueKm"
             [error]="errorOf('dueKm')"
@@ -191,14 +191,14 @@
               [invalid]="!!errorOf('dueKm')"
               [pt]="inputPt().dueKm"
             />
-          </holita-form-field>
+          </discocan-form-field>
         </div>
       </section>
 
       <section class="app-form-section">
         <h3>{{ text().details }}</h3>
         <div class="app-form-grid">
-          <holita-form-field
+          <discocan-form-field
             class="app-form-grid--wide"
             [label]="text().workshop"
             controlId="task-workshop"
@@ -212,8 +212,8 @@
               [attr.aria-invalid]="errorOf('workshop') ? 'true' : null"
               [attr.aria-describedby]="describedBy('workshop')"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             class="app-form-grid--wide"
             [label]="text().notes"
             controlId="task-notes"
@@ -229,7 +229,7 @@
               [attr.aria-invalid]="errorOf('notes') ? 'true' : null"
               [attr.aria-describedby]="describedBy('notes')"
             ></textarea>
-          </holita-form-field>
+          </discocan-form-field>
         </div>
       </section>
     </form>
@@ -269,4 +269,4 @@
       </button>
     }
   </div>
-</holita-route-drawer>
+</discocan-route-drawer>

@@ -53,7 +53,7 @@ const initialPassword: ValidatorFn = (control) => {
 };
 
 @Component({
-  selector: 'holita-user-drawer',
+  selector: 'discocan-user-drawer',
   imports: [
     ReactiveFormsModule,
     ButtonDirective,

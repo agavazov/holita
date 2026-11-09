@@ -20,7 +20,7 @@ export interface KpiDelta {
 
 /** One KPI: label, pre-formatted value (`null` → "—"), context lines, delta and explanation. */
 @Component({
-  selector: 'holita-kpi-tile',
+  selector: 'discocan-kpi-tile',
   imports: [RouterLink, Popover, Skeleton, ArrowDownRight, ArrowUpRight, InfoCircle, Minus],
   templateUrl: './kpi-tile.html',
   styleUrl: './kpi-tile.scss',

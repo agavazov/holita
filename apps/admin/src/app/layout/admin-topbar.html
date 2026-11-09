@@ -12,7 +12,7 @@
 @if (showLogo()) {
   <a class="app-logo app-topbar__logo" [routerLink]="homeLink()">
     <span class="app-logo__mark" aria-hidden="true">h</span>
-    <span class="app-logo__word">holita</span>
+    <span class="app-logo__word">discocan</span>
   </a>
 }
 <div class="app-topbar__context">
@@ -113,7 +113,7 @@
     </nav>
   }
 </div>
-<holita-menu-button
+<discocan-menu-button
   class="app-topbar__branch"
   variant="text"
   menuClass="app-menu-scroll"
@@ -123,10 +123,10 @@
 >
   <span class="app-visually-hidden">{{ text().branchPrefix }}&#32;</span>
   <span id="active-branch" class="app-topbar__branch-name">{{ branchLabel() }}</span>
-</holita-menu-button>
+</discocan-menu-button>
 <div class="app-topbar__actions">
   @if (languageOptions().length > 1) {
-    <holita-menu-button
+    <discocan-menu-button
       variant="text"
       [options]="languageOptions()"
       (choose)="chooseLanguage($event.id)"
@@ -138,10 +138,10 @@
       <span class="app-topbar__language-code" [attr.lang]="currentLanguage().code">{{
         currentLanguage().code.toUpperCase()
       }}</span>
-    </holita-menu-button>
+    </discocan-menu-button>
   }
   @if (notifications(); as notifications) {
-    <holita-notification-bell
+    <discocan-notification-bell
       [language]="language()"
       [notifications]="notifications"
       [unreadCount]="notificationUnreadCount()"
@@ -155,7 +155,7 @@
       (retry)="notificationsRetry.emit()"
     />
   }
-  <holita-menu-button
+  <discocan-menu-button
     buttonClass="app-topbar__account"
     [header]="accountHeader()"
     [options]="accountOptions()"
@@ -163,5 +163,5 @@
   >
     <span class="app-topbar__avatar" aria-hidden="true">{{ initials() }}</span>
     <span class="app-visually-hidden">{{ accountLabel() }}</span>
-  </holita-menu-button>
+  </discocan-menu-button>
 </div>

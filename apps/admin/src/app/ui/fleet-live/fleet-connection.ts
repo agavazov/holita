@@ -14,7 +14,7 @@ import { formatDuration } from '../format/format';
 import { interpolate } from '../i18n/messages';
 
 @Component({
-  selector: 'holita-fleet-connection',
+  selector: 'discocan-fleet-connection',
   imports: [Tag],
   template: `
     <span class="live-cell">

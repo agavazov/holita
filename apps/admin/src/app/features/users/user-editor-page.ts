@@ -25,11 +25,11 @@ import { UserDrawer, type UserField, type UserForm } from './user-drawer';
 import { UsersApi } from './users-api';
 
 @Component({
-  selector: 'holita-user-editor-page',
+  selector: 'discocan-user-editor-page',
   imports: [UserDrawer],
   providers: [UsersApi],
   template: `
-    <holita-user-drawer
+    <discocan-user-drawer
       [user]="user()"
       [creating]="creating"
       [state]="state()"

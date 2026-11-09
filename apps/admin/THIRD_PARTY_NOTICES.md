@@ -3,7 +3,7 @@
 ## PrimeNG, PrimeUI themes and PrimeIcons
 
 The admin is built on PrimeNG, `@primeuix/themes` and `@primeicons/angular`. They are npm
-dependencies and retain their own package licenses; the holita design system configures them
+dependencies and retain their own package licenses; the discocan design system configures them
 through tokens and does not copy their source or assets. Without a configured PrimeUI license
 key, PrimeNG shows its license notice.
 

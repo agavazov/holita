@@ -371,7 +371,7 @@ export class DeviceSession {
   }
 
   private deviceFrame(frame: CapturedFrame, parsed: ParsedFrame | undefined): boolean {
-    // Trackers may compress a reply into a $SLC container. Its reply completes holita's command and is
+    // Trackers may compress a reply into a $SLC container. Its reply completes discocan's command and is
     // confirmed, but the container still goes to Karma unchanged because it also carries events.
     const replies =
       !frame.partial && parsed === undefined ? inflateContainer(frame.raw) : undefined;
@@ -406,7 +406,7 @@ export class DeviceSession {
       return true;
     }
     if (this.pending && matchesResponse(this.pending.input, parsed)) {
-      // Replies to holita's own commands stay off Karma, which reads routing values from them and
+      // Replies to discocan's own commands stay off Karma, which reads routing values from them and
       // then writes its own server back, and are confirmed so the unit does not resend them.
       if (!(this.options.ackCommands ?? new Set(['06'])).has(parsed.command)) {
         this.send(buildServerFrame(parsed.unitId, '02', nextReference(), [parsed.reference, '01']));
@@ -437,7 +437,7 @@ export class DeviceSession {
   }
 
   private send(raw: Buffer): void {
-    this.capture('holita', { raw: raw.subarray(0, -2), partial: false });
+    this.capture('discocan', { raw: raw.subarray(0, -2), partial: false });
     if (this.serverPartial) {
       this.deferred.push(raw);
     } else {
@@ -458,7 +458,7 @@ export class DeviceSession {
   }
 
   private capture(
-    from: 'device' | 'server' | 'holita',
+    from: 'device' | 'server' | 'discocan',
     frame: CapturedFrame,
   ): ParsedFrame | undefined {
     const parsed = parseFrame(frame.raw);

@@ -19,7 +19,7 @@
     ) {
       <ng-template #preferencesState>
         @if (preferences.loading()) {
-          <holita-page-loading />
+          <discocan-page-loading />
         } @else {
           <section class="app-card">
             <p-message severity="error" role="alert">{{ preferencesError() }}</p-message>
@@ -32,49 +32,49 @@
         }
       </ng-template>
       @if (scope.resource === 'general' || scope.resource === 'groups') {
-        <holita-settings-tabs
+        <discocan-settings-tabs
           [current]="scope.resource === 'general' ? 'general' : 'vehicle-groups'"
         >
           @if (preferences.settings()) {
             @if (scope.resource === 'general') {
-              <holita-general-settings-page [branch]="scope.branch" [language]="scope.language" />
+              <discocan-general-settings-page [branch]="scope.branch" [language]="scope.language" />
             } @else {
-              <holita-vehicle-groups-page [branch]="scope.branch" [language]="scope.language" />
+              <discocan-vehicle-groups-page [branch]="scope.branch" [language]="scope.language" />
             }
           } @else {
             <ng-container [ngTemplateOutlet]="preferencesState" />
           }
-        </holita-settings-tabs>
+        </discocan-settings-tabs>
       } @else if (!preferences.settings()) {
         <ng-container [ngTemplateOutlet]="preferencesState" />
       } @else {
         @switch (scope.resource) {
           @case ('vehicle-profile') {
-            <holita-vehicle-profile-page [branch]="scope.branch" [language]="scope.language" />
+            <discocan-vehicle-profile-page [branch]="scope.branch" [language]="scope.language" />
           }
           @case ('maintenance') {
-            <holita-maintenance-page [branch]="scope.branch" [language]="scope.language" />
+            <discocan-maintenance-page [branch]="scope.branch" [language]="scope.language" />
           }
           @case ('trips') {
-            <holita-trips-page [branch]="scope.branch" [language]="scope.language" />
+            <discocan-trips-page [branch]="scope.branch" [language]="scope.language" />
           }
           @case ('drivers') {
-            <holita-drivers-page [branch]="scope.branch" [language]="scope.language" />
+            <discocan-drivers-page [branch]="scope.branch" [language]="scope.language" />
           }
           @case ('driver-scorecard') {
-            <holita-driver-scorecard-page [branch]="scope.branch" [language]="scope.language" />
+            <discocan-driver-scorecard-page [branch]="scope.branch" [language]="scope.language" />
           }
           @case ('overview') {
-            <holita-overview-page [branch]="scope.branch" [language]="scope.language" />
+            <discocan-overview-page [branch]="scope.branch" [language]="scope.language" />
           }
           @case ('alerts') {
-            <holita-alerts-page [branch]="scope.branch" [language]="scope.language" />
+            <discocan-alerts-page [branch]="scope.branch" [language]="scope.language" />
           }
           @case ('devices') {
-            <holita-devices-list-page [branch]="scope.branch" [language]="scope.language" />
+            <discocan-devices-list-page [branch]="scope.branch" [language]="scope.language" />
           }
           @case ('vehicles') {
-            <holita-vehicles-page [branch]="scope.branch" [language]="scope.language" />
+            <discocan-vehicles-page [branch]="scope.branch" [language]="scope.language" />
           }
         }
       }

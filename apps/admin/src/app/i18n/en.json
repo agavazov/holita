@@ -69,7 +69,7 @@
   "devices": "Devices",
   "smsCommands": "SMS commands",
   "imei": "IMEI",
-  "configurationError": "Could not start holita. Check the public configuration and reload.",
+  "configurationError": "Could not start discocan. Check the public configuration and reload.",
   "demoLogin": "Demo sign in",
   "demoLoginDescription": "Choose your tenant and branch to continue.",
   "tenant": "Tenant",

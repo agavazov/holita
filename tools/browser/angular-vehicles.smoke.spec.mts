@@ -62,7 +62,7 @@ test.describe('Vehicles', () => {
     ).toEqual({ group: { id: expect.any(String) }, driver: { id: expect.any(String) } });
     await page.goto(app.url + path + '?search=CA1234');
     await page
-      .locator('holita-page-header')
+      .locator('discocan-page-header')
       .getByRole('button', { name: 'New vehicle', exact: true })
       .click();
     const create = page.getByRole('dialog', { name: 'New vehicle', exact: true });

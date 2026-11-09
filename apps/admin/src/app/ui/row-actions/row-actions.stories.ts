@@ -7,12 +7,12 @@ import { RowActions, type RowChoice } from './row-actions';
 type Action = 'edit' | 'deactivate' | 'delete';
 
 @Component({
-  selector: 'holita-row-actions-story',
+  selector: 'discocan-row-actions-story',
   imports: [RowActions],
   template: `
     <div class="app-inline">
       <span>CB 1001 AX</span>
-      <holita-row-actions [actions]="actions" [record]="record" (choose)="chosen.set($event)" />
+      <discocan-row-actions [actions]="actions" [record]="record" (choose)="chosen.set($event)" />
     </div>
     <p role="status" class="app-muted">Last action: {{ chosen()?.action ?? 'None' }}</p>
   `,

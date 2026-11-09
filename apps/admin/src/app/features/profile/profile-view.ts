@@ -43,7 +43,7 @@ const passwordFields: readonly PasswordField[] = [
 ];
 
 @Component({
-  selector: 'holita-profile-view',
+  selector: 'discocan-profile-view',
   imports: [
     ReactiveFormsModule,
     ButtonDirective,

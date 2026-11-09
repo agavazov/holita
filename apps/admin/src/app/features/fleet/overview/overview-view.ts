@@ -51,7 +51,7 @@ export interface OverviewLinks {
 }
 
 @Component({
-  selector: 'holita-overview-view',
+  selector: 'discocan-overview-view',
   imports: [
     RouterLink,
     PageHeader,

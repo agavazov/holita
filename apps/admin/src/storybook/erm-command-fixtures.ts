@@ -70,7 +70,7 @@ export const commandAcknowledgedFixture = commandFixture({
     '24534C553030313233343536373839303132332C30322C383036332C3930303030303038312C30312A46440D0A',
   sentFrame: {
     id: 'c0000000-0000-4000-8000-000000000001',
-    direction: 'HOLITA',
+    direction: 'DISCOCAN',
     receivedAt: '2026-10-20T07:58:11.000Z',
     command: '03',
     reference: '900000081',

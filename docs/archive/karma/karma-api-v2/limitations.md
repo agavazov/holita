@@ -8,9 +8,9 @@ questions and possible future work are recorded separately in the
 
 The integration consumes thirteen GET method/path pairs, internal `POST /login` and
 `POST /commands` for fixed parameter/profile/rule/logger/diagnostic reads and single-parameter/rule writes. The other seventeen
-declared operations are absent from holita:
+declared operations are absent from discocan:
 
-| Area                            | Declared operations absent from holita                    |
+| Area                            | Declared operations absent from discocan                    |
 | ------------------------------- | --------------------------------------------------------- |
 | Cars                            | POST `/cars`, PUT and DELETE `/cars/{id}`                 |
 | Drivers                         | GET/POST `/drivers`, PUT/DELETE `/drivers/{id}`           |
@@ -101,7 +101,7 @@ reconciled. Nullable finite values are preserved, without deriving units or labe
 
 ## Access and operations limits
 
-All authenticated holita Tenants intentionally see the same configured account.
+All authenticated discocan Tenants intentionally see the same configured account.
 Karma project memberships do not enforce Tenant/Branch filtering. Fleet's persisted
 configuration operations are separately scoped to their Fleet Tenant/Branch
 and selected Karma car/device pair, without requiring a local Fleet Device record;
@@ -156,11 +156,11 @@ persistent fault records or establish current vehicle health. Report numbers in 
 are distinct from Karma event-code filters. Fleet's connected **Diagnostics** scenario
 uses labelled illustrative records and links separately to real truck history.
 Examples, counts and briefs from the scenario source cannot prove live DTC
-reading. See the [integration evidence map](holita-integration.md#diagnostic-evidence-and-product-coverage).
+reading. See the [integration evidence map](discocan-integration.md#diagnostic-evidence-and-product-coverage).
 
 Fixed diagnostic and fault-logger reads use scoped Fleet operations; version/global
 commands remain manual upstream procedures. Previously retained queues are reconciled,
-but discovery of unrelated commands submitted outside holita is unavailable.
+but discovery of unrelated commands submitted outside discocan is unavailable.
 Queue acceptance or `transmitted` does not establish a device ACK, successful fault
 retrieval or a decoded error. A negative/terminal `154,0` reply is not a positive
 fault list or proof that the ECU has no faults. A `411` CAN-error flag or `417`

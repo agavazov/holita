@@ -1,4 +1,4 @@
-<holita-page-header
+<discocan-page-header
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
   [moduleInfo]="text().moduleInfo"
@@ -11,39 +11,39 @@
 }
 
 @if (kpis(); as kpis) {
-  <holita-kpi-strip [label]="text().kpis.label">
-    <holita-kpi-tile
+  <discocan-kpi-strip [label]="text().kpis.label">
+    <discocan-kpi-tile
       [label]="text().kpis.active"
-      [value]="kpis.active | holitaNumber"
+      [value]="kpis.active | discocanNumber"
       [secondary]="onLeave(kpis.onLeave)"
       tone="success"
       ><svg kpiIcon data-p-icon="users"
-    /></holita-kpi-tile>
-    <holita-kpi-tile
+    /></discocan-kpi-tile>
+    <discocan-kpi-tile
       [label]="text().kpis.documents"
-      [value]="kpis.documents | holitaNumber"
+      [value]="kpis.documents | discocanNumber"
       [footnote]="text().kpis.documentsFootnote"
       [tone]="kpis.documents ? 'warn' : 'success'"
       ><svg kpiIcon data-p-icon="id-card"
-    /></holita-kpi-tile>
-    <holita-kpi-tile
+    /></discocan-kpi-tile>
+    <discocan-kpi-tile
       [label]="text().kpis.score"
       [value]="scoreValue()"
       [footnote]="text().kpis.scoreFootnote"
       category="c3"
       ><svg kpiIcon data-p-icon="chart-line"
-    /></holita-kpi-tile>
-    <holita-kpi-tile
+    /></discocan-kpi-tile>
+    <discocan-kpi-tile
       [label]="text().kpis.distance"
       [value]="units.distance(kpis.distanceKm, false, 0)"
       [unit]="units.distanceUnit()"
       category="c4"
       ><svg kpiIcon data-p-icon="compass"
-    /></holita-kpi-tile>
-  </holita-kpi-strip>
+    /></discocan-kpi-tile>
+  </discocan-kpi-strip>
 }
 
-<holita-filter-builder
+<discocan-filter-builder
   [searchLabel]="text().search"
   [search]="state().search"
   [searchError]="searchError()"
@@ -54,7 +54,7 @@
   (conditionsChange)="changeConditions($event)"
 />
 
-<holita-table-panel
+<discocan-table-panel
   #panel
   [heading]="text().table.heading"
   [total]="total()"
@@ -78,7 +78,7 @@
   @if (canEdit()) {
     <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
   }
-  <holita-list-sort-menu
+  <discocan-list-sort-menu
     panelActions
     [fields]="sortFields()"
     [sort]="state().sort"
@@ -173,7 +173,7 @@
             <span [title]="row.employeeNo">{{ row.employeeNo || '—' }}</span>
           </span>
           <div class="app-table-mobile-actions">
-            <holita-row-actions
+            <discocan-row-actions
               [actions]="actions()"
               [record]="recordOf(row)"
               (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -233,13 +233,13 @@
                 [style.--app-meter-value]="row.score + '%'"
                 aria-hidden="true"
               ></span>
-              <span class="app-cell-number">{{ row.score | holitaNumber: 1 }}</span>
+              <span class="app-cell-number">{{ row.score | discocanNumber: 1 }}</span>
             </span>
           } @else {
             <span class="app-muted">{{ text().table.noScore }}</span>
           }
         </td>
-        <td class="app-cell-number app-col-secondary">{{ row.trips30d | holitaNumber }}</td>
+        <td class="app-cell-number app-col-secondary">{{ row.trips30d | discocanNumber }}</td>
         <td class="app-cell-number app-col-secondary">
           {{ units.distance(row.distance30dKm, false, 0) }}
         </td>
@@ -256,7 +256,7 @@
           }
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-          <holita-row-actions
+          <discocan-row-actions
             [actions]="actions()"
             [record]="recordOf(row)"
             (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -265,4 +265,4 @@
       </tr>
     </ng-template>
   </p-table>
-</holita-table-panel>
+</discocan-table-panel>

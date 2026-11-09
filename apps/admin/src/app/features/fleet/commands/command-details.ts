@@ -33,7 +33,7 @@ const lifecycleFields = [
 ] as const;
 
 @Component({
-  selector: 'holita-command-details',
+  selector: 'discocan-command-details',
   imports: [ButtonDirective, Dialog, Message, Tag, Timeline],
   templateUrl: './command-details.html',
   styleUrl: './command-details.scss',

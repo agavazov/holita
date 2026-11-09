@@ -5,7 +5,7 @@
 $tones: success, info, warn, danger, neutral, accent;
 $categories: c1, c2, c3, c4, c5, c6, c7, c8;
 
-@layer holita {
+@layer discocan {
   // Brand mark and word, used by the sidebar, the topbar below `lg` and the login page.
   .app-logo {
     display: inline-flex;
@@ -356,7 +356,7 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
   }
 
   // Controls projected into FormField fill its width.
-  holita-form-field > :is(input, textarea, p-select, p-autocomplete, p-inputnumber, p-datepicker) {
+  discocan-form-field > :is(input, textarea, p-select, p-autocomplete, p-inputnumber, p-datepicker) {
     inline-size: 100%;
   }
 
@@ -717,7 +717,7 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     white-space: nowrap;
   }
 
-  // The scroll container is focusable (provideHolitaTheme) so the keyboard can scroll it.
+  // The scroll container is focusable (provideDiscoCanTheme) so the keyboard can scroll it.
   .p-datatable-table-container:focus-visible {
     outline: var(--p-focus-ring-width) var(--p-focus-ring-style) var(--p-focus-ring-color);
     outline-offset: calc(-1 * var(--p-focus-ring-width));

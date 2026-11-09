@@ -1,6 +1,6 @@
 # ERM roadmap
 
-Remaining work to run every StarLink unit on holita, verify its data and commands, and retire
+Remaining work to run every StarLink unit on discocan, verify its data and commands, and retire
 Karma. Follow [ADR 0007](../architecture/decisions/0007-erm-gateway-and-api-processes.md),
 the [operator guide](../discocan/development.md#erm-device-server) and the retained
 [ERM sources](../discocan/erm-resources/README.md).
@@ -19,18 +19,18 @@ reopen them as roadmap tasks.
 
 ## Safety rules
 
-- A unit always keeps a working way back. Its backup server (0051/0052) stays Karma until holita runs
+- A unit always keeps a working way back. Its backup server (0051/0052) stays Karma until discocan runs
   without Karma, and no command changes the primary and the backup server together.
 - Before any write, take that unit's parameter snapshot. Change one unit at a time, read every write
   back, and restore the snapshot value on a mismatch.
-- Never read 0049–0052 through Karma for a unit routed to holita: Karma then writes its own server
+- Never read 0049–0052 through Karma for a unit routed to discocan: Karma then writes its own server
   back. A tool talking to a unit confirms every reply, so the unit does not resend it to Karma.
 - There are no spare units (owner, 2026-11-03). CB6711TE, CB5640XP and CB5636XP are the test
   trucks; the other seven get only what the test trucks proved. Firmware update, reset, logger
   clearing, outputs and immobilizer, unit lock (0059/0060), authentication (`95`), TLS (0053), APN
   and the Simple SMS password are tried only on a parked test truck with a person at it, after
   telling the owner. Never on a moving truck. Report any loss of contact to the owner at once.
-- Snapshots contain secrets (for example 0593 and lock codes). They stay in `holita_erm`, and the
+- Snapshots contain secrets (for example 0593 and lock codes). They stay in `discocan_erm`, and the
   admin shows them unmasked to the Device's Branch operators (owner, 2026-11-03); never print them
   in logs or commit them.
 - Every test is recorded in the git-ignored `.references/erm-relay/JOURNAL.md` with its frames and
@@ -47,13 +47,13 @@ reopen them as roadmap tasks.
 
 ## Fleet rollout
 
-- Nine units report to holita in primary mode since 2026-11-04: the three test trucks, the five
+- Nine units report to discocan in primary mode since 2026-11-04: the three test trucks, the five
   routed on 2026-11-03 and CB6721TE. Route CB9680TE after checking its power/unit/SIM and current
   reachability: its last known report was 2026-10-28 06:02 UTC.
 - A gateway restart sends about half of the driving units to their Karma backup, and a unit can
   also fall back without one (CB1147TP after a mobile-network change on 2026-11-04). Restart the
   gateway only while no routed truck is driving. Fleet marks such units `KARMA_BACKUP`; bring them
-  back once parked as in [moving a unit](../discocan/development.md#moving-a-unit-between-karma-and-holita).
+  back once parked as in [moving a unit](../discocan/development.md#moving-a-unit-between-karma-and-discocan).
 - For each unit, snapshot parameters and verify its next ordinary connection, gapless Karma
   `/events`, and no Karma `46` rewrite for an hour. Require seven days of gapless relaying for
   all ten units before closing rollout.
@@ -63,7 +63,7 @@ reopen them as roadmap tasks.
   with installed hardware capabilities.
 - Compare positions, timestamps, speed, odometer, voltages, ignition/engine, satellites and
   network against Karma over a day per unit, then verify seven-day agreement. Confirm that
-  holita ACKs prevent retransmission and that command replies do not make Karma rewrite routing.
+  discocan ACKs prevent retransmission and that command replies do not make Karma rewrite routing.
 
 ## Open engineering work
 
@@ -86,10 +86,10 @@ reopen them as roadmap tasks.
   establish that measurements stopped.
 - **Remaining binary/framing gaps:** identify `$SLB` tag `27` (seen only while parked); handle configuration-session `E0 00` pairs without corrupting the following
   frame. Non-routing replies inside `$SLC` still reach Karma (routing reads are refused).
-- **Own telemetry and diagnostics:** Fleet imports holita events as samples and trips, `419` fault
+- **Own telemetry and diagnostics:** Fleet imports discocan events as samples and trips, `419` fault
   records as `DIAGNOSTIC_TROUBLE_CODE` and `411` CAN errors per ADR 0008. Raw `405` observations now have scoped Vehicle history and a chart. Remaining: verify physical
   byte order, signedness and calibration before displaying physical values; decide whether to
-  backfill reports before the existing import cursors; verify CB1147TP's real `419` faults through holita. Establish fault lifecycle/completeness
+  backfill reports before the existing import cursors; verify CB1147TP's real `419` faults through discocan. Establish fault lifecycle/completeness
   before continuous fault-state tracking or notifications; missing telemetry or an empty logger is
   not confirmed ECU clearance.
 - **Broader command coverage:** prove each supported family at its permitted test level, including
@@ -108,7 +108,7 @@ reopen them as roadmap tasks.
 
 - Implement and prove standalone operation without the Karma upstream, including `95`
   authentication where needed, command delivery and eData replies.
-- Before removing Karma backup, run a second holita endpoint on another host and prove failover
+- Before removing Karma backup, run a second discocan endpoint on another host and prove failover
   on L1. Prove the Simple SMS emergency route and write the on-call recovery procedure.
 - Run one unit for 30 days without Karma before moving the others.
 - Deploy outside the development host: independent gateway/API supervision, database backups and
@@ -182,7 +182,7 @@ remains the evidence source; do not request already supplied protocol access or 
 4. Identify supported APIs for accident/camera data, battery health, starter time, temperature,
    drivers/sensors and historical assignment, POI/geofence/routes, notifications, hierarchy,
    first transmission, query-use reports and telemetry definitions/event aliases. Are internal
-   `/i/` methods supported/versioned external contracts, or must holita own those workflows?
+   `/i/` methods supported/versioned external contracts, or must discocan own those workflows?
 5. Identify supported NC2 firmware/hardware/cached-parameter/diagnostic reads without device commands;
    explain CSS/BATC/BATH, parameter namespaces and Statistics units. Supply classic/NC2 role/action
    matrices and confirm web/API account equivalence and source-only firmware/preset/billing scope.

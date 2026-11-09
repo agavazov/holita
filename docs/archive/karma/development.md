@@ -358,7 +358,7 @@ sample reads retain the original endpoint facts and report their retrieval state
 from GPS coverage. Open trips or missing message bounds remain in endpoint mode.
 
 The list keeps same-time/same-coordinate records with distinct IDs. Long intervals use the
-displayed Holita 15-minute rule over established UTC positions; this is not a provider
+displayed DiscoCan 15-minute rule over established UTC positions; this is not a provider
 sampling-frequency claim. Declared source gaps are displayed separately. Full paths,
 multi-marker fleet maps and nearest-truck lists remain unavailable without the richer-map
 and bounded bulk-contract prerequisites; eData/CAN series are not loaded by this view.
@@ -514,7 +514,7 @@ have no implemented views because their populated schemas or valid identifiers a
 
 ## Background device configuration reads
 
-Apply Fleet migrations with `npm run db:migrate --workspace @holita/fleet` and regenerate
+Apply Fleet migrations with `npm run db:migrate --workspace @discocan/fleet` and regenerate
 contracts with `npm run codegen`. Configure these entries from the root `.env.example`:
 
 - Fleet: `FLEET_DEVICE_OPERATIONS_ENABLED=true` and `FLEET_KARMA_INTERNAL_URL`, default

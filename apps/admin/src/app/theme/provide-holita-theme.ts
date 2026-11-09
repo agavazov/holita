@@ -1,30 +1,30 @@
 import type { EnvironmentProviders } from '@angular/core';
 import { providePrimeNG } from 'primeng/config';
 import { tabListPt } from '../ui/tabs';
-import { holitaPreset } from './holita-preset';
+import { discocanPreset } from './discocan-preset';
 import type { ThemeChoice } from './theme-choice';
 
 /**
  * PrimeNG emits its tokens and component styles into the `primeng` layer, between the global
- * reset and the holita layer (declared first in `styles/_layers.scss`).
+ * reset and the discocan layer (declared first in `styles/_layers.scss`).
  */
-const holitaThemeOptions = {
+const discocanThemeOptions = {
   darkModeSelector: '.app-dark',
-  cssLayer: { name: 'primeng', order: 'holita-reset, primeng, holita' },
+  cssLayer: { name: 'primeng', order: 'discocan-reset, primeng, discocan' },
 } as const;
 
-export function holitaTheme(choice: ThemeChoice) {
-  return { preset: holitaPreset(choice), options: holitaThemeOptions };
+export function discocanTheme(choice: ThemeChoice) {
+  return { preset: discocanPreset(choice), options: discocanThemeOptions };
 }
 
 /**
- * PrimeNG with the holita preset for one design choice; the license is optional. Table cells do
+ * PrimeNG with the discocan preset for one design choice; the license is optional. Table cells do
  * not wrap, so a table may scroll sideways: its scroll container is a tab stop for keyboard users.
  */
-export function provideHolitaTheme(choice: ThemeChoice, license?: string): EnvironmentProviders {
+export function provideDiscoCanTheme(choice: ThemeChoice, license?: string): EnvironmentProviders {
   return providePrimeNG({
     ripple: false,
-    theme: holitaTheme(choice),
+    theme: discocanTheme(choice),
     pt: { table: { tableContainer: { tabindex: '0' } }, tabList: tabListPt },
     ...(license ? { license } : {}),
   });

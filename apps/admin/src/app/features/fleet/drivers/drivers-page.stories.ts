@@ -12,7 +12,7 @@ import { DriversPage } from './drivers-page';
 const meta: Meta = {
   title: 'Admin/Fleet/Drivers',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: true } satisfies StoryFixtures },
 };
 export default meta;
 type Story = StoryObj;
@@ -33,7 +33,7 @@ function routed(suffix = ''): NonNullable<Story['render']> {
         VehicleProfilePage,
       ],
     },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 
@@ -44,7 +44,7 @@ export const Default: Story = {
 export const Loading: Story = {
   render: routed(),
   parameters: {
-    holita: { scenario: { failures: { AdminDrivers: 'pending' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminDrivers: 'pending' } } } satisfies StoryFixtures,
   },
 };
 
@@ -75,6 +75,6 @@ export const ErrorState: Story = {
   name: 'Error',
   render: routed(),
   parameters: {
-    holita: { scenario: { failures: { AdminDrivers: 'network' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminDrivers: 'network' } } } satisfies StoryFixtures,
   },
 };

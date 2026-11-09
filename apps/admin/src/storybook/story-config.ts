@@ -32,7 +32,7 @@ import { clearSession, defaultBranchId, seedSession } from './session-fixtures';
 import './general-settings-fixtures';
 import { notificationFixtures } from './notifications-fixtures';
 
-/** Per-story fixture options, passed as `parameters.holita`. */
+/** Per-story fixture options, passed as `parameters.discocan`. */
 export interface StoryFixtures {
   /** Stories start signed in to the default Branch unless this is false. */
   readonly signedIn?: boolean;
@@ -144,7 +144,7 @@ function readScenario(value: unknown): FixtureScenario {
   return { latencyMs, failures: forced };
 }
 
-/** Reads `parameters.holita` with runtime checks. */
+/** Reads `parameters.discocan` with runtime checks. */
 export function readStoryFixtures(value: unknown): StoryFixtures {
   if (!isRecord(value)) {
     return {};
@@ -162,7 +162,7 @@ export function applyStoryGlobals(globals: Readonly<Record<string, unknown>>): v
   currentLanguage = storyLanguage(globals);
   const dark = globals['theme'] === 'dark';
   try {
-    localStorage.setItem('holita.admin.theme', dark ? 'dark' : 'light');
+    localStorage.setItem('discocan.admin.theme', dark ? 'dark' : 'light');
   } catch {
     /* The class below still applies the theme. */
   }
@@ -202,7 +202,7 @@ export function routeAt(path: string) {
 
 /** Renders the real application routes at a URL, for screen and flow stories. */
 @Component({
-  selector: 'holita-story-app',
+  selector: 'discocan-story-app',
   imports: [RouterOutlet],
   template: '<router-outlet />',
 })

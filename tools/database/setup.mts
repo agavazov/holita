@@ -16,7 +16,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 }
 
 const databases = ['core', 'fleet', 'erm'].map((service) => {
-  const name = `holita_${service}${suffix}`;
+  const name = `discocan_${service}${suffix}`;
   const key = `${service.toUpperCase()}${suffix.toUpperCase()}_DATABASE_URL`;
   let url: URL;
   try {
@@ -44,15 +44,15 @@ const databases = ['core', 'fleet', 'erm'].map((service) => {
 const admin = new pg.Client({
   host: '127.0.0.1',
   port,
-  user: 'holita_admin',
+  user: 'discocan_admin',
   database: 'postgres',
-  password: process.env.POSTGRES_PASSWORD ?? 'holita_admin_local',
+  password: process.env.POSTGRES_PASSWORD ?? 'discocan_admin_local',
   connectionTimeoutMillis: 5000,
 });
 
 try {
   await admin.connect();
-  await admin.query("SELECT pg_advisory_lock(hashtext('holita-database-setup'))");
+  await admin.query("SELECT pg_advisory_lock(hashtext('discocan-database-setup'))");
   for (const database of databases) {
     const role = await admin.query<{
       rolsuper: boolean;

@@ -101,7 +101,7 @@ const emptyVehicle: VehicleForm = {
  * Presentation only: the host saves and passes back `saving`, `saveError` and server `fieldErrors`.
  */
 @Component({
-  selector: 'holita-vehicle-drawer',
+  selector: 'discocan-vehicle-drawer',
   imports: [
     ReactiveFormsModule,
     ButtonDirective,

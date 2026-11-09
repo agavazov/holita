@@ -84,7 +84,7 @@ import type {
   FleetDeviceErmFramesArgs,
   FleetDeviceErmCommandsArgs,
   FleetDeviceErmParameterSnapshotsArgs,
-  MutationReturnErmDeviceToHolitaArgs,
+  MutationReturnErmDeviceToDiscoCanArgs,
 } from '../src/generated/graphql/types.js';
 import type { RequestContext } from '../src/graphql/request-context.js';
 import { formatGraphqlError } from '../src/graphql/errors.js';
@@ -200,7 +200,7 @@ it('persists captured connection lifecycle and raw frames through the production
     };
     // A fake unit exercises the recovery contract without contacting Karma or a device port.
     for (const scenario of [
-      { primaryHost: '65.108.137.165', outcome: 'ALREADY_HOLITA' },
+      { primaryHost: '65.108.137.165', outcome: 'ALREADY_DISCOCAN' },
       { primaryHost: 'in.karma.online', outcome: 'NEEDS_OPERATOR' },
     ]) {
       let complete: (result: RecoveryResult) => void = () => undefined;
@@ -273,7 +273,7 @@ it('persists captured connection lifecycle and raw frames through the production
       }
     }
     const binary = Buffer.from([0x00, 0x10, 0x0d, 0x0a, 0x80, 0xff]);
-    const holitaFrame = `$SRV${unitId},03,900000001,0774`;
+    const discocanFrame = `$SRV${unitId},03,900000001,0774`;
     const eventFrame = `$SLU${unitId},06,2,261103142530,04,261103142520,+4238.9347,-07109.9017,002.3,180,12345.678,10052,8738,1,12.200,03.600`;
     const records = [
       {
@@ -306,12 +306,12 @@ it('persists captured connection lifecycle and raw frames through the production
       { connection, from: 'device', partial: true, frame: binary.toString('latin1') },
       {
         connection,
-        from: 'holita',
+        from: 'discocan',
         unit: unitId,
         command: '03',
         reference: '900000001',
         checksum: 'absent',
-        frame: holitaFrame,
+        frame: discocanFrame,
       },
       {
         connection,
@@ -451,13 +451,13 @@ it('persists captured connection lifecycle and raw frames through the production
         raw: binary,
       },
       {
-        direction: 'HOLITA',
+        direction: 'DISCOCAN',
         unit: unitId,
         command: '03',
         reference: '900000001',
         checksum: 'ABSENT',
         partial: false,
-        raw: Buffer.from(holitaFrame, 'latin1'),
+        raw: Buffer.from(discocanFrame, 'latin1'),
       },
       {
         direction: 'DEVICE',
@@ -596,7 +596,7 @@ it('persists captured connection lifecycle and raw frames through the production
       `$SLU654321,33,999999999,\\x00\\x10\\x0d\\x0a\\x80ÿ*00`,
     );
     const unitFrames = (await telemetry.deviceFrames(device, undefined, context))?.items ?? [];
-    expect(unitFrames.map((frame) => frame.direction)).toContain('HOLITA');
+    expect(unitFrames.map((frame) => frame.direction)).toContain('DISCOCAN');
     expect(unitFrames).toContainEqual(
       expect.objectContaining({
         unitId: null,
@@ -1196,7 +1196,7 @@ it('persists captured connection lifecycle and raw frames through the production
             data: {
               connectionId: stored.id,
               unitId,
-              direction: 'HOLITA',
+              direction: 'DISCOCAN',
               receivedAt: recorded.sentAt,
               command: command.command,
               reference: recorded.reference,
@@ -2260,7 +2260,7 @@ it('persists captured connection lifecycle and raw frames through the production
           data: {
             connectionId: stored.id,
             unitId,
-            direction: command.command === '45' ? 'DEVICE' : 'HOLITA',
+            direction: command.command === '45' ? 'DEVICE' : 'DISCOCAN',
             receivedAt: new Date(),
             command: command.command,
             reference: command.reference,
@@ -4580,18 +4580,18 @@ it('persists captured connection lifecycle and raw frames through the production
       ),
     });
     const karmaObservedAt = new Date();
-    const karmaHolitaAt = new Date(karmaObservedAt.getTime() - 10 * 60_000);
+    const karmaDiscoCanAt = new Date(karmaObservedAt.getTime() - 10 * 60_000);
     const karmaConnection = await database.client.ermConnection.create({
       data: {
         unitId: karmaUnitId,
         peer,
         upstream: 'primary',
-        openedAt: karmaHolitaAt,
-        closedAt: karmaHolitaAt,
+        openedAt: karmaDiscoCanAt,
+        closedAt: karmaDiscoCanAt,
         frames: {
           create: {
             unitId: karmaUnitId,
-            receivedAt: karmaHolitaAt,
+            receivedAt: karmaDiscoCanAt,
             direction: 'DEVICE',
             command: '01',
             checksum: 'ABSENT',
@@ -4600,14 +4600,14 @@ it('persists captured connection lifecycle and raw frames through the production
         },
       },
     });
-    karmaEvents = [{ reportedAt: new Date(karmaHolitaAt.getTime() + 180_000), parked: true }];
+    karmaEvents = [{ reportedAt: new Date(karmaDiscoCanAt.getTime() + 180_000), parked: true }];
     expect(await karma.observe(karmaUnitId, '19', karmaObservedAt)).toMatchObject({
-      state: 'HOLITA',
+      state: 'DISCOCAN',
     });
     await expect(karma.requestReturn(deviceId, engineerContext)).rejects.toMatchObject({
       status: 409,
     });
-    const firstKarmaReportAt = new Date(karmaHolitaAt.getTime() + 60_000);
+    const firstKarmaReportAt = new Date(karmaDiscoCanAt.getTime() + 60_000);
     const latestKarmaReportAt = new Date(karmaObservedAt.getTime() - 60_000);
     karmaEvents = [
       { reportedAt: latestKarmaReportAt, parked: false },
@@ -4701,11 +4701,11 @@ it('persists captured connection lifecycle and raw frames through the production
             parseLiteral: (node) => dateTime.parseLiteral(node),
           }),
           Mutation: {
-            returnErmDeviceToHolita: (
+            returnErmDeviceToDiscoCan: (
               _parent: unknown,
-              args: MutationReturnErmDeviceToHolitaArgs,
+              args: MutationReturnErmDeviceToDiscoCanArgs,
               ctx: RequestContext,
-            ) => karmaResolver.returnToHolita(args, ctx),
+            ) => karmaResolver.returnToDiscoCan(args, ctx),
           },
           FleetDevice: {
             __resolveReference: (
@@ -4721,22 +4721,22 @@ it('persists captured connection lifecycle and raw frames through the production
     ]);
     const karmaAccepted = await graphql({
       schema: karmaSchema,
-      source: `mutation($deviceId: ID!) { returnErmDeviceToHolita(deviceId: $deviceId) {
+      source: `mutation($deviceId: ID!) { returnErmDeviceToDiscoCan(deviceId: $deviceId) {
         id actorId requestedAt queueId status pending recovery { outcome }
-        holitaConnectionId holitaConnectedAt
+        discocanConnectionId discocanConnectedAt
       } }`,
       variableValues: { deviceId },
       contextValue: engineerContext,
     });
     expect(karmaAccepted.errors).toBeUndefined();
-    expect(karmaAccepted.data?.['returnErmDeviceToHolita']).toMatchObject({
+    expect(karmaAccepted.data?.['returnErmDeviceToDiscoCan']).toMatchObject({
       actorId: engineerContext.userId,
       queueId: '7301',
       status: 'QUEUED',
       pending: true,
       recovery: null,
-      holitaConnectionId: null,
-      holitaConnectedAt: null,
+      discocanConnectionId: null,
+      discocanConnectedAt: null,
     });
     const firstReturn = await database.client.ermKarmaReturnAttempt.findFirstOrThrow({
       where: { unitId: karmaUnitId },
@@ -4776,14 +4776,14 @@ it('persists captured connection lifecycle and raw frames through the production
       ...engineerContext,
       role: 'ADMINISTRATOR',
     });
-    const alreadyHolita = await recoveryRepository.record({
+    const alreadyDiscoCan = await recoveryRepository.record({
       unitId: karmaUnitId,
       peer,
       startedAt: secondReturn.requestedAt,
       finishedAt: secondReturn.requestedAt,
-      outcome: 'ALREADY_HOLITA',
-      reason: 'Primary endpoint already points to holita',
-      primaryHost: 'holita.example',
+      outcome: 'ALREADY_DISCOCAN',
+      reason: 'Primary endpoint already points to discocan',
+      primaryHost: 'discocan.example',
       primaryPort: '11500',
     });
     await karmaRepository.reconcile(karmaUnitId);
@@ -4791,8 +4791,8 @@ it('persists captured connection lifecycle and raw frames through the production
       latestReturnAttempt: {
         id: secondReturn.id,
         pending: true,
-        recovery: { id: alreadyHolita.id, outcome: 'ALREADY_HOLITA' },
-        holitaConnectionId: null,
+        recovery: { id: alreadyDiscoCan.id, outcome: 'ALREADY_DISCOCAN' },
+        discocanConnectionId: null,
       },
     });
     const returnedAt = new Date(secondReturn.requestedAt.getTime() + 1000);
@@ -4816,11 +4816,11 @@ it('persists captured connection lifecycle and raw frames through the production
     });
     expect(returnedConnection.id).not.toBe(karmaConnection.id);
     await karmaRepository.reconcile(karmaUnitId);
-    expect(await karma.observe(karmaUnitId, '19', returnedAt)).toMatchObject({ state: 'HOLITA' });
+    expect(await karma.observe(karmaUnitId, '19', returnedAt)).toMatchObject({ state: 'DISCOCAN' });
     const routingSource = `query($representations: [_Any!]!) {
       _entities(representations: $representations) { ... on FleetDevice {
         ermRouting { state since observedAt latestKarmaReportAt parked latestReturnAttempt {
-          id queueId status pending recovery { id outcome } holitaConnectionId holitaConnectedAt
+          id queueId status pending recovery { id outcome } discocanConnectionId discocanConnectedAt
         } }
       } }
     }`;
@@ -4836,15 +4836,15 @@ it('persists captured connection lifecycle and raw frames through the production
     expect(routingContract.data?.['_entities']).toEqual([
       {
         ermRouting: expect.objectContaining({
-          state: 'HOLITA',
+          state: 'DISCOCAN',
           latestReturnAttempt: {
             id: secondReturn.id,
             queueId: '7302',
             status: 'RETURNED',
             pending: false,
-            recovery: { id: alreadyHolita.id, outcome: 'ALREADY_HOLITA' },
-            holitaConnectionId: returnedConnection.id,
-            holitaConnectedAt: returnedAt.toISOString(),
+            recovery: { id: alreadyDiscoCan.id, outcome: 'ALREADY_DISCOCAN' },
+            discocanConnectionId: returnedConnection.id,
+            discocanConnectedAt: returnedAt.toISOString(),
           },
         }),
       },
@@ -4869,7 +4869,7 @@ it('persists captured connection lifecycle and raw frames through the production
       tenantId,
       branchId,
       deviceId,
-      since: karmaHolitaAt.toISOString(),
+      since: karmaDiscoCanAt.toISOString(),
     });
     expect(karmaNotifications.items).toEqual([
       expect.objectContaining({
@@ -4879,7 +4879,7 @@ it('persists captured connection lifecycle and raw frames through the production
       }),
       expect.objectContaining({
         sourceKind: 'DIAGNOSTIC',
-        parameters: { eventKind: 'UNIT_RETURNED_TO_HOLITA' },
+        parameters: { eventKind: 'UNIT_RETURNED_TO_DISCOCAN' },
         target: { kind: 'DEVICE', id: deviceId },
       }),
     ]);
@@ -4888,7 +4888,7 @@ it('persists captured connection lifecycle and raw frames through the production
         tenantId,
         branchId,
         deviceId,
-        since: karmaHolitaAt.toISOString(),
+        since: karmaDiscoCanAt.toISOString(),
         after: karmaNotifications.next,
       }),
     ).toMatchObject({ items: [], hasMore: false });
@@ -4898,20 +4898,20 @@ it('persists captured connection lifecycle and raw frames through the production
     fleetDeviceImeis.set(deviceId, karmaTargetUnitId);
     process.env.ERM_PRIMARY_UNITS = karmaTargetUnitId;
     const lateObservedAt = new Date();
-    const oldHolitaAt = new Date(lateObservedAt.getTime() - 2 * 60 * 60_000);
-    const onsetAt = new Date(oldHolitaAt.getTime() + 60_000);
+    const oldDiscoCanAt = new Date(lateObservedAt.getTime() - 2 * 60 * 60_000);
+    const onsetAt = new Date(oldDiscoCanAt.getTime() + 60_000);
     const parkedReportAt = new Date(lateObservedAt.getTime() - 5 * 60_000);
     await database.client.ermConnection.create({
       data: {
         unitId: karmaTargetUnitId,
         peer,
         upstream: 'primary',
-        openedAt: oldHolitaAt,
-        closedAt: oldHolitaAt,
+        openedAt: oldDiscoCanAt,
+        closedAt: oldDiscoCanAt,
         frames: {
           create: {
             unitId: karmaTargetUnitId,
-            receivedAt: oldHolitaAt,
+            receivedAt: oldDiscoCanAt,
             direction: 'DEVICE',
             checksum: 'ABSENT',
             raw: Buffer.from(`$SLU${karmaTargetUnitId},01,1`),
@@ -4931,8 +4931,8 @@ it('persists captured connection lifecycle and raw frames through the production
     });
     expect(karmaReads).toHaveBeenLastCalledWith(
       '19',
-      oldHolitaAt,
-      new Date(oldHolitaAt.getTime() + 30 * 60_000),
+      oldDiscoCanAt,
+      new Date(oldDiscoCanAt.getTime() + 30 * 60_000),
       karmaTargetUnitId,
     );
     const emptyWindowAt = new Date(lateObservedAt.getTime() + 31 * 60_000);

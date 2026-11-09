@@ -20,7 +20,7 @@ import { PageLoading } from './page-loading';
 
 /** Each mounted dashboard owns its Branch preferences and feature clients. */
 @Component({
-  selector: 'holita-dashboard-workspace',
+  selector: 'discocan-dashboard-workspace',
   imports: [
     Tabs,
     TabList,
@@ -57,7 +57,7 @@ import { PageLoading } from './page-loading';
       @for (scope of scopes(); track scope.token + ':' + scope.branch.id + ':' + scope.language) {
         @if (!preferences.settings()) {
           @if (preferences.loading()) {
-            <holita-page-loading />
+            <discocan-page-loading />
           } @else {
             <section class="app-card">
               <p-message severity="error">{{ preferencesError() }}</p-message>
@@ -78,13 +78,13 @@ import { PageLoading } from './page-loading';
                 <div class="app-view">
                   @switch (tab) {
                     @case ('overview') {
-                      <holita-overview-page [branch]="scope.branch" [language]="scope.language" />
+                      <discocan-overview-page [branch]="scope.branch" [language]="scope.language" />
                     }
                     @case ('problems') {
-                      <holita-problems-page [branch]="scope.branch" [language]="scope.language" />
+                      <discocan-problems-page [branch]="scope.branch" [language]="scope.language" />
                     }
                     @case ('trips') {
-                      <holita-trips-page [branch]="scope.branch" [language]="scope.language" />
+                      <discocan-trips-page [branch]="scope.branch" [language]="scope.language" />
                     }
                   }
                 </div>

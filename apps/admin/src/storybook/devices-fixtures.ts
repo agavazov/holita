@@ -127,11 +127,11 @@ export const fixtureLiveDevice = {
   warningLamps: liveLamps,
   currentWarnings: [],
   diagnostics: { __typename: 'FleetDeviceDiagnosticSummary', count: 0, latest: null },
-  routing: 'HOLITA',
+  routing: 'DISCOCAN',
   routingHealth: null,
   ermRouting: {
     __typename: 'ErmDeviceRouting',
-    state: 'HOLITA',
+    state: 'DISCOCAN',
     since: null,
     latestKarmaReportAt: null,
   },

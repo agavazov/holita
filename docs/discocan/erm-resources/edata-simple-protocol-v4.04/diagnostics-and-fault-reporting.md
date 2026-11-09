@@ -104,7 +104,7 @@ proved a one-byte DTC enablement on CB1344XH and CB1147TP using a fresh full
 49-byte `410`, one `302` write and independent whole-global readback. Offset
 **18**, counting from the configuration-ID high byte and excluding outer framing,
 changed `00→01`; all other **48 bytes** matched. These are installation-specific
-manual proofs. Holita has no product global-setting/DTC mutation yet.
+manual proofs. DiscoCan has no product global-setting/DTC mutation yet.
 
 Controlled paired exports also locate ignition-off/CAN-alive reporting at byte
 **24**. The independent byte **7** discrepancy remains: Monitor 9.56 parses

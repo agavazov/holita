@@ -11,10 +11,10 @@ export interface ListSortField {
 
 /** A field and direction menu for list sorts, including fields without a visible column. */
 @Component({
-  selector: 'holita-list-sort-menu',
+  selector: 'discocan-list-sort-menu',
   imports: [MenuButton],
   template: `
-    <holita-menu-button
+    <discocan-menu-button
       variant="text"
       menuClass="app-menu-scroll"
       [options]="options()"
@@ -27,7 +27,7 @@ export interface ListSortField {
           sort.direction === 'asc' ? text().ascending : text().descending
         }}</span>
       }
-    </holita-menu-button>
+    </discocan-menu-button>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -55,7 +55,7 @@ export const IdentityAndActions: Story = {
     },
     template: `
       <div class="app-view">
-        <holita-table-panel #panel heading="Responsive cells" mode="local" [total]="rows.length" [view]="{kind: 'rows'}" [columns]="columns" tableMinWidth="88.25rem" [actions]="actions" (action)="chosen = 'View ' + $event.ids.join(', ')">
+        <discocan-table-panel #panel heading="Responsive cells" mode="local" [total]="rows.length" [view]="{kind: 'rows'}" [columns]="columns" tableMinWidth="88.25rem" [actions]="actions" (action)="chosen = 'View ' + $event.ids.join(', ')">
           <p-table class="app-responsive-table" [value]="rows" [scrollable]="true" dataKey="id" [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }">
             <ng-template #colgroup><colgroup>@for (column of columns; track column.id) { <col [style.width]="column.className === 'app-col-identity' ? 'var(--app-table-identity-width, ' + column.width + ')' : column.width" [class]="column.className ?? ''" /> }</colgroup></ng-template>
             <ng-template #header>
@@ -73,7 +73,7 @@ export const IdentityAndActions: Story = {
               <tr>
                 <td class="app-col-identity">
                   <span class="app-cell-identity"><span class="app-mono" [title]="row.imei">{{ row.imei }}</span><span [title]="row.name">{{ row.name }}</span></span>
-                  <div class="app-table-mobile-actions"><holita-row-actions [actions]="actions" [record]="record" (choose)="panel.run($event.action, [record], $event.origin)" /></div>
+                  <div class="app-table-mobile-actions"><discocan-row-actions [actions]="actions" [record]="record" (choose)="panel.run($event.action, [record], $event.origin)" /></div>
                 </td>
                 <td><span class="app-plate">{{ row.vehicle }}</span></td>
                 <td><span class="app-cell-status"><p-tag severity="success" value="Connected" /></span></td>
@@ -81,11 +81,11 @@ export const IdentityAndActions: Story = {
                 <td><span class="app-cell-problems"><p-tag severity="warn" value="2" /><button type="button" class="app-link" (click)="panel.run('view', [record], $event.currentTarget)">View</button></span></td>
                 <td class="app-num"><span class="app-cell-number">123,456.7</span></td>
                 <td class="app-col-secondary"><span class="app-cell-truncate" [title]="row.model">{{ row.model }}</span></td>
-                <td class="app-col-actions" pFrozenColumn alignFrozen="right"><holita-row-actions [actions]="actions" [record]="record" (choose)="panel.run($event.action, [record], $event.origin)" /></td>
+                <td class="app-col-actions" pFrozenColumn alignFrozen="right"><discocan-row-actions [actions]="actions" [record]="record" (choose)="panel.run($event.action, [record], $event.origin)" /></td>
               </tr>
             </ng-template>
           </p-table>
-        </holita-table-panel>
+        </discocan-table-panel>
         @if (chosen) { <p role="status">{{ chosen }}</p> }
       </div>
     `,

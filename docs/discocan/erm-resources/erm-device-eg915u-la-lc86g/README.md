@@ -4,7 +4,7 @@ This reference describes **one device discussed in the supplied integration
 note**, identified there by a Quectel EG915U-LA modem, LC86G GNSS module, eight
 visible connector contacts and a 3.7 V / 350 mAh battery. Its exact ERM model,
 hardware revision and firmware are unknown. The directory name is a descriptive
-reference label, not an ERM SKU or a holita device type.
+reference label, not an ERM SKU or a discocan device type.
 
 [ERM resources](../README.md) · [Original integration note](source/ERM_INTEGRATION_EN.md) ·
 [Source metadata](metadata.json) · [Open hardware questions](../../../todo/erm-roadmap.md#questions-for-erm)
@@ -99,7 +99,7 @@ remain awaited. Those rules still need to be matched to the installed firmware.
 The [flespi ERM reference](https://flespi.com/protocols/erm) documents an ASCII/TCP
 adapter, tracker destination `host:port` configuration and parsed MQTT/REST data.
 This establishes a provider integration option, not a connection from this unit
-or an integration implemented in holita.
+or an integration implemented in discocan.
 
 Its relevant field and command notes are:
 
@@ -108,7 +108,7 @@ Its relevant field and command notes are:
 - `#VIN#` maps to `external.powersource.voltage` in this adapter. It is not the
   vehicle's VIN identifier in that context.
 - `getparam`, `setparam`, `custom`, `output_on` and `output_off` are flespi command
-  names, not literal ERM wire messages or holita GraphQL operations.
+  names, not literal ERM wire messages or discocan GraphQL operations.
 
 The [flespi changelog](https://forum.flespi.com/d/57-changelog-erm-protocol)
 also describes retaining the dynamic parameter format between connections. This
@@ -118,9 +118,9 @@ commands were executed during this analysis.
 
 The modem's AT interface and the tracker's application protocol are separate
 interfaces. The supplied note does not establish direct modem control as a
-supported way for holita to operate this tracker.
+supported way for discocan to operate this tracker.
 
-## Relationship to holita and the supplied integration proposal
+## Relationship to discocan and the supplied integration proposal
 
 The current [Discocan documentation](../../README.md) describes the implemented
 Fleet and ERM Server behavior. This hardware reference adds no ingestion
@@ -136,7 +136,7 @@ this device and the evidence available for it.
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1: Device Overview                                    | Hardware observations and uncertainty recorded above.                                                                                          |
 | 2–3: Data Flow; Data Available                        | Connectivity and capability prerequisites summarized above; no architecture selected.                                                          |
-| 4–6: Remote Control; Command Lifecycle; Backend Model | Proposed desired/reported configuration, queues, audit and normalized JSON remain source examples, not accepted holita contracts.              |
+| 4–6: Remote Control; Command Lifecycle; Backend Model | Proposed desired/reported configuration, queues, audit and normalized JSON remain source examples, not accepted discocan contracts.              |
 | 7–8: Provisioning; Integration Tests                  | Suggested procedures only; no provisioning or hardware tests have been performed.                                                              |
 | 9: Information Required from ERM                      | Outstanding hardware identification is tracked as HARDWARE-01; shared protocol/parameter/command questions remain in existing backlog entries. |
 | 10: References                                        | Original links retained in the archived note; the component and adapter sources used here are linked beside their claims.                      |

@@ -12,7 +12,7 @@ datasource db {
 enum ErmDirection {
   DEVICE @map("device")
   UPSTREAM @map("upstream")
-  HOLITA @map("holita")
+  DISCOCAN @map("discocan")
   @@map("ermDirection")
 }
 
@@ -90,7 +90,7 @@ enum ErmChecksum {
 }
 
 enum ErmRecoveryOutcome {
-  ALREADY_HOLITA @map("alreadyHolita")
+  ALREADY_DISCOCAN @map("alreadyDiscoCan")
   NEEDS_OPERATOR @map("needsOperator")
   @@map("ermRecoveryOutcome")
 }
@@ -305,7 +305,7 @@ model ErmCommandBatch {
 
 enum ErmKarmaRoutingState {
   UNKNOWN @map("unknown")
-  HOLITA @map("holita")
+  DISCOCAN @map("discocan")
   KARMA_BACKUP @map("karmaBackup")
   @@map("ermKarmaRoutingState")
 }
@@ -347,8 +347,8 @@ model ErmKarmaReturnAttempt {
   pending Boolean @default(true)
   recoverySessionId String? @db.Uuid
   recovery ErmRecoverySession? @relation(fields: [recoverySessionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  holitaConnectionId String? @db.Uuid
-  holitaConnection ErmConnection? @relation(fields: [holitaConnectionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  discocanConnectionId String? @db.Uuid
+  discocanConnection ErmConnection? @relation(fields: [discocanConnectionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   @@index([tenantId, branchId, deviceId, requestedAt(sort: Desc)])
   @@index([unitId, requestedAt(sort: Desc)])
   @@map("ermKarmaReturnAttempt")

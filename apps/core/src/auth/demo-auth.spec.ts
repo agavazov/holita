@@ -40,7 +40,7 @@ describe('Demo tenant session verification', () => {
     process.env.DEMO_AUTH_ENABLED = 'true';
     const tenantId = randomUUID();
     const token = issueDemoToken(tenantId);
-    const expired = `holita-demo.${tenantId}.${String(Math.floor(Date.now() / 1000) - 1)}`;
+    const expired = `discocan-demo.${tenantId}.${String(Math.floor(Date.now() / 1000) - 1)}`;
     const signature = createHmac('sha256', secret).update(expired).digest('base64url');
     for (const [row, header, expected] of [
       ['issued token', `Bearer ${token}`, tenantId],

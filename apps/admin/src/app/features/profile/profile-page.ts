@@ -23,11 +23,11 @@ import { ProfileApi } from './profile-api';
 import { ProfileView, type PasswordField, type ProfileField } from './profile-view';
 
 @Component({
-  selector: 'holita-profile-workspace',
+  selector: 'discocan-profile-workspace',
   imports: [ProfileView],
   providers: [ProfileApi],
   template: `
-    <holita-profile-view
+    <discocan-profile-view
       [user]="user()"
       [state]="loading() ? 'loading' : loadError() ? 'error' : 'ready'"
       [loadError]="loadFailure()"
@@ -194,11 +194,11 @@ export class ProfileWorkspace implements OnInit {
 }
 
 @Component({
-  selector: 'holita-profile-page',
+  selector: 'discocan-profile-page',
   imports: [ProfileWorkspace],
   template: `
     @for (scope of scopes(); track scope.key) {
-      <holita-profile-workspace [language]="scope.language" [token]="scope.token" />
+      <discocan-profile-workspace [language]="scope.language" [token]="scope.token" />
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

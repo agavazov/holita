@@ -29,11 +29,11 @@ import {
 import { VehicleGroupsApi } from './vehicle-groups-api';
 
 @Component({
-  selector: 'holita-vehicle-group-editor-page',
+  selector: 'discocan-vehicle-group-editor-page',
   imports: [GroupDrawer],
   providers: [VehicleGroupsApi],
   template: `
-    <holita-group-drawer
+    <discocan-group-drawer
       [group]="group()"
       [state]="state()"
       [loadError]="loadFailure()"

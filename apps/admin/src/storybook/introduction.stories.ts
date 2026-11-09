@@ -20,12 +20,12 @@ const entries: Record<EntryId, { story: string; source: 'demo' | 'stored' }> = {
 
 /** Owner's guide, using the same menu and language as the admin. */
 @Component({
-  selector: 'holita-storybook-introduction',
+  selector: 'discocan-storybook-introduction',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[attr.lang]': 'language()' },
   template: `
     <main class="intro">
-      <p class="intro__eyebrow">holita admin · Storybook</p>
+      <p class="intro__eyebrow">discocan admin · Storybook</p>
       <h1>{{ text().title }}</h1>
       <p>{{ text().intro }}</p>
       <p>{{ text().review }}</p>

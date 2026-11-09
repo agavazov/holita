@@ -14,11 +14,11 @@ import {
 } from './fault-wording';
 
 @Component({
-  selector: 'holita-fleet-current-warnings',
+  selector: 'discocan-fleet-current-warnings',
   imports: [TablePanel, TableModule, Tag],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <holita-table-panel
+    <discocan-table-panel
       mode="local"
       [heading]="text().currentWarnings"
       [view]="{ kind: rows().length ? 'rows' : 'empty' }"
@@ -67,7 +67,7 @@ import {
           </tr></ng-template
         >
       </p-table>
-    </holita-table-panel>
+    </discocan-table-panel>
   `,
 })
 export class FleetCurrentWarnings {

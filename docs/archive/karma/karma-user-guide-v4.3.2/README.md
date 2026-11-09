@@ -42,15 +42,15 @@ The interface combines a natural-language question field, categorized reports an
 
 Dashboard workflows include status filters, sub-fleets, graphical metrics and notification records. POIs and route planning use staged forms to select a vehicle/driver, start/end places, intermediate stops and optional notifications. Separate wizards create notifications and saved question/report shortcuts (pages 19-32).
 
-Settings cover users, drivers, vehicles, fuel receipts, maintenance records and tire positions. The odometer section shows updates during vehicle creation, through vehicle details and through the dashboard, and warns that odometer changes affect trip values (pages 33-37). These workflows are documented as vendor UI behavior; no corresponding holita features are implied.
+Settings cover users, drivers, vehicles, fuel receipts, maintenance records and tire positions. The odometer section shows updates during vehicle creation, through vehicle details and through the dashboard, and warns that odometer changes affect trip values (pages 33-37). These workflows are documented as vendor UI behavior; no corresponding discocan features are implied.
 
 ## Source qualifications
 
 - The cover says December 2018; the internal footers say November 2018. Neither date has been silently substituted for the other.
 - The original repeats section numbers 2 and 3. Original headings are retained; PDF page anchors provide unambiguous navigation.
-- UI screenshots describe this historical release. They do not prove current NC2 behavior, API field semantics, current feature availability or holita implementation.
+- UI screenshots describe this historical release. They do not prove current NC2 behavior, API field semantics, current feature availability or discocan implementation.
 - Illustrative trip, fuel and driving charts are examples; their displayed values are not live measurements.
 
 ## Conversion coverage
 
-All **39 PDF pages** are represented in [content.md](content.md). The [image catalog](images.md) contains **109 described assets** and **9 context captures**. Standalone decorative artwork, publisher logos and generic note/support markers are omitted. The original PDF remains the authority for layout, screenshot microtext and ambiguous source wording. This reference describes the supplied vendor document; it does not change holita behavior or verify the present-day vendor service.
+All **39 PDF pages** are represented in [content.md](content.md). The [image catalog](images.md) contains **109 described assets** and **9 context captures**. Standalone decorative artwork, publisher logos and generic note/support markers are omitted. The original PDF remains the authority for layout, screenshot microtext and ambiguous source wording. This reference describes the supplied vendor document; it does not change discocan behavior or verify the present-day vendor service.

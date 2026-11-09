@@ -12,7 +12,7 @@ import { TripDetailPage } from './trip-detail-page';
 const meta: Meta = {
   title: 'Admin/Dashboard/Trips',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: true } satisfies StoryFixtures },
 };
 export default meta;
 type Story = StoryObj;
@@ -22,7 +22,7 @@ function routed(suffix = ''): NonNullable<Story['render']> {
   return () => ({
     ...render(),
     moduleMetadata: { imports: [StoryApp, AdminWorkspace, FleetWorkspace, TripDetailPage] },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 export const Default: Story = {
@@ -39,13 +39,13 @@ export const ErrorState: Story = {
   name: 'Error',
   render: routed(),
   parameters: {
-    holita: { scenario: { failures: { AdminTrips: 'network' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminTrips: 'network' } } } satisfies StoryFixtures,
   },
 };
 export const Loading: Story = {
   render: routed(),
   parameters: {
-    holita: { scenario: { failures: { AdminTrips: 'pending' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminTrips: 'pending' } } } satisfies StoryFixtures,
   },
 };
 export const NoResults: Story = {

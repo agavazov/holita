@@ -39,12 +39,12 @@ import {
 
 /** One routed record owns its read and write scope across edit, completion and receipt modes. */
 @Component({
-  selector: 'holita-maintenance-record-page',
+  selector: 'discocan-maintenance-record-page',
   imports: [ServiceTaskDrawer, ServiceCompletionDrawer],
   providers: [MaintenanceApi, MaintenanceChoices],
   template: `
     @if (completionMode()) {
-      <holita-service-completion-drawer
+      <discocan-service-completion-drawer
         [vehicleLink]="completionVehicleLink()"
         [task]="completionTask()"
         [completed]="completed()"
@@ -61,7 +61,7 @@ import {
         (save)="complete($event)"
       />
     } @else {
-      <holita-service-task-drawer
+      <discocan-service-task-drawer
         [recordLinks]="recordLinks"
         [task]="task()"
         [readOnly]="readOnly()"

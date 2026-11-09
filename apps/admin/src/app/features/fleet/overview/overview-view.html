@@ -1,4 +1,4 @@
-<holita-page-header
+<discocan-page-header
   [title]="text().title"
   [moduleInfo]="text().moduleInfo"
   [actions]="[
@@ -54,8 +54,8 @@
     </button></p-message
   >
 }
-<holita-kpi-strip [label]="text().kpis.label" [loading]="loading() && !data()">
-  <holita-kpi-tile
+<discocan-kpi-strip [label]="text().kpis.label" [loading]="loading() && !data()">
+  <discocan-kpi-tile
     [label]="text().kpis.live"
     [value]="number(summary()?.vehicles.live)"
     [secondary]="vehicleTotal()"
@@ -64,8 +64,8 @@
     [link]="links().overview"
     [queryParams]="{ view: 'live', days: days() }"
     ><svg kpiIcon data-p-icon="truck" aria-hidden="true"></svg
-  ></holita-kpi-tile>
-  <holita-kpi-tile
+  ></discocan-kpi-tile>
+  <discocan-kpi-tile
     [label]="text().kpis.connected"
     [value]="number(summary()?.devices.connected)"
     [secondary]="deviceTotal()"
@@ -74,8 +74,8 @@
     [link]="links().overview"
     [queryParams]="{ view: 'connected', days: days() }"
     ><svg kpiIcon data-p-icon="wifi" aria-hidden="true"></svg
-  ></holita-kpi-tile>
-  <holita-kpi-tile
+  ></discocan-kpi-tile>
+  <discocan-kpi-tile
     [label]="text().kpis.problems"
     [value]="number(summary()?.problems.requiringAttention)"
     [secondary]="periodLabel()"
@@ -84,8 +84,8 @@
     [link]="links().problems"
     [queryParams]="problemParams()"
     ><svg kpiIcon data-p-icon="exclamation-triangle" aria-hidden="true"></svg
-  ></holita-kpi-tile>
-  <holita-kpi-tile
+  ></discocan-kpi-tile>
+  <discocan-kpi-tile
     [label]="text().kpis.trips"
     [value]="number(summary()?.trips.total)"
     [secondary]="tripDistance()"
@@ -94,8 +94,8 @@
     [link]="links().trips"
     [queryParams]="tripParams()"
     ><svg kpiIcon data-p-icon="compass" aria-hidden="true"></svg
-  ></holita-kpi-tile>
-</holita-kpi-strip>
+  ></discocan-kpi-tile>
+</discocan-kpi-strip>
 
 <div class="overview__primary">
   <div class="app-view overview__map-area">
@@ -122,7 +122,7 @@
         @if (devicesError() && !devicesComplete()) {
           <p class="app-muted">{{ text().devices.partialError }}</p>
         }
-        <holita-table-panel
+        <discocan-table-panel
           mode="local"
           [heading]="text().devices.title"
           [headingLevel]="3"
@@ -187,7 +187,7 @@
               </tr></ng-template
             >
           </p-table>
-        </holita-table-panel>
+        </discocan-table-panel>
       </section>
     } @else {
       <div class="overview__map-toolbar">
@@ -252,7 +252,7 @@
           </p>
         }
         @defer (on immediate) {
-          <holita-location-map
+          <discocan-location-map
             [language]="language()"
             [title]="text().map.title"
             [records]="mapRecords()"
@@ -279,7 +279,7 @@
           <p-skeleton height="var(--map-placeholder-height)" />
         </section>
       } @else {
-        <holita-empty-state kind="error" [title]="text().map.error" />
+        <discocan-empty-state kind="error" [title]="text().map.error" />
       }
     }
   </div>
@@ -324,7 +324,7 @@
           }
         </ol>
       } @else {
-        <holita-empty-state kind="done" [compact]="true" [title]="text().attention.empty" />
+        <discocan-empty-state kind="done" [compact]="true" [title]="text().attention.empty" />
       }
     } @else if (loading()) {
       <p-skeleton height="18rem" />
@@ -341,12 +341,12 @@
 </div>
 
 @if (errorText() && !data()) {
-  <holita-empty-state kind="error" [title]="text().errorTitle" [description]="text().errorText" />
+  <discocan-empty-state kind="error" [title]="text().errorTitle" [description]="text().errorText" />
 } @else {
   <div class="overview__charts">
     <section class="app-view">
       @defer (on immediate) {
-        <holita-chart-panel
+        <discocan-chart-panel
           kind="donut"
           [title]="text().connection.title"
           [points]="connectionPoints()"
@@ -376,7 +376,7 @@
     </section>
     <section class="app-view">
       @defer (on immediate) {
-        <holita-chart-panel
+        <discocan-chart-panel
           kind="bar"
           [title]="text().distance.title"
           [points]="distancePoints()"

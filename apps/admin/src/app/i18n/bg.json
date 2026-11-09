@@ -69,7 +69,7 @@
   "devices": "Устройства",
   "smsCommands": "SMS команди",
   "imei": "IMEI",
-  "configurationError": "Неуспешно стартиране на holita. Проверете публичната конфигурация и презаредете.",
+  "configurationError": "Неуспешно стартиране на discocan. Проверете публичната конфигурация и презаредете.",
   "demoLogin": "Демонстрационен вход",
   "demoLoginDescription": "Изберете tenant и клон, за да продължите.",
   "tenant": "Tenant",

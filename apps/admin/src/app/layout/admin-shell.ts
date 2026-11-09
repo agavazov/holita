@@ -36,7 +36,7 @@ import {
 } from './admin-topbar';
 import type { NavGroup, PageContext } from './navigation';
 
-const railStorageKey = 'holita.admin.sidebar';
+const railStorageKey = 'discocan.admin.sidebar';
 
 function readRail(): boolean {
   try {
@@ -65,7 +65,7 @@ function pageKey(root: ActivatedRouteSnapshot): string {
  * It reads no business data; navigation and the page context come from the workspace.
  */
 @Component({
-  selector: 'holita-admin-shell',
+  selector: 'discocan-admin-shell',
   imports: [Drawer, Message, AdminSidebar, AdminTopbar, ModuleInfoDialog],
   templateUrl: './admin-shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

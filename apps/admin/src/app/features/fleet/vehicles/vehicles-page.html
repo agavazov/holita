@@ -17,7 +17,7 @@
 @if (liveError() || contextError()) {
   <p-message severity="warn">{{ liveFailure() }}</p-message>
 }
-<holita-vehicles-view
+<discocan-vehicles-view
   [branchId]="branch().id"
   [branchName]="branch().name"
   [dataAsOf]="summary()?.dataAsOf ?? ''"

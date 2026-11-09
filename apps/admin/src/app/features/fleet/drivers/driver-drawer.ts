@@ -108,7 +108,7 @@ const statusTones = { ACTIVE: 'success', ON_LEAVE: 'info', INACTIVE: 'neutral' }
  * the host saves and passes back `saving`, `saveError` and server `fieldErrors`.
  */
 @Component({
-  selector: 'holita-driver-drawer',
+  selector: 'discocan-driver-drawer',
   imports: [
     RouterLink,
     ReactiveFormsModule,

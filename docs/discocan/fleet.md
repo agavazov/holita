@@ -67,7 +67,7 @@ stored values or explicitly labelled editor/filter units. No equivalence with Ka
 
 ### Activity rules
 
-Activity rows are holita demo data or, when `FLEET_ERM_TELEMETRY_ENABLED=true`, ERM status samples
+Activity rows are discocan demo data or, when `FLEET_ERM_TELEMETRY_ENABLED=true`, ERM status samples
 and ignition trips imported per
 [ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md).
 The import also writes dated eData FleetEvents (413/418 codes, 419 SPN/FMI fault observations,
@@ -328,7 +328,7 @@ server. Each list response retains one database snapshot for status/report dates
 and count. Diagnostics display available stored metadata; signal, voltage, firmware policy and Restart
 are explicitly unavailable/Demo until integrated.
 Device `routing` exposes the retained destination observation for up to 70 minutes. A newer ERM
-receipt proves `HOLITA`; without a fresh observation it is null, as it is while Fleet's ERM import
+receipt proves `DISCOCAN`; without a fresh observation it is null, as it is while Fleet's ERM import
 is disabled. `routingHealth` preserves the recorded backup periods and caps open-period duration
 at the retained observation. New backup transitions require an upstream
 last-data source that ERM does not currently provide.

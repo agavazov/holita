@@ -9,7 +9,7 @@ import { GeneralSettingsView, type GeneralSettings } from './general-settings-vi
 const meta: Meta = {
   title: 'Admin/System/Settings/General',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: true } satisfies StoryFixtures },
 };
 export default meta;
 type Story = StoryObj;
@@ -20,7 +20,7 @@ function routed(): NonNullable<Story['render']> {
   return () => ({
     ...render(),
     moduleMetadata: { imports: [StoryApp, AdminWorkspace, FleetWorkspace, GeneralSettingsPage] },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 
@@ -31,7 +31,7 @@ export const Default: Story = {
 export const Loading: Story = {
   render: routed(),
   parameters: {
-    holita: {
+    discocan: {
       scenario: { failures: { AdminFleetPreferences: 'pending' } },
     } satisfies StoryFixtures,
   },
@@ -41,7 +41,7 @@ export const ReadError: Story = {
   name: 'Preferences read failure',
   render: routed(),
   parameters: {
-    holita: {
+    discocan: {
       scenario: { failures: { AdminFleetPreferences: 'network' } },
     } satisfies StoryFixtures,
   },
@@ -63,7 +63,7 @@ function preferences(dateFormat: GeneralSettings['dateFormat'], timeZone: string
     render: () => ({
       props: { settings },
       moduleMetadata: { imports: [GeneralSettingsView] },
-      template: '<holita-general-settings-view branchName="Discordia" [settings]="settings" />',
+      template: '<discocan-general-settings-view branchName="Discordia" [settings]="settings" />',
     }),
   };
 }

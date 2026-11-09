@@ -128,7 +128,7 @@ Concrete reference reads validate complete project/time-zone lists, reject dupli
 and expose original names. The Karma sidebar contains Trucks and Karma administration.
 Administration groups Users, Roles, Projects, Time zones and API information in route-backed
 tabs at `/:language/karma-client/administration/:section`. These are Karma account resources,
-separate from holita Tenant/Branch settings and the selected truck. The original `/users`,
+separate from discocan Tenant/Branch settings and the selected truck. The original `/users`,
 `/roles`, `/projects`, `/time-zones` and `/api-info` addresses redirect to their administration
 destinations, retaining query parameters and fragments. Only the active resource screen is
 mounted and queried. Project/time-zone search and local pagination cover the full returned list,
@@ -204,7 +204,7 @@ when the source fails. Physical position coverage remains `NOT_ASSESSED` in ever
 `TripDetails` owns one `PointExplorer` for both trip-list and daily-report drawers. Selection
 and local 10/25/50 paging reuse the loaded dataset without source requests or URL changes.
 The selected record supplies its own map coordinates, time, ID and raw speed/odometer facts.
-Missing or failed samples retain the trip's actual endpoint records. A Holita view rule
+Missing or failed samples retain the trip's actual endpoint records. A DiscoCan view rule
 marks intervals longer than 15 minutes between loaded valid UTC positions; it does not
 establish sampling frequency or a missing physical journey. Source-declared gaps remain
 separate. Google Embed renders the selected point or endpoints, not an arbitrary polyline.
@@ -429,7 +429,7 @@ Operations expire ten minutes after creation. HTTP failures leave response polli
 until that deadline. A changed target, inconsistent response or exceeded evidence bound fails
 the operation. Stopping Fleet does not extend the deadline. Expiry means no matching complete
 configuration was confirmed; it does not prove a command was never delivered. The vendor queue
-may deliver an accepted command later, and holita cannot cancel it. Refresh and reconcile
+may deliver an accepted command later, and discocan cannot cancel it. Refresh and reconcile
 device state before requesting another change; an uncertain write is never automatically replayed.
 
 Parameter reads use command `301`, payload `0702BC`; profile reads use `301`, payload `1F`;
@@ -516,9 +516,9 @@ opaque or imported n-ary expressions. Rule names are local editor metadata, abse
 `trueEventId`/`falseEventId`, `debounceMilliseconds`, and both rule and parameter baseline
 operation IDs. Both complete baselines must match the active Tenant/Branch and exact
 Karma target. Every referenced parameter must already exist in the parameter baseline. The
-shared `@holita/edata-rules` codec compiles the expression; public input never accepts raw hex.
+shared `@discocan/edata-rules` codec compiles the expression; public input never accepts raw hex.
 Rule/event IDs use `0..65535`, debounce uses `1..32767` milliseconds and RuleData is at most
-128 bytes. A selected ID updates that existing rule or adds one if absent; holita does not
+128 bytes. A selected ID updates that existing rule or adds one if absent; discocan does not
 allocate an unused device ID. Existing dashboard activation is preserved, while new rules
 use false. Unsupported existing expressions cannot be overwritten through this mutation.
 
@@ -538,7 +538,7 @@ that pair within the active Tenant/Branch; `fleetDeviceOperation` retrieves a sa
 independently return the latest complete snapshot, so newer failed reads cannot hide it beyond
 the history limit. Operations expose their `branchId` for scoped client reconciliation.
 Historical requests remain available by scoped history/ID. A snapshot describes the observed
-configuration at its recorded time; changes made outside holita can make it stale.
+configuration at its recorded time; changes made outside discocan can make it stale.
 
 The admin opens `/:language/karma-client/cars/:recordId/configuration` through More →
 Device settings in the truck navigation. The selected Karma car directly supplies its device;

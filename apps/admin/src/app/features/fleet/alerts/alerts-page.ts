@@ -39,7 +39,7 @@ import { AlertsView, type AlertActionId, type AlertKpis } from './alerts-view';
 import { alertsText } from './i18n/messages';
 
 @Component({
-  selector: 'holita-alerts-page',
+  selector: 'discocan-alerts-page',
   providers: [AlertsApi, AlertChoices],
   imports: [AlertsView, RouterOutlet, Message, ButtonDirective],
   template: `
@@ -67,7 +67,7 @@ import { alertsText } from './i18n/messages';
         </button></p-message
       >
     }
-    <holita-alerts-view
+    <discocan-alerts-view
       [recordLinks]="recordLinks()"
       [branchName]="branch().name"
       [dataAsOf]="dataAsOf() ?? ''"

@@ -92,7 +92,7 @@ export interface VehicleOption {
  * row actions and bulk actions. Presentation only: the host owns data, list state and editing.
  */
 @Component({
-  selector: 'holita-vehicles-view',
+  selector: 'discocan-vehicles-view',
   imports: [
     ButtonDirective,
     TableModule,

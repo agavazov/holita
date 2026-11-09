@@ -184,7 +184,7 @@ export async function seedFleetDemo(
   const inserted = await client.$transaction(
     async (transaction) => {
       // First runs must agree on one anchor before any master or activity insert can start.
-      const lockScope = `holita:fleet-demo:${schema}:${DEMO_SCOPE.tenantId}:${DEMO_SCOPE.branchId}`;
+      const lockScope = `discocan:fleet-demo:${schema}:${DEMO_SCOPE.tenantId}:${DEMO_SCOPE.branchId}`;
       await transaction.$queryRaw(Prisma.sql`
         SELECT 1::int AS "locked" FROM pg_catalog.pg_advisory_xact_lock(
           pg_catalog.hashtextextended(${lockScope}::text, 0::bigint))`);

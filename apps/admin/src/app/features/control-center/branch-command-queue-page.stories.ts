@@ -10,7 +10,7 @@ const meta: Meta = {
   title: 'Admin/Command queue',
   tags: ['!autodocs'],
   parameters: {
-    holita: { signedIn: true, now: '2026-10-20T08:00:05.000Z' } satisfies StoryFixtures,
+    discocan: { signedIn: true, now: '2026-10-20T08:00:05.000Z' } satisfies StoryFixtures,
   },
 };
 export default meta;
@@ -20,7 +20,7 @@ function routed(query = ''): NonNullable<Story['render']> {
   return () => ({
     ...render(),
     moduleMetadata: { imports: [StoryApp, AdminWorkspace, BranchCommandQueuePage] },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 export const Default: Story = { render: routed() };
@@ -34,7 +34,7 @@ export const Narrow: Story = {
 export const ErrorState: Story = {
   name: 'Error',
   parameters: {
-    holita: {
+    discocan: {
       scenario: { failures: { AdminControlCenterBranchCommandRequests: 'network' } },
     } satisfies StoryFixtures,
   },

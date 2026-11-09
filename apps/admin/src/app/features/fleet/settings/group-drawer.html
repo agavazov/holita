@@ -1,4 +1,4 @@
-<holita-route-drawer
+<discocan-route-drawer
   [title]="title()"
   [saving]="saving()"
   [dirty]="dirty()"
@@ -13,7 +13,7 @@
   }
   <form #formElement id="group-form" [formGroup]="form" (ngSubmit)="submit()">
     <section class="app-form-section">
-      <holita-form-field
+      <discocan-form-field
         [label]="text().name"
         controlId="group-name"
         [required]="true"
@@ -27,8 +27,8 @@
           [attr.aria-invalid]="errorOf('name') ? 'true' : null"
           aria-describedby="group-name-hint group-name-error"
         />
-      </holita-form-field>
-      <holita-form-field
+      </discocan-form-field>
+      <discocan-form-field
         [label]="text().color"
         controlId="group-slot"
         [hint]="text().colorHint"
@@ -61,8 +61,8 @@
             </span>
           </ng-template>
         </p-select>
-      </holita-form-field>
-      <holita-form-field
+      </discocan-form-field>
+      <discocan-form-field
         [label]="text().descriptionLabel"
         controlId="group-description"
         [error]="errorOf('description')"
@@ -76,7 +76,7 @@
           [attr.aria-invalid]="errorOf('description') ? 'true' : null"
           aria-describedby="group-description-hint group-description-error"
         ></textarea>
-      </holita-form-field>
+      </discocan-form-field>
     </section>
   </form>
 
@@ -101,4 +101,4 @@
       {{ group() ? text().save : text().create }}
     </button>
   </div>
-</holita-route-drawer>
+</discocan-route-drawer>

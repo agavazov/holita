@@ -6,7 +6,7 @@ Fleet activity rows (`VehicleStatusSample`, `Trip`, `FleetEvent`) drive vehicle 
 data clock, trips, daily distance, the overview and scorecards. Only the demo seed, tests and
 MANUAL odometer readings write it (`FleetDataSource` is `DEMO` or `MANUAL`), and the owner's Branch
 has none. Meanwhile `apps/erm-server` decodes position, speed, heading, odometer, ignition/engine
-and main/backup voltages from every truck routed to holita into provider-level `ermEvent` rows.
+and main/backup voltages from every truck routed to discocan into provider-level `ermEvent` rows.
 
 The current design cannot connect the two:
 

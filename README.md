@@ -1,8 +1,8 @@
-# holita
+# discocan
 
-holita is a strict TypeScript npm-workspaces repository with Nx tasks and five host
+discocan is a strict TypeScript npm-workspaces repository with Nx tasks and five host
 applications: Angular admin, native Apollo Router gateway and NestJS core, fleet and erm-server services.
-The admin uses the holita [design system](docs/admin-design-system.md) on PrimeNG and
+The admin uses the discocan [design system](docs/admin-design-system.md) on PrimeNG and
 Bulgarian/English catalogs.
 Its modules are Fleet management and ERM device-server inspection and controlled settings. Core provides users, sessions and Branch discovery; Gateway
 exposes their schema-first federated GraphQL API. PostgreSQL is the only container.
@@ -117,7 +117,7 @@ See [Router configuration](docs/development.md#apollo-router) for health, enviro
 After SDL/operation changes run `npm run codegen` and `npm run schema:check`, then restart Router
 and the affected web/API services. Keep the ERM gateway running for API-only changes. The
 independent `ERM_ROLE=recovery` listener uses TCP 11510; see the
-[operator guide](docs/discocan/development.md#moving-a-unit-between-karma-and-holita).
+[operator guide](docs/discocan/development.md#moving-a-unit-between-karma-and-discocan).
 Generated clients/types are ignored and must not be edited.
 
 ## Check a change

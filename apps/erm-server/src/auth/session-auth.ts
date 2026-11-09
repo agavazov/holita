@@ -19,7 +19,7 @@ function isUuid(value: unknown): value is string {
 export async function readSession(
   authorization: string | undefined,
 ): Promise<SessionIdentity | undefined> {
-  if (!authorization || !/^Bearer holita-session\.[A-Za-z0-9_-]{43}$/i.test(authorization)) {
+  if (!authorization || !/^Bearer discocan-session\.[A-Za-z0-9_-]{43}$/i.test(authorization)) {
     return undefined;
   }
   const internalToken = process.env.CORE_INTERNAL_AUTH_TOKEN;

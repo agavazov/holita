@@ -5,7 +5,7 @@ import { AdminWorkspace } from './admin-workspace';
 
 /** Branch settings have their own tabs; Tenant-wide Users is a separate destination. */
 @Component({
-  selector: 'holita-settings-tabs',
+  selector: 'discocan-settings-tabs',
   imports: [Tabs, TabList, Tab, TabPanels, TabPanel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `

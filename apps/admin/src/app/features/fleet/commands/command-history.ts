@@ -23,7 +23,7 @@ import {
 } from './command-presentation';
 
 @Component({
-  selector: 'holita-command-history',
+  selector: 'discocan-command-history',
   imports: [ButtonDirective, TableModule, Tag, TablePanel, RowActions],
   templateUrl: './command-history.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

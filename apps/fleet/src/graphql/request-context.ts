@@ -28,7 +28,7 @@ export async function createRequestContext({
   const header = req.headers['x-branch-id'];
   const authorization = req.headers.authorization;
   res.setHeader('x-request-id', requestId);
-  const isSession = /^Bearer holita-session\./i.test(authorization ?? '');
+  const isSession = /^Bearer discocan-session\./i.test(authorization ?? '');
   const identity = isSession ? await readSession(authorization) : undefined;
   return {
     requestId,

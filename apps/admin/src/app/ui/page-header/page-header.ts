@@ -26,7 +26,7 @@ export interface PageHeaderAction extends MenuOption {
 
 /** Page title, count, one primary action and the complete page-action menu. */
 @Component({
-  selector: 'holita-page-header',
+  selector: 'discocan-page-header',
   imports: [RouterLink, ArrowLeft, EllipsisH, ButtonDirective, MenuButton],
   templateUrl: './page-header.html',
   styleUrl: './page-header.scss',

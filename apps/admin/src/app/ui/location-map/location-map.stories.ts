@@ -66,12 +66,12 @@ const withGoogleMapsConfig: Decorator<MapStoryArgs> = (story, context) => {
 };
 
 @Component({
-  selector: 'holita-location-map-demo',
+  selector: 'discocan-location-map-demo',
   imports: [LocationMap],
   providers: [{ provide: AdminConfig, useFactory: () => inject(MAP_STORY_CONFIG) }],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <holita-location-map
+    <discocan-location-map
       [language]="language()"
       [title]="text().title"
       [records]="records()"
@@ -184,7 +184,7 @@ class LocationMapDemo {
 
 /** The missing-key fixture remains independent of configured map stories and preview providers. */
 @Component({
-  selector: 'holita-location-map-key-missing-demo',
+  selector: 'discocan-location-map-key-missing-demo',
   imports: [LocationMapDemo],
   providers: [
     {
@@ -193,7 +193,7 @@ class LocationMapDemo {
     },
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: '<holita-location-map-demo />',
+  template: '<discocan-location-map-demo />',
 })
 class LocationMapKeyMissingDemo {}
 
@@ -217,7 +217,7 @@ const meta: Meta<MapStoryArgs> = {
     },
   },
   parameters: {
-    holita: { now: asOf },
+    discocan: { now: asOf },
     docs: {
       description: {
         component:
@@ -229,24 +229,24 @@ const meta: Meta<MapStoryArgs> = {
 export default meta;
 type Story = StoryObj<MapStoryArgs>;
 
-export const Many: Story = { render: () => ({ template: '<holita-location-map-demo />' }) };
+export const Many: Story = { render: () => ({ template: '<discocan-location-map-demo />' }) };
 export const One: Story = {
-  render: () => ({ template: '<holita-location-map-demo mode="one" />' }),
+  render: () => ({ template: '<discocan-location-map-demo mode="one" />' }),
 };
 export const None: Story = {
-  render: () => ({ template: '<holita-location-map-demo mode="none" />' }),
+  render: () => ({ template: '<discocan-location-map-demo mode="none" />' }),
 };
 export const Stale: Story = {
-  render: () => ({ template: '<holita-location-map-demo mode="stale" />' }),
+  render: () => ({ template: '<discocan-location-map-demo mode="stale" />' }),
 };
 export const HeadingAndTrack: Story = {
-  render: () => ({ template: '<holita-location-map-demo mode="track" />' }),
+  render: () => ({ template: '<discocan-location-map-demo mode="track" />' }),
 };
 export const KeyMissing: Story = {
   argTypes: { googleMapsApiKey: { control: false }, googleMapsMapId: { control: false } },
-  render: () => ({ template: '<holita-location-map-key-missing-demo />' }),
+  render: () => ({ template: '<discocan-location-map-key-missing-demo />' }),
 };
 export const Narrow: Story = {
   globals: { viewport: { value: 'mobile375', isRotated: false } },
-  render: () => ({ template: '<holita-location-map-demo />' }),
+  render: () => ({ template: '<discocan-location-map-demo />' }),
 };

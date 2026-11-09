@@ -42,14 +42,14 @@ import { DevicesView, type DeviceActionId } from './devices-view';
 import { devicesText } from './i18n/messages';
 
 @Component({
-  selector: 'holita-devices-list-page',
+  selector: 'discocan-devices-list-page',
   providers: [DevicesApi],
   imports: [DevicesView, RouterOutlet, Message],
   template: `
     @if (liveError()) {
       <p-message severity="warn">{{ liveFailure() }}</p-message>
     }
-    <holita-devices-view
+    <discocan-devices-view
       [recordLinks]="recordLinks()"
       [deviceLinkBase]="deviceLinkBase()"
       [branchName]="branch().name"

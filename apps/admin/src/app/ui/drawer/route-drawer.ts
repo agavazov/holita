@@ -35,7 +35,7 @@ let nextId = 0;
  * the host decides (e.g. after `confirmLeave`) whether to remove it.
  */
 @Component({
-  selector: 'holita-route-drawer',
+  selector: 'discocan-route-drawer',
   imports: [Drawer, ConfirmDialog, ButtonDirective, Skeleton, EmptyState, Times],
   providers: [ConfirmationService],
   templateUrl: './route-drawer.html',

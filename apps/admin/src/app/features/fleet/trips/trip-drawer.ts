@@ -33,7 +33,7 @@ interface TimelineEntry {
  * nobody edits (trips, log entries) use this view mode.
  */
 @Component({
-  selector: 'holita-trip-drawer',
+  selector: 'discocan-trip-drawer',
   imports: [
     RouterLink,
     ButtonDirective,

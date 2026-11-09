@@ -32,7 +32,7 @@ import {
   type StartErmParameterChangeInput,
   AdminControlCenterDevicesDocument,
   AdminControlCenterDeviceDocument,
-  AdminControlCenterReturnToHolitaDocument,
+  AdminControlCenterReturnToDiscoCanDocument,
   AdminControlCenterEventsDocument,
   AdminControlCenterCommandsDocument,
   AdminControlCenterFramesDocument,
@@ -52,7 +52,7 @@ import {
   type ErmLanguage,
 } from '../../../generated/graphql/operations';
 
-/** Branch-scoped reads of Fleet Devices with their state on holita's device server. */
+/** Branch-scoped reads of Fleet Devices with their state on discocan's device server. */
 @Injectable()
 export class ControlCenterApi implements OnDestroy {
   private readonly httpLink = inject(HttpLink);
@@ -116,17 +116,17 @@ export class ControlCenterApi implements OnDestroy {
     });
   }
 
-  async returnToHolita(deviceId: string) {
+  async returnToDiscoCan(deviceId: string) {
     const result = await firstValueFrom(
       this.client().mutate({
-        mutation: AdminControlCenterReturnToHolitaDocument,
+        mutation: AdminControlCenterReturnToDiscoCanDocument,
         variables: { deviceId },
       }),
     );
-    if (!result.data?.returnErmDeviceToHolita) {
-      throw new Error('Missing returnErmDeviceToHolita result.');
+    if (!result.data?.returnErmDeviceToDiscoCan) {
+      throw new Error('Missing returnErmDeviceToDiscoCan result.');
     }
-    return result.data.returnErmDeviceToHolita;
+    return result.data.returnErmDeviceToDiscoCan;
   }
 
   watchEvents(variables: AdminControlCenterEventsQueryVariables) {

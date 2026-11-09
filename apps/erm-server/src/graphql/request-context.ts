@@ -29,7 +29,7 @@ export async function createRequestContext({
   res.setHeader('x-request-id', requestId);
   const branchId = req.headers['x-branch-id'];
   const authorization = req.headers.authorization;
-  const isSession = /^Bearer holita-session\./i.test(authorization ?? '');
+  const isSession = /^Bearer discocan-session\./i.test(authorization ?? '');
   const identity = isSession ? await readSession(authorization) : undefined;
   const tenantId = isSession ? identity?.tenantId : readDemoTenant(authorization);
   return {

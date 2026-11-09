@@ -64,7 +64,7 @@ import { settingsText } from './settings/i18n/messages';
       },
     },
   ],
-  selector: 'holita-fleet-workspace',
+  selector: 'discocan-fleet-workspace',
   templateUrl: './fleet-workspace.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

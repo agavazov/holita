@@ -69,7 +69,7 @@ const semanticColorTokens = [
 ];
 
 @Component({
-  selector: 'holita-foundation-colors',
+  selector: 'discocan-foundation-colors',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @for (scheme of schemes; track scheme) {
@@ -241,7 +241,7 @@ class FoundationColors {
 }
 
 @Component({
-  selector: 'holita-foundation-brands',
+  selector: 'discocan-foundation-brands',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @for (brand of brands; track brand.name) {
@@ -337,7 +337,7 @@ class FoundationBrands {
 }
 
 @Component({
-  selector: 'holita-foundation-typography',
+  selector: 'discocan-foundation-typography',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section>
@@ -387,7 +387,7 @@ class FoundationBrands {
 class FoundationTypography {}
 
 @Component({
-  selector: 'holita-foundation-density',
+  selector: 'discocan-foundation-density',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, ButtonDirective, InputText, Select, TableModule],
   template: `
@@ -476,7 +476,7 @@ class FoundationDensity {
 }
 
 @Component({
-  selector: 'holita-foundation-shapes',
+  selector: 'discocan-foundation-shapes',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section>
@@ -520,7 +520,7 @@ class FoundationShapes {
 }
 
 @Component({
-  selector: 'holita-foundation-tones',
+  selector: 'discocan-foundation-tones',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section>
@@ -567,7 +567,7 @@ class FoundationTones {
 }
 
 @Component({
-  selector: 'holita-foundation-categories',
+  selector: 'discocan-foundation-categories',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section>
@@ -616,7 +616,7 @@ class FoundationCategories {
 }
 
 @Component({
-  selector: 'holita-foundation-breakpoints',
+  selector: 'discocan-foundation-breakpoints',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section>
@@ -679,7 +679,7 @@ type Story = StoryObj;
 export const Colors: Story = {
   render: () => ({
     moduleMetadata: { imports: [FoundationColors] },
-    template: '<holita-foundation-colors />',
+    template: '<discocan-foundation-colors />',
   }),
 };
 
@@ -687,14 +687,14 @@ export const BrandVariants: Story = {
   name: 'Brand variants',
   render: () => ({
     moduleMetadata: { imports: [FoundationBrands] },
-    template: '<holita-foundation-brands />',
+    template: '<discocan-foundation-brands />',
   }),
 };
 
 export const Typography: Story = {
   render: () => ({
     moduleMetadata: { imports: [FoundationTypography] },
-    template: '<holita-foundation-typography />',
+    template: '<discocan-foundation-typography />',
   }),
 };
 
@@ -702,7 +702,7 @@ export const SpacingAndDensity: Story = {
   name: 'Spacing and density',
   render: () => ({
     moduleMetadata: { imports: [FoundationDensity] },
-    template: '<holita-foundation-density />',
+    template: '<discocan-foundation-density />',
   }),
 };
 
@@ -710,7 +710,7 @@ export const RadiiAndBorders: Story = {
   name: 'Radii and borders',
   render: () => ({
     moduleMetadata: { imports: [FoundationShapes] },
-    template: '<holita-foundation-shapes />',
+    template: '<discocan-foundation-shapes />',
   }),
 };
 
@@ -718,7 +718,7 @@ export const StatusTones: Story = {
   name: 'Status tones',
   render: () => ({
     moduleMetadata: { imports: [FoundationTones] },
-    template: '<holita-foundation-tones />',
+    template: '<discocan-foundation-tones />',
   }),
 };
 
@@ -726,13 +726,13 @@ export const CategoricalPalette: Story = {
   name: 'Categorical palette',
   render: () => ({
     moduleMetadata: { imports: [FoundationCategories] },
-    template: '<holita-foundation-categories />',
+    template: '<discocan-foundation-categories />',
   }),
 };
 
 export const Breakpoints: Story = {
   render: () => ({
     moduleMetadata: { imports: [FoundationBreakpoints] },
-    template: '<holita-foundation-breakpoints />',
+    template: '<discocan-foundation-breakpoints />',
   }),
 };

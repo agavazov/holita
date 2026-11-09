@@ -43,7 +43,7 @@ processes in `apps/erm-server`, selected by `ERM_ROLE`:
 | `gateway` | Device sessions, Karma relay, confirmations, frame/event/command records and the loopback internal API | HTTP 127.0.0.1:11015; TCP 0.0.0.0:11500 |
 | `api`     | GraphQL subgraph, database reads, live state and command requests through the gateway                  | HTTP 127.0.0.1:11017                    |
 
-Both use `holita_erm`. Raw provider records have no Tenant/Branch columns. Frames preserve
+Both use `discocan_erm`. Raw provider records have no Tenant/Branch columns. Frames preserve
 exact bytes and direction; decoded events retain raw fields alongside parsed telemetry.
 Persistence/decoding failures must not interrupt forwarding or acknowledgements. Private
 JSON Lines captures are operational evidence, not a source for public documentation.

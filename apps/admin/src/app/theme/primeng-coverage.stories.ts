@@ -40,7 +40,7 @@ const vehicles = Array.from({ length: 200 }, (_, index) => `CB ${String(1001 + i
 
 /** Every control of the registered presets, rendered inline. */
 @Component({
-  selector: 'holita-primeng-controls',
+  selector: 'discocan-primeng-controls',
   imports: [
     FormsModule,
     AutoComplete,
@@ -140,7 +140,7 @@ class PrimeNgControls {
 
 /** Non-modal overlay controls: dialog, drawer, popover and tooltip, opened on render. */
 @Component({
-  selector: 'holita-primeng-overlays',
+  selector: 'discocan-primeng-overlays',
   imports: [ButtonDirective, Dialog, Drawer, Popover, Tooltip],
   template: `
     <div class="anchors">
@@ -207,7 +207,7 @@ class PrimeNgOverlays {
 
 /** The modal confirmation of destructive actions (`confirmAction` with `danger`). */
 @Component({
-  selector: 'holita-primeng-confirm',
+  selector: 'discocan-primeng-confirm',
   imports: [ConfirmDialog],
   providers: [ConfirmationService],
   template: `<p-confirmdialog [pt]="pt" />`,
@@ -230,7 +230,7 @@ class PrimeNgConfirm {
 
 /** Uses the preview's single Toast host, as every example page does. */
 @Component({
-  selector: 'holita-primeng-toast',
+  selector: 'discocan-primeng-toast',
   imports: [ButtonDirective],
   template: '<button pButton type="button" (click)="show()">Show toast</button>',
 })
@@ -253,14 +253,14 @@ type Story = StoryObj;
 export const Controls: Story = {
   render: () => ({
     moduleMetadata: { imports: [PrimeNgControls] },
-    template: '<holita-primeng-controls />',
+    template: '<discocan-primeng-controls />',
   }),
 };
 
 export const Overlays: Story = {
   render: () => ({
     moduleMetadata: { imports: [PrimeNgOverlays] },
-    template: '<holita-primeng-overlays />',
+    template: '<discocan-primeng-overlays />',
   }),
 };
 
@@ -268,7 +268,7 @@ export const ConfirmDialogStory: Story = {
   name: 'Confirm dialog',
   render: () => ({
     moduleMetadata: { imports: [PrimeNgConfirm] },
-    template: '<holita-primeng-confirm />',
+    template: '<discocan-primeng-confirm />',
   }),
 };
 
@@ -276,6 +276,6 @@ export const ToastStory: Story = {
   name: 'Toast',
   render: () => ({
     moduleMetadata: { imports: [PrimeNgToast] },
-    template: '<holita-primeng-toast />',
+    template: '<discocan-primeng-toast />',
   }),
 };

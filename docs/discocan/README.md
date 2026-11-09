@@ -1,6 +1,6 @@
 # Discocan: fleet telemetry
 
-Discocan is holita's fleet telemetry domain. Fleet owns Vehicles, Devices, Drivers, Vehicle
+Discocan is discocan's fleet telemetry domain. Fleet owns Vehicles, Devices, Drivers, Vehicle
 groups, samples/data clock, trips, alerts, service tasks, Dashboard, notifications and Branch settings.
 The Angular admin uses generated GraphQL operations through Router. ERM Server receives
 StarLink traffic and records connections, exact frames, decoded events and commands; its gateway

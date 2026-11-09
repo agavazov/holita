@@ -2,7 +2,7 @@
 CREATE TYPE "ermCommandStatus" AS ENUM ('sent', 'answered', 'timeout', 'failed');
 
 -- AlterEnum
-ALTER TYPE "ermDirection" ADD VALUE 'holita';
+ALTER TYPE "ermDirection" ADD VALUE 'discocan';
 
 -- CreateTable
 CREATE TABLE "ermCommand" (

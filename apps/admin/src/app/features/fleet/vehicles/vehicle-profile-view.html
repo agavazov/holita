@@ -1,6 +1,6 @@
 @switch (state()) {
   @case ('not-found') {
-    <holita-page-header
+    <discocan-page-header
       [title]="text().eyebrow"
       [backLink]="backLink()"
       [backLabel]="backLabel() ?? text().back"
@@ -8,14 +8,14 @@
       [backFragment]="backFragment()"
       [moduleInfo]="text().moduleInfo"
     />
-    <holita-empty-state
+    <discocan-empty-state
       kind="not-found"
       [title]="text().notFoundTitle"
       [description]="text().notFoundDescription"
     />
   }
   @case ('error') {
-    <holita-page-header
+    <discocan-page-header
       [title]="text().eyebrow"
       [backLink]="backLink()"
       [backLabel]="backLabel() ?? text().back"
@@ -23,16 +23,16 @@
       [backFragment]="backFragment()"
       [moduleInfo]="text().moduleInfo"
     />
-    <holita-empty-state
+    <discocan-empty-state
       kind="error"
       [title]="text().errorTitle"
       [description]="errorText() ?? text().errorText"
     >
       <button emptyActions pButton type="button" (click)="retry.emit()">{{ text().retry }}</button>
-    </holita-empty-state>
+    </discocan-empty-state>
   }
   @case ('loading') {
-    <holita-page-header
+    <discocan-page-header
       title="…"
       [backLink]="backLink()"
       [backLabel]="backLabel() ?? text().back"
@@ -42,23 +42,23 @@
     />
     <p-skeleton height="3rem" />
     <p-skeleton height="4rem" />
-    <holita-kpi-strip [label]="text().kpis.label" [loading]="true">
-      <holita-kpi-tile [label]="text().kpis.odometer" category="c1"
+    <discocan-kpi-strip [label]="text().kpis.label" [loading]="true">
+      <discocan-kpi-tile [label]="text().kpis.odometer" category="c1"
         ><svg kpiIcon data-p-icon="gauge"
-      /></holita-kpi-tile>
-      <holita-kpi-tile [label]="text().kpis.fuel" category="c2"
+      /></discocan-kpi-tile>
+      <discocan-kpi-tile [label]="text().kpis.fuel" category="c2"
         ><svg kpiIcon data-p-icon="gauge"
-      /></holita-kpi-tile>
-      <holita-kpi-tile [label]="text().kpis.distance" category="c3"
+      /></discocan-kpi-tile>
+      <discocan-kpi-tile [label]="text().kpis.distance" category="c3"
         ><svg kpiIcon data-p-icon="chart-line"
-      /></holita-kpi-tile>
-      <holita-kpi-tile [label]="v2().problemKpi" tone="warn"
+      /></discocan-kpi-tile>
+      <discocan-kpi-tile [label]="v2().problemKpi" tone="warn"
         ><svg kpiIcon data-p-icon="exclamation-triangle"
-      /></holita-kpi-tile>
-      <holita-kpi-tile [label]="text().kpis.nextService" category="c4"
+      /></discocan-kpi-tile>
+      <discocan-kpi-tile [label]="text().kpis.nextService" category="c4"
         ><svg kpiIcon data-p-icon="wrench"
-      /></holita-kpi-tile>
-    </holita-kpi-strip>
+      /></discocan-kpi-tile>
+    </discocan-kpi-strip>
     <section
       class="app-card vehicle-profile__map-placeholder"
       [attr.aria-label]="v2().map"
@@ -70,7 +70,7 @@
   }
   @case ('ready') {
     @if (vehicle(); as vehicle) {
-      <holita-page-header
+      <discocan-page-header
         [title]="vehicle.plate"
         [backLink]="backLink()"
         [backLabel]="backLabel() ?? text().back"
@@ -85,7 +85,7 @@
           [severity]="statusSeverity(vehicle.status)"
           [value]="statusLabel(vehicle.status)"
         />
-      </holita-page-header>
+      </discocan-page-header>
 
       <p-tabs [value]="tab()" (valueChange)="selectTab($event)">
         <p-tablist [pt]="{ content: { 'aria-label': text().eyebrow } }">
@@ -102,7 +102,7 @@
                     [severity]="toneSeverity(liveStatus().tone)"
                     [value]="liveStatus().label"
                   />
-                  <holita-fleet-now mode="table" [device]="activityDevice()" />
+                  <discocan-fleet-now mode="table" [device]="activityDevice()" />
                 </span>
                 <span class="app-cell-date" [title]="units.utc(lastReport())">
                   {{ text().lastReport }}:
@@ -113,47 +113,47 @@
                 </button>
               </div>
 
-              <holita-kpi-strip [label]="text().kpis.label">
-                <holita-kpi-tile
+              <discocan-kpi-strip [label]="text().kpis.label">
+                <discocan-kpi-tile
                   [label]="text().kpis.odometer"
                   [value]="units.distance(vehicle.odometerKm, false, 0)"
                   [unit]="units.distanceUnit()"
                   category="c1"
                   ><svg kpiIcon data-p-icon="gauge"
-                /></holita-kpi-tile>
-                <holita-kpi-tile
+                /></discocan-kpi-tile>
+                <discocan-kpi-tile
                   [label]="text().kpis.fuel"
-                  [value]="vehicle.fuelPct === null ? null : (vehicle.fuelPct | holitaNumber)"
+                  [value]="vehicle.fuelPct === null ? null : (vehicle.fuelPct | discocanNumber)"
                   [unit]="vehicle.fuelPct === null ? null : '%'"
                   [tone]="vehicle.fuelStatus === 'LOW' ? 'danger' : null"
                   [category]="vehicle.fuelStatus === 'LOW' ? null : 'c2'"
                   [footnote]="vehicle.fuelStatus === 'STALE' ? staleFuelText() : null"
                   ><svg kpiIcon data-p-icon="gauge"
-                /></holita-kpi-tile>
-                <holita-kpi-tile
+                /></discocan-kpi-tile>
+                <discocan-kpi-tile
                   [label]="text().kpis.distance"
                   [value]="units.distance(distanceTotal(), false, 0)"
                   [unit]="units.distanceUnit()"
                   category="c3"
                   ><svg kpiIcon data-p-icon="chart-line"
-                /></holita-kpi-tile>
-                <holita-kpi-tile
+                /></discocan-kpi-tile>
+                <discocan-kpi-tile
                   [label]="faults().currentWarnings"
-                  [value]="vehicle.currentWarnings.length | holitaNumber"
+                  [value]="vehicle.currentWarnings.length | discocanNumber"
                   [tone]="currentWarningTone()"
                   ><svg kpiIcon data-p-icon="exclamation-triangle"
-                /></holita-kpi-tile>
-                <holita-kpi-tile
+                /></discocan-kpi-tile>
+                <discocan-kpi-tile
                   [label]="text().kpis.nextService"
                   [value]="nextService().value"
                   [footnote]="nextService().footnote"
                   [tone]="nextService().tone"
                   [category]="nextService().tone ? null : 'c4'"
                   ><svg kpiIcon data-p-icon="wrench"
-                /></holita-kpi-tile>
-              </holita-kpi-strip>
+                /></discocan-kpi-tile>
+              </discocan-kpi-strip>
               @defer (on immediate) {
-                <holita-location-map
+                <discocan-location-map
                   [language]="language()"
                   [title]="v2().map"
                   [records]="mapRecords()"
@@ -198,7 +198,7 @@
                   <dl class="app-facts">
                     <div>
                       <dt>{{ text().activity }}</dt>
-                      <dd><holita-fleet-now mode="table" [device]="activityDevice()" /></dd>
+                      <dd><discocan-fleet-now mode="table" [device]="activityDevice()" /></dd>
                     </div>
                     <div>
                       <dt>{{ text().speed }}</dt>
@@ -223,7 +223,7 @@
                     <div>
                       <dt>{{ v2().positionAge }}</dt>
                       <dd [title]="units.utc(positionAt())">
-                        {{ positionAt() | holitaRelative: now() }}
+                        {{ positionAt() | discocanRelative: now() }}
                       </dd>
                     </div>
                     <div>
@@ -260,7 +260,7 @@
                 </section>
                 <section class="app-card">
                   <h2 class="app-card__title">{{ text().distanceChart }}</h2>
-                  <holita-column-series
+                  <discocan-column-series
                     [label]="text().distanceChart"
                     [points]="distancePoints()"
                   />
@@ -324,7 +324,7 @@
                   @if (edataTruncated()) {
                     <p class="app-muted">{{ v2().edata.truncated }}</p>
                   }
-                  <holita-table-panel
+                  <discocan-table-panel
                     mode="local"
                     [heading]="v2().edata.heading"
                     [headingLevel]="3"
@@ -367,7 +367,7 @@
                               ><span class="app-muted app-mono">ID {{ observation.id }}</span></span
                             >
                           </td>
-                          <td class="app-cell-number">{{ observation.count | holitaNumber }}</td>
+                          <td class="app-cell-number">{{ observation.count | discocanNumber }}</td>
                           <td class="app-cell-date">
                             <time
                               [attr.datetime]="observation.lastAt"
@@ -378,7 +378,7 @@
                         </tr></ng-template
                       >
                     </p-table>
-                  </holita-table-panel>
+                  </discocan-table-panel>
                 </div>
               </details>
             </div>
@@ -386,7 +386,7 @@
 
           <p-tabpanel value="problems">
             <div class="app-tab-content">
-              <holita-fleet-current-warnings
+              <discocan-fleet-current-warnings
                 [warnings]="vehicle.currentWarnings"
                 [language]="language()"
               />
@@ -398,7 +398,7 @@
                   {{ units.preferences().timeZone }}
                 </p>
               }
-              <holita-table-panel
+              <discocan-table-panel
                 [heading]="faults().history"
                 [total]="problemPage()?.total ?? problems().length"
                 [page]="problemPage()"
@@ -510,7 +510,7 @@
                     </tr></ng-template
                   >
                 </p-table>
-              </holita-table-panel>
+              </discocan-table-panel>
               @if (diagnosticProblems().length) {
                 <details class="app-card vehicle-profile__technical">
                   <summary>{{ v2().technical }}</summary>
@@ -586,7 +586,7 @@
                   </div>
                 </details>
               }
-              <holita-fleet-fault-coverage
+              <discocan-fleet-fault-coverage
                 [lamps]="vehicle.warningLamps"
                 [language]="language()"
                 [hasFaultReports]="hasFaultReports()"
@@ -596,7 +596,7 @@
 
           <p-tabpanel value="trips">
             <div class="app-tab-content">
-              <holita-table-panel
+              <discocan-table-panel
                 [heading]="text().recentTrips"
                 [total]="tripPage()?.total ?? trips().length"
                 [page]="tripPage()"
@@ -656,7 +656,7 @@
                       <td class="app-cell-number">
                         {{
                           (trip.durationMin === null ? null : trip.durationMin * 60)
-                            | holitaDuration
+                            | discocanDuration
                         }}
                       </td>
                       <td class="app-cell-number">
@@ -685,13 +685,13 @@
                     </tr></ng-template
                   >
                 </p-table>
-              </holita-table-panel>
+              </discocan-table-panel>
             </div>
           </p-tabpanel>
 
           <p-tabpanel value="maintenance">
             <div class="app-tab-content">
-              <holita-table-panel
+              <discocan-table-panel
                 [heading]="text().serviceHeading"
                 [total]="servicePage()?.total ?? service().length"
                 [page]="servicePage()"
@@ -755,11 +755,11 @@
                           ><p-tag [severity]="urgencySeverity(task)" [value]="urgencyLabel(task)"
                         /></span>
                       </td>
-                      <td class="app-cell-number">{{ task.costCents | holitaMoney }}</td>
+                      <td class="app-cell-number">{{ task.costCents | discocanMoney }}</td>
                     </tr></ng-template
                   >
                 </p-table>
-              </holita-table-panel>
+              </discocan-table-panel>
             </div>
           </p-tabpanel>
 
@@ -808,7 +808,7 @@
                 }
               </section>
               @if (selectedDevice(); as selected) {
-                <holita-vehicle-command-history
+                <discocan-vehicle-command-history
                   [branchId]="branchId()"
                   [language]="language()"
                   [deviceId]="selected.id"

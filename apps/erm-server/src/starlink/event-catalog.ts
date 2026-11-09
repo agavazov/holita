@@ -1,7 +1,7 @@
 import type { ErmEventCategory, ErmEventSeverity } from '../generated/graphql/types.js';
 
 // Vendor names: StarLink archive authenticated/pages/E0.md (including unlinked event 17).
-// Category and severity are holita presentation classifications.
+// Category and severity are discocan presentation classifications.
 const entries: readonly [string, string, string, ErmEventCategory, ErmEventSeverity][] = [
   ['01', 'Location report', 'Отчет за местоположение', 'POSITION', 'INFO'],
   ['02', 'Diagnostic report', 'Диагностичен отчет', 'ALARM', 'WARNING'],

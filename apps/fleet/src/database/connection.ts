@@ -1,7 +1,7 @@
 export function getDatabaseUrl(): string {
   const value =
     process.env.FLEET_DATABASE_URL ??
-    'postgresql://holita_fleet:holita_fleet_local@127.0.0.1:11084/holita_fleet';
+    'postgresql://discocan_fleet:discocan_fleet_local@127.0.0.1:11084/discocan_fleet';
   try {
     const url = new URL(value);
     if (!['postgresql:', 'postgres:'].includes(url.protocol)) {

@@ -101,7 +101,7 @@ export function scoreTone(score: number): StatusTone {
  * the drawer to the form. Presentation only: the host owns data, list state and editing.
  */
 @Component({
-  selector: 'holita-drivers-view',
+  selector: 'discocan-drivers-view',
   imports: [
     ButtonDirective,
     TableModule,

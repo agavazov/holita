@@ -205,7 +205,7 @@ const listener = net.createServer((socket) => {
     record({
       connection,
       step: index,
-      from: 'holita',
+      from: 'discocan',
       frame: frame.subarray(0, -2).toString('latin1'),
     });
     socket.write(frame);
@@ -266,7 +266,7 @@ const listener = net.createServer((socket) => {
           const confirmation = serverFrame('02', String(++reference), [frame.reference, '01']);
           record({
             connection,
-            from: 'holita',
+            from: 'discocan',
             frame: confirmation.subarray(0, -2).toString('latin1'),
           });
           socket.write(confirmation);

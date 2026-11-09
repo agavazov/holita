@@ -29,7 +29,7 @@ import { notificationsText } from './i18n/messages';
 import { notificationTone, type NotificationRow } from './notification-presentation';
 
 @Component({
-  selector: 'holita-notifications-view',
+  selector: 'discocan-notifications-view',
   imports: [
     RouterLink,
     FormsModule,

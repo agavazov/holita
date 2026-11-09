@@ -37,7 +37,7 @@ function barColor(tone: BarTone): string {
 
 /** Horizontal stacked rows with a legend and a visually hidden data table. */
 @Component({
-  selector: 'holita-stacked-bars',
+  selector: 'discocan-stacked-bars',
   template: `
     <ul class="stacked-bars__legend" aria-hidden="true">
       @for (item of legend(); track item.key) {

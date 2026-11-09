@@ -44,7 +44,7 @@ import { VehiclesView, type VehicleActionId, type VehicleRow } from './vehicles-
 import { vehiclesText } from './i18n/messages';
 
 @Component({
-  selector: 'holita-vehicles-page',
+  selector: 'discocan-vehicles-page',
   providers: [VehiclesApi, VehicleChoices],
   imports: [VehiclesView, RouterOutlet, Message, ButtonDirective],
   templateUrl: './vehicles-page.html',

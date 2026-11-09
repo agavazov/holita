@@ -83,7 +83,7 @@ export const alertStatusTones: Record<AlertStatusCode, StatusTone> = {
  * updates.
  */
 @Component({
-  selector: 'holita-alerts-view',
+  selector: 'discocan-alerts-view',
   imports: [
     Bell,
     CheckCircle,

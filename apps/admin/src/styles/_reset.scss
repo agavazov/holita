@@ -1,5 +1,5 @@
-// Lowest layer: browser normalisation that PrimeNG and holita rules may override.
-@layer holita-reset {
+// Lowest layer: browser normalisation that PrimeNG and discocan rules may override.
+@layer discocan-reset {
   *,
   *::before,
   *::after {

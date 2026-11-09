@@ -77,8 +77,8 @@
     "edataModule": "eData module",
     "edataModuleHint": "Module and version, for example eData Fms 6.56"
   },
-  "liveError": "The live holita connection is unavailable right now; the device registry is up to date.",
-  "liveStale": "The live holita connection could not be refreshed; it shows the state from {time}.",
+  "liveError": "The live discocan connection is unavailable right now; the device registry is up to date.",
+  "liveStale": "The live discocan connection could not be refreshed; it shows the state from {time}.",
   "optionLabels": {
     "CELLULAR_4G": "4G cellular connectivity",
     "SAFETY_SF": "Safety (SF)",
@@ -104,7 +104,7 @@
     "routing": "Routing",
     "warningLamps": "Warning lamps",
     "offline": "Offline",
-    "viaHolita": "via holita",
+    "viaDiscoCan": "via discocan",
     "viaKarma": "via Karma",
     "karmaBackup": "Karma backup",
     "since": "Since {time}",
@@ -112,7 +112,7 @@
     "activeLamps": "{count} active",
     "noLampReports": "No lamp reports",
     "lampCoverage": "Known lamp states: {count} of {total}",
-    "noHolitaConnection": "No holita connection yet",
+    "noDiscoCanConnection": "No discocan connection yet",
     "reportingOffline": "Reporting · offline",
     "lampNames": {
       "1896": "Brake",

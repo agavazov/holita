@@ -1,4 +1,4 @@
-<holita-route-drawer
+<discocan-route-drawer
   [state]="state()"
   [errorText]="loadError()"
   (retry)="retry.emit()"
@@ -24,7 +24,7 @@
     <section class="app-form-section">
       <h3>{{ text().identification }}</h3>
       <div class="app-form-grid">
-        <holita-form-field
+        <discocan-form-field
           [label]="text().plate"
           controlId="vehicle-plate"
           [required]="true"
@@ -39,8 +39,8 @@
             [attr.aria-invalid]="errorOf('plate') ? 'true' : null"
             [attr.aria-describedby]="describedBy('plate')"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().fleetNumber"
           controlId="vehicle-fleetNumber"
           [hint]="text().fleetNumberHint"
@@ -55,8 +55,8 @@
             [attr.aria-invalid]="errorOf('fleetNumber') ? 'true' : null"
             [attr.aria-describedby]="describedBy('fleetNumber')"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           class="app-form-grid--wide"
           [label]="text().vin"
           controlId="vehicle-vin"
@@ -73,14 +73,14 @@
             [attr.aria-invalid]="errorOf('vin') ? 'true' : null"
             [attr.aria-describedby]="describedBy('vin')"
           />
-        </holita-form-field>
+        </discocan-form-field>
       </div>
     </section>
 
     <section class="app-form-section">
       <h3>{{ text().specification }}</h3>
       <div class="app-form-grid">
-        <holita-form-field [label]="text().type" controlId="vehicle-type">
+        <discocan-form-field [label]="text().type" controlId="vehicle-type">
           <p-select
             inputId="vehicle-type"
             formControlName="type"
@@ -90,8 +90,8 @@
             appendTo="body"
             [ariaLabel]="text().type"
           />
-        </holita-form-field>
-        <holita-form-field [label]="text().fuelType" controlId="vehicle-fuelType">
+        </discocan-form-field>
+        <discocan-form-field [label]="text().fuelType" controlId="vehicle-fuelType">
           <p-select
             inputId="vehicle-fuelType"
             formControlName="fuelType"
@@ -101,8 +101,8 @@
             appendTo="body"
             [ariaLabel]="text().fuelType"
           />
-        </holita-form-field>
-        <holita-form-field [label]="text().make" controlId="vehicle-make" [error]="errorOf('make')">
+        </discocan-form-field>
+        <discocan-form-field [label]="text().make" controlId="vehicle-make" [error]="errorOf('make')">
           <input
             pInputText
             id="vehicle-make"
@@ -111,8 +111,8 @@
             [attr.aria-invalid]="errorOf('make') ? 'true' : null"
             [attr.aria-describedby]="describedBy('make')"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().model"
           controlId="vehicle-model"
           [error]="errorOf('model')"
@@ -125,8 +125,8 @@
             [attr.aria-invalid]="errorOf('model') ? 'true' : null"
             [attr.aria-describedby]="describedBy('model')"
           />
-        </holita-form-field>
-        <holita-form-field [label]="text().year" controlId="vehicle-year" [error]="errorOf('year')">
+        </discocan-form-field>
+        <discocan-form-field [label]="text().year" controlId="vehicle-year" [error]="errorOf('year')">
           <p-inputnumber
             inputId="vehicle-year"
             formControlName="year"
@@ -134,8 +134,8 @@
             [invalid]="!!errorOf('year')"
             [pt]="numberPt().year"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().tank"
           controlId="vehicle-tankL"
           [error]="errorOf('tankL')"
@@ -146,14 +146,14 @@
             [invalid]="!!errorOf('tankL')"
             [pt]="numberPt().tankL"
           />
-        </holita-form-field>
+        </discocan-form-field>
       </div>
     </section>
 
     <section class="app-form-section">
       <h3>{{ text().assignment }}</h3>
       <div class="app-form-grid">
-        <holita-form-field [label]="text().status" controlId="vehicle-status">
+        <discocan-form-field [label]="text().status" controlId="vehicle-status">
           <p-select
             inputId="vehicle-status"
             formControlName="status"
@@ -163,8 +163,8 @@
             appendTo="body"
             [ariaLabel]="text().status"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().group"
           controlId="vehicle-groupId"
           [error]="errorOf('groupId')"
@@ -185,8 +185,8 @@
               },
             }"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           class="app-form-grid--wide"
           [label]="text().driver"
           controlId="vehicle-driverId"
@@ -209,8 +209,8 @@
               },
             }"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           class="app-form-grid--wide"
           [label]="text().notes"
           controlId="vehicle-notes"
@@ -226,7 +226,7 @@
             [attr.aria-invalid]="errorOf('notes') ? 'true' : null"
             [attr.aria-describedby]="describedBy('notes')"
           ></textarea>
-        </holita-form-field>
+        </discocan-form-field>
       </div>
     </section>
   </form>
@@ -252,4 +252,4 @@
       {{ vehicle() ? text().save : text().create }}
     </button>
   </div>
-</holita-route-drawer>
+</discocan-route-drawer>

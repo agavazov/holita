@@ -6,7 +6,7 @@ import { fleetLiveText, type FleetLiveDevice, type FleetLiveMode } from './fleet
 import { injectFleetNow } from './fleet-clock';
 
 @Component({
-  selector: 'holita-fleet-last-report',
+  selector: 'discocan-fleet-last-report',
   template: `
     <span class="live-cell">
       <span class="live-cell__text" [attr.title]="exact()">

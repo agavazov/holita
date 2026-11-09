@@ -17,11 +17,11 @@ import { CommandHistory } from './command-history';
 import { commandPending, commandText, type CommandRequest } from './command-presentation';
 
 @Component({
-  selector: 'holita-vehicle-command-history',
+  selector: 'discocan-vehicle-command-history',
   imports: [CommandHistory, CommandDetails],
   providers: [ControlCenterApi],
   template: `
-    <holita-command-history
+    <discocan-command-history
       [requests]="requests()"
       [language]="language()"
       [target]="target()"
@@ -30,7 +30,7 @@ import { commandPending, commandText, type CommandRequest } from './command-pres
       (inspect)="selectedId.set($event.id)"
       (retry)="reload.update(increment)"
     />
-    <holita-command-details
+    <discocan-command-details
       [request]="selected()"
       [language]="language()"
       [target]="target()"

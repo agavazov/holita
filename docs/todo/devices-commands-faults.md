@@ -3,14 +3,14 @@
 Status: approved by the owner on 2026-11-06, with the decisions below. This is the Discocan phase after
 [admin UI v2](ui-v2.md). Delivery follows UI v2: Codex implements each package in the main checkout
 on disjoint folders, and Claude reviews the result, runs `npm run check` under
-`flock .nx/holita-check.lock` and commits locally after each package. Pushes need the owner's
+`flock .nx/discocan-check.lock` and commits locally after each package. Pushes need the owner's
 approval. Device work follows the [ERM roadmap safety rules](erm-roadmap.md#safety-rules) and test
 levels.
 
 ## Goals (owner, 2026-11-06)
 
 - **Devices:** show for every unit when it last sent a signal, whether it is online, and that it has
-  fallen back to Karma, with a button that returns it to holita. The information should be enough,
+  fallen back to Karma, with a button that returns it to discocan. The information should be enough,
   ordered and meaningful. Karma will not stay long, so its part stays small and removable.
 - **Commands:** a fleet-wide command queue, controlled `46` parameter writes, batch commands (one
   unit at a time with verification), and roles and permissions.
@@ -19,11 +19,11 @@ levels.
 
 ## Remaining facts (2026-11-08)
 
-- Faults: since 2026-11-03, no truck has sent a `413`, `418` or `419` fault record to holita.
+- Faults: since 2026-11-03, no truck has sent a `413`, `418` or `419` fault record to discocan.
   CB1147TP reported SPN 4339/7, 1247/11 and 23806/15 through Karma on 2026-10-28/29. The
   stored-fault read (`30` `301/19`) returned `154,0` (not acknowledged) on CB1147TP and CB1344XH,
   so faults come only from automatic reports and warning lamps until ERM explains that read. The
-  active/cleared lifecycle is unproven, and descriptions are holita's own wording.
+  active/cleared lifecycle is unproven, and descriptions are discocan's own wording.
 - Warning lamps: only CB5636XP has the definitions (since 2026-11-06). On 2026-11-08 its reports
   carried 1896 only; 1906 and 1910 never arrived. 1896 read RED at every ignition-on while the engine
   was off, so Fleet now ignores lamp values reported with the engine off.
@@ -31,7 +31,7 @@ levels.
 ## Packages
 
 Delivered on 2026-11-06: the Branch command queue with retry and batch reads, Tenant-wide roles,
-Karma backup detection with the return to holita, and the structured fault pipeline with warning
+Karma backup detection with the return to discocan, and the structured fault pipeline with warning
 lamps. Delivered on 2026-11-08: ERM role enforcement with controlled `46` writes and configuration
 batches, the Device status workspace, the admin command queue with the `46` form and role-aware
 controls, fault meanings with current warnings and lamp notifications, and the truck faults view

@@ -30,9 +30,9 @@ type LoginState =
 
 /** State snapshots use the real sign-in presentation and the same transport fixtures. */
 @Component({
-  selector: 'holita-login-story',
+  selector: 'discocan-login-story',
   imports: [Login],
-  template: '<holita-login [language]="language()" [languageUrl]="languageUrl" />',
+  template: '<discocan-login [language]="language()" [languageUrl]="languageUrl" />',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class LoginStory {
@@ -74,7 +74,7 @@ class LoginStory {
 const meta: Meta = {
   title: 'Admin/Sign in',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: false } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: false } satisfies StoryFixtures },
   beforeEach: () => loginFixtures(),
 };
 export default meta;
@@ -84,7 +84,7 @@ function snapshot(state: LoginState): NonNullable<Story['render']> {
   return (_args, context) => ({
     props: { language: storyLanguage(context.globals), state },
     moduleMetadata: { imports: [LoginStory] },
-    template: '<holita-login-story [language]="language" [state]="state" />',
+    template: '<discocan-login-story [language]="language" [state]="state" />',
   });
 }
 
@@ -92,7 +92,7 @@ export const Default: Story = {
   render: () => ({
     ...routeAt('sign-in')(),
     moduleMetadata: { imports: [StoryApp] },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   }),
 };
 export const SigningIn: Story = { render: snapshot('submitting') };

@@ -41,7 +41,7 @@ async function start(): Promise<void> {
 
 void start().catch((error: unknown) => {
   console.error(error);
-  const root = document.querySelector('holita-root');
+  const root = document.querySelector('discocan-root');
   if (root) {
     const language = readLanguage(window.location.pathname.split('/')[1] ?? null);
     const text = messages[language];

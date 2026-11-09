@@ -10,7 +10,7 @@ import { DevicesPage } from './devices-list-page';
 const meta: Meta = {
   title: 'Admin/Devices/List',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: true } satisfies StoryFixtures },
 };
 export default meta;
 type Story = StoryObj;
@@ -22,7 +22,7 @@ function routed(suffix = ''): NonNullable<Story['render']> {
     moduleMetadata: {
       imports: [StoryApp, AdminWorkspace, FleetWorkspace, DevicesPage, DeviceEditorPage],
     },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 export const Default: Story = {
@@ -34,14 +34,14 @@ export const Edit: Story = {
 
 export const Loading: Story = {
   parameters: {
-    holita: { scenario: { failures: { AdminDevices: 'pending' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminDevices: 'pending' } } } satisfies StoryFixtures,
   },
   render: routed(),
 };
 export const DelayedLiveState: Story = {
   name: 'Waiting for live state',
   parameters: {
-    holita: { scenario: { failures: { AdminDevicesLive: 'pending' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminDevicesLive: 'pending' } } } satisfies StoryFixtures,
   },
   render: routed(),
 };
@@ -55,14 +55,14 @@ export const Narrow: Story = {
 export const LiveError: Story = {
   name: 'Live state unavailable',
   parameters: {
-    holita: { scenario: { failures: { AdminDevicesLive: 'network' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminDevicesLive: 'network' } } } satisfies StoryFixtures,
   },
   render: routed(),
 };
 export const ErrorState: Story = {
   name: 'Error',
   parameters: {
-    holita: { scenario: { failures: { AdminDevices: 'network' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminDevices: 'network' } } } satisfies StoryFixtures,
   },
   render: routed(),
 };

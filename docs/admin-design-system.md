@@ -1,7 +1,7 @@
 # Admin design system
 
 The shared presentation rules for `apps/admin`: theme, global styles, shell and reusable
-patterns. Use the [design-system skill](../.agents/skills/holita-admin-design-system/SKILL.md)
+patterns. Use the [design-system skill](../.agents/skills/discocan-admin-design-system/SKILL.md)
 when changing presentation. Meridian is visual inspiration only; no copied source/assets.
 The code defines individual component inputs and implementation details.
 
@@ -26,10 +26,10 @@ Never use shell classes in feature code. Compiled component CSS warns at 4 kB an
 
 ## Theme
 
-`holitaPreset(choice)` extends Aura through registered component presets.
-`provideHolitaTheme` supplies it to PrimeNG with ripple disabled and makes table scroll
+`discocanPreset(choice)` extends Aura through registered component presets.
+`provideDiscoCanTheme` supplies it to PrimeNG with ripple disabled and makes table scroll
 containers keyboard reachable. `.app-dark` is the central dark-mode selector.
-Layer order is `holita-reset, primeng, holita`; keep Sass and `holitaThemeOptions` aligned.
+Layer order is `discocan-reset, primeng, discocan`; keep Sass and `discocanThemeOptions` aligned.
 
 ### The configured choice
 
@@ -75,8 +75,8 @@ accessibility audit. Use canvas-muted tokens on canvas backgrounds, not panel mu
 | Status/series | `tone-<name>-color/background/solid`, category solids `category-c1` through `category-c8` and each slot’s `-background`/`-color` pair                     |
 | Accent/plate  | Teal `accent-background/color/solid`, `hero-background/color`, `plate-background/color/border-color/band-background/band-color`                           |
 
-Define tokens under `extend.app` in `theme/holita-preset.ts`; nested paths become kebab-case
-CSS properties. Reference Aura/holita tokens centrally. Shadows are for floating surfaces.
+Define tokens under `extend.app` in `theme/discocan-preset.ts`; nested paths become kebab-case
+CSS properties. Reference Aura/discocan tokens centrally. Shadows are for floating surfaces.
 Table column titles use the DataTable density token, not `text-xs`.
 
 The canvas uses neutral 100/950 and the frame 50/950; panels use 0/900 with 50/800 headers
@@ -95,7 +95,7 @@ tables; sparkline names state range and last value. Null is a gap, zero a real v
 
 ### Light and dark
 
-`Appearance` toggles the root scheme and stores `holita.admin.theme`; default is light.
+`Appearance` toggles the root scheme and stores `discocan.admin.theme`; default is light.
 Login and the account menu expose the switch. Denied storage keeps switching usable and
 reports a warning. Scheme differences belong in the preset/tokens, not component selectors.
 Private license/map configuration and production asset exclusions are documented once in
@@ -128,15 +128,15 @@ focus targets need `tabindex="-1"`; do not remove visible keyboard focus.
 
 The shell imports no business features and fetches no business data. The workspace supplies
 navigation, Branch/language/account context and page title. Navigation has no business-count badges.
-The document title is `<page> · holita`; login uses the localized Sign in title.
+The document title is `<page> · discocan`; login uses the localized Sign in title.
 
 - Dashboard is the first destination without a group heading. Fleet contains Vehicles, Devices,
   Drivers and Maintenance. System contains Commands, Settings and Tenant-wide Users. Without
   Fleet or a selected Branch, System contains Users only. Settings opens General and stays
   selected across its General | Vehicle groups tabs. Users has no Settings tabs. Dashboard opens
   Overview; its Problems and Trips tabs keep Dashboard selected. Device detail belongs to Devices.
-- Desktop navigation collapses to a rail, persisted as `holita.admin.sidebar`. Rail links retain
-  accessible names/group labels and hover/focus tooltips. The footer identifies holita and Tenant.
+- Desktop navigation collapses to a rail, persisted as `discocan.admin.sidebar`. Rail links retain
+  accessible names/group labels and hover/focus tooltips. The footer identifies discocan and Tenant.
 - Below 1024px, a modal drawer takes focus on Close, traps focus and closes on Escape, backdrop,
   navigation or reaching desktop width. Return focus to the menu button. Resizing preserves drafts.
 - Keep the topbar one row, with Branch, language and account menus. Branch switching keeps the
@@ -168,21 +168,21 @@ is not translated. Storybook uses the same texts with a language toolbar.
 ## Patterns (`src/app/ui`)
 
 Use components only for repeated structure/state/behavior. Single PrimeNG controls stay direct.
-Components are standalone and OnPush, with signal inputs/outputs, `holita-` selectors and BG/EN
+Components are standalone and OnPush, with signal inputs/outputs, `discocan-` selectors and BG/EN
 texts. Source files define full signatures; the table identifies which pattern to use.
 
 | Pattern                                                           | Use and required behavior                                                                                                     |
 | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `holita-page-header`                                              | One page `h1` with `id="page-title"`, optional count/back link, one primary action and a complete action menu                 |
-| `holita-kpi-strip` / `holita-kpi-tile`                            | Named group, optional icon/category/status tint and record link; stable loading tracks; null shows “—” without a unit         |
-| `holita-filter-builder`                                           | Quick search and independent AND conditions; bounds/errors stay visible; incomplete/invalid drafts cannot apply               |
-| `holita-table-panel`                                              | Shared offset/cursor/local geometry, column skeletons, retained refresh/stale rows, empty/error states, selection and actions |
-| `holita-row-actions`                                              | Named row menu; send choices through `TablePanel.run`; destructive actions last                                               |
-| `holita-menu-button`                                              | Accessible popup actions/navigation; real anchors for routes, current-choice labels and disabled/danger states                |
-| `holita-route-drawer`                                             | Loading/missing/error/ready states, labelled Close, sticky footer, dirty/pending guards                                       |
-| `holita-form-field`                                               | Label/control/hint/error association, required state and Unicode counter                                                      |
-| `holita-empty-state`                                              | Empty/no-results/error/missing/disabled/no-telemetry/done; alert only for errors/missing records                              |
-| `holita-column-series`, `holita-stacked-bars`, `holita-sparkline` | Accessible chart/table alternatives, null gaps and preserved zero values                                                      |
+| `discocan-page-header`                                              | One page `h1` with `id="page-title"`, optional count/back link, one primary action and a complete action menu                 |
+| `discocan-kpi-strip` / `discocan-kpi-tile`                            | Named group, optional icon/category/status tint and record link; stable loading tracks; null shows “—” without a unit         |
+| `discocan-filter-builder`                                           | Quick search and independent AND conditions; bounds/errors stay visible; incomplete/invalid drafts cannot apply               |
+| `discocan-table-panel`                                              | Shared offset/cursor/local geometry, column skeletons, retained refresh/stale rows, empty/error states, selection and actions |
+| `discocan-row-actions`                                              | Named row menu; send choices through `TablePanel.run`; destructive actions last                                               |
+| `discocan-menu-button`                                              | Accessible popup actions/navigation; real anchors for routes, current-choice labels and disabled/danger states                |
+| `discocan-route-drawer`                                             | Loading/missing/error/ready states, labelled Close, sticky footer, dirty/pending guards                                       |
+| `discocan-form-field`                                               | Label/control/hint/error association, required state and Unicode counter                                                      |
+| `discocan-empty-state`                                              | Empty/no-results/error/missing/disabled/no-telemetry/done; alert only for errors/missing records                              |
+| `discocan-column-series`, `discocan-stacked-bars`, `discocan-sparkline` | Accessible chart/table alternatives, null gaps and preserved zero values                                                      |
 
 Page headers show a title and count on the left, and at most one primary action followed by the
 page-action menu on the right. Define actions once with `actions`; mark the primary action with
@@ -228,12 +228,12 @@ Keep rejected drafts editable and focus their first invalid field. Never expose 
 
 ### Source context
 
-`holita-source-context` presents provenance, period, coverage and availability; it owns no fetching
+`discocan-source-context` presents provenance, period, coverage and availability; it owns no fetching
 or actions. Keep source identity, retrieval and event clocks, gaps and missing fields distinct.
 
 ### Maps and charts
 
-`holita-location-map` (`ui/location-map`) uses Google Maps JavaScript API for one record or a
+`discocan-location-map` (`ui/location-map`) uses Google Maps JavaScript API for one record or a
 fleet, with truck pins coloured by status, a recorded track and a matching accessible list.
 Selected pins are highlighted; heading arrows appear only for fresh moving positions.
 Callers establish motion with optional canonical `speedKph` or source-provided `moving`; a heading
@@ -252,7 +252,7 @@ actions available. Browser key and Map ID configuration are documented in
 [development](development.md#ports-and-environment). Google external links remain available.
 Review `Design System/Maps` for missing-key, fleet, single, stale, heading/track and narrow states.
 
-`holita-chart-panel` (`ui/chart-panel`) uses `p-chart`/Chart.js for donut, line and bar summaries.
+`discocan-chart-panel` (`ui/chart-panel`) uses `p-chart`/Chart.js for donut, line and bar summaries.
 Supply localized point/series labels, canonical numeric values, units, time zone/date format,
 period/as-of and a useful summary. Null values remain gaps; measured zero stays zero. Category
 slots c1–c8 and explicit status tones resolve from the current tokens at runtime, including brand
@@ -312,7 +312,7 @@ Cancel restores trigger focus; destructive/bulk actions restore the panel headin
 
 ### Operation feedback
 
-`AdminWorkspace` owns one `holita-operation-toast` outlet and scoped `MessageService`; stories use
+`AdminWorkspace` owns one `discocan-operation-toast` outlet and scoped `MessageService`; stories use
 the same presentation. Workspace changes clear messages. Publish one batch result, retaining
 failed record labels/details. Success closes after five seconds; warning/error stays until dismissed.
 The top-right outlet must not shift page/table layout or steal focus.
@@ -394,11 +394,11 @@ from axe and never hidden. Storybook may serve private local configuration; do n
 3. Brand/density: update choice unions/arrays and records; extend palette unions when needed.
 4. Pattern: change the shared component/CSS once and its representative stories.
 5. Breakpoint: update the Sass map, test-setup restatement, `BreakpointName` and Foundations story.
-6. Layer order: change `_layers.scss` and `holitaThemeOptions.cssLayer.order` together.
+6. Layer order: change `_layers.scss` and `discocanThemeOptions.cssLayer.order` together.
 7. PrimeNG control: follow [usage rules](#primeng-usage-rules) and coverage stories.
 8. Font weight: add its licensed WOFF under `public/fonts/lato` and the `_fonts.scss` weight entry.
 
-Follow [focused validation](../.agents/skills/holita-focused-validation/SKILL.md) at handover;
+Follow [focused validation](../.agents/skills/discocan-focused-validation/SKILL.md) at handover;
 request Storybook review when needed, including both schemes/brands/densities and mobile375.
 
 ## Extending

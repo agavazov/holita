@@ -3,7 +3,7 @@
   "info": {
     "title": "Karma API v2 - reconstructed reference",
     "version": "0.1.0-reconstructed",
-    "description": "Locally reconstructed, NOT an official vendor OpenAPI document. Requests come from the downloaded vendor endpoint/helper scripts. Response models combine structural read observations and fields accepted by the current holita adapter; nullable variants are not a vendor guarantee. Unknown write/driver/black-box/queue response bodies remain unconstrained. See README.md and source/manifest.json."
+    "description": "Locally reconstructed, NOT an official vendor OpenAPI document. Requests come from the downloaded vendor endpoint/helper scripts. Response models combine structural read observations and fields accepted by the current discocan adapter; nullable variants are not a vendor guarantee. Unknown write/driver/black-box/queue response bodies remain unconstrained. See README.md and source/manifest.json."
   },
   "servers": [
     {
@@ -56,10 +56,10 @@
         "operationId": "getVersion",
         "description": "Get API version information (no authentication required). Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
-        "x-holita-query": "karmaVersion",
+        "x-discocan-query": "karmaVersion",
         "responses": {
           "200": {
             "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
@@ -96,7 +96,7 @@
         "operationId": "postLogin",
         "description": "Authenticate with username and password to receive session ID. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "POST",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "requestBody": {
@@ -155,7 +155,7 @@
         "operationId": "getCars",
         "description": "Retrieve list of all cars with optional filtering. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -196,7 +196,7 @@
             "x-vendor-control-type": "text"
           }
         ],
-        "x-holita-query": "karmaCars",
+        "x-discocan-query": "karmaCars",
         "responses": {
           "200": {
             "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
@@ -234,7 +234,7 @@
         "operationId": "postCars",
         "description": "Create a new car record in the system. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "POST",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "x-authentication": {
@@ -304,7 +304,7 @@
         "operationId": "getCarsId",
         "description": "Retrieve detailed information for a specific car. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -323,7 +323,7 @@
             "x-vendor-field-name": "car_id"
           }
         ],
-        "x-holita-query": "karmaCar",
+        "x-discocan-query": "karmaCar",
         "responses": {
           "200": {
             "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
@@ -361,7 +361,7 @@
         "operationId": "putCarsId",
         "description": "Update information for an existing car. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "PUT",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "parameters": [
@@ -430,7 +430,7 @@
         "operationId": "deleteCarsId",
         "description": "Remove a car from the system. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "DELETE",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -468,7 +468,7 @@
         "operationId": "getDrivers",
         "description": "Retrieve list of all drivers with optional filtering. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -524,7 +524,7 @@
         "operationId": "postDrivers",
         "description": "Create a new driver record in the system. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "POST",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "x-authentication": {
@@ -583,7 +583,7 @@
         "operationId": "putDriversId",
         "description": "Update information for an existing driver. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "PUT",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "parameters": [
@@ -648,7 +648,7 @@
         "operationId": "deleteDriversId",
         "description": "Remove a driver from the system. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "DELETE",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -686,14 +686,14 @@
         "operationId": "getProjects",
         "description": "Retrieve list of all projects. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
             "KarmaSessionQuery": []
           }
         ],
-        "x-holita-query": "karmaProjects",
+        "x-discocan-query": "karmaProjects",
         "responses": {
           "200": {
             "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
@@ -731,7 +731,7 @@
         "operationId": "postProjects",
         "description": "Create a new project in the system. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "POST",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "x-authentication": {
@@ -780,7 +780,7 @@
         "operationId": "getUsers",
         "description": "Retrieve list of all users with optional filtering. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -800,7 +800,7 @@
             "x-vendor-control-type": "number"
           }
         ],
-        "x-holita-query": "karmaUsers",
+        "x-discocan-query": "karmaUsers",
         "responses": {
           "200": {
             "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
@@ -840,7 +840,7 @@
         "operationId": "getLocation",
         "description": "Retrieve last known location data for vehicles. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET/POST",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -866,14 +866,14 @@
                   }
                 }
               ],
-              "description": "The vendor form permits multiple cars. Current holita GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
+              "description": "The vendor form permits multiple cars. Current discocan GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
             },
             "description": "Car ID",
             "x-vendor-control-type": "number",
             "style": "form",
             "explode": true,
             "x-vendor-multi": true,
-            "x-holita-serialization": "single scalar car query value",
+            "x-discocan-serialization": "single scalar car query value",
             "x-evidence": [
               "source/endpoints.js.txt",
               "../../../../apps/karma-client/src/integrations/karma/karma-transport.ts",
@@ -890,7 +890,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Device ID",
             "x-vendor-control-type": "text",
@@ -906,7 +906,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Field",
             "x-vendor-control-type": "text",
@@ -957,16 +957,16 @@
               "items": {
                 "type": "string"
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
-            "description": "Bracketed GET alias used by current holita transport.",
+            "description": "Bracketed GET alias used by current discocan transport.",
             "x-vendor-control-type": "text",
             "style": "form",
             "explode": true,
-            "x-holita-alias-of": "fields"
+            "x-discocan-alias-of": "fields"
           }
         ],
-        "x-holita-query": "karmaLocation",
+        "x-discocan-query": "karmaLocation",
         "responses": {
           "200": {
             "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
@@ -1004,7 +1004,7 @@
         "operationId": "postLocation",
         "description": "Retrieve last known location data for vehicles. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET/POST",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "x-authentication": {
@@ -1026,21 +1026,21 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "device": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "fields": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "address": {
                     "type": "string",
@@ -1086,7 +1086,7 @@
         "operationId": "getTrips",
         "description": "Retrieve historical trip data with filtering options. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET/POST",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -1134,14 +1134,14 @@
                   }
                 }
               ],
-              "description": "The vendor form permits multiple cars. Current holita GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
+              "description": "The vendor form permits multiple cars. Current discocan GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
             },
             "description": "Car ID",
             "x-vendor-control-type": "number",
             "style": "form",
             "explode": true,
             "x-vendor-multi": true,
-            "x-holita-serialization": "single scalar car query value",
+            "x-discocan-serialization": "single scalar car query value",
             "x-evidence": [
               "source/endpoints.js.txt",
               "../../../../apps/karma-client/src/integrations/karma/karma-transport.ts",
@@ -1158,7 +1158,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Device ID",
             "x-vendor-control-type": "text",
@@ -1175,7 +1175,7 @@
                 "type": ["number", "string"],
                 "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Project ID",
             "x-vendor-control-type": "number",
@@ -1207,7 +1207,7 @@
             "x-vendor-control-type": "datetime"
           }
         ],
-        "x-holita-query": "karmaTrips",
+        "x-discocan-query": "karmaTrips",
         "responses": {
           "200": {
             "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
@@ -1245,7 +1245,7 @@
         "operationId": "postTrips",
         "description": "Retrieve historical trip data with filtering options. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET/POST",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "x-authentication": {
@@ -1275,14 +1275,14 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "device": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "project_id": {
                     "type": "array",
@@ -1290,7 +1290,7 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "from_date": {
                     "type": "string",
@@ -1332,7 +1332,7 @@
         "operationId": "getEvents",
         "description": "Retrieve historical event data with filtering options. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET/POST",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -1371,7 +1371,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Field",
             "x-vendor-control-type": "text",
@@ -1407,14 +1407,14 @@
                   }
                 }
               ],
-              "description": "The vendor form permits multiple cars. Current holita GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
+              "description": "The vendor form permits multiple cars. Current discocan GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
             },
             "description": "Car ID",
             "x-vendor-control-type": "number",
             "style": "form",
             "explode": true,
             "x-vendor-multi": true,
-            "x-holita-serialization": "single scalar car query value",
+            "x-discocan-serialization": "single scalar car query value",
             "x-evidence": [
               "source/endpoints.js.txt",
               "../../../../apps/karma-client/src/integrations/karma/karma-transport.ts",
@@ -1431,7 +1431,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Device ID",
             "x-vendor-control-type": "text",
@@ -1448,7 +1448,7 @@
                 "type": ["number", "string"],
                 "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Project ID",
             "x-vendor-control-type": "number",
@@ -1465,7 +1465,7 @@
                 "type": ["number", "string"],
                 "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Event Type",
             "x-vendor-control-type": "number",
@@ -1513,7 +1513,7 @@
             "required": false,
             "schema": {
               "type": ["boolean", "string", "integer"],
-              "description": "Vendor helper sends true when checked and omits when unchecked. Holita uses 1 for showdesc."
+              "description": "Vendor helper sends true when checked and omits when unchecked. DiscoCan uses 1 for showdesc."
             },
             "description": "Decode External Devices",
             "x-vendor-control-type": "checkbox"
@@ -1527,13 +1527,13 @@
               "items": {
                 "type": "string"
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
-            "description": "Bracketed GET alias used by current holita transport.",
+            "description": "Bracketed GET alias used by current discocan transport.",
             "x-vendor-control-type": "text",
             "style": "form",
             "explode": true,
-            "x-holita-alias-of": "fields"
+            "x-discocan-alias-of": "fields"
           },
           {
             "name": "event_type[]",
@@ -1545,16 +1545,16 @@
                 "type": ["number", "string"],
                 "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
-            "description": "Bracketed GET alias used by current holita transport.",
+            "description": "Bracketed GET alias used by current discocan transport.",
             "x-vendor-control-type": "number",
             "style": "form",
             "explode": true,
-            "x-holita-alias-of": "event_type"
+            "x-discocan-alias-of": "event_type"
           }
         ],
-        "x-holita-query": "karmaEvents",
+        "x-discocan-query": "karmaEvents",
         "responses": {
           "200": {
             "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
@@ -1592,7 +1592,7 @@
         "operationId": "postEvents",
         "description": "Retrieve historical event data with filtering options. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET/POST",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "x-authentication": {
@@ -1621,7 +1621,7 @@
                     "items": {
                       "type": "string"
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "address": {
                     "type": "string",
@@ -1633,14 +1633,14 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "device": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "project_id": {
                     "type": "array",
@@ -1648,7 +1648,7 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "event_type": {
                     "type": "array",
@@ -1656,7 +1656,7 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "from_date": {
                     "type": "string",
@@ -1674,7 +1674,7 @@
                   },
                   "decode": {
                     "type": ["boolean", "string", "integer"],
-                    "description": "Vendor helper sends true when checked and omits when unchecked. Holita uses 1 for showdesc."
+                    "description": "Vendor helper sends true when checked and omits when unchecked. DiscoCan uses 1 for showdesc."
                   },
                   "karma_sid": {
                     "type": "string",
@@ -1706,7 +1706,7 @@
         "operationId": "getSensors",
         "description": "Retrieve sensor data with filtering options. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET/POST",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -1746,7 +1746,7 @@
                 "type": ["number", "string"],
                 "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Car ID",
             "x-vendor-control-type": "number",
@@ -1762,7 +1762,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Device ID",
             "x-vendor-control-type": "text",
@@ -1779,7 +1779,7 @@
                 "type": ["number", "string"],
                 "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Project ID",
             "x-vendor-control-type": "number",
@@ -1796,7 +1796,7 @@
                 "type": ["number", "string"],
                 "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Event Type",
             "x-vendor-control-type": "number",
@@ -1865,7 +1865,7 @@
         "operationId": "postSensors",
         "description": "Retrieve sensor data with filtering options. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET/POST",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "x-authentication": {
@@ -1895,14 +1895,14 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "device": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "project_id": {
                     "type": "array",
@@ -1910,7 +1910,7 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "event_type": {
                     "type": "array",
@@ -1918,7 +1918,7 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "from_date": {
                     "type": "string",
@@ -1960,7 +1960,7 @@
         "operationId": "getDrivingProfile",
         "description": "Retrieve driving profile analytics data. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET/POST",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -1986,14 +1986,14 @@
                   }
                 }
               ],
-              "description": "The vendor form permits multiple cars. Current holita GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
+              "description": "The vendor form permits multiple cars. Current discocan GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
             },
             "description": "Car ID",
             "x-vendor-control-type": "number",
             "style": "form",
             "explode": true,
             "x-vendor-multi": true,
-            "x-holita-serialization": "single scalar car query value",
+            "x-discocan-serialization": "single scalar car query value",
             "x-evidence": [
               "source/endpoints.js.txt",
               "../../../../apps/karma-client/src/integrations/karma/karma-transport.ts",
@@ -2010,7 +2010,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Device ID",
             "x-vendor-control-type": "text",
@@ -2027,7 +2027,7 @@
                 "type": ["number", "string"],
                 "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Project ID",
             "x-vendor-control-type": "number",
@@ -2059,7 +2059,7 @@
             "x-vendor-control-type": "datetime"
           }
         ],
-        "x-holita-query": "karmaDrivingProfile",
+        "x-discocan-query": "karmaDrivingProfile",
         "responses": {
           "200": {
             "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
@@ -2097,7 +2097,7 @@
         "operationId": "postDrivingProfile",
         "description": "Retrieve driving profile analytics data. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET/POST",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "x-authentication": {
@@ -2119,14 +2119,14 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "device": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "project_id": {
                     "type": "array",
@@ -2134,7 +2134,7 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "from_date": {
                     "type": "string",
@@ -2176,7 +2176,7 @@
         "operationId": "getParameters",
         "description": "Retrieve device configuration parameters. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -2194,7 +2194,7 @@
                 "type": ["number", "string"],
                 "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Car ID",
             "x-vendor-control-type": "number",
@@ -2211,7 +2211,7 @@
                 "type": ["number", "string"],
                 "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Parameter ID",
             "x-vendor-control-type": "number",
@@ -2224,7 +2224,7 @@
             "required": false,
             "schema": {
               "type": ["boolean", "string", "integer"],
-              "description": "Vendor helper sends true when checked and omits when unchecked. Holita uses 1 for showdesc."
+              "description": "Vendor helper sends true when checked and omits when unchecked. DiscoCan uses 1 for showdesc."
             },
             "description": "Query Device",
             "x-vendor-control-type": "checkbox"
@@ -2262,7 +2262,7 @@
         "operationId": "putParameters",
         "description": "Update device configuration parameters. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "PUT",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "x-authentication": {
@@ -2284,7 +2284,7 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "param_id": {
                     "type": "array",
@@ -2292,14 +2292,14 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "value": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "karma_sid": {
                     "type": "string",
@@ -2331,8 +2331,8 @@
         "operationId": "postCommands",
         "description": "Send command message to one or more devices. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "POST",
-        "x-holita-implemented": true,
-        "x-holita-implementation-scope": "Internal machine-authenticated parameter/profile reads and one additive 22-byte parameter definition; Fleet owns persisted eligibility, baseline and readback verification. No arbitrary command interface.",
+        "x-discocan-implemented": true,
+        "x-discocan-implementation-scope": "Internal machine-authenticated parameter/profile reads and one additive 22-byte parameter definition; Fleet owns persisted eligibility, baseline and readback verification. No arbitrary command interface.",
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [],
         "x-authentication": {
@@ -2354,7 +2354,7 @@
                       "type": ["number", "string"],
                       "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
                     },
-                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+                    "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
                   },
                   "message": {
                     "type": "string"
@@ -2389,7 +2389,7 @@
         "operationId": "getEdata",
         "description": "Request the received eData parameters. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -2437,14 +2437,14 @@
                   }
                 }
               ],
-              "description": "The vendor form permits multiple cars. Current holita GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
+              "description": "The vendor form permits multiple cars. Current discocan GET transport uses a single scalar car value; repeated values retain the documented multi-value form. Exact bulk wire semantics remain unverified."
             },
             "description": "Car ID",
             "x-vendor-control-type": "number",
             "style": "form",
             "explode": true,
             "x-vendor-multi": true,
-            "x-holita-serialization": "single scalar car query value",
+            "x-discocan-serialization": "single scalar car query value",
             "x-evidence": [
               "source/endpoints.js.txt",
               "../../../../apps/karma-client/src/integrations/karma/karma-transport.ts",
@@ -2461,7 +2461,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Device ID",
             "x-vendor-control-type": "text",
@@ -2478,7 +2478,7 @@
                 "type": ["number", "string"],
                 "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Project ID",
             "x-vendor-control-type": "number",
@@ -2495,7 +2495,7 @@
                 "type": ["number", "string"],
                 "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
             "description": "Parameter ID",
             "x-vendor-control-type": "number",
@@ -2508,7 +2508,7 @@
             "required": false,
             "schema": {
               "type": ["boolean", "string", "integer"],
-              "description": "Vendor helper sends true when checked and omits when unchecked. Holita uses 1 for showdesc."
+              "description": "Vendor helper sends true when checked and omits when unchecked. DiscoCan uses 1 for showdesc."
             },
             "description": "Show description",
             "x-vendor-control-type": "checkbox"
@@ -2558,16 +2558,16 @@
                 "type": ["number", "string"],
                 "description": "Vendor form uses a number input; help.js serializes input values as strings. Exact wire restrictions are unverified."
               },
-              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; holita uses verified bracketed aliases for selected fields."
+              "description": "Vendor multi-value form field. GET uses repeated keys in help.js; discocan uses verified bracketed aliases for selected fields."
             },
-            "description": "Bracketed GET alias used by current holita transport.",
+            "description": "Bracketed GET alias used by current discocan transport.",
             "x-vendor-control-type": "number",
             "style": "form",
             "explode": true,
-            "x-holita-alias-of": "parameter_id"
+            "x-discocan-alias-of": "parameter_id"
           }
         ],
-        "x-holita-query": "karmaEdata",
+        "x-discocan-query": "karmaEdata",
         "responses": {
           "200": {
             "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
@@ -2607,7 +2607,7 @@
         "operationId": "getBlackBoxId",
         "description": "Request a specific accident report. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET",
-        "x-holita-implemented": false,
+        "x-discocan-implemented": false,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -2658,9 +2658,9 @@
         "tags": ["Devices"],
         "summary": "Get queued messages state",
         "operationId": "getQueueId",
-        "description": "Get status of queued messages. Used internally by holita diagnostic reads; no public queue query is exposed. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
+        "description": "Get status of queued messages. Used internally by discocan diagnostic reads; no public queue query is exposed. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
@@ -2713,14 +2713,14 @@
         "operationId": "getTimeZones",
         "description": "Retrieve list of available time zones. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
             "KarmaSessionQuery": []
           }
         ],
-        "x-holita-query": "karmaTimeZones",
+        "x-discocan-query": "karmaTimeZones",
         "responses": {
           "200": {
             "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
@@ -2760,14 +2760,14 @@
         "operationId": "getRoles",
         "description": "Retrieve list of available user roles. Request metadata is reconstructed from the vendor help, not a formal vendor schema.",
         "x-vendor-method": "GET",
-        "x-holita-implemented": true,
+        "x-discocan-implemented": true,
         "x-evidence": ["source/endpoints.js.txt", "source/help.js.txt"],
         "security": [
           {
             "KarmaSessionQuery": []
           }
         ],
-        "x-holita-query": "karmaRoles",
+        "x-discocan-query": "karmaRoles",
         "responses": {
           "200": {
             "description": "JSON result or application error envelope. HTTP 200 alone does not prove success. Driver and unimplemented-operation models may be incomplete.",
@@ -2807,7 +2807,7 @@
         "type": "apiKey",
         "in": "query",
         "name": "karma_sid",
-        "description": "Secret session from POST /login. Used by GET/DELETE in vendor helper and by holita fixed GET reads. POST/PUT helper transport uses JSON-body karma_sid instead."
+        "description": "Secret session from POST /login. Used by GET/DELETE in vendor helper and by discocan fixed GET reads. POST/PUT helper transport uses JSON-body karma_sid instead."
       }
     },
     "schemas": {
@@ -2846,7 +2846,7 @@
       },
       "Car": {
         "type": "object",
-        "description": "Observed car fields with holita-accepted optional null variants. No required list is inferred for the vendor contract.",
+        "description": "Observed car fields with discocan-accepted optional null variants. No required list is inferred for the vendor contract.",
         "properties": {
           "device_id": {
             "type": "string"
@@ -2871,7 +2871,7 @@
           },
           "car_year": {
             "type": ["string", "number", "null"],
-            "description": "Text observed; holita also accepts finite numbers and normalizes to a string."
+            "description": "Text observed; discocan also accepts finite numbers and normalizes to a string."
           },
           "time_zone": {
             "type": ["integer", "null"]
@@ -2879,22 +2879,22 @@
           "driver_ids": {
             "type": ["array", "null"],
             "items": {},
-            "description": "Only empty arrays observed. Holita exposes the length, not driver identities."
+            "description": "Only empty arrays observed. DiscoCan exposes the length, not driver identities."
           },
           "sim_imsi": {
-            "description": "Observed only as null; non-null shape and meaning are not established. Not exposed by holita.",
+            "description": "Observed only as null; non-null shape and meaning are not established. Not exposed by discocan.",
             "x-observed-types": ["null"]
           },
           "sim_phone": {
-            "description": "Observed only as null; non-null shape and meaning are not established. Not exposed by holita.",
+            "description": "Observed only as null; non-null shape and meaning are not established. Not exposed by discocan.",
             "x-observed-types": ["null"]
           },
           "karma_video_data": {
-            "description": "Observed only as null; non-null shape and meaning are not established. Not exposed by holita.",
+            "description": "Observed only as null; non-null shape and meaning are not established. Not exposed by discocan.",
             "x-observed-types": ["null"]
           },
           "vehicle_type": {
-            "description": "Observed only as null; non-null shape and meaning are not established. Not exposed by holita.",
+            "description": "Observed only as null; non-null shape and meaning are not established. Not exposed by discocan.",
             "x-observed-types": ["null"]
           }
         },
@@ -3073,7 +3073,7 @@
       },
       "Trip": {
         "type": "object",
-        "description": "Trip record with nullable stop values accepted by holita. Metric units and active-trip conventions are not established.",
+        "description": "Trip record with nullable stop values accepted by discocan. Metric units and active-trip conventions are not established.",
         "properties": {
           "trip_id": {
             "type": "integer"
@@ -3212,7 +3212,7 @@
       },
       "SensorRecord": {
         "type": "object",
-        "description": "Observed sensor envelope only; no sensor reading schema is established and holita does not expose it.",
+        "description": "Observed sensor envelope only; no sensor reading schema is established and discocan does not expose it.",
         "properties": {
           "car_id": {
             "type": "integer"
@@ -3264,7 +3264,7 @@
           },
           "score": {
             "type": "object",
-            "description": "Nine source categories accepted by holita. No overall score is calculated.",
+            "description": "Nine source categories accepted by discocan. No overall score is calculated.",
             "properties": {
               "accelerations": {
                 "$ref": "#/components/schemas/DrivingCategory"

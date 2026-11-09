@@ -7,7 +7,7 @@ Sources: [vendor helper](source/help.js.txt), [vendor fields](source/endpoints.j
 
 ## Two independent sessions
 
-The browser authenticates to holita and sends its captured bearer token to Gateway.
+The browser authenticates to discocan and sends its captured bearer token to Gateway.
 Gateway forwards Authorization to Karma Client. The subgraph verifies the HMAC and
 expiry before its concrete services validate inputs or contact Karma. It derives
 Tenant identity from that signed session, not a caller-selected Tenant header.
@@ -30,7 +30,7 @@ Provider expiry duration and concurrent-session limits are not documented here.
 
 Every fixed authenticated read sends `karma_sid` in the query and requests JSON.
 It never returns the token to GraphQL. Upstream `/version` bypasses Karma login,
-but its holita service still verifies the signed admin session.
+but its discocan service still verifies the signed admin session.
 
 ## Expired sessions and deadlines
 
@@ -74,7 +74,7 @@ for the additional methods.
 For normal car/driver forms that is the ID field. The queue form marks its path
 ID as multi-value; an accepted multi-ID path grammar is not established.
 
-Holita uses fixed GET paths and `URLSearchParams`. It sends scalar `car` and
+DiscoCan uses fixed GET paths and `URLSearchParams`. It sends scalar `car` and
 repeated bracketed `fields[]`, `parameter_id[]` and `event_type[]` where applicable.
 The reconstructed GET parameter models include this scalar `car` form as well as
 the vendor's multi-value form; a multi-value control does not require an array in
@@ -84,7 +84,7 @@ specification. No arbitrary upstream path or field selection is exposed by Graph
 
 ## Dates, coordinates and metrics
 
-| Context            | Holita input                                  | Upstream encoding                          | Interpretation                                        |
+| Context            | DiscoCan input                                  | Upstream encoding                          | Interpretation                                        |
 | ------------------ | --------------------------------------------- | ------------------------------------------ | ----------------------------------------------------- |
 | eData              | Paired optional `YYYY-MM-DDTHH:MM:SSZ`        | Space-separated dates plus `date_type=utc` | UTC filtering against `edt`                           |
 | Events             | Paired optional `YYYY-MM-DDTHH:MM:SSZ`        | Space-separated dates plus `date_type=utc` | UTC filtering against `edt`                           |
@@ -122,7 +122,7 @@ accept at most 500 rows and expect ascending unique IDs. Samples also show ascen
 trip IDs, but the provider trip batch cap remains unspecified. A short batch does
 not establish a complete trip history.
 
-Holita returns newest-first `items`, `cursor`, `nextCursor` and `hasMore`, using
+DiscoCan returns newest-first `items`, `cursor`, `nextCursor` and `hasMore`, using
 25/50/100 displayed rows, default 50. There is no history total. `cursor` reopens the
 current upper bound; `nextCursor` opens the older page. Next-page bounds set inclusive
 `to_id = last displayed ID - 1`, using `message_id` for events/eData and `trip_id`
@@ -178,5 +178,5 @@ its backend method; its page separately loads the car before the history. Callin
 `karmaEdata` directly therefore depends on `/edata` behavior for an unknown car.
 
 The external API's complete status codes, error payloads, rate-limit signals,
-correlation identifiers and support diagnostics remain undocumented. Holita's
+correlation identifiers and support diagnostics remain undocumented. DiscoCan's
 sanitized boundary should not be mistaken for a complete provider error contract.

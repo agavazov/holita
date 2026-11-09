@@ -41,11 +41,11 @@ function scorecardPeriod(value: string | null): ScorecardPeriod {
 }
 
 @Component({
-  selector: 'holita-driver-scorecard-page',
+  selector: 'discocan-driver-scorecard-page',
   imports: [DriverScorecardView],
   providers: [DriversApi],
   template: `
-    <holita-driver-scorecard-view
+    <discocan-driver-scorecard-view
       [state]="state()"
       [scorecard]="scorecard()"
       [period]="period()"

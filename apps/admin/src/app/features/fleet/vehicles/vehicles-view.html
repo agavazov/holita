@@ -1,4 +1,4 @@
-<holita-page-header
+<discocan-page-header
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
   [moduleInfo]="text().moduleInfo"
@@ -6,14 +6,14 @@
   (action)="create.emit()"
 />
 
-<holita-fleet-live-summary
+<discocan-fleet-live-summary
   [devices]="[]"
   [groups]="liveGroups()"
   unassigned="vehicles"
   [loading]="view().kind === 'loading'"
 />
 
-<holita-filter-builder
+<discocan-filter-builder
   [searchLabel]="text().search"
   [search]="state().search"
   [searchError]="searchError()"
@@ -24,7 +24,7 @@
   (conditionsChange)="changeConditions($event)"
 />
 
-<holita-table-panel
+<discocan-table-panel
   #panel
   [heading]="text().table.heading"
   [total]="total()"
@@ -48,7 +48,7 @@
   @if (canEdit()) {
     <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
   }
-  <holita-list-sort-menu
+  <discocan-list-sort-menu
     panelActions
     [fields]="sortFields()"
     [sort]="state().sort"
@@ -137,7 +137,7 @@
             <span [title]="identity(row)">{{ identity(row) }}</span>
           </span>
           <div class="app-table-mobile-actions">
-            <holita-row-actions
+            <discocan-row-actions
               [actions]="actions()"
               [record]="recordOf(row)"
               (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -159,7 +159,7 @@
                 [value]="liveStatus(row).label"
                 [severity]="toneSeverity(liveStatus(row).tone)"
               />
-              <holita-fleet-now mode="table" [device]="activityDevice(row)" />
+              <discocan-fleet-now mode="table" [device]="activityDevice(row)" />
             }
           </span>
         </td>
@@ -191,7 +191,7 @@
           }}</span>
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-          <holita-row-actions
+          <discocan-row-actions
             [actions]="actions()"
             [record]="recordOf(row)"
             (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -200,4 +200,4 @@
       </tr>
     </ng-template>
   </p-table>
-</holita-table-panel>
+</discocan-table-panel>

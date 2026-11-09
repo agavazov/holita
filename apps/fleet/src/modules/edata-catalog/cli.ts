@@ -36,8 +36,8 @@ async function main() {
   const url = new URL(getDatabaseUrl());
   check(
     ['127.0.0.1', 'localhost'].includes(url.hostname) &&
-      url.pathname === '/holita_fleet' &&
-      decodeURIComponent(url.username) === 'holita_fleet' &&
+      url.pathname === '/discocan_fleet' &&
+      decodeURIComponent(url.username) === 'discocan_fleet' &&
       !url.search &&
       !url.hash,
     'This CLI only supports the local Fleet development database without URL options',
@@ -48,7 +48,7 @@ async function main() {
     console.info(
       JSON.stringify(
         {
-          target: `${url.hostname}:${url.port || '5432'}/holita_fleet`,
+          target: `${url.hostname}:${url.port || '5432'}/discocan_fleet`,
           packageLabel: catalog.packageLabel,
           contentSha256: catalog.contentSha256,
           ...result,

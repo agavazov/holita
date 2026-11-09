@@ -1,44 +1,44 @@
-<holita-page-header
+<discocan-page-header
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
   [moduleInfo]="text().moduleInfo"
 />
 
 @if (kpis(); as kpis) {
-  <holita-kpi-strip [label]="text().kpis.label">
-    <holita-kpi-tile [label]="text().kpis.trips" [value]="kpis.trips | holitaNumber" category="c1">
+  <discocan-kpi-strip [label]="text().kpis.label">
+    <discocan-kpi-tile [label]="text().kpis.trips" [value]="kpis.trips | discocanNumber" category="c1">
       <svg kpiIcon data-p-icon="map" aria-hidden="true"></svg>
-    </holita-kpi-tile>
-    <holita-kpi-tile
+    </discocan-kpi-tile>
+    <discocan-kpi-tile
       [label]="text().kpis.distance"
       [value]="units.distance(kpis.distanceKm, false, 0)"
       [unit]="units.distanceUnit()"
       category="c2"
     >
       <svg kpiIcon data-p-icon="chart-line" aria-hidden="true"></svg>
-    </holita-kpi-tile>
-    <holita-kpi-tile
+    </discocan-kpi-tile>
+    <discocan-kpi-tile
       [label]="text().kpis.drivingTime"
-      [value]="kpis.drivingMin * 60 | holitaDuration"
+      [value]="kpis.drivingMin * 60 | discocanDuration"
       category="c4"
     >
       <svg kpiIcon data-p-icon="clock" aria-hidden="true"></svg>
-    </holita-kpi-tile>
-    <holita-kpi-tile [label]="text().kpis.score" [value]="scoreValue()" category="c6">
+    </discocan-kpi-tile>
+    <discocan-kpi-tile [label]="text().kpis.score" [value]="scoreValue()" category="c6">
       <svg kpiIcon data-p-icon="star" aria-hidden="true"></svg>
-    </holita-kpi-tile>
-    <holita-kpi-tile
+    </discocan-kpi-tile>
+    <discocan-kpi-tile
       [label]="text().kpis.events"
-      [value]="kpis.events | holitaNumber"
+      [value]="kpis.events | discocanNumber"
       [footnote]="text().kpis.eventsFootnote"
       [tone]="kpis.events ? 'warn' : null"
     >
       <svg kpiIcon data-p-icon="exclamation-triangle" aria-hidden="true"></svg>
-    </holita-kpi-tile>
-  </holita-kpi-strip>
+    </discocan-kpi-tile>
+  </discocan-kpi-strip>
 }
 
-<holita-filter-builder
+<discocan-filter-builder
   [searchLabel]="text().search"
   [search]="state().search"
   [searchError]="searchError()"
@@ -49,7 +49,7 @@
   (conditionsChange)="changeConditions($event)"
 />
 
-<holita-table-panel
+<discocan-table-panel
   #panel
   [heading]="text().table.heading"
   [total]="total()"
@@ -68,7 +68,7 @@
   (clearFilters)="clearFilters()"
   (retry)="retry.emit()"
 >
-  <holita-list-sort-menu
+  <discocan-list-sort-menu
     panelActions
     [fields]="sortFields()"
     [sort]="state().sort"
@@ -146,13 +146,13 @@
                   [value]="row.inProgress ? text().table.inProgress : text().table.noEnd"
                 />
               }
-              @if (row.holita) {
-                <p-tag severity="secondary" [value]="text().table.holita" />
+              @if (row.discocan) {
+                <p-tag severity="secondary" [value]="text().table.discocan" />
               }
             </span>
           </div>
           <div class="app-table-mobile-actions">
-            <holita-row-actions
+            <discocan-row-actions
               [actions]="actions()"
               [record]="recordOf(row)"
               (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -192,7 +192,7 @@
         </td>
         <td class="app-cell-number">{{ units.distance(row.distanceKm, false, 0) }}</td>
         <td class="app-cell-number">
-          {{ (row.durationMin === null ? null : row.durationMin * 60) | holitaDuration }}
+          {{ (row.durationMin === null ? null : row.durationMin * 60) | discocanDuration }}
         </td>
         <td class="app-cell-number app-col-secondary">
           {{ units.speed(row.maxSpeedKph) }}
@@ -202,7 +202,7 @@
         </td>
         <td class="app-cell-number">
           @if (row.score !== null) {
-            {{ row.score | holitaNumber }}
+            {{ row.score | discocanNumber }}
           } @else {
             <span class="app-muted">—</span>
           }
@@ -210,7 +210,7 @@
         <td>
           @if (row.events.length) {
             <span class="app-cell-problems" [title]="eventsLabel(row)">
-              <p-tag [severity]="eventsSeverity(row)" [value]="row.events.length | holitaNumber" />
+              <p-tag [severity]="eventsSeverity(row)" [value]="row.events.length | discocanNumber" />
               <button
                 type="button"
                 class="app-link"
@@ -225,7 +225,7 @@
           }
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-          <holita-row-actions
+          <discocan-row-actions
             [actions]="actions()"
             [record]="recordOf(row)"
             (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -234,4 +234,4 @@
       </tr>
     </ng-template>
   </p-table>
-</holita-table-panel>
+</discocan-table-panel>

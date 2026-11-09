@@ -50,4 +50,4 @@ Command access is enabled through a user checkbox. The vehicle card exposes outp
 
 ## Conversion coverage
 
-All **10 PDF pages** are represented in [content.md](content.md). The [image catalog](images.md) contains **27 described assets** and **5 context captures**. Standalone decorative artwork, publisher logos and generic note/support markers are omitted. The original PDF remains the authority for layout, screenshot microtext and ambiguous source wording. This reference describes the supplied vendor document; it does not change holita behavior or verify the present-day vendor service.
+All **10 PDF pages** are represented in [content.md](content.md). The [image catalog](images.md) contains **27 described assets** and **5 context captures**. Standalone decorative artwork, publisher logos and generic note/support markers are omitted. The original PDF remains the authority for layout, screenshot microtext and ambiguous source wording. This reference describes the supplied vendor document; it does not change discocan behavior or verify the present-day vendor service.

@@ -1,10 +1,10 @@
 <div class="login-layout">
   <aside class="login-hero" aria-labelledby="hero-title">
-    <div class="login-brand" aria-label="holita">
-      <span class="holita-mark" aria-hidden="true">h</span><span>holita</span>
+    <div class="login-brand" aria-label="discocan">
+      <span class="discocan-mark" aria-hidden="true">h</span><span>discocan</span>
     </div>
     <div class="login-hero__message">
-      <span class="login-eyebrow">holita</span>
+      <span class="login-eyebrow">discocan</span>
       <h2 id="hero-title">{{ text().heroTitle }}</h2>
       <p>{{ text().heroDescription }}</p>
     </div>
@@ -76,7 +76,7 @@
             </button>
           }
           @if (branches().length) {
-            <holita-form-field
+            <discocan-form-field
               controlId="login-branch"
               [label]="text().chooseBranch"
               [required]="true"
@@ -92,7 +92,7 @@
                 [disabled]="branchesLoading() || submitted()"
                 appendTo="body"
               />
-            </holita-form-field>
+            </discocan-form-field>
             <button
               pButton
               type="button"
@@ -130,7 +130,7 @@
             (ngSubmit)="login()"
             [attr.aria-busy]="busy()"
           >
-            <holita-form-field
+            <discocan-form-field
               controlId="login-email"
               [label]="text().email"
               [error]="fieldError('email')"
@@ -147,8 +147,8 @@
                 [attr.aria-invalid]="!!fieldError('email')"
                 [attr.aria-describedby]="fieldError('email') ? 'login-email-error' : null"
               />
-            </holita-form-field>
-            <holita-form-field
+            </discocan-form-field>
+            <discocan-form-field
               controlId="login-password"
               [label]="text().password"
               [error]="fieldError('password')"
@@ -164,7 +164,7 @@
                 [attr.aria-invalid]="!!fieldError('password')"
                 [attr.aria-describedby]="fieldError('password') ? 'login-password-error' : null"
               />
-            </holita-form-field>
+            </discocan-form-field>
             <button pButton type="submit" [disabled]="busy() || session.signingOut()">
               {{ busy() ? text().signingIn : text().signIn }}
             </button>
@@ -185,7 +185,7 @@
               <section class="app-form-section" aria-labelledby="demo-title">
                 <h2 id="demo-title">{{ text().demo }}</h2>
                 <p class="app-muted">{{ text().demoHint }}</p>
-                <holita-form-field controlId="login-tenant" [label]="text().tenant">
+                <discocan-form-field controlId="login-tenant" [label]="text().tenant">
                   <p-select
                     inputId="login-tenant"
                     [options]="tenants()"
@@ -197,7 +197,7 @@
                     [loading]="tenantsLoading()"
                     appendTo="body"
                   />
-                </holita-form-field>
+                </discocan-form-field>
                 @if (!tenantsLoading() && !tenants().length && !failure()) {
                   <p>{{ text().emptyTenants }}</p>
                 }

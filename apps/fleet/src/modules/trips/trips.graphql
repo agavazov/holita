@@ -23,7 +23,7 @@ type FleetTrip {
   idleSeconds: Int
   maxSpeedKph: Float
   fuelUsedL: Float
-  "Device-reported demo score 0–100; holita does not calculate it."
+  "Device-reported demo score 0–100; discocan does not calculate it."
   drivingScore: Float
   ecoScore: Float
   maneuverCount: Int!

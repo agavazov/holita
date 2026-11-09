@@ -1,6 +1,6 @@
 // Fleet fixed thresholds and defaults for configurable Branch settings.
 // TypeScript classifiers and raw SQL use scoped settings where configurable.
-// Units are holita's demo contract: km, km/h, litres, volts, °C, minutes, percent, 0–100 scores
+// Units are discocan's demo contract: km, km/h, litres, volts, °C, minutes, percent, 0–100 scores
 // and EUR cents.
 
 /** Default Branch time zone for business dates and daily-distance buckets. */

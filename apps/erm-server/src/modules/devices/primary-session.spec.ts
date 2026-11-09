@@ -289,7 +289,7 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
         resultCode: null,
         fields: input.expectedFields,
       });
-      // The reply is confirmed by holita and never reaches Karma (checked by the next Karma frame).
+      // The reply is confirmed by discocan and never reaches Karma (checked by the next Karma frame).
       const replyConfirmation = parseFrame((await deviceFrames.next()).subarray(0, -2));
       expect(replyConfirmation?.command).toBe('02');
       expect(replyConfirmation?.fields.map((field) => field.toString())).toEqual(['80', '01']);
@@ -399,7 +399,7 @@ it('acknowledges primary units, filters owned confirmations and completes allowl
       event: 'upstream-close',
       reason: 'upstream closed',
     });
-    expect(records.some((entry) => 'from' in entry && entry.from === 'holita')).toBe(true);
+    expect(records.some((entry) => 'from' in entry && entry.from === 'discocan')).toBe(true);
   } finally {
     device.destroy();
     for (const socket of upstreamSockets) {

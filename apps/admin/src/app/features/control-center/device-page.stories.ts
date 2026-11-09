@@ -19,7 +19,7 @@ const meta: Meta = {
   title: 'Admin/Devices/Device',
   tags: ['!autodocs'],
   parameters: {
-    holita: { signedIn: true, now: '2026-10-20T08:00:05.000Z' } satisfies StoryFixtures,
+    discocan: { signedIn: true, now: '2026-10-20T08:00:05.000Z' } satisfies StoryFixtures,
   },
 };
 export default meta;
@@ -30,7 +30,7 @@ function routed(tab: DeviceTab, recordId = fixtureDevice.id): NonNullable<Story[
   return () => ({
     ...render(),
     moduleMetadata: { imports: [StoryApp, AdminWorkspace, ControlCenterWorkspace, DevicePage] },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 export const Overview: Story = { render: routed('overview') };

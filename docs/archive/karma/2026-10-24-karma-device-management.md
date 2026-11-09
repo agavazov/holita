@@ -10,7 +10,7 @@ This historical checkpoint does not authorize an unspecified device write.
 
 ## 1. Start here
 
-- Repository: `/var/workspace/services/holita`, primary checkout, branch `main`.
+- Repository: `/var/workspace/services/discocan`, primary checkout, branch `main`.
   No separate linked worktree was created. Pre-checkpoint HEAD is `6118e4f`;
   main was 35 commits ahead of origin/main before this checkpoint. Do not push.
 - This document is committed together with the current prototype and its related UI changes.
@@ -274,11 +274,11 @@ In the current Linux shell, Node is installed at the following local path. Adjus
 absent; use an explicit Linux workdir rather than the desktop app's malformed Windows/UNC cwd:
 
 ```bash
-cd /var/workspace/services/holita
+cd /var/workspace/services/discocan
 export PATH=/home/agavazov/.nvm/versions/node/v24.21.0/bin:$PATH
 export NODE_OPTIONS=--max-old-space-size=3072
 export GOMAXPROCS=2
-npm run storybook --workspace @holita/admin
+npm run storybook --workspace @discocan/admin
 ```
 
 Wait for preview compilation to finish before browser review. Stop that server before running

@@ -70,7 +70,7 @@ function odometerInstant(
 
 /** MANUAL readings only; the host supplies min(now, data clock) and the last known odometer. */
 @Component({
-  selector: 'holita-odometer-drawer',
+  selector: 'discocan-odometer-drawer',
   imports: [
     ReactiveFormsModule,
     ButtonDirective,

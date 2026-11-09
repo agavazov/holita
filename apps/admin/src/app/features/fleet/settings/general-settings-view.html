@@ -1,13 +1,13 @@
-<holita-page-header [title]="text().title" [moduleInfo]="text().moduleInfo">
+<discocan-page-header [title]="text().title" [moduleInfo]="text().moduleInfo">
   @if (demo()) {
     <p-tag headerMeta severity="info" [value]="text().demoLabel" />
   }
-</holita-page-header>
+</discocan-page-header>
 
 @if (state() === 'error') {
-  <holita-empty-state kind="error" [title]="text().loadError" [description]="loadError()">
+  <discocan-empty-state kind="error" [title]="text().loadError" [description]="loadError()">
     <button emptyActions pButton type="button" (click)="retry.emit()">{{ text().retry }}</button>
-  </holita-empty-state>
+  </discocan-empty-state>
 } @else if (state() === 'loading' || !settings()) {
   <p role="status">{{ text().loading }}</p>
 }
@@ -23,7 +23,7 @@
         <h2>{{ text().branch }}</h2>
       </header>
       <div class="app-form-grid">
-        <holita-form-field
+        <discocan-form-field
           class="app-form-grid--wide"
           [label]="text().name"
           controlId="settings-name"
@@ -38,8 +38,8 @@
             [attr.aria-invalid]="errorOf('name') ? 'true' : null"
             aria-describedby="settings-name-hint settings-name-error"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().timeZone"
           controlId="settings-timeZone"
           [hint]="timeZoneHint()"
@@ -62,8 +62,8 @@
             [invalid]="!!errorOf('timeZone')"
             [pt]="selectPt().timeZone"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().dateFormat"
           controlId="settings-dateFormat"
           [hint]="dateFormatHint()"
@@ -82,8 +82,8 @@
             [invalid]="!!errorOf('dateFormat')"
             [pt]="selectPt().dateFormat"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().distanceUnit"
           controlId="settings-distanceUnit"
           [error]="errorOf('distanceUnit')"
@@ -99,8 +99,8 @@
             [invalid]="!!errorOf('distanceUnit')"
             [pt]="selectPt().distanceUnit"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().volumeUnit"
           controlId="settings-volumeUnit"
           [error]="errorOf('volumeUnit')"
@@ -116,7 +116,7 @@
             [invalid]="!!errorOf('volumeUnit')"
             [pt]="selectPt().volumeUnit"
           />
-        </holita-form-field>
+        </discocan-form-field>
       </div>
     </section>
 
@@ -125,7 +125,7 @@
         <h2>{{ text().thresholds }}</h2>
       </header>
       <div class="app-form-grid">
-        <holita-form-field
+        <discocan-form-field
           [label]="text().lowFuel"
           controlId="settings-lowFuelPct"
           [required]="true"
@@ -138,8 +138,8 @@
             [invalid]="!!errorOf('lowFuelPct')"
             [pt]="numberPt().lowFuelPct"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().notReporting"
           controlId="settings-notReportingHours"
           [required]="true"
@@ -152,8 +152,8 @@
             [invalid]="!!errorOf('notReportingHours')"
             [pt]="numberPt().notReportingHours"
           />
-        </holita-form-field>
-        <holita-form-field
+        </discocan-form-field>
+        <discocan-form-field
           [label]="text().speedLimit"
           controlId="settings-speedLimitKph"
           [required]="true"
@@ -166,7 +166,7 @@
             [invalid]="!!errorOf('speedLimitKph')"
             [pt]="numberPt().speedLimitKph"
           />
-        </holita-form-field>
+        </discocan-form-field>
       </div>
     </section>
 
@@ -175,7 +175,7 @@
         <h2>{{ text().notifications }}</h2>
       </header>
       <div class="app-form-grid">
-        <holita-form-field
+        <discocan-form-field
           [label]="text().notificationRetentionDays"
           controlId="settings-notificationRetentionDays"
           [required]="true"
@@ -188,7 +188,7 @@
             [invalid]="!!errorOf('notificationRetentionDays')"
             [pt]="numberPt().notificationRetentionDays"
           />
-        </holita-form-field>
+        </discocan-form-field>
       </div>
     </section>
 

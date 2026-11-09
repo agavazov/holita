@@ -75,7 +75,7 @@ import {
   controlCenterText,
   controlCenterError,
   ermLanguage,
-  returnToHolitaError,
+  returnToDiscoCanError,
   severityTone,
 } from './control-center-text';
 import { DeviceCommandQueue } from './device-command-queue';
@@ -114,7 +114,7 @@ interface HistoryRead {
 }
 
 @Component({
-  selector: 'holita-control-center-device',
+  selector: 'discocan-control-center-device',
   imports: [
     JsonPipe,
     RouterLink,
@@ -192,7 +192,7 @@ export class DevicePage implements OnInit {
     'EDATA',
     'OTHER',
   ];
-  readonly directions: readonly ErmFrameDirection[] = ['DEVICE', 'UPSTREAM', 'HOLITA'];
+  readonly directions: readonly ErmFrameDirection[] = ['DEVICE', 'UPSTREAM', 'DISCOCAN'];
   readonly checksums: readonly ErmFrameChecksum[] = ['OK', 'MISMATCH', 'ABSENT'];
   private readonly api = inject(ControlCenterApi);
   private readonly session = inject(DemoSession);
@@ -967,7 +967,7 @@ export class DevicePage implements OnInit {
     }
   }
 
-  async returnToHolita(): Promise<void> {
+  async returnToDiscoCan(): Promise<void> {
     if (this.returnDisabledReason()) {
       return;
     }
@@ -986,7 +986,7 @@ export class DevicePage implements OnInit {
     this.returning.set(true);
     this.returnFailure.set(null);
     try {
-      const attempt = await this.api.returnToHolita(deviceId);
+      const attempt = await this.api.returnToDiscoCan(deviceId);
       if (this.alive()) {
         this.device.update((device) =>
           device
@@ -1001,7 +1001,7 @@ export class DevicePage implements OnInit {
       }
     } catch (error: unknown) {
       if (this.alive()) {
-        this.returnFailure.set(returnToHolitaError(error, language));
+        this.returnFailure.set(returnToDiscoCanError(error, language));
       }
     } finally {
       if (this.alive()) {

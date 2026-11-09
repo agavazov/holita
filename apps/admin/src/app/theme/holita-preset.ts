@@ -339,16 +339,16 @@ th.p-datatable-header-cell {
 }
 `;
 
-/** The holita preset for one brand and density: standard Aura plus the holita tokens. */
-export function holitaPreset(choice: ThemeChoice): Preset {
+/** The discocan preset for one brand and density: standard Aura plus the discocan tokens. */
+export function discocanPreset(choice: ThemeChoice): Preset {
   const brand = brands[choice.brand];
   const density = densities[choice.density];
   const base: Preset = { ...AuraBase, components: registeredComponents };
-  const holita: Preset = {
+  const discocan: Preset = {
     semantic: semanticTokens(brand, density),
     components: componentTokens(brand, density),
     extend: { app: appTokens(brand, density) },
     css: presetCss,
   };
-  return definePreset(base, holita);
+  return definePreset(base, discocan);
 }

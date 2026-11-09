@@ -39,7 +39,7 @@ interface DeviceFilters {
   readonly conditions: readonly FilterCondition[];
 }
 export type DeviceQueryState = ListState<DeviceFilters, DeviceSort>;
-/** Fleet's sample-derived status is not offered next to the live holita connection. */
+/** Fleet's sample-derived status is not offered next to the live discocan connection. */
 const operators: Readonly<Record<string, readonly FilterOperator[]>> = {
   model: ['isAnyOf', 'isNoneOf'],
   firmware: ['equals', 'notEquals', 'startsWith'],

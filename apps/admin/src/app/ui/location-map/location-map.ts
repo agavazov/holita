@@ -44,7 +44,7 @@ interface MapMarker {
 }
 
 @Component({
-  selector: 'holita-location-map',
+  selector: 'discocan-location-map',
   imports: [ButtonDirective],
   templateUrl: './location-map.html',
   styleUrl: './location-map.scss',

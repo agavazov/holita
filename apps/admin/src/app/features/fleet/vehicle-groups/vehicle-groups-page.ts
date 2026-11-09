@@ -40,11 +40,11 @@ const groupDefinition: ListDefinition<Record<string, never>, 'name'> = {
 
 /** A bounded group page; the existing operation keeps its supported name ordering. */
 @Component({
-  selector: 'holita-vehicle-groups-page',
+  selector: 'discocan-vehicle-groups-page',
   imports: [GroupsView, RouterOutlet],
   providers: [VehicleGroupsApi],
   template: `
-    <holita-groups-view
+    <discocan-groups-view
       [rows]="rows()"
       [page]="pagination()"
       [view]="view()"

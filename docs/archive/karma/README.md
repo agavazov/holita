@@ -3,7 +3,7 @@
 The Karma Client app was removed on 2026-11-06; its full code remains in git history.
 
 Karma is deprecated. Keep `apps/karma-client` and the Karma-based Fleet paths only for viewing
-when needed until holita recreates every required function, then archive the code. This archive
+when needed until discocan recreates every required function, then archive the code. This archive
 preserves API/interface research and historical implementation evidence; old feature plans are
 not active work or approval to send commands. Read only the reference needed for the task.
 

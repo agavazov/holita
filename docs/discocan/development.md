@@ -208,11 +208,11 @@ so application restarts do not drop device connections. Configure it from the ro
 
 ## ERM device server
 
-`apps/erm-server` (`@holita/erm-server`) runs independently from compiled output. It remains
+`apps/erm-server` (`@discocan/erm-server`) runs independently from compiled output. It remains
 outside `npm run dev` and `npm run kill`, so restarting the web/API group leaves its device
 connections open. The gateway process (`ERM_ROLE=gateway`) owns device sessions and the internal API on
 HTTP 11015/TCP 11500. The api process (`ERM_ROLE=api`, HTTP 11017) owns the GraphQL subgraph
-and uses the gateway for live sessions and command delivery. Both share `holita_erm`; see
+and uses the gateway for live sessions and command delivery. Both share `discocan_erm`; see
 [ADR 0007](../architecture/decisions/0007-erm-gateway-and-api-processes.md).
 
 `ERM_PRIMARY_UNITS` is a comma-separated unit allowlist, empty by default. The first complete
@@ -220,13 +220,13 @@ device frame selects the connection's mode:
 
 - **Mirror:** forward device and Karma traffic byte for byte. Karma owns acknowledgements and
   commands.
-- **Primary:** holita immediately confirms complete device frames with a valid checksum whose
+- **Primary:** discocan immediately confirms complete device frames with a valid checksum whose
   command appears in `ERM_ACK_COMMANDS` (default `06`), using confirmation reference mode 0. Device traffic is still
-  mirrored to Karma, except confirmations of holita commands. Duplicate Karma confirmations for
-  messages holita acknowledged are dropped. Karma authentication answers and other commands still
-  reach the device. Holita and Karma whole-frame writes share one device queue.
+  mirrored to Karma, except confirmations of discocan commands. Duplicate Karma confirmations for
+  messages discocan acknowledged are dropped. Karma authentication answers and other commands still
+  reach the device. DiscoCan and Karma whole-frame writes share one device queue.
 
-Primary sessions stay connected when Karma closes or cannot be reached: holita keeps recording,
+Primary sessions stay connected when Karma closes or cannot be reached: discocan keeps recording,
 confirming `ERM_ACK_COMMANDS` frames and accepting commands, holds the traffic for Karma in order
 and reconnects after 1 second, doubling to at most 60 seconds (a link that stayed up for 60 seconds
 resets the delay). A mirror session still closes when its established Karma link closes; its first
@@ -240,7 +240,7 @@ ignored `apps/erm-server/.env`, preserving existing settings. HTTP `/health` def
 `ERM_UPSTREAM` defaults to `in.karma.online:500`. `ERM_CAPTURE_DIR` defaults to
 `.references/erm-server` relative to the repository root, including when started from the app
 directory. Its daily UTC JSON Lines files preserve the relay's record fields and include
-`from: "holita"` for server-originated frames; directory mode is `0700` and file mode is `0600`.
+`from: "discocan"` for server-originated frames; directory mode is `0700` and file mode is `0600`.
 Captures contain vehicle positions and must remain private.
 
 Provision missing databases/roles, deploy this application's migrations and build from the
@@ -249,13 +249,13 @@ repository root, with PostgreSQL already running:
 ```bash
 npm run db:setup
 npm run db:test:setup
-npm run db:migrate --workspace @holita/erm-server
+npm run db:migrate --workspace @discocan/erm-server
 npx nx run erm-server:build
-ERM_ROLE=gateway npm run start:prod --workspace @holita/erm-server
+ERM_ROLE=gateway npm run start:prod --workspace @discocan/erm-server
 ```
 
-Provisioning is additive and preserves existing data/passwords. Development uses `holita_erm`;
-guarded tests use `holita_erm_test` with isolated per-run schemas. Connection, frame, command,
+Provisioning is additive and preserves existing data/passwords. Development uses `discocan_erm`;
+guarded tests use `discocan_erm_test` with isolated per-run schemas. Connection, frame, command,
 event and upstream-close database writes are asynchronous; database failures are logged while
 forwarding and acknowledgements continue. Fleet separately pulls decoded events when
 `FLEET_ERM_TELEMETRY_ENABLED=true`, as defined in ADR 0008; the gateway never pushes into Fleet.
@@ -279,7 +279,7 @@ with the same `ERM_DATABASE_URL` and `ERM_EVENT_STRUCTURE` as the gateway. From
 `apps/erm-server`, run the deployed copy with its environment file:
 
 ```bash
-node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/redecode.js
+node --env-file=/home/sysadmin/.config/discocan/erm-server.env live-api/redecode.js
 ```
 
 The command opens no listener or HTTP server and may run while the gateway and api are running.
@@ -300,7 +300,7 @@ The relay and ERM Server share the default device port; run them together only o
 ports, for example:
 
 ```bash
-PORT=11018 ERM_DEVICE_PORT=11501 ERM_ROLE=gateway npm run start:prod --workspace @holita/erm-server
+PORT=11018 ERM_DEVICE_PORT=11501 ERM_ROLE=gateway npm run start:prod --workspace @discocan/erm-server
 ```
 
 ### GraphQL and admin inspection
@@ -419,7 +419,7 @@ intervals are estimates: five minutes driving and one hour parked. Network chang
 and changes in decoded network/operator fields; missing fields are not changes. Shared lists
 explain parked, overdue and backup states without additional Karma polling. Fleet retains the
 current observed backup start, the last completed period and cumulative backup time. An open
-period includes silence until holita is observed again; it does not prove continuous traffic.
+period includes silence until discocan is observed again; it does not prove continuous traffic.
 Backup-history collection requires `FLEET_ERM_HEALTH_ENABLED=true` in Fleet; its default is off
 so the development watcher cannot start the new collector before deployment. When off,
 `routingHealth` is unavailable and existing routing detection continues.
@@ -482,7 +482,7 @@ unattributed legacy tool runs are not included in this operator history.
 The current Device's **SMS commands** tab uses its stored SIM number and SMS password; it
 never asks the operator to choose a different target. Cards explain each purpose, message text,
 expected reply and timeout meaning. Copy prepares text; **Open SMS app** fills the phone's
-message composer and never sends from holita. Missing credentials link to the Device editor,
+message composer and never sends from discocan. Missing credentials link to the Device editor,
 and unavailable/overlength messages cannot be opened for sending. A timeout leaves the result
 unknown. Routing messages retain their explicit warning and require the operator to confirm
 the resulting device connection independently.
@@ -541,14 +541,14 @@ then verifies the whole baseline. No replace or multi-definition write is allowe
 submission is never retried and requires a successful fresh `--read` before another change.
 
 ```bash
-node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/edata-change.js --unit "$IMEI" --read
-node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/edata-change.js --unit "$IMEI" --parameter 1 --interval 60
-node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/edata-change.js --unit "$IMEI" --add "$DEFINITION"
-node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/edata-change.js --unit "$IMEI" --add "$DEFINITION" --restore-after
+node --env-file=/home/sysadmin/.config/discocan/erm-server.env live-api/edata-change.js --unit "$IMEI" --read
+node --env-file=/home/sysadmin/.config/discocan/erm-server.env live-api/edata-change.js --unit "$IMEI" --parameter 1 --interval 60
+node --env-file=/home/sysadmin/.config/discocan/erm-server.env live-api/edata-change.js --unit "$IMEI" --add "$DEFINITION"
+node --env-file=/home/sysadmin/.config/discocan/erm-server.env live-api/edata-change.js --unit "$IMEI" --add "$DEFINITION" --restore-after
 ```
 
 The same operator tool accepts `--unit "$IMEI" --globals "$GLOBALS" [--restore-after]` for one approved 98-hex globals payload, comparing the exact written bytes on readback and restoring the exact baseline after a mismatch; `302` is available only from its recorded workflow submission, outside the generic command allowlist.
-For a reversible single-parameter change, run `node --env-file=/home/sysadmin/.config/holita/erm-server.env live-api/parameter-change.js --unit "$IMEI" --parameter 0774 --value "$VALUE" --restore-after` after taking the unit's snapshot: routing 0049–0054 and protected catalog parameters are refused, and an unconfirmed write is recorded UNCERTAIN, read back once and never retried or restored automatically.
+For a reversible single-parameter change, run `node --env-file=/home/sysadmin/.config/discocan/erm-server.env live-api/parameter-change.js --unit "$IMEI" --parameter 0774 --value "$VALUE" --restore-after` after taking the unit's snapshot: routing 0049–0054 and protected catalog parameters are refused, and an unconfirmed write is recorded UNCERTAIN, read back once and never retried or restored automatically.
 
 ### Internal unit and command API
 
@@ -600,19 +600,19 @@ backup are never changed together. Other writes never change lock codes (0059/00
 (0593). Reads of protected parameters, including 0593, remain allowed. Values contain no quotes or commas.
 
 The call waits up to 30 seconds. `04`/`46`/`05` complete on the device's `02` confirmation for
-holita's reference; the other commands complete on the device's reply with the same command, or
+discocan's reference; the other commands complete on the device's reply with the same command, or
 on a `02` error. For `03`/`45`, a `02` result `01` is only a receipt; any other result ends the read.
 A `45` reply may contain a non-empty subset of the requested parameters, with complete
 parameter/value pairs and no unrequested parameters; only the returned pairs appear in `fields`.
-holita confirms that reply and does not forward it to Karma, because Karma reads
+discocan confirms that reply and does not forward it to Karma, because Karma reads
 routing values from such replies and writes its own server back. Replies inside `$SLC` containers
 still go to Karma unchanged, so `03`/`45` reads of 0049–0054 are rejected entirely.
 Units sending binary `$SLB`/`$SLC`
 frames are identified from the IMEI in the frame header. HTTP 200 returns
 `{ id, reference, status, resultCode, fields }`, with status
-`answered`, `timeout` or `failed`. Only one holita command may be pending per connection.
+`answered`, `timeout` or `failed`. Only one discocan command may be pending per connection.
 Invalid commands return 400, disconnected units 404, and mirror/busy units 409. Reconnecting to
-Karma does not block holita commands.
+Karma does not block discocan commands.
 The API returns 401 for invalid credentials and 503 when its token is unconfigured. Command
 requests, outcomes and exact responses are persisted. No command is retried automatically.
 
@@ -660,7 +660,7 @@ observations of the same code/kind/report on the same Vehicle/IMEI within the re
 period, across added/deleted reports. Alert-backed diagnostic entries use their own observation
 time. Missing code meanings use OTHER with no description.
 The versioned catalog in [Fleet](../../apps/fleet/src/modules/events/fault-meanings.ts) provides
-holita component wording keys for engine, brakes, ABS/EBS and aftertreatment. Generic SPN
+discocan component wording keys for engine, brakes, ABS/EBS and aftertreatment. Generic SPN
 associations come from the manufacturer [Prevost service manual, Group 28](https://techpub.prevostcar.com/content/media/18633/view),
 [Basler DGC-2020ES manual, section 6-9](https://www.basler.com/resource-hub/manuals/instruction-manual/dgc-2020es-operation-instruction-manual-rev-d-english/9469200996.pdf),
 and ZF [sBSP](https://www.zf.com/products/media/automotive/cv/literature_downloads_wna/truck_solutions/abs_maintenance_manuals_/MM060125_ABS_and_ESC_Maintenance_Manual_for_sBSP_102025_updated.pdf)
@@ -674,25 +674,25 @@ the admin catalogs.
 ### Development and service management
 
 For development only, `npm run dev:erm-server` runs its watcher with the same configuration.
-The running `holita-erm-server` user service uses `apps/erm-server/live/`; do not restart it
+The running `discocan-erm-server` user service uses `apps/erm-server/live/`; do not restart it
 or replace its files without the owner. Deploying the new gateway is a separate owner step.
 For a **new, separate installation**, save a user unit such as
-`~/.config/systemd/user/holita-erm-server.service`, replacing paths with this installation's
+`~/.config/systemd/user/discocan-erm-server.service`, replacing paths with this installation's
 absolute repository and Node executable paths (`command -v node`):
 
 ```ini
 [Unit]
-Description=holita ERM StarLink device server
+Description=discocan ERM StarLink device server
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/path/to/holita/apps/erm-server
+WorkingDirectory=/path/to/discocan/apps/erm-server
 Environment=NODE_ENV=production
 Environment=ERM_ROLE=gateway
-EnvironmentFile=/path/to/holita/apps/erm-server/.env
-ExecStart=/absolute/path/to/node /path/to/holita/apps/erm-server/dist/main.js
+EnvironmentFile=/path/to/discocan/apps/erm-server/.env
+ExecStart=/absolute/path/to/node /path/to/discocan/apps/erm-server/dist/main.js
 Restart=on-failure
 RestartSec=5
 UMask=0077
@@ -703,13 +703,13 @@ WantedBy=default.target
 
 Set the chosen free `PORT` and `ERM_DEVICE_PORT` in that application's `.env` before enabling the
 new unit with `systemctl --user daemon-reload` and
-`systemctl --user enable --now holita-erm-server.service`. Restarting ERM Server closes its TCP
+`systemctl --user enable --now discocan-erm-server.service`. Restarting ERM Server closes its TCP
 sessions. Devices return at their next scheduled transmission, even when always connected: on the
 fleet's settings about 5 minutes with ignition on and up to an hour when parked, or at once after
 a call to the unit's SIM. The example unit runs `dist`; the existing live service runs `live`. Rebuilding the
 checkout does not deploy to `live`. API-only deployments must leave the gateway running.
 
-### Moving a unit between Karma and holita
+### Moving a unit between Karma and discocan
 
 Karma API v2 rejects StarLink parameter writes (`04`, `46`, `PUT /parameters`) but accepts command
 `98` ([connect to configuration server](erm-resources/starlink-online-protocol/authenticated/pages/C98.md)),
@@ -722,14 +722,14 @@ the result and appends every frame to `ERM_RELAY_CAPTURE_DIR/route-unit-<UTC dat
 
 Karma writes its own 0049/0050 back with `46` within about ten minutes once its parameter cache
 shows another server; it did so when a unit resent an unconfirmed read-back reply to its new primary
-server. Never read 0049–0052 through Karma for a unit routed to holita.
+server. Never read 0049–0052 through Karma for a unit routed to discocan.
 
 Configuration sessions (Karma command `98` to the unit) use a port in 11501–11509, forwarded like
-the device port 11500, so the tool runs beside the gateway with `--port <port>`; `--holita` stays
+the device port 11500, so the tool runs beside the gateway with `--port <port>`; `--discocan` stays
 the ordinary device endpoint written to 0049/0050:
 
 ```bash
-npm run erm:route-unit -- --unit 862129080366630 --to holita --holita <public-host>:11500 --port 11501
+npm run erm:route-unit -- --unit 862129080366630 --to discocan --discocan <public-host>:11500 --port 11501
 ```
 
 While the tool waits (`--wait-minutes`, default 140), queue `98,1,<public-host>,11501` for
@@ -738,17 +738,17 @@ code 0 means moved and verified, 2 not moved, 3 uncertain and 4 no session. Afte
 result, read the log; the unit's next ordinary connection, to ERM Server or in Karma `/events`, shows
 where its primary server points. To move a unit back, run the tool with `--to karma`, no command
 `98` and the default port 11500 in an owner-approved gateway stop
-(`systemctl --user stop holita-erm-server` before, `systemctl --user start holita-erm-server` right
-after): the unit's next ordinary connection reaches the tool. Other units that use holita reach it
+(`systemctl --user stop discocan-erm-server` before, `systemctl --user start discocan-erm-server` right
+after): the unit's next ordinary connection reaches the tool. Other units that use discocan reach it
 too and are not forwarded to Karma, so run it between their sessions (open sessions are
 `ermConnection` rows without `closedAt`). A unit whose backup server (0051/0052) is Karma fails
-over to it by itself while holita is unreachable.
+over to it by itself while discocan is unreachable.
 
-A unit can stay on that backup after holita drops it, as CB6711TE did after a gateway restart.
+A unit can stay on that backup after discocan drops it, as CB6711TE did after a gateway restart.
 The API role's temporary Karma module checks `ERM_PRIMARY_UNITS` every five minutes using a
 30-minute event window. It marks a unit `KARMA_BACKUP` when its latest Karma report is more than
-three minutes newer than holita's last device frame. For a newly detected episode whose last
-holita frame is older than the current window, one additional lookup reads the first 30 minutes
+three minutes newer than discocan's last device frame. For a newly detected episode whose last
+discocan frame is older than the current window, one additional lookup reads the first 30 minutes
 after that frame. `since` records the first later Karma report from that lookup and stays null if
 no such report is found. Later polls preserve the episode start. `FleetDevice.ermRouting` exposes
 routing, its observation time, the latest Karma report, whether the latest event establishes that
@@ -761,11 +761,11 @@ environment to enable detection and returns; `KARMA_API_URL` defaults to
 `https://karma.online/apiv2/`. Without complete valid configuration routing is `UNKNOWN` and a
 return is unavailable. The recovery endpoint is the public `host:port` the unit can reach, normally
 the permanent listener on 11510 described below. An Engineer or Administrator can request the
-explicit `returnErmDeviceToHolita` mutation for a Device in the active Branch. It refreshes Karma status, requires
+explicit `returnErmDeviceToDiscoCan` mutation for a Device in the active Branch. It refreshes Karma status, requires
 `KARMA_BACKUP`, a parked latest event (`eid` 5, or `eid` 1 with first `extra` field `0`) and no
 pending return, then queues only `98,1,<recovery-host>,<port>`. This temporary session changes no
 device settings. The attempt records its actor, submission time and Karma queue ID, and links the
-read-only recovery outcome and the next ordinary holita connection. An uncertain submission is
+read-only recovery outcome and the next ordinary discocan connection. An uncertain submission is
 not automatically retried.
 
 Run `98` sessions, for routing or this recovery, only while the truck is parked: reports a unit
@@ -776,7 +776,7 @@ Port **11510 is reserved for permanent read-only recovery**. Deploy the compiled
 `apps/erm-server/dist/main.js` with `ERM_ROLE=recovery` in a separate user unit, using the ERM
 database configuration. Forward TCP 11510 to it. This role reads only 0049/0050, confirms the read
 reply and closes; it never writes routing or forwards a session to Karma. It records either
-`ALREADY_HOLITA` (65.108.137.165:11500) or `NEEDS_OPERATOR`, including a timeout, disconnect or
+`ALREADY_DISCOCAN` (65.108.137.165:11500) or `NEEDS_OPERATOR`, including a timeout, disconnect or
 unexpected destination. Deploying it does not require a gateway restart. Apply the additive ERM
 migration before deploying the recovery listener or the API that displays its results.
 

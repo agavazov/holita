@@ -8,7 +8,7 @@ import { NotificationsPage } from './notifications-page';
 const meta: Meta = {
   title: 'Admin/Notifications',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: true } satisfies StoryFixtures },
 };
 export default meta;
 type Story = StoryObj;
@@ -20,7 +20,7 @@ function routed(query = '', empty = false): NonNullable<Story['render']> {
     return {
       ...render(),
       moduleMetadata: { imports: [StoryApp, AdminWorkspace, NotificationsPage] },
-      template: '<holita-story-app [url]="url" />',
+      template: '<discocan-story-app [url]="url" />',
     };
   };
 }
@@ -31,7 +31,7 @@ export const Empty: Story = { render: routed('', true) };
 export const Error: Story = {
   render: routed(),
   parameters: {
-    holita: { scenario: { failures: { AdminNotifications: 'network' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminNotifications: 'network' } } } satisfies StoryFixtures,
   },
 };
 export const Narrow: Story = {

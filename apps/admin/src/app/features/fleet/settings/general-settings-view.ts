@@ -79,7 +79,7 @@ const timeZones = ['UTC', ...Intl.supportedValuesOf('timeZone')];
  * while there are changes. Presentation only: the host saves and passes back the stored values.
  */
 @Component({
-  selector: 'holita-general-settings-view',
+  selector: 'discocan-general-settings-view',
   imports: [
     ReactiveFormsModule,
     ButtonDirective,

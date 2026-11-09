@@ -6,7 +6,7 @@ const meta: Meta<FleetNow> = {
   title: 'Design System/Fleet/Now',
   component: FleetNow,
   decorators: [onFrame],
-  parameters: { holita: { now: '2026-10-20T08:00:05.000Z' } satisfies StoryFixtures },
+  parameters: { discocan: { now: '2026-10-20T08:00:05.000Z' } satisfies StoryFixtures },
   tags: ['!autodocs'],
 };
 export default meta;

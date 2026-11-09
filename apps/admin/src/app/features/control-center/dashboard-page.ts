@@ -5,7 +5,7 @@ import { OverviewPage } from '../fleet/overview/overview-page';
 
 /** Retained adapter for the legacy Control center workspace. */
 @Component({
-  selector: 'holita-control-center-dashboard',
+  selector: 'discocan-control-center-dashboard',
   imports: [OverviewPage],
   templateUrl: './dashboard-page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

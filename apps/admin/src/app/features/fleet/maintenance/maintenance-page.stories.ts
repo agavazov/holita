@@ -11,7 +11,7 @@ import { MaintenanceRecordPage } from './maintenance-record-page';
 const meta: Meta = {
   title: 'Admin/Fleet/Maintenance',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: true } satisfies StoryFixtures },
 };
 export default meta;
 type Story = StoryObj;
@@ -21,7 +21,7 @@ function routed(suffix = ''): NonNullable<Story['render']> {
   return () => ({
     ...render(),
     moduleMetadata: { imports: [StoryApp, AdminWorkspace, FleetWorkspace, MaintenanceRecordPage] },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 export const Default: Story = {
@@ -31,7 +31,7 @@ export const FirstLoad: Story = {
   name: 'First load',
   render: routed(),
   parameters: {
-    holita: { scenario: { latencyMs: 1800 } } satisfies StoryFixtures,
+    discocan: { scenario: { latencyMs: 1800 } } satisfies StoryFixtures,
   },
 };
 export const Mobile: Story = {
@@ -53,6 +53,6 @@ export const ErrorState: Story = {
   name: 'Error',
   render: routed(),
   parameters: {
-    holita: { scenario: { failures: { AdminServiceTasks: 'network' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminServiceTasks: 'network' } } } satisfies StoryFixtures,
   },
 };

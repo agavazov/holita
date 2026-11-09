@@ -65,7 +65,7 @@ export interface DriverScorecard {
 }
 
 @Component({
-  selector: 'holita-driver-scorecard-view',
+  selector: 'discocan-driver-scorecard-view',
   imports: [
     RouterLink,
     ButtonDirective,

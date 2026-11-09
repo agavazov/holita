@@ -59,9 +59,9 @@ The rule is configured after `eslint-config-prettier` so that it remains enabled
 
 Builds, checks and `start:prod` use `apps/NAME/dist`; the `npm run dev` watchers for Core and Fleet
 compile to `apps/NAME/dist-dev` (`tsconfig.dev.json`), so a check never replaces a running
-dev server's files. `npm run start:prod --workspace @holita/core` (or fleet/erm-server)
+dev server's files. `npm run start:prod --workspace @discocan/core` (or fleet/erm-server)
 runs the compiled app. Gateway `build` generates the supergraph and
-validates the installed native Router configuration. `npm run start:prod --workspace @holita/gateway`
+validates the installed native Router configuration. `npm run start:prod --workspace @discocan/gateway`
 starts that binary using the generated supergraph; no Node bundle or Rust compilation is involved. `dev` does not migrate or seed databases.
 The group generates admin GraphQL artifacts once before starting Angular and Storybook in
 parallel; their standalone commands keep their own generation step. Ctrl+C stops the process
@@ -163,7 +163,7 @@ Apply the additive Core migration before using account authentication, then gene
 and GraphQL clients. Provision the first user for an existing Tenant from the repository root:
 
 ```bash
-npm run user:create --workspace @holita/core -- --tenant TENANT_UUID --email person@example.test --name "First user" < /secure/password-file
+npm run user:create --workspace @discocan/core -- --tenant TENANT_UUID --email person@example.test --name "First user" < /secure/password-file
 ```
 
 The password comes only from stdin or the transient `CORE_SETUP_PASSWORD` environment variable;
@@ -311,7 +311,7 @@ asserts the public contract through Router over real subgraphs and isolated test
 
 ### Admin presentation
 
-The [admin design system](admin-design-system.md) describes the implemented theme (`holitaPreset`
+The [admin design system](admin-design-system.md) describes the implemented theme (`discocanPreset`
 over standard Aura), global styles, shell, patterns and their Storybook review; the decision is
 [ADR 0004](architecture/decisions/0004-admin-design-system.md). The root font size is the browser
 default (16 px). Lato weights 400, 500, 600, 700 and 800, including Cyrillic glyphs, are served
@@ -338,7 +338,7 @@ opening a browser. Storybook starts at "Start here", followed by Admin and Desig
 - The Nx target `storybook` in `apps/admin/project.json` is continuous and uncached, and first
   runs `graphql-generate`.
 - Toolbar globals switch the theme (light/dark), brand and density. The application itself uses
-  `appTheme`. A change re-bootstraps the story: the `holitaApplication` decorator in `preview.ts`
+  `appTheme`. A change re-bootstraps the story: the `discocanApplication` decorator in `preview.ts`
   rebuilds `storybookApplicationConfig(choice)` and keys a `STORY_GLOBALS` provider on brand,
   density and theme.
 - Viewports are `desktop1440`, `desktop1024`, `tablet768` and `mobile375`.
@@ -365,7 +365,7 @@ opening a browser. Storybook starts at "Start here", followed by Admin and Desig
   through `login-fixtures.ts`, restoring the shared Branch handler on cleanup. Unregistered
   operations answer with the GraphQL error `No Storybook fixture answers <Operation>.` Responses carry the request ID
   `fixture-<Operation>`.
-- `parameters.holita` (`StoryFixtures`, declared with `satisfies StoryFixtures`) is read at runtime
+- `parameters.discocan` (`StoryFixtures`, declared with `satisfies StoryFixtures`) is read at runtime
   by `readStoryFixtures`, which ignores unknown values:
   - `signedIn: false` clears the stored demo session; by default a story starts signed in as the
     synthetic tenant `Demo Logistics Ltd` on its first Branch, `Sofia Fleet`.
@@ -409,9 +409,9 @@ The repository includes the official
 from the official source, keeping its referenced files together. Codex discovers repository
 skills automatically; start a new turn, or restart Codex if the new skill does not appear.
 
-[holita-admin-development](../.agents/skills/holita-admin-development/SKILL.md) adds only
-Holita's application boundaries, generated contracts, lifecycle and check selection.
-[holita-admin-design-system](../.agents/skills/holita-admin-design-system/SKILL.md) covers central
+[discocan-admin-development](../.agents/skills/discocan-admin-development/SKILL.md) adds only
+DiscoCan's application boundaries, generated contracts, lifecycle and check selection.
+[discocan-admin-design-system](../.agents/skills/discocan-admin-design-system/SKILL.md) covers central
 token, brand, density and pattern changes, new PrimeNG controls and screens built from the
 patterns, with their stories and checks.
 
@@ -479,19 +479,19 @@ npm run db:seed
 
 Provisioning creates/verifies six databases and matching roles, preserves existing data and
 passwords, checks role privileges/ownership and revokes PUBLIC database access. The loopback
-provisioning role is `holita_admin`; application URLs never use it.
+provisioning role is `discocan_admin`; application URLs never use it.
 
 | Service    | Development database/role | Test database/role | Environment variables                       |
 | ---------- | ------------------------- | ------------------ | ------------------------------------------- |
-| Core       | holita_core               | holita_core_test   | CORE_DATABASE_URL, CORE_TEST_DATABASE_URL   |
-| Fleet      | holita_fleet              | holita_fleet_test  | FLEET_DATABASE_URL, FLEET_TEST_DATABASE_URL |
-| ERM Server | holita_erm                | holita_erm_test    | ERM_DATABASE_URL, ERM_TEST_DATABASE_URL     |
+| Core       | discocan_core               | discocan_core_test   | CORE_DATABASE_URL, CORE_TEST_DATABASE_URL   |
+| Fleet      | discocan_fleet              | discocan_fleet_test  | FLEET_DATABASE_URL, FLEET_TEST_DATABASE_URL |
+| ERM Server | discocan_erm                | discocan_erm_test    | ERM_DATABASE_URL, ERM_TEST_DATABASE_URL     |
 
 Roles cannot connect to another service's databases or the corresponding dev/test database.
 The [root environment example](../.env.example) configures POSTGRES_PORT/POSTGRES_PASSWORD.
 If overriding the port, update application/test URLs too. Setup accepts only expected identities
 on 127.0.0.1 at that port. Examples do not replace credentials in existing installations.
-Compose project `holita` uses `holita_postgres_data` mounted at `/var/lib/postgresql`.
+Compose project `discocan` uses `discocan_postgres_data` mounted at `/var/lib/postgresql`.
 `db:down` preserves the volume. Do not delete volumes or reset databases to repair setup.
 
 Core/Fleet/ERM Server own their schemas, generated Prisma clients and reviewed SQL migrations. Core/Fleet start

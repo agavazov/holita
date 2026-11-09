@@ -54,7 +54,7 @@
             </div>
           }
           @case ('not-found') {
-            <holita-empty-state
+            <discocan-empty-state
               kind="not-found"
               [title]="text().drawer.notFoundTitle"
               [description]="text().drawer.notFoundDescription"
@@ -70,10 +70,10 @@
               >
                 {{ text().close }}
               </button>
-            </holita-empty-state>
+            </discocan-empty-state>
           }
           @case ('invalid-id') {
-            <holita-empty-state
+            <discocan-empty-state
               kind="not-found"
               [title]="text().drawer.invalidIdTitle"
               [description]="text().drawer.invalidIdDescription"
@@ -89,10 +89,10 @@
               >
                 {{ text().close }}
               </button>
-            </holita-empty-state>
+            </discocan-empty-state>
           }
           @case ('error') {
-            <holita-empty-state
+            <discocan-empty-state
               kind="error"
               [title]="text().drawer.errorTitle"
               [description]="errorText()"
@@ -100,7 +100,7 @@
               <button emptyActions pButton type="button" (click)="retry.emit()">
                 {{ text().retry }}
               </button>
-            </holita-empty-state>
+            </discocan-empty-state>
           }
         }
         <div class="route-drawer__content" [hidden]="state() !== 'ready'">

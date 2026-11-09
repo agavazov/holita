@@ -7,10 +7,10 @@
     <p-message severity="warn">{{ error }}</p-message>
   }
   <div [formGroup]="form" class="app-form-grid">
-    <holita-form-field [label]="text().intent" controlId="erm-command-intent">
+    <discocan-form-field [label]="text().intent" controlId="erm-command-intent">
       <input pInputText id="erm-command-intent" formControlName="intent" maxlength="200" />
-    </holita-form-field>
-    <holita-form-field [label]="text().expiry" controlId="erm-command-expiry">
+    </discocan-form-field>
+    <discocan-form-field [label]="text().expiry" controlId="erm-command-expiry">
       <input
         pInputText
         id="erm-command-expiry"
@@ -20,7 +20,7 @@
         max="1440"
         step="1"
       />
-    </holita-form-field>
+    </discocan-form-field>
   </div>
   <div class="command-queue__actions">
     @for (action of actions; track action) {
@@ -44,7 +44,7 @@
     >
   </p-confirmdialog>
 </section>
-<holita-command-history
+<discocan-command-history
   [requests]="requests()"
   [language]="language()"
   [target]="target()"
@@ -53,7 +53,7 @@
   (inspect)="selectedId.set($event.id)"
   (retry)="refresh()"
 />
-<holita-command-details
+<discocan-command-details
   [request]="selected()"
   [language]="language()"
   [target]="target()"

@@ -77,7 +77,7 @@ test.describe('Devices', () => {
       page.getByText('Device 001234567890123 was registered.', { exact: true }),
     ).toBeVisible();
     await page
-      .locator('holita-page-header')
+      .locator('discocan-page-header')
       .getByRole('button', { name: 'Register device', exact: true })
       .click();
     await page.getByRole('textbox', { name: /^IMEI/ }).fill('001234567890123');

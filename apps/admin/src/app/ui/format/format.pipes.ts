@@ -14,7 +14,7 @@ import {
 /** Default for standalone examples and non-Fleet screens. */
 export const displayTimeZone = 'Europe/Sofia';
 
-@Pipe({ name: 'holitaNumber' })
+@Pipe({ name: 'discocanNumber' })
 export class FormatNumberPipe implements PipeTransform {
   private readonly language = inject(UI_LANGUAGE);
   transform(value: number | null | undefined, fraction = 0): string {
@@ -22,7 +22,7 @@ export class FormatNumberPipe implements PipeTransform {
   }
 }
 
-@Pipe({ name: 'holitaDateTime', pure: false })
+@Pipe({ name: 'discocanDateTime', pure: false })
 export class FormatDateTimePipe implements PipeTransform {
   private readonly language = inject(UI_LANGUAGE);
   private readonly preferences = inject(FLEET_DISPLAY);
@@ -37,7 +37,7 @@ export class FormatDateTimePipe implements PipeTransform {
   }
 }
 
-@Pipe({ name: 'holitaDate', pure: false })
+@Pipe({ name: 'discocanDate', pure: false })
 export class FormatDateOnlyPipe implements PipeTransform {
   private readonly language = inject(UI_LANGUAGE);
   private readonly preferences = inject(FLEET_DISPLAY);
@@ -46,7 +46,7 @@ export class FormatDateOnlyPipe implements PipeTransform {
   }
 }
 
-@Pipe({ name: 'holitaRelative' })
+@Pipe({ name: 'discocanRelative' })
 export class FormatRelativePipe implements PipeTransform {
   private readonly language = inject(UI_LANGUAGE);
   transform(
@@ -57,7 +57,7 @@ export class FormatRelativePipe implements PipeTransform {
   }
 }
 
-@Pipe({ name: 'holitaDuration' })
+@Pipe({ name: 'discocanDuration' })
 export class FormatDurationPipe implements PipeTransform {
   private readonly language = inject(UI_LANGUAGE);
   transform(seconds: number | null | undefined): string {
@@ -65,7 +65,7 @@ export class FormatDurationPipe implements PipeTransform {
   }
 }
 
-@Pipe({ name: 'holitaMoney' })
+@Pipe({ name: 'discocanMoney' })
 export class FormatMoneyPipe implements PipeTransform {
   private readonly language = inject(UI_LANGUAGE);
   transform(cents: number | null | undefined): string {
@@ -73,8 +73,8 @@ export class FormatMoneyPipe implements PipeTransform {
   }
 }
 
-/** Pair with holitaDateTime on the visible label to expose the exact original UTC instant. */
-@Pipe({ name: 'holitaUtcInstant' })
+/** Pair with discocanDateTime on the visible label to expose the exact original UTC instant. */
+@Pipe({ name: 'discocanUtcInstant' })
 export class FormatUtcInstantPipe implements PipeTransform {
   transform(value: string | null | undefined): string {
     return formatUtcInstant(value);

@@ -18,7 +18,7 @@ import { VehicleProfilePage } from './vehicle-profile-page';
 const meta: Meta = {
   title: 'Admin/Fleet/Vehicles',
   tags: ['!autodocs'],
-  parameters: { holita: { signedIn: true } satisfies StoryFixtures },
+  parameters: { discocan: { signedIn: true } satisfies StoryFixtures },
 };
 
 export default meta;
@@ -33,7 +33,7 @@ function routed(suffix = '', backend?: Type<FixtureHttpBackend>): NonNullable<St
     moduleMetadata: {
       imports: [StoryApp, AdminWorkspace, FleetWorkspace, VehicleEditorPage, VehicleProfilePage],
     },
-    template: '<holita-story-app [url]="url" />',
+    template: '<discocan-story-app [url]="url" />',
   });
 }
 
@@ -63,6 +63,6 @@ export const ErrorState: Story = {
   name: 'Error',
   render: routed(),
   parameters: {
-    holita: { scenario: { failures: { AdminVehicles: 'network' } } } satisfies StoryFixtures,
+    discocan: { scenario: { failures: { AdminVehicles: 'network' } } } satisfies StoryFixtures,
   },
 };

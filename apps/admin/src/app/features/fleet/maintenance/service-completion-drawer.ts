@@ -98,7 +98,7 @@ const nextSchedule: ValidatorFn = (group) => {
 
 /** Completes a task and optionally plans its next occurrence, in one host-owned save. */
 @Component({
-  selector: 'holita-service-completion-drawer',
+  selector: 'discocan-service-completion-drawer',
   imports: [
     RouterLink,
     ReactiveFormsModule,

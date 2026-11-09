@@ -138,11 +138,11 @@ function recordOf(row: DemoRow): ListRecord<DemoAction> {
 
 /** Same projected cells and declared widths for offset, cursor and finite snapshots. */
 @Component({
-  selector: 'holita-table-panel-demo',
+  selector: 'discocan-table-panel-demo',
   imports: [TablePanel, TableModule, Tag, ButtonDirective, RowActions],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <holita-table-panel
+    <discocan-table-panel
       #panel
       heading="Vehicles"
       [total]="view().kind === 'empty' ? 0 : mode() === 'local' ? rows.length : 46"
@@ -219,7 +219,7 @@ function recordOf(row: DemoRow): ListRecord<DemoAction> {
                 <span [title]="row.model">{{ row.model }}</span>
               </span>
               <div class="app-table-mobile-actions">
-                <holita-row-actions
+                <discocan-row-actions
                   [actions]="actions"
                   [record]="recordOf(row)"
                   (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -260,7 +260,7 @@ function recordOf(row: DemoRow): ListRecord<DemoAction> {
               <span class="app-cell-number">{{ row.odometer }}</span>
             </td>
             <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-              <holita-row-actions
+              <discocan-row-actions
                 [actions]="actions"
                 [record]="recordOf(row)"
                 (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -282,7 +282,7 @@ function recordOf(row: DemoRow): ListRecord<DemoAction> {
           }}
         }
       </span>
-    </holita-table-panel>
+    </discocan-table-panel>
   `,
 })
 class TablePanelDemo {

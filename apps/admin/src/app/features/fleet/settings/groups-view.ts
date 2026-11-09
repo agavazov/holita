@@ -34,7 +34,7 @@ export interface GroupRow {
  * A paged settings list with identity and vehicle counts. Groups in use cannot be deleted.
  */
 @Component({
-  selector: 'holita-groups-view',
+  selector: 'discocan-groups-view',
   imports: [ButtonDirective, TableModule, FormatNumberPipe, PageHeader, RowActions, TablePanel],
   templateUrl: './groups-view.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

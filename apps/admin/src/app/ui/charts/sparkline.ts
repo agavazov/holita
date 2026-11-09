@@ -16,7 +16,7 @@ const pad = 2;
 
 /** A compact trend line with gaps for missing values and a spoken summary. */
 @Component({
-  selector: 'holita-sparkline',
+  selector: 'discocan-sparkline',
   template: `
     <svg
       class="sparkline__svg"

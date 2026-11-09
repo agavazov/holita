@@ -109,7 +109,7 @@ type QueueLabel = AdminControlCenterQueueDeviceLabelsQuery['fleetDevices']['item
 type CommandBatch = AdminControlCenterCommandBatchFieldsFragment;
 
 @Component({
-  selector: 'holita-branch-command-queue',
+  selector: 'discocan-branch-command-queue',
   imports: [
     FormsModule,
     ReactiveFormsModule,
@@ -681,7 +681,7 @@ export class BranchCommandQueue implements OnInit {
 }
 
 @Component({
-  selector: 'holita-branch-command-queue-page',
+  selector: 'discocan-branch-command-queue-page',
   imports: [BranchCommandQueue, Message, ButtonDirective],
   providers: [
     GeneralSettingsApi,
@@ -698,7 +698,7 @@ export class BranchCommandQueue implements OnInit {
   template: `
     @for (scope of scopes(); track scope.token + ':' + scope.branchId + ':' + scope.language) {
       @if (preferences.settings()) {
-        <holita-branch-command-queue [branchId]="scope.branchId" [language]="scope.language" />
+        <discocan-branch-command-queue [branchId]="scope.branchId" [language]="scope.language" />
       } @else {
         <section class="app-card">
           <h1>{{ text().title }}</h1>

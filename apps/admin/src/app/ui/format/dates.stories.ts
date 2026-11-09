@@ -26,7 +26,7 @@ const messages = { bg, en };
 const instant = '2026-10-18T07:00:45.125Z';
 
 @Component({
-  selector: 'holita-date-editor-demo',
+  selector: 'discocan-date-editor-demo',
   imports: [ReactiveFormsModule, DatePicker, InputText, FormField],
   template: `
     <section class="app-card">
@@ -36,7 +36,7 @@ const instant = '2026-10-18T07:00:45.125Z';
       <div class="app-card__body app-stack">
         <p class="app-muted">{{ text().zone }}: {{ timeZone() }} · {{ formatLabel() }}</p>
         <div class="app-form-grid">
-          <holita-form-field controlId="date-demo-calendar" [label]="text().calendarDate">
+          <discocan-form-field controlId="date-demo-calendar" [label]="text().calendarDate">
             <p-datepicker
               inputId="date-demo-calendar"
               [formControl]="calendar"
@@ -44,8 +44,8 @@ const instant = '2026-10-18T07:00:45.125Z';
               [fluid]="true"
               appendTo="body"
             />
-          </holita-form-field>
-          <holita-form-field
+          </discocan-form-field>
+          <discocan-form-field
             controlId="date-demo-instant"
             [label]="text().editor"
             [hint]="text().help"
@@ -59,7 +59,7 @@ const instant = '2026-10-18T07:00:45.125Z';
               [invalid]="!parsed()"
               aria-describedby="date-demo-instant-hint date-demo-instant-error"
             />
-          </holita-form-field>
+          </discocan-form-field>
         </div>
         <dl class="app-facts">
           <div>

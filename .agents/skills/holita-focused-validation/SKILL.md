@@ -1,6 +1,6 @@
 ---
-name: holita-focused-validation
-description: Check a holita change once, when handing over the task, and respect the test budget. Use when implementing or verifying repository changes.
+name: discocan-focused-validation
+description: Check a discocan change once, when handing over the task, and respect the test budget. Use when implementing or verifying repository changes.
 ---
 
 # Focused validation

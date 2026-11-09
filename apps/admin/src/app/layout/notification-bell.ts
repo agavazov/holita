@@ -43,7 +43,7 @@ const messages: Record<Language, typeof en> = { bg, en };
 
 /** The recent feed popover; no business fetching or mutation takes place in the shell. */
 @Component({
-  selector: 'holita-notification-bell',
+  selector: 'discocan-notification-bell',
   imports: [RouterLink, ButtonDirective, Popover, Bell, ExclamationTriangle, Send, Times, Wrench],
   templateUrl: './notification-bell.html',
   styleUrl: './notification-bell.scss',

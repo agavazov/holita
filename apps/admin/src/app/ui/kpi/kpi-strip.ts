@@ -6,7 +6,7 @@ import { UI_LANGUAGE } from '../ui-language';
 
 /** One panel of KPI tiles separated by thin dividers; loading and errors apply to the whole strip. */
 @Component({
-  selector: 'holita-kpi-strip',
+  selector: 'discocan-kpi-strip',
   imports: [ButtonDirective, Message],
   template: `
     @if (error(); as error) {
