@@ -3,8 +3,9 @@
 Status: approved by the owner on 2026-11-06, with the decisions below. This is the Discocan phase after
 [admin UI v2](ui-v2.md). Delivery follows UI v2: Codex implements each package in the main checkout
 on disjoint folders, and Claude reviews the result, runs `npm run check` under
-`flock .nx/holita-check.lock` and commits locally after each package. Nothing is pushed. Device work
-follows the [ERM roadmap safety rules](erm-roadmap.md#safety-rules) and test levels.
+`flock .nx/holita-check.lock` and commits locally after each package. Pushes need the owner's
+approval. Device work follows the [ERM roadmap safety rules](erm-roadmap.md#safety-rules) and test
+levels.
 
 ## Goals (owner, 2026-11-06)
 
@@ -45,8 +46,8 @@ permits. Remaining:
 
 ## Order
 
-1. **Next:** F1 after CB5636XP's next start and W2 after the owner's approval (operations by
-   Claude).
+1. **On hold:** the owner stopped all device operations on 2026-11-09. F1 (after CB5636XP's next
+   start) and W2 resume only with the owner's explicit approval (operations by Claude).
 2. The owner reviews the Device status, command queue and faults screens together with the UI v2
    acceptance.
 
