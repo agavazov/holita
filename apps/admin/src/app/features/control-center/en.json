@@ -410,9 +410,13 @@
     "batchConfirm": "{operation} on {count} Devices, one at a time.",
     "snapshotRequired": "Read the device parameters to choose catalog parameters and see their current values.",
     "readRoleRequired": "Operator or Administrator access is required for device reads. Engineers also have access.",
-    "writeRoleRequired": "Engineer or Administrator access is required for configuration writes and parameter snapshots.",
+    "writeRoleRequired": "Engineer or Administrator access is required.",
     "auditIntent": "Audit intent",
-    "batchBaselineHint": "Displayed current values are from {target}. The workflow reads each selected Device again before writing."
+    "batchBaselineHint": "Displayed current values are from {target}. The workflow reads each selected Device again before writing.",
+    "baselineUnavailable": "The saved parameter values could not be loaded.",
+    "parameterPlaceholder": "Choose or type an ID",
+    "freeParameter": "Custom ID (1–4 digits)",
+    "addParameter": "Add parameter"
   },
   "queue": {
     "title": "Queue a device read",
@@ -670,5 +674,39 @@
     "session": "Sign in again before continuing.",
     "failed": "The workflow could not finish. Review its recorded steps.",
     "restoration": "Restoration could not be verified. Read the affected parameters and review the recorded steps."
+  },
+  "moduleInfo": {
+    "branchQueue": {
+      "title": "Command queue",
+      "body": "This page lists requests for devices in the selected fleet and their status: queued, sent, completed or failed. Parameter reads and changes also appear as commands. Batch requests run separately for each device."
+    },
+    "overview": {
+      "title": "Device overview",
+      "body": "The overview shows the device connection, route and latest reports. Vehicle readings, warning lamps and location come from received reports. The GPS position time may differ from the last connection time."
+    },
+    "problems": {
+      "title": "Device problems",
+      "body": "This tab shows current warnings and the history of reported problems. Each record identifies the source, time and problem status. A missing report does not prove that the device or vehicle has no faults."
+    },
+    "commands": {
+      "title": "Device commands",
+      "body": "Commands are queued requests sent to the device, with statuses including queued, sent, completed and failed. Parameters are the settings stored in the device itself. Every parameter read or change also passes through the queue as a command."
+    },
+    "smsCommands": {
+      "title": "SMS commands",
+      "body": "This tab prepares SMS text for the selected device using its SIM number and password. Messages are sent from a phone, rather than from this page. Device replies are not added automatically to the holita queue."
+    },
+    "parameters": {
+      "title": "Device parameters",
+      "body": "Parameters are settings stored in the device and read together in one operation. The history retains the values and differences between reads. Command 46 makes one controlled change at a time, followed by a read to verify it. Every read or change also passes through the command queue, where its progress is tracked."
+    },
+    "events": {
+      "title": "Device events",
+      "body": "Events are decoded reports received from the device. The history can be sorted by time, type and severity, and filtered by one or several severities. Filters and sorting are kept in the URL and apply to the entire history."
+    },
+    "frames": {
+      "title": "Device frames",
+      "body": "Frames are protocol messages received from or sent to the device. Each record shows its direction, time, checksum and content. This history supports technical inspection of device communication."
+    }
   }
 }

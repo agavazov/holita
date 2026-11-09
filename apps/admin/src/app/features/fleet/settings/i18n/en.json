@@ -38,7 +38,8 @@
       "cancel": "Cancel",
       "duplicateName": "A group with this name already exists.",
       "saveError": "The group could not be saved. Try again."
-    }
+    },
+    "moduleInfo": "Vehicle groups organize the fleet into named categories for filtering and summaries. Authorized users can maintain group names and colors and remove groups that contain no vehicles."
   },
   "general": {
     "demoLabel": "Demo settings",
@@ -77,6 +78,7 @@
     "timeZonePreview": "Current local time: {value}.",
     "searchTimeZone": "Search IANA time zones",
     "notificationRetentionDays": "Notification retention, days",
-    "notificationRetentionHint": "1–365 days, starting when a notification is created. Telemetry and command history are kept separately."
+    "notificationRetentionHint": "1–365 days, starting when a notification is created. Telemetry and command history are kept separately.",
+    "moduleInfo": "General settings defines this fleet’s name, time zone, date format and display units. You can set fuel and reporting thresholds and notification retention. The speed limit is a stored reference and does not change speeding alerts. Display preferences keep stored measurements and the explicitly labeled units in forms and filters unchanged."
   }
 }

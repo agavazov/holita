@@ -57,6 +57,7 @@ const someConditions: readonly FilterCondition[] = [
       [search]="search()"
       [fields]="fields"
       [conditions]="conditions()"
+      [quickFilterKeys]="quickStatus() ? ['status'] : []"
       (searchChange)="search.set($event)"
       (conditionsChange)="conditions.set($event)"
     />
@@ -68,6 +69,7 @@ const someConditions: readonly FilterCondition[] = [
 class FilterBuilderDemo {
   readonly initial = input<readonly FilterCondition[]>([]);
   readonly fields = fields;
+  readonly quickStatus = input(false);
   readonly search = signal('');
   readonly conditions = linkedSignal<readonly FilterCondition[]>(() => this.initial());
 }
@@ -93,4 +95,9 @@ export const WithConditions: Story = {
 export const Mobile: Story = {
   args: { initial: someConditions },
   globals: { viewport: { value: 'mobile375', isRotated: false } },
+};
+
+export const QuickStatus: Story = {
+  name: 'Quick multi-status selection',
+  args: { quickStatus: true },
 };

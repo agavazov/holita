@@ -94,6 +94,21 @@
             }}</span>
           </li>
         }
+        @if (moduleInfo.info()) {
+          <li class="app-breadcrumb__info">
+            <button
+              type="button"
+              class="app-icon-button"
+              [attr.aria-label]="aboutLabel()"
+              [attr.aria-expanded]="moduleInfo.visible()"
+              aria-controls="module-info-dialog"
+              aria-haspopup="dialog"
+              (click)="moduleInfo.open()"
+            >
+              <svg data-p-icon="info-circle" aria-hidden="true"></svg>
+            </button>
+          </li>
+        }
       </ol>
     </nav>
   }

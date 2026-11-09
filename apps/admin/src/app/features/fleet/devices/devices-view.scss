@@ -1,0 +1,39 @@
+.device-lamps {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-app-space-2);
+  max-inline-size: 100%;
+  white-space: nowrap;
+}
+.device-lamps__icon {
+  display: inline-flex;
+  flex: 0 0 1.5rem;
+  inline-size: 1.5rem;
+  color: var(--p-app-tone-neutral-color);
+  &[data-tone='danger'] {
+    color: var(--p-app-tone-danger-color);
+  }
+  &[data-tone='warn'] {
+    color: var(--p-app-tone-warn-color);
+  }
+  &[data-tone='info'] {
+    color: var(--p-app-tone-info-color);
+  }
+  &[data-tone='success'] {
+    color: var(--p-app-tone-success-color);
+  }
+  svg {
+    inline-size: 100%;
+    block-size: 1.5rem;
+  }
+}
+
+.device-lamps [tabindex]:focus-visible {
+  outline: var(--p-focus-ring-width) var(--p-focus-ring-style) var(--p-focus-ring-color);
+  outline-offset: var(--p-focus-ring-offset);
+}
+
+.device-lamps-heading {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

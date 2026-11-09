@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { Bell } from '@primeicons/angular/bell';
 import { Car } from '@primeicons/angular/car';
 import { Clock } from '@primeicons/angular/clock';
+import { Cog } from '@primeicons/angular/cog';
 import { Directions } from '@primeicons/angular/directions';
 import { Envelope } from '@primeicons/angular/envelope';
 import { Folder } from '@primeicons/angular/folder';
@@ -30,6 +31,7 @@ import { navigationContext, type NavGroup } from './navigation';
     Bell,
     Car,
     Clock,
+    Cog,
     Directions,
     Envelope,
     Folder,

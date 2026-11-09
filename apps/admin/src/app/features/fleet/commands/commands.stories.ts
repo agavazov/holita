@@ -12,7 +12,7 @@ import { CommandHistory } from './command-history';
 import type { CommandRequest } from './command-presentation';
 
 const meta: Meta = {
-  title: 'Admin/Devices/Commands',
+  title: 'Admin/Fleet/Devices/Commands',
   decorators: [moduleMetadata({ imports: [CommandHistory, CommandDetails] }), onFrame],
   tags: ['!autodocs'],
 };

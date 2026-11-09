@@ -1,15 +1,22 @@
-import { Plus } from '@primeicons/angular/plus';
-import { Refresh } from '@primeicons/angular/refresh';
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
-import { ButtonDirective } from 'primeng/button';
+import {
+  componentWrapperDecorator,
+  moduleMetadata,
+  type Meta,
+  type StoryObj,
+} from '@storybook/angular-vite';
 import { Tag } from 'primeng/tag';
 import { onFrame } from '../../../storybook/story-config';
+import { ModuleInfoDialog } from './module-info-dialog';
 import { PageHeader } from './page-header';
 
 const meta: Meta<PageHeader> = {
   title: 'Design System/Patterns/PageHeader',
   component: PageHeader,
-  decorators: [moduleMetadata({ imports: [ButtonDirective, Tag, Plus, Refresh] }), onFrame],
+  decorators: [
+    moduleMetadata({ imports: [Tag, ModuleInfoDialog] }),
+    componentWrapperDecorator((story) => `${story}<holita-module-info-dialog />`),
+    onFrame,
+  ],
   tags: ['!autodocs'],
 };
 
@@ -20,20 +27,14 @@ export const List: Story = {
   render: () => ({
     template: `
       <holita-page-header
-        eyebrow="Fleet"
         title="Vehicles"
         [count]="46"
-        description="Tractor units, trailers and vans in the Discordia branch"
-      >
-        <span headerMeta class="app-muted" style="font-size: var(--p-app-text-sm)">Data as of Oct 18, 2026 09:30</span>
-        <button headerActions pButton type="button" severity="secondary" [outlined]="true" aria-label="Refresh">
-          <svg data-p-icon="refresh" aria-hidden="true"></svg>
-        </button>
-        <a headerActions pButton href="#new">
-          <svg data-p-icon="plus" aria-hidden="true"></svg>
-          New vehicle
-        </a>
-      </holita-page-header>
+        moduleInfo="Vehicles shows the fleet and its current reporting status. You can maintain vehicle details and open their history."
+        [actions]="[
+          { id: 'create', label: 'New vehicle', primary: true },
+          { id: 'refresh', label: 'Refresh' }
+        ]"
+      />
     `,
   }),
 };
@@ -43,14 +44,17 @@ export const DetailWithBackLink: Story = {
   render: () => ({
     template: `
       <holita-page-header
-        [backLink]="['/', 'bg']"
+        [backLink]="['/', 'en']"
         backLabel="Vehicles"
-        eyebrow="T-04 · Tractor unit · International"
         title="CB 1004 AX"
-        description="MAN TGX 18.510 · 2021 · VIN WMA06XZZ1MP123456"
+        moduleInfoTitle="Vehicle overview"
+        moduleInfo="The vehicle profile combines device readings, trips and maintenance. Authorized users can edit the vehicle and record odometer readings."
+        [actions]="[
+          { id: 'edit', label: 'Edit', primary: true },
+          { id: 'odometer', label: 'Record odometer' }
+        ]"
       >
         <p-tag headerMeta severity="success" value="Active" />
-        <button headerActions pButton type="button" severity="secondary" [outlined]="true">Edit</button>
       </holita-page-header>
     `,
   }),
@@ -61,13 +65,11 @@ export const LongTitle: Story = {
   render: () => ({
     template: `
       <holita-page-header
-        eyebrow="Drivers · International haulage · Long-term contracts"
         title="Aleksandar-Kristiyan Petrov-Stoyanov Georgiev-Dimitrov Ivanov"
         [count]="1234"
-        description="A long description wraps on narrow screens so the full page hint remains readable while the actions move to the next row."
-      >
-        <button headerActions pButton type="button">Action</button>
-      </holita-page-header>
+        moduleInfo="The driver scorecard summarizes driving data for a selected period. You can review scores and recorded maneuvers."
+        [actions]="[{ id: 'edit', label: 'Edit', primary: true, disabled: true }]"
+      />
     `,
   }),
 };

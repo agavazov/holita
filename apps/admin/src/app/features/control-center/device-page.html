@@ -1,21 +1,13 @@
 <section class="app-view">
   <holita-page-header
     [title]="title()"
-    [description]="device() ? 'IMEI ' + device()!.imei : ''"
+    [moduleInfo]="moduleInfo().body"
+    [moduleInfoTitle]="tabTitle()"
     [backLink]="link('fleet', 'devices')"
     [backLabel]="text().devices"
-  >
-    <button
-      headerActions
-      pButton
-      type="button"
-      severity="secondary"
-      [disabled]="deviceLoading()"
-      (click)="refresh()"
-    >
-      {{ text().refresh }}
-    </button>
-  </holita-page-header>
+    [actions]="[{ id: 'refresh', label: text().refresh, primary: true, disabled: deviceLoading() }]"
+    (action)="refresh()"
+  />
   @if (device(); as device) {
     @if (deviceError()) {
       <p-message severity="error"
@@ -400,7 +392,6 @@
                   [warnings]="device.currentWarnings"
                   [language]="language()"
                 />
-                <p class="app-muted">{{ faultText().historyHint }}</p>
                 <p class="app-muted">
                   {{ text().detail.problemPeriod }}
                   {{
@@ -593,6 +584,13 @@
                 }
               }
               @case ('parameters') {
+                @if (!canConfigure() || !canSend()) {
+                  <p-message severity="info">{{
+                    !canConfigure()
+                      ? text().settings.writeRoleRequired
+                      : text().settings.primaryRequired
+                  }}</p-message>
+                }
                 <holita-device-settings
                   [deviceId]="recordId()"
                   [language]="language()"
@@ -602,16 +600,6 @@
                 />
                 <section class="app-card">
                   <h2>{{ text().snapshots.title }}</h2>
-                  <p class="app-muted">{{ text().snapshots.hint }}</p>
-                  <p class="app-muted">{{ text().snapshots.secretNote }}</p>
-                  @if (!canConfigure()) {
-                    <p-message severity="info">{{ text().settings.writeRoleRequired }}</p-message>
-                  }
-                  @if (!canSend()) {
-                    <p-message severity="secondary">{{
-                      text().settings.primaryRequired
-                    }}</p-message>
-                  }
                   <div class="control-center__actions">
                     <button
                       pButton
@@ -763,36 +751,46 @@
                     <p-tabpanel [value]="tab()">
                       <div class="app-tab-content">
                         @if (tab() === 'events') {
-                          <div
-                            class="control-center__actions"
-                            role="group"
-                            [attr.aria-label]="text().category"
+                          <holita-filter-builder
+                            [searchLabel]="text().tabs.events"
+                            [searchable]="false"
+                            [fields]="eventFields()"
+                            [quickFilterKeys]="['severity']"
+                            [maxConditions]="1"
+                            [conditions]="eventConditions()"
+                            (conditionsChange)="filterEvents($event)"
                           >
-                            <button
-                              pButton
-                              type="button"
-                              severity="secondary"
-                              [outlined]="category() !== null"
-                              [attr.aria-pressed]="category() === null"
-                              (click)="selectCategory(null)"
+                            <div
+                              filterQuickActions
+                              class="control-center__actions"
+                              role="group"
+                              [attr.aria-label]="text().category"
                             >
-                              {{ text().allCategories }}
-                            </button>
-                            @for (option of categories; track option) {
                               <button
                                 pButton
                                 type="button"
                                 severity="secondary"
-                                [outlined]="category() !== option"
-                                [attr.aria-pressed]="category() === option"
-                                (click)="selectCategory(option)"
+                                [outlined]="category() !== null"
+                                [attr.aria-pressed]="category() === null"
+                                (click)="selectCategory(null)"
                               >
-                                {{ text().categories[option] }}
+                                {{ text().allCategories }}
                               </button>
-                            }
-                          </div>
+                              @for (option of categories; track option) {
+                                <button
+                                  pButton
+                                  type="button"
+                                  severity="secondary"
+                                  [outlined]="category() !== option"
+                                  [attr.aria-pressed]="category() === option"
+                                  (click)="selectCategory(option)"
+                                >
+                                  {{ text().categories[option] }}
+                                </button>
+                              }
+                            </div>
+                          </holita-filter-builder>
                         } @else {
-                          <p class="app-muted">{{ text().detail.frameFilterHint }}</p>
                           <div
                             class="control-center__actions"
                             role="group"
@@ -868,13 +866,19 @@
                           (action)="openDetail($event.ids[0])"
                           (cursorChange)="pageHistory($event)"
                           (retry)="refresh()"
-                          (clearFilters)="
-                            selectCategory(null); direction.set(null); checksum.set(null)
-                          "
+                          (clearFilters)="clearTechnicalFilters()"
                         >
                           <p-table
+                            #technicalTable
                             class="app-responsive-table"
                             [value]="technicalRows()"
+                            [lazy]="true"
+                            [lazyLoadOnInit]="false"
+                            [sortField]="
+                              tab() === 'events' ? eventList.state().sort.field : undefined
+                            "
+                            [sortOrder]="eventList.state().sort.direction === 'ASC' ? 1 : -1"
+                            (onLazyLoad)="sortEvents($event)"
                             dataKey="id"
                             [rowTrackBy]="trackById"
                             [scrollable]="true"
@@ -896,12 +900,20 @@
                             <ng-template #header
                               ><tr>
                                 @for (column of columns(); track column.id) {
-                                  <th scope="col" [class]="column.className ?? ''">
+                                  @let sortField = eventSortField(column.id);
+                                  <th
+                                    scope="col"
+                                    [class]="column.className ?? ''"
+                                    [pSortableColumn]="sortField ?? ''"
+                                    [pSortableColumnDisabled]="!sortField"
+                                  >
                                     {{ column.label }}
+                                    @if (sortField) {
+                                      <p-sort-icon [field]="sortField" />
+                                    }
                                   </th>
-                                }
-                              </tr></ng-template
-                            >
+                                }</tr
+                            ></ng-template>
                             <ng-template #body let-row
                               ><tr>
                                 <td class="app-col-identity">
@@ -1034,7 +1046,6 @@
                             </div>
                           </dl>
                           <h3>{{ text().edataMeasurements }}</h3>
-                          <p class="app-muted">{{ text().edataMeasurementsHint }}</p>
                           @for (
                             measurement of state()?.edataMeasurements;
                             track measurement.parameterId
@@ -1230,7 +1241,6 @@
           @if (detail.value.unreadParameters.length) {
             <section class="app-card" [attr.aria-label]="text().snapshots.unread">
               <h3>{{ text().snapshots.unread }}</h3>
-              <p class="app-muted">{{ text().snapshots.unreadHint }}</p>
               <ul>
                 @for (id of detail.value.unreadParameters; track id) {
                   <li>{{ parameter(id) }}</li>

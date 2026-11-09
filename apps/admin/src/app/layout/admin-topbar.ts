@@ -11,9 +11,11 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { Bars } from '@primeicons/angular/bars';
 import { ChevronRight } from '@primeicons/angular/chevron-right';
+import { InfoCircle } from '@primeicons/angular/info-circle';
 import { messages, type Language } from '../i18n/messages';
 import { Appearance } from '../theme/appearance';
-import { interpolate } from '../ui/i18n/messages';
+import { interpolate, uiMessages } from '../ui/i18n/messages';
+import { ModuleInfo } from '../ui/page-header/module-info';
 import { MenuButton, type MenuOption } from '../ui/menu-button/menu-button';
 import type { PageContext } from './navigation';
 import { ACCOUNT_MENU_CONTEXT } from './account-menu-context';
@@ -39,7 +41,7 @@ export interface ShellAccount {
  */
 @Component({
   selector: 'holita-admin-topbar',
-  imports: [RouterLink, MenuButton, NotificationBell, Bars, ChevronRight],
+  imports: [RouterLink, MenuButton, NotificationBell, Bars, ChevronRight, InfoCircle],
   templateUrl: './admin-topbar.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -74,6 +76,8 @@ export class AdminTopbar {
   readonly signOut = output();
 
   protected readonly appearance = inject(Appearance);
+  protected readonly moduleInfo = inject(ModuleInfo);
+  protected readonly aboutLabel = computed(() => uiMessages[this.language()].pageHeader.about);
   private readonly accountContext = inject(ACCOUNT_MENU_CONTEXT, { optional: true });
   private readonly router = inject(Router);
   protected readonly text = computed(() => messages[this.language()]);

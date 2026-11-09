@@ -88,6 +88,8 @@ let nextCondition = 0;
 export class FilterBuilder {
   readonly searchLabel = input.required<string>();
   readonly search = input('');
+  readonly searchable = input(true);
+  readonly quickFilterKeys = input<readonly string[]>([]);
   readonly searchError = input<string | null>(null);
   readonly fields = input<readonly FilterField[]>([]);
   readonly conditions = input<readonly FilterCondition[]>([]);
@@ -143,6 +145,39 @@ export class FilterBuilder {
     const count = this.conditions().length;
     return count ? interpolate(this.text().toggleCount, { count }) : this.text().toggle;
   });
+
+  protected readonly quickFields = computed(() =>
+    this.fields()
+      .filter(
+        (field) =>
+          this.quickFilterKeys().includes(field.key) &&
+          field.type === 'enum' &&
+          field.operators.includes('isAnyOf'),
+      )
+      .map((field) => ({
+        ...field,
+        options: [...(field.options ?? [])],
+        selected: [
+          ...(this.conditions().find(
+            (condition) => condition.field === field.key && condition.operator === 'isAnyOf',
+          )?.values ?? []),
+        ],
+      })),
+  );
+
+  protected quickToggle(field: string, value: string, selected: readonly string[]): void {
+    const values = selected.includes(value)
+      ? selected.filter((entry) => entry !== value)
+      : [...selected, value];
+    const previous = this.conditions().find(
+      (condition) => condition.field === field && condition.operator === 'isAnyOf',
+    );
+    const conditions = this.conditions().filter((condition) => condition !== previous);
+    if (values.length) {
+      conditions.push({ id: previous?.id ?? `quick-${field}`, field, operator: 'isAnyOf', values });
+    }
+    this.conditionsChange.emit(conditions);
+  }
 
   protected readonly fieldOptions = computed(() => [...this.fields()]);
   protected readonly canAdd = computed(() => {

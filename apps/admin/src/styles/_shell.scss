@@ -163,6 +163,15 @@
     min-inline-size: min(8rem, 40%);
   }
 
+  .app-breadcrumb__info {
+    flex: none;
+
+    .app-icon-button {
+      inline-size: var(--p-app-space-6);
+      block-size: var(--p-app-space-6);
+    }
+  }
+
   .app-breadcrumb__text {
     min-inline-size: 0;
     overflow: hidden;

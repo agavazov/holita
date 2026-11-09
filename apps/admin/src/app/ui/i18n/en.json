@@ -142,5 +142,9 @@
     "total": "Total",
     "sparkline": "{label}: {min}–{max}, last {last}",
     "sparklineEmpty": "{label}: no data"
+  },
+  "pageHeader": {
+    "actions": "Page actions",
+    "about": "About this module"
   }
 }

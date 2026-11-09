@@ -24,5 +24,6 @@
   "save": "Save details",
   "changePassword": "Change password and sign out",
   "discard": "Discard changes",
-  "unsaved": "You have unsaved changes."
+  "unsaved": "You have unsaved changes.",
+  "moduleInfo": "Your profile contains the name and email used for your account. You can update these details and change your password."
 }

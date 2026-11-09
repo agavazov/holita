@@ -45,7 +45,10 @@ export class UrlListState<F, S extends string> {
     searchApplies(this.searchDraft()) ? null : 'searchTooManyWords',
   );
 
-  constructor(private readonly definition: ListDefinition<F, S>) {
+  constructor(
+    private readonly definition: ListDefinition<F, S>,
+    private readonly enabled: () => boolean = () => true,
+  ) {
     const destroyRef = inject(DestroyRef);
     this.changes = this.route.queryParamMap.pipe(
       map((params) => readListState(params, definition)),
@@ -57,6 +60,9 @@ export class UrlListState<F, S extends string> {
 
     // Invalid or non-normalised URLs are rewritten in place.
     this.route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
+      if (!this.enabled()) {
+        return;
+      }
       const normalized = listStateParams(readListState(params, definition), definition);
       const differs = Object.entries(normalized).some(
         ([name, value]) => params.get(name) !== (typeof value === 'string' ? value : null),

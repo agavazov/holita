@@ -1,4 +1,4 @@
-<holita-page-header [title]="text().title" [description]="text().description" />
+<holita-page-header [title]="text().title" [moduleInfo]="text().moduleInfo" />
 
 @if (state() === 'error') {
   <holita-empty-state kind="error" [title]="text().loadError" [description]="loadError()">
@@ -15,7 +15,6 @@
   >
     <header>
       <h2>{{ text().identity }}</h2>
-      <p>{{ text().identityHint }}</p>
     </header>
     <div class="app-card__body">
       @if (saveError(); as error) {
@@ -75,7 +74,6 @@
   >
     <header>
       <h2>{{ text().password }}</h2>
-      <p>{{ text().passwordHint }}</p>
     </header>
     <div class="app-card__body">
       @if (passwordError(); as error) {

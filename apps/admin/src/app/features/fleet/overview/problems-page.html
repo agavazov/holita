@@ -1,20 +1,17 @@
 <holita-page-header
   [title]="text().title"
   [count]="page() && warningVehicles() ? (historyTotal() ?? 0) + warnings().length : null"
->
-  <span headerMeta class="app-muted">{{ branch().name }}</span>
-  <button
-    headerActions
-    pButton
-    type="button"
-    severity="secondary"
-    [disabled]="loading() || warningsLoading()"
-    (click)="refresh()"
-  >
-    <svg data-p-icon="refresh" aria-hidden="true"></svg>
-    {{ text().refresh }}
-  </button>
-</holita-page-header>
+  [moduleInfo]="text().moduleInfo"
+  [actions]="[
+    {
+      id: 'refresh',
+      label: text().refresh,
+      primary: true,
+      disabled: loading() || warningsLoading(),
+    },
+  ]"
+  (action)="refresh()"
+/>
 
 @if (page()?.counts; as counts) {
   <div class="app-card">
@@ -31,11 +28,6 @@
         >{{ text().updated }} {{ format.dateTime(counts.asOf) }}</span
       >
     </div>
-    <p class="app-muted">{{ text().recordedHint }}</p>
-    <p class="app-muted">
-      {{ text().period }}: {{ format.dateTimeRange(counts.periodFrom, counts.periodTo) }} ·
-      {{ format.preferences().timeZone }}. {{ text().currentHint }}
-    </p>
   </div>
 }
 
@@ -349,7 +341,6 @@
 >
   @if (selectedProblem(); as problem) {
     <div class="app-view">
-      <p class="app-muted">{{ faultText().historyHint }}</p>
       <p>{{ problem.vehicle?.licensePlate ?? problem.deviceImei ?? text().table.noTarget }}</p>
       @for (diagnostic of selectedDiagnostics(); track $index) {
         <section class="app-card">

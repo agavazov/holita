@@ -142,5 +142,9 @@
     "total": "Общо",
     "sparkline": "{label}: {min}–{max}, последно {last}",
     "sparklineEmpty": "{label}: няма данни"
+  },
+  "pageHeader": {
+    "actions": "Действия за страницата",
+    "about": "Информация за модула"
   }
 }

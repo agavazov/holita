@@ -4,7 +4,6 @@ import { Router, RouterLink } from '@angular/router';
 import { ExclamationTriangle } from '@primeicons/angular/exclamation-triangle';
 import { Microchip } from '@primeicons/angular/microchip';
 import { Send } from '@primeicons/angular/send';
-import { ButtonDirective } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
@@ -37,7 +36,6 @@ import { notificationTone, type NotificationRow } from './notification-presentat
     ExclamationTriangle,
     Microchip,
     Send,
-    ButtonDirective,
     InputText,
     Message,
     Select,

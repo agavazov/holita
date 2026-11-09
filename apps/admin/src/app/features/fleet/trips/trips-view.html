@@ -1,11 +1,8 @@
 <holita-page-header
-  [eyebrow]="text().eyebrow"
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
-  [description]="text().description"
->
-  <span headerMeta class="app-muted">{{ branchName() }}</span>
-</holita-page-header>
+  [moduleInfo]="text().moduleInfo"
+/>
 
 @if (kpis(); as kpis) {
   <holita-kpi-strip [label]="text().kpis.label">

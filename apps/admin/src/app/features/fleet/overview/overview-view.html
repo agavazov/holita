@@ -1,56 +1,48 @@
-<section class="overview__hero" [attr.aria-label]="text().title">
-  <div class="overview__identity">
-    <span class="overview__eyebrow">{{ text().eyebrow }}</span>
-    <h1 id="page-title" tabindex="-1">{{ branchName() }}</h1>
-    <p>{{ text().snapshotHint }}</p>
-    <div class="overview__clocks">
-      <span
-        >{{ text().liveAsOf }}:
-        <time
-          [attr.datetime]="summary()?.vehicles.liveAsOf"
-          [title]="units.utc(summary()?.vehicles.liveAsOf)"
-          >{{ units.dateTime(summary()?.vehicles.liveAsOf) }}</time
-        ></span
-      >
-      <span
-        >{{ text().dataAsOf }}:
-        <time
-          [attr.datetime]="summary()?.vehicles.dataAsOf"
-          [title]="units.utc(summary()?.vehicles.dataAsOf)"
-          >{{
-            summary()?.vehicles.dataAsOf
-              ? units.dateTime(summary()?.vehicles.dataAsOf)
-              : text().noReports
-          }}</time
-        ></span
-      >
-    </div>
+<holita-page-header
+  [title]="text().title"
+  [moduleInfo]="text().moduleInfo"
+  [actions]="[
+    { id: 'refresh', label: text().refresh, primary: true, disabled: loading() || mapLoading() },
+  ]"
+  (action)="retry.emit()"
+/>
+<div class="app-context-toolbar">
+  <div class="overview__clocks">
+    <span
+      >{{ text().liveAsOf }}:
+      <time
+        [attr.datetime]="summary()?.vehicles.liveAsOf"
+        [title]="units.utc(summary()?.vehicles.liveAsOf)"
+        >{{ units.dateTime(summary()?.vehicles.liveAsOf) }}</time
+      ></span
+    >
+    <span
+      >{{ text().dataAsOf }}:
+      <time
+        [attr.datetime]="summary()?.vehicles.dataAsOf"
+        [title]="units.utc(summary()?.vehicles.dataAsOf)"
+        >{{
+          summary()?.vehicles.dataAsOf
+            ? units.dateTime(summary()?.vehicles.dataAsOf)
+            : text().noReports
+        }}</time
+      ></span
+    >
   </div>
-  <div class="overview__controls">
+
+  <div class="app-inline">
     <label for="dashboard-period">{{ text().period }}</label>
-    <div class="overview__control-row">
-      <p-select
-        inputId="dashboard-period"
-        [options]="periods()"
-        optionLabel="label"
-        optionValue="value"
-        [ngModel]="days()"
-        (ngModelChange)="periodChange.emit($event)"
-      />
-      <button
-        pButton
-        type="button"
-        severity="secondary"
-        [disabled]="loading() || mapLoading()"
-        (click)="retry.emit()"
-      >
-        {{ text().refresh }}
-      </button>
-    </div>
-    <span>{{ periodLabel() }}</span>
-    <span>{{ text().timeZone }} · {{ units.preferences().timeZone }}</span>
+    <p-select
+      inputId="dashboard-period"
+      [options]="periods()"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="days()"
+      (ngModelChange)="periodChange.emit($event)"
+    />
+    <span class="app-muted">{{ periodLabel() }} · {{ units.preferences().timeZone }}</span>
   </div>
-</section>
+</div>
 @if (loading() && data()) {
   <p role="status" class="app-muted">{{ text().refreshing }}</p>
 }
@@ -68,7 +60,6 @@
     [value]="number(summary()?.vehicles.live)"
     [secondary]="vehicleTotal()"
     [footnote]="text().kpis.snapshot"
-    [explanation]="text().kpis.liveHint"
     tone="success"
     [link]="links().overview"
     [queryParams]="{ view: 'live', days: days() }"
@@ -79,7 +70,6 @@
     [value]="number(summary()?.devices.connected)"
     [secondary]="deviceTotal()"
     [footnote]="text().kpis.snapshot"
-    [explanation]="text().kpis.connectedHint"
     category="c1"
     [link]="links().overview"
     [queryParams]="{ view: 'connected', days: days() }"
@@ -90,7 +80,6 @@
     [value]="number(summary()?.problems.requiringAttention)"
     [secondary]="periodLabel()"
     [footnote]="text().kpis.period"
-    [explanation]="text().kpis.problemHint"
     [tone]="summary()?.problems.requiringAttention ? 'danger' : 'success'"
     [link]="links().problems"
     [queryParams]="problemParams()"
@@ -124,7 +113,6 @@
             {{ text().devices.back }}
           </button>
         </div>
-        <p class="app-muted">{{ text().devices.hint }}</p>
         @if (devicesLoading()) {
           <p role="status">
             {{ devicesComplete() ? text().refreshing : text().devices.partial }}
@@ -300,7 +288,6 @@
     <div class="app-card__header">
       <h2 class="app-card__title">{{ text().attention.title }}</h2>
     </div>
-    <p class="app-muted">{{ text().attention.hint }}</p>
     @if (data()) {
       @if (attention().length) {
         <ol class="overview__problems">
@@ -358,7 +345,6 @@
 } @else {
   <div class="overview__charts">
     <section class="app-view">
-      <p class="app-muted">{{ text().connection.hint }}</p>
       @defer (on immediate) {
         <holita-chart-panel
           kind="donut"
@@ -395,7 +381,6 @@
           [title]="text().distance.title"
           [points]="distancePoints()"
           [series]="distanceSeries()"
-          [summary]="text().distance.summary"
           [unit]="units.distanceUnit()"
           [period]="distancePeriod()"
           [timeZone]="units.preferences().timeZone"
@@ -411,7 +396,6 @@
             <h2 class="app-card__title">{{ text().distance.title }}</h2>
           </div>
           <p-skeleton height="1rem" />
-          <p class="app-muted">{{ text().distance.summary }}</p>
           <p-skeleton height="17rem" />
           <p-skeleton height="1rem" />
           <p-skeleton height="1rem" />

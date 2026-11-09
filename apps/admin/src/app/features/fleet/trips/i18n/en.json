@@ -71,5 +71,6 @@
     "noEnd": "End not received",
     "close": "Close",
     "openVehicle": "Open vehicle"
-  }
+  },
+  "moduleInfo": "Trips shows recorded journeys, routes and driving events for the selected period. You can filter journeys by vehicle and date and inspect distance, duration and recorded driving events."
 }

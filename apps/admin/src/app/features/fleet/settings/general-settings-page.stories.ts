@@ -7,7 +7,7 @@ import { GeneralSettingsPage } from './general-settings-page';
 import { GeneralSettingsView, type GeneralSettings } from './general-settings-view';
 
 const meta: Meta = {
-  title: 'Admin/Settings/General',
+  title: 'Admin/System/Settings/General',
   tags: ['!autodocs'],
   parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };

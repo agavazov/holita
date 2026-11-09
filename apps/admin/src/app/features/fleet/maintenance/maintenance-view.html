@@ -1,14 +1,10 @@
 <holita-page-header
-  [eyebrow]="text().eyebrow"
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
-  [description]="text().hint"
->
-  @if (canEdit()) {
-    <button headerActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
-  }
-</holita-page-header>
-<p class="app-muted">{{ description() }}</p>
+  [moduleInfo]="text().moduleInfo"
+  [actions]="canEdit() ? [{ id: 'create', label: text().new, primary: true }] : []"
+  (action)="create.emit()"
+/>
 
 @if (kpis(); as kpis) {
   <holita-kpi-strip [label]="text().kpis.label">

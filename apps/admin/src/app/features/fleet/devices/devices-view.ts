@@ -25,11 +25,12 @@ import { deviceModelLabel, devicesText } from './i18n/messages';
 import { FleetFaults } from '../../../ui/fleet-live/fleet-faults';
 import { fleetLiveText } from '../../../ui/fleet-live/fleet-live';
 import { Tag } from 'primeng/tag';
+import { Tooltip } from 'primeng/tooltip';
 import type {
   AdminDeviceDetailsFragment,
   AdminDevicesLiveQuery,
 } from '../../../../generated/graphql/operations';
-import { formatNumber, formatRelative } from '../../../ui/format/format';
+import { formatRelative } from '../../../ui/format/format';
 import { injectFleetNow } from '../../../ui/fleet-live/fleet-clock';
 import { toneSeverity, type StatusTone } from '../../../ui/tones';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
@@ -72,6 +73,7 @@ export interface DeviceRow {
     Skeleton,
     FilterBuilder,
     Tag,
+    Tooltip,
     FleetFaults,
     PageHeader,
     RowActions,
@@ -79,6 +81,7 @@ export interface DeviceRow {
     TablePanel,
   ],
   templateUrl: './devices-view.html',
+  styleUrl: './devices-view.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-view' },
 })
@@ -316,31 +319,31 @@ export class DevicesView {
     };
   }
 
-  protected lampStatus(row: DeviceRow): { label: string; tone: StatusTone; title: string } {
-    const lamps = row.warningLamps;
-    const active = lamps.filter(
-      (lamp) => lamp.state === 'RED' || lamp.state === 'YELLOW' || lamp.state === 'INFORMATION',
-    );
-    const reported = lamps.filter(
-      (lamp) =>
-        lamp.state === 'OFF' ||
-        lamp.state === 'RED' ||
-        lamp.state === 'YELLOW' ||
-        lamp.state === 'INFORMATION',
-    ).length;
-    return {
-      label: reported
-        ? interpolate(this.text().status.activeLamps, {
-            count: formatNumber(active.length, this.language()),
-          })
-        : this.text().status.noLampReports,
-      tone: active.some((lamp) => lamp.state === 'RED')
-        ? 'danger'
-        : active.length
-          ? 'warn'
-          : 'neutral',
-      title: interpolate(this.text().status.lampCoverage, { count: reported, total: lamps.length }),
-    };
+  protected lampIndicators(row: DeviceRow) {
+    if (!row.warningLamps.some((lamp) => lamp.recordedAt !== null)) {
+      return [];
+    }
+    return ([1896, 1906, 1910] as const).map((parameterId) => {
+      const lamp = row.warningLamps.find((entry) => entry.parameterId === parameterId);
+      const state = lamp?.state ?? 'UNKNOWN';
+      const labels = this.text().status;
+      const name = labels.lampNames[parameterId];
+      return {
+        parameterId,
+        label: `${name}: ${labels.lampStates[state]}`,
+        tooltip: `${name}: ${labels.lampStates[state]} · ${labels.lastSignal}: ${this.format.dateTime(lamp?.recordedAt)}`,
+        tone:
+          state === 'RED'
+            ? 'danger'
+            : state === 'YELLOW'
+              ? 'warn'
+              : state === 'INFORMATION'
+                ? 'info'
+                : state === 'OFF'
+                  ? 'success'
+                  : 'neutral',
+      };
+    });
   }
 
   protected label(template: string, row: DeviceRow): string {

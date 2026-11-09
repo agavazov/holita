@@ -1,22 +1,17 @@
 <holita-page-header
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
-  [description]="text().hint"
->
-  <button
-    headerActions
-    pButton
-    type="button"
-    [disabled]="!readAllowed() || busy() || unreadCount() === 0"
-    (click)="markAllRead.emit()"
-  >
-    {{ text().markAllRead }}
-  </button>
-</holita-page-header>
-
-@if (!readAllowed()) {
-  <p-message severity="info">{{ text().demo }}</p-message>
-}
+  [moduleInfo]="text().moduleInfo + (!readAllowed() ? ' ' + text().demo : '')"
+  [actions]="[
+    {
+      id: 'mark-all-read',
+      label: text().markAllRead,
+      primary: true,
+      disabled: !readAllowed() || busy() || unreadCount() === 0,
+    },
+  ]"
+  (action)="markAllRead.emit()"
+/>
 
 <p-tabs [value]="readState()" (valueChange)="changeFilter('readState', $event)">
   <p-tablist [pt]="{ content: { 'aria-label': text().readState } }">

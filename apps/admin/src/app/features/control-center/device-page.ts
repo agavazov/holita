@@ -1,6 +1,8 @@
 import { JsonPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  afterNextRender,
+  Injector,
   Component,
   DestroyRef,
   computed,
@@ -10,6 +12,7 @@ import {
   linkedSignal,
   signal,
   untracked,
+  viewChild,
   type OnInit,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -20,7 +23,7 @@ import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Dialog } from 'primeng/dialog';
 import { Message } from 'primeng/message';
 import { Skeleton } from 'primeng/skeleton';
-import { TableModule } from 'primeng/table';
+import { TableModule, type Table, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { map, type Observable } from 'rxjs';
@@ -78,6 +81,10 @@ import {
 import { DeviceCommandQueue } from './device-command-queue';
 import { DeviceSettings } from './device-settings';
 import { SmsPage } from './sms-page';
+import { FilterBuilder } from '../../ui/filter-builder/filter-builder';
+import type { FilterCondition, FilterField } from '../../ui/filter-builder/filter-model';
+import { UrlListState } from '../../ui/list/url-list-state';
+import { eventDefinition } from './device-events-query';
 
 export type DeviceTab =
   'overview' | 'problems' | 'commands' | 'sms-commands' | 'parameters' | 'events' | 'frames';
@@ -117,6 +124,7 @@ interface HistoryRead {
     Message,
     Skeleton,
     TableModule,
+    FilterBuilder,
     Tag,
     Tabs,
     TabList,
@@ -147,6 +155,16 @@ export class DevicePage implements OnInit {
   readonly recordId = input.required<string>();
   readonly tab = input.required<DeviceTab>();
   readonly text = computed(() => controlCenterText[this.language()]);
+  readonly moduleInfo = computed(() => {
+    const tab = this.tab();
+    return this.text().moduleInfo[tab === 'sms-commands' ? 'smsCommands' : tab];
+  });
+  readonly tabTitle = computed(() => {
+    const tab = this.tab();
+    return tab === 'events' || tab === 'frames'
+      ? this.text().tabs[tab]
+      : this.text().detail.tabs[tab];
+  });
   readonly uiText = computed(() => uiMessages[this.language()]);
   readonly faultText = computed(() => faultsText(this.language()));
   readonly faultDescription = faultDescription;
@@ -338,7 +356,32 @@ export class DevicePage implements OnInit {
         })
       : this.text().detail.problemsUnknown,
   );
-  readonly category = signal<ErmEventCategory | null>(null);
+  readonly eventList = new UrlListState(
+    eventDefinition,
+    () => this.route.snapshot.paramMap.get('tab') === 'events',
+  );
+  private readonly injector = inject(Injector);
+  private eventsSortReady = false;
+  private readonly technicalTable = viewChild<Table>('technicalTable');
+  readonly category = computed(() => this.eventList.state().filter.category || null);
+  readonly eventConditions = computed<readonly FilterCondition[]>(() => {
+    const values = this.eventList.state().filter.statuses ?? [];
+    return values.length
+      ? [{ id: 'event-status', field: 'severity', operator: 'isAnyOf', values }]
+      : [];
+  });
+  readonly eventFields = computed<readonly FilterField[]>(() => [
+    {
+      key: 'severity',
+      label: this.text().severity,
+      type: 'enum',
+      operators: ['isAnyOf'],
+      options: (['INFO', 'WARNING', 'CRITICAL'] as const).map((value) => ({
+        value,
+        label: this.text().severities[value],
+      })),
+    },
+  ]);
   readonly direction = signal<ErmFrameDirection | null>(null);
   readonly checksum = signal<ErmFrameChecksum | null>(null);
   readonly cursors = linkedSignal<DeviceTab, readonly (string | null)[]>({
@@ -385,7 +428,11 @@ export class DevicePage implements OnInit {
             ? this.filteredFrames().length
             : null
           : (this.history()?.items.length ?? null),
-      filtered: !!this.category() || !!this.direction() || !!this.checksum(),
+      filtered:
+        !!this.category() ||
+        this.eventConditions().length > 0 ||
+        !!this.direction() ||
+        !!this.checksum(),
     }),
   );
   readonly cursorPage = computed(() => ({
@@ -514,6 +561,25 @@ export class DevicePage implements OnInit {
   ]);
 
   constructor() {
+    effect(() => {
+      this.tab();
+      const table = this.technicalTable();
+      this.eventsSortReady = false;
+      if (table) {
+        afterNextRender(
+          () => {
+            this.eventsSortReady = true;
+          },
+          { injector: this.injector },
+        );
+      }
+    });
+    effect(() => {
+      this.eventList.state();
+      untracked(() => {
+        this.cursors.set([null]);
+      });
+    });
     injectPageRecord(() => (this.device() ? this.title() : null));
     effect((onCleanup) => {
       this.reload();
@@ -566,6 +632,7 @@ export class DevicePage implements OnInit {
       const id = this.recordId();
       const cursor = this.cursor();
       const category = this.category();
+      const eventState = this.eventList.state();
       if (tab !== 'events' && tab !== 'frames' && tab !== 'parameters') {
         return;
       }
@@ -578,7 +645,16 @@ export class DevicePage implements OnInit {
               .watchEvents({
                 id,
                 language: ermLanguage(this.language()),
-                input: { ...page, ...(category ? { categories: [category] } : {}) },
+                input: {
+                  ...page,
+                  ...(category ? { categories: [category] } : {}),
+                  ...(eventState.filter.statuses?.length
+                    ? { severities: [...eventState.filter.statuses] }
+                    : {}),
+                  ...(eventState.sort.field === 'TIME' && eventState.sort.direction === 'DESC'
+                    ? {}
+                    : { sort: eventState.sort }),
+                },
               })
               .valueChanges.pipe(
                 map((result) => ({
@@ -724,8 +800,50 @@ export class DevicePage implements OnInit {
     return { id, label, unavailable: [] };
   }
   selectCategory(value: ErmEventCategory | null): void {
-    this.category.set(value);
+    this.eventList.patchFilter({ category: value ?? '' });
     this.cursors.set([null]);
+  }
+  filterEvents(conditions: readonly FilterCondition[]): void {
+    const values = conditions[0]?.values ?? [];
+    this.eventList.patchFilter({
+      statuses: (['INFO', 'WARNING', 'CRITICAL'] as const).filter((status) =>
+        values.includes(status),
+      ),
+    });
+    this.cursors.set([null]);
+  }
+  clearTechnicalFilters(): void {
+    if (this.tab() === 'events') {
+      this.eventList.clearFilters();
+    }
+    this.direction.set(null);
+    this.checksum.set(null);
+    this.cursors.set([null]);
+  }
+  sortEvents(event: TableLazyLoadEvent): void {
+    if (this.tab() !== 'events' || !this.eventsSortReady) {
+      return;
+    }
+    const sort = eventDefinition.sorts.find((sort) => sort.field === event.sortField);
+    if (sort) {
+      this.eventList.sortFromTable({ field: sort.param, order: event.sortOrder });
+    }
+  }
+
+  eventSortField(column: string): string | null {
+    if (this.tab() !== 'events') {
+      return null;
+    }
+    switch (column) {
+      case 'event':
+        return 'EVENT_TYPE';
+      case 'time':
+        return 'TIME';
+      case 'severity':
+        return 'STATUS';
+      default:
+        return null;
+    }
   }
   pageHistory(direction: 'previous' | 'next'): void {
     if (direction === 'previous') {

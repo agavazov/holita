@@ -589,9 +589,27 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     min-inline-size: var(--app-table-min-width, 100%);
   }
 
+  // All tables share cell alignment, including record links and action buttons.
+  th,
+  td {
+    vertical-align: middle;
+  }
+
+  td :is(a, button, p-tag) {
+    vertical-align: middle;
+  }
+
+  td :is(a, button).app-link {
+    margin: 0;
+    text-align: start;
+    line-height: inherit;
+  }
+
   .app-cell-identity {
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
     gap: var(--p-app-space-1);
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -687,9 +705,14 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
     color: var(--p-app-tone-danger-color);
   }
 
-  // Data tables keep every value on one line; a wide table scrolls sideways instead of wrapping.
+  // Headings wrap within their columns; row values keep a single line and scroll with the table.
   // Long free text uses `.app-cell-truncate`.
-  .p-datatable-thead > tr > th,
+  th,
+  .p-datatable-thead > tr > th {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   .p-datatable-tbody > tr > td {
     white-space: nowrap;
   }
@@ -795,7 +818,7 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
         position: sticky;
         inset-inline-start: 0;
         z-index: 1;
-        vertical-align: top;
+        vertical-align: middle;
         white-space: normal;
         border-inline-end: 1px solid var(--p-content-border-color);
         background: var(--p-content-background);

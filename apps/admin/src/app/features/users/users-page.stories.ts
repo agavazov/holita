@@ -6,7 +6,7 @@ import { UserEditorPage } from './user-editor-page';
 import { UsersPage } from './users-page';
 
 const meta: Meta = {
-  title: 'Admin/Users',
+  title: 'Admin/System/Users',
   tags: ['!autodocs'],
   parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };

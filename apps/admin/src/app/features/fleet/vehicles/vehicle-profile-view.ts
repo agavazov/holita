@@ -48,7 +48,7 @@ import {
   type LocationMapRecord,
   type LocationMapTrack,
 } from '../../../ui/location-map/location-map';
-import { PageHeader } from '../../../ui/page-header/page-header';
+import { PageHeader, type PageHeaderAction } from '../../../ui/page-header/page-header';
 import { TablePanel, type TableColumn, type TablePage } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
@@ -158,6 +158,16 @@ function listView(rows: readonly unknown[]): TableView {
 })
 export class VehicleProfileView {
   readonly canOperate = input(true);
+  protected readonly headerActions = computed<readonly PageHeaderAction[]>(() => {
+    if (!this.canOperate()) {
+      return [];
+    }
+    const actions: PageHeaderAction[] = [{ id: 'edit', label: this.text().edit, primary: true }];
+    if (this.vehicle()?.status !== 'INACTIVE') {
+      actions.push({ id: 'odometer', label: this.text().recordOdometer });
+    }
+    return actions;
+  });
   readonly branchId = input.required<string>();
   readonly deviceLinkBase = input<readonly string[]>([]);
   readonly recordLinks = input<FleetRecordLinks | null>(null);

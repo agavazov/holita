@@ -76,5 +76,6 @@
     "COMMAND": "Device operation needs follow-up"
   },
   "warningsHint": "Warning lamps show the latest observed state. Missing lamp values and fault-report coverage are shown on each truck.",
-  "warningsError": "Current warning lamps could not be loaded."
+  "warningsError": "Current warning lamps could not be loaded.",
+  "moduleInfo": "Problems combines current warning lamps, fault reports, alerts and command outcomes that need follow-up. You can filter by source, severity and state and inspect the related vehicle or device. Recorded observations remain available even when they no longer require attention."
 }

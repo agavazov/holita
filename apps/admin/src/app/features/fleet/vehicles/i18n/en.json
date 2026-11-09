@@ -163,7 +163,8 @@
       "catalogUnit": "Catalog unit (reference only)",
       "raw": "raw",
       "empty": "No imported observations for these IDs in this period."
-    }
+    },
+    "moduleInfo": "The vehicle profile brings together device readings, trips, problems and maintenance history. Recorded fault evidence is historical, and raw eData observations have unverified units and scaling. Commands and SMS belong to the selected installed device. Authorized users can edit vehicle details and record a manual odometer reading."
   },
   "odometer": {
     "title": "Record odometer · {plate}",
@@ -221,5 +222,6 @@
     "duplicateFleetNumber": "This fleet number is already used in the branch.",
     "duplicateVin": "This VIN is already used in the branch.",
     "inactiveDriver": "Unassign the driver before deactivating the vehicle."
-  }
+  },
+  "moduleInfo": "Vehicles shows the fleet, installed devices and their live reporting status. You can search and filter vehicles, inspect their history and maintain vehicle details according to your role. An inactive vehicle remains in the history; its device status is shown separately. Summary counts cover the displayed rows and current warning lamps."
 }

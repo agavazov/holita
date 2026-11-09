@@ -12,7 +12,7 @@ import { VehicleOdometerPage } from './vehicle-odometer-page';
 import { VehicleProfilePage } from './vehicle-profile-page';
 
 const meta: Meta = {
-  title: 'Admin/Vehicles/Vehicle detail',
+  title: 'Admin/Fleet/Vehicles/Vehicle detail',
   tags: ['!autodocs'],
   parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };

@@ -1,12 +1,8 @@
-<holita-page-header [eyebrow]="eyebrow()" [title]="text().title" [description]="description()">
+<holita-page-header [title]="text().title" [moduleInfo]="text().moduleInfo">
   @if (demo()) {
     <p-tag headerMeta severity="info" [value]="text().demoLabel" />
   }
 </holita-page-header>
-
-@if (demo()) {
-  <p class="app-muted">{{ text().demoDescription }}</p>
-}
 
 @if (state() === 'error') {
   <holita-empty-state kind="error" [title]="text().loadError" [description]="loadError()">
@@ -25,7 +21,6 @@
     <section class="app-card app-settings-section">
       <header>
         <h2>{{ text().branch }}</h2>
-        <p>{{ text().branchHint }}</p>
       </header>
       <div class="app-form-grid">
         <holita-form-field
@@ -128,7 +123,6 @@
     <section class="app-card app-settings-section">
       <header>
         <h2>{{ text().thresholds }}</h2>
-        <p>{{ text().thresholdsHint }}</p>
       </header>
       <div class="app-form-grid">
         <holita-form-field
@@ -164,7 +158,6 @@
           controlId="settings-speedLimitKph"
           [required]="true"
           [error]="errorOf('speedLimitKph')"
-          [hint]="text().speedLimitHint"
         >
           <p-inputnumber
             inputId="settings-speedLimitKph"
@@ -180,14 +173,12 @@
     <section class="app-card app-settings-section">
       <header>
         <h2>{{ text().notifications }}</h2>
-        <p>{{ notificationHint() }}</p>
       </header>
       <div class="app-form-grid">
         <holita-form-field
           [label]="text().notificationRetentionDays"
           controlId="settings-notificationRetentionDays"
           [required]="true"
-          [hint]="text().notificationRetentionHint"
           [error]="errorOf('notificationRetentionDays')"
         >
           <p-inputnumber

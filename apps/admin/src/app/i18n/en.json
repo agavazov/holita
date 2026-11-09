@@ -120,5 +120,7 @@
     "emptyMessage": "No results found",
     "emptySearchMessage": "No results found",
     "searchMessage": "{0} results are available"
-  }
+  },
+  "system": "System",
+  "deviceOverview": "Overview"
 }

@@ -120,5 +120,7 @@
     "emptyMessage": "Няма намерени резултати",
     "emptySearchMessage": "Няма намерени резултати",
     "searchMessage": "{0} налични резултата"
-  }
+  },
+  "system": "Системни",
+  "deviceOverview": "Общ преглед"
 }

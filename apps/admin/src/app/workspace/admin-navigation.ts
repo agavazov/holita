@@ -1,7 +1,7 @@
 import { messages, type Language } from '../i18n/messages';
 import type { NavGroup } from '../layout/navigation';
 
-/** Branch navigation: primary Fleet sections and the implemented Settings pages. */
+/** Dashboard, Fleet and System destinations for the selected Branch. */
 export function adminNavigation(
   language: Language,
   branchId: string | null,
@@ -9,9 +9,8 @@ export function adminNavigation(
 ): NavGroup[] {
   const text = messages[language];
   const users: NavGroup = {
-    id: 'settings',
-    label: text.settings,
-    headingHidden: true,
+    id: 'system',
+    label: text.system,
     items: [
       { id: 'users', label: text.users, icon: 'users', link: ['/', language, 'settings', 'users'] },
     ],
@@ -33,12 +32,12 @@ export function adminNavigation(
           link: [...fleet, 'dashboard', 'overview'],
           activePrefix: [...fleet, 'dashboard'],
         },
-        {
-          id: 'command-queue',
-          label: text.commands,
-          icon: 'clock',
-          link: [...fleet, 'command-queue'],
-        },
+      ],
+    },
+    {
+      id: 'fleet',
+      label: text.fleet,
+      items: [
         { id: 'vehicles', label: text.vehicles, icon: 'truck', link: [...fleet, 'vehicles'] },
         { id: 'devices', label: text.devices, icon: 'mobile', link: [...fleet, 'devices'] },
         { id: 'drivers', label: text.drivers, icon: 'id-card', link: [...fleet, 'drivers'] },
@@ -51,14 +50,19 @@ export function adminNavigation(
       ],
     },
     {
-      id: 'settings',
-      label: text.settings,
-      headingHidden: true,
+      id: 'system',
+      label: text.system,
       items: [
+        {
+          id: 'command-queue',
+          label: text.commands,
+          icon: 'clock',
+          link: [...fleet, 'command-queue'],
+        },
         {
           id: 'settings',
           label: text.settings,
-          icon: 'info-circle',
+          icon: 'cog',
           link: [...fleet, 'settings', 'general'],
           activePrefix: [...fleet, 'settings'],
         },

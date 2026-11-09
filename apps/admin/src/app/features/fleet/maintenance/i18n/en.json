@@ -145,5 +145,6 @@
     "saveError": "The service could not be completed. Your draft is kept; try again.",
     "loadingTitle": "Service record",
     "inactiveNext": "This vehicle is inactive. You can record completed service, but cannot plan its next occurrence."
-  }
+  },
+  "moduleInfo": "Maintenance shows planned and completed service work for the fleet. Tasks become due by date or odometer, whichever comes first. You can plan work, record completion and costs, and schedule the next service."
 }

@@ -1,13 +1,16 @@
-<holita-page-header [title]="text().title" [description]="text().description" />
-@if (!canOperate()) {
-  <p-message severity="info">{{ text().operatorRequired }}</p-message>
-}
+<holita-page-header
+  [title]="text().title"
+  [moduleInfo]="
+    catalog().moduleInfo.branchQueue.body + (!canOperate() ? ' ' + text().operatorRequired : '')
+  "
+  [actions]="[{ id: 'refresh', label: text().refresh, primary: true, loading: loading() }]"
+  (action)="refresh()"
+/>
 @if (actionError(); as error) {
   <p-message severity="warn" role="alert">{{ error }}</p-message>
 }
 <section class="app-card" [attr.aria-label]="text().batch">
   <h2>{{ text().batch }}</h2>
-  <p class="app-muted">{{ text().batchHint }}</p>
   <div class="app-form-grid" [formGroup]="batchForm">
     <holita-form-field [label]="text().batchUnits" controlId="command-batch-units">
       <p-select
@@ -171,17 +174,6 @@
   (clearFilters)="url.clearFilters()"
   (retry)="refresh()"
 >
-  <button
-    panelActions
-    pButton
-    type="button"
-    severity="secondary"
-    [outlined]="true"
-    [loading]="loading()"
-    (click)="refresh()"
-  >
-    {{ text().refresh }}
-  </button>
   <p-table
     class="app-responsive-table app-table-fixed"
     [value]="rows()"

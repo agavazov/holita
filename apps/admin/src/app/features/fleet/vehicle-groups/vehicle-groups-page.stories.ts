@@ -7,7 +7,7 @@ import { FleetWorkspace } from '../fleet-workspace';
 import { VehicleGroupEditorPage } from './vehicle-group-editor-page';
 
 const meta: Meta = {
-  title: 'Admin/Settings/Vehicle groups',
+  title: 'Admin/System/Settings/Vehicle groups',
   tags: ['!autodocs'],
   parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };

@@ -130,10 +130,10 @@ The shell imports no business features and fetches no business data. The workspa
 navigation, Branch/language/account context and page title. Navigation has no business-count badges.
 The document title is `<page> · holita`; login uses the localized Sign in title.
 
-- The sidebar lists Dashboard, Vehicles, Devices, Drivers and Maintenance, then a second group
-  without a visible heading containing Settings and Tenant-wide Users. Settings opens General
-  and stays selected across its General | Vehicle groups tabs. Users has no Settings tabs and
-  remains available without Fleet or a Branch. Dashboard opens
+- Dashboard is the first destination without a group heading. Fleet contains Vehicles, Devices,
+  Drivers and Maintenance. System contains Commands, Settings and Tenant-wide Users. Without
+  Fleet or a selected Branch, System contains Users only. Settings opens General and stays
+  selected across its General | Vehicle groups tabs. Users has no Settings tabs. Dashboard opens
   Overview; its Problems and Trips tabs keep Dashboard selected. Device detail belongs to Devices.
 - Desktop navigation collapses to a rail, persisted as `holita.admin.sidebar`. Rail links retain
   accessible names/group labels and hover/focus tooltips. The footer identifies holita and Tenant.
@@ -173,7 +173,7 @@ texts. Source files define full signatures; the table identifies which pattern t
 
 | Pattern                                                           | Use and required behavior                                                                                                     |
 | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `holita-page-header`                                              | One page `h1` with `id="page-title"`, optional count/back link and action/meta slots                                          |
+| `holita-page-header`                                              | One page `h1` with `id="page-title"`, optional count/back link, one primary action and a complete action menu                 |
 | `holita-kpi-strip` / `holita-kpi-tile`                            | Named group, optional icon/category/status tint and record link; stable loading tracks; null shows “—” without a unit         |
 | `holita-filter-builder`                                           | Quick search and independent AND conditions; bounds/errors stay visible; incomplete/invalid drafts cannot apply               |
 | `holita-table-panel`                                              | Shared offset/cursor/local geometry, column skeletons, retained refresh/stale rows, empty/error states, selection and actions |
@@ -183,6 +183,17 @@ texts. Source files define full signatures; the table identifies which pattern t
 | `holita-form-field`                                               | Label/control/hint/error association, required state and Unicode counter                                                      |
 | `holita-empty-state`                                              | Empty/no-results/error/missing/disabled/no-telemetry/done; alert only for errors/missing records                              |
 | `holita-column-series`, `holita-stacked-bars`, `holita-sparkline` | Accessible chart/table alternatives, null gaps and preserved zero values                                                      |
+
+Page headers show a title and count on the left, and at most one primary action followed by the
+page-action menu on the right. Define actions once with `actions`; mark the primary action with
+`primary: true` and handle choices through `action`. All actions also appear in the menu. Its last
+item, About this module, opens the same dialog as the information icon after the final breadcrumb.
+Supply a short localized `moduleInfo` body; explanations belong in that dialog. Use the optional
+`moduleInfoTitle` to name the current tab in the dialog while keeping the record's page title.
+
+Table cells align vertically to the middle. Record links and buttons share the cell text's starting
+edge; identity containers center both single-line and two-line content. Column headings wrap within
+their cells to prevent overlapping adjacent headings.
 
 Use `.app-view`, `.app-card`/`.app-card-grid`, `.app-stack`, `.app-settings-section` and
 `.app-save-bar` for page layout. Cards separate direct children with a token gap;

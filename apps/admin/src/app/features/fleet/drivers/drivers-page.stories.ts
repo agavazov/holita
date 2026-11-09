@@ -10,7 +10,7 @@ import { DriverScorecardPage } from './driver-scorecard-page';
 import { DriversPage } from './drivers-page';
 
 const meta: Meta = {
-  title: 'Admin/Drivers',
+  title: 'Admin/Fleet/Drivers',
   tags: ['!autodocs'],
   parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };

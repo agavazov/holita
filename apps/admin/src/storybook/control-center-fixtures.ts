@@ -461,29 +461,70 @@ const detailEvents: WithTypename<AdminControlCenterEventsQuery['fleetDevice']['e
   nextCursor: null,
   hasMore: false,
   items: [
-    { ...detailEvent, fields: ['1', '72'], edata: null },
+    { ...detailEvent, id: 'history-position', fields: ['1', '72'], edata: null },
     {
       ...detailEvent,
-      id: '11',
+      id: 'history-edata',
       category: 'EDATA',
+      eventId: '33',
+      severity: 'INFO',
+      eventTime: '2026-10-20T07:58:00.000Z',
       name: 'External device',
       fields: ['33'],
       edata: { type: 419, faults: [{ spn: 102, fmi: 1, status: 2 }] },
     },
+    {
+      ...detailEvent,
+      id: 'history-warning',
+      eventId: '09',
+      category: 'ALARM',
+      severity: 'WARNING',
+      eventTime: '2026-10-20T07:55:00.000Z',
+      name: 'Car battery disconnected',
+      fields: ['09'],
+      edata: null,
+    },
+    {
+      ...detailEvent,
+      id: 'history-critical',
+      eventId: '41',
+      category: 'ALARM',
+      severity: 'CRITICAL',
+      eventTime: '2026-10-20T07:50:00.000Z',
+      name: 'Accident detected',
+      fields: ['41'],
+      edata: null,
+    },
   ],
 };
 graphqlFixture(AdminControlCenterEventsDocument, (variables) => {
-  const categories = variables.object('input').strings('categories');
+  const input = variables.object('input');
+  const categories = input.strings('categories');
+  const statuses = input.strings('severities');
+  const sort = input.object('sort');
+  const field = sort.string('field') ?? 'TIME';
+  const direction = sort.string('direction') === 'ASC' ? 1 : -1;
+  const rank = { INFO: 0, WARNING: 1, CRITICAL: 2 };
+  const items = detailEvents.items
+    .filter(
+      (event) =>
+        (!categories?.length || categories.includes(event.category)) &&
+        (!statuses?.length || statuses.includes(event.severity)),
+    )
+    .sort(
+      (left, right) =>
+        direction *
+        (field === 'STATUS'
+          ? rank[left.severity] - rank[right.severity]
+          : field === 'EVENT_TYPE'
+            ? (left.eventId ?? '').localeCompare(right.eventId ?? '')
+            : Date.parse(left.eventTime ?? '') - Date.parse(right.eventTime ?? '')),
+    );
   return {
     fleetDevice: {
       __typename: 'FleetDevice',
       id: fixtureDevice.id,
-      ermEvents: {
-        ...detailEvents,
-        items: detailEvents.items.filter(
-          (event) => !categories || categories.includes(event.category),
-        ),
-      },
+      ermEvents: { ...detailEvents, items },
     },
   };
 });

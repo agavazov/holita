@@ -6,6 +6,7 @@
       [backLabel]="backLabel() ?? text().back"
       [backQueryParams]="backQueryParams()"
       [backFragment]="backFragment()"
+      [moduleInfo]="text().moduleInfo"
     />
     <holita-empty-state
       kind="not-found"
@@ -20,6 +21,7 @@
       [backLabel]="backLabel() ?? text().back"
       [backQueryParams]="backQueryParams()"
       [backFragment]="backFragment()"
+      [moduleInfo]="text().moduleInfo"
     />
     <holita-empty-state
       kind="error"
@@ -36,6 +38,7 @@
       [backLabel]="backLabel() ?? text().back"
       [backQueryParams]="backQueryParams()"
       [backFragment]="backFragment()"
+      [moduleInfo]="text().moduleInfo"
     />
     <p-skeleton height="3rem" />
     <p-skeleton height="4rem" />
@@ -69,34 +72,19 @@
     @if (vehicle(); as vehicle) {
       <holita-page-header
         [title]="vehicle.plate"
-        [description]="description()"
         [backLink]="backLink()"
         [backLabel]="backLabel() ?? text().back"
         [backQueryParams]="backQueryParams()"
         [backFragment]="backFragment()"
+        [moduleInfo]="text().moduleInfo"
+        [actions]="headerActions()"
+        (action)="$event.id === 'edit' ? edit.emit() : recordOdometer.emit()"
       >
         <p-tag
           headerMeta
           [severity]="statusSeverity(vehicle.status)"
           [value]="statusLabel(vehicle.status)"
         />
-        @if (canOperate()) {
-          <button headerActions pButton type="button" (click)="edit.emit()">
-            {{ text().edit }}
-          </button>
-        }
-        @if (canOperate() && vehicle.status !== 'INACTIVE') {
-          <button
-            headerActions
-            pButton
-            type="button"
-            severity="secondary"
-            [outlined]="true"
-            (click)="recordOdometer.emit()"
-          >
-            {{ text().recordOdometer }}
-          </button>
-        }
       </holita-page-header>
 
       <p-tabs [value]="tab()" (valueChange)="selectTab($event)">
@@ -329,7 +317,6 @@
               <details class="app-card vehicle-profile__technical">
                 <summary>{{ v2().technical }}</summary>
                 <div class="app-card__body">
-                  <p class="app-muted">{{ v2().edata.note }}</p>
                   <p class="app-muted">
                     {{ units.dateTimeRange(edataFrom(), edataTo()) }} ·
                     {{ units.preferences().timeZone }}
@@ -403,7 +390,7 @@
                 [warnings]="vehicle.currentWarnings"
                 [language]="language()"
               />
-              <p class="app-muted">{{ v2().problems.note }}</p>
+
               @if (problemCounts(); as counts) {
                 <p class="app-muted">
                   {{ v2().problems.period }}:
@@ -795,7 +782,7 @@
                       <option [value]="device.id">{{ device.imei }}</option>
                     }
                   </select>
-                  <p class="app-muted">{{ v2().commands.note }}</p>
+
                   @if (selectedDevice(); as selected) {
                     <p>
                       {{ v2().commands.selected }}:

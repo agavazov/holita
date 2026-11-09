@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { ButtonDirective } from 'primeng/button';
-import { Message } from 'primeng/message';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { AdminUserDetailsFragment } from '../../../generated/graphql/operations';
@@ -25,7 +24,7 @@ export type UserActionId = 'edit' | 'deactivate' | 'reactivate';
 
 @Component({
   selector: 'holita-users-view',
-  imports: [ButtonDirective, Message, TableModule, Tag, PageHeader, RowActions, TablePanel],
+  imports: [ButtonDirective, TableModule, Tag, PageHeader, RowActions, TablePanel],
   templateUrl: './users-view.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-view' },

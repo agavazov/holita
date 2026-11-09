@@ -11,9 +11,6 @@
 }
 <div class="page-header__row">
   <div class="page-header__heading">
-    @if (eyebrow()) {
-      <p class="page-header__eyebrow">{{ eyebrow() }}</p>
-    }
     <div class="page-header__title-row">
       <h1 #heading id="page-title" class="page-header__title" tabindex="-1">{{ title() }}</h1>
       @if (countText(); as count) {
@@ -21,11 +18,26 @@
       }
       <ng-content select="[headerMeta]" />
     </div>
-    @if (description(); as description) {
-      <p class="page-header__description" [title]="description">{{ description }}</p>
-    }
   </div>
   <div class="page-header__actions">
-    <ng-content select="[headerActions]" />
+    @if (primaryAction(); as primary) {
+      <button
+        pButton
+        type="button"
+        [routerLink]="primary.link ?? null"
+        [disabled]="primary.disabled || primary.loading || false"
+        [loading]="primary.loading ?? false"
+        (click)="runPrimary(primary, $event)"
+      >
+        {{ primary.label }}
+      </button>
+    }
+    <holita-menu-button
+      [ariaLabel]="text().actions"
+      [options]="menuOptions()"
+      (choose)="choose($event)"
+    >
+      <svg data-p-icon="ellipsis-h" aria-hidden="true"></svg>
+    </holita-menu-button>
   </div>
 </div>

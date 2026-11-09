@@ -14,6 +14,13 @@
   gap: var(--p-app-space-2);
 }
 
+.filter-builder__quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-app-space-2);
+}
+
 .filter-builder__search {
   display: flex;
   flex: 1 1 18rem;

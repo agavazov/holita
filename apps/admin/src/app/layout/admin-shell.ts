@@ -26,6 +26,7 @@ import { Message } from 'primeng/message';
 import { messages, type Language } from '../i18n/messages';
 import { Appearance } from '../theme/appearance';
 import { below } from '../ui/media';
+import { ModuleInfoDialog } from '../ui/page-header/module-info-dialog';
 import { AdminSidebar } from './admin-sidebar';
 import {
   AdminTopbar,
@@ -65,7 +66,7 @@ function pageKey(root: ActivatedRouteSnapshot): string {
  */
 @Component({
   selector: 'holita-admin-shell',
-  imports: [Drawer, Message, AdminSidebar, AdminTopbar],
+  imports: [Drawer, Message, AdminSidebar, AdminTopbar, ModuleInfoDialog],
   templateUrl: './admin-shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

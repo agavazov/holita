@@ -230,11 +230,26 @@ test.describe('Vehicles', () => {
     await expect(page.getByText('Vehicles deactivated: 2.', { exact: true })).toBeVisible();
     await expect(bulk).toBeHidden();
     await page.reload();
-    for (const plate of ['SORT-A', 'SORT-C']) {
+    const deactivated = await graphql(
+      page,
+      app,
+      'query DeactivatedVehicles { fleetVehicles(search: "SORT", sort: { field: LICENSE_PLATE, direction: ASC }) { items { licensePlate status } } }',
+    );
+    expect(deactivated['fleetVehicles']).toEqual({
+      items: [
+        { licensePlate: 'SORT-A', status: 'INACTIVE' },
+        { licensePlate: 'SORT-B', status: 'ACTIVE' },
+        { licensePlate: 'SORT-C', status: 'INACTIVE' },
+      ],
+    });
+    for (const [plate, liveStatus] of [
+      ['SORT-A', 'No device'],
+      ['SORT-C', 'No reports received'],
+    ] as const) {
       const row = page
         .getByRole('row')
         .filter({ has: page.getByRole('button', { name: `Open ${plate}`, exact: true }) });
-      await expect(row.getByText('Inactive', { exact: true }), plate).toBeVisible();
+      await expect(row.getByText(liveStatus, { exact: true }), plate).toBeVisible();
     }
     await page.getByRole('button', { name: 'Clear all', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Open SORT-B', exact: true })).toBeVisible();

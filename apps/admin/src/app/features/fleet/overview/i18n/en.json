@@ -98,5 +98,6 @@
   },
   "errorTitle": "The overview could not be loaded",
   "errorText": "Try again in a moment.",
-  "retry": "Try again"
+  "retry": "Try again",
+  "moduleInfo": "Overview brings together fleet reporting status, locations, trips and problems. Current connections and the latest recorded telemetry have separate timestamps. You can change the period, filter the map and open the related vehicle, device or task."
 }

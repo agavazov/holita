@@ -125,6 +125,7 @@ export class DeviceSettings {
     definitionHex: new FormControl('', { nonNullable: true }),
     globalsHex: new FormControl('', { nonNullable: true }),
     parameter: new FormControl('', { nonNullable: true }),
+    freeParameter: new FormControl('', { nonNullable: true }),
     value: new FormControl('', { nonNullable: true }),
     parameters: new FormArray<ParameterForm>([]),
     batch: new FormControl(false, { nonNullable: true }),
@@ -154,8 +155,8 @@ export class DeviceSettings {
     return modes.map((value) => ({ value, label: labels[value] }));
   });
   protected readonly baseline = signal<Baseline | null>(null);
-  protected readonly parameterOptions = computed(() =>
-    (this.baseline()?.values ?? [])
+  protected readonly parameterOptions = computed(() => {
+    const options = (this.baseline()?.values ?? [])
       .filter(
         (entry) =>
           !protectedParameters.has(entry.parameter) &&
@@ -164,8 +165,14 @@ export class DeviceSettings {
       .map((entry) => ({
         value: this.parameter(entry.parameter),
         label: `${this.parameter(entry.parameter)} · ${entry.title ?? '—'}`,
-      })),
-  );
+      }));
+    for (const value of this.selectedParameters()) {
+      if (!options.some((option) => option.value === value)) {
+        options.push({ value, label: value });
+      }
+    }
+    return options;
+  });
   protected readonly plannedChange = computed(() => {
     this.formValue();
     const value = this.form.getRawValue();
@@ -233,11 +240,6 @@ export class DeviceSettings {
       total: this.batch()?.changes.length ?? 0,
     }),
   );
-  protected readonly batchBaselineHint = computed(() =>
-    interpolate(this.text().batchBaselineHint, {
-      target: this.target(),
-    }),
-  );
   protected readonly batchRows = computed(() => this.batch()?.changes ?? []);
   protected readonly batchColumns = computed<readonly TableColumn[]>(() => [
     {
@@ -283,7 +285,7 @@ export class DeviceSettings {
   protected readonly historyView = computed(() =>
     tableView({
       loading: this.loading(),
-      error: this.error(),
+      error: this.historyError(),
       rows: this.runs().length,
       filtered: false,
     }),
@@ -295,6 +297,8 @@ export class DeviceSettings {
   );
   protected readonly writesEnabled = signal(false);
   protected readonly loading = signal(true);
+  protected readonly baselineError = signal<string | null>(null);
+  protected readonly historyError = signal<string | null>(null);
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
   private readonly reload = signal(0);
@@ -362,15 +366,18 @@ export class DeviceSettings {
       const subscription = this.api.watchParameterBaseline(this.deviceId()).valueChanges.subscribe({
         next: (result) => {
           if (result.error) {
-            this.error.set(
-              controlCenterError(result.error, this.language(), this.text().unavailable),
-            );
+            this.baselineError.set(this.text().baselineUnavailable);
           } else if (result.dataState === 'complete') {
-            this.baseline.set(result.data.fleetDevice.ermParameterSnapshots.items[0] ?? null);
+            this.baselineError.set(null);
+            this.baseline.set(
+              result.data.fleetDevice.ermParameterSnapshots.items.find(
+                (snapshot) => snapshot.status !== 'RUNNING',
+              ) ?? null,
+            );
           }
         },
-        error: (error: unknown) => {
-          this.error.set(controlCenterError(error, this.language(), this.text().unavailable));
+        error: () => {
+          this.baselineError.set(this.text().baselineUnavailable);
         },
       });
       onCleanup(() => {
@@ -448,24 +455,39 @@ export class DeviceSettings {
           next: (result) => {
             this.loading.set(result.loading);
             if (result.dataState === 'complete' && !result.error) {
+              this.historyError.set(null);
               this.runs.set(result.data.fleetDevice.ermConfigurationChanges);
               this.writesEnabled.set(result.data.fleetDevice.ermConfigurationWritesEnabled);
             }
             if (result.error) {
-              this.error.set(
+              this.historyError.set(
                 controlCenterError(result.error, this.language(), this.text().unavailable),
               );
             }
           },
           error: (error: unknown) => {
             this.loading.set(false);
-            this.error.set(controlCenterError(error, this.language(), this.text().unavailable));
+            this.historyError.set(
+              controlCenterError(error, this.language(), this.text().unavailable),
+            );
           },
         });
       onCleanup(() => {
         subscription.unsubscribe();
       });
     });
+  }
+
+  protected addParameter(): void {
+    const value = this.form.controls.freeParameter.value.trim();
+    if (!/^\d{1,4}$/.test(value)) {
+      return;
+    }
+    const parameter = value.padStart(4, '0');
+    if (!this.parameterSelection.value.includes(parameter)) {
+      this.parameterSelection.setValue([...this.parameterSelection.value, parameter]);
+    }
+    this.form.controls.freeParameter.setValue('');
   }
 
   protected async submit(): Promise<void> {
@@ -548,6 +570,8 @@ export class DeviceSettings {
 
   protected refreshHistory(): void {
     this.error.set(null);
+    this.baselineError.set(null);
+    this.historyError.set(null);
     this.reload.update((value) => value + 1);
   }
   protected operation(run: Run): string {

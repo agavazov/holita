@@ -1,7 +1,6 @@
 import { Component, computed, effect, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
-import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { defaultBranchId, fixtureBranches, fixtureTenant } from '../../storybook/session-fixtures';
@@ -73,16 +72,7 @@ const rows = [
  */
 @Component({
   selector: 'holita-shell-preview',
-  imports: [
-    AdminShell,
-    PageHeader,
-    KpiStrip,
-    KpiTile,
-    TablePanel,
-    TableModule,
-    Tag,
-    ButtonDirective,
-  ],
+  imports: [AdminShell, PageHeader, KpiStrip, KpiTile, TablePanel, TableModule, Tag],
   template: `
     <holita-admin-shell
       [branches]="branches()"
@@ -98,13 +88,11 @@ const rows = [
       [context]="context()"
     >
       <holita-page-header
-        [eyebrow]="context()?.group ?? ''"
         [title]="context()?.page ?? ''"
         [count]="46"
-        description="Sofia Fleet · data as of Oct 18, 2026 09:58"
-      >
-        <button headerActions pButton type="button">New vehicle</button>
-      </holita-page-header>
+        moduleInfo="This module shows the selected fleet records. You can inspect their details and manage them according to your role."
+        [actions]="[{ id: 'create', label: 'New vehicle', primary: true }]"
+      />
       <holita-kpi-strip label="Summary">
         <holita-kpi-tile label="In operation" value="38" secondary="in service: 4" />
         <holita-kpi-tile label="Distance, 7 days" value="18,420" unit="km" />

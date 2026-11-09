@@ -20,7 +20,7 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
   }
   if (branchId === 'settings' && namespace === 'users') {
     return {
-      group: '',
+      group: text.system,
       page: text.users,
       pageLink: ['/', language, 'settings', 'users'],
     };
@@ -31,8 +31,10 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
   const fleet = ['/', language, branchId, 'fleet'];
   if (resource === 'settings' && (recordId === 'general' || recordId === 'groups')) {
     return {
-      group: text.settings,
-      page: recordId === 'general' ? text.settingsGeneral : text.vehicleGroups,
+      group: text.system,
+      page: text.settings,
+      pageLink: [...fleet, 'settings', 'general'],
+      tab: recordId === 'general' ? text.settingsGeneral : text.vehicleGroups,
     };
   }
   if (resource === 'notifications') {
@@ -75,7 +77,7 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
                 : null;
     return vehicleTab
       ? {
-          group: '',
+          group: text.fleet,
           page: text.vehicles,
           pageLink: [...fleet, 'vehicles'],
           ...(tab === 'overview'
@@ -89,7 +91,7 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
   }
   const deviceTab =
     tab === 'overview'
-      ? text.overview
+      ? text.deviceOverview
       : tab === 'problems'
         ? text.problems
         : tab === 'commands'
@@ -99,18 +101,17 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
             : tab === 'parameters'
               ? text.parameters
               : tab === 'technical-details' && technicalTab === 'events'
-                ? `${text.technicalDetails} — ${text.events}`
+                ? text.events
                 : tab === 'technical-details' && technicalTab === 'frames'
-                  ? `${text.technicalDetails} — ${text.frames}`
+                  ? text.frames
                   : null;
   return deviceTab
     ? {
-        group: '',
+        group: text.fleet,
         page: text.devices,
         pageLink: [...fleet, 'devices'],
-        ...(tab === 'overview'
-          ? {}
-          : { recordLink: [...fleet, 'devices', recordId, 'overview'], tab: deviceTab }),
+        recordLink: [...fleet, 'devices', recordId, 'overview'],
+        tab: deviceTab,
       }
     : null;
 }

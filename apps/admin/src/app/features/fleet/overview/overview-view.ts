@@ -34,6 +34,7 @@ import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-pane
 import { tableView } from '../../../ui/table-panel/table-view';
 import { toneSeverity } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { PageHeader } from '../../../ui/page-header/page-header';
 import { maintenanceText } from '../maintenance/i18n/messages';
 import { overviewText } from './i18n/messages';
 import { problemTitle, problemsText, problemSeverityTones } from './problems-presentation';
@@ -53,6 +54,7 @@ export interface OverviewLinks {
   selector: 'holita-overview-view',
   imports: [
     RouterLink,
+    PageHeader,
     FormsModule,
     ButtonDirective,
     Message,

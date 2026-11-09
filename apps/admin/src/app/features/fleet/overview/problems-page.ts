@@ -11,7 +11,6 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
-import { Refresh } from '@primeicons/angular/refresh';
 import { MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { Select } from 'primeng/select';
@@ -95,7 +94,6 @@ type ProblemAction = 'details' | 'open' | 'vehicle' | 'device';
     FormatNumberPipe,
     FormsModule,
     PageHeader,
-    Refresh,
     RouterOutlet,
     RouterLink,
     RowActions,

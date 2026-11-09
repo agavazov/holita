@@ -36,13 +36,12 @@
   }
   @case ('loading') {
     <holita-page-header
-      [eyebrow]="text().eyebrow"
       [title]="text().title"
-      [description]="hint()"
       [backLink]="backLink()"
       [backLabel]="text().back"
       [backQueryParams]="backQueryParams()"
       [backFragment]="backFragment()"
+      [moduleInfo]="text().moduleInfo"
     />
     <holita-kpi-strip [label]="text().summary" [loading]="true">
       <holita-kpi-tile [label]="text().drivingScore" [loading]="true" category="c3"
@@ -65,13 +64,12 @@
   @case ('ready') {
     @if (scorecard(); as card) {
       <holita-page-header
-        [eyebrow]="text().eyebrow"
         [title]="card.name"
-        [description]="hint()"
         [backLink]="backLink()"
         [backLabel]="text().back"
         [backQueryParams]="backQueryParams()"
         [backFragment]="backFragment()"
+        [moduleInfo]="text().moduleInfo"
       />
 
       <p class="app-muted">{{ description() }}</p>
@@ -159,7 +157,6 @@
         <div class="app-card-grid scorecard__details">
           <section class="app-card">
             <h2 class="app-card__title app-card__header">{{ text().maneuvers }}</h2>
-            <p class="app-muted">{{ text().maneuverDescription }}</p>
             <holita-stacked-bars
               [label]="text().maneuvers"
               [rows]="maneuverRows()"
@@ -201,9 +198,6 @@
                 <dd>{{ card.scoredTripCount | holitaNumber }}</dd>
               </div>
             </dl>
-            <p class="app-muted">{{ text().windowDescription }}</p>
-            <p class="app-muted">{{ text().weightedDescription }}</p>
-            <p class="app-muted">{{ text().missingDescription }}</p>
           </section>
         </div>
       }

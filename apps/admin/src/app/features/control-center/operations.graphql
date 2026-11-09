@@ -561,7 +561,7 @@ mutation AdminControlCenterStopCommandBatch($id: ID!) {
 query AdminControlCenterParameterBaseline($id: ID!) {
   fleetDevice(id: $id) {
     id
-    ermParameterSnapshots(input: { pageSize: 1 }) {
+    ermParameterSnapshots(input: { pageSize: 25 }) {
       items {
         id
         startedAt

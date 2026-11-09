@@ -111,5 +111,6 @@
     "warningLampOff": "{lamp}: lamp switched off (previously: {previousState})."
   },
   "configurationSource": "Configuration run",
-  "snapshotSource": "Parameter snapshot"
+  "snapshotSource": "Parameter snapshot",
+  "moduleInfo": "Notifications collect recent alerts and command outcomes for this fleet. You can filter read and unread items, open the related records and mark notifications as read."
 }

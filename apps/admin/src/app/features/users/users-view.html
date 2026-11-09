@@ -1,19 +1,12 @@
 <holita-page-header
   [title]="text().title"
-  [description]="text().guidance"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? rows().length : null"
->
-  @if (canManage()) {
-    <button headerActions pButton type="button" [disabled]="busy()" (click)="create.emit()">
-      {{ text().new }}
-    </button>
-  }
-</holita-page-header>
-
-<p-message severity="info">{{ text().scope }}</p-message>
-@if (!canManage()) {
-  <p-message severity="secondary">{{ text().administratorRequired }}</p-message>
-}
+  [moduleInfo]="text().moduleInfo"
+  [actions]="
+    canManage() ? [{ id: 'create', label: text().new, primary: true, disabled: busy() }] : []
+  "
+  (action)="create.emit()"
+/>
 
 <holita-table-panel
   #panel

@@ -1,15 +1,7 @@
 <section class="app-card" [attr.aria-label]="text().title">
   <h2>{{ text().title }}</h2>
-  <p class="app-muted">{{ text().hint }}</p>
-  @if (!primary() && !isBatch()) {
-    <p-message severity="warn">{{ text().primaryRequired }}</p-message>
-  }
-  @if (mode() === 'READ_EDATA' ? !canRead() : !canWrite()) {
-    <p-message severity="info">{{
-      mode() === 'READ_EDATA' ? text().readRoleRequired : text().writeRoleRequired
-    }}</p-message>
-  } @else if (!writesEnabled()) {
-    <p-message severity="info">{{ text().writesDisabled }}</p-message>
+  @if (baselineError(); as error) {
+    <p-message severity="error">{{ error }}</p-message>
   }
   @if (error(); as error) {
     <p-message severity="error">{{ error }}</p-message>
@@ -20,6 +12,7 @@
         <p-select
           inputId="erm-settings-mode"
           formControlName="mode"
+          [ariaLabel]="text().operation"
           [options]="modes()"
           optionLabel="label"
           optionValue="value"
@@ -51,11 +44,7 @@
           </holita-form-field>
         }
         @case ('ADD_DEFINITION') {
-          <holita-form-field
-            [label]="text().definition"
-            controlId="erm-settings-definition"
-            [hint]="text().definitionHint"
-          >
+          <holita-form-field [label]="text().definition" controlId="erm-settings-definition">
             <input
               pInputText
               id="erm-settings-definition"
@@ -66,11 +55,7 @@
           </holita-form-field>
         }
         @case ('GLOBALS') {
-          <holita-form-field
-            [label]="text().globals"
-            controlId="erm-settings-globals"
-            [hint]="text().globalsHint"
-          >
+          <holita-form-field [label]="text().globals" controlId="erm-settings-globals">
             <input
               pInputText
               id="erm-settings-globals"
@@ -89,6 +74,9 @@
               optionLabel="label"
               optionValue="value"
               [filter]="true"
+              [editable]="true"
+              filterBy="label,value"
+              [placeholder]="text().parameterPlaceholder"
               [ariaLabel]="text().parameter"
               required
             />
@@ -111,16 +99,35 @@
               [ariaLabel]="text().parameters"
             />
           </holita-form-field>
+          <holita-form-field [label]="text().freeParameter" controlId="erm-settings-free-parameter">
+            <div class="app-inline">
+              <input
+                pInputText
+                id="erm-settings-free-parameter"
+                formControlName="freeParameter"
+                inputmode="numeric"
+                maxlength="4"
+                pattern="[0-9]{1,4}"
+              />
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [disabled]="
+                  !form.controls.freeParameter.value.trim() || form.controls.freeParameter.invalid
+                "
+                (click)="addParameter()"
+              >
+                {{ text().addParameter }}
+              </button>
+            </div>
+          </holita-form-field>
           <div class="app-inline">
             <p-checkbox inputId="erm-settings-batch" formControlName="batch" [binary]="true" />
             <label for="erm-settings-batch">{{ text().batch }}</label>
           </div>
           @if (isBatch()) {
-            <holita-form-field
-              [label]="text().batchDevices"
-              controlId="erm-settings-devices"
-              [hint]="text().batchHint"
-            >
+            <holita-form-field [label]="text().batchDevices" controlId="erm-settings-devices">
               <p-select
                 inputId="erm-settings-devices"
                 formControlName="deviceIds"
@@ -160,9 +167,6 @@
         </div>
       }
     </div>
-    @if (mode() === 'PARAMETER' || mode() === 'PARAMETERS') {
-      <p class="app-muted">{{ text().parameterCatalogHint }}</p>
-    }
     @if (mode() === 'PARAMETERS') {
       <div formArrayName="parameters" class="app-form-grid">
         @for (
@@ -192,12 +196,10 @@
           disabledReason() !== null || running() || batchRunning() || submitting() || form.invalid
         "
         [loading]="submitting()"
+        [title]="disabledReason() ?? ''"
       >
         {{ text().start }}
       </button>
-      @if (disabledReason(); as reason) {
-        <span class="app-muted">{{ reason }}</span>
-      }
     </div>
   </form>
   <p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(64rem, calc(100vw - 2rem))' }">
@@ -271,9 +273,6 @@
   </holita-table-panel>
 }
 <ng-template #parameterPlan>
-  @if (isBatch()) {
-    <p class="app-muted">{{ batchBaselineHint() }}</p>
-  }
   <holita-table-panel
     mode="local"
     [heading]="text().plannedChange"
@@ -316,7 +315,7 @@
   [tableMinWidth]="tableMinWidth"
   [view]="historyView()"
   [busy]="loading()"
-  [errorText]="error()"
+  [errorText]="historyError()"
   [emptyTitle]="text().empty"
   [actions]="actions()"
   (action)="historyAction($event)"

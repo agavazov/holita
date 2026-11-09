@@ -110,9 +110,29 @@
     "since": "Since {time}",
     "routingUnknown": "Routing unknown",
     "activeLamps": "{count} active",
-    "noLampReports": "Lamp states unavailable",
+    "noLampReports": "No lamp reports",
     "lampCoverage": "Known lamp states: {count} of {total}",
     "noHolitaConnection": "No holita connection yet",
-    "reportingOffline": "Reporting · offline"
+    "reportingOffline": "Reporting · offline",
+    "lampNames": {
+      "1896": "Brake",
+      "1906": "Engine",
+      "1910": "ABS"
+    },
+    "lampStates": {
+      "OFF": "Off",
+      "RED": "Red",
+      "YELLOW": "Yellow",
+      "INFORMATION": "Information",
+      "UNKNOWN": "Unknown",
+      "NOT_AVAILABLE": "Unavailable",
+      "RESERVED": "Reserved"
+    }
+  },
+  "moduleInfo": {
+    "devices": {
+      "title": "Devices",
+      "body": "The list shows devices in the selected fleet, their connection and assigned vehicles. Warning lamps show the last reported brake, engine and ABS states. Each device page provides access to problems, commands, parameters and technical history."
+    }
   }
 }

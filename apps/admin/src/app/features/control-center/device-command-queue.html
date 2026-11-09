@@ -1,7 +1,5 @@
 <section class="app-card" [attr.aria-label]="text().title">
   <h2>{{ text().title }}</h2>
-  <p class="app-muted">{{ text().hint }}</p>
-  <p class="app-muted">{{ text().identityNote }}</p>
   @if (!canOperate()) {
     <p-message severity="info">{{ operatorRequired() }}</p-message>
   }
@@ -9,11 +7,7 @@
     <p-message severity="warn">{{ error }}</p-message>
   }
   <div [formGroup]="form" class="app-form-grid">
-    <holita-form-field
-      [label]="text().intent"
-      controlId="erm-command-intent"
-      [hint]="text().intentHint"
-    >
+    <holita-form-field [label]="text().intent" controlId="erm-command-intent">
       <input pInputText id="erm-command-intent" formControlName="intent" maxlength="200" />
     </holita-form-field>
     <holita-form-field [label]="text().expiry" controlId="erm-command-expiry">

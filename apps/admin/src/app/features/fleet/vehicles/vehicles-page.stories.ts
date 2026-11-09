@@ -16,7 +16,7 @@ import { VehicleProfilePage } from './vehicle-profile-page';
 
 /** Real routes, page adapters, scoped Apollo clients and the shared Storybook presentation. */
 const meta: Meta = {
-  title: 'Admin/Vehicles',
+  title: 'Admin/Fleet/Vehicles',
   tags: ['!autodocs'],
   parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };

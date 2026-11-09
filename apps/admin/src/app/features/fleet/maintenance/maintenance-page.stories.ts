@@ -9,7 +9,7 @@ import { AdminWorkspace } from '../../../workspace/admin-workspace';
 import { FleetWorkspace } from '../fleet-workspace';
 import { MaintenanceRecordPage } from './maintenance-record-page';
 const meta: Meta = {
-  title: 'Admin/Maintenance',
+  title: 'Admin/Fleet/Maintenance',
   tags: ['!autodocs'],
   parameters: { holita: { signedIn: true } satisfies StoryFixtures },
 };

@@ -169,6 +169,8 @@
     "notFoundDescription": "This driver is no longer available in the current branch.",
     "errorTitle": "Scorecard could not be loaded",
     "errorDescription": "Try loading this driver's scorecard again.",
-    "retry": "Try again"
-  }
+    "retry": "Try again",
+    "moduleInfo": "The driver scorecard summarizes driving and eco scores, distance, trips and recorded maneuvers. You can compare the available periods and inspect the coverage behind each score."
+  },
+  "moduleInfo": "Drivers shows the people assigned to vehicles, their documents and driving summaries. You can maintain driver details, review expiring documents and open a driving scorecard for a selected period."
 }

@@ -1,15 +1,12 @@
 <holita-page-header
-  [eyebrow]="text().eyebrow"
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
-  [description]="description()"
->
-  @if (canEdit()) {
-    <button headerActions pButton type="button" [disabled]="busy()" (click)="create.emit()">
-      {{ text().new }}
-    </button>
-  }
-</holita-page-header>
+  [moduleInfo]="text().moduleInfo.devices.body"
+  [actions]="
+    canEdit() ? [{ id: 'create', label: text().new, primary: true, disabled: busy() }] : []
+  "
+  (action)="create.emit()"
+/>
 
 <holita-filter-builder
   [searchLabel]="text().search"
@@ -107,7 +104,7 @@
         <th scope="col">{{ liveText().connection }}</th>
         <th scope="col">{{ text().status.lastSignal }}</th>
         <th scope="col">{{ text().status.routing }}</th>
-        <th scope="col">{{ text().status.warningLamps }}</th>
+        <th scope="col" class="device-lamps-heading">{{ text().status.warningLamps }}</th>
         <th scope="col">{{ text().table.problems }}</th>
         <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
           <span class="app-visually-hidden">{{ text().table.actions }}</span>
@@ -214,12 +211,60 @@
           }
         </td>
         <td>
-          @let lamps = lampStatus(row);
-          <p-tag
-            [value]="lamps.label"
-            [severity]="toneSeverity(lamps.tone)"
-            [attr.title]="lamps.title"
-          />
+          <span class="device-lamps">
+            @for (lamp of lampIndicators(row); track lamp.parameterId) {
+              <span
+                class="device-lamps__icon"
+                [attr.data-tone]="lamp.tone"
+                role="img"
+                [attr.aria-label]="lamp.label"
+                [pTooltip]="lamp.tooltip"
+                tooltipPosition="top"
+                tooltipEvent="both"
+                tabindex="0"
+              >
+                <svg
+                  viewBox="0 0 28 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  aria-hidden="true"
+                >
+                  @switch (lamp.parameterId) {
+                    @case (1896) {
+                      <circle cx="14" cy="12" r="7" />
+                      <path d="M5 4a12 12 0 0 0 0 16M23 4a12 12 0 0 1 0 16M14 7v6m0 2v2" />
+                    }
+                    @case (1906) {
+                      <path d="M5 8h5l3-3h6v4h4v4h3v6h-7l-3-3H5zM8 4h6M2 10v7" />
+                    }
+                    @case (1910) {
+                      <circle cx="14" cy="12" r="9" />
+                      <text
+                        x="14"
+                        y="15"
+                        text-anchor="middle"
+                        stroke="none"
+                        fill="currentColor"
+                        font-size="8"
+                        font-weight="700"
+                      >
+                        ABS
+                      </text>
+                    }
+                  }
+                </svg>
+              </span>
+            } @empty {
+              <span
+                class="app-muted"
+                [pTooltip]="text().status.noLampReports"
+                tooltipEvent="both"
+                tabindex="0"
+                >—</span
+              >
+            }
+          </span>
         </td>
         <td>
           <holita-fleet-faults mode="table" [device]="row.live" [link]="diagnosticsLink(row)" />

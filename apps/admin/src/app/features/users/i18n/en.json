@@ -59,5 +59,6 @@
     "ENGINEER": "Engineer",
     "ADMINISTRATOR": "Administrator"
   },
-  "administratorRequired": "An Administrator role is required to create, edit, deactivate or reactivate users."
+  "administratorRequired": "An Administrator role is required to create, edit, deactivate or reactivate users.",
+  "moduleInfo": "Users lists the accounts that can sign in to this organization, with their roles and account status. Organization administrators can create accounts, update their details and manage access. Roles apply across all fleets in the organization."
 }

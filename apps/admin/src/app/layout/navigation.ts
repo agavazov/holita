@@ -9,6 +9,7 @@ export type NavIconName =
   | 'id-card'
   | 'mobile'
   | 'wrench'
+  | 'cog'
   | 'tags'
   | 'car'
   | 'users'
