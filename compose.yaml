@@ -19,3 +19,4 @@ services:
 
 volumes:
   postgres_data:
+    name: ${POSTGRES_VOLUME:-discocan_postgres_data}

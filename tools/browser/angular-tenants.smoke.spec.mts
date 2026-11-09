@@ -62,7 +62,11 @@ test('sign-in gates deep links and business reads, survives reload, clears on lo
   await expect(page).toHaveURL(
     `${app.url}/en/${app.branchA.id}/fleet/dashboard/overview?search=old`,
   );
-  await expect(page.getByRole('heading', { name: app.branchA.name, exact: true })).toBeVisible();
+  await expect(
+    page
+      .locator('discocan-admin-topbar')
+      .getByRole('button', { name: `Branch: ${app.branchA.name}`, exact: true }),
+  ).toBeVisible();
   expect(business.length).toBeGreaterThan(0);
   expect(business.every((header) => header.startsWith('Bearer discocan-session.'))).toBe(true);
   await page.getByRole('link', { name: 'Vehicles', exact: true }).click();
@@ -87,7 +91,6 @@ test('sign-in gates deep links and business reads, survives reload, clears on lo
       .locator('discocan-admin-topbar')
       .getByRole('button', { name: 'Branch: Isolation branch', exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Isolation branch', exact: true })).toBeVisible();
   // The first tenant's cached Vehicles must not survive the session change.
   await page.getByRole('link', { name: 'Vehicles', exact: true }).click();
   await expect(page.getByText('No vehicles yet', { exact: true })).toBeVisible();

@@ -16,20 +16,18 @@ export const IgnitionOff: Story = {
   args: {
     device: {
       ...fixtureLiveDevice,
-      ermState: fixtureLiveDevice.ermState
-        ? {
-            ...fixtureLiveDevice.ermState,
-            latestEvent: {
-              ...fixtureLiveDevice.ermState.latestEvent,
-              eventTime: '2026-10-20T08:00:00.000Z',
-              speedKmh: 0,
-              ignitionOn: false,
-              engineOn: false,
-              nameEn: 'Ignition off',
-              nameBg: 'Изключен контакт',
-            },
-          }
-        : null,
+      ermState: {
+        ...fixtureLiveDevice.ermState,
+        latestEvent: {
+          ...fixtureLiveDevice.ermState.latestEvent,
+          eventTime: '2026-10-20T08:00:00.000Z',
+          speedKmh: 0,
+          ignitionOn: false,
+          engineOn: false,
+          nameEn: 'Ignition off',
+          nameBg: 'Изключен контакт',
+        },
+      },
     },
   },
 };
@@ -37,20 +35,18 @@ export const EngineRunning: Story = {
   args: {
     device: {
       ...fixtureLiveDevice,
-      ermState: fixtureLiveDevice.ermState
-        ? {
-            ...fixtureLiveDevice.ermState,
-            latestEvent: {
-              ...fixtureLiveDevice.ermState.latestEvent,
-              eventTime: '2026-10-20T08:00:00.000Z',
-              speedKmh: 0,
-              ignitionOn: true,
-              engineOn: true,
-              nameEn: 'Engine started',
-              nameBg: 'Двигателят е стартиран',
-            },
-          }
-        : null,
+      ermState: {
+        ...fixtureLiveDevice.ermState,
+        latestEvent: {
+          ...fixtureLiveDevice.ermState.latestEvent,
+          eventTime: '2026-10-20T08:00:00.000Z',
+          speedKmh: 0,
+          ignitionOn: true,
+          engineOn: true,
+          nameEn: 'Engine started',
+          nameBg: 'Двигателят е стартиран',
+        },
+      },
     },
   },
 };

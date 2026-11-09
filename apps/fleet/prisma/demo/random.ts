@@ -1,7 +1,8 @@
 /** Independent seeded streams prevent changes in one vehicle/day from shifting other fixtures. */
 export function rng(key: string): () => number {
   let state = 0x811c9dc5;
-  for (const character of `discocan:fleet-demo:v1:${key}`) {
+  // Preserve the original stream for existing deterministic demo fixtures.
+  for (const character of `holita:fleet-demo:v1:${key}`) {
     state = Math.imul(state ^ character.charCodeAt(0), 0x01000193) >>> 0;
   }
   return () => {

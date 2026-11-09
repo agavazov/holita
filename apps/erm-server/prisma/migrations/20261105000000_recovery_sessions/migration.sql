@@ -1,4 +1,4 @@
-CREATE TYPE "ermRecoveryOutcome" AS ENUM ('alreadyDiscoCan', 'needsOperator');
+CREATE TYPE "ermRecoveryOutcome" AS ENUM ('alreadyHolita', 'needsOperator');
 
 CREATE TABLE "ermRecoverySession" (
     "id" UUID NOT NULL,

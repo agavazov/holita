@@ -113,7 +113,7 @@ runtime file, preserving existing settings:
 
 | Consumer                 | Runtime configuration                                                                                                                                   |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`                                                                                                       |
+| Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`; Compose also reads `POSTGRES_VOLUME`                                                                   |
 | Core and Prisma          | `apps/core/.env`: Core database URLs and shared demo settings                                                                                           |
 | Fleet and Prisma         | `apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins                                     |
 | ERM Server and Prisma    | `apps/erm-server/.env`: ERM database URLs, shared demo settings, `ERM_ROLE`, gateway listener/capture settings, internal API connection and HTTP `PORT` |
@@ -488,11 +488,17 @@ provisioning role is `discocan_admin`; application URLs never use it.
 | ERM Server | discocan_erm                | discocan_erm_test    | ERM_DATABASE_URL, ERM_TEST_DATABASE_URL     |
 
 Roles cannot connect to another service's databases or the corresponding dev/test database.
-The [root environment example](../.env.example) configures POSTGRES_PORT/POSTGRES_PASSWORD.
+The [root environment example](../.env.example) configures POSTGRES_PORT, POSTGRES_PASSWORD and POSTGRES_VOLUME.
 If overriding the port, update application/test URLs too. Setup accepts only expected identities
 on 127.0.0.1 at that port. Examples do not replace credentials in existing installations.
-Compose project `discocan` uses `discocan_postgres_data` mounted at `/var/lib/postgresql`.
-`db:down` preserves the volume. Do not delete volumes or reset databases to repair setup.
+Compose project `discocan` mounts `discocan_postgres_data` at `/var/lib/postgresql` by default.
+Set `POSTGRES_VOLUME` in the root `.env` to use another named volume. Compose creates a missing
+volume, so verify the name exists before switching when retaining data. To migrate an older
+installation, stop PostgreSQL before copying its volume, preserve the original, and select the
+copy. A copied volume retains its existing database names, roles and passwords; migrate those
+and apply the new schema migrations before using the current application configuration. Never
+run two PostgreSQL containers against the same data volume. `db:down` preserves the volume.
+Do not delete volumes or reset databases to repair setup.
 
 Core/Fleet/ERM Server own their schemas, generated Prisma clients and reviewed SQL migrations. Core/Fleet start
 with `20261102000000_baseline`, which replaces the pre-release migration history. Tables, enum
