@@ -5,21 +5,13 @@ export interface ModuleInfoContent {
   readonly body: string;
 }
 
-/** The active module's information, shared by its page menu and the breadcrumb. */
+/** The active module's information, shown by the breadcrumb (i) popover. */
 @Injectable({ providedIn: 'root' })
 export class ModuleInfo {
   private readonly current = signal<ModuleInfoContent | null>(null);
   readonly info = this.current.asReadonly();
-  readonly visible = signal(false);
 
   set(info: ModuleInfoContent | null): void {
-    this.visible.set(false);
     this.current.set(info);
-  }
-
-  open(): void {
-    if (this.info()) {
-      this.visible.set(true);
-    }
   }
 }

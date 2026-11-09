@@ -32,12 +32,14 @@
         {{ primary.label }}
       </button>
     }
-    <discocan-menu-button
-      [ariaLabel]="text().actions"
-      [options]="menuOptions()"
-      (choose)="choose($event)"
-    >
-      <svg data-p-icon="ellipsis-h" aria-hidden="true"></svg>
-    </discocan-menu-button>
+    @if (menuOptions().length) {
+      <discocan-menu-button
+        [ariaLabel]="text().actions"
+        [options]="menuOptions()"
+        (choose)="choose($event)"
+      >
+        <svg data-p-icon="ellipsis-h" aria-hidden="true"></svg>
+      </discocan-menu-button>
+    }
   </div>
 </div>

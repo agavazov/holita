@@ -55,9 +55,9 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
             : null;
     return page
       ? {
-          group: text.dashboard,
+          group: text.dashboardOld,
           page,
-          title: `${page} · ${text.dashboard}`,
+          title: `${page} · ${text.dashboardOld}`,
           pageLink: [...fleet, 'dashboard', recordId ?? 'overview'],
         }
       : null;

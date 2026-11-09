@@ -1,0 +1,85 @@
+@if (hasKey) {
+  <section #frame class="street-view" [attr.aria-label]="text().title">
+    <header class="street-view__header">
+      <span class="street-view__heading">
+        <strong class="street-view__title">{{ title() }}</strong>
+        @if (detail(); as detail) {
+          <span class="street-view__detail">{{ detail }}</span>
+        }
+      </span>
+      <ng-content select="[streetViewAction]" />
+      @if (url(); as href) {
+        <a
+          class="app-icon-button"
+          [href]="href"
+          target="_blank"
+          rel="noopener noreferrer"
+          [attr.aria-label]="text().google"
+          [title]="text().google"
+        >
+          <svg data-p-icon="external-link" aria-hidden="true"></svg>
+        </a>
+      }
+      @if (!minimized()) {
+        <button
+          type="button"
+          class="app-icon-button"
+          [attr.aria-label]="fullscreen() ? text().exitFullscreen : text().fullscreen"
+          [title]="fullscreen() ? text().exitFullscreen : text().fullscreen"
+          (click)="toggleFullscreen()"
+        >
+          @if (fullscreen()) {
+            <svg data-p-icon="compress" aria-hidden="true"></svg>
+          } @else {
+            <svg data-p-icon="expand" aria-hidden="true"></svg>
+          }
+        </button>
+      }
+      <button
+        type="button"
+        class="app-icon-button"
+        [attr.aria-label]="minimized() ? text().restore : text().minimize"
+        [attr.aria-expanded]="!minimized()"
+        [title]="minimized() ? text().restore : text().minimize"
+        (click)="toggleMinimized()"
+      >
+        @if (minimized()) {
+          <svg data-p-icon="window-maximize" aria-hidden="true"></svg>
+        } @else {
+          <svg data-p-icon="window-minimize" aria-hidden="true"></svg>
+        }
+      </button>
+      @if (closable()) {
+        <button
+          type="button"
+          class="app-icon-button"
+          [attr.aria-label]="text().close"
+          [title]="text().close"
+          (click)="close()"
+        >
+          <svg data-p-icon="times" aria-hidden="true"></svg>
+        </button>
+      }
+    </header>
+    <div class="street-view__body" [hidden]="minimized()">
+      <div
+        #canvas
+        class="street-view__canvas"
+        [class.street-view__canvas--hidden]="state() !== 'ready' || failed()"
+        [attr.aria-label]="text().title"
+      ></div>
+      @if (failed()) {
+        <p role="status">{{ text().failure }}</p>
+      } @else if (state() === 'loading') {
+        <p role="status">{{ text().loading }}</p>
+      } @else if (state() === 'unavailable') {
+        <p role="status">
+          {{ text().unavailable }}
+          @if (url(); as href) {
+            <a [href]="href" target="_blank" rel="noopener noreferrer">{{ text().google }}</a>
+          }
+        </p>
+      }
+    </div>
+  </section>
+}

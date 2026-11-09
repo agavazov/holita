@@ -25,10 +25,11 @@ export function adminNavigation(
       label: text.navigation,
       headingHidden: true,
       items: [
+        { id: 'live', label: text.dashboard, icon: 'th-large', link: [...fleet, 'live'] },
         {
           id: 'dashboard',
-          label: text.dashboard,
-          icon: 'th-large',
+          label: text.dashboardOld,
+          icon: 'folder',
           link: [...fleet, 'dashboard', 'overview'],
           activePrefix: [...fleet, 'dashboard'],
         },

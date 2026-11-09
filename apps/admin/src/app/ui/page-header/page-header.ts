@@ -50,18 +50,12 @@ export class PageHeader {
   protected readonly primaryAction = computed(() =>
     this.actions().find((action) => action.primary),
   );
-  protected readonly menuOptions = computed<readonly MenuOption[]>(() => [
-    ...this.actions().map((action) => ({
+  protected readonly menuOptions = computed<readonly MenuOption[]>(() =>
+    this.actions().map((action) => ({
       ...action,
       disabled: action.disabled || action.loading || false,
     })),
-    {
-      id: 'module-info',
-      label: this.text().about,
-      separated: true,
-      disabled: !this.info.info(),
-    },
-  ]);
+  );
   private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
   protected readonly countText = computed(() => {
     const count = this.count();
@@ -79,11 +73,7 @@ export class PageHeader {
   }
 
   protected choose(choice: MenuChoice): void {
-    if (choice.id === 'module-info') {
-      this.info.open();
-    } else {
-      this.action.emit(choice);
-    }
+    this.action.emit(choice);
   }
 
   protected runPrimary(action: PageHeaderAction, event: Event): void {

@@ -14,8 +14,6 @@
   "branches": "Fleets could not be loaded. Try again.",
   "tenants": "Demo organizations could not be loaded. Try again.",
   "retry": "Retry",
-  "lightTheme": "Use light theme",
-  "darkTheme": "Use dark theme",
   "chooseBranch": "Choose a fleet",
   "branchHint": "Choose the fleet you want to work with.",
   "continue": "Open Dashboard",

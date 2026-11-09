@@ -327,6 +327,38 @@
     }
   }
 
+  // A full-bleed page (the truck map dashboard) keeps a thin frame and the whole width. On wide
+  // screens it is exactly as tall as the frame, so only its panels scroll, never the page.
+  .app-page:has(> .app-view--bleed) {
+    gap: 0;
+    max-inline-size: none;
+    padding: var(--p-app-space-2);
+
+    @include bp.from(xl) {
+      block-size: calc(100dvh - 2 * var(--app-shell-gap) - var(--p-app-topbar-height) - 1px);
+    }
+
+    @include bp.below(md) {
+      padding: 0;
+    }
+  }
+
+  .app-view--bleed {
+    flex: 1;
+    min-block-size: 0;
+  }
+
+  // The breadcrumb (i) popover with the active module's information.
+  .app-module-info {
+    display: grid;
+    gap: var(--p-app-space-2);
+    font-size: var(--p-app-text-sm);
+
+    p {
+      margin: 0;
+    }
+  }
+
   // Sidebar on the canvas.
   .app-sidebar {
     grid-area: sidebar;

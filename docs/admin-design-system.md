@@ -95,9 +95,9 @@ tables; sparkline names state range and last value. Null is a gap, zero a real v
 
 ### Light and dark
 
-`Appearance` toggles the root scheme and stores `discocan.admin.theme`; default is light.
-Login and the account menu expose the switch. Denied storage keeps switching usable and
-reports a warning. Scheme differences belong in the preset/tokens, not component selectors.
+`Appearance` sets the root scheme to light, dark or automatic (the system setting, the default)
+and stores the choice in `discocan.admin.theme`. The `discocan-theme-menu` icon on Login and in the
+topbar offers the three choices. Denied storage keeps switching usable and reports a warning. Scheme differences belong in the preset/tokens, not component selectors.
 Private license/map configuration and production asset exclusions are documented once in
 [development](development.md#ports-and-environment); never hide the PrimeUI license notice.
 
@@ -139,7 +139,7 @@ The document title is `<page> · discocan`; login uses the localized Sign in tit
   accessible names/group labels and hover/focus tooltips. The footer identifies discocan and Tenant.
 - Below 1024px, a modal drawer takes focus on Close, traps focus and closes on Escape, backdrop,
   navigation or reaching desktop width. Return focus to the menu button. Resizing preserves drafts.
-- Keep the topbar one row, with Branch, language and account menus. Branch switching keeps the
+- Keep the topbar one row, with Branch, theme, language and account menus. Branch switching keeps the
   supported section/tab and clears record/list context; language switching keeps URL context.
   No Branch disables its menu with truthful loading/empty/unknown text.
 - Page metadata supplies Dashboard tab, Device, Profile, Users and Notifications titles/breadcrumbs.
@@ -171,25 +171,26 @@ Use components only for repeated structure/state/behavior. Single PrimeNG contro
 Components are standalone and OnPush, with signal inputs/outputs, `discocan-` selectors and BG/EN
 texts. Source files define full signatures; the table identifies which pattern to use.
 
-| Pattern                                                           | Use and required behavior                                                                                                     |
-| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `discocan-page-header`                                              | One page `h1` with `id="page-title"`, optional count/back link, one primary action and a complete action menu                 |
-| `discocan-kpi-strip` / `discocan-kpi-tile`                            | Named group, optional icon/category/status tint and record link; stable loading tracks; null shows “—” without a unit         |
-| `discocan-filter-builder`                                           | Quick search and independent AND conditions; bounds/errors stay visible; incomplete/invalid drafts cannot apply               |
-| `discocan-table-panel`                                              | Shared offset/cursor/local geometry, column skeletons, retained refresh/stale rows, empty/error states, selection and actions |
-| `discocan-row-actions`                                              | Named row menu; send choices through `TablePanel.run`; destructive actions last                                               |
-| `discocan-menu-button`                                              | Accessible popup actions/navigation; real anchors for routes, current-choice labels and disabled/danger states                |
-| `discocan-route-drawer`                                             | Loading/missing/error/ready states, labelled Close, sticky footer, dirty/pending guards                                       |
-| `discocan-form-field`                                               | Label/control/hint/error association, required state and Unicode counter                                                      |
-| `discocan-empty-state`                                              | Empty/no-results/error/missing/disabled/no-telemetry/done; alert only for errors/missing records                              |
+| Pattern                                                                 | Use and required behavior                                                                                                     |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `discocan-page-header`                                                  | One page `h1` with `id="page-title"`, optional count/back link, one primary action and a complete action menu                 |
+| `discocan-kpi-strip` / `discocan-kpi-tile`                              | Named group, optional icon/category/status tint and record link; stable loading tracks; null shows “—” without a unit         |
+| `discocan-filter-builder`                                               | Quick search and independent AND conditions; bounds/errors stay visible; incomplete/invalid drafts cannot apply               |
+| `discocan-table-panel`                                                  | Shared offset/cursor/local geometry, column skeletons, retained refresh/stale rows, empty/error states, selection and actions |
+| `discocan-row-actions`                                                  | Named row menu; send choices through `TablePanel.run`; destructive actions last                                               |
+| `discocan-menu-button`                                                  | Accessible popup actions/navigation; real anchors for routes, current-choice labels and disabled/danger states                |
+| `discocan-route-drawer`                                                 | Loading/missing/error/ready states, labelled Close, sticky footer, dirty/pending guards                                       |
+| `discocan-form-field`                                                   | Label/control/hint/error association, required state and Unicode counter                                                      |
+| `discocan-empty-state`                                                  | Empty/no-results/error/missing/disabled/no-telemetry/done; alert only for errors/missing records                              |
 | `discocan-column-series`, `discocan-stacked-bars`, `discocan-sparkline` | Accessible chart/table alternatives, null gaps and preserved zero values                                                      |
 
 Page headers show a title and count on the left, and at most one primary action followed by the
 page-action menu on the right. Define actions once with `actions`; mark the primary action with
-`primary: true` and handle choices through `action`. All actions also appear in the menu. Its last
-item, About this module, opens the same dialog as the information icon after the final breadcrumb.
-Supply a short localized `moduleInfo` body; explanations belong in that dialog. Use the optional
-`moduleInfoTitle` to name the current tab in the dialog while keeping the record's page title.
+`primary: true` and handle choices through `action`. All actions also appear in the menu, which is
+hidden when a page has no actions. Supply a short localized `moduleInfo` body; the information icon
+after the final breadcrumb opens it in a popover. Use the optional `moduleInfoTitle` to name the
+current tab in the popover while keeping the record's page title. A page without a header sets the
+root `ModuleInfo` itself, as the truck dashboard does.
 
 Table cells align vertically to the middle. Record links and buttons share the cell text's starting
 edge; identity containers center both single-line and two-line content. Column headings wrap within

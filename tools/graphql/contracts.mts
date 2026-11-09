@@ -56,6 +56,7 @@ export const operationPaths = [
   'apps/admin/src/app/features/fleet/vehicle-groups/operations.graphql',
   'apps/admin/src/app/features/fleet/alerts/operations.graphql',
   'apps/admin/src/app/features/fleet/overview/operations.graphql',
+  'apps/admin/src/app/features/fleet/live-dashboard/operations.graphql',
   'apps/admin/src/app/features/fleet/trips/operations.graphql',
   'apps/admin/src/app/features/fleet/drivers/operations.graphql',
   'apps/admin/src/app/features/fleet/maintenance/operations.graphql',

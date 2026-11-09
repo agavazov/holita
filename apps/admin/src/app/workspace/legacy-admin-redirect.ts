@@ -17,9 +17,10 @@ function destination(segments: UrlSegment[]): UrlSegment[] | null {
   }
   const fleet = [branch, segment('fleet')];
   const dashboard = [...fleet, segment('dashboard')];
+  const start = [...fleet, segment('live')];
   if (section?.path === 'control-center') {
     if (!resource) {
-      return [...dashboard, segment('overview')];
+      return start;
     }
     if (resource.path === 'sms' && !record) {
       return [...fleet, segment('devices')];
@@ -29,13 +30,13 @@ function destination(segments: UrlSegment[]): UrlSegment[] | null {
     }
   }
   if (section?.path === 'reference' && !resource) {
-    return [...dashboard, segment('overview')];
+    return start;
   }
   if (section?.path !== 'fleet') {
     return null;
   }
   if (!resource) {
-    return [...dashboard, segment('overview')];
+    return start;
   }
   if (resource.path === 'overview' || resource.path === 'alerts' || resource.path === 'trips') {
     const target = resource.path === 'alerts' ? 'problems' : resource.path;

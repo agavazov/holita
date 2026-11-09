@@ -64,6 +64,12 @@
         −
       </button>
     </div>
+    <discocan-street-view-popup
+      [position]="streetViewPosition()"
+      [language]="language()"
+      [label]="streetViewLabel()"
+      (closed)="streetViewPosition.set(null)"
+    />
   </div>
   @if (!positioned().length) {
     <p role="status">{{ text().noPositions }}</p>

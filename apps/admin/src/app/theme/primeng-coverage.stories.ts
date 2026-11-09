@@ -26,6 +26,7 @@ import { SelectButton } from 'primeng/selectbutton';
 import { Skeleton } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
+import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from 'primeng/accordion';
 import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
 import { Timeline } from 'primeng/timeline';
@@ -64,6 +65,10 @@ const vehicles = Array.from({ length: 200 }, (_, index) => `CB ${String(1001 + i
     Skeleton,
     TableModule,
     Tabs,
+    Accordion,
+    AccordionPanel,
+    AccordionHeader,
+    AccordionContent,
     TabList,
     Tab,
     TabPanels,

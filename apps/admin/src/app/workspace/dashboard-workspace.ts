@@ -50,7 +50,7 @@ import { PageLoading } from './page-loading';
   template: `
     @if (!enabled) {
       <section class="app-card">
-        <h1 id="page-title">{{ workspace.text().dashboard }}</h1>
+        <h1 id="page-title">{{ workspace.text().dashboardOld }}</h1>
         <p-message severity="warn">{{ workspace.text().fleetDisabled }}</p-message>
       </section>
     } @else {
@@ -68,7 +68,7 @@ import { PageLoading } from './page-loading';
           }
         } @else {
           <p-tabs [value]="tab" (valueChange)="selectTab($event)">
-            <p-tablist [pt]="{ content: { 'aria-label': workspace.text().dashboard } }">
+            <p-tablist [pt]="{ content: { 'aria-label': workspace.text().dashboardOld } }">
               <p-tab value="overview">{{ workspace.text().overview }}</p-tab>
               <p-tab value="problems">{{ workspace.text().problems }}</p-tab>
               <p-tab value="trips">{{ workspace.text().trips }}</p-tab>

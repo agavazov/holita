@@ -56,8 +56,14 @@ delete/deactivate actions submit one IDs-array operation; partial failures retai
 records for retry and appear in the shared operation toast. See the
 [Vehicles workflow](docs/discocan/development.md#fleet-operator-workflows).
 
-The sidebar contains Dashboard, Vehicles, Devices, Drivers, Maintenance and Settings.
-Dashboard groups Overview, Problems and Trips. Overview combines whole-Branch KPIs, a fleet
+The sidebar contains Dashboard, Dashboard (old), Vehicles, Devices, Drivers, Maintenance and
+Settings. Dashboard is one truck map: every truck with its online state, activity and problem
+marker, a searchable list, and for the selected truck accordion details plus its recorded trail
+for 1 h, 6 h, 24 h or today, coloured against the Branch speed limit. The selected truck's trail
+grows every 10 s and the fleet refreshes every 15 s. Street View in the map corner follows the
+selected truck's last position in its driving direction; clicking the route shows that point. It can
+be hidden, restored and opened full screen. On the other maps a vehicle's popup opens Street View.
+Dashboard (old) groups Overview, Problems and Trips. Overview combines whole-Branch KPIs, a fleet
 map and interactive charts; Vehicle Overview adds the recorded track. Problems distinguishes actionable alerts from
 recorded device evidence and command outcomes. Vehicle details offer Overview, Trips, Problems,
 Maintenance and Commands; Commands selects an installed Device. Devices open Overview,

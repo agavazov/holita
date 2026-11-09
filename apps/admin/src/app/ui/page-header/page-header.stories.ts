@@ -1,22 +1,12 @@
-import {
-  componentWrapperDecorator,
-  moduleMetadata,
-  type Meta,
-  type StoryObj,
-} from '@storybook/angular-vite';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { Tag } from 'primeng/tag';
 import { onFrame } from '../../../storybook/story-config';
-import { ModuleInfoDialog } from './module-info-dialog';
 import { PageHeader } from './page-header';
 
 const meta: Meta<PageHeader> = {
   title: 'Design System/Patterns/PageHeader',
   component: PageHeader,
-  decorators: [
-    moduleMetadata({ imports: [Tag, ModuleInfoDialog] }),
-    componentWrapperDecorator((story) => `${story}<discocan-module-info-dialog />`),
-    onFrame,
-  ],
+  decorators: [moduleMetadata({ imports: [Tag] }), onFrame],
   tags: ['!autodocs'],
 };
 

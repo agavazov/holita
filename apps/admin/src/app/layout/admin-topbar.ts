@@ -6,6 +6,7 @@ import {
   inject,
   input,
   output,
+  signal,
   viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
@@ -13,9 +14,10 @@ import { Bars } from '@primeicons/angular/bars';
 import { ChevronRight } from '@primeicons/angular/chevron-right';
 import { InfoCircle } from '@primeicons/angular/info-circle';
 import { messages, type Language } from '../i18n/messages';
-import { Appearance } from '../theme/appearance';
 import { interpolate, uiMessages } from '../ui/i18n/messages';
+import { Popover } from 'primeng/popover';
 import { ModuleInfo } from '../ui/page-header/module-info';
+import { ThemeMenu } from '../ui/theme-menu/theme-menu';
 import { MenuButton, type MenuOption } from '../ui/menu-button/menu-button';
 import type { PageContext, PageCrumb } from './navigation';
 import { ACCOUNT_MENU_CONTEXT } from './account-menu-context';
@@ -41,7 +43,16 @@ export interface ShellAccount {
  */
 @Component({
   selector: 'discocan-admin-topbar',
-  imports: [RouterLink, MenuButton, NotificationBell, Bars, ChevronRight, InfoCircle],
+  imports: [
+    RouterLink,
+    MenuButton,
+    NotificationBell,
+    Bars,
+    ChevronRight,
+    InfoCircle,
+    Popover,
+    ThemeMenu,
+  ],
   templateUrl: './admin-topbar.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -75,8 +86,8 @@ export class AdminTopbar {
   readonly menuToggle = output();
   readonly signOut = output();
 
-  protected readonly appearance = inject(Appearance);
   protected readonly moduleInfo = inject(ModuleInfo);
+  protected readonly infoOpen = signal(false);
   protected readonly aboutLabel = computed(() => uiMessages[this.language()].pageHeader.about);
   protected readonly breadcrumbs = computed(() => {
     const context = this.context();
@@ -164,10 +175,6 @@ export class AdminTopbar {
       label: this.text().profile,
       link: this.router.createUrlTree(['/', this.language(), 'profile']),
     },
-    {
-      id: 'theme',
-      label: this.appearance.dark() ? this.text().lightTheme : this.text().darkTheme,
-    },
     { id: 'sign-out', label: this.text().signOut, separated: true },
   ]);
 
@@ -189,9 +196,6 @@ export class AdminTopbar {
   }
 
   protected chooseAccount(id: string): void {
-    if (id === 'theme') {
-      this.appearance.toggle();
-    }
     if (id === 'sign-out') {
       this.signOut.emit();
     }

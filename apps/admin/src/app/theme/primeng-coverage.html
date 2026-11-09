@@ -128,6 +128,16 @@
           <p-tabpanel value="service">Service</p-tabpanel>
         </p-tabpanels>
       </p-tabs>
+      <p-accordion [value]="['status']" [multiple]="true">
+        <p-accordion-panel value="status">
+          <p-accordion-header>Status</p-accordion-header>
+          <p-accordion-content>Moving · 82 km/h</p-accordion-content>
+        </p-accordion-panel>
+        <p-accordion-panel value="vehicle">
+          <p-accordion-header>Vehicle</p-accordion-header>
+          <p-accordion-content>Odometer 491 807 km</p-accordion-content>
+        </p-accordion-panel>
+      </p-accordion>
     </div>
     <div class="row">
       <span class="label">p-chart</span>

@@ -1,0 +1,153 @@
+query AdminLiveFleet {
+  fleetMap(offset: 0, limit: 100) {
+    asOf
+    liveAsOf
+    total
+    items {
+      vehicle {
+        id
+        licensePlate
+      }
+      position {
+        latitude
+        longitude
+        headingDeg
+        speedKph
+        recordedAt
+      }
+      activity
+      live
+    }
+  }
+  fleetVehicles(offset: 0, limit: 100) {
+    total
+    items {
+      id
+      licensePlate
+      make
+      model
+      group {
+        id
+        name
+      }
+      currentDriver {
+        id
+        firstName
+        lastName
+      }
+      currentWarnings {
+        ...AdminWarningLamp
+      }
+      state {
+        address
+        speedKph
+        ignition
+        odometerKm
+      }
+    }
+  }
+  fleetProblems(offset: 0, limit: 100, filter: { requiringAttention: true }) {
+    total
+    items {
+      id
+      vehicleId
+      severity
+    }
+  }
+}
+
+query AdminLiveVehicle($id: ID!) {
+  fleetVehicle(id: $id) {
+    id
+    modelYear
+    vin
+    currentDriver {
+      id
+      firstName
+      lastName
+    }
+    currentWarnings {
+      ...AdminWarningLamp
+    }
+    state {
+      odometerKm
+      engineHours
+      fuelLevelPct
+      externalVoltage
+      backupBatteryVoltage
+      coolantTempC
+    }
+    devices {
+      id
+      imei
+      lastReportedAt
+      ermState {
+        connectedSince
+        lastFrameAt
+        alarmsLast24h
+        latestEvent {
+          engineOn
+          nameEn: name(language: EN)
+          nameBg: name(language: BG)
+        }
+        health {
+          overdue
+        }
+      }
+    }
+  }
+  fleetTrips(
+    offset: 0
+    limit: 5
+    filter: { vehicleIds: [$id] }
+    sort: { field: STARTED_AT, direction: DESC }
+  ) {
+    items {
+      id
+      startedAt
+      inProgress
+      startAddress
+      endAddress
+      distanceKm
+      durationSeconds
+      maxSpeedKph
+    }
+  }
+  fleetProblems(
+    offset: 0
+    limit: 20
+    filter: { vehicleIds: [$id], requiringAttention: true }
+    sort: { field: TIME, direction: DESC }
+  ) {
+    items {
+      id
+      sourceKind
+      code
+      severity
+      occurredAt
+      requiringAttention
+      diagnostics {
+        ...AdminFaultDiagnostic
+      }
+    }
+  }
+}
+
+query AdminLiveTrack($vehicleId: ID!, $from: DateTime!, $to: DateTime!) {
+  fleetVehicleSamples(vehicleId: $vehicleId, from: $from, to: $to) {
+    from
+    to
+    truncated
+    items {
+      id
+      deviceImei
+      recordedAt
+      latitude
+      longitude
+      speedKph
+      headingDeg
+      ignition
+      odometerKm
+    }
+  }
+}

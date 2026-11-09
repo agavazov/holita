@@ -1,0 +1,12 @@
+{
+  "title": "Street View",
+  "google": "Open in Google Maps",
+  "close": "Close Street View",
+  "loading": "Loading Street View…",
+  "unavailable": "No Street View is available near this location.",
+  "failure": "Street View is unavailable. Check the Google Maps configuration.",
+  "minimize": "Hide Street View",
+  "restore": "Show Street View",
+  "fullscreen": "Full screen",
+  "exitFullscreen": "Exit full screen"
+}

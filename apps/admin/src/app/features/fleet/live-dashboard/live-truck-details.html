@@ -1,0 +1,313 @@
+@let current = truck();
+@let live = latest();
+@let car = vehicle();
+@let unit = device();
+<header class="truck-details__header">
+  <div class="truck-details__identity">
+    <strong class="app-plate">{{ current.plate }}</strong>
+    <p-tag
+      [value]="current.online ? text().online : text().offline"
+      [severity]="current.online ? 'success' : 'secondary'"
+    />
+    <span class="truck-details__muted">{{ text().activity[current.activity] }}</span>
+  </div>
+  <button
+    pButton
+    type="button"
+    severity="secondary"
+    [text]="true"
+    [attr.aria-label]="text().close"
+    (click)="closed.emit()"
+  >
+    ×
+  </button>
+</header>
+
+<dl class="truck-details__live" [attr.aria-label]="heading()">
+  <div>
+    <dt>{{ text().speed }}</dt>
+    <dd>{{ format.speed(live.speedKph) }}</dd>
+  </div>
+  <div>
+    <dt>{{ text().odometer }}</dt>
+    <dd>{{ format.distance(live.odometerKm, true, 0) }}</dd>
+  </div>
+  <div>
+    <dt>{{ text().ignition }}</dt>
+    <dd>{{ live.ignition === null ? '—' : live.ignition ? text().on : text().off }}</dd>
+  </div>
+  <div>
+    <dt>{{ text().lastReport }}</dt>
+    <dd [title]="format.dateTime(live.at, true)">{{ relative(live.at) }}</dd>
+  </div>
+</dl>
+
+@if (detailError()) {
+  <p-message severity="error" size="small">{{ detailError() }}</p-message>
+}
+
+<p-accordion class="truck-details__sections" [multiple]="true" [value]="sections">
+  <p-accordion-panel value="status">
+    <p-accordion-header>{{ text().sections.status }}</p-accordion-header>
+    <p-accordion-content>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().connectedSince }}</dt>
+          <dd>{{ format.dateTime(unit?.ermState?.connectedSince) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().lastFrame }}</dt>
+          <dd>{{ relative(unit?.ermState?.lastFrameAt ?? unit?.lastReportedAt) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().latestEvent }}</dt>
+          <dd>{{ eventName() ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().engine }}</dt>
+          <dd>
+            @let engine = unit?.ermState?.latestEvent?.engineOn;
+            {{ engine === null || engine === undefined ? '—' : engine ? text().on : text().off }}
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().alarms }}</dt>
+          <dd>{{ number(unit?.ermState?.alarmsLast24h) }}</dd>
+        </div>
+      </dl>
+      @if (unit?.ermState?.health?.overdue) {
+        <p-message severity="warn" size="small">{{ text().overdue }}</p-message>
+      }
+    </p-accordion-content>
+  </p-accordion-panel>
+
+  <p-accordion-panel value="position">
+    <p-accordion-header>{{ text().sections.position }}</p-accordion-header>
+    <p-accordion-content>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().address }}</dt>
+          <dd>{{ current.address ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().coordinates }}</dt>
+          <dd>{{ coordinates(current) }}</dd>
+        </div>
+      </dl>
+      @if (current.position) {
+        <div class="truck-details__actions">
+          @if (googleUrl(current); as href) {
+            <a
+              pButton
+              size="small"
+              severity="secondary"
+              [outlined]="true"
+              [href]="href"
+              target="_blank"
+              rel="noopener noreferrer"
+              >{{ text().googleMaps }}</a
+            >
+          }
+        </div>
+      }
+    </p-accordion-content>
+  </p-accordion-panel>
+
+  <p-accordion-panel value="trail">
+    <p-accordion-header>{{ text().sections.trail }}</p-accordion-header>
+    <p-accordion-content>
+      <p-selectbutton
+        size="small"
+        [options]="windowOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [allowEmpty]="false"
+        [ariaLabel]="text().window"
+        [ngModel]="window()"
+        (ngModelChange)="window.set($event)"
+      />
+      @if (trailError()) {
+        <p-message severity="error" size="small">{{ trailError() }}</p-message>
+      } @else if (!trail().length) {
+        <p class="truck-details__muted">{{ text().trailEmpty }}</p>
+      } @else {
+        @let stats = trailStats();
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().trailDistance }}</dt>
+            <dd>{{ format.distance(stats.distanceKm) }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().trailMaxSpeed }}</dt>
+            <dd>{{ format.speed(stats.maxSpeedKph) }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().trailLimit }}</dt>
+            <dd>{{ format.speed(limitKph()) }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().trailOverLimit }}</dt>
+            <dd>{{ number(stats.overLimit) }} / {{ number(stats.points) }}</dd>
+          </div>
+        </dl>
+        @if (trailTruncated()) {
+          <p class="truck-details__muted">{{ text().trailTruncated }}</p>
+        }
+      }
+    </p-accordion-content>
+  </p-accordion-panel>
+
+  <p-accordion-panel value="problems">
+    <p-accordion-header>
+      {{ text().sections.problems }}
+      @if (current.problems) {
+        <p-tag
+          class="truck-details__count"
+          [value]="number(current.problems)"
+          [severity]="current.severity === 'CRITICAL' ? 'danger' : 'warn'"
+        />
+      }
+    </p-accordion-header>
+    <p-accordion-content>
+      @if (!problems().length && !lamps().length) {
+        <p class="truck-details__muted">{{ text().noProblems }}</p>
+      }
+      <ul class="truck-details__list">
+        @for (problem of problems(); track problem.id) {
+          <li>
+            @let level = severity(problem);
+            <p-tag [value]="level.label" [severity]="level.severity" />
+            <span>{{ title(problem) }}</span>
+            <time class="truck-details__muted">{{ relative(problem.occurredAt) }}</time>
+          </li>
+        }
+        @for (lamp of lamps(); track lamp.deviceId + ':' + lamp.parameterId) {
+          @let lit = lampState(lamp.state);
+          <li>
+            <p-tag [value]="lit.label" [severity]="lit.severity" />
+            <span>{{ lampLabel(lamp.parameterId) }}</span>
+            <time class="truck-details__muted">{{
+              relative(lamp.stateSince ?? lamp.recordedAt)
+            }}</time>
+          </li>
+        }
+      </ul>
+      <a [routerLink]="[...fleet(), 'vehicles', current.id, 'problems']">{{
+        text().allProblems
+      }}</a>
+    </p-accordion-content>
+  </p-accordion-panel>
+
+  <p-accordion-panel value="trips">
+    <p-accordion-header>{{ text().sections.trips }}</p-accordion-header>
+    <p-accordion-content>
+      <ul class="truck-details__list truck-details__list--trips">
+        @for (trip of detail()?.fleetTrips?.items ?? []; track trip.id) {
+          <li>
+            <span>
+              <strong>{{ format.dateTime(trip.startedAt) }}</strong>
+              @if (trip.inProgress) {
+                <p-tag [value]="text().tripInProgress" severity="success" />
+              }
+            </span>
+            <span class="truck-details__muted">
+              {{ trip.startAddress ?? '—' }} → {{ trip.endAddress ?? '—' }}
+            </span>
+            <span class="truck-details__muted">
+              {{ format.distance(trip.distanceKm) }} · {{ duration(trip.durationSeconds) }} ·
+              {{ text().tripMaxSpeed }} {{ format.speed(trip.maxSpeedKph) }}
+            </span>
+          </li>
+        } @empty {
+          <li class="truck-details__muted">{{ text().noTrips }}</li>
+        }
+      </ul>
+    </p-accordion-content>
+  </p-accordion-panel>
+
+  <p-accordion-panel value="vehicle">
+    <p-accordion-header>{{ text().sections.vehicle }}</p-accordion-header>
+    <p-accordion-content>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().make }}</dt>
+          <dd>{{ current.vehicle ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().year }}</dt>
+          <dd>{{ car?.modelYear ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().vin }}</dt>
+          <dd>{{ car?.vin ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().group }}</dt>
+          <dd>{{ current.group ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().odometer }}</dt>
+          <dd>{{ format.distance(car?.state?.odometerKm ?? null, true, 0) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().engineHours }}</dt>
+          <dd>{{ number(car?.state?.engineHours, text().hours) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().fuel }}</dt>
+          <dd>{{ number(car?.state?.fuelLevelPct, '%') }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().voltage }}</dt>
+          <dd>{{ number(car?.state?.externalVoltage, 'V', 1) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().backupBattery }}</dt>
+          <dd>{{ number(car?.state?.backupBatteryVoltage, 'V', 1) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().coolant }}</dt>
+          <dd>{{ number(car?.state?.coolantTempC, '°C') }}</dd>
+        </div>
+      </dl>
+      <a [routerLink]="[...fleet(), 'vehicles', current.id, 'overview']">{{
+        text().openVehicle
+      }}</a>
+    </p-accordion-content>
+  </p-accordion-panel>
+
+  <p-accordion-panel value="driver">
+    <p-accordion-header>{{ text().sections.driver }}</p-accordion-header>
+    <p-accordion-content>
+      @if (car?.currentDriver; as driver) {
+        <p>
+          <strong>{{ driver.firstName }} {{ driver.lastName }}</strong>
+        </p>
+        <a [routerLink]="[...fleet(), 'drivers', driver.id, 'scorecard']">{{ text().scorecard }}</a>
+      } @else {
+        <p class="truck-details__muted">{{ text().noDriver }}</p>
+      }
+    </p-accordion-content>
+  </p-accordion-panel>
+
+  <p-accordion-panel value="device">
+    <p-accordion-header>{{ text().sections.device }}</p-accordion-header>
+    <p-accordion-content>
+      @if (unit) {
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().imei }}</dt>
+            <dd>{{ unit.imei }}</dd>
+          </div>
+          <div>
+            <dt>{{ text().lastFrame }}</dt>
+            <dd>{{ format.dateTime(unit.ermState?.lastFrameAt ?? unit.lastReportedAt, true) }}</dd>
+          </div>
+        </dl>
+        <a [routerLink]="[...fleet(), 'devices', unit.id, 'overview']">{{ text().openDevice }}</a>
+      } @else {
+        <p class="truck-details__muted">{{ detail() ? '—' : text().loading }}</p>
+      }
+    </p-accordion-content>
+  </p-accordion-panel>
+</p-accordion>

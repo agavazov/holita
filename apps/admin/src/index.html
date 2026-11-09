@@ -6,13 +6,16 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script>
-      let dark = false;
+      let mode = null;
       try {
-        // Matches Appearance: the admin stays light unless the user chose dark.
-        dark = localStorage.getItem('discocan.admin.theme') === 'dark';
+        // Matches Appearance: light, dark or automatic (the system setting, the default).
+        mode = localStorage.getItem('discocan.admin.theme');
       } catch {
-        // Light stays the default when browser storage is unavailable.
+        // Automatic stays the default when browser storage is unavailable.
       }
+      const dark =
+        mode === 'dark' ||
+        (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
       document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
       document.documentElement.classList.toggle('app-dark', dark);
     </script>

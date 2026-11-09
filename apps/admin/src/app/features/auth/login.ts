@@ -18,12 +18,11 @@ import { ButtonDirective } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
-import { Moon } from '@primeicons/angular/moon';
-import { Sun } from '@primeicons/angular/sun';
 import type { AdminBranchesQuery, AdminTenantsQuery } from '../../../generated/graphql/operations';
 import { AuthApi } from '../../core/auth/auth-api';
 import { DemoSession, isUnauthenticated, type AccountSession } from '../../core/auth/demo-session';
 import type { Language } from '../../i18n/messages';
+import { ThemeMenu } from '../../ui/theme-menu/theme-menu';
 import { Appearance } from '../../theme/appearance';
 import { FormField } from '../../ui/form-field/form-field';
 import { BranchesApi } from '../branches/branches-api';
@@ -39,8 +38,7 @@ import en from './login.en.json';
     ButtonDirective,
     InputText,
     Message,
-    Moon,
-    Sun,
+    ThemeMenu,
     FormField,
   ],
   templateUrl: './login.html',

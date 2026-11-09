@@ -39,9 +39,7 @@ export class SignInPage {
       if (this.session.current() && this.session.branchId()) {
         const branchId = this.session.branchId();
         void this.router.navigate(
-          branchId
-            ? ['/', this.language(), branchId, 'fleet', 'dashboard', 'overview']
-            : ['/', this.language()],
+          branchId ? ['/', this.language(), branchId, 'fleet', 'live'] : ['/', this.language()],
           { replaceUrl: true },
         );
       }

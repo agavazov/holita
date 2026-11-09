@@ -1,0 +1,89 @@
+@use 'breakpoints' as bp;
+
+:host {
+  position: absolute;
+  inset: auto auto var(--p-app-space-2) var(--p-app-space-2);
+  z-index: 1;
+  inline-size: min(24rem, calc(100% - 2 * var(--p-app-space-2)));
+}
+
+.street-view {
+  display: flex;
+  flex-direction: column;
+  block-size: 17rem;
+  overflow: hidden;
+  background: var(--p-app-panel-background);
+  border: 1px solid var(--p-app-panel-border-color);
+  border-radius: var(--p-app-radius-panel);
+  box-shadow: var(--p-app-shadow-floating);
+  color: var(--p-text-color);
+}
+
+:host(.street-view--minimized) .street-view {
+  block-size: auto;
+}
+
+.street-view:fullscreen {
+  block-size: 100%;
+  border: 0;
+  border-radius: 0;
+}
+
+.street-view__header {
+  display: flex;
+  align-items: center;
+  gap: var(--p-app-space-1);
+  padding: var(--p-app-space-1) var(--p-app-space-1) var(--p-app-space-1) var(--p-app-space-2);
+  font-size: var(--p-app-text-sm);
+}
+
+.street-view__heading {
+  display: grid;
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.street-view__title,
+.street-view__detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.street-view__detail {
+  font-size: var(--p-app-text-xs);
+  color: var(--p-text-muted-color);
+}
+
+.street-view__body {
+  position: relative;
+  flex: 1;
+  min-block-size: 0;
+}
+
+.street-view__canvas {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.street-view__canvas--hidden {
+  visibility: hidden;
+}
+
+.street-view__body p {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: var(--p-app-space-2);
+  margin: 0;
+  padding: var(--p-app-space-3);
+  text-align: center;
+}
+
+@include bp.below(md) {
+  :host {
+    inset: auto 0 0;
+    inline-size: 100%;
+  }
+}

@@ -29,7 +29,8 @@ Provision the first user for an existing Tenant using the
 or password recovery. Sign-in takes email/password first, then offers that Tenant's Branches.
 A single Branch opens automatically; an account with no Branches can open Profile and retry
 discovery. Profile edits name/email and changes the password; the admin signs out after a password
-change and requires the new password. The account menu also offers theme and Sign out.
+change and requires the new password. The account menu also offers Sign out; the topbar's theme
+menu chooses light, dark or automatic.
 Real sessions are saved in localStorage as soon as sign-in succeeds, before fleet selection.
 Reloads and new tabs in the same browser stay signed in until expiry or sign-out. Sign-out,
 expiry and a detected server revocation clear the real session across tabs; each open tab keeps

@@ -1,0 +1,12 @@
+{
+  "title": "Street View",
+  "google": "Отвори в Google Maps",
+  "close": "Затвори Street View",
+  "loading": "Зареждане на Street View…",
+  "unavailable": "Наблизо до тази точка няма Street View.",
+  "failure": "Street View не е достъпен. Проверете настройките на Google Maps.",
+  "minimize": "Скрий Street View",
+  "restore": "Покажи Street View",
+  "fullscreen": "На цял екран",
+  "exitFullscreen": "Изход от цял екран"
+}

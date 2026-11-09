@@ -128,6 +128,15 @@ discocan-location-map {
   .location-map__popup p {
     margin: 0;
   }
+  .location-map__street-view {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--p-primary-color);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
 }
 
 @include bp.below(md) {

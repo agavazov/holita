@@ -387,7 +387,7 @@ captured clients, generated operations and shared load/error/empty states:
 
 The topbar's notification bell is labelled Demo and explains that delivery has no connected
 provider. It does not derive a notification feed or unread badge from Fleet business counts.
-The account menu uses the actual demo tenant identity and offers theme switching and Sign out.
+The account menu uses the actual demo tenant identity and offers Profile and Sign out.
 
 ## Boundaries to preserve
 

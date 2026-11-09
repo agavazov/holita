@@ -1,0 +1,71 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--p-app-space-2);
+  min-block-size: 0;
+}
+
+// Fills the frame below any message; the lists and the details scroll inside.
+.live-dashboard {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  min-block-size: 30rem;
+  overflow: hidden;
+  border: 1px solid var(--p-app-frame-border-color);
+  border-radius: var(--p-app-frame-radius);
+}
+
+.live-dashboard--details {
+  grid-template-columns: 15rem minmax(0, 1fr) 22rem;
+}
+
+// The map and its Street View corner share one positioned cell.
+.live-dashboard__stage {
+  position: relative;
+  display: grid;
+  min-block-size: 0;
+}
+
+.live-dashboard__map {
+  grid-area: 1 / 1;
+}
+
+@include bp.below(xl) {
+  .live-dashboard,
+  .live-dashboard--details {
+    grid-template-columns: 14rem minmax(0, 1fr);
+  }
+
+  .live-dashboard__details {
+    grid-column: 1 / -1;
+    max-block-size: 26rem;
+  }
+
+  .live-dashboard--details {
+    grid-template-rows: minmax(0, 1fr) auto;
+    block-size: auto;
+    min-block-size: 34rem;
+  }
+}
+
+@include bp.below(md) {
+  .live-dashboard,
+  .live-dashboard--details {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 60dvh auto auto;
+    block-size: auto;
+    border-radius: 0;
+  }
+
+  .live-dashboard__stage {
+    grid-row: 1;
+  }
+
+  .live-dashboard__list {
+    max-block-size: 22rem;
+  }
+}

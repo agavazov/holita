@@ -8,8 +8,9 @@ keeps device sessions while its api process serves Fleet Device inspection and c
 Configured ERM ingestion projects device reports into Fleet activity; availability and reporting
 freshness remain distinct from the age of a recorded GPS position.
 
-The admin opens Dashboard after email/password sign-in and fleet selection. Its Overview,
-Problems and Trips tabs combine Branch totals, a paged fleet map, charts and source-aware
+The admin opens Dashboard, the single-screen truck map, after email/password sign-in and fleet
+selection. Dashboard (old), kept for now, has Overview,
+Problems and Trips tabs that combine Branch totals, a paged fleet map, charts and source-aware
 problems. Vehicles and Devices have their own detail pages; readable command history and
 current-device SMS preparation sit under Devices, and a Vehicle's Commands tab selects an
 installed Device. Profile and Tenant-wide Users use Core accounts. The bell opens the persisted

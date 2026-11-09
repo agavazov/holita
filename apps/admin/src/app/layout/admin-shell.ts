@@ -26,7 +26,6 @@ import { Message } from 'primeng/message';
 import { messages, type Language } from '../i18n/messages';
 import { Appearance } from '../theme/appearance';
 import { below } from '../ui/media';
-import { ModuleInfoDialog } from '../ui/page-header/module-info-dialog';
 import { AdminSidebar } from './admin-sidebar';
 import {
   AdminTopbar,
@@ -66,7 +65,7 @@ function pageKey(root: ActivatedRouteSnapshot): string {
  */
 @Component({
   selector: 'discocan-admin-shell',
-  imports: [Drawer, Message, AdminSidebar, AdminTopbar, ModuleInfoDialog],
+  imports: [Drawer, Message, AdminSidebar, AdminTopbar],
   templateUrl: './admin-shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -103,9 +102,7 @@ export class AdminShell {
   protected readonly text = computed(() => messages[this.language()]);
   protected readonly homeLink = computed(() => {
     const branch = this.branchId();
-    return branch
-      ? ['/', this.language(), branch, 'fleet', 'dashboard', 'overview']
-      : ['/', this.language()];
+    return branch ? ['/', this.language(), branch, 'fleet', 'live'] : ['/', this.language()];
   });
   protected readonly menuExpanded = computed(() =>
     this.mobile() ? this.mobileOpen() : !this.rail(),

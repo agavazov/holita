@@ -86,7 +86,7 @@ export class BranchContext {
         const branch =
           branches.find((branch) => branch.id === this.session.branchId()) ?? branches[0];
         if (branch) {
-          void this.router.navigate(['/', language, branch.id, 'fleet', 'dashboard', 'overview'], {
+          void this.router.navigate(['/', language, branch.id, 'fleet', 'live'], {
             replaceUrl: true,
             queryParamsHandling: 'preserve',
             preserveFragment: true,
@@ -104,7 +104,7 @@ export class BranchContext {
     language: Language,
   ): Promise<void> {
     const destination = this.router.createUrlTree(
-      ['/', language, selection.branchId, 'fleet', 'dashboard', 'overview'],
+      ['/', language, selection.branchId, 'fleet', 'live'],
       { queryParamsHandling: 'preserve', preserveFragment: true },
     );
     if (
@@ -146,7 +146,7 @@ export class BranchContext {
     const section = this.route.firstChild?.snapshot.url;
     const resource = section?.[2]?.path;
     const tab = section?.[3]?.path;
-    let destination = ['dashboard', 'overview'];
+    let destination = ['live'];
     if (this.fleetEnabled && section?.[1]?.path === 'fleet') {
       if (resource === 'dashboard' && tab && ['overview', 'problems', 'trips'].includes(tab)) {
         destination = ['dashboard', tab];

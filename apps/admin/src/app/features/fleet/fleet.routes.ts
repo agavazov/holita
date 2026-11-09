@@ -191,6 +191,14 @@ export const fleetRoutes: Routes = [
     ],
   },
   {
+    path: ':branchId/fleet/live',
+    data: { resource: 'live', editor: false },
+    loadComponent: () =>
+      import('./live-dashboard/live-dashboard-workspace').then(
+        (module) => module.LiveDashboardWorkspace,
+      ),
+  },
+  {
     path: ':branchId/fleet/dashboard/trips',
     data: { resource: 'trips', dashboardTab: 'trips', editor: false },
     loadComponent: () =>

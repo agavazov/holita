@@ -1,0 +1,97 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-app-space-2);
+  min-block-size: 0;
+  padding: var(--p-app-space-3);
+  overflow-y: auto;
+  background: var(--p-app-panel-background);
+  border-inline-start: 1px solid var(--p-app-panel-border-color);
+}
+
+.truck-details__header,
+.truck-details__identity,
+.truck-details__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-app-space-2);
+}
+
+.truck-details__header {
+  justify-content: space-between;
+  flex-wrap: nowrap;
+}
+
+.truck-details__muted {
+  margin: 0;
+  font-size: var(--p-app-text-sm);
+  color: var(--p-text-muted-color);
+}
+
+.truck-details__live {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--p-app-space-2);
+  margin: 0;
+}
+
+.truck-details__live div {
+  padding: var(--p-app-space-2);
+  background: var(--p-app-canvas-background);
+  border-radius: var(--p-app-radius-control);
+}
+
+.truck-details__live dt {
+  font-size: var(--p-app-text-xs);
+  color: var(--p-text-muted-color);
+}
+
+.truck-details__live dd {
+  margin: 0;
+  font-size: var(--p-app-text-lg);
+  font-weight: 600;
+  font-variant-numeric: var(--p-app-font-numeric);
+}
+
+.app-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--p-app-space-2) var(--p-app-space-3);
+  margin: 0 0 var(--p-app-space-2);
+}
+
+.app-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.truck-details__count {
+  margin-inline-start: var(--p-app-space-2);
+}
+
+.truck-details__list {
+  display: grid;
+  gap: var(--p-app-space-2);
+  margin: 0 0 var(--p-app-space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.truck-details__list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-app-space-1) var(--p-app-space-2);
+  font-size: var(--p-app-text-sm);
+}
+
+.truck-details__list--trips li {
+  display: grid;
+  padding-block-end: var(--p-app-space-2);
+  border-block-end: 1px solid var(--p-app-panel-border-color);
+}
+
+p-selectbutton {
+  margin-block-end: var(--p-app-space-2);
+}

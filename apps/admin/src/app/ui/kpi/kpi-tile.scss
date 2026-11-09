@@ -4,7 +4,7 @@
   flex-direction: column;
   gap: var(--p-app-space-1);
   min-inline-size: 0;
-  padding: var(--p-app-space-3) var(--p-app-panel-padding) var(--p-app-panel-padding);
+  padding: var(--p-app-space-2) var(--p-app-panel-padding);
   // Dividers between tiles: the strip clips the shadows on its outer edges.
   box-shadow:
     -1px 0 0 var(--p-app-panel-border-color),
@@ -15,11 +15,16 @@
 :host([data-category])::before {
   content: '';
   position: absolute;
-  inset-block: var(--p-app-space-3);
+  inset-block: var(--p-app-space-2);
   inset-inline-start: 0;
   inline-size: 3px;
   border-radius: var(--p-app-radius-tag);
   background: var(--app-tone-color);
+}
+
+.kpi-tile__icon {
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
 }
 
 .kpi-tile__icon:empty {
@@ -35,7 +40,7 @@
   align-items: center;
   justify-content: flex-start;
   gap: var(--p-app-space-2);
-  min-block-size: 2.5rem;
+  min-block-size: 1.75rem;
 }
 
 .kpi-tile__label {
@@ -106,7 +111,7 @@
 
 .kpi-tile__meta {
   display: flex;
-  min-block-size: 1.4rem;
+  min-block-size: 1.25rem;
   overflow: hidden;
   white-space: nowrap;
   align-items: center;
@@ -123,7 +128,7 @@
 }
 
 .kpi-tile__footnote {
-  min-block-size: 1.2rem;
+  min-block-size: 1rem;
   font-size: var(--p-app-text-xs);
 }
 

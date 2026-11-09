@@ -26,6 +26,7 @@ import { formatNumber, type FleetDateFormat } from '../format/format';
 import { FLEET_DISPLAY, injectFleetFormat } from '../format/fleet-format';
 import { interpolate } from '../i18n/messages';
 import { locationMap, mapCoordinates } from '../map-preview/location-map';
+import { StreetViewPopup } from '../street-view/street-view-popup';
 import {
   recordedTrackSegments,
   type LocationMapRecord,
@@ -45,7 +46,7 @@ interface MapMarker {
 
 @Component({
   selector: 'discocan-location-map',
-  imports: [ButtonDirective],
+  imports: [ButtonDirective, StreetViewPopup],
   templateUrl: './location-map.html',
   styleUrl: './location-map.scss',
   // Google Maps creates its own DOM; custom marker/popup rules stay beneath this selector.
@@ -95,6 +96,11 @@ export class LocationMap {
   protected readonly mapFailed = signal(false);
   protected readonly failed = computed(() => this.mapFailed() || googleMapsAuthenticationFailed());
   protected readonly ready = signal(false);
+  protected readonly streetViewPosition = signal<{
+    readonly latitude: number;
+    readonly longitude: number;
+  } | null>(null);
+  protected readonly streetViewLabel = signal<string | null>(null);
   private readonly canvas = viewChild.required<ElementRef<HTMLDivElement>>('mapCanvas');
   private readonly config = inject(AdminConfig);
   protected readonly missingKey = !this.config.googleMapsApiKey;
@@ -134,6 +140,9 @@ export class LocationMap {
     this.destroyRef.onDestroy(() => {
       clearTimeout(this.tileDeadline);
       this.infoWindow?.close();
+      if (this.infoWindow) {
+        google.maps.event.clearInstanceListeners(this.infoWindow);
+      }
       for (const { marker } of this.markers.values()) {
         marker.map = null;
       }
@@ -406,6 +415,18 @@ export class LocationMap {
       time.title = this.format.utc(record.positionAt);
     }
     popup.append(time);
+    const point = mapCoordinates(record.position?.latitude, record.position?.longitude);
+    if (point) {
+      const streetView = this.document.createElement('button');
+      streetView.type = 'button';
+      streetView.className = 'location-map__street-view';
+      streetView.textContent = this.text().streetView;
+      streetView.addEventListener('click', () => {
+        this.streetViewLabel.set(record.plate ?? record.label);
+        this.streetViewPosition.set(point);
+      });
+      popup.append(streetView);
+    }
     const href = record.href ?? this.googleUrl(record);
     if (href) {
       const open = this.document.createElement('a');

@@ -1,28 +1,49 @@
 import { DOCUMENT } from '@angular/common';
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 
 const storageKey = 'discocan.admin.theme';
+const darkQuery = '(prefers-color-scheme: dark)';
+
+/** Light, dark, or automatic: the operating system's setting, which is the default. */
+export type ThemeMode = 'light' | 'dark' | 'auto';
+export const themeModes: readonly ThemeMode[] = ['light', 'dark', 'auto'];
 
 @Injectable({ providedIn: 'root' })
 export class Appearance {
   private readonly document = inject(DOCUMENT);
-  readonly dark = signal(false);
+  readonly mode = signal<ThemeMode>('auto');
+  private readonly systemDark = signal(false);
+  readonly dark = computed(
+    () => this.mode() === 'dark' || (this.mode() === 'auto' && this.systemDark()),
+  );
   readonly persistenceFailed = signal(false);
 
   constructor() {
     try {
-      this.dark.set(localStorage.getItem(storageKey) === 'dark');
+      const stored = localStorage.getItem(storageKey);
+      const mode = themeModes.find((value) => value === stored);
+      if (mode) {
+        this.mode.set(mode);
+      }
     } catch {
       this.persistenceFailed.set(true);
+    }
+    const media = this.document.defaultView?.matchMedia(darkQuery);
+    if (media) {
+      this.systemDark.set(media.matches);
+      media.addEventListener('change', (event) => {
+        this.systemDark.set(event.matches);
+        this.apply();
+      });
     }
     this.apply();
   }
 
-  toggle(): void {
-    this.dark.update((dark) => !dark);
+  setMode(mode: ThemeMode): void {
+    this.mode.set(mode);
     this.apply();
     try {
-      localStorage.setItem(storageKey, this.dark() ? 'dark' : 'light');
+      localStorage.setItem(storageKey, mode);
       this.persistenceFailed.set(false);
     } catch {
       this.persistenceFailed.set(true);
@@ -30,7 +51,8 @@ export class Appearance {
   }
 
   private apply(): void {
-    this.document.documentElement.classList.toggle('app-dark', this.dark());
-    this.document.documentElement.style.colorScheme = this.dark() ? 'dark' : 'light';
+    const dark = this.dark();
+    this.document.documentElement.classList.toggle('app-dark', dark);
+    this.document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
   }
 }

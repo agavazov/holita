@@ -1,5 +1,6 @@
 import { definePreset, type Preset } from '@primeuix/themes';
 import AuraBase from '@primeuix/themes/aura/base';
+import Accordion from '@primeuix/themes/aura/accordion';
 import AutoComplete from '@primeuix/themes/aura/autocomplete';
 import Avatar from '@primeuix/themes/aura/avatar';
 import Badge from '@primeuix/themes/aura/badge';
@@ -52,6 +53,7 @@ import type { ThemeChoice } from './theme-choice';
  * carry (axe `aria-allowed-attr`).
  */
 export const registeredComponents = {
+  accordion: Accordion,
   autocomplete: AutoComplete,
   avatar: Avatar,
   badge: Badge,
@@ -148,7 +150,7 @@ function appTokens(brand: Brand, density: Density) {
       md: '1rem',
       lg: '1.125rem',
       title: density.app.titleSize,
-      kpi: '1.625rem',
+      kpi: '1.5rem',
     },
     space: {
       1: '0.25rem',

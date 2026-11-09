@@ -1,0 +1,150 @@
+discocan-live-truck-map {
+  position: relative;
+  display: block;
+  min-block-size: 0;
+  overflow: hidden;
+  background: var(--p-app-frame-background);
+
+  .live-map__canvas {
+    position: absolute;
+    inset: 0;
+  }
+
+  .live-map__status {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    margin: 0;
+    padding: var(--p-app-space-4);
+    text-align: center;
+  }
+
+  .live-map__tools {
+    position: absolute;
+    inset: var(--p-app-space-2) var(--p-app-space-2) auto auto;
+    display: flex;
+    gap: var(--p-app-space-1);
+  }
+
+  .live-map__tools .p-button {
+    box-shadow: var(--p-app-shadow-floating);
+  }
+
+  .live-map__legend {
+    position: absolute;
+    inset: auto auto var(--p-app-space-2) 50%;
+    translate: -50% 0;
+    display: flex;
+    gap: var(--p-app-space-3);
+    margin: 0;
+    padding: var(--p-app-space-1) var(--p-app-space-3);
+    list-style: none;
+    font-size: var(--p-app-text-xs);
+    white-space: nowrap;
+    background: var(--p-app-panel-background);
+    border-radius: var(--p-app-radius-tag);
+    box-shadow: var(--p-app-shadow-floating);
+  }
+
+  .live-map__band::before {
+    content: '';
+    display: inline-block;
+    inline-size: 1rem;
+    block-size: 0.25rem;
+    margin-inline-end: var(--p-app-space-1);
+    vertical-align: middle;
+    border-radius: 1rem;
+    background: var(--band);
+  }
+
+  .live-map__band--normal {
+    --band: var(--p-app-tone-info-solid);
+  }
+
+  .live-map__band--over {
+    --band: var(--p-app-tone-warn-solid);
+  }
+
+  .live-map__band--far {
+    --band: var(--p-app-tone-danger-solid);
+  }
+
+  .live-map__hint {
+    color: var(--p-text-muted-color);
+  }
+
+  .route-pin {
+    display: block;
+    inline-size: 1rem;
+    block-size: 1rem;
+    border: 3px solid var(--p-primary-color);
+    border-radius: 50%;
+    background: var(--p-app-panel-background);
+    box-shadow: var(--p-app-shadow-floating);
+    translate: 0 50%;
+  }
+
+  .truck-pin {
+    --pin: var(--p-app-tone-info-solid);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--p-app-space-1);
+    padding: 0.125rem var(--p-app-space-2) 0.125rem 0.125rem;
+    font: 600 var(--p-app-text-xs) / 1 var(--p-app-font-family);
+    font-variant-numeric: var(--p-app-font-numeric);
+    color: var(--p-text-color);
+    background: var(--p-app-panel-background);
+    border: 2px solid var(--pin);
+    border-radius: 2rem;
+    box-shadow: var(--p-app-shadow-floating);
+    transition: scale 150ms ease;
+  }
+
+  .truck-pin--moving {
+    --pin: var(--p-app-tone-success-solid);
+  }
+
+  .truck-pin--offline {
+    --pin: var(--p-app-tone-neutral-solid);
+    color: var(--p-text-muted-color);
+  }
+
+  .truck-pin--selected {
+    scale: 1.2;
+    outline: 3px solid color-mix(in srgb, var(--pin) 35%, transparent);
+  }
+
+  .truck-pin__badge {
+    display: grid;
+    place-content: center;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    color: var(--p-app-panel-background);
+    background: var(--pin);
+    border-radius: 50%;
+  }
+
+  .truck-pin__badge svg {
+    inline-size: 1rem;
+    fill: currentColor;
+  }
+
+  .truck-pin__alert {
+    position: absolute;
+    inset: -0.5rem -0.5rem auto auto;
+    display: grid;
+    place-content: center;
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+    font-size: 0.6875rem;
+    color: var(--p-app-panel-background);
+    border-radius: 50%;
+    background: var(--p-app-tone-warn-solid);
+  }
+
+  .truck-pin__alert--danger {
+    background: var(--p-app-tone-danger-solid);
+  }
+}

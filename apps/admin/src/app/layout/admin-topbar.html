@@ -49,10 +49,10 @@
                 type="button"
                 class="app-icon-button app-breadcrumb__info"
                 [attr.aria-label]="aboutLabel()"
-                [attr.aria-expanded]="moduleInfo.visible()"
-                aria-controls="module-info-dialog"
+                [attr.aria-expanded]="infoOpen()"
+                aria-controls="module-info"
                 aria-haspopup="dialog"
-                (click)="moduleInfo.open()"
+                (click)="infoPopover.toggle($event)"
               >
                 <svg data-p-icon="info-circle" aria-hidden="true"></svg>
               </button>
@@ -63,6 +63,19 @@
     </nav>
   }
 </div>
+<p-popover
+  #infoPopover
+  [style]="{ maxWidth: 'min(26rem, calc(100vw - 2rem))' }"
+  (onShow)="infoOpen.set(true)"
+  (onHide)="infoOpen.set(false)"
+>
+  @if (moduleInfo.info(); as info) {
+    <div id="module-info" class="app-module-info" role="region" [attr.aria-label]="info.title">
+      <strong>{{ info.title }}</strong>
+      <p>{{ info.body }}</p>
+    </div>
+  }
+</p-popover>
 <discocan-menu-button
   class="app-topbar__branch"
   variant="text"
@@ -75,6 +88,7 @@
   <span id="active-branch" class="app-topbar__branch-name">{{ branchLabel() }}</span>
 </discocan-menu-button>
 <div class="app-topbar__actions">
+  <discocan-theme-menu />
   @if (languageOptions().length > 1) {
     <discocan-menu-button
       variant="text"

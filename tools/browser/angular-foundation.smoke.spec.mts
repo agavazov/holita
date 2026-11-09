@@ -43,10 +43,11 @@ test('compiled Angular discovers branches and reads Vehicles through the real ga
     }
   });
   await page.goto(`${app.url}/en`);
-  await expect(page).toHaveURL(`${app.url}/en/${branchA.id}/fleet/dashboard/overview`);
-  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(`${app.url}/en/${branchA.id}/fleet/live`);
+  await expect(page.getByRole('heading', { level: 1, name: /^Dashboard/ })).toBeVisible();
   await expect(page.locator('aside nav').getByRole('link')).toHaveText([
     'Dashboard',
+    'Dashboard (old)',
     'Vehicles',
     'Devices',
     'Drivers',

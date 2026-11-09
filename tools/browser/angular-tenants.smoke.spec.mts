@@ -59,9 +59,7 @@ test('sign-in gates deep links and business reads, survives reload, clears on lo
   await page.getByRole('combobox', { name: 'Choose a fleet', exact: true }).click();
   await page.getByRole('option', { name: app.branchA.name, exact: true }).click();
   await page.getByRole('button', { name: 'Open Dashboard', exact: true }).click();
-  await expect(page).toHaveURL(
-    `${app.url}/en/${app.branchA.id}/fleet/dashboard/overview?search=old`,
-  );
+  await expect(page).toHaveURL(`${app.url}/en/${app.branchA.id}/fleet/live?search=old`);
   await expect(
     page
       .locator('discocan-admin-topbar')
