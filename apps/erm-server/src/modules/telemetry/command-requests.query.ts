@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import type {
+  ErmCommandRequestsSortField,
   QueryErmCommandRequestsArgs,
   SendErmDeviceCommandInput,
 } from '../../generated/graphql/types.js';
@@ -15,6 +16,14 @@ const statuses = [
   'EXPIRED',
   'CANCELLED',
   'UNCERTAIN',
+];
+const sortFields: readonly ErmCommandRequestsSortField[] = [
+  'ACTION',
+  'STATUS',
+  'UNIT_ID',
+  'ACTOR_ID',
+  'REQUESTED_AT',
+  'COMPLETED_AT',
 ];
 
 function values<T>(items: T[], valid: (item: T) => boolean): T[] {
@@ -64,6 +73,24 @@ export function commandRequestsQuery(args: QueryErmCommandRequestsArgs) {
   ) {
     throw new BadRequestException('Command offset must be nonnegative and limit 1–100');
   }
+  const field = args.sort?.field ?? 'REQUESTED_AT';
+  const direction = args.sort?.direction ?? 'DESC';
+  if (!sortFields.includes(field) || !['ASC', 'DESC'].includes(direction)) {
+    throw new BadRequestException('Choose a supported command sort field and ASC or DESC');
+  }
+  const order = direction === 'ASC' ? 'asc' : 'desc';
+  const fields = {
+    ACTION: { action: order },
+    STATUS: { status: order },
+    UNIT_ID: { unitId: order },
+    ACTOR_ID: { actorId: order },
+    REQUESTED_AT: { createdAt: order },
+    COMPLETED_AT: { completedAt: { sort: order, nulls: 'last' } },
+  } satisfies Record<ErmCommandRequestsSortField, Prisma.ErmCommandRequestOrderByWithRelationInput>;
+  const orderBy: Prisma.ErmCommandRequestOrderByWithRelationInput[] = [
+    fields[field],
+    { id: order },
+  ];
   const filter = args.filter;
   const createdFrom = filter?.createdFrom == null ? undefined : new Date(filter.createdFrom);
   const createdTo = filter?.createdTo == null ? undefined : new Date(filter.createdTo);
@@ -102,5 +129,5 @@ export function commandRequestsQuery(args: QueryErmCommandRequestsArgs) {
         }
       : {}),
   };
-  return { offset, limit, where };
+  return { offset, limit, where, orderBy };
 }

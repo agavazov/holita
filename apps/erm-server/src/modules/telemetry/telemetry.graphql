@@ -92,6 +92,18 @@ input ErmCommandRequestsFilter {
   createdFrom: DateTime
   createdTo: DateTime
 }
+enum ErmCommandRequestsSortField {
+  ACTION
+  STATUS
+  UNIT_ID
+  ACTOR_ID
+  REQUESTED_AT
+  COMPLETED_AT
+}
+input ErmCommandRequestsSort {
+  field: ErmCommandRequestsSortField! = REQUESTED_AT
+  direction: ErmEventSortDirection! = DESC
+}
 type ErmCommandRequestsPage {
   items: [ErmCommandRequest!]!
   total: Int!
@@ -319,16 +331,22 @@ input ErmEventSort {
 input ErmDeviceEventsInput {
   pageSize: Int = 50
   cursor: String
+  "Zero-based page offset; omit when using a cursor."
+  offset: Int
   "Only these categories; every category when omitted."
   categories: [ErmEventCategory!]
   "Only these severity statuses; every status when omitted."
   severities: [ErmEventSeverity!]
-  "Applied before cursor pagination; defaults to newest first."
+  "Applied before pagination; defaults to newest first."
   sort: ErmEventSort
 }
 input ErmDevicePageInput {
   pageSize: Int = 50
   cursor: String
+  "Zero-based page offset; omit when using a cursor."
+  offset: Int
+  "Time order of frames and parameter snapshots; newest first when omitted."
+  direction: ErmEventSortDirection
 }
 input SendErmDeviceCommandInput {
   "A Fleet Device of the active Branch."
@@ -533,12 +551,18 @@ type ErmCommand {
 }
 type ErmEventsPage {
   items: [ErmEvent!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
   cursor: String
   nextCursor: String
   hasMore: Boolean!
 }
 type ErmFramesPage {
   items: [ErmFrame!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
   cursor: String
   nextCursor: String
   hasMore: Boolean!
@@ -552,6 +576,9 @@ type ErmCommandsPage {
 "Newest-first snapshot history for one Fleet Device."
 type ErmParameterSnapshotsPage {
   items: [ErmParameterSnapshot!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
   cursor: String
   nextCursor: String
   hasMore: Boolean!
@@ -652,11 +679,12 @@ type Query {
   ): ErmFleetProblems!
   "One durable request in the verified Tenant and active Branch, suitable for pending-state polling."
   ermCommandRequest(id: ID!): ErmCommandRequest
-  "Newest first, scoped to the verified Tenant and active Branch; creation range is half-open."
+  "Newest first by default, scoped to the verified Tenant and active Branch; creation range is half-open."
   ermCommandRequests(
     offset: Int! = 0
     limit: Int! = 20
     filter: ErmCommandRequestsFilter
+    sort: ErmCommandRequestsSort
   ): ErmCommandRequestsPage!
   ermCommandBatch(id: ID!): ErmCommandBatch
   ermConfigurationBatch(id: ID!): ErmConfigurationBatch

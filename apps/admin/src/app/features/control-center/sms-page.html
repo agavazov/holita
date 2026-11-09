@@ -81,7 +81,12 @@
               <tr>
                 <th scope="col" class="app-col-identity">{{ ui().command }}</th>
                 <th scope="col">{{ ui().message }}</th>
-                <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+                <th
+                  scope="col"
+                  class="app-col-actions app-col-actions-pair"
+                  pFrozenColumn
+                  alignFrozen="right"
+                >
                   <span class="app-visually-hidden">{{ text().detail.actions }}</span>
                 </th>
               </tr>
@@ -102,28 +107,12 @@
                     <span [title]="purpose(item)">{{ purpose(item) }}</span>
                   </div>
                   <div class="app-table-mobile-actions">
-                    <ng-container [ngTemplateOutlet]="openSms" />
+                    <ng-container [ngTemplateOutlet]="messageActions" />
                   </div>
                 </td>
                 <td>
                   <div class="sms-message control-center__sms-text">
                     <code #code [title]="item.text">{{ item.text }}</code>
-                    <button
-                      pButton
-                      type="button"
-                      size="small"
-                      severity="secondary"
-                      [text]="true"
-                      [iconOnly]="true"
-                      [disabled]="item.bytes > maxBytes"
-                      [attr.aria-label]="format(ui().copyPurpose, { purpose: purpose(item) })"
-                      [pTooltip]="sms().copy"
-                      tooltipEvent="both"
-                      tooltipPosition="top"
-                      (click)="copy(item.text, code)"
-                    >
-                      <svg data-p-icon="copy" aria-hidden="true"></svg>
-                    </button>
                   </div>
                   @if (item.bytes > maxBytes) {
                     <p-message severity="warn">{{
@@ -131,31 +120,49 @@
                     }}</p-message>
                   }
                 </td>
-                <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-                  <ng-container [ngTemplateOutlet]="openSms" />
+                <td class="app-col-actions app-col-actions-pair" pFrozenColumn alignFrozen="right">
+                  <ng-container [ngTemplateOutlet]="messageActions" />
                 </td>
               </tr>
-              <ng-template #openSms>
-                @if (current.simPhoneNumber && item.bytes <= maxBytes) {
-                  <a
+              <ng-template #messageActions>
+                <span class="app-table-inline-actions">
+                  <button
                     pButton
+                    type="button"
                     size="small"
                     severity="secondary"
                     [text]="true"
                     [iconOnly]="true"
-                    [href]="smsLink(current.simPhoneNumber, item.text)"
-                    [attr.aria-label]="
-                      format(ui().openPurpose, {
-                        purpose: purpose(item),
-                        sim: current.simPhoneNumber,
-                      })
-                    "
-                    [pTooltip]="sms().openSms"
+                    [disabled]="item.bytes > maxBytes"
+                    [attr.aria-label]="format(ui().copyPurpose, { purpose: purpose(item) })"
+                    [pTooltip]="sms().copy"
                     tooltipEvent="both"
                     tooltipPosition="top"
-                    ><svg data-p-icon="envelope" aria-hidden="true"></svg
-                  ></a>
-                }
+                    (click)="copy(item.text, code)"
+                  >
+                    <svg data-p-icon="copy" aria-hidden="true"></svg>
+                  </button>
+                  @if (current.simPhoneNumber && item.bytes <= maxBytes) {
+                    <a
+                      pButton
+                      size="small"
+                      severity="secondary"
+                      [text]="true"
+                      [iconOnly]="true"
+                      [href]="smsLink(current.simPhoneNumber, item.text)"
+                      [attr.aria-label]="
+                        format(ui().openPurpose, {
+                          purpose: purpose(item),
+                          sim: current.simPhoneNumber,
+                        })
+                      "
+                      [pTooltip]="sms().openSms"
+                      tooltipEvent="both"
+                      tooltipPosition="top"
+                      ><svg data-p-icon="envelope" aria-hidden="true"></svg
+                    ></a>
+                  }
+                </span>
               </ng-template>
             </ng-template>
           </p-table>

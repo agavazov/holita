@@ -179,12 +179,17 @@ export class ParameterSnapshotsService implements OnModuleInit, OnModuleDestroy 
       page = this.repository.history(queries, scope).then(
         (rows) =>
           new Map(
-            rows.map(({ query, rows: snapshots }) => [
+            rows.map(({ query, rows: snapshots, total }) => [
               query.deviceId,
-              telemetryPage(
-                snapshots.map((snapshot) => snapshotView(snapshot, context)),
-                query,
-              ),
+              {
+                ...telemetryPage(
+                  snapshots.map((snapshot) => snapshotView(snapshot, context)),
+                  query,
+                ),
+                total,
+                offset: query.offset,
+                limit: query.pageSize,
+              },
             ]),
           ),
       );

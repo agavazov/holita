@@ -78,6 +78,7 @@ import type {
   ErmDeviceAction,
   ErmEventNameArgs,
   QueryErmCommandRequestArgs,
+  QueryErmCommandRequestsArgs,
   QueryErmFleetTelemetryArgs,
   QueryErmFleetProblemsArgs,
   FleetDeviceErmEventsArgs,
@@ -657,6 +658,21 @@ it('persists captured connection lifecycle and raw frames through the production
     expect((await telemetry.deviceEvents(reference(), undefined, context))?.items[0]?.id).toBe(
       String(event.id),
     );
+    const ascendingFrames = await telemetry.deviceFrames(
+      reference(),
+      { pageSize: 50, direction: 'ASC' },
+      context,
+    );
+    const offsetFrames = await telemetry.deviceFrames(
+      reference(),
+      { pageSize: 25, offset: 25, direction: 'ASC' },
+      context,
+    );
+    expect(ascendingFrames?.items[0]?.receivedAt).toEqual(fixtureTime);
+    expect(offsetFrames).toMatchObject({ total: ascendingFrames?.total, offset: 25, limit: 25 });
+    expect(offsetFrames?.items.map(({ id }) => id)).toEqual(
+      ascendingFrames?.items.slice(25, 50).map(({ id }) => id),
+    );
     for (const read of [
       (cursor: string | null = null) =>
         telemetry.deviceEvents(reference(), { pageSize: 25, cursor }, context),
@@ -693,8 +709,19 @@ it('persists captured connection lifecycle and raw frames through the production
             )
           : null;
         const items = [...(first?.items ?? []), ...(second?.items ?? [])];
+        const offsetPage = await telemetry.deviceEvents(
+          reference(),
+          { pageSize: 25, offset: 25, sort },
+          context,
+        );
         expect(items.length).toBeGreaterThan(25);
         expect(new Set(items.map((item) => item.id)).size).toBe(items.length);
+        expect(first).toMatchObject({ total: items.length, offset: 0, limit: 25 });
+        expect(second).toMatchObject({ total: items.length, offset: 25, limit: 25 });
+        expect(offsetPage).toMatchObject({ total: items.length, offset: 25, limit: 25 });
+        expect(offsetPage?.items.map((item) => item.id)).toEqual(
+          second?.items.map((item) => item.id),
+        );
         const rank = { INFO: 0, WARNING: 1, CRITICAL: 2 };
         const values = items.map((item) =>
           field === 'TIME'
@@ -722,6 +749,8 @@ it('persists captured connection lifecycle and raw frames through the production
         }
       }
     }
+    const unfilteredEvents =
+      (await telemetry.deviceEvents(reference(), { pageSize: 100 }, context))?.items ?? [];
     for (const severities of [['WARNING'], ['INFO', 'CRITICAL']] as const) {
       const page = await telemetry.deviceEvents(
         reference(),
@@ -732,6 +761,24 @@ it('persists captured connection lifecycle and raw frames through the production
       expect(
         page?.items.every((item) => severities.some((severity) => severity === item.severity)),
       ).toBe(true);
+      const total = unfilteredEvents.filter((item) =>
+        severities.some((severity) => severity === item.severity),
+      ).length;
+      expect(page).toMatchObject({ total, offset: 0, limit: 50 });
+      expect(
+        await telemetry.deviceEvents(
+          reference(),
+          { pageSize: 25, offset: 100, severities: [...severities] },
+          context,
+        ),
+      ).toMatchObject({
+        items: [],
+        total,
+        offset: 100,
+        limit: 25,
+        hasMore: false,
+        nextCursor: null,
+      });
     }
     for (const input of [{ pageSize: 101 }, { cursor: 'invalid' }]) {
       await expect(telemetry.deviceEvents(reference(), input, context)).rejects.toThrow(
@@ -1587,6 +1634,66 @@ it('persists captured connection lifecycle and raw frames through the production
       unitId: '123456789012346',
       createdAt: new Date(Date.UTC(2020, 0, 1, 0, 0, 49)),
     });
+    const queueSortCases: [QueryErmCommandRequestsArgs, Record<string, unknown>][] = [
+      [
+        { sort: { field: 'REQUESTED_AT', direction: 'ASC' } },
+        { createdAt: new Date(Date.UTC(2020, 0, 1)) },
+      ],
+      [{ sort: { field: 'ACTION', direction: 'ASC' } }, { action: 'REQUEST_LOCATION' }],
+      [{ sort: { field: 'ACTION', direction: 'DESC' } }, { action: 'READ_EDATA_FAULTS' }],
+      [
+        {
+          sort: { field: 'STATUS', direction: 'ASC' },
+          filter: { statuses: ['CANCELLED', 'UNCERTAIN'] },
+        },
+        { status: 'CANCELLED' },
+      ],
+      [
+        {
+          sort: { field: 'STATUS', direction: 'DESC' },
+          filter: { statuses: ['CANCELLED', 'UNCERTAIN'] },
+        },
+        { status: 'UNCERTAIN' },
+      ],
+      [{ sort: { field: 'UNIT_ID', direction: 'ASC' } }, { unitId: '123456789012346' }],
+      [{ sort: { field: 'UNIT_ID', direction: 'DESC' } }, { unitId }],
+    ];
+    for (const [args, first] of queueSortCases) {
+      const sorted = await requests.list({ ...args, limit: 100 }, scopedContext);
+      expect(sorted.items[0]).toMatchObject(first);
+      expect(sorted.items.every(({ actorId }) => actorId === `demo-tenant:${tenantId}`)).toBe(true);
+      const next = await requests.list({ ...args, offset: 1, limit: 1 }, scopedContext);
+      expect(next.total).toBe(sorted.total);
+      expect(next.items.map(({ id }) => id)).toEqual(sorted.items.slice(1, 2).map(({ id }) => id));
+    }
+    for (const direction of ['ASC', 'DESC'] as const) {
+      const completed = await requests.list(
+        {
+          limit: 100,
+          filter: { deviceIds: [queueHistoryDeviceId] },
+          sort: { field: 'COMPLETED_AT', direction },
+        },
+        scopedContext,
+      );
+      expect(completed.total).toBe(51);
+      expect(completed.items.at(-1)).toMatchObject({
+        intent: 'Newest history row',
+        completedAt: null,
+      });
+      const tiedIds = completed.items.slice(0, -1).map(({ id }) => id);
+      const expectedIds = [...tiedIds].sort();
+      expect(tiedIds).toEqual(direction === 'ASC' ? expectedIds : expectedIds.reverse());
+      const page = await requests.list(
+        {
+          limit: 1,
+          offset: 1,
+          filter: { deviceIds: [queueHistoryDeviceId] },
+          sort: { field: 'COMPLETED_AT', direction },
+        },
+        scopedContext,
+      );
+      expect(page.items.map(({ id }) => id)).toEqual(tiedIds.slice(1, 2));
+    }
     const retryActor = randomUUID();
     const retryContext = { ...scopedContext, userId: retryActor, role: 'OPERATOR' as const };
     await expect(
@@ -1617,6 +1724,15 @@ it('persists captured connection lifecycle and raw frames through the production
       expect(await requests.cancel({ deviceId, requestId: retry.id }, retryContext)).toMatchObject({
         cancelledByActorId: retryActor,
       });
+    }
+    for (const direction of ['ASC', 'DESC'] as const) {
+      const actors = [`demo-tenant:${tenantId}`, retryActor].sort();
+      const sorted = await requests.list(
+        { limit: 100, sort: { field: 'ACTOR_ID', direction } },
+        scopedContext,
+      );
+      expect(sorted.items[0]?.actorId).toBe(direction === 'ASC' ? actors[0] : actors[1]);
+      expect(sorted.items.every(({ actorId }) => actors.includes(actorId))).toBe(true);
     }
     const batchIssuer = randomUUID();
     const batchStopper = randomUUID();
@@ -2914,7 +3030,10 @@ it('persists captured connection lifecycle and raw frames through the production
         _entities(representations: $representations) { ... on FleetDevice {
           ermParameterSnapshots(input: {pageSize: 25}) {
             items { id status values { parameter title value resultCode } changes { parameter previousValue value } }
-            hasMore
+            hasMore total offset limit
+          }
+          oldest: ermParameterSnapshots(input: {pageSize: 25, offset: 1, direction: ASC}) {
+            items { id } total offset
           }
         } }
       }`,
@@ -2932,9 +3051,16 @@ it('persists captured connection lifecycle and raw frames through the production
         ermParameterSnapshots: {
           items: [{ id: runningSnapshotId, status: 'COMPLETE' }, { id: previousSnapshot.id }],
           hasMore: false,
+          total: 2,
+          offset: 0,
+          limit: 25,
         },
+        oldest: { items: [{ id: runningSnapshotId }], total: 2, offset: 1 },
       },
-      { ermParameterSnapshots: { items: [], hasMore: false } },
+      {
+        ermParameterSnapshots: { items: [], hasMore: false, total: 0 },
+        oldest: { items: [], total: 0, offset: 1 },
+      },
     ]);
     const interrupted = await database.client.ermParameterSnapshot.create({
       data: { unitId, status: 'RUNNING', parameterCount: snapshotParameters.length },

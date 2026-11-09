@@ -7,7 +7,7 @@ import { Send } from '@primeicons/angular/send';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
-import { TableModule } from 'primeng/table';
+import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import type { FilterCondition } from '../../ui/filter-builder/filter-model';
@@ -18,7 +18,8 @@ import {
   type ListAction,
   type ListActionRequest,
 } from '../../ui/list/list-actions';
-import { listQuery, type ListQuery } from '../../ui/list/list-query';
+import { injectSortReady, listQuery, type ListQuery } from '../../ui/list/list-query';
+import { ListSortMenu } from '../../ui/list/list-sort-menu';
 import { maxSearchLength } from '../../ui/list/list-state';
 import { PageHeader } from '../../ui/page-header/page-header';
 import { RowActions } from '../../ui/row-actions/row-actions';
@@ -37,6 +38,7 @@ import { notificationTone, type NotificationRow } from './notification-presentat
     Microchip,
     Send,
     InputText,
+    ListSortMenu,
     Message,
     Select,
     TableModule,
@@ -72,10 +74,14 @@ export class NotificationsView {
 
   private readonly language = inject(UI_LANGUAGE);
   private readonly router = inject(Router);
+  private readonly sortReady = injectSortReady();
   protected readonly text = computed(() => notificationsText(this.language()));
   protected readonly format = injectFleetFormat();
   protected readonly trackById = trackById;
   protected readonly maxSearchLength = maxSearchLength;
+  protected readonly sortFields = computed(() => [
+    { field: 'occurredAt', label: this.text().table.occurred },
+  ]);
   protected readonly tableMinWidth = '91.25rem';
   protected readonly view = computed(() =>
     tableView({
@@ -188,6 +194,20 @@ export class NotificationsView {
 
   protected changePage(page: { page: number; pageSize: number }): void {
     this.stateChange.emit(listQuery.page(this.state(), page));
+  }
+
+  protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    this.stateChange.emit({ ...this.state(), sort, page: 1 });
+  }
+
+  protected sort(event: TableLazyLoadEvent): void {
+    if (!this.sortReady()) {
+      return;
+    }
+    const next = listQuery.sorted(this.state(), event);
+    if (next) {
+      this.stateChange.emit(next);
+    }
   }
 
   protected clearFilters(): void {

@@ -34,7 +34,7 @@
     "emptyTitle": "No trips yet",
     "emptyDescription": "Trips appear when the trackers report the first journeys.",
     "errorText": "The trips could not be loaded.",
-    "discocan": "discocan"
+    "discocan": "DiscoCan"
   },
   "actions": {
     "open": "Open trip",

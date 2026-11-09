@@ -50,7 +50,13 @@ export interface PageContext {
   readonly pageLink?: readonly string[] | UrlTree;
   readonly record?: string | null;
   readonly recordLink?: readonly string[];
+  readonly ancestors?: readonly PageCrumb[];
   readonly tab?: string;
+}
+
+export interface PageCrumb {
+  readonly label: string;
+  readonly link?: readonly string[] | UrlTree;
 }
 
 function linkPath(link: readonly string[]): string {

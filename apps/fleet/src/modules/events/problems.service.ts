@@ -6,6 +6,7 @@ import type {
   FleetProblemDiagnostic,
   FleetProblemPage,
   FleetProblemSourceKind,
+  FleetProblemSortField,
   FleetProblemState,
   QueryFleetProblemsArgs,
 } from '../../generated/graphql/types.js';
@@ -25,6 +26,8 @@ import {
   invalid,
   pagination,
   requireScope,
+  sortDirection,
+  sortField,
 } from '../../validation.js';
 import { ProblemsRepository } from './problems.repository.js';
 import { faultMeaning } from './fault-meanings.js';
@@ -37,6 +40,7 @@ const SOURCES: readonly FleetProblemSourceKind[] = [
   'COMMAND',
 ];
 const SEVERITIES: readonly FleetEventSeverity[] = ['INFO', 'WARNING', 'CRITICAL'];
+const SORT_FIELDS: readonly FleetProblemSortField[] = ['TIME', 'SOURCE', 'SEVERITY', 'STATE'];
 const STATES: readonly FleetProblemState[] = [
   'OPEN',
   'ACKNOWLEDGED',
@@ -232,6 +236,8 @@ export class ProblemsService {
   async list(context: RequestContext, args: QueryFleetProblemsArgs): Promise<FleetProblemPage> {
     const scope = requireScope(context);
     const page = pagination(args);
+    const field = sortField(args.sort?.field, SORT_FIELDS, 'TIME');
+    const direction = sortDirection(args.sort?.direction, 'DESC');
     const filter = args.filter;
     const sourceKinds = enumFilter(filter?.sourceKinds, SOURCES, 'sourceKinds');
     const severities = enumFilter(filter?.severities, SEVERITIES, 'severities');
@@ -264,6 +270,21 @@ export class ProblemsService {
         (deviceIds === undefined || (row.deviceId != null && deviceIds.includes(row.deviceId))) &&
         (requiringAttention === undefined || row.requiringAttention === requiringAttention),
     );
+    items.sort((left, right) => {
+      const compared =
+        field === 'SOURCE'
+          ? SOURCES.indexOf(left.sourceKind) - SOURCES.indexOf(right.sourceKind)
+          : field === 'SEVERITY'
+            ? SEVERITIES.indexOf(left.severity) - SEVERITIES.indexOf(right.severity)
+            : field === 'STATE'
+              ? STATES.indexOf(left.state) - STATES.indexOf(right.state)
+              : left.occurredAt.getTime() - right.occurredAt.getTime();
+      return (
+        (direction === 'ASC' ? compared : -compared) ||
+        right.occurredAt.getTime() - left.occurredAt.getTime() ||
+        left.id.localeCompare(right.id)
+      );
+    });
     return {
       ...page,
       items: items.slice(page.offset, page.offset + page.limit),

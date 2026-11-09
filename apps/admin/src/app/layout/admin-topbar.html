@@ -11,102 +11,52 @@
 </button>
 @if (showLogo()) {
   <a class="app-logo app-topbar__logo" [routerLink]="homeLink()">
-    <span class="app-logo__mark" aria-hidden="true">h</span>
-    <span class="app-logo__word">discocan</span>
+    <span class="app-logo__mark" aria-hidden="true">D</span>
+    <span class="app-logo__word">DiscoCan</span>
   </a>
 }
 <div class="app-topbar__context">
-  @if (context(); as context) {
+  @if (context()) {
     <nav [attr.aria-label]="text().breadcrumb">
       <ol class="app-breadcrumb">
-        @if (context.group) {
-          <!-- The navigation group is a label, not a page, so it is never a link. -->
-          <li class="app-breadcrumb__group">
-            <span class="app-breadcrumb__text" [title]="context.group">{{ context.group }}</span>
-          </li>
-        }
-        @if ((context.record || context.tab) && context.pageLink) {
-          <li class="app-breadcrumb__ancestor">
-            @if (context.group) {
+        @for (crumb of breadcrumbs(); track $index) {
+          <li
+            [class.app-breadcrumb__group]="crumb.group"
+            [class.app-breadcrumb__ancestor]="!crumb.group && !$last"
+            [class.app-breadcrumb__current]="$last"
+          >
+            @if (!$first) {
               <svg
                 data-p-icon="chevron-right"
                 class="app-breadcrumb__separator"
                 aria-hidden="true"
               ></svg>
             }
-            <a
-              class="app-breadcrumb__text"
-              [routerLink]="context.pageLink"
-              [title]="context.page"
-              >{{ context.page }}</a
-            >
-          </li>
-          @if (context.record) {
-            <li [class]="context.tab ? 'app-breadcrumb__ancestor' : 'app-breadcrumb__current'">
-              <svg
-                data-p-icon="chevron-right"
-                class="app-breadcrumb__separator"
-                aria-hidden="true"
-              ></svg>
-              @if (context.recordLink) {
-                <a
-                  class="app-breadcrumb__text"
-                  [routerLink]="context.recordLink"
-                  [title]="context.record"
-                  >{{ context.record }}</a
-                >
-              } @else {
-                <span
-                  class="app-breadcrumb__text"
-                  [attr.aria-current]="context.tab ? null : 'page'"
-                  [title]="context.record"
-                  >{{ context.record }}</span
-                >
-              }
-            </li>
-          }
-        } @else {
-          <li [class]="context.tab ? 'app-breadcrumb__ancestor' : 'app-breadcrumb__current'">
-            @if (context.group) {
-              <svg
-                data-p-icon="chevron-right"
-                class="app-breadcrumb__separator"
-                aria-hidden="true"
-              ></svg>
+            @if (crumb.link && !$last) {
+              <a class="app-breadcrumb__text" [routerLink]="crumb.link" [title]="crumb.label">{{
+                crumb.label
+              }}</a>
+            } @else {
+              <span
+                class="app-breadcrumb__text"
+                [attr.aria-current]="$last ? 'page' : null"
+                [title]="crumb.label"
+                >{{ crumb.label }}</span
+              >
             }
-            <span
-              class="app-breadcrumb__text"
-              [attr.aria-current]="context.tab ? null : 'page'"
-              [title]="context.page"
-              >{{ context.page }}</span
-            >
-          </li>
-        }
-        @if (context.tab) {
-          <li class="app-breadcrumb__current">
-            <svg
-              data-p-icon="chevron-right"
-              class="app-breadcrumb__separator"
-              aria-hidden="true"
-            ></svg>
-            <span class="app-breadcrumb__text" aria-current="page" [title]="context.tab">{{
-              context.tab
-            }}</span>
-          </li>
-        }
-        @if (moduleInfo.info()) {
-          <li class="app-breadcrumb__info">
-            <button
-              type="button"
-              class="app-icon-button"
-              [attr.aria-label]="aboutLabel()"
-              [attr.aria-expanded]="moduleInfo.visible()"
-              aria-controls="module-info-dialog"
-              aria-haspopup="dialog"
-              (click)="moduleInfo.open()"
-            >
-              <svg data-p-icon="info-circle" aria-hidden="true"></svg>
-            </button>
+            @if ($last && moduleInfo.info()) {
+              <button
+                type="button"
+                class="app-icon-button app-breadcrumb__info"
+                [attr.aria-label]="aboutLabel()"
+                [attr.aria-expanded]="moduleInfo.visible()"
+                aria-controls="module-info-dialog"
+                aria-haspopup="dialog"
+                (click)="moduleInfo.open()"
+              >
+                <svg data-p-icon="info-circle" aria-hidden="true"></svg>
+              </button>
+            }
           </li>
         }
       </ol>

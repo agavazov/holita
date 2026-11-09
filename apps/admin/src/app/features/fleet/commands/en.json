@@ -9,6 +9,7 @@
   "actions": "Actions",
   "details": "View details",
   "refresh": "Refresh",
+  "fullHistory": "Full history",
   "empty": "No commands requested",
   "emptyHint": "Choose a supported command above to request information from this device.",
   "unavailable": "Command status could not be refreshed. Try again.",

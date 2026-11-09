@@ -111,9 +111,9 @@ export class SmsPage implements OnInit {
     {
       id: 'actions',
       label: this.text().detail.actions,
-      width: '5rem',
+      width: '7rem',
       kind: 'actions',
-      className: 'app-col-actions',
+      className: 'app-col-actions app-col-actions-pair',
     },
   ]);
   readonly device = signal<SmsDevice | null>(null);

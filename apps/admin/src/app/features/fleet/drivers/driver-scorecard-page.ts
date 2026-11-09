@@ -23,6 +23,7 @@ import {
 import type { AdminBranchesQuery } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
 import type { Language } from '../../../i18n/messages';
+import { injectPageRecord } from '../../../layout/page-record';
 import { drawerParam } from '../../../ui/drawer/drawer-route';
 import { errorCode } from '../../../ui/forms/field-errors';
 import { driverScorecard } from './driver-mapping';
@@ -97,6 +98,19 @@ export class DriverScorecardPage implements OnInit {
   protected readonly failure = computed(() =>
     requestError(this.error(), driversText(this.language()).scorecard.errorDescription),
   );
+
+  constructor() {
+    injectPageRecord(
+      () => this.scorecard()?.name ?? null,
+      () => {
+        const fragment = this.backFragment();
+        return this.router.createUrlTree([...this.backLink()], {
+          queryParams: this.backQueryParams(),
+          ...(fragment === null ? {} : { fragment }),
+        });
+      },
+    );
+  }
 
   ngOnInit(): void {
     this.api.initialize(this.branch().id, this.language());

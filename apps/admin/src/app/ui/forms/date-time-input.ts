@@ -14,6 +14,28 @@ export function formatDateTimeInput(
   return wall ? `${formatDateOnly(wall.slice(0, 10), 'en', dateFormat)} ${wall.slice(11)}` : '';
 }
 
+/** PrimeNG's time picker edits seconds; retain stored milliseconds when it is unchanged. */
+export function formatDateTimePickerInput(
+  iso: string | null | undefined,
+  timeZone: string,
+  dateFormat: FleetDateFormat = defaultDateFormat,
+): string {
+  return formatDateTimeInput(iso, timeZone, dateFormat).replace(/\.\d{3}$/, '');
+}
+
+export function dateTimePickerInputInstants(
+  text: string | null,
+  timeZone: string,
+  dateFormat: FleetDateFormat = defaultDateFormat,
+  original?: string | null,
+): readonly number[] {
+  const preciseText =
+    original && text === formatDateTimePickerInput(original, timeZone, dateFormat)
+      ? formatDateTimeInput(original, timeZone, dateFormat)
+      : text;
+  return dateTimeInputInstants(preciseText, timeZone, dateFormat);
+}
+
 /** All valid occurrences, earliest first; skipped/invalid Branch wall times return none. */
 export function dateTimeInputInstants(
   text: string | null,

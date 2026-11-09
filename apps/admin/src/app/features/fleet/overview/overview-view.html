@@ -138,6 +138,8 @@
           <p-table
             class="app-responsive-table app-table-fixed"
             [value]="connectedDevices()"
+            sortField="imei"
+            [sortOrder]="1"
             dataKey="id"
             [scrollable]="true"
             scrollHeight="36rem"
@@ -153,10 +155,17 @@
             <ng-template #header
               ><tr>
                 @for (column of deviceColumns(); track column.id) {
-                  <th scope="col">{{ column.label }}</th>
-                }
-              </tr></ng-template
-            >
+                  @let field =
+                    column.id === 'device'
+                      ? 'imei'
+                      : column.id === 'vehicle'
+                        ? 'vehicle.licensePlate'
+                        : 'ermState.lastFrameAt';
+                  <th scope="col" [pSortableColumn]="field">
+                    {{ column.label }} <p-sort-icon [field]="field" />
+                  </th>
+                }</tr
+            ></ng-template>
             <ng-template #body let-device
               ><tr>
                 <td>

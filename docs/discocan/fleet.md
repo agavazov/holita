@@ -81,6 +81,13 @@ to RED/YELLOW and return to OFF create Branch notifications once per transition.
 reports with the engine off are not stored, because trucks show red lamps at ignition-on before
 the engine builds brake air pressure; reports with an unknown engine state still count. Operators
 add MANUAL odometer readings.
+
+`fleetProblems(offset, limit, filter, sort)` sorts the complete merged, scoped feed before
+pagination. `sort` accepts `field: TIME | SOURCE | SEVERITY | STATE` and `direction: ASC | DESC`;
+the default is `TIME DESC`. Severity orders INFO, WARNING, CRITICAL; source orders FLEET_ALERT,
+DIAGNOSTIC, ALARM, REPORTING_GAP, COMMAND; state orders OPEN, ACKNOWLEDGED, RECORDED, FAILED,
+UNCERTAIN, EXPIRED. Ties use newest occurrence and stable source identity.
+
 Samples, trips and events store the reporting IMEI as a snapshot instead of a Device foreign key,
 so devices can be replaced, reassigned or deleted without rewriting history. A sample's history
 belongs to the (vehicle, IMEI) pair at reporting time.

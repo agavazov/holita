@@ -8,7 +8,7 @@ import type { PageContext } from '../layout/navigation';
 export function pageMetadata(language: Language, path: string): PageContext | null {
   const text = messages[language];
   const segments = (path.split(/[?#]/, 1)[0] ?? path).split('/').filter(Boolean);
-  const [routeLanguage, branchId, namespace, resource, recordId, tab, technicalTab] = segments;
+  const [routeLanguage, branchId, namespace, resource, recordId, tab, detail] = segments;
   if (routeLanguage !== language) {
     return null;
   }
@@ -62,6 +62,15 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
         }
       : null;
   }
+  if (resource === 'drivers' && recordId && tab === 'scorecard') {
+    return {
+      group: text.fleet,
+      page: text.drivers,
+      pageLink: [...fleet, 'drivers'],
+      recordLink: [...fleet, 'drivers', recordId],
+      tab: text.driverScorecard,
+    };
+  }
   if (resource === 'vehicles' && recordId && tab && tab !== 'edit') {
     const vehicleTab =
       tab === 'overview'
@@ -75,14 +84,41 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
               : tab === 'commands'
                 ? text.commands
                 : null;
+    // Drawers opened from a profile tab: the tab is their parent unless it is the overview.
+    const drawer =
+      detail === 'odometer'
+        ? text.odometerReading
+        : detail === 'edit'
+          ? text.editRecord
+          : !segments[7]
+            ? null
+            : detail === 'trips'
+              ? text.tripDetail
+              : detail === 'alerts'
+                ? text.alertDetail
+                : detail === 'service'
+                  ? text.serviceTask
+                  : null;
     return vehicleTab
       ? {
           group: text.fleet,
           page: text.vehicles,
           pageLink: [...fleet, 'vehicles'],
-          ...(tab === 'overview'
-            ? {}
-            : { recordLink: [...fleet, 'vehicles', recordId, 'overview'], tab: vehicleTab }),
+          ...(drawer
+            ? {
+                recordLink: [...fleet, 'vehicles', recordId, 'overview'],
+                ...(tab === 'overview'
+                  ? {}
+                  : {
+                      ancestors: [
+                        { label: vehicleTab, link: [...fleet, 'vehicles', recordId, tab] },
+                      ],
+                    }),
+                tab: drawer,
+              }
+            : tab === 'overview'
+              ? {}
+              : { recordLink: [...fleet, 'vehicles', recordId, 'overview'], tab: vehicleTab }),
         }
       : null;
   }
@@ -100,9 +136,9 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
             ? text.smsCommands
             : tab === 'parameters'
               ? text.parameters
-              : tab === 'technical-details' && technicalTab === 'events'
+              : tab === 'technical-details' && detail === 'events'
                 ? text.events
-                : tab === 'technical-details' && technicalTab === 'frames'
+                : tab === 'technical-details' && detail === 'frames'
                   ? text.frames
                   : null;
   return deviceTab
@@ -111,6 +147,16 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
         page: text.devices,
         pageLink: [...fleet, 'devices'],
         recordLink: [...fleet, 'devices', recordId, 'overview'],
+        ...(tab === 'technical-details'
+          ? {
+              ancestors: [
+                {
+                  label: text.technicalDetails,
+                  link: [...fleet, 'devices', recordId, 'technical-details', 'events'],
+                },
+              ],
+            }
+          : {}),
         tab: deviceTab,
       }
     : null;

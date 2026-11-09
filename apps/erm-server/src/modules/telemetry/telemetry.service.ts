@@ -574,17 +574,20 @@ export class TelemetryService {
     let page = request.events.get(key);
     if (!page) {
       const queries = deviceTelemetryQueries('events', request.unitIds, input, input?.categories);
-      page = this.repository
-        .deviceEvents(queries, input)
-        .then(
-          (rows) =>
-            new Map(
-              rows.map(({ query, rows: events }) => [
-                query.unitId,
-                telemetryPage(events.map(eventView), query),
-              ]),
-            ),
-        );
+      page = this.repository.deviceEvents(queries, input).then(
+        (rows) =>
+          new Map(
+            rows.map(({ query, rows: events, total }) => [
+              query.unitId,
+              {
+                ...telemetryPage(events.map(eventView), query),
+                total,
+                offset: query.offset,
+                limit: query.pageSize,
+              },
+            ]),
+          ),
+      );
       request.events.set(key, page);
     }
     return (await page).get(device.imei);
@@ -607,15 +610,20 @@ export class TelemetryService {
         .then(
           (rows) =>
             new Map(
-              rows.map(({ query, rows: frames }) => [
+              rows.map(({ query, rows: frames, total }) => [
                 query.unitId,
-                telemetryPage(
-                  frames.map((frame) => ({
-                    ...frameView(frame, context),
-                    acknowledgement: frame.acknowledgement,
-                  })),
-                  query,
-                ),
+                {
+                  ...telemetryPage(
+                    frames.map((frame) => ({
+                      ...frameView(frame, context),
+                      acknowledgement: frame.acknowledgement,
+                    })),
+                    query,
+                  ),
+                  total,
+                  offset: query.offset,
+                  limit: query.pageSize,
+                },
               ]),
             ),
         );

@@ -398,26 +398,49 @@
                     fmt.dateTimeRange(problems()?.counts?.periodFrom, problems()?.counts?.periodTo)
                   }}
                 </p>
+                <discocan-filter-builder
+                  [searchLabel]="text().detail.problem"
+                  [searchable]="false"
+                  [fields]="problemFields()"
+                  [conditions]="problemConditions()"
+                  (conditionsChange)="filterProblems($event)"
+                />
                 <discocan-table-panel
                   #problemsPanel
                   [heading]="faultText().history"
                   [view]="problemView()"
                   [busy]="problemsLoading()"
                   [columns]="problemColumns()"
-                  tableMinWidth="73rem"
+                  tableMinWidth="82rem"
                   [total]="problems()?.total ?? null"
-                  [page]="{ page: problemPage(), pageSize: 20, total: problems()?.total ?? 0 }"
-                  [pageSizes]="[20]"
+                  [page]="{
+                    page: problemList.state().page,
+                    pageSize: problemList.state().pageSize,
+                    total: problems()?.total ?? 0,
+                  }"
                   [errorText]="problemFailure()"
                   [emptyTitle]="text().detail.noProblems"
                   [actions]="actions()"
                   (action)="openDetail($event.ids[0])"
-                  (pageChange)="problemPage.set($event.page)"
+                  (pageChange)="problemList.setPage($event)"
+                  (clearFilters)="problemList.clearFilters()"
                   (retry)="refresh()"
                 >
+                  <discocan-list-sort-menu
+                    panelActions
+                    [fields]="problemSortFields()"
+                    [sort]="problemSort()"
+                    (sortChange)="chooseProblemSort($event)"
+                  />
                   <p-table
                     class="app-responsive-table"
-                    [value]="problems()?.items ?? []"
+                    [value]="problemRows()"
+                    [lazy]="true"
+                    [lazyLoadOnInit]="false"
+                    [sortField]="problemList.state().sort.field"
+                    [sortOrder]="problemList.state().sort.direction === 'ASC' ? 1 : -1"
+                    (onLazyLoad)="sortProblems($event)"
+                    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': faultText().history } }"
                     dataKey="id"
                     [rowTrackBy]="trackById"
                     [scrollable]="true"
@@ -439,10 +462,27 @@
                     <ng-template #header
                       ><tr>
                         @for (column of problemColumns(); track column.id) {
-                          <th scope="col" [class]="column.className ?? ''">{{ column.label }}</th>
-                        }
-                      </tr></ng-template
-                    >
+                          @let sortField = problemSortField(column.id);
+                          <th
+                            scope="col"
+                            [class]="column.className ?? ''"
+                            pFrozenColumn
+                            [frozen]="column.kind === 'actions'"
+                            alignFrozen="right"
+                            [pSortableColumn]="sortField ?? ''"
+                            [pSortableColumnDisabled]="!sortField"
+                          >
+                            @if (column.kind === 'actions') {
+                              <span class="app-visually-hidden">{{ column.label }}</span>
+                            } @else {
+                              {{ column.label }}
+                              @if (sortField) {
+                                <p-sort-icon [field]="sortField" />
+                              }
+                            }
+                          </th>
+                        }</tr
+                    ></ng-template>
                     <ng-template #body let-row
                       ><tr>
                         <td class="app-col-identity">
@@ -454,12 +494,14 @@
                                 [queryParams]="
                                   row.commandRequestId ? { request: row.commandRequestId } : null
                                 "
-                                >{{ problemLabel(row) }}</a
+                                [title]="row.title"
+                                >{{ row.title }}</a
                               >
                             } @else {
                               <button
                                 class="app-link"
                                 type="button"
+                                [title]="row.title"
                                 (click)="
                                   problemsPanel.run(
                                     'details',
@@ -468,21 +510,10 @@
                                   )
                                 "
                               >
-                                {{ problemLabel(row) }}
+                                {{ row.title }}
                               </button>
                             }
-                            @for (diagnostic of row.diagnostics; track $index) {
-                              <strong>{{ faultDescription(diagnostic, language()) }}</strong>
-                              @if (diagnostic.fmi !== null) {
-                                <span class="app-muted">{{
-                                  faultFmi(diagnostic.fmi, language())
-                                }}</span>
-                              }
-                            } @empty {
-                              <span class="app-muted" [title]="row.details ?? ''">{{
-                                row.details ?? problemLabel(row)
-                              }}</span>
-                            }
+                            <span class="app-muted" [title]="row.summary">{{ row.summary }}</span>
                           </div>
                           <div class="app-table-mobile-actions">
                             <discocan-row-actions
@@ -499,31 +530,35 @@
                           </div>
                         </td>
                         <td>
-                          <div class="app-cell-identity">
-                            @for (diagnostic of row.diagnostics; track $index) {
-                              <span>{{ faultSystem(diagnostic.systemKey, language()) }}</span>
-                            } @empty {
-                              <span>—</span>
-                            }
-                          </div>
+                          <span class="app-cell-truncate" [title]="row.system">{{
+                            row.system
+                          }}</span>
                         </td>
                         <td>
-                          @for (diagnostic of row.diagnostics; track $index) {
-                            <div class="app-cell-date">
-                              <span [title]="fmt.utc(diagnostic.firstObservedAt)">
-                                {{ faultText().firstObserved }}:
-                                {{ fmt.dateTime(diagnostic.firstObservedAt, true) }}
-                              </span>
-                              <span [title]="fmt.utc(diagnostic.lastObservedAt)">
-                                {{ faultText().lastObserved }}:
-                                {{ fmt.dateTime(diagnostic.lastObservedAt, true) }}
-                              </span>
-                            </div>
-                          } @empty {
-                            <span class="app-cell-date" [title]="fmt.utc(row.occurredAt)">{{
-                              fmt.dateTime(row.occurredAt)
+                          <span class="app-cell-truncate" [title]="problemLabel(row)">{{
+                            problemLabel(row)
+                          }}</span>
+                        </td>
+                        <td>
+                          <div class="app-cell-identity">
+                            <span [title]="fmt.utc(row.occurredAt)">{{
+                              fmt.dateTime(row.occurredAt, true)
                             }}</span>
-                          }
+                            <span
+                              [title]="
+                                faultText().firstObserved +
+                                ': ' +
+                                fmt.dateTime(row.firstObserved, true) +
+                                ' · ' +
+                                faultText().lastObserved +
+                                ': ' +
+                                fmt.dateTime(row.lastObserved, true)
+                              "
+                              >{{ text().detail.observations }}:
+                              {{ fmt.dateTime(row.firstObserved, true) }} →
+                              {{ fmt.dateTime(row.lastObserved, true) }}</span
+                            >
+                          </div>
                         </td>
                         <td>
                           <div class="app-cell-status">
@@ -566,6 +601,7 @@
               @case ('commands') {
                 <discocan-device-command-queue
                   [deviceId]="recordId()"
+                  [branchId]="branchId()"
                   [language]="language()"
                   [target]="unitName()"
                   [requestId]="requestedCommand()"
@@ -616,23 +652,35 @@
                 </section>
                 <discocan-table-panel
                   #snapshotsPanel
-                  mode="cursor"
                   [heading]="text().snapshots.history"
                   [view]="historyView()"
                   [busy]="historyLoading()"
                   [columns]="columns()"
                   tableMinWidth="48rem"
-                  [cursorPage]="cursorPage()"
+                  [page]="historyPage()"
+                  [pageSizes]="[25, 50, 100]"
+                  [total]="snapshots()?.total ?? null"
                   [errorText]="historyFailure()"
                   [emptyTitle]="text().snapshots.empty"
                   [actions]="actions()"
                   (action)="openDetail($event.ids[0])"
-                  (cursorChange)="pageHistory($event)"
+                  (pageChange)="changeHistoryPage($event)"
                   (retry)="refresh()"
                 >
+                  <discocan-list-sort-menu
+                    panelActions
+                    [fields]="timeSortFields()"
+                    [sort]="timeSort()"
+                    (sortChange)="chooseTimeSort($event)"
+                  />
                   <p-table
                     class="app-responsive-table"
                     [value]="snapshots()?.items ?? []"
+                    [lazy]="true"
+                    [lazyLoadOnInit]="false"
+                    sortField="TIME"
+                    [sortOrder]="timeSort().direction === 'asc' ? 1 : -1"
+                    (onLazyLoad)="sortSnapshots($event)"
                     [pt]="{
                       tableContainer: { tabindex: '0', 'aria-label': text().snapshots.history },
                     }"
@@ -663,16 +711,20 @@
                             pFrozenColumn
                             [frozen]="column.kind === 'actions'"
                             alignFrozen="right"
+                            [pSortableColumn]="column.id === 'time' ? 'TIME' : ''"
+                            [pSortableColumnDisabled]="column.id !== 'time'"
                           >
                             @if (column.kind === 'actions') {
                               <span class="app-visually-hidden">{{ column.label }}</span>
                             } @else {
                               {{ column.label }}
+                              @if (column.id === 'time') {
+                                <p-sort-icon field="TIME" />
+                              }
                             }
                           </th>
-                        }
-                      </tr></ng-template
-                    >
+                        }</tr
+                    ></ng-template>
                     <ng-template #body let-row
                       ><tr>
                         <td class="app-col-identity">
@@ -850,13 +902,14 @@
                         }
                         <discocan-table-panel
                           #technicalPanel
-                          mode="cursor"
                           [heading]="tab() === 'events' ? text().tabs.events : text().tabs.frames"
                           [view]="historyView()"
                           [busy]="historyLoading()"
                           [columns]="columns()"
                           tableMinWidth="56rem"
-                          [cursorPage]="cursorPage()"
+                          [page]="historyPage()"
+                          [pageSizes]="[25, 50, 100]"
+                          [total]="history()?.total ?? null"
                           [errorText]="historyFailure()"
                           [emptyTitle]="
                             tab() === 'events' ? text().eventsEmpty : text().framesEmpty
@@ -864,24 +917,42 @@
                           [actions]="actions()"
                           [actionContext]="tab()"
                           (action)="openDetail($event.ids[0])"
-                          (cursorChange)="pageHistory($event)"
+                          (pageChange)="changeHistoryPage($event)"
                           (retry)="refresh()"
                           (clearFilters)="clearTechnicalFilters()"
                         >
+                          @if (tab() === 'events') {
+                            <discocan-list-sort-menu
+                              panelActions
+                              [fields]="eventSortFields()"
+                              [sort]="eventSort()"
+                              (sortChange)="chooseEventSort($event)"
+                            />
+                          } @else {
+                            <discocan-list-sort-menu
+                              panelActions
+                              [fields]="timeSortFields()"
+                              [sort]="timeSort()"
+                              (sortChange)="chooseTimeSort($event)"
+                            />
+                          }
                           <p-table
                             #technicalTable
                             class="app-responsive-table"
                             [value]="technicalRows()"
                             [lazy]="true"
                             [lazyLoadOnInit]="false"
-                            [sortField]="
-                              tab() === 'events' ? eventList.state().sort.field : undefined
+                            [sortField]="tab() === 'events' ? eventList.state().sort.field : 'TIME'"
+                            [sortOrder]="
+                              (tab() === 'events' ? eventSort() : timeSort()).direction === 'asc'
+                                ? 1
+                                : -1
                             "
-                            [sortOrder]="eventList.state().sort.direction === 'ASC' ? 1 : -1"
-                            (onLazyLoad)="sortEvents($event)"
+                            (onLazyLoad)="sortHistory($event)"
                             dataKey="id"
                             [rowTrackBy]="trackById"
                             [scrollable]="true"
+                            [pt]="{ tableContainer: { tabindex: '0', 'aria-label': tabTitle() } }"
                             [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
                           >
                             <ng-template #colgroup
@@ -900,16 +971,23 @@
                             <ng-template #header
                               ><tr>
                                 @for (column of columns(); track column.id) {
-                                  @let sortField = eventSortField(column.id);
+                                  @let sortField = historySortField(column.id);
                                   <th
                                     scope="col"
                                     [class]="column.className ?? ''"
+                                    pFrozenColumn
+                                    [frozen]="column.kind === 'actions'"
+                                    alignFrozen="right"
                                     [pSortableColumn]="sortField ?? ''"
                                     [pSortableColumnDisabled]="!sortField"
                                   >
-                                    {{ column.label }}
-                                    @if (sortField) {
-                                      <p-sort-icon [field]="sortField" />
+                                    @if (column.kind === 'actions') {
+                                      <span class="app-visually-hidden">{{ column.label }}</span>
+                                    } @else {
+                                      {{ column.label }}
+                                      @if (sortField) {
+                                        <p-sort-icon [field]="sortField" />
+                                      }
                                     }
                                   </th>
                                 }</tr

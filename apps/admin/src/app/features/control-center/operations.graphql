@@ -216,6 +216,9 @@ query AdminControlCenterEvents($id: ID!, $language: ErmLanguage!, $input: ErmDev
   fleetDevice(id: $id) {
     id
     ermEvents(input: $input) {
+      total
+      offset
+      limit
       cursor
       nextCursor
       hasMore
@@ -252,6 +255,9 @@ query AdminControlCenterFrames($id: ID!, $input: ErmDevicePageInput) {
   fleetDevice(id: $id) {
     id
     ermFrames(input: $input) {
+      total
+      offset
+      limit
       cursor
       nextCursor
       hasMore
@@ -294,6 +300,9 @@ query AdminControlCenterSnapshots($id: ID!, $input: ErmDevicePageInput) {
   fleetDevice(id: $id) {
     id
     ermParameterSnapshots(input: $input) {
+      total
+      offset
+      limit
       cursor
       nextCursor
       hasMore
@@ -471,8 +480,20 @@ query AdminControlCenterCommandRequest($id: ID!) {
     ...AdminControlCenterCommandRequestFields
   }
 }
-query AdminControlCenterDeviceProblems($id: ID!, $offset: Int! = 0) {
-  fleetProblems(offset: $offset, limit: 20, filter: { deviceIds: [$id] }) {
+query AdminControlCenterDeviceProblems(
+  $id: ID!
+  $offset: Int! = 0
+  $limit: Int! = 20
+  $severities: [FleetEventSeverity!]
+  $states: [FleetProblemState!]
+  $sort: FleetProblemSort
+) {
+  fleetProblems(
+    offset: $offset
+    limit: $limit
+    filter: { deviceIds: [$id], severities: $severities, states: $states }
+    sort: $sort
+  ) {
     total
     offset
     limit
@@ -513,8 +534,9 @@ query AdminControlCenterBranchCommandRequests(
   $offset: Int! = 0
   $limit: Int! = 20
   $filter: ErmCommandRequestsFilter
+  $sort: ErmCommandRequestsSort
 ) {
-  ermCommandRequests(offset: $offset, limit: $limit, filter: $filter) {
+  ermCommandRequests(offset: $offset, limit: $limit, filter: $filter, sort: $sort) {
     total
     offset
     limit

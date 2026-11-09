@@ -241,7 +241,7 @@ export class AdminWorkspace {
             .filter(Boolean)
             .join(' · ')
         : text.signIn;
-      document.title = page ? `${page} · discocan` : 'discocan';
+      document.title = page ? `${page} · DiscoCan` : 'DiscoCan';
     });
   }
 

@@ -474,9 +474,9 @@ describe('Events and alert workflow with PostgreSQL', () => {
       eventId: null,
       diagnostics: [],
     });
-    const problems = `query($filter:FleetProblemFilter,$offset:Int!){
-      fleetProblems(filter:$filter,offset:$offset,limit:1){
-        total offset limit items{sourceKind sourceId state requiringAttention alertId fleetEventId ermEventId commandRequestId deviceId}
+    const problems = `query($filter:FleetProblemFilter,$offset:Int!,$sort:FleetProblemSort){
+      fleetProblems(filter:$filter,offset:$offset,limit:1,sort:$sort){
+        total offset limit items{id sourceKind sourceId severity occurredAt state requiringAttention alertId fleetEventId ermEventId commandRequestId deviceId}
         counts{total requiringAttention recorded bySource{sourceKind total requiringAttention recorded}}
       }
     }`;
@@ -549,6 +549,52 @@ describe('Events and alert workflow with PostgreSQL', () => {
     expect(
       await query(problems, { offset: 0, filter: { deviceIds: [device.id] } }, otherBranchId),
     ).toMatchObject({ data: { fleetProblems: { total: 0, items: [] } } });
+    for (const [sort, offset, item] of [
+      [{ field: 'TIME', direction: 'ASC' }, 0, { occurredAt: hours(-100).toISOString() }],
+      [{ field: 'TIME', direction: 'DESC' }, 0, { sourceId: '901' }],
+      [{ field: 'SOURCE', direction: 'ASC' }, 104, { sourceKind: 'DIAGNOSTIC' }],
+      [
+        { field: 'SOURCE', direction: 'DESC' },
+        0,
+        { sourceKind: 'COMMAND', commandRequestId: commandId },
+      ],
+      [{ field: 'SEVERITY', direction: 'ASC' }, 0, { severity: 'WARNING', sourceId: '901' }],
+      [
+        { field: 'SEVERITY', direction: 'DESC' },
+        0,
+        { severity: 'CRITICAL', fleetEventId: event('trouble') },
+      ],
+      [{ field: 'STATE', direction: 'ASC' }, 0, { state: 'OPEN' }],
+      [
+        { field: 'STATE', direction: 'DESC' },
+        0,
+        { state: 'UNCERTAIN', commandRequestId: commandId },
+      ],
+    ] satisfies [Record<string, string>, number, Record<string, unknown>][]) {
+      expect(await query(problems, { sort, offset })).toMatchObject({
+        data: { fleetProblems: { total: 608, offset, items: [item] } },
+      });
+    }
+    for (const offset of [0, 1, 500]) {
+      expect(
+        await query(problems, {
+          offset,
+          sort: { field: 'SOURCE', direction: 'ASC' },
+          filter: { sourceKinds: ['ALARM'] },
+        }),
+      ).toMatchObject({
+        data: { fleetProblems: { total: 501, items: [{ id: `ALARM:${String(1000 + offset)}` }] } },
+      });
+    }
+    expect(
+      await query(
+        problems,
+        { offset: 0, sort: { field: 'SEVERITY', direction: 'DESC' } },
+        otherBranchId,
+      ),
+    ).toMatchObject({
+      data: { fleetProblems: { total: 1, items: [{ sourceKind: 'FLEET_ALERT' }] } },
+    });
 
     const reports: {
       report: number;

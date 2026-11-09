@@ -4,6 +4,7 @@ import type {
   FleetFaultSystem,
   FleetProblemSourceKind,
   FleetProblemState,
+  FleetProblemSortField,
 } from '../../../../generated/graphql/operations';
 import {
   codecs,
@@ -65,11 +66,16 @@ const instant: FilterCodec<string> = {
   same: (left, right) => left === right,
 };
 
-export const problemDefinition: ListDefinition<ProblemFilters, 'occurredAt'> = {
+export const problemDefinition: ListDefinition<ProblemFilters, FleetProblemSortField> = {
   pageSizes: [10, 20, 50, 100],
   defaultPageSize: 20,
-  sorts: [],
-  defaultSort: { field: 'occurredAt', direction: 'DESC' },
+  sorts: [
+    { param: 'time', field: 'TIME' },
+    { param: 'source', field: 'SOURCE' },
+    { param: 'severity', field: 'SEVERITY' },
+    { param: 'state', field: 'STATE' },
+  ],
+  defaultSort: { field: 'TIME', direction: 'DESC' },
   filters: {
     system: codecs.enumList(problemSystems),
     source: codecs.enumList(problemSources),
@@ -99,11 +105,12 @@ export const problemDefinition: ListDefinition<ProblemFilters, 'occurredAt'> = {
 };
 
 export function problemVariables(
-  state: ListState<ProblemFilters, 'occurredAt'>,
+  state: ListState<ProblemFilters, FleetProblemSortField>,
 ): AdminDashboardProblemsQueryVariables {
   return {
     offset: (state.page - 1) * state.pageSize,
     limit: state.pageSize,
+    sort: state.sort,
     filter: {
       sourceKinds: state.filter.source ? [...state.filter.source] : null,
       severities: state.filter.severity ? [...state.filter.severity] : null,

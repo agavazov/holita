@@ -60,6 +60,7 @@
     "db:migrate": "npm run db:migrate --workspace @discocan/core && npm run db:migrate --workspace @discocan/fleet && npm run db:migrate --workspace @discocan/erm-server",
     "db:seed": "npm run db:seed --workspace @discocan/core && npm run db:seed --workspace @discocan/fleet",
     "db:seed:fleet-demo": "tsx apps/fleet/prisma/demo/cli.ts",
+    "db:seed:driver-scorecards": "tsx apps/fleet/prisma/demo/driver-scorecards-cli.ts",
     "test:core:db": "nx run core:test-db --skip-nx-cache --output-style=static",
     "prelint": "npm run db:generate && npm run codegen",
     "typecheck:tools": "tsc --project tools/tsconfig.json",

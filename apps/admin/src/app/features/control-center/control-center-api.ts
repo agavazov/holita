@@ -40,6 +40,7 @@ import {
   AdminControlCenterCommandRequestsDocument,
   AdminControlCenterCommandRequestDocument,
   AdminControlCenterDeviceProblemsDocument,
+  type AdminControlCenterDeviceProblemsQueryVariables,
   AdminControlCenterCancelCommandDocument,
   type SendErmDeviceCommandInput,
   AdminControlCenterSnapshotsDocument,
@@ -231,10 +232,10 @@ export class ControlCenterApi implements OnDestroy {
     });
   }
 
-  watchDeviceProblems(id: string, offset: number) {
+  watchDeviceProblems(variables: AdminControlCenterDeviceProblemsQueryVariables) {
     return this.client().watchQuery({
       query: AdminControlCenterDeviceProblemsDocument,
-      variables: { id, offset },
+      variables,
       fetchPolicy: 'network-only',
     });
   }

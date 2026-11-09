@@ -29,6 +29,8 @@ import {
     >
       <p-table
         [value]="rows()"
+        sortField="since"
+        [sortOrder]="-1"
         [scrollable]="true"
         [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().currentWarnings } }"
         [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
@@ -42,10 +44,11 @@ import {
         <ng-template #header
           ><tr>
             @for (column of columns(); track column.id) {
-              <th scope="col">{{ column.label }}</th>
-            }
-          </tr></ng-template
-        >
+              <th scope="col" [pSortableColumn]="column.id">
+                {{ column.label }} <p-sort-icon [field]="column.id" />
+              </th>
+            }</tr
+        ></ng-template>
         <ng-template #body let-row
           ><tr>
             <td>

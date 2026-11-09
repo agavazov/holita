@@ -9,7 +9,6 @@ import {
   effect,
   inject,
   input,
-  linkedSignal,
   signal,
   untracked,
   viewChild,
@@ -41,6 +40,7 @@ import type {
   ErmParameterSnapshotStatus,
   FleetWarningLampState,
   ErmKarmaReturnStatus,
+  FleetProblemSortField,
 } from '../../../generated/graphql/operations';
 import { requestError } from '../../core/graphql/request-error';
 import { DemoSession } from '../../core/auth/demo-session';
@@ -62,6 +62,8 @@ import { injectFleetFormat } from '../../ui/format/fleet-format';
 import { formatDuration, formatNumber } from '../../ui/format/format';
 import { interpolate, uiMessages } from '../../ui/i18n/messages';
 import { trackById, type ListActionBase, type ListRecord } from '../../ui/list/list-actions';
+import { injectSortReady, type ListQuery } from '../../ui/list/list-query';
+import { ListSortMenu, type ListSortField } from '../../ui/list/list-sort-menu';
 import { LocationMap, type LocationMapRecord } from '../../ui/location-map/location-map';
 import { mapCoordinates } from '../../ui/map-preview/location-map';
 import { PageHeader } from '../../ui/page-header/page-header';
@@ -84,7 +86,9 @@ import { SmsPage } from './sms-page';
 import { FilterBuilder } from '../../ui/filter-builder/filter-builder';
 import type { FilterCondition, FilterField } from '../../ui/filter-builder/filter-model';
 import { UrlListState } from '../../ui/list/url-list-state';
-import { eventDefinition } from './device-events-query';
+import { eventDefinition, frameDefinition, snapshotDefinition } from './device-events-query';
+import { deviceProblemDefinition } from './device-problems-query';
+import { problemSeverities, problemStates } from '../fleet/overview/problems-query';
 
 export type DeviceTab =
   'overview' | 'problems' | 'commands' | 'sms-commands' | 'parameters' | 'events' | 'frames';
@@ -125,6 +129,7 @@ interface HistoryRead {
     Skeleton,
     TableModule,
     FilterBuilder,
+    ListSortMenu,
     Tag,
     Tabs,
     TabList,
@@ -310,8 +315,91 @@ export class DevicePage implements OnInit {
     ];
   });
   private readonly reload = signal(0);
-  readonly problemPage = signal(1);
+  readonly problemList = new UrlListState(
+    deviceProblemDefinition,
+    () => this.route.snapshot.paramMap.get('tab') === 'problems',
+  );
+  private readonly problemsSortReady = injectSortReady();
   readonly problems = signal<Problems | null>(null);
+  readonly problemRows = computed(() =>
+    (this.problems()?.items ?? []).map((problem) => {
+      const first = problem.diagnostics[0];
+      const firstObserved = problem.diagnostics
+        .map((diagnostic) => diagnostic.firstObservedAt)
+        .sort()[0];
+      const lastObserved = problem.diagnostics
+        .map((diagnostic) => diagnostic.lastObservedAt)
+        .sort()
+        .at(-1);
+      return {
+        ...problem,
+        title: first ? faultDescription(first, this.language()) : this.problemLabel(problem),
+        summary: first
+          ? [
+              first.troubleCode,
+              first.fmi === null ? null : faultFmi(first.fmi, this.language()),
+              problem.diagnostics.length > 1 ? `+${String(problem.diagnostics.length - 1)}` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')
+          : (problem.details ?? this.problemLabel(problem)),
+        system: first ? faultSystem(first.systemKey, this.language()) : '—',
+        firstObserved: firstObserved ?? problem.occurredAt,
+        lastObserved: lastObserved ?? problem.occurredAt,
+      };
+    }),
+  );
+  readonly problemConditions = computed<readonly FilterCondition[]>(() => {
+    const filter = this.problemList.state().filter;
+    return [
+      ...(filter.severity?.length
+        ? [
+            {
+              id: 'problem-severity',
+              field: 'severity',
+              operator: 'isAnyOf' as const,
+              values: filter.severity,
+            },
+          ]
+        : []),
+      ...(filter.state?.length
+        ? [
+            {
+              id: 'problem-state',
+              field: 'state',
+              operator: 'isAnyOf' as const,
+              values: filter.state,
+            },
+          ]
+        : []),
+    ];
+  });
+  readonly problemFields = computed<readonly FilterField[]>(() => [
+    {
+      key: 'severity',
+      label: this.text().severity,
+      type: 'enum',
+      operators: ['isAnyOf'],
+      options: problemSeverities.map((value) => ({ value, label: this.severityLabel(value) })),
+    },
+    {
+      key: 'state',
+      label: this.text().status,
+      type: 'enum',
+      operators: ['isAnyOf'],
+      options: problemStates.map((value) => ({ value, label: this.problemState(value) })),
+    },
+  ]);
+  readonly problemSortFields = computed<readonly ListSortField[]>(() => [
+    { field: 'SOURCE', label: this.text().source },
+    { field: 'TIME', label: this.text().time },
+    { field: 'SEVERITY', label: this.text().severity },
+    { field: 'STATE', label: this.text().status },
+  ]);
+  readonly problemSort = computed<NonNullable<ListQuery['sort']>>(() => ({
+    field: this.problemList.state().sort.field,
+    direction: this.problemList.state().sort.direction === 'ASC' ? 'asc' : 'desc',
+  }));
   readonly problemsLoading = signal(true);
   readonly problemsError = signal<unknown>(null);
   readonly problemView = computed(() =>
@@ -319,7 +407,7 @@ export class DevicePage implements OnInit {
       loading: this.problemsLoading() && !this.problems(),
       error: this.problemsError(),
       rows: this.problems()?.items.length ?? null,
-      filtered: false,
+      filtered: this.problemConditions().length > 0,
     }),
   );
   readonly hasFaultReports = computed<boolean | null>(() => {
@@ -360,6 +448,15 @@ export class DevicePage implements OnInit {
     eventDefinition,
     () => this.route.snapshot.paramMap.get('tab') === 'events',
   );
+  readonly eventSortFields = computed<readonly ListSortField[]>(() => [
+    { field: 'TIME', label: this.text().time },
+    { field: 'EVENT_TYPE', label: this.text().event },
+    { field: 'STATUS', label: this.text().severity },
+  ]);
+  readonly eventSort = computed<NonNullable<ListQuery['sort']>>(() => ({
+    field: this.eventList.state().sort.field,
+    direction: this.eventList.state().sort.direction === 'ASC' ? 'asc' : 'desc',
+  }));
   private readonly injector = inject(Injector);
   private eventsSortReady = false;
   private readonly technicalTable = viewChild<Table>('technicalTable');
@@ -384,11 +481,29 @@ export class DevicePage implements OnInit {
   ]);
   readonly direction = signal<ErmFrameDirection | null>(null);
   readonly checksum = signal<ErmFrameChecksum | null>(null);
-  readonly cursors = linkedSignal<DeviceTab, readonly (string | null)[]>({
-    source: this.tab,
-    computation: () => [null],
-  });
-  readonly cursor = computed(() => this.cursors().at(-1) ?? null);
+  readonly frameList = new UrlListState(
+    frameDefinition,
+    () => this.route.snapshot.paramMap.get('tab') === 'frames',
+  );
+  readonly snapshotList = new UrlListState(
+    snapshotDefinition,
+    () => this.route.snapshot.paramMap.get('tab') === 'parameters',
+  );
+  private readonly snapshotsSortReady = injectSortReady();
+  readonly timeSortFields = computed<readonly ListSortField[]>(() => [
+    {
+      field: 'TIME',
+      label: this.tab() === 'frames' ? this.text().received : this.text().snapshots.startedAt,
+    },
+  ]);
+  readonly timeSort = computed<NonNullable<ListQuery['sort']>>(() => ({
+    field: 'TIME',
+    direction:
+      (this.tab() === 'frames' ? this.frameList : this.snapshotList).state().sort.direction ===
+      'ASC'
+        ? 'asc'
+        : 'desc',
+  }));
   readonly events = signal<Events | null>(null);
   readonly frames = signal<Frames | null>(null);
   readonly snapshots = signal<Snapshots | null>(null);
@@ -435,11 +550,16 @@ export class DevicePage implements OnInit {
         !!this.checksum(),
     }),
   );
-  readonly cursorPage = computed(() => ({
-    page: this.cursors().length,
-    hasPrevious: this.cursors().length > 1,
-    hasNext: !!this.history()?.hasMore,
-  }));
+  readonly historyPage = computed(() => {
+    const tab = this.tab();
+    const state =
+      tab === 'events'
+        ? this.eventList.state()
+        : tab === 'frames'
+          ? this.frameList.state()
+          : this.snapshotList.state();
+    return { page: state.page, pageSize: state.pageSize, total: this.history()?.total ?? 0 };
+  });
   readonly detail = signal<Detail | null>(null);
   readonly actions = computed<readonly ListActionBase<'details'>[]>(() => [
     { id: 'details', label: this.text().detail.details },
@@ -527,7 +647,8 @@ export class DevicePage implements OnInit {
       className: 'app-col-identity',
     },
     { id: 'system', label: this.faultText().system, width: '11rem', kind: 'text' },
-    { id: 'time', label: this.text().detail.observations, width: '15rem', kind: 'date' },
+    { id: 'source', label: this.text().source, width: '9rem', kind: 'text' },
+    { id: 'time', label: this.text().time, width: '15rem', kind: 'date' },
     { id: 'severity', label: this.text().severity, width: '9rem', kind: 'status' },
     { id: 'status', label: this.text().status, width: '11rem', kind: 'status' },
     {
@@ -574,12 +695,6 @@ export class DevicePage implements OnInit {
         );
       }
     });
-    effect(() => {
-      this.eventList.state();
-      untracked(() => {
-        this.cursors.set([null]);
-      });
-    });
     injectPageRecord(() => (this.device() ? this.title() : null));
     effect((onCleanup) => {
       this.reload();
@@ -606,15 +721,28 @@ export class DevicePage implements OnInit {
     });
     effect((onCleanup) => {
       this.reload();
+      const state = this.problemList.state();
       this.problemsLoading.set(true);
       const sub = this.api
-        .watchDeviceProblems(this.recordId(), (this.problemPage() - 1) * 20)
+        .watchDeviceProblems({
+          id: this.recordId(),
+          offset: (state.page - 1) * state.pageSize,
+          limit: state.pageSize,
+          severities: state.filter.severity ? [...state.filter.severity] : null,
+          states: state.filter.state ? [...state.filter.state] : null,
+          sort: state.sort,
+        })
         .valueChanges.subscribe({
           next: (result) => {
             this.problemsLoading.set(result.loading);
             this.problemsError.set(result.error ?? null);
             if (result.dataState === 'complete' && !result.error) {
               this.problems.set(result.data.fleetProblems);
+              if (this.tab() === 'problems') {
+                this.problemList.correctPage(
+                  Math.max(1, Math.ceil(result.data.fleetProblems.total / state.pageSize)),
+                );
+              }
             }
           },
           error: (error: unknown) => {
@@ -630,15 +758,15 @@ export class DevicePage implements OnInit {
       this.reload();
       const tab = this.tab();
       const id = this.recordId();
-      const cursor = this.cursor();
       const category = this.category();
       const eventState = this.eventList.state();
+      const frameState = this.frameList.state();
+      const snapshotState = this.snapshotList.state();
       if (tab !== 'events' && tab !== 'frames' && tab !== 'parameters') {
         return;
       }
       this.historyLoading.set(true);
       this.historyError.set(null);
-      const page = { pageSize: 50, cursor };
       const read: Observable<HistoryRead> =
         tab === 'events'
           ? this.api
@@ -646,7 +774,8 @@ export class DevicePage implements OnInit {
                 id,
                 language: ermLanguage(this.language()),
                 input: {
-                  ...page,
+                  pageSize: eventState.pageSize,
+                  offset: (eventState.page - 1) * eventState.pageSize,
                   ...(category ? { categories: [category] } : {}),
                   ...(eventState.filter.statuses?.length
                     ? { severities: [...eventState.filter.statuses] }
@@ -667,19 +796,37 @@ export class DevicePage implements OnInit {
                 })),
               )
           : tab === 'frames'
-            ? this.api.watchFrames({ id, input: page }).valueChanges.pipe(
-                map((result) => ({
-                  loading: result.loading,
-                  error: result.error,
-                  data:
-                    result.dataState === 'complete' && !result.error
-                      ? { frames: result.data.fleetDevice.ermFrames }
-                      : null,
-                })),
-              )
+            ? this.api
+                .watchFrames({
+                  id,
+                  input: {
+                    pageSize: frameState.pageSize,
+                    offset: (frameState.page - 1) * frameState.pageSize,
+                    ...(frameState.sort.direction === 'ASC' ? { direction: 'ASC' as const } : {}),
+                  },
+                })
+                .valueChanges.pipe(
+                  map((result) => ({
+                    loading: result.loading,
+                    error: result.error,
+                    data:
+                      result.dataState === 'complete' && !result.error
+                        ? { frames: result.data.fleetDevice.ermFrames }
+                        : null,
+                  })),
+                )
             : this.api
                 .watchSnapshots(
-                  { id, input: { pageSize: 25, cursor } },
+                  {
+                    id,
+                    input: {
+                      pageSize: snapshotState.pageSize,
+                      offset: (snapshotState.page - 1) * snapshotState.pageSize,
+                      ...(snapshotState.sort.direction === 'ASC'
+                        ? { direction: 'ASC' as const }
+                        : {}),
+                    },
+                  },
                   () => !this.snapshotRunning(),
                 )
                 .valueChanges.pipe(
@@ -698,12 +845,21 @@ export class DevicePage implements OnInit {
           this.historyError.set(result.error ?? null);
           if (result.data && 'events' in result.data) {
             this.events.set(result.data.events);
+            this.eventList.correctPage(
+              Math.max(1, Math.ceil(result.data.events.total / eventState.pageSize)),
+            );
           }
           if (result.data && 'frames' in result.data) {
             this.frames.set(result.data.frames);
+            this.frameList.correctPage(
+              Math.max(1, Math.ceil(result.data.frames.total / frameState.pageSize)),
+            );
           }
           if (result.data && 'snapshots' in result.data) {
             this.snapshots.set(result.data.snapshots);
+            this.snapshotList.correctPage(
+              Math.max(1, Math.ceil(result.data.snapshots.total / snapshotState.pageSize)),
+            );
             const detail = untracked(this.detail);
             if (detail?.kind === 'snapshot') {
               const current = result.data.snapshots.items.find((row) => row.id === detail.value.id);
@@ -801,7 +957,6 @@ export class DevicePage implements OnInit {
   }
   selectCategory(value: ErmEventCategory | null): void {
     this.eventList.patchFilter({ category: value ?? '' });
-    this.cursors.set([null]);
   }
   filterEvents(conditions: readonly FilterCondition[]): void {
     const values = conditions[0]?.values ?? [];
@@ -810,7 +965,6 @@ export class DevicePage implements OnInit {
         values.includes(status),
       ),
     });
-    this.cursors.set([null]);
   }
   clearTechnicalFilters(): void {
     if (this.tab() === 'events') {
@@ -818,19 +972,93 @@ export class DevicePage implements OnInit {
     }
     this.direction.set(null);
     this.checksum.set(null);
-    this.cursors.set([null]);
   }
-  sortEvents(event: TableLazyLoadEvent): void {
-    if (this.tab() !== 'events' || !this.eventsSortReady) {
+  sortHistory(event: TableLazyLoadEvent): void {
+    if (!this.eventsSortReady) {
+      return;
+    }
+    if (this.tab() === 'frames') {
+      this.frameList.sortFromTable({ field: 'time', order: event.sortOrder });
       return;
     }
     const sort = eventDefinition.sorts.find((sort) => sort.field === event.sortField);
-    if (sort) {
+    if (this.tab() === 'events' && sort) {
       this.eventList.sortFromTable({ field: sort.param, order: event.sortOrder });
     }
   }
+  sortSnapshots(event: TableLazyLoadEvent): void {
+    if (this.snapshotsSortReady()) {
+      this.snapshotList.sortFromTable({ field: 'time', order: event.sortOrder });
+    }
+  }
+  chooseTimeSort(sort: NonNullable<ListQuery['sort']>): void {
+    (this.tab() === 'frames' ? this.frameList : this.snapshotList).setSort(
+      'TIME',
+      sort.direction === 'asc' ? 'ASC' : 'DESC',
+    );
+  }
+  changeHistoryPage(page: { page: number; pageSize: number }): void {
+    const tab = this.tab();
+    (tab === 'events'
+      ? this.eventList
+      : tab === 'frames'
+        ? this.frameList
+        : this.snapshotList
+    ).setPage(page);
+  }
 
-  eventSortField(column: string): string | null {
+  filterProblems(conditions: readonly FilterCondition[]): void {
+    const severity = conditions.find((condition) => condition.field === 'severity')?.values ?? [];
+    const state = conditions.find((condition) => condition.field === 'state')?.values ?? [];
+    this.problemList.patchFilter({
+      severity: problemSeverities.filter((value) => severity.includes(value)),
+      state: problemStates.filter((value) => state.includes(value)),
+    });
+  }
+
+  chooseProblemSort(sort: NonNullable<ListQuery['sort']>): void {
+    const field = deviceProblemDefinition.sorts.find((entry) => entry.field === sort.field)?.field;
+    if (field) {
+      this.problemList.setSort(field, sort.direction === 'asc' ? 'ASC' : 'DESC');
+    }
+  }
+
+  chooseEventSort(sort: NonNullable<ListQuery['sort']>): void {
+    const field = eventDefinition.sorts.find((entry) => entry.field === sort.field)?.field;
+    if (field) {
+      this.eventList.setSort(field, sort.direction === 'asc' ? 'ASC' : 'DESC');
+    }
+  }
+
+  sortProblems(event: TableLazyLoadEvent): void {
+    if (!this.problemsSortReady()) {
+      return;
+    }
+    const sort = deviceProblemDefinition.sorts.find((sort) => sort.field === event.sortField);
+    if (sort) {
+      this.problemList.sortFromTable({ field: sort.param, order: event.sortOrder });
+    }
+  }
+
+  problemSortField(column: string): FleetProblemSortField | null {
+    switch (column) {
+      case 'source':
+        return 'SOURCE';
+      case 'time':
+        return 'TIME';
+      case 'severity':
+        return 'SEVERITY';
+      case 'status':
+        return 'STATE';
+      default:
+        return null;
+    }
+  }
+
+  historySortField(column: string): string | null {
+    if (this.tab() === 'frames') {
+      return column === 'time' ? 'TIME' : null;
+    }
     if (this.tab() !== 'events') {
       return null;
     }
@@ -843,16 +1071,6 @@ export class DevicePage implements OnInit {
         return 'STATUS';
       default:
         return null;
-    }
-  }
-  pageHistory(direction: 'previous' | 'next'): void {
-    if (direction === 'previous') {
-      this.cursors.update((cursors) => cursors.slice(0, -1));
-    } else {
-      const next = this.history()?.nextCursor;
-      if (next) {
-        this.cursors.update((cursors) => [...cursors, next]);
-      }
     }
   }
   openDetail(id: string | undefined): void {

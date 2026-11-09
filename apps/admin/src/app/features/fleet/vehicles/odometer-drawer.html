@@ -25,7 +25,9 @@
           </div>
           <div>
             <dt>{{ text().recordedAt }}</dt>
-            <dd>{{ previous.recordedAt | discocanDateTime: units.preferences().timeZone : true }}</dd>
+            <dd>
+              {{ previous.recordedAt | discocanDateTime: units.preferences().timeZone : true }}
+            </dd>
           </div>
           <div>
             <dt>{{ text().source }}</dt>
@@ -62,15 +64,21 @@
           [hint]="timeZoneHint()"
           [error]="errorOf('recordedAt')"
         >
-          <input
-            pInputText
-            id="odometer-recordedAt"
-            type="datetime-local"
-            step="0.001"
+          <p-datepicker
+            inputId="odometer-recordedAt"
             formControlName="recordedAt"
+            dataType="string"
+            [dateFormat]="units.datePickerFormat()"
+            [showTime]="true"
+            [showSeconds]="true"
+            [keepInvalid]="true"
+            (input)="recordedAtInput($event)"
+            hourFormat="24"
+            [showIcon]="true"
+            [fluid]="true"
+            appendTo="body"
             [invalid]="!!errorOf('recordedAt')"
-            [attr.aria-invalid]="errorOf('recordedAt') ? 'true' : null"
-            aria-describedby="odometer-recordedAt-hint odometer-recordedAt-error"
+            [pt]="datePt()"
           />
         </discocan-form-field>
       </div>

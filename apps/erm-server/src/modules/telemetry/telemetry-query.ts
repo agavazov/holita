@@ -1,5 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
-import type { ErmDeviceEventsInput, ErmEventCategory } from '../../generated/graphql/types.js';
+import type {
+  ErmDeviceEventsInput,
+  ErmDevicePageInput,
+  ErmEventCategory,
+} from '../../generated/graphql/types.js';
 
 function invalid(): never {
   throw new BadRequestException('Invalid ERM unit, page size or cursor');
@@ -7,7 +11,7 @@ function invalid(): never {
 
 export function telemetryQuery(
   kind: 'events' | 'frames' | 'commands' | 'parameterSnapshots',
-  input: ErmDeviceEventsInput & { unitId: string },
+  input: ErmDeviceEventsInput & Pick<ErmDevicePageInput, 'direction'> & { unitId: string },
   categories?: readonly ErmEventCategory[] | null,
 ) {
   const pageSize = input.pageSize ?? 50;
@@ -15,15 +19,23 @@ export function telemetryQuery(
   if (![25, 50, 100].includes(pageSize) || !/^(?:[0-9A-Fa-f]{6}|\d{15})$/.test(unitId)) {
     invalid();
   }
+  const timeOrdered = kind === 'frames' || kind === 'parameterSnapshots';
   if (
-    kind === 'events' &&
-    (input.severities?.some((value) => !['INFO', 'WARNING', 'CRITICAL'].includes(value)) ||
-      (input.sort &&
-        (!['TIME', 'EVENT_TYPE', 'STATUS'].includes(input.sort.field ?? 'TIME') ||
-          !['ASC', 'DESC'].includes(input.sort.direction ?? 'DESC'))))
+    (input.offset != null &&
+      (!Number.isInteger(input.offset) ||
+        input.offset < 0 ||
+        input.offset > 2_147_483_647 ||
+        input.cursor != null)) ||
+    (input.direction != null && (!timeOrdered || !['ASC', 'DESC'].includes(input.direction))) ||
+    (kind === 'events' &&
+      (input.severities?.some((value) => !['INFO', 'WARNING', 'CRITICAL'].includes(value)) ||
+        (input.sort &&
+          (!['TIME', 'EVENT_TYPE', 'STATUS'].includes(input.sort.field ?? 'TIME') ||
+            !['ASC', 'DESC'].includes(input.sort.direction ?? 'DESC')))))
   ) {
     invalid();
   }
+  const direction = input.direction ?? 'DESC';
   const scope = JSON.stringify([
     kind,
     unitId,
@@ -36,8 +48,9 @@ export function telemetryQuery(
           input.sort?.direction ?? 'DESC',
         ]
       : []),
+    ...(timeOrdered ? [direction] : []),
   ]);
-  let offset = 0;
+  let offset = input.offset ?? 0;
   let snapshot = new Date();
   const cursor = input.cursor ?? null;
   if (cursor !== null) {
@@ -70,7 +83,7 @@ export function telemetryQuery(
       invalid();
     }
   }
-  return { unitId, pageSize, scope, offset, snapshot, cursor };
+  return { unitId, pageSize, scope, offset, snapshot, cursor, direction };
 }
 export type TelemetryQuery = ReturnType<typeof telemetryQuery>;
 

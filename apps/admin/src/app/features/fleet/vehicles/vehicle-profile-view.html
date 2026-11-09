@@ -325,21 +325,33 @@
                     <p class="app-muted">{{ v2().edata.truncated }}</p>
                   }
                   <discocan-table-panel
-                    mode="local"
                     [heading]="v2().edata.heading"
                     [headingLevel]="3"
                     [total]="edataObservations().length"
+                    [page]="edataPage()"
                     [columns]="edataColumns()"
                     tableMinWidth="42rem"
                     [view]="edataView()"
                     [errorText]="edataError()"
                     [emptyTitle]="v2().edata.empty"
                     (retry)="retryEdata.emit()"
+                    (pageChange)="changeEdataPage($event)"
                   >
+                    <discocan-list-sort-menu
+                      panelActions
+                      [fields]="edataSortFields()"
+                      [sort]="edataSort()"
+                      (sortChange)="changeSort('edata', $event)"
+                    />
                     <p-table
                       class="app-responsive-table"
                       [pt]="{ tableContainer: { tabindex: '0', 'aria-label': v2().edata.heading } }"
                       [value]="edataRows()"
+                      [lazy]="true"
+                      [lazyLoadOnInit]="false"
+                      [sortField]="edataSort().field"
+                      [sortOrder]="edataSort().direction === 'asc' ? 1 : -1"
+                      (onLazyLoad)="sort('edata', $event)"
                       dataKey="id"
                       [scrollable]="true"
                       [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
@@ -353,12 +365,15 @@
                       <ng-template #header
                         ><tr>
                           @for (column of edataColumns(); track column.id) {
-                            <th scope="col" [class.app-num]="column.kind === 'number'">
-                              {{ column.label }}
+                            <th
+                              scope="col"
+                              [class.app-num]="column.kind === 'number'"
+                              [pSortableColumn]="column.id"
+                            >
+                              {{ column.label }} <p-sort-icon [field]="column.id" />
                             </th>
-                          }
-                        </tr></ng-template
-                      >
+                          }</tr
+                      ></ng-template>
                       <ng-template #body let-observation
                         ><tr>
                           <td>
@@ -410,10 +425,21 @@
                 (pageChange)="problemPageChange.emit($event)"
                 (retry)="retryProblems.emit()"
               >
+                <discocan-list-sort-menu
+                  panelActions
+                  [fields]="problemSortFields()"
+                  [sort]="problemSort()"
+                  (sortChange)="changeSort('problems', $event)"
+                />
                 <p-table
                   class="app-responsive-table"
                   [pt]="{ tableContainer: { tabindex: '0', 'aria-label': v2().problems.heading } }"
                   [value]="problemRows()"
+                  [lazy]="true"
+                  [lazyLoadOnInit]="false"
+                  [sortField]="problemSort().field"
+                  [sortOrder]="problemSort().direction === 'asc' ? 1 : -1"
+                  (onLazyLoad)="sort('problems', $event)"
                   dataKey="id"
                   [rowTrackBy]="trackById"
                   [scrollable]="true"
@@ -428,10 +454,18 @@
                   <ng-template #header
                     ><tr>
                       @for (column of problemColumns(); track column.id) {
-                        <th scope="col">{{ column.label }}</th>
-                      }
-                    </tr></ng-template
-                  >
+                        <th
+                          scope="col"
+                          [pSortableColumn]="column.id"
+                          [pSortableColumnDisabled]="!canSort('problems', column.id)"
+                        >
+                          {{ column.label }}
+                          @if (canSort('problems', column.id)) {
+                            <p-sort-icon [field]="column.id" />
+                          }
+                        </th>
+                      }</tr
+                  ></ng-template>
                   <ng-template #body let-problem
                     ><tr>
                       <td>
@@ -441,7 +475,11 @@
                             [value]="severityLabel(problem.severity)"
                         /></span>
                       </td>
-                      <td>{{ problemSystemLabel(problem) }}</td>
+                      <td>
+                        <span class="app-cell-truncate" [title]="problemSystemLabel(problem)">{{
+                          problemSystemLabel(problem)
+                        }}</span>
+                      </td>
                       <td>
                         <span class="app-cell-identity" [title]="problemLabel(problem)">
                           @if (problem.alertId; as alertId) {
@@ -480,32 +518,28 @@
                         /></span>
                       </td>
                       <td class="app-cell-date">
-                        @if (problem.diagnostics.length) {
-                          <span class="app-cell-identity">
-                            <span
-                              >{{ faults().firstObserved }}:
-                              <time
-                                [attr.datetime]="problemFirstObserved(problem)"
-                                [title]="units.utc(problemFirstObserved(problem))"
-                                >{{ units.dateTime(problemFirstObserved(problem)) }}</time
-                              >
-                            </span>
-                            <span
-                              >{{ faults().lastObserved }}:
-                              <time
-                                [attr.datetime]="problemLastObserved(problem)"
-                                [title]="units.utc(problemLastObserved(problem))"
-                                >{{ units.dateTime(problemLastObserved(problem)) }}</time
-                              >
-                            </span>
-                          </span>
-                        } @else {
+                        <span class="app-cell-identity">
                           <time
                             [attr.datetime]="problem.occurredAt"
                             [title]="units.utc(problem.occurredAt)"
                             >{{ units.dateTime(problem.occurredAt) }}</time
                           >
-                        }
+                          @if (problem.diagnostics.length) {
+                            <span
+                              [title]="
+                                faults().firstObserved +
+                                ': ' +
+                                units.dateTime(problemFirstObserved(problem)) +
+                                ' · ' +
+                                faults().lastObserved +
+                                ': ' +
+                                units.dateTime(problemLastObserved(problem))
+                              "
+                              >{{ units.dateTime(problemFirstObserved(problem)) }} →
+                              {{ units.dateTime(problemLastObserved(problem)) }}
+                            </span>
+                          }
+                        </span>
                       </td>
                     </tr></ng-template
                   >
@@ -608,10 +642,21 @@
                 (pageChange)="tripPageChange.emit($event)"
                 (retry)="retryTrips.emit()"
               >
+                <discocan-list-sort-menu
+                  panelActions
+                  [fields]="tripSortFields()"
+                  [sort]="tripSort()"
+                  (sortChange)="changeSort('trips', $event)"
+                />
                 <p-table
                   class="app-responsive-table"
                   [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().recentTrips } }"
                   [value]="tripRows()"
+                  [lazy]="true"
+                  [lazyLoadOnInit]="false"
+                  [sortField]="tripSort().field"
+                  [sortOrder]="tripSort().direction === 'asc' ? 1 : -1"
+                  (onLazyLoad)="sort('trips', $event)"
                   dataKey="id"
                   [rowTrackBy]="trackById"
                   [scrollable]="true"
@@ -626,12 +671,19 @@
                   <ng-template #header
                     ><tr>
                       @for (column of tripColumns(); track column.id) {
-                        <th scope="col" [class.app-num]="column.kind === 'number'">
+                        <th
+                          scope="col"
+                          [class.app-num]="column.kind === 'number'"
+                          [pSortableColumn]="column.id"
+                          [pSortableColumnDisabled]="!canSort('trips', column.id)"
+                        >
                           {{ column.label }}
+                          @if (canSort('trips', column.id)) {
+                            <p-sort-icon [field]="column.id" />
+                          }
                         </th>
-                      }
-                    </tr></ng-template
-                  >
+                      }</tr
+                  ></ng-template>
                   <ng-template #body let-trip
                     ><tr>
                       <td class="app-cell-date">
@@ -703,10 +755,21 @@
                 (pageChange)="servicePageChange.emit($event)"
                 (retry)="retryService.emit()"
               >
+                <discocan-list-sort-menu
+                  panelActions
+                  [fields]="serviceSortFields()"
+                  [sort]="serviceSort()"
+                  (sortChange)="changeSort('service', $event)"
+                />
                 <p-table
                   class="app-responsive-table"
                   [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().serviceHeading } }"
                   [value]="serviceRows()"
+                  [lazy]="true"
+                  [lazyLoadOnInit]="false"
+                  [sortField]="serviceSort().field"
+                  [sortOrder]="serviceSort().direction === 'asc' ? 1 : -1"
+                  (onLazyLoad)="sort('service', $event)"
                   dataKey="id"
                   [rowTrackBy]="trackById"
                   [scrollable]="true"
@@ -721,12 +784,15 @@
                   <ng-template #header
                     ><tr>
                       @for (column of serviceColumns(); track column.id) {
-                        <th scope="col" [class.app-num]="column.kind === 'number'">
-                          {{ column.label }}
+                        <th
+                          scope="col"
+                          [class.app-num]="column.kind === 'number'"
+                          [pSortableColumn]="column.id"
+                        >
+                          {{ column.label }} <p-sort-icon [field]="column.id" />
                         </th>
-                      }
-                    </tr></ng-template
-                  >
+                      }</tr
+                  ></ng-template>
                   <ng-template #body let-task
                     ><tr>
                       <td>

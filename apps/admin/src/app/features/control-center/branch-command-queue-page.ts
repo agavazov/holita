@@ -24,7 +24,7 @@ import { ConfirmDialog } from 'primeng/confirmdialog';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
-import { TableModule } from 'primeng/table';
+import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type {
   AdminControlCenterBranchCommandRequestsQuery,
@@ -32,6 +32,7 @@ import type {
   AdminControlCenterSettingsDevicesQuery,
   AdminControlCenterQueueDeviceLabelsQuery,
   ErmCommandRequestStatus,
+  ErmCommandRequestsSortField,
   ErmDeviceAction,
 } from '../../../generated/graphql/operations';
 import { DemoSession } from '../../core/auth/demo-session';
@@ -54,6 +55,8 @@ import {
   type ListActionRequest,
 } from '../../ui/list/list-actions';
 import { codecs, type ListDefinition } from '../../ui/list/list-state';
+import { injectSortReady, type ListQuery } from '../../ui/list/list-query';
+import { ListSortMenu, type ListSortField } from '../../ui/list/list-sort-menu';
 import { UrlListState } from '../../ui/list/url-list-state';
 import { PageHeader } from '../../ui/page-header/page-header';
 import { RowActions } from '../../ui/row-actions/row-actions';
@@ -96,11 +99,18 @@ interface QueueFilters {
   readonly statuses: readonly ErmCommandRequestStatus[];
   readonly devices: readonly string[];
 }
-const queueDefinition: ListDefinition<QueueFilters, 'requested'> = {
+const queueDefinition: ListDefinition<QueueFilters, ErmCommandRequestsSortField> = {
   pageSizes: [10, 20, 50, 100],
   defaultPageSize: 20,
-  sorts: [],
-  defaultSort: { field: 'requested', direction: 'DESC' },
+  sorts: [
+    { param: 'command', field: 'ACTION' },
+    { param: 'status', field: 'STATUS' },
+    { param: 'unit', field: 'UNIT_ID' },
+    { param: 'actor', field: 'ACTOR_ID' },
+    { param: 'requested', field: 'REQUESTED_AT' },
+    { param: 'completed', field: 'COMPLETED_AT' },
+  ],
+  defaultSort: { field: 'REQUESTED_AT', direction: 'DESC' },
   filters: { statuses: codecs.enumList(statuses), devices: codecs.idList(100) },
 };
 type QueueAction = 'details' | 'batch' | 'cancel' | 'retry';
@@ -117,6 +127,7 @@ type CommandBatch = AdminControlCenterCommandBatchFieldsFragment;
     ButtonDirective,
     ConfirmDialog,
     InputText,
+    ListSortMenu,
     Message,
     Select,
     TableModule,
@@ -146,6 +157,21 @@ export class BranchCommandQueue implements OnInit {
   protected readonly url = new UrlListState(queueDefinition);
   protected readonly selectMultiplePt = selectMultiplePt;
   protected readonly trackById = trackById;
+  private readonly sortReady = injectSortReady();
+  protected readonly sortField = computed(
+    () =>
+      queueDefinition.sorts.find((sort) => sort.field === this.url.state().sort.field)?.param ??
+      'requested',
+  );
+  protected readonly sortQuery = computed<NonNullable<ListQuery['sort']>>(() => ({
+    field: this.sortField(),
+    direction: this.url.state().sort.direction === 'ASC' ? 'asc' : 'desc',
+  }));
+  protected readonly sortFields = computed<readonly ListSortField[]>(() =>
+    this.columns()
+      .filter((column) => this.sortableColumn(column.id))
+      .map((column) => ({ field: column.id, label: column.label })),
+  );
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
   protected readonly actionError = signal<string | null>(null);
@@ -334,6 +360,7 @@ export class BranchCommandQueue implements OnInit {
       const query = this.api.watchBranchCommandRequests({
         offset: (state.page - 1) * state.pageSize,
         limit: state.pageSize,
+        sort: state.sort,
         filter: {
           statuses: state.filter.statuses ? [...state.filter.statuses] : undefined,
           deviceIds: state.filter.devices ? [...state.filter.devices] : undefined,
@@ -507,6 +534,20 @@ export class BranchCommandQueue implements OnInit {
   protected loadMoreDevices(): void {
     this.deviceOffset.set(this.devices().length);
     this.deviceReload.update((value) => value + 1);
+  }
+  protected sortableColumn(id: string): boolean {
+    return queueDefinition.sorts.some((sort) => sort.param === id);
+  }
+  protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    const field = queueDefinition.sorts.find((entry) => entry.param === sort.field)?.field;
+    if (field) {
+      this.url.setSort(field, sort.direction === 'asc' ? 'ASC' : 'DESC');
+    }
+  }
+  protected sort(event: TableLazyLoadEvent): void {
+    if (this.sortReady()) {
+      this.url.sortFromTable({ field: event.sortField, order: event.sortOrder });
+    }
   }
   protected refresh(): void {
     this.actionError.set(null);

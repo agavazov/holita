@@ -15,6 +15,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonDirective } from 'primeng/button';
+import { DatePicker } from 'primeng/datepicker';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
@@ -24,8 +25,12 @@ import { selectMultiplePt } from '../../../ui/select-multiple';
 import { deviceOptions } from './device-query';
 import { FormField } from '../../../ui/form-field/form-field';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { isoToZonedWallTime, zonedWallTimeInstants } from '../../../ui/format/zoned-time';
+import {
+  dateTimePickerInputInstants,
+  formatDateTimePickerInput,
+} from '../../../ui/forms/date-time-input';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
+import { datePickerInputPt } from '../../../ui/forms/inner-input-pt';
 import { lockWhileSaving } from '../../../ui/forms/saving';
 import { patternValidator, textValidator, validationMessage } from '../../../ui/forms/validators';
 import { interpolate } from '../../../ui/i18n/messages';
@@ -72,6 +77,7 @@ const fieldOrder: readonly DeviceField[] = [
   imports: [
     ReactiveFormsModule,
     ButtonDirective,
+    DatePicker,
     InputText,
     Message,
     Select,
@@ -102,8 +108,9 @@ export class DeviceDrawer {
   readonly retryChoices = output();
 
   private readonly language = inject(UI_LANGUAGE);
-  private readonly units = injectFleetFormat();
+  protected readonly units = injectFleetFormat();
   private readonly timeZone = computed(() => this.units.preferences().timeZone);
+  private readonly dateFormat = computed(() => this.units.preferences().dateFormat);
   private readonly injector = inject(Injector);
   private readonly drawer = viewChild.required(RouteDrawer);
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
@@ -156,11 +163,11 @@ export class DeviceDrawer {
       nonNullable: true,
       validators: [textValidator(16), patternValidator(/^[0-9A-Za-z]{1,16}$/)],
     }),
-    installedAt: new FormControl('', {
-      nonNullable: true,
+    installedAt: new FormControl<string | null>('', {
       validators: (control) => {
         const value: unknown = control.value;
-        return value === '' ||
+        return value === null ||
+          value === '' ||
           (typeof value === 'string' && this.installedAtInstant(value) !== null)
           ? null
           : { pattern: true };
@@ -175,6 +182,9 @@ export class DeviceDrawer {
   });
   private readonly events = toSignal(this.form.events);
   private submitted = false;
+  protected readonly installedAtPt = computed(() =>
+    datePickerInputPt('device-installedAt', !!this.errorOf('installedAt')),
+  );
 
   protected readonly title = computed(() => {
     const device = this.device();
@@ -206,6 +216,7 @@ export class DeviceDrawer {
       const device = this.value() ?? this.device();
       const value = this.value();
       const timeZone = this.timeZone();
+      const dateFormat = this.dateFormat();
       untracked(() => {
         this.submitted = false;
         this.form.reset({
@@ -220,9 +231,7 @@ export class DeviceDrawer {
           edataModule: value?.edataModule ?? '',
           simPhoneNumber: value?.simPhoneNumber ?? '',
           smsPassword: value?.smsPassword ?? '',
-          installedAt: value?.installedAt
-            ? (isoToZonedWallTime(value.installedAt, timeZone) ?? '')
-            : '',
+          installedAt: formatDateTimePickerInput(value?.installedAt, timeZone, dateFormat),
         });
       });
     });
@@ -313,9 +322,23 @@ export class DeviceDrawer {
     this.form.markAsPristine();
   }
 
-  private installedAtInstant(wallTime: string): string | null {
-    const candidates = zonedWallTimeInstants(wallTime, this.timeZone());
+  protected installedAtInput(event: Event): void {
+    const input = event.target;
+    if (input instanceof HTMLInputElement) {
+      // Keep typed Branch wall time and precision instead of browser Date normalization.
+      this.form.controls.installedAt.setValue(input.value, { emitModelToViewChange: false });
+      this.form.controls.installedAt.markAsDirty();
+    }
+  }
+
+  private installedAtInstant(wallTime: string | null): string | null {
     const original = this.value()?.installedAt;
+    const candidates = dateTimePickerInputInstants(
+      wallTime,
+      this.timeZone(),
+      this.dateFormat(),
+      original,
+    );
     const originalAt = original ? Date.parse(original) : Number.NaN;
     // An unchanged repeated wall time must retain its original occurrence and precision.
     const selected = candidates.includes(originalAt) ? originalAt : candidates[0];

@@ -19,7 +19,7 @@ import { Dialog } from 'primeng/dialog';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
-import { TableModule } from 'primeng/table';
+import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { toneSeverity } from '../../ui/tones';
 import type {
@@ -43,6 +43,8 @@ import {
   type ListActionRequest,
 } from '../../ui/list/list-actions';
 import { RowActions } from '../../ui/row-actions/row-actions';
+import { injectSortReady, listQuery, type ListQuery } from '../../ui/list/list-query';
+import { ListSortMenu } from '../../ui/list/list-sort-menu';
 import { selectMultiplePt } from '../../ui/select-multiple';
 import { TablePanel, type TableColumn } from '../../ui/table-panel/table-panel';
 import { tableView } from '../../ui/table-panel/table-view';
@@ -91,6 +93,7 @@ interface Step {
     FormField,
     RowActions,
     TablePanel,
+    ListSortMenu,
   ],
   providers: [ConfirmationService],
   templateUrl: './device-settings.html',
@@ -240,7 +243,40 @@ export class DeviceSettings {
       total: this.batch()?.changes.length ?? 0,
     }),
   );
-  protected readonly batchRows = computed(() => this.batch()?.changes ?? []);
+  protected readonly batchState = signal<ListQuery>({
+    search: '',
+    conditions: [],
+    sort: null,
+    page: 1,
+    pageSize: 20,
+  });
+  protected readonly batchPage = computed(() => ({
+    page: this.batchState().page,
+    pageSize: this.batchState().pageSize,
+    total: this.batch()?.changes.length ?? 0,
+  }));
+  protected readonly batchSortFields = computed(() =>
+    this.batchColumns().map((column) => ({ field: column.id, label: column.label })),
+  );
+  protected readonly batchRows = computed(() => {
+    const state = this.batchState();
+    const rows = [...(this.batch()?.changes ?? [])];
+    if (state.sort) {
+      const sort = state.sort;
+      rows.sort((left, right) => {
+        const compared =
+          sort.field === 'status'
+            ? this.stateLabel(left.status).localeCompare(
+                this.stateLabel(right.status),
+                this.language(),
+              )
+            : left.unitId.localeCompare(right.unitId);
+        return (sort.direction === 'asc' ? compared : -compared) || left.id.localeCompare(right.id);
+      });
+    }
+    const start = (state.page - 1) * state.pageSize;
+    return rows.slice(start, start + state.pageSize);
+  });
   protected readonly batchColumns = computed<readonly TableColumn[]>(() => [
     {
       id: 'unit',
@@ -290,7 +326,52 @@ export class DeviceSettings {
       filtered: false,
     }),
   );
-  protected readonly historyRows = computed(() => [...this.runs()]);
+  protected readonly historyState = signal<ListQuery>({
+    search: '',
+    conditions: [],
+    sort: { field: 'started', direction: 'desc' },
+    page: 1,
+    pageSize: 20,
+  });
+  private readonly sortReady = injectSortReady();
+  protected readonly historyPage = computed(() => ({
+    page: this.historyState().page,
+    pageSize: this.historyState().pageSize,
+    total: this.runs().length,
+  }));
+  protected readonly historySortFields = computed(() =>
+    this.columns()
+      .filter((column) => column.kind !== 'actions')
+      .map((column) => ({ field: column.id, label: column.label })),
+  );
+  protected readonly historyRows = computed(() => {
+    const state = this.historyState();
+    const rows = [...this.runs()].sort((left, right) => {
+      const field = state.sort?.field;
+      if (field === 'finished' && (left.finishedAt === null || right.finishedAt === null)) {
+        if (left.finishedAt !== right.finishedAt) {
+          return left.finishedAt === null ? 1 : -1;
+        }
+      }
+      const compared =
+        field === 'operation'
+          ? this.operation(left).localeCompare(this.operation(right), this.language())
+          : field === 'status'
+            ? this.stateLabel(left.status).localeCompare(
+                this.stateLabel(right.status),
+                this.language(),
+              )
+            : field === 'finished'
+              ? (left.finishedAt ? Date.parse(left.finishedAt) : 0) -
+                (right.finishedAt ? Date.parse(right.finishedAt) : 0)
+              : Date.parse(left.startedAt) - Date.parse(right.startedAt);
+      return (
+        (state.sort?.direction === 'asc' ? compared : -compared) || left.id.localeCompare(right.id)
+      );
+    });
+    const start = (state.page - 1) * state.pageSize;
+    return rows.slice(start, start + state.pageSize);
+  });
   protected readonly selectedId = signal<string | null>(null);
   protected readonly selectedRun = computed(
     () => this.runs().find((run) => run.id === this.selectedId()) ?? null,
@@ -490,6 +571,26 @@ export class DeviceSettings {
     this.form.controls.freeParameter.setValue('');
   }
 
+  protected changePage(list: 'history' | 'batch', page: { page: number; pageSize: number }): void {
+    const state = list === 'history' ? this.historyState : this.batchState;
+    state.update((current) => listQuery.page(current, page));
+  }
+
+  protected changeSort(list: 'history' | 'batch', sort: NonNullable<ListQuery['sort']>): void {
+    const state = list === 'history' ? this.historyState : this.batchState;
+    state.update((current) => ({ ...current, sort, page: 1 }));
+  }
+
+  protected sort(list: 'history' | 'batch', event: TableLazyLoadEvent): void {
+    if (this.sortReady()) {
+      const state = list === 'history' ? this.historyState : this.batchState;
+      const next = listQuery.sorted(state(), event);
+      if (next) {
+        state.set(next);
+      }
+    }
+  }
+
   protected async submit(): Promise<void> {
     if (
       this.disabledReason() ||
@@ -534,6 +635,7 @@ export class DeviceSettings {
         });
         this.batch.set(batch);
         this.batchId.set(batch.id);
+        this.batchState.update((state) => ({ ...state, page: 1 }));
       } else if (value.mode === 'PARAMETERS') {
         await this.api.startParametersChange({
           deviceId: this.deviceId(),

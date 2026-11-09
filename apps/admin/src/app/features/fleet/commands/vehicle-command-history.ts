@@ -25,6 +25,8 @@ import { commandPending, commandText, type CommandRequest } from './command-pres
       [requests]="requests()"
       [language]="language()"
       [target]="target()"
+      [branchId]="branchId()"
+      [deviceId]="deviceId()"
       [loading]="loading()"
       [error]="error()"
       (inspect)="selectedId.set($event.id)"

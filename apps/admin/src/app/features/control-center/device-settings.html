@@ -99,7 +99,10 @@
               [ariaLabel]="text().parameters"
             />
           </discocan-form-field>
-          <discocan-form-field [label]="text().freeParameter" controlId="erm-settings-free-parameter">
+          <discocan-form-field
+            [label]="text().freeParameter"
+            controlId="erm-settings-free-parameter"
+          >
             <div class="app-inline">
               <input
                 pInputText
@@ -233,10 +236,18 @@
     mode="local"
     [heading]="text().batch"
     [total]="batch.changes.length"
+    [page]="batchPage()"
     [columns]="batchColumns()"
     [view]="{ kind: 'rows' }"
     tableMinWidth="36rem"
+    (pageChange)="changePage('batch', $event)"
   >
+    <discocan-list-sort-menu
+      panelActions
+      [fields]="batchSortFields()"
+      [sort]="batchState().sort"
+      (sortChange)="changeSort('batch', $event)"
+    />
     @if (batchRunning()) {
       <button
         panelActions
@@ -251,22 +262,44 @@
       </button>
     }
     <p-table
+      class="app-responsive-table"
       [value]="batchRows()"
+      dataKey="id"
+      [rowTrackBy]="trackById"
+      [lazy]="true"
+      [lazyLoadOnInit]="false"
+      [sortField]="batchState().sort?.field"
+      [sortOrder]="batchState().sort?.direction === 'asc' ? 1 : -1"
+      (onLazyLoad)="sort('batch', $event)"
       [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().batch } }"
       [scrollable]="true"
-      [tableStyle]="{ 'min-width': '36rem' }"
+      [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
     >
+      <ng-template #colgroup>
+        <colgroup>
+          @for (column of batchColumns(); track column.id) {
+            <col [style.width]="column.width" [class]="column.className ?? ''" />
+          }
+        </colgroup>
+      </ng-template>
       <ng-template #header
         ><tr>
-          <th scope="col">{{ auditText().target }}</th>
-          <th scope="col">{{ common().status }}</th>
-        </tr></ng-template
-      >
+          <th scope="col" class="app-col-identity" pSortableColumn="unit">
+            {{ auditText().target }} <p-sort-icon field="unit" />
+          </th>
+          <th scope="col" pSortableColumn="status">
+            {{ common().status }} <p-sort-icon field="status" />
+          </th></tr
+      ></ng-template>
       <ng-template #body let-change
         ><tr>
-          <td>{{ change.unitId }}</td>
+          <td class="app-col-identity">
+            <span class="app-cell-identity">{{ change.unitId }}</span>
+          </td>
           <td>
-            <p-tag [value]="stateLabel(change.status)" [severity]="severity(change.status)" />
+            <span class="app-cell-status">
+              <p-tag [value]="stateLabel(change.status)" [severity]="severity(change.status)" />
+            </span>
           </td></tr
       ></ng-template>
     </p-table>
@@ -311,6 +344,7 @@
   mode="local"
   [heading]="text().history"
   [total]="runs().length"
+  [page]="historyPage()"
   [columns]="columns()"
   [tableMinWidth]="tableMinWidth"
   [view]="historyView()"
@@ -319,8 +353,15 @@
   [emptyTitle]="text().empty"
   [actions]="actions()"
   (action)="historyAction($event)"
+  (pageChange)="changePage('history', $event)"
   (retry)="refreshHistory()"
 >
+  <discocan-list-sort-menu
+    panelActions
+    [fields]="historySortFields()"
+    [sort]="historyState().sort"
+    (sortChange)="changeSort('history', $event)"
+  />
   <button
     panelActions
     pButton
@@ -337,6 +378,11 @@
     [value]="historyRows()"
     dataKey="id"
     [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [sortField]="historyState().sort?.field"
+    [sortOrder]="historyState().sort?.direction === 'asc' ? 1 : -1"
+    (onLazyLoad)="sort('history', $event)"
     [scrollable]="true"
     [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
     [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().history } }"
@@ -357,10 +403,18 @@
     </ng-template>
     <ng-template #header>
       <tr>
-        <th scope="col" class="app-col-identity">{{ text().operation }}</th>
-        <th scope="col">{{ text().started }}</th>
-        <th scope="col">{{ common().status }}</th>
-        <th scope="col" class="app-col-secondary">{{ text().finished }}</th>
+        <th scope="col" class="app-col-identity" pSortableColumn="operation">
+          {{ text().operation }} <p-sort-icon field="operation" />
+        </th>
+        <th scope="col" pSortableColumn="started">
+          {{ text().started }} <p-sort-icon field="started" />
+        </th>
+        <th scope="col" pSortableColumn="status">
+          {{ common().status }} <p-sort-icon field="status" />
+        </th>
+        <th scope="col" class="app-col-secondary" pSortableColumn="finished">
+          {{ text().finished }} <p-sort-icon field="finished" />
+        </th>
         <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
           <span class="app-visually-hidden">{{ text().actions }}</span>
         </th>

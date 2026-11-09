@@ -356,7 +356,8 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
   }
 
   // Controls projected into FormField fill its width.
-  discocan-form-field > :is(input, textarea, p-select, p-autocomplete, p-inputnumber, p-datepicker) {
+  discocan-form-field
+    > :is(input, textarea, p-select, p-autocomplete, p-inputnumber, p-datepicker) {
     inline-size: 100%;
   }
 
@@ -799,6 +800,17 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
   .app-col-actions {
     inline-size: 3.25rem;
     text-align: end;
+  }
+
+  .app-col-actions-pair {
+    inline-size: 7rem;
+  }
+
+  .app-table-inline-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--p-app-space-1);
+    white-space: nowrap;
   }
 
   // One compact identity stays with its row actions while the remaining values scroll.

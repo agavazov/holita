@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
-import { sqlNullableText, sqlRows, sqlText } from '../../database/sql.js';
+import { sqlInteger, sqlNullableText, sqlRows, sqlText } from '../../database/sql.js';
 import { Prisma, type ErmParameterReadOutcome } from '../../generated/prisma/client.js';
 import type { TelemetryQuery } from './telemetry-query.js';
 import type { OperatorAudit, OperatorScope } from './operator-audit.js';
@@ -112,19 +112,25 @@ export class ParameterSnapshotsRepository {
   }
 
   async history(queries: (TelemetryQuery & { deviceId: string })[], scope: OperatorScope) {
+    // One request shares one validated direction.
+    const direction = Prisma.raw(queries[0]?.direction === 'ASC' ? 'ASC' : 'DESC');
+    const matching = Prisma.sql`"tenantId" = ${scope.tenantId}::uuid AND "branchId" = ${scope.branchId}::uuid
+            AND "deviceId" = q."deviceId" AND "startedAt" <= q.snapshot
+            AND "actorId" IS NOT NULL`;
     const selected = sqlRows(
       await this.prisma.client.$queryRaw(Prisma.sql`
-        SELECT q."deviceId", history.id::text AS id, previous.id::text AS "previousId"
+        SELECT q."deviceId", history.id::text AS id, previous.id::text AS "previousId", totals.total
         FROM jsonb_to_recordset(${JSON.stringify(queries)}::jsonb)
           q("deviceId" uuid, "offset" integer, "pageSize" integer, snapshot timestamptz)
         CROSS JOIN LATERAL (
+          SELECT count(*)::integer AS total FROM ${this.table()} WHERE ${matching}
+        ) totals
+        LEFT JOIN LATERAL (
           SELECT id, "startedAt", "unitId" FROM ${this.table()}
-          WHERE "tenantId" = ${scope.tenantId}::uuid AND "branchId" = ${scope.branchId}::uuid
-            AND "deviceId" = q."deviceId" AND "startedAt" <= q.snapshot
-            AND "actorId" IS NOT NULL
-          ORDER BY "startedAt" DESC, id DESC
+          WHERE ${matching}
+          ORDER BY "startedAt" ${direction}, id ${direction}
           LIMIT q."pageSize" + 1 OFFSET q."offset"
-        ) history
+        ) history ON true
         LEFT JOIN LATERAL (
           SELECT id FROM ${this.table()}
           WHERE "tenantId" = ${scope.tenantId}::uuid AND "branchId" = ${scope.branchId}::uuid
@@ -133,13 +139,15 @@ export class ParameterSnapshotsRepository {
             AND ("startedAt", id) < (history."startedAt", history.id)
           ORDER BY "startedAt" DESC, id DESC LIMIT 1
         ) previous ON true
-        ORDER BY q."deviceId", history."startedAt" DESC, history.id DESC
+        ORDER BY q."deviceId", history."startedAt" ${direction}, history.id ${direction}
       `),
     );
-    const ids = selected.flatMap((row) => {
-      const previousId = sqlNullableText(row, 'previousId');
-      return previousId === null ? [sqlText(row, 'id')] : [sqlText(row, 'id'), previousId];
-    });
+    const totals = new Map(
+      selected.map((row) => [sqlText(row, 'deviceId'), sqlInteger(row, 'total')]),
+    );
+    const ids = selected.flatMap((row) =>
+      [sqlNullableText(row, 'id'), sqlNullableText(row, 'previousId')].filter((id) => id !== null),
+    );
     const rows = new Map(
       (
         await this.prisma.client.ermParameterSnapshot.findMany({
@@ -155,10 +163,11 @@ export class ParameterSnapshotsRepository {
     );
     return queries.map((query) => ({
       query,
+      total: totals.get(query.deviceId) ?? 0,
       rows: selected
         .filter((row) => sqlText(row, 'deviceId') === query.deviceId)
         .flatMap((row): StoredParameterSnapshot[] => {
-          const snapshot = rows.get(sqlText(row, 'id'));
+          const snapshot = rows.get(sqlNullableText(row, 'id') ?? '');
           const previousId = sqlNullableText(row, 'previousId');
           return snapshot
             ? [{ ...snapshot, previousSnapshot: rows.get(previousId ?? '') ?? null }]

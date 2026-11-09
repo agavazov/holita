@@ -687,33 +687,53 @@ export class TelemetryRepository {
           ? Prisma.sql`CASE ${status} WHEN 'CRITICAL' THEN 2 WHEN 'WARNING' THEN 1 ELSE 0 END`
           : Prisma.sql`event."eventTime"`;
     const order = Prisma.sql`${field} ${direction} NULLS LAST, event.id ${direction}`;
+    const matching = Prisma.sql`event."unitId" = q."unitId" AND frame."receivedAt" <= q.snapshot
+      AND ${filter} AND ${severityFilter}`;
     const selected = sqlRows(
       await this.prisma.client.$queryRaw(Prisma.sql`
-      SELECT q."unitId", h.id::text AS id FROM
+      SELECT q."unitId", h.id::text AS id, totals.total FROM
       jsonb_to_recordset(${JSON.stringify(queries)}::jsonb) q("unitId" text, "offset" integer, "pageSize" integer, snapshot timestamptz)
       CROSS JOIN LATERAL (
+        SELECT count(*)::integer AS total
+        FROM ${this.table('ermEvent')} event
+        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+        WHERE ${matching}
+      ) totals
+      LEFT JOIN LATERAL (
         SELECT event.id, row_number() OVER (ORDER BY ${order}) AS ordinal
         FROM ${this.table('ermEvent')} event
         JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
-        WHERE event."unitId" = q."unitId" AND frame."receivedAt" <= q.snapshot AND ${filter} AND ${severityFilter}
+        WHERE ${matching}
         ORDER BY ${order}
         LIMIT q."pageSize" + 1 OFFSET q."offset"
-      ) h ORDER BY q."unitId", h.ordinal
+      ) h ON true ORDER BY q."unitId", h.ordinal
     `),
+    );
+    const totals = new Map(
+      selected.map((row) => [sqlText(row, 'unitId'), sqlInteger(row, 'total')]),
     );
     const rows = new Map(
       (
         await this.prisma.client.ermEvent.findMany({
-          where: { id: { in: selected.map((row) => BigInt(sqlText(row, 'id'))) } },
+          where: {
+            id: {
+              in: selected.flatMap((row) => {
+                const id = sqlNullableText(row, 'id');
+                return id === null ? [] : [BigInt(id)];
+              }),
+            },
+          },
         })
       ).map((event) => [String(event.id), event]),
     );
     return queries.map((query) => ({
       query,
+      total: totals.get(query.unitId) ?? 0,
       rows: selected
         .filter((row) => sqlText(row, 'unitId') === query.unitId)
         .flatMap((row) => {
-          const event = rows.get(sqlText(row, 'id'));
+          const id = sqlNullableText(row, 'id');
+          const event = id === null ? undefined : rows.get(id);
           return event ? [event] : [];
         }),
     }));
@@ -724,22 +744,38 @@ export class TelemetryRepository {
     scope: OperatorScope | null,
     devices: { id: string; imei: string }[],
   ) {
+    // One request shares one validated direction.
+    const direction = Prisma.raw(queries[0]?.direction === 'ASC' ? 'ASC' : 'DESC');
+    const matching = Prisma.sql`(frame."unitId" = q."unitId" OR (frame."unitId" IS NULL AND EXISTS (
+          SELECT 1 FROM ${this.table('ermConnection')} c WHERE c.id = frame."connectionId" AND c."unitId" = q."unitId"
+        ))) AND frame."receivedAt" <= q.snapshot`;
     const selected = sqlRows(
       await this.prisma.client.$queryRaw(Prisma.sql`
-      SELECT q."unitId", h.id::text AS id FROM
+      SELECT q."unitId", h.id::text AS id, totals.total FROM
       jsonb_to_recordset(${JSON.stringify(queries)}::jsonb) q("unitId" text, "offset" integer, "pageSize" integer, snapshot timestamptz)
       CROSS JOIN LATERAL (
+        SELECT count(*)::integer AS total FROM ${this.table('ermFrame')} frame WHERE ${matching}
+      ) totals
+      LEFT JOIN LATERAL (
         SELECT frame.id, frame."receivedAt" FROM ${this.table('ermFrame')} frame
-        WHERE (frame."unitId" = q."unitId" OR (frame."unitId" IS NULL AND EXISTS (
-          SELECT 1 FROM ${this.table('ermConnection')} c WHERE c.id = frame."connectionId" AND c."unitId" = q."unitId"
-        ))) AND frame."receivedAt" <= q.snapshot
-        ORDER BY frame."receivedAt" DESC, frame.id DESC
+        WHERE ${matching}
+        ORDER BY frame."receivedAt" ${direction}, frame.id ${direction}
         LIMIT q."pageSize" + 1 OFFSET q."offset"
-      ) h ORDER BY q."unitId", h."receivedAt" DESC, h.id DESC
+      ) h ON true ORDER BY q."unitId", h."receivedAt" ${direction}, h.id ${direction}
     `),
     );
+    const totals = new Map(
+      selected.map((row) => [sqlText(row, 'unitId'), sqlInteger(row, 'total')]),
+    );
     const frames = await this.prisma.client.ermFrame.findMany({
-      where: { id: { in: selected.map((row) => BigInt(sqlText(row, 'id'))) } },
+      where: {
+        id: {
+          in: selected.flatMap((row) => {
+            const id = sqlNullableText(row, 'id');
+            return id === null ? [] : [BigInt(id)];
+          }),
+        },
+      },
     });
     const confirmations = frames.flatMap((frame) => {
       const parsed =
@@ -817,10 +853,11 @@ export class TelemetryRepository {
     );
     return queries.map((query) => ({
       query,
+      total: totals.get(query.unitId) ?? 0,
       rows: selected
         .filter((row) => sqlText(row, 'unitId') === query.unitId)
         .flatMap((row) => {
-          const frame = rows.get(sqlText(row, 'id'));
+          const frame = rows.get(sqlNullableText(row, 'id') ?? '');
           return frame ? [frame] : [];
         }),
     }));

@@ -95,6 +95,12 @@ The fixed anchor defaults to `2026-10-18T06:30:00.000Z`; override with
 Production, future anchors, remote targets and unguarded database scopes are refused.
 This creates demo data, not telemetry or device commands.
 
+For an existing local Discordia fleet, `npm run db:seed:driver-scorecards` adds scored `DEMO`
+trips and maneuvers across the 7-, 30- and 90-day periods to active, assigned drivers explicitly
+marked as fictional demo people. It uses the existing Branch data clock and inserts missing
+fixtures only; it preserves device telemetry, assignments and existing activity. The scorecard
+periods follow the moving data clock: run it again later to add the trips missing up to that clock.
+
 ### Fleet operator workflows
 
 All paths below start with `/:language/:branchId`. Lists retain search, AND conditions, sort
@@ -433,8 +439,11 @@ offline, choose expiry (default two hours, maximum 24 hours), and cancel a QUEUE
 primary connection.
 
 The command queue API also provides Branch-wide history through
-`ermCommandRequests(offset: 0, limit: 20, filter: ...)`, returning `items`, `total`, `offset` and
-`limit`. The maximum limit is 100; rows sort by `createdAt DESC, id DESC`. Filters are `statuses`,
+`ermCommandRequests(offset: 0, limit: 20, filter: ..., sort: ...)`, returning `items`, `total`,
+`offset` and `limit`. The maximum limit is 100. Sort fields are `ACTION`, `STATUS`, `UNIT_ID`,
+`ACTOR_ID`, `REQUESTED_AT` and `COMPLETED_AT`, with `ASC`/`DESC` direction; completed times keep
+nulls last and ties use ID in the same direction. The default is `REQUESTED_AT DESC`, equivalent
+to `createdAt DESC, id DESC`. Filters are `statuses`,
 `actions`, `deviceIds`, `imeis`, `actorId`, `createdFrom` (inclusive) and `createdTo` (exclusive).
 List filters accept 1–100 unique values. Every row retains its Device ID and IMEI (`unitId`),
 issuer, outcome, lifecycle times, expiry, `retryOfId`, `batchId` and `batchIndex`.

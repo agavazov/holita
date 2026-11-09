@@ -16,15 +16,19 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonDirective } from 'primeng/button';
-import { InputText } from 'primeng/inputtext';
+import { DatePicker } from 'primeng/datepicker';
 import { InputNumber } from 'primeng/inputnumber';
 import { Message } from 'primeng/message';
 import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
 import { FormField } from '../../../ui/form-field/form-field';
 import { FormatDateTimePipe } from '../../../ui/format/format.pipes';
-import { isoToZonedWallTime, zonedWallTimeInstants } from '../../../ui/format/zoned-time';
+import { defaultDateFormat, type FleetDateFormat } from '../../../ui/format/format';
+import {
+  dateTimePickerInputInstants,
+  formatDateTimePickerInput,
+} from '../../../ui/forms/date-time-input';
 import { focusFirstInvalid } from '../../../ui/forms/focus';
-import { innerInputPt } from '../../../ui/forms/inner-input-pt';
+import { datePickerInputPt, innerInputPt } from '../../../ui/forms/inner-input-pt';
 import { validationMessage } from '../../../ui/forms/validators';
 import { interpolate } from '../../../ui/i18n/messages';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
@@ -41,18 +45,19 @@ export interface PreviousOdometerReading extends OdometerReading {
 export type OdometerField = keyof OdometerReading;
 const fields: readonly OdometerField[] = ['odometerKm', 'recordedAt'];
 
-/** Floating wall time avoids normalization by the browser's own DST rules. */
-function odometerWallTime(iso: string, timeZone = 'Europe/Sofia'): string | null {
-  return isoToZonedWallTime(iso, timeZone);
-}
-
 /** Repeated Branch wall times use an occurrence inside the permitted reading interval. */
 function odometerInstant(
   date: string | null,
   bounds?: { readonly previousAt: string | null; readonly latestAllowedAt: string },
   timeZone = 'Europe/Sofia',
+  dateFormat: FleetDateFormat = defaultDateFormat,
 ): string | null {
-  const candidates = zonedWallTimeInstants(date, timeZone);
+  const candidates = dateTimePickerInputInstants(
+    date,
+    timeZone,
+    dateFormat,
+    bounds?.latestAllowedAt,
+  );
   const earliest = candidates[0];
   if (earliest === undefined) {
     return null;
@@ -74,7 +79,7 @@ function odometerInstant(
   imports: [
     ReactiveFormsModule,
     ButtonDirective,
-    InputText,
+    DatePicker,
     InputNumber,
     Message,
     RouteDrawer,
@@ -107,6 +112,7 @@ export class OdometerDrawer {
   protected readonly text = computed(() => vehiclesText(this.language()).odometer);
   private readonly displayUnit = computed(() => this.units.preferences().distanceUnit);
   protected readonly timeZone = computed(() => this.units.preferences().timeZone);
+  private readonly dateFormat = computed(() => this.units.preferences().dateFormat);
   protected readonly odometerLabel = computed(() =>
     interpolate(this.text().odometerKm, {
       unit: this.units.distanceUnit(),
@@ -149,9 +155,8 @@ export class OdometerDrawer {
       }
       return km > 9_999_999.9 ? { max: { max: this.units.distanceValue(9_999_999.9) } } : null;
     }),
-    recordedAt: new FormControl('', {
-      nonNullable: true,
-      validators: (control) => (control.value === '' ? { required: true } : null),
+    recordedAt: new FormControl<string | null>('', {
+      validators: (control) => (!control.value ? { required: true } : null),
     }),
   });
   private readonly events = toSignal(this.form.events);
@@ -163,18 +168,31 @@ export class OdometerDrawer {
   protected readonly numberPt = computed(() =>
     innerInputPt('odometer-odometerKm', !!this.errorOf('odometerKm')),
   );
+  protected readonly datePt = computed(() =>
+    datePickerInputPt('odometer-recordedAt', !!this.errorOf('recordedAt')),
+  );
+
+  protected recordedAtInput(event: Event): void {
+    const input = event.target;
+    if (input instanceof HTMLInputElement) {
+      // Keep typed Branch wall time and precision instead of browser Date normalization.
+      this.form.controls.recordedAt.setValue(input.value, { emitModelToViewChange: false });
+      this.form.controls.recordedAt.markAsDirty();
+    }
+  }
 
   constructor() {
     effect(() => {
       const latest = this.latestAllowedAt();
       const previous = this.previous();
       const timeZone = this.timeZone();
+      const dateFormat = this.dateFormat();
       this.displayUnit();
       untracked(() => {
         this.submitted = false;
         this.form.reset({
           odometerKm: this.units.distanceValue(previous?.odometerKm ?? null),
-          recordedAt: odometerWallTime(latest, timeZone) ?? '',
+          recordedAt: formatDateTimePickerInput(latest, timeZone, dateFormat),
         });
       });
     });
@@ -306,6 +324,7 @@ export class OdometerDrawer {
         latestAllowedAt: this.latestAllowedAt(),
       },
       this.timeZone(),
+      this.dateFormat(),
     );
   }
 

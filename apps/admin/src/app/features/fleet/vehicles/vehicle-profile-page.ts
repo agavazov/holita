@@ -60,9 +60,12 @@ import {
   profileBackParams,
   profilePage,
   profilePageParams,
+  profileSortParams,
   profileTab,
   type ProfileListTab,
   type ProfilePage,
+  type ProfileListQuery,
+  type ProfileSort,
 } from './vehicle-profile-query';
 import {
   VehicleProfileView,
@@ -70,8 +73,11 @@ import {
   type VehicleProfileTab,
 } from './vehicle-profile-view';
 
-const samePage = (left: ProfilePage, right: ProfilePage) =>
-  left.page === right.page && left.pageSize === right.pageSize;
+const samePage = (left: ProfileListQuery, right: ProfileListQuery) =>
+  left.page === right.page &&
+  left.pageSize === right.pageSize &&
+  left.sort.field === right.sort.field &&
+  left.sort.direction === right.sort.direction;
 
 @Component({
   selector: 'discocan-vehicle-profile-page',
@@ -116,23 +122,29 @@ const samePage = (left: ProfilePage, right: ProfilePage) =>
       (recordOdometer)="open('odometer')"
       [trips]="trips()"
       [tripPage]="tripPage()"
+      [tripSort]="tripPage().sort"
       [tripState]="tripView()"
       [tripError]="tripFailure()"
       (tripPageChange)="changePage('trips', $event)"
+      (tripSortChange)="changeSort('trips', $event)"
       (retryTrips)="retryTrips.next()"
       [problems]="problems()"
       [problemCounts]="problemData()?.counts ?? null"
       [hasFaultReports]="hasFaultReports()"
       [problemPage]="problemPage()"
+      [problemSort]="problemPage().sort"
       [problemState]="problemView()"
       [problemError]="problemFailure()"
       (problemPageChange)="changePage('problems', $event)"
+      (problemSortChange)="changeSort('problems', $event)"
       (retryProblems)="retryProblems.next()"
       [service]="service()"
       [servicePage]="servicePage()"
+      [serviceSort]="servicePage().sort"
       [serviceState]="serviceView()"
       [serviceError]="serviceFailure()"
       (servicePageChange)="changePage('service', $event)"
+      (serviceSortChange)="changeSort('service', $event)"
       (retryService)="retryService.next()"
       (openTrip)="related('trips', $event)"
       (openAlert)="related('alerts', $event)"
@@ -414,6 +426,15 @@ export class VehicleProfilePage implements OnInit {
     });
   }
 
+  changeSort(tab: ProfileListTab, sort: ProfileSort): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: profileSortParams(tab, sort),
+      queryParamsHandling: 'merge',
+      preserveFragment: true,
+    });
+  }
+
   open(kind: 'edit' | 'odometer'): void {
     if (!this.canOperate() || this.state() !== 'ready') {
       return;
@@ -447,7 +468,7 @@ export class VehicleProfilePage implements OnInit {
   }
 
   private loadTrips(id: string): void {
-    let previous: ProfilePage | null = null;
+    let previous: ProfileListQuery | null = null;
     const pages = this.route.queryParamMap.pipe(
       map((params) => profilePage(params, 'trips')),
       distinctUntilChanged(samePage),
@@ -461,7 +482,7 @@ export class VehicleProfilePage implements OnInit {
           previous = page;
           this.tripLoading.set(true);
           this.tripError.set(null);
-          return this.api.watchTrips(id, page.page, page.pageSize).valueChanges.pipe(
+          return this.api.watchTrips(id, page.page, page.pageSize, page.sort).valueChanges.pipe(
             catchError((error: unknown) => {
               this.tripLoading.set(false);
               this.tripError.set(error);
@@ -482,7 +503,7 @@ export class VehicleProfilePage implements OnInit {
   }
 
   private loadProblems(id: string): void {
-    let previous: ProfilePage | null = null;
+    let previous: ProfileListQuery | null = null;
     const pages = this.route.queryParamMap.pipe(
       map((params) => profilePage(params, 'problems')),
       distinctUntilChanged(samePage),
@@ -496,7 +517,7 @@ export class VehicleProfilePage implements OnInit {
           previous = page;
           this.problemLoading.set(true);
           this.problemError.set(null);
-          return this.api.watchProblems(id, page.page, page.pageSize).valueChanges.pipe(
+          return this.api.watchProblems(id, page.page, page.pageSize, page.sort).valueChanges.pipe(
             catchError((error: unknown) => {
               this.problemLoading.set(false);
               this.problemError.set(error);
@@ -602,7 +623,7 @@ export class VehicleProfilePage implements OnInit {
   }
 
   private loadService(id: string): void {
-    let previous: ProfilePage | null = null;
+    let previous: ProfileListQuery | null = null;
     const pages = this.route.queryParamMap.pipe(
       map((params) => profilePage(params, 'service')),
       distinctUntilChanged(samePage),
@@ -616,7 +637,7 @@ export class VehicleProfilePage implements OnInit {
           previous = page;
           this.serviceLoading.set(true);
           this.serviceError.set(null);
-          return this.api.watchService(id, page.page, page.pageSize).valueChanges.pipe(
+          return this.api.watchService(id, page.page, page.pageSize, page.sort).valueChanges.pipe(
             catchError((error: unknown) => {
               this.serviceLoading.set(false);
               this.serviceError.set(error);

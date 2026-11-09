@@ -19,6 +19,12 @@ import { DemoSession } from '../../../core/auth/demo-session';
 import { AdminConfig } from '../../../core/config/admin-config';
 import { graphqlOptions } from '../../../core/graphql/graphql-options';
 import type { Language } from '../../../i18n/messages';
+import {
+  profileProblemSort,
+  profileServiceSort,
+  profileTripSort,
+  type ProfileSort,
+} from './vehicle-profile-query';
 
 /** One captured session, Branch and language per profile or odometer drawer. */
 @Injectable()
@@ -67,18 +73,28 @@ export class VehicleProfileApi implements OnDestroy {
     });
   }
 
-  watchTrips(vehicleId: string, page: number, pageSize: number) {
+  watchTrips(vehicleId: string, page: number, pageSize: number, sort: ProfileSort) {
     return this.client().watchQuery({
       query: AdminVehicleProfileTripsDocument,
-      variables: { vehicleId, offset: (page - 1) * pageSize, limit: pageSize },
+      variables: {
+        vehicleId,
+        offset: (page - 1) * pageSize,
+        limit: pageSize,
+        sort: profileTripSort(sort),
+      },
       fetchPolicy: 'network-only',
     });
   }
 
-  watchProblems(vehicleId: string, page: number, pageSize: number) {
+  watchProblems(vehicleId: string, page: number, pageSize: number, sort: ProfileSort) {
     return this.client().watchQuery({
       query: AdminVehicleProfileProblemsDocument,
-      variables: { vehicleId, offset: (page - 1) * pageSize, limit: pageSize },
+      variables: {
+        vehicleId,
+        offset: (page - 1) * pageSize,
+        limit: pageSize,
+        sort: profileProblemSort(sort),
+      },
       fetchPolicy: 'network-only',
       pollInterval: 30_000,
       skipPollAttempt: () => document.hidden,
@@ -109,10 +125,15 @@ export class VehicleProfileApi implements OnDestroy {
     });
   }
 
-  watchService(vehicleId: string, page: number, pageSize: number) {
+  watchService(vehicleId: string, page: number, pageSize: number, sort: ProfileSort) {
     return this.client().watchQuery({
       query: AdminVehicleProfileServiceDocument,
-      variables: { vehicleId, offset: (page - 1) * pageSize, limit: pageSize },
+      variables: {
+        vehicleId,
+        offset: (page - 1) * pageSize,
+        limit: pageSize,
+        sort: profileServiceSort(sort),
+      },
       fetchPolicy: 'network-only',
     });
   }

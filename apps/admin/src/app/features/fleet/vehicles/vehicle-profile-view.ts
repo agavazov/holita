@@ -7,6 +7,7 @@ import {
   input,
   linkedSignal,
   output,
+  signal,
 } from '@angular/core';
 import { RouterLink, type Params } from '@angular/router';
 import { ChartLine } from '@primeicons/angular/chart-line';
@@ -14,7 +15,7 @@ import { ExclamationTriangle } from '@primeicons/angular/exclamation-triangle';
 import { Gauge } from '@primeicons/angular/gauge';
 import { Wrench } from '@primeicons/angular/wrench';
 import { ButtonDirective } from 'primeng/button';
-import { TableModule } from 'primeng/table';
+import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Skeleton } from 'primeng/skeleton';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { Tag } from 'primeng/tag';
@@ -43,6 +44,8 @@ import { interpolate } from '../../../ui/i18n/messages';
 import { KpiStrip } from '../../../ui/kpi/kpi-strip';
 import { KpiTile } from '../../../ui/kpi/kpi-tile';
 import { trackById } from '../../../ui/list/list-actions';
+import { injectSortReady } from '../../../ui/list/list-query';
+import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
 import {
   LocationMap,
   type LocationMapRecord,
@@ -67,6 +70,7 @@ import { vehiclesText } from './i18n/messages';
 import type { VehicleFuelType } from './vehicle-drawer';
 import { vehicleLastReport, vehicleLiveDevice, vehicleLiveStatus } from './vehicle-live';
 import type { VehicleProblem, VehicleProblemCounts } from './vehicle-profile-v2-model';
+import type { ProfileListTab, ProfileSort } from './vehicle-profile-query';
 import type { VehicleRow } from './vehicles-view';
 import bg from './vehicle-profile-view.bg.json';
 import en from './vehicle-profile-view.en.json';
@@ -147,6 +151,7 @@ function listView(rows: readonly unknown[]): TableView {
     KpiStrip,
     KpiTile,
     LocationMap,
+    ListSortMenu,
     PageHeader,
     TablePanel,
     VehicleCommandHistory,
@@ -205,6 +210,9 @@ export class VehicleProfileView {
   readonly tripPage = input<TablePage | null>(null);
   readonly problemPage = input<TablePage | null>(null);
   readonly servicePage = input<TablePage | null>(null);
+  readonly tripSort = input<ProfileSort>({ field: 'started', direction: 'desc' });
+  readonly problemSort = input<ProfileSort>({ field: 'observed', direction: 'desc' });
+  readonly serviceSort = input<ProfileSort>({ field: 'urgency', direction: 'asc' });
   readonly tripState = input<TableView | null>(null);
   readonly problemState = input<TableView | null>(null);
   readonly serviceState = input<TableView | null>(null);
@@ -214,6 +222,9 @@ export class VehicleProfileView {
   readonly tripPageChange = output<{ page: number; pageSize: number }>();
   readonly problemPageChange = output<{ page: number; pageSize: number }>();
   readonly servicePageChange = output<{ page: number; pageSize: number }>();
+  readonly tripSortChange = output<ProfileSort>();
+  readonly problemSortChange = output<ProfileSort>();
+  readonly serviceSortChange = output<ProfileSort>();
   readonly retryTrips = output();
   readonly retryProblems = output();
   readonly retryService = output();
@@ -229,6 +240,7 @@ export class VehicleProfileView {
   protected readonly units = injectFleetFormat();
   protected readonly now = injectFleetNow();
   protected readonly language = inject(UI_LANGUAGE);
+  private readonly sortReady = injectSortReady();
   private readonly vehicles = computed(() => vehiclesText(this.language()));
   protected readonly text = computed(() => this.vehicles().profile);
   protected readonly v2 = computed(() => (this.language() === 'bg' ? bg : en));
@@ -371,7 +383,28 @@ export class VehicleProfileView {
     this.problems().filter((problem) => problem.diagnostics.length),
   );
   protected readonly serviceRows = computed(() => [...this.service()]);
-  protected readonly edataRows = computed(() => [...this.edataObservations()]);
+  protected readonly edataSort = signal<ProfileSort>({ field: 'observation', direction: 'asc' });
+  protected readonly edataPage = linkedSignal(() => ({
+    page: 1,
+    pageSize: 20,
+    total: this.edataObservations().length,
+  }));
+  protected readonly edataRows = computed(() => {
+    const { field, direction } = this.edataSort();
+    const order = direction === 'asc' ? 1 : -1;
+    const page = this.edataPage();
+    return [...this.edataObservations()]
+      .sort(
+        (left, right) =>
+          order *
+          ((field === 'count'
+            ? left.count - right.count
+            : field === 'latest'
+              ? Date.parse(left.lastAt) - Date.parse(right.lastAt)
+              : left.label.localeCompare(right.label, this.language())) || left.id - right.id),
+      )
+      .slice((page.page - 1) * page.pageSize, page.page * page.pageSize);
+  });
   protected readonly selectedDeviceId = linkedSignal<VehicleProfile | null, string>({
     source: this.vehicle,
     computation: (vehicle, previous) =>
@@ -399,7 +432,7 @@ export class VehicleProfileView {
     { id: 'problem', label: this.v2().problems.problem, width: '26rem', kind: 'identity' },
     { id: 'source', label: this.v2().problems.source, width: '10rem' },
     { id: 'state', label: this.v2().problems.state, width: '10rem', kind: 'status' },
-    { id: 'observed', label: this.v2().problems.observations, width: '15rem', kind: 'date' },
+    { id: 'observed', label: this.v2().problems.occurred, width: '15rem', kind: 'date' },
   ]);
   protected readonly serviceColumns = computed<readonly TableColumn[]>(() => [
     { id: 'task', label: this.serviceTable().task, width: '20rem', kind: 'identity' },
@@ -412,6 +445,74 @@ export class VehicleProfileView {
     { id: 'count', label: this.v2().edata.count, width: '9rem', kind: 'number' },
     { id: 'latest', label: this.v2().edata.latest, width: '13rem', kind: 'date' },
   ]);
+  protected readonly tripSortFields = computed<readonly ListSortField[]>(() =>
+    this.tripColumns()
+      .filter((column) => ['started', 'distance', 'duration', 'score'].includes(column.id))
+      .map((column) => ({ field: column.id, label: column.label })),
+  );
+  protected readonly problemSortFields = computed<readonly ListSortField[]>(() =>
+    this.problemColumns()
+      .filter((column) => ['observed', 'source', 'severity', 'state'].includes(column.id))
+      .map((column) => ({ field: column.id, label: column.label })),
+  );
+  protected readonly serviceSortFields = computed<readonly ListSortField[]>(() =>
+    this.serviceColumns().map((column) => ({ field: column.id, label: column.label })),
+  );
+  protected readonly edataSortFields = computed<readonly ListSortField[]>(() =>
+    this.edataColumns().map((column) => ({ field: column.id, label: column.label })),
+  );
+
+  protected canSort(tab: ProfileListTab | 'edata', field: string): boolean {
+    const fields =
+      tab === 'trips'
+        ? this.tripSortFields()
+        : tab === 'problems'
+          ? this.problemSortFields()
+          : tab === 'service'
+            ? this.serviceSortFields()
+            : this.edataSortFields();
+    return fields.some((candidate) => candidate.field === field);
+  }
+
+  protected sort(tab: ProfileListTab | 'edata', event: TableLazyLoadEvent): void {
+    if (this.sortReady() && typeof event.sortField === 'string') {
+      this.changeSort(tab, {
+        field: event.sortField,
+        direction: event.sortOrder === 1 ? 'asc' : 'desc',
+      });
+    }
+  }
+
+  protected changeSort(tab: ProfileListTab | 'edata', sort: ProfileSort): void {
+    const current =
+      tab === 'trips'
+        ? this.tripSort()
+        : tab === 'problems'
+          ? this.problemSort()
+          : tab === 'service'
+            ? this.serviceSort()
+            : this.edataSort();
+    if (
+      !this.canSort(tab, sort.field) ||
+      (current.field === sort.field && current.direction === sort.direction)
+    ) {
+      return;
+    }
+    if (tab === 'trips') {
+      this.tripSortChange.emit(sort);
+    } else if (tab === 'problems') {
+      this.problemSortChange.emit(sort);
+    } else if (tab === 'service') {
+      this.serviceSortChange.emit(sort);
+    } else {
+      this.edataSort.set(sort);
+      this.edataPage.update((page) => ({ ...page, page: 1 }));
+    }
+  }
+
+  protected changeEdataPage(value: { page: number; pageSize: number }): void {
+    this.edataPage.set({ ...value, total: this.edataObservations().length });
+  }
 
   protected deviceLink(id: string, tab = 'overview'): readonly string[] {
     return [...this.deviceLinkBase(), id, tab];

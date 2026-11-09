@@ -18,7 +18,7 @@ interface EventFilters {
   readonly category: ErmEventCategory | '';
 }
 export const eventDefinition: ListDefinition<EventFilters, ErmEventSortField> = {
-  pageSizes: [50],
+  pageSizes: [25, 50, 100],
   defaultPageSize: 50,
   sorts: [
     { param: 'time', field: 'TIME' },
@@ -30,4 +30,16 @@ export const eventDefinition: ListDefinition<EventFilters, ErmEventSortField> = 
     statuses: codecs.enumList(eventStatuses),
     category: codecs.choice([...eventCategories, ''], ''),
   },
+};
+/** Frames and parameter snapshots page like events and sort by time only. */
+export const frameDefinition: ListDefinition<Record<string, never>, 'TIME'> = {
+  pageSizes: [25, 50, 100],
+  defaultPageSize: 50,
+  sorts: [{ param: 'time', field: 'TIME' }],
+  defaultSort: { field: 'TIME', direction: 'DESC' },
+  filters: {},
+};
+export const snapshotDefinition: ListDefinition<Record<string, never>, 'TIME'> = {
+  ...frameDefinition,
+  defaultPageSize: 25,
 };

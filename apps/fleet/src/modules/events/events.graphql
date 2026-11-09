@@ -298,8 +298,20 @@ input FleetProblemFilter {
   occurredTo: DateTime
 }
 
+enum FleetProblemSortField {
+  TIME
+  SOURCE
+  SEVERITY
+  STATE
+}
+
+input FleetProblemSort {
+  field: FleetProblemSortField! = TIME
+  direction: FleetSortDirection! = DESC
+}
+
 type FleetProblemPage {
-  "Newest occurrence first, then stable source identity."
+  "Sorted across the complete merged feed before pagination; newest first by default."
   items: [FleetProblem!]!
   total: Int!
   offset: Int!
@@ -309,5 +321,10 @@ type FleetProblemPage {
 }
 
 extend type Query {
-  fleetProblems(offset: Int! = 0, limit: Int! = 20, filter: FleetProblemFilter): FleetProblemPage!
+  fleetProblems(
+    offset: Int! = 0
+    limit: Int! = 20
+    filter: FleetProblemFilter
+    sort: FleetProblemSort
+  ): FleetProblemPage!
 }

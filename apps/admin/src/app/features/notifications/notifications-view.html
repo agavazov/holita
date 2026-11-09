@@ -81,6 +81,12 @@
           (clearFilters)="clearFilters()"
           (retry)="retry.emit()"
         >
+          <discocan-list-sort-menu
+            panelActions
+            [fields]="sortFields()"
+            [sort]="state().sort"
+            (sortChange)="changeSort($event)"
+          />
           <p-table
             class="app-responsive-table"
             [value]="tableRows()"
@@ -88,6 +94,9 @@
             [rowTrackBy]="trackById"
             [lazy]="true"
             [lazyLoadOnInit]="false"
+            sortField="occurredAt"
+            [sortOrder]="state().sort?.direction === 'asc' ? 1 : -1"
+            (onLazyLoad)="sort($event)"
             [scrollable]="true"
             [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
             [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().table.heading } }"
@@ -112,7 +121,9 @@
                 <th scope="col">{{ text().category }}</th>
                 <th scope="col" class="app-col-secondary">{{ text().table.source }}</th>
                 <th scope="col">{{ text().table.target }}</th>
-                <th scope="col">{{ text().table.occurred }}</th>
+                <th scope="col" pSortableColumn="occurredAt">
+                  {{ text().table.occurred }} <p-sort-icon field="occurredAt" />
+                </th>
                 <th scope="col">{{ text().readState }}</th>
                 <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
                   <span class="app-visually-hidden">{{ text().table.actions }}</span>

@@ -134,6 +134,8 @@
   <p-table
     class="app-responsive-table"
     [value]="warnings()"
+    sortField="stateSince"
+    [sortOrder]="-1"
     dataKey="id"
     [rowTrackBy]="trackById"
     [scrollable]="true"
@@ -149,10 +151,18 @@
     </ng-template>
     <ng-template #header>
       <tr>
-        <th scope="col">{{ text().table.target }}</th>
-        <th scope="col">{{ faultText().lamp }} / {{ faultText().system }}</th>
-        <th scope="col">{{ faultText().state }}</th>
-        <th scope="col">{{ faultText().since }}</th>
+        <th scope="col" pSortableColumn="licensePlate">
+          {{ text().table.target }} <p-sort-icon field="licensePlate" />
+        </th>
+        <th scope="col" pSortableColumn="lamp">
+          {{ faultText().lamp }} / {{ faultText().system }} <p-sort-icon field="lamp" />
+        </th>
+        <th scope="col" pSortableColumn="state">
+          {{ faultText().state }} <p-sort-icon field="state" />
+        </th>
+        <th scope="col" pSortableColumn="stateSince">
+          {{ faultText().since }} <p-sort-icon field="stateSince" />
+        </th>
       </tr>
     </ng-template>
     <ng-template #body let-row>
@@ -194,7 +204,12 @@
   (clearFilters)="url.clearFilters()"
   (retry)="refresh()"
 >
-  <span panelActions class="app-muted">{{ text().table.newestFirst }}</span>
+  <discocan-list-sort-menu
+    panelActions
+    [fields]="sortFields()"
+    [sort]="sortQuery()"
+    (sortChange)="changeSort($event)"
+  />
   <p-table
     class="app-responsive-table"
     [value]="rows()"
@@ -202,6 +217,9 @@
     [rowTrackBy]="trackById"
     [lazy]="true"
     [lazyLoadOnInit]="false"
+    [sortField]="sortField()"
+    [sortOrder]="url.state().sort.direction === 'ASC' ? 1 : -1"
+    (onSort)="sort($event)"
     [scrollable]="true"
     [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
     [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().table.heading } }"
@@ -223,9 +241,18 @@
     <ng-template #header>
       <tr>
         <th scope="col" class="app-col-identity">{{ text().table.problem }}</th>
-        <th scope="col" class="app-col-secondary">{{ text().table.source }}</th>
-        <th scope="col">{{ text().table.severity }}</th>
-        <th scope="col">{{ text().table.state }}</th>
+        <th scope="col" class="app-col-secondary" pSortableColumn="source">
+          {{ text().table.source }} <p-sort-icon field="source" />
+        </th>
+        <th scope="col" pSortableColumn="severity">
+          {{ text().table.severity }} <p-sort-icon field="severity" />
+        </th>
+        <th scope="col" pSortableColumn="state">
+          {{ text().table.state }} <p-sort-icon field="state" />
+        </th>
+        <th scope="col" pSortableColumn="time">
+          {{ text().table.time }} <p-sort-icon field="time" />
+        </th>
         <th scope="col">{{ faultText().firstObserved }}</th>
         <th scope="col">{{ faultText().lastObserved }}</th>
         <th scope="col">{{ text().table.target }}</th>
@@ -288,6 +315,7 @@
             ><p-tag [severity]="row.stateSeverity" [value]="row.stateLabel"
           /></span>
         </td>
+        <td class="app-cell-date" [title]="row.occurred.title">{{ row.occurred.text }}</td>
         <td class="app-cell-date" [title]="row.first.title">{{ row.first.text }}</td>
         <td class="app-cell-date" [title]="row.last.title">{{ row.last.text }}</td>
         <td>

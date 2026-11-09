@@ -59,6 +59,8 @@ import {
   type ListActionRequest,
 } from '../../../ui/list/list-actions';
 import { uiMessages } from '../../../ui/i18n/messages';
+import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
+import { injectSortReady, type ListQuery } from '../../../ui/list/list-query';
 import { UrlListState } from '../../../ui/list/url-list-state';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { RowActions } from '../../../ui/row-actions/row-actions';
@@ -93,6 +95,7 @@ type ProblemAction = 'details' | 'open' | 'vehicle' | 'device';
     FormField,
     FormatNumberPipe,
     FormsModule,
+    ListSortMenu,
     PageHeader,
     RouterOutlet,
     RouterLink,
@@ -121,7 +124,23 @@ export class ProblemsPage implements OnInit {
   protected readonly text = computed(() => problemsText(this.language()));
   protected readonly selectMultiplePt = selectMultiplePt;
   protected readonly trackById = trackById;
-  protected readonly tableMinWidth = '79rem';
+  private readonly sortReady = injectSortReady();
+  protected readonly tableMinWidth = '90rem';
+  protected readonly sortField = computed(
+    () =>
+      problemDefinition.sorts.find((sort) => sort.field === this.url.state().sort.field)?.param ??
+      'time',
+  );
+  protected readonly sortQuery = computed<NonNullable<ListQuery['sort']>>(() => ({
+    field: this.sortField(),
+    direction: this.url.state().sort.direction === 'ASC' ? 'asc' : 'desc',
+  }));
+  protected readonly sortFields = computed<readonly ListSortField[]>(() => [
+    { field: 'time', label: this.text().table.time },
+    { field: 'source', label: this.text().table.source },
+    { field: 'severity', label: this.text().table.severity },
+    { field: 'state', label: this.text().table.state },
+  ]);
   private readonly reload = new Subject<void>();
   protected readonly selectedProblem = signal<Problem | null>(null);
   protected readonly uiText = computed(() => uiMessages[this.language()]);
@@ -177,6 +196,7 @@ export class ProblemsPage implements OnInit {
         ...problem,
         title: problemTitle(problem, this.language()),
         detail: problem.diagnostics.length ? '' : (problem.details ?? ''),
+        occurred: this.format.dateTimeCell(problem.occurredAt),
         first: this.format.dateTimeCell(
           problem.diagnostics.length
             ? problem.diagnostics.map((diagnostic) => diagnostic.firstObservedAt).sort()[0]
@@ -251,6 +271,7 @@ export class ProblemsPage implements OnInit {
           system: faultSystem(warningLampSystem(warning.parameterId), this.language()),
           state: warningStateLabel(warning.state, this.language()),
           severity: toneSeverity(warningTone(warning.state)),
+          stateSince: warning.stateSince,
           since: this.format.dateTimeCell(warning.stateSince),
         })),
     );
@@ -313,6 +334,7 @@ export class ProblemsPage implements OnInit {
     },
     { id: 'severity', label: this.text().table.severity, width: '8rem', kind: 'status' },
     { id: 'state', label: this.text().table.state, width: '10rem', kind: 'status' },
+    { id: 'time', label: this.text().table.time, width: '11rem', kind: 'date' },
     { id: 'first', label: this.faultText().firstObserved, width: '11rem', kind: 'date' },
     { id: 'last', label: this.faultText().lastObserved, width: '11rem', kind: 'date' },
     { id: 'target', label: this.text().table.target, width: '10rem', kind: 'identity' },
@@ -415,6 +437,17 @@ export class ProblemsPage implements OnInit {
 
   protected sourceChanged(value: readonly FleetProblemSourceKind[] | null): void {
     this.url.patchFilter({ source: value ?? [] });
+  }
+  protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    const field = problemDefinition.sorts.find((entry) => entry.param === sort.field)?.field;
+    if (field) {
+      this.url.setSort(field, sort.direction === 'asc' ? 'ASC' : 'DESC');
+    }
+  }
+  protected sort(event: unknown): void {
+    if (this.sortReady()) {
+      this.url.sortFromTable(event);
+    }
   }
   protected severityChanged(value: readonly FleetEventSeverity[] | null): void {
     this.url.patchFilter({ severity: value ?? [] });

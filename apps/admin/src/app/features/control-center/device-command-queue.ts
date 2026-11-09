@@ -63,6 +63,7 @@ const actions: readonly ErmDeviceAction[] = [
 })
 export class DeviceCommandQueue {
   readonly deviceId = input.required<string>();
+  readonly branchId = input<string | null>(null);
   readonly language = input.required<Language>();
   readonly target = input.required<string>();
   readonly requestId = input<string | null>(null);

@@ -13,6 +13,7 @@
   mode="local"
   [heading]="text().heading"
   [total]="rows().length"
+  [page]="page()"
   [columns]="columns()"
   [tableMinWidth]="tableMinWidth"
   [view]="view()"
@@ -23,8 +24,15 @@
   [emptyDescription]="text().emptyDescription"
   [actions]="actions()"
   (action)="action.emit($event)"
+  (pageChange)="changePage($event)"
   (retry)="retry.emit()"
 >
+  <discocan-list-sort-menu
+    panelActions
+    [fields]="sortFields()"
+    [sort]="state().sort"
+    (sortChange)="changeSort($event)"
+  />
   @if (canManage()) {
     <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
   }
@@ -33,6 +41,11 @@
     [value]="tableRows()"
     dataKey="id"
     [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [sortField]="state().sort?.field"
+    [sortOrder]="state().sort?.direction === 'asc' ? 1 : -1"
+    (onLazyLoad)="sort($event)"
     [scrollable]="true"
     [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
     [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().heading } }"
@@ -53,11 +66,19 @@
     </ng-template>
     <ng-template #header>
       <tr>
-        <th scope="col" class="app-col-identity">{{ text().name }}</th>
-        <th scope="col">{{ text().email }}</th>
-        <th scope="col">{{ text().role }}</th>
-        <th scope="col">{{ text().status }}</th>
-        <th scope="col" class="app-col-secondary">{{ text().lastSignIn }}</th>
+        <th scope="col" class="app-col-identity" pSortableColumn="name">
+          {{ text().name }} <p-sort-icon field="name" />
+        </th>
+        <th scope="col" pSortableColumn="email">
+          {{ text().email }} <p-sort-icon field="email" />
+        </th>
+        <th scope="col" pSortableColumn="role">{{ text().role }} <p-sort-icon field="role" /></th>
+        <th scope="col" pSortableColumn="status">
+          {{ text().status }} <p-sort-icon field="status" />
+        </th>
+        <th scope="col" class="app-col-secondary" pSortableColumn="lastSignIn">
+          {{ text().lastSignIn }} <p-sort-icon field="lastSignIn" />
+        </th>
         <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
           <span class="app-visually-hidden">{{ text().actionsColumn }}</span>
         </th>

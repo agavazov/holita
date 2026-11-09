@@ -38,7 +38,7 @@ const groupDefinition: ListDefinition<Record<string, never>, 'name'> = {
   filters: {},
 };
 
-/** A bounded group page; the existing operation keeps its supported name ordering. */
+/** A bounded group page with URL-backed name ordering. */
 @Component({
   selector: 'discocan-vehicle-groups-page',
   imports: [GroupsView, RouterOutlet],
@@ -52,10 +52,12 @@ const groupDefinition: ListDefinition<Record<string, never>, 'name'> = {
       [canEdit]="canOperate()"
       [errorText]="failure()"
       [actionContext]="url.state()"
+      [sortDirection]="url.state().sort.direction"
       (create)="openEditor(null)"
       (action)="run($event)"
       (retry)="refresh()"
       (pageChange)="url.setPage($event)"
+      (sortChange)="url.setSort('name', $event)"
     />
     <router-outlet [routerOutletData]="drawerHost" />
   `,
@@ -115,7 +117,11 @@ export class VehicleGroupsPage implements OnInit {
               this.loading.set(true);
               this.error.set(null);
               return this.api
-                .watch({ offset: (state.page - 1) * state.pageSize, limit: state.pageSize })
+                .watch({
+                  offset: (state.page - 1) * state.pageSize,
+                  limit: state.pageSize,
+                  sort: { field: 'NAME', direction: state.sort.direction },
+                })
                 .valueChanges.pipe(
                   catchError((error: unknown) => {
                     this.loading.set(false);

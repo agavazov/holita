@@ -1,6 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { ButtonDirective } from 'primeng/button';
-import { TableModule } from 'primeng/table';
+import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { AdminUserDetailsFragment } from '../../../generated/graphql/operations';
 import { injectFleetFormat } from '../../ui/format/fleet-format';
@@ -13,6 +21,8 @@ import {
   type ListRecord,
 } from '../../ui/list/list-actions';
 import { PageHeader } from '../../ui/page-header/page-header';
+import { injectSortReady, listQuery, type ListQuery } from '../../ui/list/list-query';
+import { ListSortMenu } from '../../ui/list/list-sort-menu';
 import { RowActions } from '../../ui/row-actions/row-actions';
 import { TablePanel, type TableColumn } from '../../ui/table-panel/table-panel';
 import type { TableView } from '../../ui/table-panel/table-view';
@@ -24,7 +34,7 @@ export type UserActionId = 'edit' | 'deactivate' | 'reactivate';
 
 @Component({
   selector: 'discocan-users-view',
-  imports: [ButtonDirective, TableModule, Tag, PageHeader, RowActions, TablePanel],
+  imports: [ButtonDirective, TableModule, Tag, PageHeader, RowActions, TablePanel, ListSortMenu],
   templateUrl: './users-view.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-view' },
@@ -45,7 +55,51 @@ export class UsersView {
   protected readonly format = injectFleetFormat();
   protected readonly severity = toneSeverity;
   protected readonly trackById = trackById;
-  protected readonly tableRows = computed(() => [...this.rows()]);
+  protected readonly state = signal<ListQuery>({
+    search: '',
+    conditions: [],
+    sort: { field: 'name', direction: 'asc' },
+    page: 1,
+    pageSize: 20,
+  });
+  private readonly sortReady = injectSortReady();
+  protected readonly page = computed(() => ({
+    page: this.state().page,
+    pageSize: this.state().pageSize,
+    total: this.rows().length,
+  }));
+  protected readonly sortFields = computed(() =>
+    this.columns()
+      .filter((column) => column.kind !== 'actions')
+      .map((column) => ({ field: column.id, label: column.label })),
+  );
+  protected readonly tableRows = computed(() => {
+    const state = this.state();
+    const rows = [...this.rows()].sort((left, right) => {
+      const field = state.sort?.field;
+      if (field === 'lastSignIn' && (!left.lastSignInAt || !right.lastSignInAt)) {
+        if (left.lastSignInAt !== right.lastSignInAt) {
+          return left.lastSignInAt ? -1 : 1;
+        }
+      }
+      const compared =
+        field === 'email'
+          ? left.email.localeCompare(right.email, this.language())
+          : field === 'role'
+            ? this.roleLabel(left).localeCompare(this.roleLabel(right), this.language())
+            : field === 'status'
+              ? Number(left.active) - Number(right.active)
+              : field === 'lastSignIn'
+                ? (left.lastSignInAt ? Date.parse(left.lastSignInAt) : 0) -
+                  (right.lastSignInAt ? Date.parse(right.lastSignInAt) : 0)
+                : left.name.localeCompare(right.name, this.language());
+      return (
+        (state.sort?.direction === 'asc' ? compared : -compared) || left.id.localeCompare(right.id)
+      );
+    });
+    const start = (state.page - 1) * state.pageSize;
+    return rows.slice(start, start + state.pageSize);
+  });
   protected readonly tableMinWidth = '69.25rem';
   protected readonly columns = computed<readonly TableColumn[]>(() => [
     {
@@ -100,6 +154,23 @@ export class UsersView {
   private readonly records = computed(
     () => new Map(this.rows().map((row) => [row.id, this.toRecord(row)])),
   );
+
+  protected changePage(page: { page: number; pageSize: number }): void {
+    this.state.update((state) => listQuery.page(state, page));
+  }
+
+  protected changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    this.state.update((state) => ({ ...state, sort, page: 1 }));
+  }
+
+  protected sort(event: TableLazyLoadEvent): void {
+    if (this.sortReady()) {
+      const next = listQuery.sorted(this.state(), event);
+      if (next) {
+        this.state.set(next);
+      }
+    }
+  }
 
   protected roleLabel(row: AdminUserDetailsFragment): string {
     return this.text().roles[row.role];

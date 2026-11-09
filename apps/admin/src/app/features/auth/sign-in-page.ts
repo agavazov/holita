@@ -32,7 +32,7 @@ export class SignInPage {
     effect(() => {
       const language = this.language();
       document.documentElement.lang = language;
-      document.title = `${messages[language].signIn} · discocan`;
+      document.title = `${messages[language].signIn} · DiscoCan`;
       this.primeNG.setTranslation(primeNgTranslation(language, this.primeNG.translation.aria));
     });
     effect(() => {

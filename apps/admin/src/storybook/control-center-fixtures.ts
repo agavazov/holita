@@ -457,6 +457,9 @@ graphqlFixture(
 );
 const detailEvents: WithTypename<AdminControlCenterEventsQuery['fleetDevice']['ermEvents']> = {
   __typename: 'ErmEventsPage',
+  total: 4,
+  offset: 0,
+  limit: 50,
   cursor: null,
   nextCursor: null,
   hasMore: false,
@@ -499,6 +502,8 @@ const detailEvents: WithTypename<AdminControlCenterEventsQuery['fleetDevice']['e
 };
 graphqlFixture(AdminControlCenterEventsDocument, (variables) => {
   const input = variables.object('input');
+  const offset = input.integer('offset') ?? 0;
+  const limit = input.integer('pageSize') ?? 50;
   const categories = input.strings('categories');
   const statuses = input.strings('severities');
   const sort = input.object('sort');
@@ -524,7 +529,13 @@ graphqlFixture(AdminControlCenterEventsDocument, (variables) => {
     fleetDevice: {
       __typename: 'FleetDevice',
       id: fixtureDevice.id,
-      ermEvents: { ...detailEvents, items },
+      ermEvents: {
+        ...detailEvents,
+        total: items.length,
+        offset,
+        limit,
+        items: items.slice(offset, offset + limit),
+      },
     },
   };
 });
@@ -721,6 +732,9 @@ graphqlFixture(
         id: fixtureDevice.id,
         ermFrames: {
           __typename: 'ErmFramesPage',
+          total: 2,
+          offset: 0,
+          limit: 50,
           cursor: null,
           nextCursor: null,
           hasMore: false,
@@ -929,6 +943,9 @@ graphqlFixture(AdminControlCenterSnapshotsDocument, () => ({
     id: fixtureDevice.id,
     ermParameterSnapshots: {
       __typename: 'ErmParameterSnapshotsPage',
+      total: 2,
+      offset: 0,
+      limit: 25,
       cursor: null,
       nextCursor: null,
       hasMore: false,

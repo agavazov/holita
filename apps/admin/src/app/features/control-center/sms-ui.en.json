@@ -11,14 +11,14 @@
   "noReply": "No reply",
   "noReplyMeaning": "The result is unknown. Check the SIM number, mobile coverage and stored password before deciding what to do next.",
   "replies": {
-    "info": "A line beginning with the device model, such as StarLink-CT, contains device and network details. Fields vary by firmware; an SMS reply alone does not confirm a connection to discocan.",
+    "info": "A line beginning with the device model, such as StarLink-CT, contains device and network details. Fields vary by firmware; an SMS reply alone does not confirm a connection to DiscoCan.",
     "loc": "Event: Location with LocTime, Speed and a map link describes the last known position. Check LocTime: the device does not obtain a new satellite fix for this command.",
-    "getparam49": "The reply is the configured primary server address. 65.108.137.165 means discocan; in.karma.online means Karma. Another address means a different configured server.",
-    "getparam50": "The reply is the configured primary server port. 11500 is the discocan port; 500 is the Karma port. Read it together with the primary server address.",
+    "getparam49": "The reply is the configured primary server address. 65.108.137.165 means DiscoCan; in.karma.online means Karma. Another address means a different configured server.",
+    "getparam50": "The reply is the configured primary server port. 11500 is the DiscoCan port; 500 is the Karma port. Read it together with the primary server address.",
     "getparam51": "The reply is the configured backup server address. 54.216.224.65 is the Karma backup server. Another address means a different configured backup.",
     "getparam52": "The reply is the configured backup server port. 500 is the Karma backup port. Read it together with the backup server address.",
     "route49": "ok#setparam confirms that the address setting was accepted. It does not confirm a connection. Wait for this reply before preparing step 2.",
-    "route50": "ok#setparam confirms that the port setting was accepted. Check the address and port by SMS, then check this device’s connection in discocan.",
+    "route50": "ok#setparam confirms that the port setting was accepted. Check the address and port by SMS, then check this device’s connection in DiscoCan.",
     "karma49": "ok#setparam confirms that the address setting was accepted. It does not confirm a connection. Wait for this reply before preparing step 2.",
     "karma50": "ok#setparam confirms that the port setting was accepted. Read the address and port back to check the settings; this reply does not prove that Karma is receiving data."
   },

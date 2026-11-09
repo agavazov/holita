@@ -50,7 +50,7 @@ describe('OdometerDrawer', () => {
     expect(element.textContent).toContain('Odometer, mi');
     expect(element.textContent).toContain('America/New_York time');
     const time: unknown = form.get('recordedAt')?.value;
-    expect(time).toBe('2026-10-18T03:00:00.000');
+    expect(time).toBe('2026-10-18 03:00:00');
     element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     expect(saved).toEqual([{ odometerKm: 1000.1, recordedAt: '2026-10-18T07:00:00.000Z' }]);
     form.get('odometerKm')?.setValue(621.4);

@@ -174,11 +174,22 @@
   (clearFilters)="url.clearFilters()"
   (retry)="refresh()"
 >
+  <discocan-list-sort-menu
+    panelActions
+    [fields]="sortFields()"
+    [sort]="sortQuery()"
+    (sortChange)="changeSort($event)"
+  />
   <p-table
     class="app-responsive-table app-table-fixed"
     [value]="rows()"
     dataKey="id"
     [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [sortField]="sortField()"
+    [sortOrder]="url.state().sort.direction === 'ASC' ? 1 : -1"
+    (onLazyLoad)="sort($event)"
     [scrollable]="true"
     [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
   >
@@ -202,11 +213,20 @@
           <th
             scope="col"
             [class]="column.className ?? ''"
+            [pSortableColumn]="column.id"
+            [pSortableColumnDisabled]="!sortableColumn(column.id)"
             pFrozenColumn
             [frozen]="column.kind === 'actions'"
             alignFrozen="right"
           >
-            {{ column.label }}
+            @if (column.kind === 'actions') {
+              <span class="app-visually-hidden">{{ column.label }}</span>
+            } @else {
+              {{ column.label }}
+              @if (sortableColumn(column.id)) {
+                <p-sort-icon [field]="column.id" />
+              }
+            }
           </th>
         }
       </tr>

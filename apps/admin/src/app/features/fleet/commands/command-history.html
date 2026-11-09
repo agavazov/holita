@@ -5,6 +5,7 @@
   [heading]="text().history"
   [view]="view()"
   [total]="requests().length"
+  [page]="page()"
   [busy]="loading()"
   [errorText]="error()"
   [emptyTitle]="text().empty"
@@ -13,8 +14,26 @@
   [tableMinWidth]="tableMinWidth"
   [actions]="actions()"
   (action)="run($event)"
+  (pageChange)="changePage($event)"
   (retry)="retry.emit()"
 >
+  <discocan-list-sort-menu
+    panelActions
+    [fields]="sortFields()"
+    [sort]="state().sort"
+    (sortChange)="changeSort($event)"
+  />
+  @if (fullHistoryLink(); as link) {
+    <a
+      panelActions
+      pButton
+      severity="secondary"
+      [text]="true"
+      [routerLink]="link"
+      [queryParams]="{ devices: deviceId() }"
+      >{{ text().fullHistory }}</a
+    >
+  }
   <button
     panelActions
     pButton
@@ -31,8 +50,14 @@
     [value]="rows()"
     dataKey="id"
     [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [sortField]="state().sort?.field"
+    [sortOrder]="state().sort?.direction === 'asc' ? 1 : -1"
+    (onLazyLoad)="sort($event)"
     [scrollable]="true"
     [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().history } }"
   >
     <ng-template #colgroup>
       <colgroup>
@@ -54,11 +79,20 @@
           <th
             scope="col"
             [class]="column.className ?? ''"
+            [pSortableColumn]="column.id"
+            [pSortableColumnDisabled]="column.kind === 'actions' || column.id === 'target'"
             pFrozenColumn
             [frozen]="column.kind === 'actions'"
             alignFrozen="right"
           >
-            {{ column.label }}
+            @if (column.kind === 'actions') {
+              <span class="app-visually-hidden">{{ column.label }}</span>
+            } @else {
+              {{ column.label }}
+              @if (column.id !== 'target') {
+                <p-sort-icon [field]="column.id" />
+              }
+            }
           </th>
         }
       </tr>

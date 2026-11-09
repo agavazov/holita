@@ -106,10 +106,10 @@ test.describe('Devices', () => {
     const installedAt = edit.getByLabel('Installed at', { exact: true });
     await expect(edit.locator('#device-installedAt-hint')).toContainText('Europe/Belgrade');
     // 02:30 does not exist in Belgrade on the spring DST change (it does in Sofia).
-    await installedAt.fill('2026-03-29T02:30');
+    await installedAt.fill('2026-03-29 02:30:00');
     await edit.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(installedAt).toHaveAttribute('aria-invalid', 'true');
-    await installedAt.fill('2026-10-18T09:00:15.125');
+    await installedAt.fill('2026-10-18 09:00:15.125');
     await edit.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page).toHaveURL(app.url + path);
     await page.reload();

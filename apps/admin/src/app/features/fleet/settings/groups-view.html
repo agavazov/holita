@@ -24,6 +24,12 @@
   (retry)="retry.emit()"
   (pageChange)="pageChange.emit($event)"
 >
+  <discocan-list-sort-menu
+    panelActions
+    [fields]="sortFields()"
+    [sort]="sortQuery()"
+    (sortChange)="changeSort($event)"
+  />
   @if (canEdit()) {
     <button emptyActions pButton type="button" (click)="create.emit()">{{ text().new }}</button>
   }
@@ -34,6 +40,9 @@
     [rowTrackBy]="trackById"
     [lazy]="true"
     [lazyLoadOnInit]="false"
+    sortField="name"
+    [sortOrder]="sortDirection() === 'ASC' ? 1 : -1"
+    (onLazyLoad)="sort($event)"
     [scrollable]="true"
     [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
     [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().heading } }"
@@ -54,7 +63,9 @@
     </ng-template>
     <ng-template #header>
       <tr>
-        <th scope="col" class="app-col-identity">{{ text().name }}</th>
+        <th scope="col" class="app-col-identity" pSortableColumn="name">
+          {{ text().name }} <p-sort-icon field="name" />
+        </th>
         <th scope="col" class="app-cell-number">{{ text().vehicles }}</th>
         <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
           <span class="app-visually-hidden">{{ text().actionsColumn }}</span>

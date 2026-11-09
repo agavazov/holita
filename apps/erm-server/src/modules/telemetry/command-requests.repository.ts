@@ -185,14 +185,19 @@ export class CommandRequestsRepository {
 
   async list(
     scope: OperatorScope,
-    query: { where: Prisma.ErmCommandRequestWhereInput; offset: number; limit: number },
+    query: {
+      where: Prisma.ErmCommandRequestWhereInput;
+      offset: number;
+      limit: number;
+      orderBy: Prisma.ErmCommandRequestOrderByWithRelationInput[];
+    },
   ) {
     const where: Prisma.ErmCommandRequestWhereInput = { AND: [scope, query.where] };
     const [items, total] = await this.prisma.client.$transaction(
       [
         this.prisma.client.ermCommandRequest.findMany({
           where,
-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          orderBy: query.orderBy,
           skip: query.offset,
           take: query.limit,
         }),

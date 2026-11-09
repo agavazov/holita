@@ -166,15 +166,22 @@
             [hint]="installedAtHint()"
             [error]="errorOf('installedAt')"
           >
-            <input
-              pInputText
-              id="device-installedAt"
-              type="datetime-local"
-              step="0.001"
+            <p-datepicker
+              inputId="device-installedAt"
               formControlName="installedAt"
+              dataType="string"
+              [dateFormat]="units.datePickerFormat()"
+              [showTime]="true"
+              [showSeconds]="true"
+              [keepInvalid]="true"
+              (input)="installedAtInput($event)"
+              hourFormat="24"
+              [showIcon]="true"
+              [showClear]="true"
+              [fluid]="true"
+              appendTo="body"
               [invalid]="!!errorOf('installedAt')"
-              [attr.aria-invalid]="errorOf('installedAt') ? 'true' : null"
-              [attr.aria-describedby]="describedBy('installedAt')"
+              [pt]="installedAtPt()"
             />
           </discocan-form-field>
           <discocan-form-field

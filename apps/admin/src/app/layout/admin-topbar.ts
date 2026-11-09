@@ -17,7 +17,7 @@ import { Appearance } from '../theme/appearance';
 import { interpolate, uiMessages } from '../ui/i18n/messages';
 import { ModuleInfo } from '../ui/page-header/module-info';
 import { MenuButton, type MenuOption } from '../ui/menu-button/menu-button';
-import type { PageContext } from './navigation';
+import type { PageContext, PageCrumb } from './navigation';
 import { ACCOUNT_MENU_CONTEXT } from './account-menu-context';
 import { NotificationBell, type ShellNotification } from './notification-bell';
 
@@ -78,6 +78,31 @@ export class AdminTopbar {
   protected readonly appearance = inject(Appearance);
   protected readonly moduleInfo = inject(ModuleInfo);
   protected readonly aboutLabel = computed(() => uiMessages[this.language()].pageHeader.about);
+  protected readonly breadcrumbs = computed(() => {
+    const context = this.context();
+    if (!context) {
+      return [];
+    }
+    const crumbs: (PageCrumb & { readonly group?: boolean })[] = [];
+    if (context.group) {
+      crumbs.push({ label: context.group, group: true });
+    }
+    crumbs.push({
+      label: context.page,
+      ...((context.record || context.tab) && context.pageLink ? { link: context.pageLink } : {}),
+    });
+    if (context.record) {
+      crumbs.push({
+        label: context.record,
+        ...(context.recordLink ? { link: context.recordLink } : {}),
+      });
+    }
+    crumbs.push(...(context.ancestors ?? []));
+    if (context.tab) {
+      crumbs.push({ label: context.tab });
+    }
+    return crumbs;
+  });
   private readonly accountContext = inject(ACCOUNT_MENU_CONTEXT, { optional: true });
   private readonly router = inject(Router);
   protected readonly text = computed(() => messages[this.language()]);
@@ -115,7 +140,7 @@ export class AdminTopbar {
     })),
   );
   protected readonly accountName = computed(
-    () => this.account()?.name ?? this.accountContext?.()?.name ?? this.tenantName() ?? 'discocan',
+    () => this.account()?.name ?? this.accountContext?.()?.name ?? this.tenantName() ?? 'DiscoCan',
   );
   protected readonly accountLabel = computed(() =>
     interpolate(this.text().account, { name: this.accountName() }),

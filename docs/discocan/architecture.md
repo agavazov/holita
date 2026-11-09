@@ -62,6 +62,12 @@ through the gateway. There is no arbitrary command input. See
 [setup and operator access](development.md#erm-device-server) and the
 [ERM SDL](../../apps/erm-server/src/modules/telemetry/telemetry.graphql).
 
+`ermEvents` accepts either a zero-based `offset` or an opaque `cursor`, with `pageSize` 25, 50
+or 100. Its page includes the filtered `total`, `offset` and `limit`; category/severity filters
+and stable event sorting apply before pagination in the same query snapshot. `ermFrames` and
+`ermParameterSnapshots` page the same way and return the same totals; their `direction` orders by
+time, newest first by default.
+
 `ErmUnitState.edataMeasurements` returns the latest decoded `405` value per parameter with its
 own report time and Monitor 9.56 catalog name/unit. Unknown or ambiguous catalog IDs remain raw
 IDs. Values retain their reported hexadecimal bytes; catalog units do not establish a physical

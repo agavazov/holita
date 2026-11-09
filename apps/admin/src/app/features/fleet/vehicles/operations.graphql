@@ -286,13 +286,8 @@ query AdminVehicleProfile($id: ID!) {
     }
   }
 }
-query AdminVehicleProfileTrips($vehicleId: ID!, $offset: Int!, $limit: Int!) {
-  fleetTrips(
-    offset: $offset
-    limit: $limit
-    filter: { vehicleIds: [$vehicleId] }
-    sort: { field: STARTED_AT, direction: DESC }
-  ) {
+query AdminVehicleProfileTrips($vehicleId: ID!, $offset: Int!, $limit: Int!, $sort: FleetTripSort) {
+  fleetTrips(offset: $offset, limit: $limit, filter: { vehicleIds: [$vehicleId] }, sort: $sort) {
     items {
       ...AdminVehicleProfileTripDetails
     }
@@ -317,12 +312,17 @@ query AdminVehicleProfileAlerts($vehicleId: ID!, $offset: Int!, $limit: Int!) {
     limit
   }
 }
-query AdminVehicleProfileService($vehicleId: ID!, $offset: Int!, $limit: Int!) {
+query AdminVehicleProfileService(
+  $vehicleId: ID!
+  $offset: Int!
+  $limit: Int!
+  $sort: FleetServiceTaskSort
+) {
   fleetServiceTasks(
     offset: $offset
     limit: $limit
     filter: { vehicleIds: [$vehicleId] }
-    sort: { field: URGENCY, direction: ASC }
+    sort: $sort
   ) {
     items {
       ...AdminVehicleProfileServiceDetails
@@ -445,8 +445,13 @@ fragment AdminVehicleProblemCounts on FleetProblemCounts {
     recorded
   }
 }
-query AdminVehicleProfileProblems($vehicleId: ID!, $offset: Int!, $limit: Int!) {
-  fleetProblems(offset: $offset, limit: $limit, filter: { vehicleIds: [$vehicleId] }) {
+query AdminVehicleProfileProblems(
+  $vehicleId: ID!
+  $offset: Int!
+  $limit: Int!
+  $sort: FleetProblemSort
+) {
+  fleetProblems(offset: $offset, limit: $limit, filter: { vehicleIds: [$vehicleId] }, sort: $sort) {
     items {
       ...AdminVehicleProblemDetails
     }
