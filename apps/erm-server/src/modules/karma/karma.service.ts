@@ -4,25 +4,26 @@ import {
   Injectable,
   Logger,
   ServiceUnavailableException,
-  type OnModuleDestroy,
-  type OnModuleInit,
 } from '@nestjs/common';
 import type { ErmDeviceRouting, ErmKarmaReturnAttempt } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
-import { ermRole } from '../../role.js';
 import type { DeviceTelemetryRequest } from '../telemetry/device-request.js';
 import { FleetClient } from '../telemetry/fleet.client.js';
+import { LiveDevicesService } from '../telemetry/live-devices.service.js';
 import { auditId, operatorActor, operatorScope } from '../telemetry/operator-audit.js';
 import type { DeviceReference } from '../telemetry/telemetry.service.js';
 import { karmaEnabled } from './karma.config.js';
 import { KarmaRepository, type KarmaAttempt } from './karma.repository.js';
 import { karmaFailureReason, KarmaTransport } from './karma.transport.js';
 
-const POLL_INTERVAL = 5 * 60_000;
 const LOOKUP_WINDOW = 30 * 60_000;
 // A pass can take 19 min (cars + 9 units with two 60 s reads), rounded to 20 min by ticks.
 // observedAt is the pass start: allow the successful pass, one failed pass and recovery.
 const ROUTING_MAX_AGE = 60 * 60_000;
+// A returned unit reconnects within minutes. A parked unit gets `98` at its next (hourly) report,
+// so a retry can queue behind an undelivered one; both sessions are read-only.
+const AUTOMATIC_RETURN_INTERVAL = 30 * 60_000;
+const AUTOMATIC_RETURN_ACTOR = 'system:auto-return';
 
 function primaryUnits(): string[] {
   return [
@@ -50,76 +51,82 @@ function attemptView(attempt: KarmaAttempt): ErmKarmaReturnAttempt {
 }
 
 @Injectable()
-export class KarmaService implements OnModuleInit, OnModuleDestroy {
+export class KarmaService {
   private readonly logger = new Logger(KarmaService.name);
   private readonly requests = new WeakMap<
     DeviceTelemetryRequest,
     Promise<Map<string, ErmDeviceRouting>>
   >();
-  private timer: ReturnType<typeof setInterval> | undefined;
-  private running: Promise<void> | undefined;
 
   constructor(
     private readonly repository: KarmaRepository,
     private readonly transport: KarmaTransport,
     private readonly fleet: FleetClient,
+    private readonly devices: LiveDevicesService,
   ) {}
 
-  onModuleInit(): void {
-    if (ermRole() !== 'api' || !karmaEnabled()) {
-      return;
-    }
-    // Karma reads can take tens of seconds; the api must not wait for them to start serving.
-    void this.tick();
-    this.timer = setInterval(() => {
-      void this.tick();
-    }, POLL_INTERVAL);
-    this.timer.unref();
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    clearInterval(this.timer);
-    await this.running;
-  }
-
-  tick(now = new Date()): Promise<void> {
-    this.running ??= this.poll(now)
-      .catch((error: unknown) => {
-        this.logger.warn(
-          `Karma routing observation failed (${karmaFailureReason(error)}); retrying on the next tick.`,
-        );
-      })
-      .finally(() => {
-        this.running = undefined;
-      });
-    return this.running;
-  }
-
-  private async poll(now: Date): Promise<void> {
-    if (!karmaEnabled()) {
-      return;
-    }
-    const units = primaryUnits();
-    for (const unitId of units) {
-      await this.repository.reconcile(unitId);
-    }
-    const cars = await this.transport.readCars();
-    for (const unitId of units) {
-      try {
-        const car = cars.find((candidate) => candidate.unitId === unitId);
-        if (!car) {
-          throw new ServiceUnavailableException(
-            'Karma car mapping is unavailable',
-            'missing car mapping',
+  // Observes every primary unit and returns those on the Karma backup while the gateway answers.
+  async routeUnits(now: Date): Promise<void> {
+    try {
+      const units = primaryUnits();
+      for (const unitId of units) {
+        await this.repository.reconcile(unitId);
+      }
+      const cars = await this.transport.readCars();
+      const gatewayAnswers = await this.devices.listUnits().then(
+        () => true,
+        () => false,
+      );
+      for (const unitId of units) {
+        try {
+          const car = cars.find((candidate) => candidate.unitId === unitId);
+          if (!car) {
+            throw new ServiceUnavailableException(
+              'Karma car mapping is unavailable',
+              'missing car mapping',
+            );
+          }
+          const route = await this.observe(unitId, car.carId, now);
+          if (route.state !== 'KARMA_BACKUP') {
+            continue;
+          }
+          if (gatewayAnswers) {
+            await this.returnAutomatically(unitId, car.carId, now);
+          } else {
+            this.logger.warn(
+              `Unit ${unitId} stays on the Karma backup: the gateway does not answer.`,
+            );
+          }
+        } catch (error) {
+          this.logger.warn(
+            `Karma routing failed for unit ${unitId} (${karmaFailureReason(error)}).`,
           );
         }
-        await this.observe(unitId, car.carId, now);
-      } catch (error) {
-        this.logger.warn(
-          `Karma routing observation failed for unit ${unitId} (${karmaFailureReason(error)}).`,
-        );
       }
+    } catch (error) {
+      this.logger.warn(
+        `Karma routing observation failed (${karmaFailureReason(error)}); retrying on the next tick.`,
+      );
     }
+  }
+
+  // Any attempt, automatic or by an operator, holds the next automatic return for the interval.
+  private async returnAutomatically(unitId: string, carId: string, now: Date): Promise<void> {
+    const latest = await this.repository.latestAttempt(unitId);
+    if (latest && now.getTime() - latest.requestedAt.getTime() < AUTOMATIC_RETURN_INTERVAL) {
+      return;
+    }
+    if (latest?.pending) {
+      // Neither a recovery outcome nor a discocan connection followed it.
+      await this.repository.failed(latest.id);
+    }
+    const attempt = await this.repository.createAttempt({
+      unitId,
+      actorId: AUTOMATIC_RETURN_ACTOR,
+      requestedAt: now,
+    });
+    const { status } = await this.submitReturn(attempt.id, carId);
+    this.logger.log(`Requested unit ${unitId}'s return from the Karma backup (${status}).`);
   }
 
   async observe(unitId: string, carId: string, now: Date) {
@@ -241,13 +248,17 @@ export class KarmaService implements OnModuleInit, OnModuleDestroy {
       actorId: operatorActor(context),
       requestedAt: new Date(),
     });
+    return attemptView(await this.submitReturn(attempt.id, car.carId));
+  }
+
+  private async submitReturn(attemptId: string, carId: string): Promise<KarmaAttempt> {
     let result: Awaited<ReturnType<KarmaTransport['requestReturn']>>;
     try {
-      result = await this.transport.requestReturn(car.carId);
+      result = await this.transport.requestReturn(carId);
     } catch {
-      await this.repository.failed(attempt.id);
+      await this.repository.failed(attemptId);
       throw new ServiceUnavailableException('Karma could not authenticate the return request');
     }
-    return attemptView(await this.repository.submitted(attempt.id, result));
+    return this.repository.submitted(attemptId, result);
   }
 }

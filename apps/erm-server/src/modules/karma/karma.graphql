@@ -19,7 +19,7 @@ type ErmKarmaReturnAttempt {
   requestedAt: DateTime!
   queueId: ID
   status: ErmKarmaReturnStatus!
-  "An uncertain submission stays pending; it is never automatically replayed."
+  "Pending until a recovery outcome or discocan connection. If the unit is still on the backup 30 minutes later, the automatic return marks it FAILED and queues another."
   pending: Boolean!
   recovery: ErmRecoverySession
   discocanConnectionId: ID

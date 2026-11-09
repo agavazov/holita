@@ -72,10 +72,11 @@ export class KarmaRepository {
     return { routes, attempts };
   }
 
+  // Operator returns carry their Branch and Device; automatic returns omit all three.
   async createAttempt(data: {
-    tenantId: string;
-    branchId: string;
-    deviceId: string;
+    tenantId?: string;
+    branchId?: string;
+    deviceId?: string;
     unitId: string;
     actorId: string;
     requestedAt: Date;
@@ -95,6 +96,13 @@ export class KarmaRepository {
 
   pending(unitId: string) {
     return this.prisma.client.ermKarmaReturnAttempt.findFirst({ where: { unitId, pending: true } });
+  }
+
+  latestAttempt(unitId: string) {
+    return this.prisma.client.ermKarmaReturnAttempt.findFirst({
+      where: { unitId },
+      orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
+    });
   }
 
   submitted(id: string, result: { status: 'ACCEPTED' | 'UNCERTAIN'; queueId: string | null }) {

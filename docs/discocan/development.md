@@ -774,12 +774,18 @@ explicit `returnErmDeviceToDiscoCan` mutation for a Device in the active Branch.
 `KARMA_BACKUP`, a parked latest event (`eid` 5, or `eid` 1 with first `extra` field `0`) and no
 pending return, then queues only `98,1,<recovery-host>,<port>`. This temporary session changes no
 device settings. The attempt records its actor, submission time and Karma queue ID, and links the
-read-only recovery outcome and the next ordinary discocan connection. An uncertain submission is
-not automatically retried.
+read-only recovery outcome and the next ordinary discocan connection.
 
-Run `98` sessions, for routing or this recovery, only while the truck is parked: reports a unit
-sends during a configuration session are lost (CB6711TE's ten driving reports during its
-2026-11-03 13:08 session never reached Karma and were not resent).
+The same five-minute job returns every unit it finds on the backup, parked or driving, while the
+gateway's internal API answers. It queues the same `98` as a unit-level attempt without Tenant,
+Branch or Device (actor `system:auto-return`), so no Branch sees it as its latest return. Any
+attempt holds the next automatic one for 30 minutes; one still pending then is marked `FAILED` and
+replaced. A driving unit loses only the reports it sends during the read-only session, which the
+listener closes within seconds (30 s at most).
+
+Run routing `98` sessions only while the truck is parked: reports a unit sends during a
+configuration session are lost (CB6711TE's ten driving reports during its 2026-11-03 13:08 session
+never reached Karma and were not resent).
 
 Port **11510 is reserved for permanent read-only recovery**. Deploy the compiled ERM entry
 `apps/erm-server/dist/main.js` with `ERM_ROLE=recovery` in a separate user unit, using the ERM

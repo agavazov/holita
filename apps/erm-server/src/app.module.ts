@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
+import { ScheduleModule } from '@nestjs/schedule';
 import { GraphQLScalarType } from 'graphql';
 import { readFileSync } from 'node:fs';
 import { formatGraphqlError, graphqlDiagnostics } from './graphql/errors.js';
@@ -21,6 +22,7 @@ const role = ermRole();
     ...(role === 'recovery' ? [RecoveryModule] : []),
     ...(role === 'api' || role === 'all'
       ? [
+          ScheduleModule.forRoot(),
           TelemetryModule,
           NotificationExportModule,
           GraphQLModule.forRoot<ApolloFederationDriverConfig>({

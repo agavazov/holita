@@ -4690,7 +4690,13 @@ it('persists captured connection lifecycle and raw frames through the production
     const karmaSubmissions = jest
       .spyOn(karmaTransport, 'requestReturn')
       .mockResolvedValue({ status: 'ACCEPTED', queueId: '7301' });
-    const karma = new KarmaService(karmaRepository, karmaTransport, new FleetClient());
+    const karmaGateway = module.get(LiveDevicesService);
+    const karma = new KarmaService(
+      karmaRepository,
+      karmaTransport,
+      new FleetClient(),
+      karmaGateway,
+    );
     const karmaResolver = new KarmaResolver(karma);
     const engineerContext: RequestContext = {
       ...scopedContext,
@@ -4751,7 +4757,7 @@ it('persists captured connection lifecycle and raw frames through the production
     try {
       routingClock.mockReturnValue(karmaObservedAt.getTime() + 20 * 60_000);
       karmaReads.mockRejectedValueOnce(new Error('Synthetic Karma read failure'));
-      await karma.tick(new Date(Date.now()));
+      await karma.routeUnits(new Date(Date.now()));
       for (const ageMinutes of [20, 60]) {
         routingClock.mockReturnValue(karmaObservedAt.getTime() + ageMinutes * 60_000);
         expect(await karma.deviceRouting(karmaDevice(), engineerContext)).toMatchObject({
@@ -5070,16 +5076,52 @@ it('persists captured connection lifecycle and raw frames through the production
       parked: true,
     });
     karmaSubmissions.mockResolvedValue({ status: 'UNCERTAIN', queueId: null });
-    expect(await karma.requestReturn(deviceId, engineerContext)).toMatchObject({
-      status: 'UNCERTAIN',
-      pending: true,
-      queueId: null,
-    });
+    const uncertainReturn = await karma.requestReturn(deviceId, engineerContext);
+    expect(uncertainReturn).toMatchObject({ status: 'UNCERTAIN', pending: true, queueId: null });
     await expect(karma.requestReturn(deviceId, engineerContext)).rejects.toMatchObject({
       status: 409,
     });
-    await karma.tick();
+    await karma.routeUnits(new Date());
     expect(karmaSubmissions).toHaveBeenCalledTimes(3);
+    // After 30 minutes the unanswered return fails and a unit-level automatic return replaces it.
+    karmaSubmissions.mockResolvedValue({ status: 'ACCEPTED', queueId: '7303' });
+    const automaticAt = new Date(uncertainReturn.requestedAt.getTime() + 30 * 60_000);
+    await karma.routeUnits(automaticAt);
+    expect(karmaSubmissions).toHaveBeenCalledTimes(4);
+    expect(
+      await database.client.ermKarmaReturnAttempt.findMany({
+        where: { unitId: karmaTargetUnitId },
+        orderBy: { requestedAt: 'asc' },
+        select: { tenantId: true, branchId: true, deviceId: true, actorId: true, status: true },
+      }),
+    ).toEqual([
+      { tenantId, branchId, deviceId, actorId: engineerContext.userId, status: 'FAILED' },
+      {
+        tenantId: null,
+        branchId: null,
+        deviceId: null,
+        actorId: 'system:auto-return',
+        status: 'QUEUED',
+      },
+    ]);
+    expect(
+      await karma.deviceRouting(
+        {
+          id: deviceId,
+          imei: karmaTargetUnitId,
+          telemetryRequest: deviceTelemetryRequest(
+            [karmaTargetUnitId],
+            [{ id: deviceId, imei: karmaTargetUnitId }],
+          ),
+        },
+        engineerContext,
+      ),
+    ).toMatchObject({ latestReturnAttempt: { id: uncertainReturn.id, status: 'FAILED' } });
+    jest
+      .spyOn(karmaGateway, 'listUnits')
+      .mockRejectedValueOnce(new Error('Synthetic gateway down'));
+    await karma.routeUnits(new Date(automaticAt.getTime() + 30 * 60_000));
+    expect(karmaSubmissions).toHaveBeenCalledTimes(4);
   } finally {
     for (const [name, value] of previousKarmaEnvironment) {
       if (value === undefined) {
