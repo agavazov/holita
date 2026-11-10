@@ -13,6 +13,16 @@ export function readPort(name: string, value: string): number {
   return port;
 }
 
+/** Units configured for primary mode in ERM_PRIMARY_UNITS. */
+export function primaryUnitIds(): Set<string> {
+  return new Set(
+    (process.env.ERM_PRIMARY_UNITS ?? '')
+      .split(',')
+      .map((unit) => unit.trim().toUpperCase())
+      .filter(Boolean),
+  );
+}
+
 export function deviceConfig() {
   const upstream = process.env.ERM_UPSTREAM ?? 'in.karma.online:500';
   const separator = upstream.lastIndexOf(':');
@@ -31,12 +41,7 @@ export function deviceConfig() {
       repositoryRoot,
       process.env.ERM_CAPTURE_DIR ?? '.references/erm-server',
     ),
-    primaryUnits: new Set(
-      (process.env.ERM_PRIMARY_UNITS ?? '')
-        .split(',')
-        .map((unit) => unit.trim().toUpperCase())
-        .filter(Boolean),
-    ),
+    primaryUnits: primaryUnitIds(),
     ackCommands: new Set(
       (process.env.ERM_ACK_COMMANDS ?? '06')
         .split(',')

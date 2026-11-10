@@ -640,6 +640,12 @@ excluded. Each event also has `ignitionOn` (binary Tracker flags or an `#IGN#` t
 - `417`: `{ report, noCanMessages: true }`, recorded as CAN communication loss.
 - `419`: `{ report, faults: [{ spn, fmi, status: ADDED | DELETED }] }`.
 
+`POST /internal/telemetry/units/:imei/fault-reads` with `{ tenantId, branchId, deviceId }` and the
+same bearer queues Fleet's scheduled READ_EDATA_FAULTS as actor `system:fault-scan`. It answers
+`{ queued }`: false when the unit is not in `ERM_PRIMARY_UNITS` or the Device already has an
+unexpired queued or submitting fault read. The request expires after 5 h 50 min, and dispatch
+verifies the Fleet target as for operator requests.
+
 Reports retain event and receipt times. `ErmEvent.edata` shows every
 decoded eData report of an External device (33) event with its raw payload. See [ADR 0008](../architecture/decisions/0008-erm-telemetry-into-fleet-activity.md) for
 Fleet's telemetry job.

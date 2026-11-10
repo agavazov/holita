@@ -6,6 +6,8 @@ import { InputIcon } from 'primeng/inputicon';
 import { InputText } from 'primeng/inputtext';
 import { SelectButton } from 'primeng/selectbutton';
 import type { Language } from '../../../i18n/messages';
+import { FaultIcon } from '../../../ui/fleet-live/fault-icon';
+import { faultsText, severityTone } from '../../../ui/fleet-live/fault-wording';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { formatRelative } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
@@ -20,7 +22,7 @@ import { liveDashboardText } from './live-dashboard-text';
 
 @Component({
   selector: 'discocan-live-truck-list',
-  imports: [FormsModule, IconField, InputIcon, InputText, SelectButton, Search],
+  imports: [FaultIcon, FormsModule, IconField, InputIcon, InputText, SelectButton, Search],
   template: `
     <div class="truck-list__tools">
       <p-iconfield>
@@ -66,12 +68,20 @@ import { liveDashboardText } from './live-dashboard-text';
             <span class="truck-list__main">
               <span class="truck-list__line">
                 <strong class="app-plate">{{ truck.plate }}</strong>
-                @if (truck.problems) {
+                @for (fault of truck.faults; track fault.system) {
+                  <discocan-fault-icon
+                    class="truck-list__fault"
+                    [attr.data-tone]="tone(fault.severity)"
+                    [system]="fault.system"
+                    [title]="faults().systems[fault.system]"
+                  />
+                }
+                @if (truck.alerts) {
                   <span
                     class="truck-list__alert"
                     [class.truck-list__alert--danger]="truck.severity === 'CRITICAL'"
                     [title]="problemLabel(truck)"
-                    >! {{ truck.problems }}</span
+                    >! {{ truck.alerts }}</span
                   >
                 }
                 <span class="truck-list__speed">
@@ -106,6 +116,8 @@ export class LiveTruckList {
 
   protected readonly format = injectFleetFormat();
   protected readonly text = computed(() => liveDashboardText(this.language()));
+  protected readonly faults = computed(() => faultsText(this.language()));
+  protected readonly tone = severityTone;
   protected readonly filterOptions = computed(() =>
     truckFilters.map((value) => ({
       value,
@@ -127,7 +139,7 @@ export class LiveTruckList {
   }
 
   protected problemLabel(truck: LiveTruck): string {
-    return interpolate(this.text().problemCount, { count: truck.problems });
+    return interpolate(this.text().problemCount, { count: truck.alerts });
   }
 
   protected moving(truck: LiveTruck): boolean {

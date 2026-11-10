@@ -5122,6 +5122,26 @@ it('persists captured connection lifecycle and raw frames through the production
       .mockRejectedValueOnce(new Error('Synthetic gateway down'));
     await karma.routeUnits(new Date(automaticAt.getTime() + 30 * 60_000));
     expect(karmaSubmissions).toHaveBeenCalledTimes(4);
+
+    // Fleet's six-hourly fault read: configured primary units only, one unexpired read per Device.
+    const faultReadUnit = '862129080369997';
+    const faultReadTarget = { tenantId, branchId, deviceId: randomUUID() };
+    process.env.ERM_PRIMARY_UNITS = faultReadUnit;
+    await expect(requests.scheduledFaultRead(faultReadUnit, faultReadTarget)).resolves.toEqual({
+      queued: true,
+    });
+    await expect(requests.scheduledFaultRead(faultReadUnit, faultReadTarget)).resolves.toEqual({
+      queued: false,
+    });
+    await expect(
+      requests.scheduledFaultRead(unitId, { ...faultReadTarget, deviceId: randomUUID() }),
+    ).resolves.toEqual({ queued: false });
+    expect(
+      await database.client.ermCommandRequest.findMany({
+        where: { unitId: { in: [faultReadUnit, unitId] }, actorId: 'system:fault-scan' },
+        select: { tenantId: true, branchId: true, deviceId: true, action: true, status: true },
+      }),
+    ).toEqual([{ ...faultReadTarget, action: 'READ_EDATA_FAULTS', status: 'QUEUED' }]);
   } finally {
     for (const [name, value] of previousKarmaEnvironment) {
       if (value === undefined) {

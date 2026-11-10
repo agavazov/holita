@@ -47,4 +47,31 @@ export class ErmTelemetryJobs {
       this.logger.warn('ERM telemetry Device registry could not be read.');
     }
   }
+
+  // ERM queues the read only for primary units without a pending one; each request waits for
+  // the unit's connection and expires before the next run.
+  @Cron('0 0 */6 * * *', {
+    name: 'erm-fault-reads',
+    timeZone: 'Europe/Sofia',
+    waitForCompletion: true,
+  })
+  async faultReads(): Promise<void> {
+    if (!ermTelemetryEnabled()) {
+      return;
+    }
+    try {
+      for (const device of await this.repository.devices()) {
+        if (device.vehicleId === null) {
+          continue;
+        }
+        try {
+          await this.client.requestFaultRead(device);
+        } catch {
+          this.logger.warn(`ERM fault read request failed for Device ${device.id}.`);
+        }
+      }
+    } catch {
+      this.logger.warn('ERM fault reads: the Device registry could not be read.');
+    }
+  }
 }

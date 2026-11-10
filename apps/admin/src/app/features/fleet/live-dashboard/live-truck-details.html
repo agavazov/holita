@@ -46,6 +46,14 @@
   <p-message severity="error" size="small">{{ detailError() }}</p-message>
 }
 
+<discocan-fault-scanner
+  [check]="current.faultCheck"
+  [lamps]="current.lamps"
+  [reads]="unit?.ermCommandRequests ?? []"
+  [language]="language()"
+  [now]="now()"
+/>
+
 <p-accordion class="truck-details__sections" [multiple]="true" [value]="sections">
   <p-accordion-panel value="status">
     <p-accordion-header>{{ text().sections.status }}</p-accordion-header>
@@ -160,16 +168,16 @@
   <p-accordion-panel value="problems">
     <p-accordion-header>
       {{ text().sections.problems }}
-      @if (current.problems) {
+      @if (problems().length) {
         <p-tag
           class="truck-details__count"
-          [value]="number(current.problems)"
-          [severity]="current.severity === 'CRITICAL' ? 'danger' : 'warn'"
+          [value]="number(problems().length)"
+          [severity]="criticalProblem() ? 'danger' : 'warn'"
         />
       }
     </p-accordion-header>
     <p-accordion-content>
-      @if (!problems().length && !lamps().length) {
+      @if (!problems().length) {
         <p class="truck-details__muted">{{ text().noProblems }}</p>
       }
       <ul class="truck-details__list">
@@ -179,16 +187,6 @@
             <p-tag [value]="level.label" [severity]="level.severity" />
             <span>{{ title(problem) }}</span>
             <time class="truck-details__muted">{{ relative(problem.occurredAt) }}</time>
-          </li>
-        }
-        @for (lamp of lamps(); track lamp.deviceId + ':' + lamp.parameterId) {
-          @let lit = lampState(lamp.state);
-          <li>
-            <p-tag [value]="lit.label" [severity]="lit.severity" />
-            <span>{{ lampLabel(lamp.parameterId) }}</span>
-            <time class="truck-details__muted">{{
-              relative(lamp.stateSince ?? lamp.recordedAt)
-            }}</time>
           </li>
         }
       </ul>

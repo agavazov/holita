@@ -108,7 +108,7 @@ function storedDiagnostic(event: StoredEvent): FleetProblemDiagnostic[] {
   return [
     {
       ...diagnostic,
-      ...faultMeaning(diagnostic.spn ?? null),
+      ...faultMeaning(diagnostic.spn ?? null, diagnostic.kind),
       firstObservedAt: diagnostic.occurredAt,
       lastObservedAt: diagnostic.occurredAt,
     },
@@ -445,7 +445,7 @@ export class ProblemsService {
           report: diagnosticReport(evidence) ?? storedEvent?.diagnosticReport ?? null,
           spn: faultCode ? Number(faultCode[1]) : null,
           fmi: faultCode ? Number(faultCode[2]) : null,
-          ...faultMeaning(faultCode ? Number(faultCode[1]) : null),
+          ...faultMeaning(faultCode ? Number(faultCode[1]) : null, diagnostic.kind),
           firstObservedAt: evidence.eventTime ?? evidence.occurredAt,
           lastObservedAt: evidence.eventTime ?? evidence.occurredAt,
           occurredAt: evidence.eventTime ?? evidence.occurredAt,

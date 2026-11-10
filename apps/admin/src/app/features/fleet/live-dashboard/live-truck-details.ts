@@ -8,11 +8,7 @@ import { SelectButton } from 'primeng/selectbutton';
 import { Tag } from 'primeng/tag';
 import type { AdminLiveVehicleQuery } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
-import {
-  warningLampLabel,
-  warningStateLabel,
-  warningTone,
-} from '../../../ui/fleet-live/fault-wording';
+import { FaultScanner } from '../../../ui/fleet-live/fault-scanner';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { formatDuration, formatNumber, formatRelative } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
@@ -42,6 +38,7 @@ import { liveDashboardText } from './live-dashboard-text';
     AccordionHeader,
     AccordionContent,
     ButtonDirective,
+    FaultScanner,
     Message,
     SelectButton,
     Tag,
@@ -72,13 +69,11 @@ export class LiveTruckDetails {
   );
   protected readonly vehicle = computed(() => this.detail()?.fleetVehicle ?? null);
   protected readonly device = computed(() => this.vehicle()?.devices[0] ?? null);
-  protected readonly lamps = computed(() =>
-    (this.vehicle()?.currentWarnings ?? []).filter(
-      (lamp) => lamp.state === 'RED' || lamp.state === 'YELLOW',
-    ),
-  );
   protected readonly problems = computed(() =>
     (this.detail()?.fleetProblems.items ?? []).filter((problem) => problem.requiringAttention),
+  );
+  protected readonly criticalProblem = computed(() =>
+    this.problems().some((problem) => problem.severity === 'CRITICAL'),
   );
   protected readonly fleet = computed(() => ['/', this.language(), this.branchId(), 'fleet']);
   /** The newest report: the trail is fresher than the fleet snapshot while a truck drives. */
@@ -148,19 +143,6 @@ export class LiveTruckDetails {
     return {
       label: problemsText(this.language()).severities[problem.severity],
       severity: toneSeverity(problemSeverityTones[problem.severity]),
-    };
-  }
-
-  protected lampLabel(parameterId: number): string {
-    return warningLampLabel(parameterId, this.language());
-  }
-
-  protected lampState(
-    state: AdminLiveVehicleQuery['fleetVehicle']['currentWarnings'][number]['state'],
-  ) {
-    return {
-      label: warningStateLabel(state, this.language()),
-      severity: toneSeverity(warningTone(state)),
     };
   }
 

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -19,6 +20,7 @@ import type {
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { validateCommand } from '../devices/command.js';
+import { primaryUnitIds } from '../devices/config.js';
 import { CommandRequestsRepository } from './command-requests.repository.js';
 import { commandRequestView } from './command-request-view.js';
 import { deviceActions } from './device-actions.js';
@@ -33,6 +35,9 @@ import {
   commandRequestOptions,
   commandRequestsQuery,
 } from './command-requests.query.js';
+
+// Fleet asks every six hours; a request still waiting expires before the next one.
+const SCHEDULED_FAULT_READ_SECONDS = 21_000;
 
 @Injectable()
 export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
@@ -80,6 +85,40 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
       new Date(createdAt.getTime() + seconds * 1000),
     );
     return commandRequestView(request, undefined, context);
+  }
+
+  /**
+   * Fleet's scheduled fault-logger read for a configured primary unit. Dispatch verifies the
+   * Fleet target again before sending, as for operator requests.
+   */
+  async scheduledFaultRead(imei: string, body: unknown): Promise<{ queued: boolean }> {
+    if (!/^\d{15}$/.test(imei) || typeof body !== 'object' || body === null) {
+      throw new BadRequestException('Expected a unit IMEI and its Fleet Device target');
+    }
+    const target = new Map(Object.entries(body));
+    const audit = {
+      tenantId: auditId(target.get('tenantId')),
+      branchId: auditId(target.get('branchId')),
+      deviceId: auditId(target.get('deviceId')),
+      actorId: 'system:fault-scan',
+      intent: 'Scheduled fault read',
+    };
+    const createdAt = new Date();
+    if (
+      !primaryUnitIds().has(imei) ||
+      (await this.repository.pendingAction(audit.deviceId, 'READ_EDATA_FAULTS', createdAt))
+    ) {
+      return { queued: false };
+    }
+    validateCommand(deviceActions.READ_EDATA_FAULTS);
+    await this.repository.create(
+      audit,
+      imei,
+      'READ_EDATA_FAULTS',
+      createdAt,
+      new Date(createdAt.getTime() + SCHEDULED_FAULT_READ_SECONDS * 1000),
+    );
+    return { queued: true };
   }
 
   async cancel(

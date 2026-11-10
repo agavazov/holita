@@ -24,6 +24,8 @@ export function vehicleProfile(vehicle: AdminVehicleProfileFragment): VehiclePro
     headingDeg: vehicle.state.headingDeg,
     liveDevices: vehicle.devices,
     warningLamps: vehicle.warningLamps,
+    faultCheck: vehicle.faultCheck ?? null,
+    faultReads: vehicle.devices.flatMap((device) => device.ermCommandRequests),
     createdAt: vehicle.createdAt,
   };
 }

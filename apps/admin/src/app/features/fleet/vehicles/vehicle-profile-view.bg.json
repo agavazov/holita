@@ -12,7 +12,7 @@
   "heading": "Измерена посока",
   "positionTime": "Запис на позицията",
   "positionAge": "Възраст на позицията",
-  "problemSummary": "{warnings} текущи предупреждения · {recorded} записани",
+  "problemSummary": "{faults} · {recorded} записани",
   "viewProblems": "Вижте проблемите",
   "problemKpi": "Текущи предупреждения",
   "problems": {

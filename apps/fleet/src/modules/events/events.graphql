@@ -204,7 +204,57 @@ enum FleetFaultSystem {
   BRAKES
   ABS_EBS
   AFTERTREATMENT
+  "CAN communication between the tracker's eData module and the vehicle; used by fault checks."
+  CAN_BUS
+  "Vehicle supply voltage measured by the tracker; used by fault checks."
+  POWER
   OTHER
+}
+
+enum FleetFaultFindingSource {
+  "The latest value of a supported warning lamp is RED, YELLOW or INFORMATION."
+  WARNING_LAMP
+  "The latest fault-logger report for this code added it and no later report deleted it."
+  FAULT_LOGGER
+  "An unresolved Fleet alert with a trouble code but no fault-logger status."
+  ALERT
+  "CAN loss or CAN error reports within the last 24 hours."
+  CAN_REPORT
+  "The last three supply-voltage samples within six hours are below the low limit for the vehicle's 12 V or 24 V system."
+  VOLTAGE
+}
+
+"One current fault of a vehicle found by the fault check."
+type FleetFaultFinding {
+  system: FleetFaultSystem!
+  severity: FleetEventSeverity!
+  source: FleetFaultFindingSource!
+  "Trouble code (SPN/FMI or OBD), or the CAN report kind; null for lamps and voltage."
+  code: String
+  "SPN uses Float to retain unsigned 32-bit values beyond GraphQL Int."
+  spn: Float
+  fmi: Int
+  "DiscoCan component-description translation key, when the code has a supported meaning."
+  descriptionKey: String
+  "Warning-lamp eData parameter for WARNING_LAMP findings."
+  parameterId: Int
+  lampState: FleetWarningLampState
+  "Volts for VOLTAGE findings."
+  value: Float
+  "Start of the current episode: when the lamp state, logger entry or first CAN report in the window began."
+  since: DateTime!
+  lastSeenAt: DateTime!
+  "Reports in the episode, for example CAN losses within 24 hours."
+  occurrences: Int!
+}
+
+"The latest server-side fault check of a vehicle. It runs every 15 minutes from the data Fleet already holds and sends nothing to the vehicle."
+type FleetFaultCheck {
+  checkedAt: DateTime!
+  "Newest status sample of the vehicle within seven days of the check."
+  dataAsOf: DateTime
+  "Current findings, worst severity first."
+  findings: [FleetFaultFinding!]!
 }
 
 type FleetProblemDiagnostic {
@@ -217,7 +267,7 @@ type FleetProblemDiagnostic {
   "SPN uses Float to retain unsigned 32-bit values beyond GraphQL Int."
   spn: Float
   fmi: Int
-  "Vehicle-system translation key from discocan's versioned catalog; unknown codes use OTHER."
+  "Vehicle-system translation key from discocan's versioned catalog; CAN loss and CAN errors use CAN_BUS, unknown codes OTHER."
   systemKey: FleetFaultSystem!
   "DiscoCan component-description translation key, when the code has a supported meaning."
   descriptionKey: String

@@ -1,0 +1,57 @@
+@let verdict = state();
+<header class="fault-scanner__head">
+  <span [class]="'app-icon-well app-icon-well--' + verdict.tone">
+    @if (verdict.tone === 'success') {
+      <svg data-p-icon="check-circle" aria-hidden="true"></svg>
+    } @else {
+      <svg data-p-icon="exclamation-triangle" aria-hidden="true"></svg>
+    }
+  </span>
+  <span class="fault-scanner__summary">
+    <strong aria-live="polite">{{ verdict.title }}</strong>
+    <span class="fault-scanner__muted">{{ verdict.detail }}</span>
+  </span>
+</header>
+
+<discocan-fault-cluster
+  [findings]="check() ? findings() : null"
+  [language]="language()"
+  [(selected)]="system"
+/>
+
+@if (staleText(); as stale) {
+  <p class="fault-scanner__muted">{{ stale }}</p>
+}
+
+@if (check()) {
+  <ol class="fault-scanner__list" [attr.aria-label]="text().scanner.title">
+    @for (finding of shown(); track $index) {
+      <li class="fault-finding" [attr.data-tone]="tone(finding)">
+        <discocan-fault-icon class="fault-finding__icon" [system]="finding.system" />
+        <span class="fault-finding__body">
+          <span class="fault-finding__title">{{ title(finding) }}</span>
+          <span class="fault-finding__meta">
+            {{ text().systems[finding.system] }} · {{ text().scanner.sources[finding.source] }}
+            @if (code(finding); as value) {
+              · <span class="app-mono">{{ value }}</span>
+            }
+          </span>
+          @if (meaning(finding); as value) {
+            <span class="fault-finding__meta">{{ value }}</span>
+          }
+          <span class="fault-finding__meta">{{ timing(finding) }}</span>
+        </span>
+        <p-tag [value]="text().severities[finding.severity]" [severity]="severity(finding)" />
+      </li>
+    } @empty {
+      <li class="fault-scanner__muted">{{ emptyText() }}</li>
+    }
+  </ol>
+}
+
+<footer class="fault-scanner__read">
+  <span
+    >{{ text().scanner.read }}: <strong>{{ readText() }}</strong></span
+  >
+  <span class="fault-scanner__muted">{{ text().scanner.readHint }}</span>
+</footer>

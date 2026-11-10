@@ -12,7 +12,7 @@
   "heading": "Measured heading",
   "positionTime": "Position recorded",
   "positionAge": "Position age",
-  "problemSummary": "{warnings} current warnings · {recorded} recorded",
+  "problemSummary": "{faults} · {recorded} recorded",
   "viewProblems": "View problems",
   "problemKpi": "Current warnings",
   "problems": {

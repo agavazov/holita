@@ -92,6 +92,22 @@
   font-variant-numeric: var(--p-app-font-numeric);
 }
 
+// Lit telltales of the systems with a current fault, as on the truck's dashboard.
+.truck-list__fault {
+  inline-size: 1rem;
+  block-size: 1rem;
+  margin-inline-end: calc(-1 * var(--p-app-space-1));
+  color: var(--p-app-tone-warn-solid);
+
+  &[data-tone='danger'] {
+    color: var(--p-app-tone-danger-solid);
+  }
+
+  &[data-tone='info'] {
+    color: var(--p-app-tone-info-solid);
+  }
+}
+
 .truck-list__alert {
   padding: 0 var(--p-app-space-1);
   font-size: var(--p-app-text-xs);

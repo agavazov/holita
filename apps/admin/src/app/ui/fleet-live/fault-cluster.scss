@@ -1,0 +1,81 @@
+// A dark instrument panel in both themes: light-dark() tokens resolve to their dark values here.
+.fault-cluster {
+  display: grid;
+  // Seven lamps in a row when there is room, otherwise rows of four or more.
+  grid-template-columns: repeat(auto-fit, minmax(4.25rem, 1fr));
+  gap: var(--p-app-space-1);
+  margin: 0;
+  padding: var(--p-app-space-2);
+  list-style: none;
+  color-scheme: dark;
+  border: 1px solid var(--p-app-sidebar-border-color);
+  border-radius: var(--p-app-frame-radius);
+  background: var(--p-app-sidebar-background);
+  color: var(--p-app-sidebar-color);
+}
+
+.fault-lamp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--p-app-space-1);
+  inline-size: 100%;
+  padding: var(--p-app-space-1) 0;
+  border: 0;
+  border-radius: var(--p-app-frame-radius);
+  background: transparent;
+  color: var(--p-app-sidebar-muted-color);
+  font: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--p-app-sidebar-focus-color);
+    outline-offset: 1px;
+  }
+
+  &[aria-pressed='true'] {
+    background: color-mix(in srgb, var(--p-app-sidebar-color), transparent 88%);
+  }
+}
+
+.fault-lamp__icon {
+  opacity: 0.4;
+}
+
+.fault-lamp[data-tone='unknown'] .fault-lamp__icon {
+  opacity: 0.2;
+}
+
+.fault-lamp[data-tone='danger'],
+.fault-lamp[data-tone='warn'],
+.fault-lamp[data-tone='info'] {
+  .fault-lamp__icon {
+    opacity: 1;
+    filter: drop-shadow(0 0 0.3rem currentColor);
+  }
+
+  .fault-lamp__name {
+    color: var(--p-app-sidebar-color);
+  }
+}
+
+.fault-lamp[data-tone='danger'] {
+  color: var(--p-app-tone-danger-solid);
+}
+
+.fault-lamp[data-tone='warn'] {
+  color: var(--p-app-tone-warn-solid);
+}
+
+.fault-lamp[data-tone='info'] {
+  color: var(--p-app-tone-info-solid);
+}
+
+.fault-lamp__name {
+  overflow: hidden;
+  max-inline-size: 100%;
+  font-size: var(--p-app-text-xs);
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

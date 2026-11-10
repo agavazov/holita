@@ -717,18 +717,20 @@ describe('Events and alert workflow with PostgreSQL', () => {
           spn: faultCode ? Number(faultCode[1]) : null,
           fmi: faultCode ? Number(faultCode[2]) : null,
           systemKey:
-            diagnostic.troubleCode === 'SPN 4339 FMI 7'
-              ? 'AFTERTREATMENT'
-              : diagnostic.troubleCode === 'SPN 1247 FMI 11'
-                ? 'ENGINE'
-                : 'OTHER',
+            diagnostic.kind === 'CAN_DISCONNECTED'
+              ? 'CAN_BUS'
+              : diagnostic.troubleCode === 'SPN 4339 FMI 7'
+                ? 'AFTERTREATMENT'
+                : diagnostic.troubleCode === 'SPN 1247 FMI 11'
+                  ? 'ENGINE'
+                  : 'OTHER',
           descriptionKey:
             diagnostic.troubleCode === 'SPN 4339 FMI 7'
               ? 'faults.spn.scrFeedbackControl'
               : diagnostic.troubleCode === 'SPN 1247 FMI 11'
                 ? 'faults.spn.enginePower'
                 : null,
-          catalogVersion: '2026-11-08.1',
+          catalogVersion: '2026-11-10.1',
           firstObservedAt:
             report.report === 417
               ? hours(-0.2).toISOString()
@@ -800,9 +802,9 @@ describe('Events and alert workflow with PostgreSQL', () => {
           troubleCode: null,
           status: null,
           report: 411,
-          systemKey: 'OTHER',
+          systemKey: 'CAN_BUS',
           descriptionKey: null,
-          catalogVersion: '2026-11-08.1',
+          catalogVersion: '2026-11-10.1',
           firstObservedAt: hours(-0.25).toISOString(),
           lastObservedAt: hours(-0.25).toISOString(),
         }),

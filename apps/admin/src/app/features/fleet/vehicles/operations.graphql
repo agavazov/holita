@@ -255,9 +255,15 @@ fragment AdminVehicleProfile on FleetVehicle {
   ...AdminVehicleDetails
   devices {
     ...AdminFleetLiveDevice
+    ermCommandRequests {
+      ...AdminFaultRead
+    }
   }
   warningLamps {
     ...AdminWarningLamp
+  }
+  faultCheck {
+    ...AdminFaultCheck
   }
   nextService {
     ...AdminVehicleProfileServiceDetails

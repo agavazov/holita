@@ -233,6 +233,7 @@ model Vehicle {
   trips Trip[]
   events FleetEvent[]
   serviceTasks ServiceTask[]
+  faultCheck VehicleFaultCheck?
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -243,6 +244,22 @@ model Vehicle {
   @@index([tenantId, branchId, groupId])
   @@index([tenantId, branchId, currentDriverId])
   @@map("vehicle")
+}
+
+// The latest server-side fault check of a vehicle, replaced every 15 minutes; findings hold the
+// check's own output (vehicles/fault-check.ts). Derived data, so it goes with its vehicle.
+// Hand-written CHECK: findings is a JSON array.
+model VehicleFaultCheck {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  vehicleId String @db.Uuid
+  checkedAt DateTime @db.Timestamptz(3)
+  dataAsOf DateTime? @db.Timestamptz(3)
+  findings Json
+  vehicle Vehicle @relation(fields: [tenantId, branchId, vehicleId], references: [tenantId, branchId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@id([tenantId, branchId, vehicleId])
+  @@map("vehicleFaultCheck")
 }
 
 // Hand-written CHECKs: options NOT NULL with at most 13 values, serial number, eData module, SIM and SMS password formats.

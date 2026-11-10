@@ -82,6 +82,18 @@ reports with the engine off are not stored, because trucks show red lamps at ign
 the engine builds brake air pressure; reports with an unknown engine state still count. Operators
 add MANUAL odometer readings.
 
+Every 15 minutes Fleet replaces each vehicle's `faultCheck` (vehicles with a Device only) from data
+it already holds, without contacting the vehicle. A finding is a RED, YELLOW or INFORMATION lamp, a
+fault-logger code whose newest report added it, an unresolved alert with a trouble code but no
+logger status, CAN loss or CAN error reports within 24 hours, or three supply-voltage samples
+within six hours below 23 V (24 V systems, peak of seven days at least 20 V) or 11.5 V. Findings
+carry the vehicle system (`FleetFaultSystem`, including `CAN_BUS` and `POWER`), severity, code and
+episode times. The admin shows them as fault lamps and a fault scanner on the live dashboard and the
+vehicle profile; lamps reported since the check replace the check's lamp findings. With
+`FLEET_ERM_TELEMETRY_ENABLED=true`, Fleet also asks ERM every six hours (00:00, 06:00, 12:00 and
+18:00 Europe/Sofia) to queue the fault-logger read for each Device with a vehicle; codes the module
+reports arrive through the normal import.
+
 `fleetProblems(offset, limit, filter, sort)` sorts the complete merged, scoped feed before
 pagination. `sort` accepts `field: TIME | SOURCE | SEVERITY | STATE` and `direction: ASC | DESC`;
 the default is `TIME DESC`. Severity orders INFO, WARNING, CRITICAL; source orders FLEET_ALERT,

@@ -9,6 +9,8 @@ import {
   AdminVehicleTrackDocument,
   AdminVehicleOdometerDocument,
   AdminRecordOdometerDocument,
+  type AdminFaultCheckFragment,
+  type AdminFaultReadFragment,
   type AdminVehicleProfileFragment,
   type AdminVehicleProfileServiceDetailsFragment,
   type AdminRecordOdometerMutation,
@@ -26,10 +28,67 @@ import { fixtureError, graphqlFixture, type WithTypename } from './graphql-fixtu
 const at = '2026-10-18T07:00:00.000Z';
 export const fixtureProfileService: WithTypename<AdminVehicleProfileServiceDetailsFragment> =
   fixtureServiceTask;
+const finding = {
+  __typename: 'FleetFaultFinding',
+  code: null,
+  spn: null,
+  fmi: null,
+  descriptionKey: null,
+  parameterId: null,
+  lampState: null,
+  value: null,
+  occurrences: 1,
+} as const;
+export const fixtureFaultCheck: WithTypename<AdminFaultCheckFragment> = {
+  __typename: 'FleetFaultCheck',
+  checkedAt: '2026-10-18T06:45:00.000Z',
+  dataAsOf: '2026-10-18T06:44:00.000Z',
+  findings: [
+    {
+      ...finding,
+      system: 'AFTERTREATMENT',
+      severity: 'WARNING',
+      source: 'FAULT_LOGGER',
+      code: 'SPN 3251 FMI 16',
+      spn: 3251,
+      fmi: 16,
+      descriptionKey: 'faults.spn.dpfPressureDifference',
+      since: '2026-10-18T05:34:00.000Z',
+      lastSeenAt: '2026-10-18T05:34:00.000Z',
+    },
+    {
+      ...finding,
+      system: 'CAN_BUS',
+      severity: 'WARNING',
+      source: 'CAN_REPORT',
+      code: 'CAN_DISCONNECTED',
+      since: '2026-10-17T07:10:00.000Z',
+      lastSeenAt: '2026-10-18T06:40:00.000Z',
+      occurrences: 12,
+    },
+  ],
+};
+const fixtureFaultRead: WithTypename<AdminFaultReadFragment> = {
+  __typename: 'ErmCommandRequest',
+  id: '0d7f3c2e-4b1a-4c8e-9f20-6a5b4c3d2e10',
+  action: 'READ_EDATA_FAULTS',
+  status: 'ANSWERED',
+  actorId: 'system:fault-scan',
+  createdAt: '2026-10-18T06:00:00.000Z',
+  sentAt: '2026-10-18T06:00:03.000Z',
+  answeredAt: '2026-10-18T06:00:04.000Z',
+  completedAt: '2026-10-18T06:00:04.000Z',
+  expiresAt: '2026-10-18T11:50:00.000Z',
+  waitingReason: null,
+};
 export const fixtureVehicleProfile: WithTypename<AdminVehicleProfileFragment> = {
   ...fixtureVehicle,
-  devices: fixtureVehicleLiveDevices,
+  devices: fixtureVehicleLiveDevices.map((device) => ({
+    ...device,
+    ermCommandRequests: [fixtureFaultRead],
+  })),
   warningLamps: fixtureVehicleLiveDevices[0].warningLamps,
+  faultCheck: fixtureFaultCheck,
   nextService: fixtureProfileService,
   state: { ...fixtureVehicle.state, odometerRecordedAt: '2026-10-18T06:50:00.000Z' },
 };

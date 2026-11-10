@@ -113,6 +113,12 @@
                 </button>
               </div>
 
+              <discocan-fault-cluster
+                [findings]="faultFindings()"
+                [language]="language()"
+                (selectedChange)="tabChange.emit('problems')"
+              />
+
               <discocan-kpi-strip [label]="text().kpis.label">
                 <discocan-kpi-tile
                   [label]="text().kpis.odometer"
@@ -138,9 +144,9 @@
                   ><svg kpiIcon data-p-icon="chart-line"
                 /></discocan-kpi-tile>
                 <discocan-kpi-tile
-                  [label]="faults().currentWarnings"
-                  [value]="vehicle.currentWarnings.length | discocanNumber"
-                  [tone]="currentWarningTone()"
+                  [label]="faults().activeFaults"
+                  [value]="faultCount() === null ? null : (faultCount() | discocanNumber)"
+                  [tone]="faultTone()"
                   ><svg kpiIcon data-p-icon="exclamation-triangle"
                 /></discocan-kpi-tile>
                 <discocan-kpi-tile
@@ -401,10 +407,18 @@
 
           <p-tabpanel value="problems">
             <div class="app-tab-content">
-              <discocan-fleet-current-warnings
-                [warnings]="vehicle.currentWarnings"
-                [language]="language()"
-              />
+              <section class="app-card" [attr.aria-label]="faults().scanner.title">
+                <h2 class="app-card__title">{{ faults().scanner.title }}</h2>
+                <div class="app-card__body">
+                  <discocan-fault-scanner
+                    [check]="vehicle.faultCheck"
+                    [lamps]="vehicle.currentWarnings"
+                    [reads]="vehicle.faultReads"
+                    [language]="language()"
+                    [now]="now()"
+                  />
+                </div>
+              </section>
 
               @if (problemCounts(); as counts) {
                 <p class="app-muted">

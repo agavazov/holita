@@ -38,6 +38,9 @@ query AdminLiveFleet {
       currentWarnings {
         ...AdminWarningLamp
       }
+      faultCheck {
+        ...AdminFaultCheck
+      }
       state {
         address
         speedKph
@@ -93,6 +96,9 @@ query AdminLiveVehicle($id: ID!) {
         health {
           overdue
         }
+      }
+      ermCommandRequests {
+        ...AdminFaultRead
       }
     }
   }

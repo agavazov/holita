@@ -3,7 +3,14 @@ import type {
   AdminLiveTrackQuery,
   FleetActivityStatus,
   FleetEventSeverity,
+  FleetFaultSystem,
 } from '../../../../generated/graphql/operations';
+import {
+  litSystems,
+  warningLampSystem,
+  type FleetFaultCheck,
+  type FleetWarning,
+} from '../../../ui/fleet-live/fault-wording';
 import { mapCoordinates, type MapCoordinates } from '../../../ui/map-preview/location-map';
 import { isoToZonedParts, zonedWallTimeToIso } from '../../../ui/format/zoned-time';
 
@@ -29,7 +36,14 @@ export interface LiveTruck {
   readonly address: string | null;
   readonly odometerKm: number | null;
   readonly ignition: boolean | null;
-  /** Problems that require attention plus warning lamps that are on now. */
+  /** The server's latest fault check and the lamps reported since, for the fault scanner. */
+  readonly faultCheck: FleetFaultCheck | null;
+  readonly lamps: readonly FleetWarning[];
+  /** Systems with a current fault, worst first per system, in dashboard order. */
+  readonly faults: readonly { system: FleetFaultSystem; severity: FleetEventSeverity }[];
+  /** Problems that require attention, such as open alerts and missing reports. */
+  readonly alerts: number;
+  /** Faulty systems plus problems that require attention. */
   readonly problems: number;
   readonly severity: FleetEventSeverity | null;
 }
@@ -62,16 +76,24 @@ export function liveTrucks(data: AdminLiveFleetQuery): LiveTruck[] {
     .map((item): LiveTruck => {
       const vehicle = vehicles.get(item.vehicle.id);
       const position = mapCoordinates(item.position?.latitude, item.position?.longitude);
-      const lit =
-        vehicle?.currentWarnings.filter(
-          (lamp) => lamp.state === 'RED' || lamp.state === 'YELLOW',
-        ) ?? [];
-      const lamps = lit.length;
-      const lampSeverity: FleetEventSeverity | null = lit.some((lamp) => lamp.state === 'RED')
-        ? 'CRITICAL'
-        : lamps
-          ? 'WARNING'
-          : null;
+      // Lamps are polled with the list; the check's other findings are up to 15 minutes old.
+      const lamps = (vehicle?.currentWarnings ?? []).flatMap(
+        (lamp): { system: FleetFaultSystem; severity: FleetEventSeverity }[] =>
+          lamp.state === 'RED' || lamp.state === 'YELLOW'
+            ? [
+                {
+                  system: warningLampSystem(lamp.parameterId),
+                  severity: lamp.state === 'RED' ? 'CRITICAL' : 'WARNING',
+                },
+              ]
+            : [],
+      );
+      const faults = litSystems([
+        ...(vehicle?.faultCheck?.findings ?? []).filter(
+          (finding) => finding.source !== 'WARNING_LAMP',
+        ),
+        ...lamps,
+      ]);
       const problem = problems.get(item.vehicle.id);
       const driver = vehicle?.currentDriver;
       return {
@@ -89,8 +111,15 @@ export function liveTrucks(data: AdminLiveFleetQuery): LiveTruck[] {
         address: vehicle?.state.address ?? null,
         odometerKm: vehicle?.state.odometerKm ?? null,
         ignition: vehicle?.state.ignition ?? null,
-        problems: (problem?.count ?? 0) + lamps,
-        severity: worstSeverity(problem?.severity ?? null, lampSeverity),
+        faultCheck: vehicle?.faultCheck ?? null,
+        lamps: vehicle?.currentWarnings ?? [],
+        faults,
+        alerts: problem?.count ?? 0,
+        problems: (problem?.count ?? 0) + faults.length,
+        severity: faults.reduce<FleetEventSeverity | null>(
+          (worst, fault) => worstSeverity(worst, fault.severity),
+          problem?.severity ?? null,
+        ),
       };
     })
     .sort(

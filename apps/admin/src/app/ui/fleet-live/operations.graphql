@@ -76,3 +76,36 @@ fragment AdminFaultDiagnostic on FleetProblemDiagnostic {
   occurredAt
   receivedAt
 }
+
+fragment AdminFaultCheck on FleetFaultCheck {
+  checkedAt
+  dataAsOf
+  findings {
+    system
+    severity
+    source
+    code
+    spn
+    fmi
+    descriptionKey
+    parameterId
+    lampState
+    value
+    since
+    lastSeenAt
+    occurrences
+  }
+}
+
+fragment AdminFaultRead on ErmCommandRequest {
+  id
+  action
+  status
+  actorId
+  createdAt
+  sentAt
+  answeredAt
+  completedAt
+  expiresAt
+  waitingReason
+}

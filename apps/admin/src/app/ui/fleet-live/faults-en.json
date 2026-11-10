@@ -31,6 +31,8 @@
     "BRAKES": "Brakes",
     "ABS_EBS": "ABS / electronic braking",
     "AFTERTREATMENT": "Exhaust treatment",
+    "CAN_BUS": "CAN communication",
+    "POWER": "Power supply",
     "OTHER": "Other / unspecified"
   },
   "lamps": {
@@ -95,5 +97,65 @@
     "30": "Reserved code; no meaning assigned",
     "31": "The reported condition is present"
   },
-  "canError": "Recorded CAN error"
+  "canError": "Recorded CAN error",
+  "cluster": "Fault lamps",
+  "activeFaults": "Active faults",
+  "lampNames": {
+    "ENGINE": "Engine",
+    "BRAKES": "Brakes",
+    "ABS_EBS": "ABS/EBS",
+    "AFTERTREATMENT": "AdBlue/DPF",
+    "CAN_BUS": "CAN",
+    "POWER": "Power",
+    "OTHER": "Other"
+  },
+  "lampStates": {
+    "danger": "critical fault",
+    "warn": "fault",
+    "info": "information",
+    "off": "no fault found",
+    "unknown": "not checked yet"
+  },
+  "severities": {
+    "CRITICAL": "Critical",
+    "WARNING": "Warning",
+    "INFO": "Information"
+  },
+  "scanner": {
+    "title": "Fault scanner",
+    "allClear": "No faults found",
+    "foundOne": "1 active fault",
+    "foundMany": "{count} active faults",
+    "notChecked": "Not checked yet",
+    "notCheckedHint": "The server checks every truck every 15 minutes.",
+    "checked": "Checked {time} · every 15 min",
+    "stale": "No data from the truck since {time}; the check shows what was known then.",
+    "noData": "No data from the truck in the last 7 days.",
+    "allSystems": "All systems",
+    "systemClear": "No faults in {system}.",
+    "since": "since {time}",
+    "lastSeen": "last {time}",
+    "times": "{count} times in 24 h",
+    "lampOn": "{lamp} lamp: {state}",
+    "lowVoltage": "Low supply voltage: {value}",
+    "sources": {
+      "WARNING_LAMP": "Dashboard lamp",
+      "FAULT_LOGGER": "Fault logger",
+      "ALERT": "Alert",
+      "CAN_REPORT": "CAN report",
+      "VOLTAGE": "Voltage"
+    },
+    "read": "Read from the truck",
+    "readNone": "none yet",
+    "readStatus": {
+      "QUEUED": "waiting for the connection",
+      "SUBMITTING": "sending",
+      "ANSWERED": "accepted by the device",
+      "FAILED": "refused",
+      "EXPIRED": "expired without a connection",
+      "CANCELLED": "cancelled",
+      "UNCERTAIN": "outcome unknown"
+    },
+    "readHint": "Every 6 hours. Codes found by the module arrive as reports and appear above."
+  }
 }

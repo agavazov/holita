@@ -41,6 +41,14 @@ export class CommandRequestsRepository {
     });
   }
 
+  /** A queued or submitting request of this action that has not expired. */
+  pendingAction(deviceId: string, action: ErmDeviceAction, now: Date) {
+    return this.prisma.client.ermCommandRequest.findFirst({
+      where: { deviceId, action, status: { in: ['QUEUED', 'SUBMITTING'] }, expiresAt: { gt: now } },
+      select: { id: true },
+    });
+  }
+
   async interrupt(completedAt: Date): Promise<void> {
     await this.prisma.client.ermCommandRequest.updateMany({
       where: { status: 'SUBMITTING' },

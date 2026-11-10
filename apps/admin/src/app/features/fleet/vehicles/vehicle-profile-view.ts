@@ -22,14 +22,19 @@ import { Tag } from 'primeng/tag';
 import { ColumnSeries, type SeriesPoint } from '../../../ui/charts/column-series';
 import { EmptyState } from '../../../ui/empty-state/empty-state';
 import { FleetNow } from '../../../ui/fleet-live/fleet-now';
-import { FleetCurrentWarnings } from '../../../ui/fleet-live/fleet-current-warnings';
+import { FaultCluster } from '../../../ui/fleet-live/fault-cluster';
+import { FaultScanner } from '../../../ui/fleet-live/fault-scanner';
 import { FleetFaultCoverage } from '../../../ui/fleet-live/fleet-fault-coverage';
 import {
   faultsText,
   faultDescription,
   faultFmi,
   faultSystem,
-  warningTone,
+  severityTone,
+  withCurrentLamps,
+  worstSeverity,
+  type FleetFaultCheck,
+  type FleetFaultRead,
   type FleetWarning,
 } from '../../../ui/fleet-live/fault-wording';
 import { injectFleetNow } from '../../../ui/fleet-live/fleet-clock';
@@ -54,7 +59,7 @@ import {
 import { PageHeader, type PageHeaderAction } from '../../../ui/page-header/page-header';
 import { TablePanel, type TableColumn, type TablePage } from '../../../ui/table-panel/table-panel';
 import type { TableView } from '../../../ui/table-panel/table-view';
-import { toneSeverity } from '../../../ui/tones';
+import { toneSeverity, type StatusTone } from '../../../ui/tones';
 import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { formatNumber } from '../../../ui/format/format';
@@ -87,6 +92,9 @@ export interface VehicleProfile extends VehicleRow {
   readonly headingDeg: number | null;
   readonly createdAt: string;
   readonly warningLamps: readonly FleetWarning[];
+  readonly faultCheck: FleetFaultCheck | null;
+  /** Command requests of the vehicle's devices, for the latest fault-logger read. */
+  readonly faultReads: readonly FleetFaultRead[];
 }
 
 /** Counts of unverified raw observations, without assigning physical meaning to their values. */
@@ -142,7 +150,8 @@ function listView(rows: readonly unknown[]): TableView {
     ColumnSeries,
     EmptyState,
     FleetNow,
-    FleetCurrentWarnings,
+    FaultCluster,
+    FaultScanner,
     FleetFaultCoverage,
     FormatDurationPipe,
     FormatMoneyPipe,
@@ -245,6 +254,13 @@ export class VehicleProfileView {
   protected readonly text = computed(() => this.vehicles().profile);
   protected readonly v2 = computed(() => (this.language() === 'bg' ? bg : en));
   protected readonly faults = computed(() => faultsText(this.language()));
+  /** The check's findings with the lamps reported since; null before the first check. */
+  protected readonly faultFindings = computed(() => {
+    const vehicle = this.vehicle();
+    return vehicle?.faultCheck
+      ? withCurrentLamps(vehicle.faultCheck.findings, vehicle.currentWarnings)
+      : null;
+  });
   protected readonly faultDescription = faultDescription;
   protected readonly faultFmi = faultFmi;
   protected readonly faultSystem = faultSystem;
@@ -310,23 +326,19 @@ export class VehicleProfileView {
       ? fleetRecordedValue(vehicle.location, vehicle.lastReportedAt, this.now(), this.language())
       : '—';
   });
-  protected readonly currentWarningTone = computed(() => {
-    const warnings = this.vehicle()?.currentWarnings ?? [];
-    return warningTone(
-      warnings.some((warning) => warning.state === 'RED')
-        ? 'RED'
-        : warnings.some((warning) => warning.state === 'YELLOW')
-          ? 'YELLOW'
-          : warnings.length
-            ? 'INFORMATION'
-            : 'OFF',
-    );
+  protected readonly faultCount = computed(() => this.faultFindings()?.length ?? null);
+  protected readonly faultTone = computed((): StatusTone => {
+    const worst = worstSeverity(this.faultFindings() ?? []);
+    return worst ? severityTone(worst) : 'neutral';
   });
   protected readonly problemSummary = computed(() => {
     const counts = this.problemCounts();
     return counts
       ? interpolate(this.v2().problemSummary, {
-          warnings: this.vehicle()?.currentWarnings.length ?? 0,
+          faults:
+            this.faultCount() === 1
+              ? this.faults().scanner.foundOne
+              : interpolate(this.faults().scanner.foundMany, { count: this.faultCount() ?? 0 }),
           recorded: counts.recorded,
         })
       : this.v2().viewProblems;

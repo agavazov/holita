@@ -55,6 +55,7 @@ import {
   VehiclesRepository,
 } from './vehicles.repository.js';
 import { vehicleConditions } from './vehicle-filter.js';
+import { FaultCheckRepository } from './fault-check.repository.js';
 
 export type VehicleResult = Omit<FleetVehicle, 'branch' | 'devices'> & { devices: DeviceResult[] };
 type StoredVehicle = Omit<
@@ -190,6 +191,7 @@ export class VehiclesService {
     private readonly events: EventsService,
     private readonly serviceTasks: ServiceTasksService,
     private readonly devices: DevicesService,
+    private readonly faultChecks: FaultCheckRepository,
   ) {}
 
   async list(
@@ -392,15 +394,17 @@ export class VehiclesService {
       return [];
     }
     const vehicleIds = rows.map((row) => row.id);
-    const [nextServices, devices] = await Promise.all([
+    const [nextServices, devices, faultChecks] = await Promise.all([
       this.serviceTasks.nextForVehicles(scope, vehicleIds),
       this.devices.forVehicles(scope, vehicleIds),
+      this.faultChecks.forVehicles(scope, vehicleIds),
     ]);
     return rows.map((row) => ({
       ...toVehicle(row),
       state: row.state,
       openAlertCount: row.openAlertCount,
       nextService: nextServices.get(row.id) ?? null,
+      faultCheck: faultChecks.get(row.id) ?? null,
       devices: devices.filter((device) => device.vehicleId === row.id),
       currentWarnings: devices.flatMap((device) =>
         device.vehicleId === row.id ? device.currentWarnings : [],
@@ -417,11 +421,12 @@ export class VehiclesService {
       return [];
     }
     const vehicleIds = rows.map((row) => row.id);
-    const [states, openAlerts, nextServices, devices] = await Promise.all([
+    const [states, openAlerts, nextServices, devices, faultChecks] = await Promise.all([
       this.telemetry.vehicleStates(scope, vehicleIds),
       this.events.openAlertCounts(scope, vehicleIds),
       this.serviceTasks.nextForVehicles(scope, vehicleIds),
       this.devices.forVehicles(scope, vehicleIds),
+      this.faultChecks.forVehicles(scope, vehicleIds),
     ]);
     return rows.map((row) => {
       const state = states.get(row.id);
@@ -433,6 +438,7 @@ export class VehiclesService {
         state,
         openAlertCount: openAlerts.get(row.id) ?? 0,
         nextService: nextServices.get(row.id) ?? null,
+        faultCheck: faultChecks.get(row.id) ?? null,
         devices: devices.filter((device) => device.vehicleId === row.id),
         currentWarnings: devices.flatMap((device) =>
           device.vehicleId === row.id ? device.currentWarnings : [],

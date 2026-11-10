@@ -46,6 +46,8 @@ type FleetVehicle @key(fields: "id") {
   warningLamps: [FleetWarningLamp!]!
   "Current RED, YELLOW or INFORMATION lamps across assigned Devices."
   currentWarnings: [FleetWarningLamp!]!
+  "Latest fault check; null until the first check after the vehicle got a Device."
+  faultCheck: FleetFaultCheck
   state: FleetVehicleState! # B2
   "Events of the vehicle with alert status OPEN." # B2
   openAlertCount: Int! # B2

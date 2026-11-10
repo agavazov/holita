@@ -259,26 +259,31 @@ function telemetryPage(value: unknown, after: bigint): ErmTelemetryPage {
   return { events, next };
 }
 
+function internalRequest(path: string): { url: URL; token: string } {
+  const token = process.env.ERM_TELEMETRY_TOKEN;
+  if (!token || token.length < 32) {
+    throw unavailable();
+  }
+  const url = new URL(process.env.ERM_TELEMETRY_URL ?? 'http://127.0.0.1:11017');
+  if (
+    !['http:', 'https:'].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    url.pathname !== '/'
+  ) {
+    throw unavailable();
+  }
+  url.pathname = path;
+  return { url, token };
+}
+
 @Injectable()
 export class ErmTelemetryClient {
   async page(imei: string, after: bigint): Promise<ErmTelemetryPage> {
-    const token = process.env.ERM_TELEMETRY_TOKEN;
-    if (!token || token.length < 32) {
-      throw unavailable();
-    }
     try {
-      const url = new URL(process.env.ERM_TELEMETRY_URL ?? 'http://127.0.0.1:11017');
-      if (
-        !['http:', 'https:'].includes(url.protocol) ||
-        url.username ||
-        url.password ||
-        url.search ||
-        url.hash ||
-        url.pathname !== '/'
-      ) {
-        throw unavailable();
-      }
-      url.pathname = `/internal/telemetry/units/${imei}/events`;
+      const { url, token } = internalRequest(`/internal/telemetry/units/${imei}/events`);
       url.searchParams.set('after', after.toString());
       url.searchParams.set('limit', '500');
       const response = await fetch(url, {
@@ -292,6 +297,42 @@ export class ErmTelemetryClient {
       }
       const payload: unknown = await response.json();
       return telemetryPage(payload, after);
+    } catch {
+      throw unavailable();
+    }
+  }
+
+  /** Asks ERM to queue its allowlisted fault-logger read; false when ERM skips the unit. */
+  async requestFaultRead(device: {
+    id: string;
+    tenantId: string;
+    branchId: string;
+    imei: string;
+  }): Promise<boolean> {
+    try {
+      const { url, token } = internalRequest(
+        `/internal/telemetry/units/${device.imei}/fault-reads`,
+      );
+      const response = await fetch(url, {
+        method: 'POST',
+        redirect: 'error',
+        signal: AbortSignal.timeout(5000),
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: device.tenantId,
+          branchId: device.branchId,
+          deviceId: device.id,
+        }),
+      });
+      if (response.status !== 200) {
+        await response.body?.cancel();
+        throw unavailable();
+      }
+      const payload: unknown = await response.json();
+      if (!record(payload) || typeof payload.queued !== 'boolean') {
+        throw unavailable();
+      }
+      return payload.queued;
     } catch {
       throw unavailable();
     }

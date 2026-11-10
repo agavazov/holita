@@ -1,6 +1,6 @@
 import type { FleetFaultSystem } from '../../generated/graphql/types.js';
 
-export const FAULT_CATALOG_VERSION = '2026-11-08.1';
+export const FAULT_CATALOG_VERSION = '2026-11-10.1';
 
 type FaultMeaning = {
   systemKey: FleetFaultSystem;
@@ -26,8 +26,16 @@ const SPNS = new Map<number, FaultMeaning>([
   [23806, { systemKey: 'OTHER', descriptionKey: null }],
 ]);
 
-export function faultMeaning(spn: number | null): FaultMeaning & { catalogVersion: string } {
-  const meaning = spn === null ? undefined : SPNS.get(spn);
+export function faultMeaning(
+  spn: number | null,
+  kind?: string,
+): FaultMeaning & { catalogVersion: string } {
+  const meaning: FaultMeaning | undefined =
+    kind === 'CAN_DISCONNECTED' || kind === 'CAN_ERROR'
+      ? { systemKey: 'CAN_BUS', descriptionKey: null }
+      : spn === null
+        ? undefined
+        : SPNS.get(spn);
   return {
     ...(meaning ?? { systemKey: 'OTHER', descriptionKey: null }),
     catalogVersion: FAULT_CATALOG_VERSION,
