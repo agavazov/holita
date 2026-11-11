@@ -113,12 +113,11 @@ export function configurationChangeView(
       name: step['name'],
       at: new Date(step['time']),
       outcome,
-      outcomeCode:
-        outcome === 'ANSWERED 01'
-          ? 'ACKNOWLEDGED'
-          : outcome.startsWith('ANSWERED REJECTED ')
-            ? 'REJECTED'
-            : outcome,
+      outcomeCode: /^ANSWERED \d+$/.test(outcome)
+        ? 'ACKNOWLEDGED'
+        : outcome.startsWith('ANSWERED REJECTED ')
+          ? 'REJECTED'
+          : outcome,
       commandId,
       transportCommand: command?.unitId === change.unitId ? command : null,
       payload: typeof step['payload'] === 'string' ? step['payload'] : null,

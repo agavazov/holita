@@ -277,7 +277,12 @@ async function runConfigurationChange(
     return result;
   }
 
-  async function write(name: string, command: DeviceCommand, preflightAt?: Date): Promise<void> {
+  // Returns the rejection of a parameter write, which its readback must settle.
+  async function write(
+    name: string,
+    command: DeviceCommand,
+    preflightAt?: Date,
+  ): Promise<string | null> {
     phase = name;
     await requirePrimary();
     // Persist the ambiguity before sending. An interrupted process must never replay this write.
@@ -309,14 +314,21 @@ async function runConfigurationChange(
         `${name} submission failed or timed out; ${parameterOptions ? 'read the affected parameters before another write' : 'take a fresh eData read'}`,
       );
     }
+    // Units accept 04 with 13 and 46 with 20 plus [set, failed]; eData commands answer 01.
+    const accepted =
+      command.command === '04'
+        ? result.resultCode === '13'
+        : command.command === '46'
+          ? result.resultCode === '20' && result.fields[1] === '0'
+          : result.resultCode === '01';
     await record({
       name,
       commandId: result.id,
       time: new Date().toISOString(),
       outcome:
         result.status === 'answered'
-          ? result.resultCode === '01'
-            ? 'ANSWERED 01'
+          ? accepted
+            ? `ANSWERED ${result.resultCode ?? 'unknown'}`
             : `ANSWERED REJECTED ${result.resultCode ?? 'unknown'}`
           : result.status.toUpperCase(),
     });
@@ -326,12 +338,15 @@ async function runConfigurationChange(
         `${name} submission failed or timed out; ${parameterOptions ? 'read the affected parameters before another write' : 'take a fresh eData read'}`,
       );
     }
-    if (result.resultCode !== '01') {
-      throw new Stopped(
-        'FAILED',
-        `${name} was rejected by the unit (result ${result.resultCode ?? 'unknown'})`,
-      );
+    if (accepted) {
+      return null;
     }
+    const reason = `${name} was rejected by the unit (result ${result.resultCode ?? 'unknown'})`;
+    // A tracker may apply part of a rejected parameter write; its readback decides what follows.
+    if (!parameterOptions) {
+      throw new Stopped('FAILED', reason);
+    }
+    return reason;
   }
 
   async function valueStep(name: string, payload: string, outcome = 'COMPLETE') {
@@ -474,7 +489,7 @@ async function runConfigurationChange(
       async function writeParameters(name: string, values: typeof targets, preflightAt?: Date) {
         await valueStep(name === 'write' ? 'written' : 'restore-written', payload(values));
         try {
-          await write(
+          return await write(
             name,
             validateCommand({
               command: multiple ? '46' : '04',
@@ -499,7 +514,7 @@ async function runConfigurationChange(
           throw error;
         }
       }
-      await writeParameters('write', targets, preflight.requestedAt);
+      const rejection = await writeParameters('write', targets, preflight.requestedAt);
       let after: Awaited<ReturnType<typeof readParameters>>;
       try {
         after = await readParameters('after');
@@ -511,6 +526,9 @@ async function runConfigurationChange(
       }
       const verified = equal(after.values, targets);
       await valueStep('readback', payload(after.values), verified ? 'VERIFIED' : 'MISMATCH');
+      if (!verified && rejection !== null && equal(after.values, baseline.values)) {
+        return await finish('FAILED', `${rejection}; the parameters still equal the baseline`);
+      }
       await repository.save(change.id, steps, {
         status: verified ? 'VERIFIED' : 'MISMATCH',
         failureReason: verified ? null : 'Readback differs from the expected value',

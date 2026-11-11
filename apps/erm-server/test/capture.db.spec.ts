@@ -1146,17 +1146,22 @@ it('persists captured connection lifecycle and raw frames through the production
               : writing
                 ? fixture.rejected
                   ? '02'
-                  : '01'
+                  : command.command === '04'
+                    ? '13'
+                    : '20'
                 : null;
+          // Real units answer 04 with 13 and 46 with 20 plus [set, failed].
           const fields =
-            writing || unread
-              ? []
-              : command.fields
-                  .filter((_, index) => !fixture.omitted || index !== command.fields.length - 1)
-                  .flatMap((parameter) => [
-                    parameter,
-                    `"${fixture.preflightMismatch && fixture.reads === 2 ? '999' : (values?.[parameter] ?? fixture.value)}"`,
-                  ]);
+            writing && !timeout && !fixture.rejected && command.command === '46'
+              ? [String(command.fields.length / 2), '0']
+              : writing || unread
+                ? []
+                : command.fields
+                    .filter((_, index) => !fixture.omitted || index !== command.fields.length - 1)
+                    .flatMap((parameter) => [
+                      parameter,
+                      `"${fixture.preflightMismatch && fixture.reads === 2 ? '999' : (values?.[parameter] ?? fixture.value)}"`,
+                    ]);
           const recorded = await database.client.ermCommand.create({
             data: {
               connectionId: stored.id,
@@ -3654,7 +3659,7 @@ it('persists captured connection lifecycle and raw frames through the production
         value: '60',
         rejected: true,
         status: 'FAILED',
-        commands: ['03', '04'],
+        commands: ['03', '04', '03'],
       },
       {
         name: 'parameter uncertain',
