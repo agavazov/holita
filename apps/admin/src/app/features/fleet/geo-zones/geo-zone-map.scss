@@ -1,0 +1,38 @@
+discocan-geo-zone-map {
+  position: relative;
+  display: block;
+  min-block-size: 24rem;
+  overflow: hidden;
+  border-radius: var(--p-app-radius-panel);
+  background: var(--p-app-frame-background);
+
+  .geo-zone-map__canvas {
+    position: absolute;
+    inset: 0;
+  }
+
+  .geo-zone-map__status {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    margin: 0;
+    padding: var(--p-app-space-4);
+    text-align: center;
+  }
+
+  .geo-zone-map__tools {
+    position: absolute;
+    inset: var(--p-app-space-2) var(--p-app-space-2) auto auto;
+  }
+
+  .geo-zone-map__label {
+    padding: 0.125rem var(--p-app-space-1);
+    border-radius: var(--p-app-radius-tag);
+    background: var(--p-content-background);
+    color: var(--p-text-color);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}

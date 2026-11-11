@@ -667,3 +667,56 @@ query AdminControlCenterQueueDeviceLabels($ids: [ID!]!) {
     }
   }
 }
+query AdminControlCenterParameterCatalog($input: ErmParameterCatalogInput) {
+  ermParameterCatalog(input: $input) {
+    total
+    offset
+    limit
+    features
+    items {
+      parameter
+      code
+      title
+      summary
+      defaultValue
+      features
+      writable
+      options {
+        value
+        label
+      }
+    }
+  }
+}
+query AdminControlCenterEdataProfiles {
+  fleetEdataProfiles {
+    id
+    name
+    categoryId
+    categoryName
+    parameterCount
+  }
+}
+query AdminControlCenterEdataParameters($input: FleetEdataParametersInput!) {
+  fleetEdataParameters(input: $input) {
+    total
+    offset
+    limit
+    catalogLabel
+    items {
+      parameterId
+      hex
+      name
+      category
+      multiply
+      offset
+    }
+  }
+}
+query AdminControlCenterActionCommands {
+  ermDeviceActionCommands {
+    action
+    command
+    fields
+  }
+}

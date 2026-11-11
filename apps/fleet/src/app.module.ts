@@ -17,7 +17,9 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module.js';
 import { OverviewModule } from './modules/overview/overview.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
 import { ErmTelemetryModule } from './modules/erm-telemetry/erm-telemetry.module.js';
+import { EdataCatalogModule } from './modules/edata-catalog/edata-catalog.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
+import { GeoZonesModule } from './modules/geo-zones/geo-zones.module.js';
 
 import { HealthController } from './health/health.controller.js';
 
@@ -34,7 +36,9 @@ const typeDefPaths = [
   'modules/service-tasks/service-tasks',
   'modules/overview/overview',
   'modules/settings/settings',
+  'modules/edata-catalog/edata-catalog',
   'modules/notifications/notifications',
+  'modules/geo-zones/geo-zones',
 ];
 
 @Module({
@@ -50,7 +54,9 @@ const typeDefPaths = [
     ServiceTasksModule,
     OverviewModule,
     SettingsModule,
+    EdataCatalogModule,
     ErmTelemetryModule,
+    GeoZonesModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       fieldResolverEnhancers: ['guards'],

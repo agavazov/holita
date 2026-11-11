@@ -12,6 +12,8 @@ import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import { DevicesRepository } from '../src/modules/devices/devices.repository.js';
 import { DriversRepository } from '../src/modules/drivers/drivers.repository.js';
+import { polygonJson, ringBounds } from '../src/modules/geo-zones/geo-zone-geometry.js';
+import { GeoZonesJobs } from '../src/modules/geo-zones/geo-zones.jobs.js';
 import { VehicleGroupsRepository } from '../src/modules/vehicle-groups/vehicle-groups.repository.js';
 import { VehiclesRepository } from '../src/modules/vehicles/vehicles.repository.js';
 import { uniqueViolation } from '../src/validation.js';
@@ -156,6 +158,53 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         alertStatus: 'OPEN',
       },
     });
+    // Geo zones: the job matches only samples of the zone's Branch, and both reads stay scoped.
+    const square = [
+      [23, 42],
+      [24, 42],
+      [24, 43],
+      [23, 43],
+      [23, 42],
+    ] as const;
+    await client.geoZone.create({
+      data: { ...owner, name: 'Owner zone', polygon: polygonJson(square), ...ringBounds(square) },
+    });
+    const inside = {
+      source: 'ERM' as const,
+      recordedAt: new Date(now.getTime() - 60_000),
+      receivedAt: now,
+      latitude: 42.5,
+      longitude: 23.5,
+    };
+    await client.vehicleStatusSample.createMany({
+      data: [
+        { ...owner, vehicleId: vehicle.id, deviceImei: device.imei, ...inside },
+        { tenantId, branchId, vehicleId, deviceImei: '990601000000199', ...inside },
+      ],
+    });
+    await module.get(GeoZonesJobs).tick();
+    const geoZones =
+      '{fleetGeoZones{name points{latitude}} fleetGeoZoneEvents{total items{kind vehicle{licensePlate}}}}';
+    expect(await query(geoZones, {}, owner)).toEqual({
+      data: {
+        fleetGeoZones: [
+          { name: 'Owner zone', points: square.map(([, latitude]) => ({ latitude })) },
+        ],
+        fleetGeoZoneEvents: {
+          total: 1,
+          items: [{ kind: 'ENTER', vehicle: { licensePlate: 'OWNER' } }],
+        },
+      },
+    });
+    for (const scope of [
+      { tenantId, branchId },
+      { tenantId: randomUUID(), branchId: owner.branchId },
+    ]) {
+      expect(await query(geoZones, {}, scope)).toEqual({
+        data: { fleetGeoZones: [], fleetGeoZoneEvents: { total: 0, items: [] } },
+      });
+    }
+
     const task = await client.serviceTask.create({
       data: {
         ...owner,

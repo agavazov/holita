@@ -34,6 +34,7 @@ import type {
   MutationStopErmConfigurationBatchArgs,
   QueryErmConfigurationBatchArgs,
   MutationCancelErmDeviceCommandArgs,
+  QueryErmParameterCatalogArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { TelemetryService, type DeviceReference } from './telemetry.service.js';
@@ -41,6 +42,7 @@ import { eventName } from '../../starlink/event-catalog.js';
 import { ParameterSnapshotsService } from './parameter-snapshots.service.js';
 import { ConfigurationChangesService } from './configuration-changes.service.js';
 import { CommandRequestsService } from './command-requests.service.js';
+import { ParameterCatalogService } from './parameter-catalog.service.js';
 
 @Resolver()
 export class TelemetryResolver {
@@ -49,6 +51,7 @@ export class TelemetryResolver {
     private readonly snapshots: ParameterSnapshotsService,
     private readonly configurations: ConfigurationChangesService,
     private readonly commandRequests: CommandRequestsService,
+    private readonly parameterCatalog: ParameterCatalogService,
   ) {}
 
   @Query('ermFleetTelemetry')
@@ -173,6 +176,19 @@ export class TelemetryResolver {
     @Context() context: RequestContext,
   ) {
     return this.telemetry.sendDeviceCommand(args.input, context);
+  }
+
+  @Query('ermParameterCatalog')
+  parameterCatalogSearch(
+    @Args() args: QueryErmParameterCatalogArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.parameterCatalog.search(args.input, context);
+  }
+
+  @Query('ermDeviceActionCommands')
+  deviceActionCommands(@Context() context: RequestContext) {
+    return this.parameterCatalog.actionCommands(context);
   }
 }
 

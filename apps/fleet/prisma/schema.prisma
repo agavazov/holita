@@ -234,6 +234,7 @@ model Vehicle {
   events FleetEvent[]
   serviceTasks ServiceTask[]
   faultCheck VehicleFaultCheck?
+  geoZoneEvents GeoZoneEvent[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -694,4 +695,65 @@ model FleetNotificationCursor {
 
   @@id([tenantId, branchId, sourceKey])
   @@map("fleetNotificationCursor")
+}
+
+enum FleetGeoZoneEventKind {
+  ENTER @map("enter")
+  EXIT @map("exit")
+  @@map("fleetGeoZoneEventKind")
+}
+
+// A polygon zone; polygon is a GeoJSON Polygon in [longitude, latitude] order and the bounding
+// box prefilters point-in-polygon checks. Hand-written CHECKs: polygon is a GeoJSON Polygon,
+// bounding box ordered and within WGS84 ranges.
+model GeoZone {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  name String @db.VarChar(120)
+  polygon Json
+  minLatitude Float
+  maxLatitude Float
+  minLongitude Float
+  maxLongitude Float
+  events GeoZoneEvent[]
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, name])
+  @@map("geoZone")
+}
+
+// A vehicle entering or leaving a zone, derived from its position samples; sampleId references
+// the VehicleStatusSample without a foreign key. Hand-written CHECK: coordinates.
+model GeoZoneEvent {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  zoneId String @db.Uuid
+  vehicleId String @db.Uuid
+  kind FleetGeoZoneEventKind
+  occurredAt DateTime @db.Timestamptz(3)
+  latitude Float
+  longitude Float
+  sampleId String @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  zone GeoZone @relation(fields: [tenantId, branchId, zoneId], references: [tenantId, branchId, id], onDelete: Cascade, onUpdate: Restrict)
+  vehicle Vehicle @relation(fields: [tenantId, branchId, vehicleId], references: [tenantId, branchId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@unique([tenantId, branchId, zoneId, vehicleId, occurredAt])
+  @@index([tenantId, branchId, occurredAt(sort: Desc)])
+  @@index([tenantId, branchId, vehicleId, occurredAt(sort: Desc)])
+  @@map("geoZoneEvent")
+}
+
+// The last VehicleStatusSample (by createdAt, id) the geo-zone job processed for a Branch.
+model GeoZoneCursor {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  sampleCreatedAt DateTime @db.Timestamptz(3)
+  sampleId String @db.Uuid
+
+  @@id([tenantId, branchId])
+  @@map("geoZoneCursor")
 }

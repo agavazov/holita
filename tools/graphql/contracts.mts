@@ -41,7 +41,9 @@ export const subgraphs = [
       'apps/fleet/src/modules/service-tasks/service-tasks.graphql',
       'apps/fleet/src/modules/overview/overview.graphql',
       'apps/fleet/src/modules/settings/settings.graphql',
+      'apps/fleet/src/modules/edata-catalog/edata-catalog.graphql',
       'apps/fleet/src/modules/notifications/notifications.graphql',
+      'apps/fleet/src/modules/geo-zones/geo-zones.graphql',
     ],
   },
 ];
@@ -62,6 +64,7 @@ export const operationPaths = [
   'apps/admin/src/app/features/fleet/maintenance/operations.graphql',
   'apps/admin/src/app/features/fleet/devices/operations.graphql',
   'apps/admin/src/app/features/fleet/settings/operations.graphql',
+  'apps/admin/src/app/features/fleet/geo-zones/operations.graphql',
   'apps/admin/src/app/features/control-center/operations.graphql',
   'apps/fleet/src/integrations/core/operations.graphql',
   'apps/erm-server/src/modules/telemetry/operations.graphql',

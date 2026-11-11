@@ -132,15 +132,17 @@ export function pageMetadata(language: Language, path: string): PageContext | nu
         ? text.problems
         : tab === 'commands'
           ? text.commands
-          : tab === 'sms-commands'
-            ? text.smsCommands
-            : tab === 'parameters'
-              ? text.parameters
-              : tab === 'technical-details' && detail === 'events'
-                ? text.events
-                : tab === 'technical-details' && detail === 'frames'
-                  ? text.frames
-                  : null;
+          : tab === 'console'
+            ? text.commandConsole
+            : tab === 'sms-commands'
+              ? text.smsCommands
+              : tab === 'parameters'
+                ? text.parameters
+                : tab === 'technical-details' && detail === 'events'
+                  ? text.events
+                  : tab === 'technical-details' && detail === 'frames'
+                    ? text.frames
+                    : null;
   return deviceTab
     ? {
         group: text.fleet,

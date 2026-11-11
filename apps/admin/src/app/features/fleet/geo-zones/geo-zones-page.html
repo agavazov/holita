@@ -1,0 +1,143 @@
+<discocan-page-header
+  [title]="text().title"
+  [count]="zones().length"
+  [moduleInfo]="text().moduleInfo"
+/>
+
+@if (zonesErrorText(); as message) {
+  <p-message severity="error">{{ message }}</p-message>
+}
+
+<div class="geo-zones__overview">
+  <discocan-geo-zone-map [language]="language()" [zones]="zones()" [focusId]="focusId()" />
+  <section class="app-card geo-zones__list" aria-labelledby="geo-zones-list">
+    <h2 id="geo-zones-list">{{ text().zones }}</h2>
+    <ul>
+      @for (zone of zones(); track zone.id) {
+        <li>
+          <button
+            type="button"
+            class="geo-zones__zone"
+            [class.geo-zones__zone--active]="focusId() === zone.id"
+            [attr.aria-label]="showZoneLabel(zone.name)"
+            [attr.aria-pressed]="focusId() === zone.id"
+            (click)="focusId.set(focusId() === zone.id ? null : zone.id)"
+          >
+            <span>{{ zone.name }}</span>
+            <span class="app-muted">{{ zonePoints(zone.points.length) }}</span>
+          </button>
+        </li>
+      } @empty {
+        <li class="app-muted">{{ text().noZones }}</li>
+      }
+    </ul>
+  </section>
+</div>
+
+<div class="geo-zones__filters" role="group" [attr.aria-label]="text().filters">
+  <p-select
+    inputId="geo-zones-vehicle"
+    [ariaLabel]="text().vehicle"
+    [options]="vehicleOptions()"
+    optionLabel="label"
+    optionValue="value"
+    [filter]="true"
+    [ngModel]="filter().vehicleId"
+    (ngModelChange)="changeFilter({ vehicleId: $event })"
+  />
+  <p-select
+    inputId="geo-zones-zone"
+    [ariaLabel]="text().zone"
+    [options]="zoneOptions()"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="filter().zoneId"
+    (ngModelChange)="changeFilter({ zoneId: $event })"
+  />
+  <p-select
+    inputId="geo-zones-kind"
+    [ariaLabel]="text().kind"
+    [options]="kindOptions()"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="filter().kind"
+    (ngModelChange)="changeFilter({ kind: $event })"
+  />
+  <p-datepicker
+    inputId="geo-zones-range"
+    [ariaLabel]="text().from + ' – ' + text().to"
+    [placeholder]="text().from + ' – ' + text().to"
+    selectionMode="range"
+    [dateFormat]="format.datePickerFormat()"
+    [readonlyInput]="true"
+    [showIcon]="true"
+    [showClear]="true"
+    appendTo="body"
+    [ngModel]="filter().range"
+    (ngModelChange)="changeFilter({ range: $event })"
+  />
+</div>
+
+<discocan-table-panel
+  [heading]="text().table.heading"
+  [total]="events()?.total ?? null"
+  [view]="view()"
+  [errorText]="errorText()"
+  [busy]="loading()"
+  [emptyTitle]="text().table.emptyTitle"
+  [emptyDescription]="text().table.emptyDescription"
+  [page]="page()"
+  [columns]="columns()"
+  (pageChange)="changePage($event)"
+  (clearFilters)="clearFilters()"
+  (retry)="retry()"
+>
+  <p-table
+    class="app-responsive-table"
+    [value]="events()?.items ?? []"
+    dataKey="id"
+    [rowTrackBy]="trackById"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().table.heading } }"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+          <col [style.width]="column.width" [class]="column.className ?? ''" />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col">{{ text().table.occurred }}</th>
+        <th scope="col" class="app-col-identity">{{ text().vehicle }}</th>
+        <th scope="col">{{ text().zone }}</th>
+        <th scope="col">{{ text().kind }}</th>
+        <th scope="col">{{ text().table.position }}</th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
+        <td>
+          <time class="app-cell-date" [attr.datetime]="row.occurredAt">{{
+            format.dateTime(row.occurredAt)
+          }}</time>
+        </td>
+        <td class="app-col-identity">
+          <span class="app-cell-identity">{{ row.vehicle.licensePlate }}</span>
+        </td>
+        <td>{{ row.zone.name }}</td>
+        <td>
+          <span class="app-cell-status">
+            <p-tag
+              [severity]="row.kind === 'ENTER' ? 'success' : 'secondary'"
+              [value]="text().kinds[row.kind === 'ENTER' ? 'ENTER' : 'EXIT']"
+            />
+          </span>
+        </td>
+        <td class="app-muted">{{ row.latitude.toFixed(5) }}, {{ row.longitude.toFixed(5) }}</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</discocan-table-panel>

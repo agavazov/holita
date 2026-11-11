@@ -6,7 +6,7 @@ const client = createPrismaClient();
 try {
   const result = await seedFleet(client);
   console.info(
-    `fleet: inserted ${String(result.vehicles)} vehicles and ${String(result.devices)} devices; existing rows preserved`,
+    `fleet: inserted ${String(result.vehicles)} vehicles, ${String(result.devices)} devices and ${String(result.geoZones)} geo zones; existing rows preserved`,
   );
 } finally {
   await client.$disconnect();

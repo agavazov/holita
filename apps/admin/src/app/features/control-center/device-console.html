@@ -1,0 +1,397 @@
+<section class="app-card" [attr.aria-label]="text().title">
+  <h2>{{ text().title }}</h2>
+  <p>{{ text().hint }}</p>
+  @if (error() ?? pollError(); as error) {
+    <p-message severity="error">{{ error }}</p-message>
+  }
+  <form [formGroup]="form" (ngSubmit)="review()" class="app-form-section">
+    <div class="app-form-grid">
+      <discocan-form-field [label]="text().kind" controlId="erm-console-kind">
+        <p-select
+          inputId="erm-console-kind"
+          formControlName="kind"
+          [ariaLabel]="text().kind"
+          [options]="kinds()"
+          optionLabel="label"
+          optionValue="value"
+          (onChange)="chooseKind()"
+        />
+      </discocan-form-field>
+      @switch (kind()) {
+        @case ('READ_ACTION') {
+          <discocan-form-field [label]="text().action" controlId="erm-console-action">
+            <p-select
+              inputId="erm-console-action"
+              formControlName="action"
+              [ariaLabel]="text().action"
+              [options]="actionOptions()"
+              optionLabel="label"
+              optionValue="value"
+            />
+          </discocan-form-field>
+        }
+        @case ('PARAMETER') {
+          <discocan-form-field [label]="text().feature" controlId="erm-console-feature">
+            <p-select
+              inputId="erm-console-feature"
+              formControlName="feature"
+              [ariaLabel]="text().feature"
+              [options]="features()"
+              [placeholder]="text().allFeatures"
+              [showClear]="true"
+              [filter]="true"
+            />
+          </discocan-form-field>
+          <discocan-form-field
+            [label]="text().parameter"
+            controlId="erm-console-parameter"
+            [hint]="text().parameterHint"
+          >
+            <p-autocomplete
+              inputId="erm-console-parameter"
+              formControlName="parameter"
+              [ariaLabel]="text().parameter"
+              [suggestions]="parameterSuggestions()"
+              [optionLabel]="parameterLabel"
+              [dropdown]="true"
+              [forceSelection]="true"
+              [delay]="250"
+              [showEmptyMessage]="true"
+              [emptyMessage]="text().noMatches"
+              [placeholder]="text().parameterPlaceholder"
+              (completeMethod)="searchParameters($event)"
+              (onSelect)="selectParameter()"
+            >
+              <ng-template #item let-entry>
+                <span
+                  >{{ entry.code }} · {{ entry.title }}
+                  @if (!entry.writable) {
+                    <p-tag severity="secondary" [value]="text().readOnly" />
+                  }
+                </span>
+              </ng-template>
+              <ng-template #footer>
+                <small class="app-muted">{{ parameterMatches() }}</small>
+              </ng-template>
+            </p-autocomplete>
+          </discocan-form-field>
+          @if (selectedParameter(); as parameter) {
+            <dl class="app-facts">
+              <dt>{{ text().currentValue }}</dt>
+              <dd>{{ currentValue() ?? text().notRead }}</dd>
+              <dt>{{ text().defaultValue }}</dt>
+              <dd>{{ parameter.defaultValue ?? '—' }}</dd>
+              @if (parameter.summary) {
+                <dt>{{ text().description }}</dt>
+                <dd>{{ parameter.summary }}</dd>
+              }
+            </dl>
+            <discocan-form-field [label]="text().value" controlId="erm-console-value">
+              @if (valueOptions().length) {
+                <p-select
+                  inputId="erm-console-value"
+                  formControlName="value"
+                  [ariaLabel]="text().value"
+                  [options]="valueOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  [editable]="freeValue()"
+                />
+              } @else {
+                <input
+                  pInputText
+                  id="erm-console-value"
+                  formControlName="value"
+                  maxlength="200"
+                  autocomplete="off"
+                />
+              }
+            </discocan-form-field>
+          }
+        }
+        @case ('EDATA_INTERVAL') {
+          <discocan-form-field [label]="text().vehicleCategory" controlId="erm-console-category">
+            <p-select
+              inputId="erm-console-category"
+              formControlName="category"
+              [ariaLabel]="text().vehicleCategory"
+              [options]="categories()"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="text().allCategories"
+              [showClear]="true"
+            />
+          </discocan-form-field>
+          <discocan-form-field
+            [label]="text().vehicleType"
+            controlId="erm-console-profile"
+            [hint]="profileHint()"
+          >
+            <p-select
+              inputId="erm-console-profile"
+              formControlName="profile"
+              [ariaLabel]="text().vehicleType"
+              [options]="vehicleTypes()"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="text().allProfiles"
+              [showClear]="true"
+            />
+          </discocan-form-field>
+          <discocan-form-field
+            [label]="text().edataParameter"
+            controlId="erm-console-edata"
+            [hint]="catalogHint()"
+          >
+            <p-autocomplete
+              inputId="erm-console-edata"
+              formControlName="edataParameter"
+              [ariaLabel]="text().edataParameter"
+              [suggestions]="edataSuggestions()"
+              [optionLabel]="edataLabel"
+              [dropdown]="true"
+              [forceSelection]="true"
+              [delay]="250"
+              [showEmptyMessage]="true"
+              [emptyMessage]="text().noMatches"
+              [placeholder]="text().parameterPlaceholder"
+              (completeMethod)="searchEdata($event)"
+              (onSelect)="selectEdata()"
+            >
+              <ng-template #footer>
+                <small class="app-muted">{{ edataMatches() }}</small>
+              </ng-template>
+            </p-autocomplete>
+          </discocan-form-field>
+          <discocan-form-field
+            [label]="text().interval"
+            controlId="erm-console-interval"
+            [hint]="intervalHint()"
+          >
+            <input
+              pInputText
+              id="erm-console-interval"
+              formControlName="interval"
+              type="number"
+              min="0"
+              max="65000"
+              step="1"
+            />
+          </discocan-form-field>
+        }
+        @case ('GLOBALS') {
+          <discocan-form-field
+            [label]="text().globals"
+            controlId="erm-console-globals"
+            [hint]="text().globalsHint"
+          >
+            <input
+              pInputText
+              id="erm-console-globals"
+              formControlName="globalsHex"
+              maxlength="98"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </discocan-form-field>
+        }
+      }
+      @if (isWrite()) {
+        <div class="app-inline">
+          <p-checkbox
+            inputId="erm-console-restore"
+            formControlName="restoreAfter"
+            [binary]="true"
+          />
+          <label for="erm-console-restore">{{ text().restoreAfter }}</label>
+        </div>
+      }
+    </div>
+
+    <h3>{{ text().preview }}</h3>
+    @if (steps().length) {
+      <ol class="console__steps" [attr.aria-label]="text().preview">
+        @for (step of steps(); track $index) {
+          <li [class.console__write]="step.write">
+            <small>{{ step.label }}</small>
+            <pre>{{ step.raw }}</pre>
+          </li>
+        }
+      </ol>
+      <small class="app-muted">{{ text().previewNote }}</small>
+    } @else {
+      <p class="app-muted">{{ text().previewEmpty }}</p>
+    }
+
+    @if (disabledReason(); as reason) {
+      <p-message severity="info">{{ reason }}</p-message>
+    }
+    <div class="app-inline">
+      <button
+        pButton
+        type="submit"
+        [severity]="isWrite() ? 'danger' : 'primary'"
+        [disabled]="!!disabledReason() || submitting() || !steps().length"
+        [loading]="submitting()"
+      >
+        {{ text().review }}
+      </button>
+    </div>
+  </form>
+
+  @if (notice(); as notice) {
+    <p-message severity="info">{{ notice }}</p-message>
+  }
+  @if (followedRequest(); as request) {
+    <section [attr.aria-label]="text().result">
+      <h3>{{ text().result }}</h3>
+      <dl class="app-facts">
+        <dt>{{ common().status }}</dt>
+        <dd>
+          <p-tag
+            [severity]="requestSeverity(request.status)"
+            [value]="requestState(request.status)"
+          />
+        </dd>
+        <dt>{{ common().resultCode }}</dt>
+        <dd>
+          {{ request.resultCode ?? request.transportCommand?.acknowledgement?.resultCode ?? '—' }}
+        </dd>
+        <dt>{{ common().response }}</dt>
+        <dd>
+          <pre>{{ request.responseText ?? '—' }}</pre>
+        </dd>
+        <dt>{{ text().sentFrame }}</dt>
+        <dd>
+          <pre>{{ request.sentFrame?.displayText ?? '—' }}</pre>
+        </dd>
+      </dl>
+      <a [routerLink]="link('commands')">{{ text().openQueue }}</a>
+    </section>
+  }
+  @if (followedRun(); as run) {
+    <section [attr.aria-label]="text().result">
+      <h3>{{ text().result }}</h3>
+      <p-tag [severity]="runSeverity(run.status)" [value]="runState(run.status)" />
+      @if (run.failureReason) {
+        <p-message severity="warn">{{ reason(run.failureReason) }}</p-message>
+      }
+      <ol class="console__steps">
+        @for (step of runSteps(run); track $index) {
+          <li>
+            <small>{{ stepName(step.name) }} · {{ step.outcome }}</small>
+            @if (step.payload) {
+              <pre>{{ step.payload }}</pre>
+            }
+          </li>
+        }
+      </ol>
+      <a [routerLink]="link('parameters')">{{ text().openHistory }}</a>
+    </section>
+  }
+</section>
+
+<section class="app-card" [attr.aria-label]="text().configured">
+  <h2>{{ text().configured }}</h2>
+  @if (latestRead(); as read) {
+    <p class="app-muted">
+      {{ text().readAt }} {{ read.startedAt | discocanDateTime }} · {{ capacity() }}
+    </p>
+    @if (readStale()) {
+      <p-message severity="warn">{{ text().readStale }}</p-message>
+    }
+    <p-table
+      [value]="configuredRows()"
+      dataKey="parameter"
+      [scrollable]="true"
+      scrollHeight="18rem"
+      [tableStyle]="{ 'min-width': '32rem' }"
+      [ariaLabel]="text().configured"
+    >
+      <ng-template #header>
+        <tr>
+          <th scope="col">{{ text().edataParameter }}</th>
+          <th scope="col">{{ text().interval }}</th>
+          <th scope="col">
+            <span class="app-visually-hidden">{{ common().settings.actions }}</span>
+          </th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-row>
+        <tr>
+          <td>{{ row.parameter }} (0x{{ row.hex }}) · {{ row.name }}</td>
+          <td>{{ row.interval === 0 ? text().notInUse : row.interval + ' s' }}</td>
+          <td>
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [text]="true"
+              (click)="useConfigured(row)"
+            >
+              {{ text().change }}
+            </button>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="3">{{ text().noDefinitions }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  } @else {
+    <p class="app-muted">{{ text().noRead }}</p>
+  }
+</section>
+
+<section class="app-card" [attr.aria-label]="text().globals">
+  <h2>{{ text().globals }}</h2>
+  @if (globalsDump(); as dump) {
+    <pre [attr.aria-label]="text().globals">{{ dump }}</pre>
+    <div class="app-inline">
+      <button pButton type="button" severity="secondary" (click)="editGlobals()">
+        {{ text().editGlobals }}
+      </button>
+    </div>
+  } @else {
+    <p class="app-muted">{{ text().noRead }}</p>
+  }
+</section>
+
+<p-dialog
+  [header]="text().confirmHeader"
+  [visible]="confirmOpen()"
+  (visibleChange)="confirmOpen.set($event)"
+  [modal]="true"
+  [style]="{ width: 'min(48rem, 95vw)' }"
+>
+  <p>{{ confirmMessage() }}</p>
+  @if (isWrite()) {
+    <p-message severity="warn">{{
+      form.controls.restoreAfter.value ? text().confirmRestore : text().confirmWrite
+    }}</p-message>
+  }
+  <ol class="console__steps">
+    @for (step of steps(); track $index) {
+      <li [class.console__write]="step.write">
+        <small>{{ step.label }}</small>
+        <pre>{{ step.raw }}</pre>
+      </li>
+    }
+  </ol>
+  <ng-template #footer>
+    <button pButton type="button" severity="secondary" (click)="confirmOpen.set(false)">
+      {{ text().cancel }}
+    </button>
+    <button
+      pButton
+      type="button"
+      [severity]="isWrite() ? 'danger' : 'primary'"
+      [disabled]="submitting()"
+      (click)="send()"
+    >
+      {{ text().send }}
+    </button>
+  </ng-template>
+</p-dialog>

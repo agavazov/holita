@@ -1,0 +1,58 @@
+enum FleetGeoZoneEventKind {
+  ENTER
+  EXIT
+}
+
+type FleetGeoPoint {
+  latitude: Float!
+  longitude: Float!
+}
+
+type FleetGeoZone {
+  id: ID!
+  name: String!
+  "Closed outer ring of the polygon; the first point repeats as the last."
+  points: [FleetGeoPoint!]!
+}
+
+type FleetGeoZoneRef {
+  id: ID!
+  name: String!
+}
+
+"A vehicle entering or leaving a zone, derived from its position samples."
+type FleetGeoZoneEvent {
+  id: ID!
+  kind: FleetGeoZoneEventKind!
+  occurredAt: DateTime!
+  latitude: Float!
+  longitude: Float!
+  zone: FleetGeoZoneRef!
+  vehicle: FleetVehicleRef!
+}
+
+type FleetGeoZoneEventPage {
+  items: [FleetGeoZoneEvent!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+
+input FleetGeoZoneEventFilter {
+  vehicleIds: [ID!]
+  zoneIds: [ID!]
+  kinds: [FleetGeoZoneEventKind!]
+  occurredFrom: DateTime
+  occurredTo: DateTime
+}
+
+extend type Query {
+  "Zones of the active Branch, ordered by name."
+  fleetGeoZones: [FleetGeoZone!]!
+  "Zone entries and exits, newest first."
+  fleetGeoZoneEvents(
+    offset: Int! = 0
+    limit: Int! = 20
+    filter: FleetGeoZoneEventFilter
+  ): FleetGeoZoneEventPage!
+}

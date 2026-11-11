@@ -398,6 +398,48 @@ type ErmParameterSnapshot {
   "Changes among values read in both snapshots; empty without a previous COMPLETE snapshot."
   changes: [ErmParameterChange!]!
 }
+"The exact allowlisted command fields behind a read action."
+type ErmDeviceActionCommand {
+  action: ErmDeviceAction!
+  command: String!
+  fields: [String!]!
+}
+"A documented value of a StarLink parameter."
+type ErmParameterOption {
+  value: String!
+  label: String!
+}
+"A StarLink tracker parameter from the archived protocol portal."
+type ErmParameterDefinition {
+  parameter: Int!
+  "Four-digit protocol number."
+  code: String!
+  title: String!
+  summary: String
+  defaultValue: String
+  "Portal features and accessories that reference this parameter."
+  features: [String!]!
+  "Documented values; empty when the portal gives no value table."
+  options: [ErmParameterOption!]!
+  "The guarded 04/46 workflows accept it: no routing, lock or secret parameter."
+  writable: Boolean!
+}
+input ErmParameterCatalogInput {
+  "Matches the number, title, summary or a feature."
+  search: String
+  feature: String
+  writableOnly: Boolean = false
+  offset: Int = 0
+  limit: Int = 20
+}
+type ErmParameterCatalogPage {
+  items: [ErmParameterDefinition!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+  "Every feature name, for the category filter."
+  features: [String!]!
+}
 type ErmEvent {
   id: ID!
   frameId: ID!
@@ -688,6 +730,10 @@ type Query {
   ): ErmCommandRequestsPage!
   ermCommandBatch(id: ID!): ErmCommandBatch
   ermConfigurationBatch(id: ID!): ErmConfigurationBatch
+  "Signed-in reference search of the StarLink parameter catalog."
+  ermParameterCatalog(input: ErmParameterCatalogInput): ErmParameterCatalogPage!
+  "Signed-in reference of the allowlisted read actions and their exact commands."
+  ermDeviceActionCommands: [ErmDeviceActionCommand!]!
 }
 type Mutation {
   "Queues an allowlisted read for the Device's next primary connection, with expiry and no ambiguous replay."

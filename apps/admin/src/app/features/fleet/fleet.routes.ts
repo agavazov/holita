@@ -28,7 +28,9 @@ const deviceProfileRoute: UrlMatcher = (segments) => {
   const canonicalTab =
     tab.path === 'technical-details' && (detail?.path === 'events' || detail?.path === 'frames')
       ? detail.path
-      : ['overview', 'problems', 'commands', 'sms-commands', 'parameters'].includes(tab.path)
+      : ['overview', 'problems', 'commands', 'console', 'sms-commands', 'parameters'].includes(
+            tab.path,
+          )
         ? tab.path
         : null;
   if (!canonicalTab || recordId.path === 'new') {
@@ -189,6 +191,12 @@ export const fleetRoutes: Routes = [
           import('./drivers/driver-editor-page').then((module) => module.DriverEditorPage),
       },
     ],
+  },
+  {
+    path: ':branchId/fleet/geo-zones',
+    data: { resource: 'geo-zones', editor: false },
+    loadComponent: () =>
+      import('./geo-zones/geo-zones-workspace').then((module) => module.GeoZonesWorkspace),
   },
   {
     path: ':branchId/fleet/live',

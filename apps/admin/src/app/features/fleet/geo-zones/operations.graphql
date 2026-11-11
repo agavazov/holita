@@ -1,0 +1,39 @@
+query AdminGeoZones {
+  fleetGeoZones {
+    id
+    name
+    points {
+      latitude
+      longitude
+    }
+  }
+  fleetVehicles(offset: 0, limit: 100) {
+    items {
+      id
+      licensePlate
+    }
+  }
+}
+
+query AdminGeoZoneEvents($offset: Int!, $limit: Int!, $filter: FleetGeoZoneEventFilter) {
+  fleetGeoZoneEvents(offset: $offset, limit: $limit, filter: $filter) {
+    total
+    offset
+    limit
+    items {
+      id
+      kind
+      occurredAt
+      latitude
+      longitude
+      zone {
+        id
+        name
+      }
+      vehicle {
+        id
+        licensePlate
+      }
+    }
+  }
+}

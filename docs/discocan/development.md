@@ -319,7 +319,7 @@ same demo-session settings as Core/Fleet when explicitly using development demo 
 Keep the gateway's loopback internal API and machine token private.
 
 The admin **Devices** section opens one Device page with Overview, Problems, Commands,
-SMS commands, Parameters and Technical details (events/frames). Trips opens the currently
+Command console, SMS commands, Parameters and Technical details (events/frames). Trips opens the currently
 assigned Vehicle's trips. Vehicle Commands selects a particular installed Device and uses the
 same readable history and details modal. Legacy Control center and diagnostics URLs redirect
 to these pages. Fleet diagnostic counts include only the latest red, yellow or information
@@ -515,6 +515,27 @@ and reconcile it before making a new decision: an uncertain eData write requires
 read; an uncertain `04` or `46` blocks writes of the same parameters until fresh `03`/`45` replies
 read those parameters successfully. An eData read cannot clear parameter uncertainty. The run list
 shows the latest 20 runs.
+
+The Device's **Command console** (`/<lang>/<branch>/fleet/devices/<id>/console`, also a row
+action of the Branch command queue) composes the same workflows from catalogs instead of free
+input: allowlisted reads, `READ_EDATA`, a full snapshot, one `04` tracker parameter, one eData
+interval (an absent ID is added with the Monitor 9.56 generic definition; interval `0` keeps the
+definition but marks it not in use) and globals `302`. Before sending it shows every raw command
+of the workflow as `SRV<IMEI>,<command>,‹ref›,<fields>`; the device server adds the reference,
+frame and checksum, and the result shows the exact sent frame or the run's steps. Its searches
+are reference reads for any signed-in role:
+
+- `ermParameterCatalog(input: {search, feature, writableOnly, offset, limit})` searches the
+  StarLink parameters by number, title, summary or portal feature. `writable` applies the `04`
+  guard. Regenerate `apps/erm-server/src/starlink/parameter-reference.ts` from the archived
+  pages with `node --import tsx tools/erm-protocol/parameter-reference.mts`.
+- `ermDeviceActionCommands` returns the exact command of each allowlisted read.
+- Fleet `fleetEdataProfiles` and `fleetEdataParameters(input: {profileId, search, ids, offset,
+limit})` read the newest imported [Simple eData catalog](erm-resources/simple-edata-catalog/README.md).
+  The console preselects the profile the unit reported in its last eData read (`416`). Without an
+  imported catalog the lists are empty.
+
+Reads require the Operator role; snapshots and writes require the Engineer role, as above.
 
 `startErmParameterBatch(input: {deviceIds, parameters: [{parameter, value}], restoreAfter})`
 starts the same verified `46` workflow for 1–100 unique Branch Devices in the supplied order.

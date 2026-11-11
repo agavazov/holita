@@ -608,6 +608,16 @@
                   (changed)="refresh()"
                 />
               }
+              @case ('console') {
+                <discocan-device-console
+                  [deviceId]="recordId()"
+                  [branchId]="branchId()"
+                  [imei]="device.imei"
+                  [language]="language()"
+                  [target]="unitName()"
+                  [primary]="canSend()"
+                />
+              }
               @case ('sms-commands') {
                 @if (!canOperate()) {
                   <p-message severity="info">{{ text().branchQueue.operatorRequired }}</p-message>

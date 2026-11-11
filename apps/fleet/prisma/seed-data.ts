@@ -1,4 +1,5 @@
 import type { PrismaClient } from '../src/generated/prisma/client.js';
+import { seedGeoZones } from './geo-zones.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
 const branchId = '10000000-0000-4000-8000-000000000001';
@@ -37,6 +38,7 @@ export async function seedFleet(client: PrismaClient) {
       data: deviceSeeds,
       skipDuplicates: true,
     });
-    return { vehicles: vehicles.count, devices: devices.count };
+    const geoZones = await seedGeoZones(transaction, { tenantId, branchId });
+    return { vehicles: vehicles.count, devices: devices.count, geoZones };
   });
 }

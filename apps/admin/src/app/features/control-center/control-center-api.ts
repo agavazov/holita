@@ -51,6 +51,12 @@ import {
   type AdminControlCenterFramesQueryVariables,
   type AdminControlCenterSnapshotsQueryVariables,
   type ErmLanguage,
+  AdminControlCenterParameterCatalogDocument,
+  AdminControlCenterEdataProfilesDocument,
+  AdminControlCenterEdataParametersDocument,
+  AdminControlCenterActionCommandsDocument,
+  type ErmParameterCatalogInput,
+  type FleetEdataParametersInput,
 } from '../../../generated/graphql/operations';
 
 /** Branch-scoped reads of Fleet Devices with their state on discocan's device server. */
@@ -403,6 +409,52 @@ export class ControlCenterApi implements OnDestroy {
       throw new Error('Missing configuration batch stop result.');
     }
     return result.data.stopErmConfigurationBatch;
+  }
+
+  async searchParameterCatalog(input: ErmParameterCatalogInput) {
+    const result = await firstValueFrom(
+      this.client().query({
+        query: AdminControlCenterParameterCatalogDocument,
+        variables: { input },
+      }),
+    );
+    if (!result.data) {
+      throw new Error('Missing ermParameterCatalog result.');
+    }
+    return result.data.ermParameterCatalog;
+  }
+
+  async edataProfiles() {
+    const result = await firstValueFrom(
+      this.client().query({ query: AdminControlCenterEdataProfilesDocument }),
+    );
+    if (!result.data) {
+      throw new Error('Missing fleetEdataProfiles result.');
+    }
+    return result.data.fleetEdataProfiles;
+  }
+
+  async searchEdataParameters(input: FleetEdataParametersInput) {
+    const result = await firstValueFrom(
+      this.client().query({
+        query: AdminControlCenterEdataParametersDocument,
+        variables: { input },
+      }),
+    );
+    if (!result.data) {
+      throw new Error('Missing fleetEdataParameters result.');
+    }
+    return result.data.fleetEdataParameters;
+  }
+
+  async actionCommands() {
+    const result = await firstValueFrom(
+      this.client().query({ query: AdminControlCenterActionCommandsDocument }),
+    );
+    if (!result.data) {
+      throw new Error('Missing ermDeviceActionCommands result.');
+    }
+    return result.data.ermDeviceActionCommands;
   }
 
   ngOnDestroy(): void {

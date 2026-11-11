@@ -1,0 +1,49 @@
+"A vehicle type of the shared Simple eData Monitor catalog, inside its vehicle category."
+type FleetEdataProfile {
+  "Profile ID reported by the unit's eData 301/1F read (416)."
+  id: Int!
+  name: String!
+  categoryId: Int!
+  categoryName: String!
+  "Number of parameters the profile's set supports."
+  parameterCount: Int!
+}
+
+"A predefined Simple eData parameter; names are Monitor reference labels, not device definitions."
+type FleetEdataParameter {
+  parameterId: Int!
+  "Four-digit hexadecimal ID used in eData definitions."
+  hex: String!
+  name: String!
+  "Vehicle category name, or the Monitor category key without a profile."
+  category: String!
+  multiply: String
+  offset: String
+}
+
+input FleetEdataParametersInput {
+  "Only the parameters of this profile's set; every Monitor parameter when omitted."
+  profileId: Int
+  "Matches the decimal or hexadecimal ID and the name."
+  search: String
+  "Only these IDs, for example a unit's configured definitions (at most 100)."
+  ids: [Int!]
+  offset: Int = 0
+  limit: Int = 20
+}
+
+type FleetEdataParameterPage {
+  items: [FleetEdataParameter!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+  "Package label of the newest imported catalog; null when none is imported."
+  catalogLabel: String
+}
+
+extend type Query {
+  "Vehicle profiles of the newest imported eData catalog."
+  fleetEdataProfiles: [FleetEdataProfile!]!
+  "Paginated reference search of the newest imported eData catalog."
+  fleetEdataParameters(input: FleetEdataParametersInput!): FleetEdataParameterPage!
+}

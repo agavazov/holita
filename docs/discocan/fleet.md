@@ -17,6 +17,7 @@ request lifecycles. Use the existing files directly; there is no generic CRUD la
 | Events         | [SDL](../../apps/fleet/src/modules/events/events.graphql), [resolver](../../apps/fleet/src/modules/events/events.resolver.ts), [service](../../apps/fleet/src/modules/events/events.service.ts), [repository](../../apps/fleet/src/modules/events/events.repository.ts)                                                                                                                                           |
 | Service tasks  | [SDL](../../apps/fleet/src/modules/service-tasks/service-tasks.graphql), [resolver](../../apps/fleet/src/modules/service-tasks/service-tasks.resolver.ts), [service](../../apps/fleet/src/modules/service-tasks/service-tasks.service.ts), [repository](../../apps/fleet/src/modules/service-tasks/service-tasks.repository.ts), [urgency SQL](../../apps/fleet/src/modules/service-tasks/service-urgency.sql.ts) |
 | Settings       | [SDL](../../apps/fleet/src/modules/settings/settings.graphql), [resolver](../../apps/fleet/src/modules/settings/settings.resolver.ts), [service](../../apps/fleet/src/modules/settings/settings.service.ts), [repository](../../apps/fleet/src/modules/settings/settings.repository.ts), [settings SQL](../../apps/fleet/src/modules/settings/settings.sql.ts)                                                    |
+| Geo zones      | [SDL](../../apps/fleet/src/modules/geo-zones/geo-zones.graphql), [resolver](../../apps/fleet/src/modules/geo-zones/geo-zones.resolver.ts), [service](../../apps/fleet/src/modules/geo-zones/geo-zones.service.ts), [repository](../../apps/fleet/src/modules/geo-zones/geo-zones.repository.ts), [job](../../apps/fleet/src/modules/geo-zones/geo-zones.jobs.ts)                                                  |
 
 Every Fleet list (`fleetVehicles`, `fleetDevices`, `fleetDrivers`, `fleetVehicleGroups`,
 `fleetTrips`, `fleetEvents`, `fleetServiceTasks`) follows the
@@ -396,6 +397,27 @@ captured clients, generated operations and shared load/error/empty states:
   disabled Demo controls. See [Branch settings](architecture.md#branch-settings) for contracts/defaults
   and the [General settings workflow](development.md#fleet-operator-workflows) for the
   initial preference gate, display versus entry units and partial-save behavior.
+
+- [Geo zones](../../apps/admin/src/app/features/fleet/geo-zones/geo-zones-page.ts) shows the
+  Branch polygon zones on a Google map with their names, a zone list that focuses the map, and the
+  entry/exit log filtered by truck, zone, movement and date range. Zones are read-only; there is
+  no zone editor, rule or notification.
+
+### Geo zones
+
+The [geo-zones module](../../apps/fleet/src/modules/geo-zones/) stores each zone as a GeoJSON
+Polygon (`[longitude, latitude]`) with a bounding box; no PostGIS is used. Every minute
+[`GeoZonesJobs`](../../apps/fleet/src/modules/geo-zones/geo-zones.jobs.ts) reads the positioned
+`VehicleStatusSample` rows of each Branch that has zones, after a per-Branch cursor and within the
+last seven days (the first run is the backfill), and writes `GeoZoneEvent` ENTER/EXIT rows in time
+order per vehicle. The last event of a vehicle and zone is its state; without one the vehicle is
+outside, so the first position inside a zone logs an entry. Samples not later than that last
+event are ignored. The [SDL](../../apps/fleet/src/modules/geo-zones/geo-zones.graphql) offers
+`fleetGeoZones` (with the closed outer ring as points) and the paginated, newest-first
+`fleetGeoZoneEvents` filtered by vehicles, zones, kinds and an `occurredFrom`/`occurredTo` range.
+Example zones (parking derived from overnight truck positions, Sofia, Bulgaria, border
+checkpoints and Serbia) are in [geo-zones.ts](../../apps/fleet/prisma/geo-zones.ts); the Fleet
+seed inserts the missing ones by name and never updates existing zones.
 
 The topbar's notification bell is labelled Demo and explains that delivery has no connected
 provider. It does not derive a notification feed or unread badge from Fleet business counts.

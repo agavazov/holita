@@ -10,7 +10,7 @@ import {
   type OnInit,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   FormControl,
   FormGroup,
@@ -113,7 +113,7 @@ const queueDefinition: ListDefinition<QueueFilters, ErmCommandRequestsSortField>
   defaultSort: { field: 'REQUESTED_AT', direction: 'DESC' },
   filters: { statuses: codecs.enumList(statuses), devices: codecs.idList(100) },
 };
-type QueueAction = 'details' | 'batch' | 'cancel' | 'retry';
+type QueueAction = 'details' | 'console' | 'batch' | 'cancel' | 'retry';
 type QueueDevice = AdminControlCenterSettingsDevicesQuery['fleetDevices']['items'][number];
 type QueueLabel = AdminControlCenterQueueDeviceLabelsQuery['fleetDevices']['items'][number];
 type CommandBatch = AdminControlCenterCommandBatchFieldsFragment;
@@ -150,6 +150,7 @@ export class BranchCommandQueue implements OnInit {
   protected readonly text = computed(() => this.catalog().branchQueue);
   protected readonly format = injectFleetFormat();
   private readonly api = inject(ControlCenterApi);
+  private readonly router = inject(Router);
   private readonly session = inject(DemoSession);
   private readonly confirmation = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
@@ -258,6 +259,7 @@ export class BranchCommandQueue implements OnInit {
   ]);
   protected readonly actions = computed<readonly ListAction<QueueAction, CommandRequest>[]>(() => [
     { id: 'details', label: this.text().details },
+    { id: 'console', label: this.text().console },
     { id: 'batch', label: this.text().batch, appliesTo: (request) => request.batchId !== null },
     {
       id: 'cancel',
@@ -572,6 +574,10 @@ export class BranchCommandQueue implements OnInit {
     }
     if (event.action === 'batch') {
       this.batchId.set(request.batchId ?? null);
+      return;
+    }
+    if (event.action === 'console') {
+      void this.router.navigate([...this.deviceLink(request).slice(0, -1), 'console']);
       return;
     }
     if (!this.canOperate() || this.busy() !== null) {

@@ -81,6 +81,7 @@ import {
   severityTone,
 } from './control-center-text';
 import { DeviceCommandQueue } from './device-command-queue';
+import { DeviceConsole } from './device-console';
 import { DeviceSettings } from './device-settings';
 import { SmsPage } from './sms-page';
 import { FilterBuilder } from '../../ui/filter-builder/filter-builder';
@@ -91,11 +92,19 @@ import { deviceProblemDefinition } from './device-problems-query';
 import { problemSeverities, problemStates } from '../fleet/overview/problems-query';
 
 export type DeviceTab =
-  'overview' | 'problems' | 'commands' | 'sms-commands' | 'parameters' | 'events' | 'frames';
+  | 'overview'
+  | 'problems'
+  | 'commands'
+  | 'console'
+  | 'sms-commands'
+  | 'parameters'
+  | 'events'
+  | 'frames';
 export const deviceTabs: readonly DeviceTab[] = [
   'overview',
   'problems',
   'commands',
+  'console',
   'sms-commands',
   'parameters',
   'events',
@@ -146,6 +155,7 @@ interface HistoryRead {
     RowActions,
     TablePanel,
     DeviceCommandQueue,
+    DeviceConsole,
     DeviceSettings,
     SmsPage,
   ],
@@ -180,6 +190,7 @@ export class DevicePage implements OnInit {
     'overview',
     'problems',
     'commands',
+    'console',
     'sms-commands',
     'parameters',
     'technical-details',

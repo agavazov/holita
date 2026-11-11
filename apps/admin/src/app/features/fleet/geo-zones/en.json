@@ -1,0 +1,31 @@
+{
+  "title": "Geo zones",
+  "moduleInfo": "Polygon zones on the map and a log of every truck entering or leaving one. Fleet checks the imported truck positions every minute; the first position inside a zone counts as an entry.",
+  "map": "Geo zone map",
+  "mapFailed": "Google Maps could not be loaded.",
+  "mapMissing": "Google Maps is not configured.",
+  "zones": "Zones",
+  "noZones": "There are no zones in this branch.",
+  "showZone": "Show {name} on the map",
+  "showAll": "Show all",
+  "points": "{count} points",
+  "filters": "Log filters",
+  "vehicle": "Truck",
+  "allVehicles": "All trucks",
+  "zone": "Zone",
+  "allZones": "All zones",
+  "kind": "Movement",
+  "allKinds": "Entries and exits",
+  "from": "From",
+  "to": "To",
+  "kinds": { "ENTER": "Entry", "EXIT": "Exit" },
+  "table": {
+    "heading": "Zone log",
+    "occurred": "Time",
+    "position": "Position",
+    "errorText": "The zone log could not be loaded.",
+    "emptyTitle": "No zone entries yet",
+    "emptyDescription": "Entries and exits appear here after the trucks report positions inside a zone."
+  },
+  "loadError": "The geo zones could not be loaded."
+}

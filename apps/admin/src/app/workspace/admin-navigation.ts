@@ -48,6 +48,12 @@ export function adminNavigation(
           icon: 'wrench',
           link: [...fleet, 'maintenance'],
         },
+        {
+          id: 'geo-zones',
+          label: text.geoZones,
+          icon: 'directions',
+          link: [...fleet, 'geo-zones'],
+        },
       ],
     },
     {
