@@ -83,14 +83,14 @@ before sending a command. Registration text is useful for discovery, but is not
 the command target. Capture current measurements and their timestamps, then read
 the configuration from that same device.
 
-| Read                         | Command string                  | Response                                                                           |
-| ---------------------------- | ------------------------------- | ---------------------------------------------------------------------------------- |
-| Parameter definitions        | `30,1,19,0,19,301,0,1,1,0702BC` | `401`, payload `07` followed by parameter definitions                              |
-| Global settings              | `30,1,19,0,19,303,0,1,1,`       | `410`                                                                              |
-| Vehicle profile              | `30,1,19,0,19,301,0,1,1,1F`     | `416`, payload `1F` and a two-byte profile ID                                      |
-| Diagnostics                  | `30,1,19,0,19,306,0,1,1,`       | `411`                                                                              |
-| Hardware/version information | `30,1,19,0,19,308,0,1,1,`       | `412`; extended layouts require firmware-specific interpretation                   |
-| Stored fault logger          | `30,1,19,0,19,301,0,1,1,19`     | Fault-logger read documented; actual reply family/correlation require verification |
+| Read                         | Command string                  | Response                                                                                          |
+| ---------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Parameter definitions        | `30,1,19,0,19,301,0,1,1,0702BC` | `401`, payload `07` followed by parameter definitions                                             |
+| Global settings              | `30,1,19,0,19,303,0,1,1,`       | `410`                                                                                             |
+| Vehicle profile              | `30,1,19,0,19,301,0,1,1,1F`     | `416`, payload `1F` and a two-byte profile ID                                                     |
+| Diagnostics                  | `30,1,19,0,19,306,0,1,1,`       | `411`                                                                                             |
+| Hardware/version information | `30,1,19,0,19,308,0,1,1,`       | `412`; extended layouts require firmware-specific interpretation                                  |
+| Stored fault logger          | `30,1,19,0,19,301,0,1,1,19`     | `154,0` when the buffer is empty; `154,1` and a `419` snapshot when codes are active (2026-11-11) |
 
 The [diagnostics and fault reference](diagnostics-and-fault-reporting.md) records
 the source-level distinction between an explicit stored-fault read and automatic
@@ -295,6 +295,227 @@ Readback on the verified device normalized multiplier/divisor to zero:
 Keep submitted and returned definitions distinct. Known normalization can be
 accounted for explicitly; do not silently ignore other differences or interpret
 all-zero decoding fields as sufficient for every device.
+
+### Custom decoding is discarded (2026-11-10)
+
+On CB6711TE (eData ID 19, firmware 6.56, profile 343) a single `02` addition of ID 4000 asked for
+engine speed from J1939 EEC1: header `0CF00400`, start bit 24, 16 bits, multiplier/divisor 1/1,
+flags `C0` (FMS network, little-endian), 60 s:
+
+```text
+0FA00CF0040018100001000100000000000000C0003C
+```
+
+The unit answered `01`, but its readback stored only the ID and interval:
+
+```text
+0FA0000000000000000000000000000000000000003C
+```
+
+The operator tool treated this as a mismatch and deleted the addition; the restore readback matched
+the baseline. eData Simple therefore keeps only predefined parameters and drops custom CAN
+decoding, as the protocol's general section says. Custom signals would need eData Pro.
+
+**Every variant, 2026-11-11, CB6711TE.** Twelve further single `02` additions (07:07–07:10,
+parked) and four Type variants (09:54, driving), each acknowledged by eData (`154,1`), were all
+stored as ID + 19 zero bytes + interval `003C`. Both restores deleted the additions, and each
+readback matched the baseline of that moment exactly (10 and 59 definitions).
+
+| ID        | Variant                                                                                | Sent definition                                                  |
+| --------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 4001      | EEC1 engine speed, flags `40` (little-endian, no FMS bit)                              | `0FA10CF004001810000100010000000000000040003C`                   |
+| 4002      | No flags                                                                               | `0FA20CF004001810000100010000000000000000003C`                   |
+| 4003      | Header with bit 31 set (`8CF00400`)                                                    | `0FA38CF0040018100001000100000000000000C0003C`                   |
+| 4004      | 11-bit header `00000123`                                                               | `0FA4000001230008000100010000000000000040003C`                   |
+| 4005      | Type `04` (accumulated time)                                                           | `0FA50CF0040018100001000100000000000004C0003C`                   |
+| 4006      | Multiplier 8, offset 5                                                                 | `0FA60CF0040018100008000100050000000000C0003C`                   |
+| 4007      | CCVS byte with filter mask `00FF`, value `0003`                                        | `0FA718FEF100080800010001000000FF000300C0003C`                   |
+| 3         | Catalog ID outside profile 343 (Privates fuel litres)                                  | `000318FEFC0008080001000100000000000000C0003C`                   |
+| 653       | Profile 343 ID with custom decoding                                                    | `028D0CF0040018100001000100000000000000C0003C`                   |
+| 32769     | ID `8001`                                                                              | `80010CF0040018100001000100000000000000C0003C`                   |
+| 61441     | ID `F001`                                                                              | `F0010CF0040018100001000100000000000000C0003C`                   |
+| 4008      | Flags `F0` (FMS, little-endian, dashboard, signed)                                     | `0FA80CF0040018100001000100000000000000F0003C`                   |
+| 4011–4014 | Types `01`, `02`, `03`, `05` (counter, difference, absolute difference, type 5), 09:54 | `0FAB0CF0040018100001000100000000000001C0003C` … `0FAE…05C0003C` |
+
+No ID range, header form, type or flag keeps a decoding field. Bulk replacement (`01`) was not
+tried: it would replace every definition, and the gateway accepts only single `02` additions and
+`10` deletions. Three other sources agree:
+
+- The protocol's general section: Simple has predefined protocols; additional protocols or
+  customization need the eData Pro firmware.
+- ERM's eData accessory page ([A16](../starlink-online-protocol/authenticated/pages/A16.md)):
+  Simple eData is preloaded with CAN configuration; Professional eData has customizable CAN
+  configuration.
+- The module identifies itself as the Simple FMS variant: `53` `19` (external device version)
+  answers `6.56,eData Fms` on CB6711TE.
+
+So eData Simple reads only the predefined parameters of its profile (1,262 IDs for profile 343)
+that the truck's bus actually carries. Custom CAN signals and raw CAN capture need eData Pro.
+Simple's other features work once the gateway allows them (extended on 2026-11-11 12:04). On
+CB6711TE, parked:
+
+- **Rules:** rule 80 (`04` `0050 0F01 0F02 03E8 07 07021400010E00`, ID 1 > 0) was answered `154,1`
+  and read back byte-identical through `0802BC` (`402`). The Monitor guide allows 100 rules.
+  CB6721TE already holds rule 2 from its installation, read on 2026-11-04 as
+  `0800020000000000010807021500011009C4`, without event IDs.
+- **Histograms:** histogram 1 (`06` `0001 0001 00000000 00000BB8 06 003C 00`: ID 1, 0–3000 in 6
+  columns, every 60 s) was answered `154,1` and read back byte-identical through `0902BC` (`403`).
+- **Driver ID:** `23` answered `423` `230000000003FF70010000000000000000` (driver 1
+  `0000000003FF7001`, no driver 2).
+- **Module counters:** `318`, `320` and `322` (odometer, total time, total fuel) answered reports
+  `318`, `320` and `322` with `00000000`; the counters are unused.
+
+Before the additions, `0802BC` and `0902BC` returned no `402`/`403`: CB6711TE held no rules or
+histograms. Both test entries were deleted again at 17:25 (`11`/`12`, `154,1`, empty readbacks).
+Their reports (`404`, `406`, `408`) need the engine running and were not observed. The FMS
+parameter scan (`312`), CAN ID sniffer (`313`), current values (`324`) and VIN (`1C`) are allowed
+but need the engine on with the truck stationary, and were not run.
+
+The StarLink tracker's own "CAN Parameters" feature
+([F40](../starlink-online-protocol/authenticated/pages/F40.md)) decodes up to 12 user-defined CAN
+variables, including raw 8-byte data, but only from the tracker's own CAN pins on its "CAN" hardware
+variant. Its eData data source (`3488`=1, needs `0674` = eData ID) mirrors an existing eData
+parameter instead. CB1147TP (Scout) reads `0674`="0", `0400` (CAN baud rate) empty and `3488`="1",
+and its `#CV1#`/`#CR1#` dynamic values are empty. CB6711TE (Tracker) reads the same (`0674`="0",
+`0400` and `3072` empty, `3073`="0", `3488`="1"; `#CV1#`/`#CR1#` empty with the engine on), so that
+feature is not configured on our installations. Enabling it would need further `46` changes and the
+tracker's own CAN wiring; it was not tested.
+
+### Definition capacity (2026-11-11)
+
+eData Simple 6.56 stores at most **120** parameter definitions. On CB6711TE, 137 additions on top
+of 10 definitions left exactly 120 stored (read back as 8 fragments of 15). eData answered `154,0`
+to the additions without room, as section 2.2 describes. Deleting one stored addition gave a
+readback of 119 without exposing a further ID, so the cap is in storage, not in the readback.
+CB1147TP and CB9369PE behaved the same. The gateway's result code `01` only confirms that the
+tracker accepted the `30` command; eData's verdict is the separate `154,x` event, and a readback
+remains the proof.
+
+In `405` reports, an ID without fresh data can appear with an empty value. Count a parameter as
+delivered only when it carries values.
+
+### Delivered parameters per truck (2026-11-11)
+
+Each truck received up to 120 definitions at 60 s: its baseline, the 86 profile-343 candidates
+below, and FMS telltales. It was observed with the ignition on, then restored to its baseline plus
+the useful delivered parameters at 180 s, with exact readback. Values are raw `405` hex as the
+range seen in the window; "–" means defined but never a value; an empty cell means not tested on
+that truck. Windows (Sofia): CB6711TE driving 07:38–08:05, CB1147TP engine on 08:17–08:20, CB6721TE
+driving 08:44–08:59. All three are DAF. CB2792TK (DAF) delivered nothing; see the
+[diagnostics evidence](diagnostics-and-fault-reporting.md#fleet-evidence-2026-11-11).
+
+|   ID | Parameter (catalog)                                              | CB6711TE              | CB1147TP      | CB6721TE              |
+| ---: | ---------------------------------------------------------------- | --------------------- | ------------- | --------------------- |
+|    1 | Engine Speed (RPM)                                               | `028A`–`05A0`         | `00`–`0228`   | `022B`–`038C`         |
+|    2 | Wheel Based Vehicle Speed (kph)                                  | `00`–`57`             | `00`          | `01`–`0F`             |
+|   23 | Brake Switch                                                     | `00`–`01`             | `00`          | `00`–`01`             |
+|   64 | Engine Total Hours Of Operation                                  | `2300`–`2301`         | `207B`        | `2227`                |
+|  152 | High Resolution Total Vehicle Distance (meters)                  | `20468320`–`2046E027` | `1D55CEE6`    | `1F45C067`–`1F45C1B1` |
+|  153 | Accelerator Pedal Position 1 (%)                                 | `00`–`64`             | `00`          | `00`–`17`             |
+|  164 | Transmission Current Gear                                        | `7D`–`0089`           | `7D`          | `0080`–`0083`         |
+|  188 | Engine Oil Temperature (c)                                       | `17`–`66`             | `0E`–`15`     | `25`–`29`             |
+|  189 | Parking Brake Switch                                             | `00`–`01`             | `01`          | `00`                  |
+|  539 | Engine Coolant Temperature (c)                                   | `1E`–`60`             | `15`–`1B`     | `2B`–`30`             |
+|  579 | Barometric pressure                                              | `62`–`65`             | `64`          | `63`                  |
+|  630 | Drivers Demand Engine - Percent Torque (%)                       | `00`–`FF68`           | `00`          | `00`–`FF0E`           |
+|  651 | Engine Percent Load At Current Speed                             | `00`–`63`             | `00`–`1A`     | `0D`–`16`             |
+|  656 | Cruise Control Active                                            | `00`                  | `00`          | `00`                  |
+|  660 | Cruise Set Speed                                                 | `00`                  | `00`          | `00`                  |
+|  662 | Engine Fuel Rate (L/h)                                           | `00`–`38`             | `00`–`03`     | `02`–`06`             |
+|  672 | Axle Weight (kg)                                                 | `231C`–`2B3E`         | `1C7C`–`1F2E` | `1DDE`–`23A6`         |
+|  687 | Engine Total Fuel Used - J1939 (L)                               | `00020F57`–`00020F63` | `0001E3EC`    | `0002046F`            |
+|  688 | Service Distance (km)                                            | `0004E6FB`            | `0004E6FB`    | `000339A0`            |
+|  694 | Aftertreatment 1 Diesel Exhaust Fluid Tank 1 Level (%)           | `63`                  | `40`          | `63`                  |
+|  695 | Actual Retarder - Percent Torque (%)                             | `00`–`BB`             | `00`          | `00`                  |
+|  696 | Service Brake Circuit 1 Air Pressure (kPa)                       | `0368`–`04A8`         | `0218`–`0388` | `0368`–`0440`         |
+|  697 | Service Brake Circuit 2 Air Pressure (kPa)                       | `0368`–`04A8`         | `0218`–`0388` | `0368`–`0440`         |
+|  708 | Aftertreatment 1 Diesel Exhaust Fluid Tank 1 Temperatue          | `0D`–`15`             | `0F`          | `0B`–`0C`             |
+|  718 | ABS/EBS Amber Warning Signal (Powered Vehicle)                   | `00`                  | `00`          | `00`                  |
+|  781 | Battery Voltage (Starlink)                                       | `1D`                  | `00`          | `00`                  |
+|  785 | Fuel Level (%)                                                   | `29`–`2D`             | `26`          | `4A`                  |
+|  838 | Cruise control states                                            | `00`                  | `00`          | `00`                  |
+| 1135 | Tachograph Handling Information                                  | `00`                  | `00`          | `00`                  |
+| 1136 | Vehicle Speed (tachograph)                                       | `00`–`62`             | `00`          | `01`–`0F`             |
+| 1288 | Aftertreatment 1 Diesel Exhaust Fluid Tank 1 Low Level Indicator | `00`                  | `00`          | `00`                  |
+| 1296 | Ambient Air Temperature                                          | `04`–`06`             | `07`–`08`     | `04`                  |
+| 1298 | Actual Engine - Percent Torque                                   | `07`–`0D`             | `07`–`08`     | `08`                  |
+| 1301 | Transmission Selected Gear                                       | `7D`–`0089`           | `7D`          | `7F`–`0083`           |
+| 1322 | Engine Torque Mode                                               | `00`–`0E`             |               | `00`–`01`             |
+| 1324 | Seconds                                                          | `00`–`3B`             |               | `1F`–`34`             |
+| 1417 | Engine Instantaneous Fuel Economy                                | `00`–`06`             | `00`          | `00`–`02`             |
+| 1419 | Brake Pedal Position                                             | `00`–`09`             | `00`          | `00`–`06`             |
+| 1435 | Vehicle motion (tacho)                                           | `00`–`01`             | `00`          | `01`                  |
+| 1436 | Driver 1 working state (tacho)                                   | `00`–`03`             | `00`          | `03`                  |
+| 1437 | Driver 2 working state (tacho)                                   | `00`–`01`             | `00`          | `01`                  |
+| 1438 | Vehicle Overspeed (tacho)                                        | `00`                  | `00`          | `00`                  |
+| 1439 | Driver card, driver 1 (tacho)                                    | `01`                  | `01`          | `01`                  |
+| 1441 | Driver 1 Time Related States (tacho)                             | `00`                  | `00`          | `00`                  |
+| 1444 | Tachograph performance                                           | `00`                  | `00`          | `00`                  |
+| 1445 | System event (tacho)                                             | `00`                  | `00`          | `00`                  |
+| 1447 | Tachograph vehicle speed                                         | `00`–`62`             | `00`          | `01`–`0F`             |
+| 1548 | Engine Trip Fuel                                                 | `00`                  | `00`          | `00`                  |
+| 1551 | Engine Average Fuel Economy                                      | `03`                  | `03`          | `03`                  |
+| 1608 | Total Power Takeoff Hours                                        | `00`                  | `00`          | `00`                  |
+| 1657 | High Resolution Engine Total Fuel Used                           | `00020F57`–`00020F63` | `0001E3EC`    | `0002046F`            |
+| 1889 | Telltale - Cooling air conditioning                              | `00`                  |               | `00`                  |
+| 1890 | Telltale - High beam, main beam                                  | `00`                  |               | `00`                  |
+| 1891 | Telltale - Low beam, dipped beam                                 | `00`                  |               | `00`                  |
+| 1892 | Telltale - Turn signals                                          | `00`                  |               | `00`                  |
+| 1893 | Telltale - Hazard warning                                        | `00`                  |               | `00`                  |
+| 1894 | Telltale - Provision for the disabled or handicapped persons     | `00`                  |               | `00`                  |
+| 1895 | Telltale - Parking Brake                                         | `00`–`03`             |               | `00`                  |
+| 1896 | Telltale - Brake failure/brake system malfunction                | `00`                  |               | `00`                  |
+| 1897 | Telltale - Hatch open                                            | `00`                  |               | `00`                  |
+| 1898 | Telltale - Fuel level                                            | `00`                  |               | `00`                  |
+| 1899 | Telltale - Engine coolant temperature                            | `00`                  |               | `00`                  |
+| 1900 | Telltale - Battery charging condition                            | `00`                  |               | `00`                  |
+| 1901 | Telltale - Engine oil                                            | `00`                  |               | `00`                  |
+| 1902 | Telltale - Position lights,side lights                           | `00`                  |               | `00`                  |
+| 1903 | Telltale - Front fog light                                       | `00`                  |               | `00`                  |
+| 2152 | FMS Diagnostics Supported                                        | `00`                  | `00`          | `00`                  |
+| 2153 | FMS Requests Supported                                           | `00`                  | `00`          | `00`                  |
+| 2154 | FMS SW-version supported                                         | `30333030`            | `30333030`    | `30333030`            |
+| 2236 | Engine Trip Fuel L (fms)                                         | `06`–`045C`           | `00`–`0C`     | `00`–`0B`             |
+
+Defined on these trucks but never delivered a value: 5, 65, 159, 168, 666, 667, 668, 679, 680, 682, 683, 689, 692, 700, 767, 805, 1124, 1125, 1126, 1127, 1128, 1129, 1130, 1131, 1132, 1269, 1271, 1338, 1415, 1443, 1517, 1518, 1609, 1610, 1701, 1766, 1904, 1905, 1906, 1907, 1908, 1909, 1910, 1911, 1912, 1913, 1914, 1915, 1916, 1917, 1918, 1919, 1920, 1921, 1922, 1923, 1924, 1925, 1926, 1927, 1928, 1929, 1930, 1931, 1932, 1933, 1934, 1935, 1936, 1937, 1938, 1939, 2125, 2259, 2260, 2263, 2269. These include engine oil
+pressure and level, coolant level, battery potential, intake manifold and boost pressure, the
+DM1 fields 1124–1132 (even while CB6711TE reported active codes as `419`), and the Volvo-specific
+IDs. DAF trucks deliver only telltale block 1889–1903; 1904–1939 never carried a value. All three
+report FMS identity 2152=`00`, 2153=`00`, 2154=`30333030` ("0300").
+
+Kept at 180 s after the test: CB6711TE and CB6721TE have 59 definitions (10 baseline + 49), and
+CB1147TP has 59 (14 baseline + 45, telltales 1889–1903 not yet confirmed on it). The 49 are 23,
+153, 164, 189, 579, 630, 651, 656, 660, 662, 672, 688, 694, 695, 696, 697, 708, 718, 781, 1288,
+1296, 1298, 1301, 1417, 1419, 1435–1439, 1441, 1447, 1551, 2236 and 1889–1903; CB1147TP already had
+153, 651, 662 and 781 in its baseline. Delivered values left out as noise: 838, 1135, 1136
+(duplicate of 1447), 1322, 1324, 1444, 1445, 1548, 1608 and 2152–2154.
+
+#### Volvo CB9369PE (2026-11-11)
+
+With its engine idling from 12:41 to 12:49, CB9369PE delivered 34 of its 120 definitions: 1, 2, 23,
+64, 153, 189, 539, 651, 656, 662, 672 (`20F9`), 688, 694 (`32`), 695, 696 and 697
+(`03E8`–`04A0`), 781, 838, 1135, 1136, 1296 (`0B`), 1298, 1417, 1419, 1435–1439, 1441, 1444, 1445,
+1447 and 2236. Nothing arrived from the FMS identity (2152–2154), any telltale (including 1900,
+which arrived on 2026-11-10), the DM1 fields 1124–1132, oil pressure or level, or the
+Volvo-specific IDs 2125, 2259, 2260, 2263 and 2269. Its own fuel level, total fuel and distance IDs
+were also silent, consistent with its intermittent CAN. The window is too short to tell whether
+Volvo's FMS interface omits the identity and telltales, or whether this module missed them. It
+keeps 41 definitions: 15 baseline plus 24 delivered parameters and telltales 1896 and 1910, all
+at 180 s.
+
+#### Status per truck (2026-11-11)
+
+| Truck              | Make   | Result                                                                                                                                    | Definitions now |
+| ------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| CB6711TE           | DAF    | 70 parameters delivered; first `419`/`415`; Process DTCs on since 07:13                                                                   | 59 (49 kept)    |
+| CB1147TP           | DAF    | 53 parameters delivered in a 3-minute engine run                                                                                          | 59 (45 kept)    |
+| CB6721TE           | DAF    | 70 parameters delivered; Process DTCs on since 08:44                                                                                      | 59 (49 kept)    |
+| CB2792TK           | DAF    | No value from any of 120 definitions; eData report stream stopped at 07:45 and did not return after the exact restore; installation issue | 10 (baseline)   |
+| CB9369PE           | Volvo  | 34 parameters delivered while idling 12:41–12:49; no FMS identity, telltale, DM1 field or Volvo-specific ID                               | 41 (26 kept)    |
+| CB9405PE           | Volvo  | No CAN data (`417` only); not tested                                                                                                      | baseline        |
+| CB5636XP, CB5640XP | Volvo  | Not connected since 2026-11-10 ~11:00; not tested                                                                                         | baseline        |
+| CB1344XH           | Scania | On Karma's backup since 2026-11-10; not tested                                                                                            | baseline        |
+| CB9680TE           | DAF    | Never connected to discocan; not tested                                                                                                   | unknown         |
 
 ### Engine-load and accelerator-position example
 

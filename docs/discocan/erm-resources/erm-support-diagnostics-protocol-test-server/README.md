@@ -19,19 +19,27 @@ Monitor checkbox and actual fault record establish different things.
 [New reply: full technical analysis and all four images](reply-2026-10-29.md) ·
 [All 29 supplied commands and three-command procedure](command-reference-2026-10-29.md) ·
 [Current live evidence](live-verification-2026-10-29.md) ·
+[1 November R&D reply](reply-2026-11-01.md) ·
 [Open work](../../../todo/erm-roadmap.md#questions-for-erm).
+
+**1 November R&D reply:** it confirms the four-byte SPN `419` layout and describes the lifecycle:
+added when a code first appears on the CAN bus, removed after more than one minute without it.
+It also names all 49 globals bytes. **Fleet evidence of 2026-11-11:** GET DTC answers `154,0`
+when the fault buffer is empty and `154,1` plus a `419` snapshot when codes are active; until
+2026-11-10 every read had met an empty buffer. See the [fleet evidence](../edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md#fleet-evidence-2026-11-11).
 
 ## Evidence and source material
 
-| Material                                         | Reference and scope                                                                                                                                   |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Original email questions and first reply         | [27 October correspondence](correspondence.md); original safe [ODT](source/erm-support-reply.odt), preserved unchanged.                               |
-| First four images and source inconsistencies     | [27 October analysis](analysis.md), retained as a dated source assessment.                                                                            |
-| First device campaign and readback/cadence proof | [27 October live campaign](live-verification-2026-10-27.md). Its absence of positive fault reports describes that earlier observation window only.    |
-| New reply and four new images                    | [29 October technical summary](reply-2026-10-29.md), including every visible image field, exact fault/ACK excerpts and question-by-question coverage. |
-| New Monitor command attachment                   | [Command reference](command-reference-2026-10-29.md) and [unchanged TXT](source/2026-10-29-fms-rental-sofia-60-second-commands.txt).                  |
-| Current independent API and device tests         | [29 October live campaign](live-verification-2026-10-29.md).                                                                                          |
-| Provenance                                       | [Metadata](metadata.json): source hashes, image hashes/dimensions and timestamp qualifications.                                                       |
+| Material                                         | Reference and scope                                                                                                                                                            |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Original email questions and first reply         | [27 October correspondence](correspondence.md); original safe [ODT](source/erm-support-reply.odt), preserved unchanged.                                                        |
+| First four images and source inconsistencies     | [27 October analysis](analysis.md), retained as a dated source assessment.                                                                                                     |
+| First device campaign and readback/cadence proof | [27 October live campaign](live-verification-2026-10-27.md). Its absence of positive fault reports describes that earlier observation window only.                             |
+| New reply and four new images                    | [29 October technical summary](reply-2026-10-29.md), including every visible image field, exact fault/ACK excerpts and question-by-question coverage.                          |
+| New Monitor command attachment                   | [Command reference](command-reference-2026-10-29.md) and [unchanged TXT](source/2026-10-29-fms-rental-sofia-60-second-commands.txt).                                           |
+| Current independent API and device tests         | [29 October live campaign](live-verification-2026-10-29.md).                                                                                                                   |
+| R&D follow-up and two attachments                | [1 November reply](reply-2026-11-01.md): `419` layout, lifecycle, [globals field table](source/2026-11-01-global-settings.xlsx), [FMI table](source/2026-11-01-fmi-codes.pdf). |
+| Provenance                                       | [Metadata](metadata.json): source hashes, image hashes/dimensions and timestamp qualifications.                                                                                |
 
 The new ODT contains portal credentials and remains in the user-supplied private
 source location. Documentation contains its hash and sanitized technical summary,
@@ -75,7 +83,8 @@ final outcomes; the register does not substitute for those records.
   assessment by the independently retrieved28/29 October reports.
 - **Negative acknowledgement:** the contextual Monitor empty-buffer display is
   an implementation observation; the new explicit protocol definition is NACK.
-  Historical 154,0 results cannot prove no vehicle faults or successful logger reads.
+  For GET DTC, 2026-11-11 fleet evidence shows `154,0` coincides with an empty fault buffer;
+  other commands keep the plain NACK meaning.
 - **Portal access:** an earlier missing access email is no longer the current
   blocker because the new private reply supplies credentials. Raw credentials
   remain outside this reference.

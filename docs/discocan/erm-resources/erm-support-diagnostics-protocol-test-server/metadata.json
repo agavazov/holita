@@ -163,7 +163,7 @@
     "final_dtc_value": 1,
     "runtime_fault_codes_verified": false
   },
-  "latest_analysis_date": "2026-10-29",
+  "latest_analysis_date": "2026-11-10",
   "follow_up_2026_10_29": {
     "source_filename": "reply.odt",
     "source_sha256": "7df037b964ae4a93da682f6b0552fdba1e92e3851c3c365184dd0ff988cce2da",
@@ -259,5 +259,24 @@
     }
   },
   "live_validation_scope": "Historical2026-10-27 campaign only; current positive fault/API/Gateway evidence is in live-verification-2026-10-29.md.",
-  "current_verification_campaign_reference": "live-verification-2026-10-29.md"
+  "current_verification_campaign_reference": "live-verification-2026-10-29.md",
+  "follow_up_2026_11_01": {
+    "reference": "reply-2026-11-01.md",
+    "sender": "Oz Dori (ERM), after R&D input",
+    "email_date_literal": "11/1/2026, 12:07 PM",
+    "timestamp_scope": "Date shown in the user-supplied HTML export; timezone not stated",
+    "credential_bearing_email_archived": false,
+    "attachments": [
+      {
+        "original_filename": "Global Settings.xlsx",
+        "path": "source/2026-11-01-global-settings.xlsx",
+        "sha256": "389f7d0ba429e535e6907716e65c238e4763386b619f3a2b8206a4da3ac074f9"
+      },
+      {
+        "original_filename": "Failure-Mode-Identifier-FMI-Codes.pdf",
+        "path": "source/2026-11-01-fmi-codes.pdf",
+        "sha256": "7b7859a39ff86a5ec7155550f7741fecd8d1b1958c705d8768cb567e760c2d25"
+      }
+    ]
+  }
 }

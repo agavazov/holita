@@ -19,11 +19,10 @@ levels.
 
 ## Remaining facts (2026-11-08)
 
-- Faults: since 2026-11-03, no truck has sent a `413`, `418` or `419` fault record to discocan.
-  CB1147TP reported SPN 4339/7, 1247/11 and 23806/15 through Karma on 2026-10-28/29. The
-  stored-fault read (`30` `301/19`) returned `154,0` (not acknowledged) on CB1147TP and CB1344XH,
-  so faults come only from automatic reports and warning lamps until ERM explains that read. The
-  active/cleared lifecycle is unproven, and descriptions are discocan's own wording.
+- Faults: CB1147TP sent `419` records from 2026-11-07 to 11-09 and CB6711TE from 2026-11-11, after
+  Process DTCs was enabled on it. The stored-fault read (`30` `301/19`) answers `154,0` when the
+  fault buffer is empty and `154,1` plus a `419` snapshot when codes are active (2026-11-11). Whether
+  the buffer survives ignition off is unproven, and descriptions are discocan's own wording.
 - Warning lamps: only CB5636XP has the definitions (since 2026-11-06). On 2026-11-08 its reports
   carried 1896 only; 1906 and 1910 never arrived. 1896 read RED at every ignition-on while the engine
   was off, so Fleet now ignores lamp values reported with the engine off.
@@ -39,15 +38,15 @@ controls, fault meanings with current warnings and lamp notifications, and the t
 observation through slow or failed reads, and Fleet editing offered only to the roles the server
 permits. Remaining:
 
-| ID  | Package                 | Scope                                                                                                                                                                                                                                                     | Depends | Device level | Codex |
-| --- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------ | ----- |
-| F1  | Warning lamps on trucks | Operations by Claude: after CB5636XP's next start, confirm that it raises no CRITICAL brake notification, then add eData 1896, 1906 and 1910 to the other trucks one at a time through the guarded GraphQL workflow with writes enabled only for each run | —       | L1, then L3  | —     |
-| W2  | `46` proof              | Operations by Claude after the owner's explicit approval: one controlled `46` change with readback and restoration on a parked test truck, writes enabled only for the run, before batch writes reach the other trucks                                    | —       | L1           | —     |
+| ID  | Package                 | Scope                                                                                                                                                                                                                                                                                                                                                                         | Depends | Device level | Codex |
+| --- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------ | ----- |
+| F1  | Warning lamps on trucks | 2026-11-11: telltales 1889–1903 are now defined at 180 s on CB6711TE, CB6721TE and CB1147TP. DAF trucks deliver only that block: 1896 (brakes) arrives, but 1906 (engine/MIL) and 1910 (ABS) never did, so Fleet's ENGINE and ABS lamps cannot come from DAF telltales. Remaining: Volvo (CB9369PE test pending; CB5636XP has 1896/1906/1910), and confirm values on CB1147TP | —       | L1, then L3  | —     |
 
 ## Order
 
-1. **On hold:** the owner stopped all device operations on 2026-11-09. F1 (after CB5636XP's next
-   start) and W2 resume only with the owner's explicit approval (operations by Claude).
+1. The owner approved the diagnostics campaign on 2026-11-11 (reads, temporary eData changes and
+   one controlled `46`, all with restore). W2 passed through the guarded workflow on 2026-11-11
+   (CB6711TE, record `7fbf80a7`, RESTORED). F1 continues within the campaign (operations by Claude).
 2. The owner reviews the Device status, command queue and faults screens together with the UI v2
    acceptance.
 

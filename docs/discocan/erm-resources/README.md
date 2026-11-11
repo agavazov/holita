@@ -33,8 +33,11 @@ and [29 October live campaign](erm-support-diagnostics-protocol-test-server/live
 for the later answers and independently acquired CB1147TP faults/ten-car observations.
 Earlier campaigns remain evidence with their original limits. Credentials/private headers are excluded.
 
-ERM identifies `154,0` as a negative special ACK. Real `419` acquisition does not settle
-current-state/lifecycle semantics, `418` examples, compatibility or conflicting global layouts.
+ERM identifies `154,0` as a negative special ACK. GET DTC (`301`/`19`) answers `154,0` when the
+fault buffer is empty and `154,1` plus a `419` snapshot of the active codes otherwise (proven
+2026-11-11, see the [fleet evidence](edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md#fleet-evidence-2026-11-11)). The [1 November R&D reply](erm-support-diagnostics-protocol-test-server/reply-2026-11-01.md)
+confirms the `419` layout, the added/removed lifecycle and every globals byte. `418` examples,
+compatibility and the buffer at ignition off remain open.
 Open questions and engineering tasks belong in the [ERM roadmap](../../todo/erm-roadmap.md).
 
 ## Hardware

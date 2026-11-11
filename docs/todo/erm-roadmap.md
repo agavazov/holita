@@ -74,8 +74,10 @@ reopen them as roadmap tasks.
 - **Parameter writes:** snapshots with titles and diffs run as background jobs and passed L1 on a
   Tracker and a Scout on 2026-11-03. Single-record eData changes (`live-api/edata-change.js`)
   passed L1 on CB5640XP on 2026-11-04. The admin now exposes guarded `04` and eData workflows with a fresh parameter
-  snapshot and exact readback/restoration. Remaining: the same controlled workflow for `46`
-  parameter writes. For each write require an exact-target complete baseline, fresh preflight, one scoped change,
+  snapshot and exact readback/restoration. The unit confirms a successful `04` with `13` and a
+  `46` with `20` and the set/failed counts; the workflow accepts both since 2026-11-11, after the
+  W2 proof found it treating them as rejections (one leftover from 2026-11-04 restored). W2 then
+  passed through the guarded workflow on CB6711TE (record `7fbf80a7`, RESTORED). For each write require an exact-target complete baseline, fresh preflight, one scoped change,
   independent whole-set readback and explicit restoration. Never automatically replay an
   ambiguous submission. Restoring an existing definition differs from deleting a new ID;
   check rule/histogram dependencies and never replay a complete Monitor export.
@@ -89,20 +91,62 @@ reopen them as roadmap tasks.
 - **Own telemetry and diagnostics:** Fleet imports discocan events as samples and trips, `419` fault
   records as `DIAGNOSTIC_TROUBLE_CODE` and `411` CAN errors per ADR 0008. Raw `405` observations now have scoped Vehicle history and a chart. Remaining: verify physical
   byte order, signedness and calibration before displaying physical values; decide whether to
-  backfill reports before the existing import cursors; verify CB1147TP's real `419` faults through discocan. Establish fault lifecycle/completeness
-  before continuous fault-state tracking or notifications; missing telemetry or an empty logger is
-  not confirmed ECU clearance.
+  backfill reports before the existing import cursors. CB1147TP's `419` faults arrive through discocan,
+  and ERM R&D described the added/removed lifecycle (2026-11-01). Before continuous fault-state tracking
+  or notifications, establish what happens to the buffer at ignition off. Missing telemetry is not
+  confirmed ECU clearance.
+- **Fault reads:** GET DTC (`301`/`19`) answers `154,0` when the fault buffer is empty and `154,1`
+  plus a `419` snapshot of the active codes when it is not (CB6711TE, 2026-11-11, see
+  [fleet evidence](../discocan/erm-resources/edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md#fleet-evidence-2026-11-11)).
+  Fleet's 6-hour scheduled read therefore yields the active codes when there are any.
+- **Volvo CAN connection:** CB9405PE and CB9369PE have never delivered eData CAN data (no `405`,
+  repeated `417`), although their configuration matches reporting trucks. With ignition on, read
+  `306`/`411`, then have the installer check the eData CAN wiring to the FMS connector and whether
+  the truck's FMS interface is active. Faults from these trucks cannot arrive before this works.
+  Fleet check 2026-11-10: CB2792TK drives daily, but its `405` reports carry one constant value per
+  parameter (only 2 of 10 parameters), so it has no live CAN either. CB1344XH sends
+  intermittent `417`. CB1147TP, CB6711TE (`411` `01`), CB6721TE, CB5636XP and CB5640XP report live values.
+  CB9369PE after the installer's CAN work (2026-11-10 13:38–13:53 Sofia): live `405` values from 9
+  parameters from 13:50, with `417` about every 2 minutes until 15:19. Afterwards fewer drops
+  (`417` at 15:40 and 15:45), with 7 parameters at a regular cadence; CAN is not yet stable. With
+  Process DTCs on, no telltale (1900/1906/1907/1914) and no `419` arrived. Its globals match
+  CB5636XP byte for byte, and CB5636XP, CB6711TE, CB6721TE and CB1147TP sent no `417` in 7 days,
+  so the remaining drops are an installation issue. Ask ERM question 7.
+  At about 16:10 the installer replaced the eData module (ID 19, firmware 6.56, profile 343). The new
+  module came with Process DTCs off and 10 definitions. At 16:24 its globals and all 15 definitions
+  were restored to the previous module's values, with exact readback. With the new module, CAN ran
+  without a `417` from 16:11 to 16:57 (ignition on), with 10 of 15 parameters and telltale 1900 (off);
+  188, 5, 1906, 1907 and 1914 did not arrive, and no `419` arrived.
+- **More data channels (documentation sweep 2026-11-11, untested unless stated):**
+  - eData commands from ERM's command export, without documented replies: `313` CAN ID sniffer,
+    `324` current values and `312` FMS parameter scan (§3.24) are allowed since 2026-11-11 and wait
+    for an engine-on stationary test. `318`/`320`/`322` (module odometer, total time, total fuel)
+    answered `00000000` on CB6711TE; their `317`/`319`/`321` SET counterparts stay blocked.
+  - Rules and histograms are stored on Simple (CB6711TE, 2026-11-11). Remaining: confirm their
+    `404`/`406`/`408` reports with the engine on, then decide on product use.
+  - `310` raw CAN transmit (§2.11, Simple) for J1939 requests; it transmits (stationary only), and
+    replies are useful only when a predefined parameter decodes them. DAF FMS reports requests as
+    unsupported (2153=`00`).
+  - Globals: fault debounce bytes 20/21 (`03`/`03`), ignore list 25–34, ignition-off reporting
+    bytes 7/24 (`420`/`421`), and profile 430 (500 kbit/s, same parameter set) as a bus-speed check
+    for trucks without CAN data.
+  - Tracker features fed by eData: odometer source P0004=8, RPM source P1840 with RPM events, speed
+    source P0005, service due E89, and eData rules as Custom Events (P0674=19, P0680–P0703).
+  - Tracker battery health via `48`: `#BATH#`, `#BATC#` and `#STRT#` answer on the Tracker
+    (CB6711TE: 54 %, 100 %, 1.31 s on 2026-11-11) and stay empty on Scouts.
+  - Need other hardware: tracker OBD2, CAN odometer, CAN VIN and CAN transmission (tracker CAN
+    pins; Scouts have none), Bluetooth eData (iRF), fuel sensors, eSafe black box.
 - **Broader command coverage:** prove each supported family at its permitted test level, including
   result codes and unlock-required `98`. The operator mutation stays limited to its six reads;
   new operations need their own explicit authorization and contract.
 
-| Family              | Remaining verification scope                                                        | Levels                |
-| ------------------- | ----------------------------------------------------------------------------------- | --------------------- |
-| Reads               | Remaining supported reads and configuration reads outside protected routing/secrets | L1, then L3           |
-| Reversible settings | `04`/`46` outside 0049–0054, geo-zones, speed, temperature and clock                | L1, then L3           |
-| eData               | Fixed reads followed by verified single-record configuration writes                 | L1, then L3           |
-| Vehicle-acting      | Outputs `13`, immobilizer `24`, arm/disarm `25`/`47`, override `57`                 | L2 only               |
-| Maintenance         | Reset `99`, logger clear, external firmware `35`, unit OTA                          | L2 after ERM guidance |
+| Family              | Remaining verification scope                                                                                                                                                 | Levels                |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| Reads               | L1 sweep done on CB6711TE (2026-11-11): all gateway reads answer except `19` (no reply), `08 01` (result 03), `36 1` (result 15, no Canalog) and `53 1` (result 18); L3 open | L3                    |
+| Reversible settings | `04`/`46` outside 0049–0054, geo-zones, speed, temperature and clock                                                                                                         | L1, then L3           |
+| eData               | Fixed reads followed by verified single-record configuration writes                                                                                                          | L1, then L3           |
+| Vehicle-acting      | Outputs `13`, immobilizer `24`, arm/disarm `25`/`47`, override `57`                                                                                                          | L2 only               |
+| Maintenance         | Reset `99`, logger clear, external firmware `35`, unit OTA                                                                                                                   | L2 after ERM guidance |
 
 ## Run without Karma and production deployment
 
@@ -156,19 +200,29 @@ remains the evidence source; do not request already supplied protocol access or 
 ### eData and faults
 
 1. Supply the hardware/firmware/profile compatibility matrix and extended `412` fields.
-2. Resolve Monitor byte 7 export and `302`/`410` label discrepancies; ignition-off processing
-   versus CAN-alive reporting; and whether StarLink 2069/2070 are required on these installations.
-   CB2792TK and CB9405PE send no `405` with the same ten definitions as the reporting CB1344XH; they
-   are the only Scouts with `410` bytes 7 and 18 both `00` (2026-11-04).
-3. Correct the `418` P1482 example with a real five-character capture/expected status and the
-   `419` SPN table. Real `419` captures support four-byte big-endian SPNs but do not settle
-   reserved bits, range or FMI rules.
-4. Define `301`/`19` replies, fragmentation/completeness and empty logger versus rejection;
-   `154,0` means not acknowledged, not proof of an empty buffer. Does a read trigger a fresh ECU scan?
-5. Define automatic snapshots/transitions, debounce, ignition/reconnect behavior and fault removal;
-   supply authoritative fault descriptions, distinct from tracker/eData internal diagnostics.
+2. Are StarLink 2069/2070 required on these installations? The byte 7 question is answered by the
+   [1 November field table](../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/reply-2026-11-01.md#global-settings-302--410).
+3. Correct the `418` P1482 example with a real five-character capture and expected status. ERM
+   R&D confirmed the four-byte `419` SPN on 2026-11-01.
+4. Confirm that `301`/`19` answers `154,0` for an empty fault buffer and `154,1` plus a `419`
+   snapshot (status 01) for active codes, as observed on CB6711TE on 2026-11-11, and that it never
+   triggers a fresh ECU scan.
+5. The buffer survives ignition off: CB6711TE still returned its codes through GET DTC 16 minutes
+   after engine off (2026-11-11). Is it cleared on a module restart or power loss, and are active
+   codes added again at the next ignition on? Supply SPN descriptions.
 6. Explain globals → parameters → profile ordering for bulk `301`/`01` versus verified
    single-record `301`/`02`, including commit/profile prerequisites and write/readback correlation.
+7. Which ECU faults can reach `419` from a Volvo FMS interface? No Volvo has sent a `419` so far.
+   On 2026-11-10 a mechanic's online diagnosis found a battery-module sensor fault on CB9405PE
+   and a weak key-fob battery on CB9369PE. CB9369PE has delivered CAN data since its rewiring
+   (see Volvo CAN connection above). CB5636XP (Volvo) has had CAN data and Process DTCs on since
+   2026-11-04, without a `419`. Does Volvo's FMS interface forward DM1/telltales, and if not, which
+   connection can deliver Volvo ECU faults?
+8. eData Simple 6.56 keeps only predefined parameters: twelve custom-decoding variants were stored
+   as ID and interval only, and the module reports itself as `eData Fms` (see
+   [custom decoding](../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md#custom-decoding-is-discarded-2026-11-10)).
+   Can our modules be upgraded to eData Pro (custom CAN signals, raw capture, J1939 requests such as
+   DM2), how, and at what cost? Is 120 the definition limit of every Simple firmware?
 
 ### Karma replacement parity
 
