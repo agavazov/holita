@@ -544,3 +544,36 @@ query AdminVehicleTrack($vehicleId: ID!, $from: DateTime!, $to: DateTime!) {
     }
   }
 }
+
+query AdminVehicleEdataLatest($vehicleId: ID!) {
+  fleetVehicleEdataLatest(vehicleId: $vehicleId) {
+    parameterId
+    name
+    unit
+    recordedAt
+    valueHex
+    value
+  }
+}
+
+query AdminVehicleEdataHistory(
+  $vehicleId: ID!
+  $from: DateTime!
+  $to: DateTime!
+  $parameterIds: [Int!]!
+) {
+  fleetVehicleEdataMeasurements(
+    vehicleId: $vehicleId
+    from: $from
+    to: $to
+    parameterIds: $parameterIds
+  ) {
+    truncated
+    items {
+      id
+      recordedAt
+      valueHex
+      value
+    }
+  }
+}

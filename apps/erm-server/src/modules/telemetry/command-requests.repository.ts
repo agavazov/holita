@@ -11,17 +11,20 @@ import type {
   ErmFrame,
   ErmConfigurationChange,
   ErmCommandWaitingReason,
+  ErmFaultReadVerdict,
 } from '../../generated/graphql/types.js';
 import { sqlRows, sqlText } from '../../database/sql.js';
 import type { OperatorAudit, OperatorScope } from './operator-audit.js';
 import { commandView, frameView } from './command-evidence.js';
 import { configurationChangeView } from './configuration-change-view.js';
 import { EdataChangeRepository } from './edata-change.repository.js';
+import { faultReadVerdicts } from './fault-read-verdicts.js';
 
 export interface CommandRequestRelations {
   commands: Map<string, ErmCommand>;
   frames: Map<string, ErmFrame | null>;
   configurations: Map<string, ErmConfigurationChange | null>;
+  faultReadVerdicts: Map<string, ErmFaultReadVerdict>;
 }
 
 @Injectable()
@@ -35,9 +38,18 @@ export class CommandRequestsRepository {
     createdAt: Date,
     expiresAt: Date,
     retryOfId?: string,
+    parameters: readonly number[] = [],
   ) {
     return this.prisma.client.ermCommandRequest.create({
-      data: { ...audit, unitId, action, createdAt, expiresAt, retryOfId: retryOfId ?? null },
+      data: {
+        ...audit,
+        unitId,
+        action,
+        parameters: [...parameters],
+        createdAt,
+        expiresAt,
+        retryOfId: retryOfId ?? null,
+      },
     });
   }
 
@@ -289,7 +301,12 @@ export class CommandRequestsRepository {
         request.commandId !== null,
     );
     if (!linked.length) {
-      return { commands: new Map(), frames: new Map(), configurations: new Map() };
+      return {
+        commands: new Map(),
+        frames: new Map(),
+        configurations: new Map(),
+        faultReadVerdicts: new Map(),
+      };
     }
     const commands = await this.prisma.client.ermCommand.findMany({
       where: {
@@ -361,6 +378,7 @@ export class CommandRequestsRepository {
           return [request.id, change ? configurationChangeView(change, commandViews) : null];
         }),
       ),
+      faultReadVerdicts: await faultReadVerdicts(this.prisma, linked, commands),
     };
   }
 

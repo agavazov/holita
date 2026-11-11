@@ -40,7 +40,15 @@ import { ControlCenterApi } from './control-center-api';
 import { controlCenterError, controlCenterReason, controlCenterText } from './control-center-text';
 
 type ConsoleKind =
-  'READ_ACTION' | 'READ_EDATA' | 'SNAPSHOT' | 'PARAMETER' | 'EDATA_INTERVAL' | 'GLOBALS';
+  | 'READ_ACTION'
+  | 'READ_PARAMETERS'
+  | 'READ_EDATA'
+  | 'SNAPSHOT'
+  | 'PARAMETER'
+  | 'EDATA_INTERVAL'
+  | 'GLOBALS';
+// Queued reads wait for the unit's next primary connection instead of requiring it now.
+const queuedKinds: ReadonlySet<ConsoleKind> = new Set(['READ_ACTION', 'READ_PARAMETERS']);
 type CatalogEntry = AdminControlCenterParameterCatalogQuery['ermParameterCatalog']['items'][number];
 type EdataEntry = AdminControlCenterEdataParametersQuery['fleetEdataParameters']['items'][number];
 type Profile = AdminControlCenterEdataProfilesQuery['fleetEdataProfiles'][number];
@@ -180,6 +188,7 @@ export class DeviceConsole {
     action: new FormControl<ErmDeviceAction>('READ_STATUS', { nonNullable: true }),
     feature: new FormControl<string | null>(null),
     parameter: new FormControl<CatalogEntry | null>(null),
+    readParameters: new FormControl<CatalogEntry[]>([], { nonNullable: true }),
     value: new FormControl('', { nonNullable: true }),
     category: new FormControl<number | null>(null),
     profile: new FormControl<number | null>(null),
@@ -195,6 +204,7 @@ export class DeviceConsole {
   protected readonly kinds = computed(() => {
     const labels = this.text().kinds;
     const kinds: readonly ConsoleKind[] = [
+      'READ_PARAMETERS',
       'READ_EDATA',
       'READ_ACTION',
       'SNAPSHOT',
@@ -342,6 +352,10 @@ export class DeviceConsole {
         const command = this.actionCommands().find((entry) => entry.action === value.action);
         return command ? [step(labels.send, command.command, command.fields)] : [];
       }
+      case 'READ_PARAMETERS': {
+        const codes = (value.readParameters ?? []).map((entry) => entry.code);
+        return codes.length ? [step(labels.send, codes.length === 1 ? '03' : '45', codes)] : [];
+      }
       case 'READ_EDATA':
         return [
           step(labels.definitions, '30', edataFields('301', '0702BC')),
@@ -427,11 +441,20 @@ export class DeviceConsole {
     if (writeKinds.has(kind) && !this.writesEnabled()) {
       return text.writesDisabled;
     }
-    if (kind !== 'READ_ACTION' && !this.primary()) {
+    if (!queuedKinds.has(kind) && !this.primary()) {
       return text.primaryRequired;
     }
-    if (kind !== 'READ_ACTION' && this.running()) {
+    if (!queuedKinds.has(kind) && this.running()) {
       return text.running;
+    }
+    if (kind === 'READ_PARAMETERS') {
+      const count = value.readParameters?.length ?? 0;
+      if (!count) {
+        return text.chooseParameter;
+      }
+      if (count > 20) {
+        return text.readLimit;
+      }
     }
     if (kind === 'PARAMETER') {
       if (!value.parameter) {
@@ -669,7 +692,8 @@ export class DeviceConsole {
       const page = await this.api.searchParameterCatalog({
         search: event.query,
         feature: this.form.controls.feature.value,
-        writableOnly: this.kind() === 'PARAMETER',
+        // Reads and writes both exclude routing, lock and secret parameters.
+        writableOnly: true,
         limit: 20,
       });
       if (sequence === this.searchSequence) {
@@ -740,6 +764,10 @@ export class DeviceConsole {
     this.error.set(null);
   }
 
+  protected parameterCode(parameter: number): string {
+    return String(parameter).padStart(4, '0');
+  }
+
   protected parameterLabel(entry: CatalogEntry): string {
     return `${entry.code} · ${entry.title}`;
   }
@@ -765,8 +793,17 @@ export class DeviceConsole {
     this.chooseKind();
     try {
       switch (value.kind) {
-        case 'READ_ACTION': {
-          const request = await this.api.sendCommand({ deviceId, action: value.action });
+        case 'READ_ACTION':
+        case 'READ_PARAMETERS': {
+          const request = await this.api.sendCommand(
+            value.kind === 'READ_ACTION'
+              ? { deviceId, action: value.action }
+              : {
+                  deviceId,
+                  action: 'READ_PARAMETERS',
+                  parameters: value.readParameters.map((entry) => entry.parameter),
+                },
+          );
           this.followedRequest.set(request);
           this.followedRequestId.set(request.id);
           break;

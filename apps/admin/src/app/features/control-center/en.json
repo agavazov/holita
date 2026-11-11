@@ -116,7 +116,8 @@
     "READ_VERSION": "Read versions",
     "READ_ACCESSORIES": "Read accessories",
     "READ_EDATA_DIAGNOSTICS": "eData diagnostics",
-    "READ_EDATA_FAULTS": "eData fault log"
+    "READ_EDATA_FAULTS": "eData fault log",
+    "READ_PARAMETERS": "Read parameters"
   },
   "commandsHint": "Only allowlisted reads; they do not change the unit's configuration.",
   "commandsOffline": "The unit is offline, so a command cannot reach it now.",
@@ -720,6 +721,7 @@
     "hint": "Choose a command, pick the parameter from the catalog and check the exact command before sending. Changes run through the guarded workflow: baseline read, write, exact readback and optional restore.",
     "kind": "Command",
     "kinds": {
+      "READ_PARAMETERS": "Read tracker parameters (03/45)",
       "READ_EDATA": "Read eData configuration (301/303)",
       "READ_ACTION": "Quick read",
       "SNAPSHOT": "Read all tracker parameters",
@@ -815,6 +817,10 @@
     "globalsFormat": "Enter exactly 98 hexadecimal digits.",
     "globalsUnchanged": "The global settings are unchanged.",
     "unavailable": "The console data is unavailable.",
-    "uncertain": "The result is uncertain. Check the history before sending again."
+    "uncertain": "The result is uncertain. Check the history before sending again.",
+    "readParameters": "Parameters to read",
+    "readParametersHint": "Up to 20; routing, lock and secret parameters are excluded. The read waits in the queue until the unit connects.",
+    "readLimit": "Choose at most 20 parameters.",
+    "notReturned": "Not returned"
   }
 }

@@ -1,0 +1,48 @@
+.vehicle-parameters__search input {
+  inline-size: min(100%, 24rem);
+}
+
+.vehicle-parameters__group {
+  font-size: var(--p-app-text-sm);
+
+  table {
+    inline-size: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: var(--p-app-space-1) var(--p-app-space-2);
+    border-block-end: 1px solid var(--p-content-border-color);
+    font-weight: 400;
+    text-align: start;
+  }
+
+  thead th {
+    color: var(--p-text-muted-color);
+    font-size: var(--p-app-text-xs);
+  }
+
+  .app-link {
+    text-align: start;
+  }
+}
+
+.vehicle-parameters__value {
+  font-variant-numeric: var(--p-app-font-numeric);
+  text-align: end;
+  white-space: nowrap;
+}
+
+.vehicle-parameters__selected > * {
+  background: var(--p-highlight-background);
+}
+
+.vehicle-parameters__scroll {
+  overflow-x: auto;
+}
+
+.vehicle-parameters__scroll:focus-visible {
+  outline: var(--p-focus-ring-width) solid var(--p-focus-ring-color);
+  outline-offset: var(--p-focus-ring-offset);
+}

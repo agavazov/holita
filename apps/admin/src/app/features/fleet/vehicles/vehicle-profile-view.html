@@ -415,8 +415,11 @@
                     [lamps]="vehicle.currentWarnings"
                     [reads]="vehicle.faultReads"
                     [freezeFrame]="vehicle.freezeFrame"
+                    [canRead]="canOperate() && !!vehicle.liveDevices?.length"
+                    [readBusy]="faultReadBusy()"
                     [language]="language()"
                     [now]="now()"
+                    (readFaults)="requestFaultRead(vehicle)"
                   />
                 </div>
               </section>
@@ -641,6 +644,16 @@
                 [hasFaultReports]="hasFaultReports()"
               />
             </div>
+          </p-tabpanel>
+
+          <p-tabpanel value="parameters">
+            @if (tab() === 'parameters') {
+              <discocan-vehicle-parameters
+                [branchId]="branchId()"
+                [language]="language()"
+                [vehicleId]="vehicle.id"
+              />
+            }
           </p-tabpanel>
 
           <p-tabpanel value="trips">

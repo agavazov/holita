@@ -10,7 +10,11 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { ConfirmationService } from 'primeng/api';
+import { ButtonDirective } from 'primeng/button';
+import { ConfirmDialog } from 'primeng/confirmdialog';
 import { DatePicker } from 'primeng/datepicker';
+import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { TableModule } from 'primeng/table';
@@ -21,15 +25,17 @@ import type {
   AdminGeoZonesQuery,
   FleetGeoZoneEventKind,
 } from '../../../../generated/graphql/operations';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import type { Language } from '../../../i18n/messages';
+import { confirmAction, confirmDialogPt } from '../../../ui/confirm';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { interpolate } from '../../../ui/i18n/messages';
 import { trackById } from '../../../ui/list/list-actions';
 import { PageHeader } from '../../../ui/page-header/page-header';
 import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-panel';
 import { tableView } from '../../../ui/table-panel/table-view';
-import { GeoZoneMap } from './geo-zone-map';
+import { GeoZoneMap, type GeoPoint } from './geo-zone-map';
 import { GeoZonesApi } from './geo-zones-api';
 import { geoZonesText } from './geo-zones-text';
 
@@ -42,12 +48,21 @@ interface LogFilter {
 
 const emptyFilter: LogFilter = { vehicleId: null, zoneId: null, kind: null, range: null };
 
+interface ZoneDraft {
+  readonly id: string | null;
+  readonly name: string;
+  readonly points: readonly GeoPoint[];
+}
+
 /** Zones on a map with their list, and the entry/exit log with its filters. */
 @Component({
   selector: 'discocan-geo-zones-page',
   imports: [
     FormsModule,
+    ButtonDirective,
+    ConfirmDialog,
     DatePicker,
+    InputText,
     Message,
     Select,
     TableModule,
@@ -56,7 +71,7 @@ const emptyFilter: LogFilter = { vehicleId: null, zoneId: null, kind: null, rang
     TablePanel,
     GeoZoneMap,
   ],
-  providers: [GeoZonesApi],
+  providers: [GeoZonesApi, ConfirmationService],
   templateUrl: './geo-zones-page.html',
   styleUrl: './geo-zones-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -68,6 +83,10 @@ export class GeoZonesPage implements OnInit {
 
   private readonly api = inject(GeoZonesApi);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly confirmation = inject(ConfirmationService);
+  private readonly session = inject(DemoSession);
+  protected readonly canEdit = computed(() => this.session.hasRole('OPERATOR'));
+  protected readonly confirmPt = computed(() => confirmDialogPt(this.language()));
   protected readonly format = injectFleetFormat();
   protected readonly text = computed(() => geoZonesText(this.language()));
   protected readonly trackById = trackById;
@@ -76,6 +95,16 @@ export class GeoZonesPage implements OnInit {
   protected readonly vehicles = signal<AdminGeoZonesQuery['fleetVehicles']['items']>([]);
   protected readonly zonesError = signal<unknown>(null);
   protected readonly focusId = signal<string | null>(null);
+  protected readonly draft = signal<ZoneDraft | null>(null);
+  protected readonly saving = signal(false);
+  protected readonly editError = signal<string | null>(null);
+  protected readonly draftHeading = computed(() => {
+    const draft = this.draft();
+    const zone = draft?.id ? this.zones().find((item) => item.id === draft.id) : undefined;
+    return zone
+      ? interpolate(this.text().editor.editZone, { name: zone.name })
+      : this.text().editor.newZone;
+  });
 
   protected readonly filter = signal<LogFilter>(emptyFilter);
   protected readonly pageState = signal({ page: 1, pageSize: 20 });
@@ -126,18 +155,7 @@ export class GeoZonesPage implements OnInit {
 
   ngOnInit(): void {
     this.api.initialize(this.branchId(), this.language());
-    this.api
-      .zones()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (data) => {
-          this.zones.set(data.fleetGeoZones);
-          this.vehicles.set(data.fleetVehicles.items);
-        },
-        error: (error: unknown) => {
-          this.zonesError.set(error);
-        },
-      });
+    this.loadZones();
     this.reload
       .pipe(
         switchMap(() => {
@@ -158,6 +176,107 @@ export class GeoZonesPage implements OnInit {
         this.loading.set(false);
       });
     this.reload.next();
+  }
+
+  protected startCreate(): void {
+    this.editError.set(null);
+    this.focusId.set(null);
+    this.draft.set({ id: null, name: '', points: [] });
+  }
+
+  protected startEdit(zone: AdminGeoZonesQuery['fleetGeoZones'][number]): void {
+    this.editError.set(null);
+    this.focusId.set(zone.id);
+    // The stored ring is closed; the editor works on the open vertex list.
+    this.draft.set({ id: zone.id, name: zone.name, points: zone.points.slice(0, -1) });
+  }
+
+  protected changeDraft(patch: Partial<ZoneDraft>): void {
+    this.draft.update((draft) => (draft ? { ...draft, ...patch } : draft));
+  }
+
+  protected cancelDraft(): void {
+    this.draft.set(null);
+    this.editError.set(null);
+  }
+
+  protected saveDraft(): void {
+    const draft = this.draft();
+    if (!draft || this.saving()) {
+      return;
+    }
+    if (draft.points.length < 3) {
+      this.editError.set(this.text().editor.tooFew);
+      return;
+    }
+    this.saving.set(true);
+    this.api
+      .save(draft.id, {
+        name: draft.name,
+        points: draft.points.map(({ latitude, longitude }) => ({ latitude, longitude })),
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.draft.set(null);
+          this.editError.set(null);
+          this.loadZones();
+        },
+        error: (error: unknown) => {
+          this.saving.set(false);
+          this.editError.set(requestError(error, this.text().editor.saveError));
+        },
+      });
+  }
+
+  protected async deleteDraft(): Promise<void> {
+    const id = this.draft()?.id;
+    if (!id || this.saving()) {
+      return;
+    }
+    const editor = this.text().editor;
+    const accepted = await confirmAction(this.confirmation, this.language(), {
+      header: editor.deleteHeader,
+      message: editor.deleteMessage,
+      acceptLabel: editor.delete,
+      danger: true,
+    });
+    if (!accepted || this.destroyRef.destroyed) {
+      return;
+    }
+    this.saving.set(true);
+    this.api
+      .delete(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.draft.set(null);
+          this.focusId.set(null);
+          this.loadZones();
+        },
+        error: (error: unknown) => {
+          this.saving.set(false);
+          this.editError.set(requestError(error, editor.deleteError));
+        },
+      });
+  }
+
+  private loadZones(): void {
+    this.api
+      .zones()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          this.zonesError.set(null);
+          this.zones.set(data.fleetGeoZones);
+          this.vehicles.set(data.fleetVehicles.items);
+        },
+        error: (error: unknown) => {
+          this.zonesError.set(error);
+        },
+      });
   }
 
   protected zonePoints(count: number): string {

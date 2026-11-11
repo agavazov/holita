@@ -137,3 +137,116 @@ export function zoneTransitions(
   }
   return transitions;
 }
+
+export const MAX_ZONE_VERTICES = 2000;
+
+/** Field error code and message when the vertices do not form a simple polygon, else null. */
+export function ringProblem(
+  points: readonly { latitude: number; longitude: number }[],
+): { code: 'TOO_MANY_ITEMS' | 'OUT_OF_RANGE' | 'INVALID_VALUE'; message: string } | null {
+  const open = [...points];
+  const first = open[0];
+  const last = open.at(-1);
+  if (
+    open.length > 1 &&
+    first &&
+    last &&
+    first.latitude === last.latitude &&
+    first.longitude === last.longitude
+  ) {
+    open.pop();
+  }
+  if (open.length < 3 || open.length > MAX_ZONE_VERTICES) {
+    return {
+      code: 'TOO_MANY_ITEMS',
+      message: `Use 3 to ${String(MAX_ZONE_VERTICES)} vertices.`,
+    };
+  }
+  if (
+    open.some(
+      (point) =>
+        !Number.isFinite(point.latitude) ||
+        !Number.isFinite(point.longitude) ||
+        Math.abs(point.latitude) > 90 ||
+        Math.abs(point.longitude) > 180,
+    )
+  ) {
+    return {
+      code: 'OUT_OF_RANGE',
+      message: 'Use latitudes from -90 to 90 and longitudes from -180 to 180.',
+    };
+  }
+  const ring: Ring = open.map((point) => [point.longitude, point.latitude]);
+  const n = ring.length;
+  const vertex = (index: number) => ring[index % n] ?? [0, 0];
+  if (
+    new Set(ring.map(([longitude, latitude]) => `${String(longitude)},${String(latitude)}`))
+      .size !== n
+  ) {
+    return { code: 'INVALID_VALUE', message: 'Do not repeat a vertex.' };
+  }
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 2; j < n; j++) {
+      if (i === 0 && j === n - 1) {
+        continue;
+      }
+      if (segmentsCross(vertex(i), vertex(i + 1), vertex(j), vertex(j + 1))) {
+        return { code: 'INVALID_VALUE', message: 'The zone outline must not cross itself.' };
+      }
+    }
+  }
+  return null;
+}
+
+/** Closed ring in [longitude, latitude] order from validated vertices. */
+export function closedRing(points: readonly { latitude: number; longitude: number }[]): Ring {
+  const ring: [number, number][] = points.map((point) => [point.longitude, point.latitude]);
+  const first = ring[0];
+  const last = ring.at(-1);
+  if (first && last && (first[0] !== last[0] || first[1] !== last[1])) {
+    ring.push([first[0], first[1]]);
+  }
+  return ring;
+}
+
+function orientation(
+  a: readonly [number, number],
+  b: readonly [number, number],
+  c: readonly [number, number],
+): number {
+  return Math.sign((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]));
+}
+
+function onSegment(
+  a: readonly [number, number],
+  b: readonly [number, number],
+  p: readonly [number, number],
+): boolean {
+  return (
+    Math.min(a[0], b[0]) <= p[0] &&
+    p[0] <= Math.max(a[0], b[0]) &&
+    Math.min(a[1], b[1]) <= p[1] &&
+    p[1] <= Math.max(a[1], b[1])
+  );
+}
+
+function segmentsCross(
+  a: readonly [number, number],
+  b: readonly [number, number],
+  c: readonly [number, number],
+  d: readonly [number, number],
+): boolean {
+  const o1 = orientation(a, b, c);
+  const o2 = orientation(a, b, d);
+  const o3 = orientation(c, d, a);
+  const o4 = orientation(c, d, b);
+  if (o1 !== o2 && o3 !== o4) {
+    return true;
+  }
+  return (
+    (o1 === 0 && onSegment(a, b, c)) ||
+    (o2 === 0 && onSegment(a, b, d)) ||
+    (o3 === 0 && onSegment(c, d, a)) ||
+    (o4 === 0 && onSegment(c, d, b))
+  );
+}

@@ -59,7 +59,11 @@ export class LiveTruckDetails {
   readonly limitKph = input.required<number>();
   readonly now = input.required<number>();
   readonly window = model<TrailWindow>('day');
+  /** Operators can queue a fault-logger read of the truck's Device. */
+  readonly canReadFaults = input(false);
+  readonly readingFaults = input(false);
   readonly closed = output();
+  readonly readFaults = output<string>();
 
   protected readonly format = injectFleetFormat();
   protected readonly text = computed(() => liveDashboardText(this.language()));
@@ -114,6 +118,13 @@ export class LiveTruckDetails {
 
   protected relative(iso: string | null | undefined): string {
     return formatRelative(iso, this.now(), this.language());
+  }
+
+  protected requestFaultRead(): void {
+    const device = this.device();
+    if (device) {
+      this.readFaults.emit(device.id);
+    }
   }
 
   protected number(value: number | null | undefined, unit = '', fraction = 0): string {

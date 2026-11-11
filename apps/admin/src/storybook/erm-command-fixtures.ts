@@ -15,6 +15,8 @@ export function commandFixture(overrides: Partial<CommandRequest> = {}): Command
     retryOfId: null,
     intent: 'Check the current device status',
     action: 'READ_STATUS',
+    parameters: [],
+    parameterValues: [],
     actionCode: 'READ_STATUS',
     displayParameters: {
       expiresInSeconds: 7200,

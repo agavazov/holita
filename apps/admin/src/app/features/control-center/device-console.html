@@ -30,6 +30,33 @@
             />
           </discocan-form-field>
         }
+        @case ('READ_PARAMETERS') {
+          <discocan-form-field
+            [label]="text().readParameters"
+            controlId="erm-console-read-parameters"
+            [hint]="text().readParametersHint"
+          >
+            <p-autocomplete
+              inputId="erm-console-read-parameters"
+              formControlName="readParameters"
+              [ariaLabel]="text().readParameters"
+              [multiple]="true"
+              [suggestions]="parameterSuggestions()"
+              [optionLabel]="parameterLabel"
+              [dropdown]="true"
+              [forceSelection]="true"
+              [delay]="250"
+              [showEmptyMessage]="true"
+              [emptyMessage]="text().noMatches"
+              [placeholder]="text().parameterPlaceholder"
+              (completeMethod)="searchParameters($event)"
+            >
+              <ng-template #footer>
+                <small class="app-muted">{{ parameterMatches() }}</small>
+              </ng-template>
+            </p-autocomplete>
+          </discocan-form-field>
+        }
         @case ('PARAMETER') {
           <discocan-form-field [label]="text().feature" controlId="erm-console-feature">
             <p-select
@@ -253,6 +280,12 @@
             [value]="requestState(request.status)"
           />
         </dd>
+        @for (entry of request.parameterValues; track entry.parameter) {
+          <dt>{{ parameterCode(entry.parameter) }} · {{ entry.title ?? '—' }}</dt>
+          <dd>
+            <pre>{{ entry.outcome === 'READ' ? entry.value : text().notReturned }}</pre>
+          </dd>
+        }
         <dt>{{ common().resultCode }}</dt>
         <dd>
           {{ request.resultCode ?? request.transportCommand?.acknowledgement?.resultCode ?? '—' }}

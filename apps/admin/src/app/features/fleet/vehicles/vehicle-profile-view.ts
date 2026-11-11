@@ -72,6 +72,7 @@ import { type ServiceTaskRow, urgencyTones, serviceStatusTones } from '../mainte
 import { tripsText } from '../trips/i18n/messages';
 import { type TripRow, worstTone } from '../trips/trips-view';
 import { VehicleCommandHistory } from '../commands/vehicle-command-history';
+import { VehicleParameters } from './vehicle-parameters';
 import { vehiclesText } from './i18n/messages';
 import type { VehicleFuelType } from './vehicle-drawer';
 import { vehicleLastReport, vehicleLiveDevice, vehicleLiveStatus } from './vehicle-live';
@@ -111,6 +112,7 @@ export type VehicleProfileState = 'loading' | 'ready' | 'not-found' | 'error';
 export const vehicleProfileTabs = [
   'overview',
   'problems',
+  'parameters',
   'trips',
   'maintenance',
   'commands',
@@ -166,6 +168,7 @@ function listView(rows: readonly unknown[]): TableView {
     PageHeader,
     TablePanel,
     VehicleCommandHistory,
+    VehicleParameters,
   ],
   templateUrl: './vehicle-profile-view.html',
   styleUrl: './vehicle-profile-view.scss',
@@ -247,6 +250,9 @@ export class VehicleProfileView {
   readonly openTrip = output<string>();
   readonly openAlert = output<string>();
   readonly openService = output<string>();
+  /** The page is queuing a fault read; readFaults carries the first Device's id. */
+  readonly faultReadBusy = input(false);
+  readonly readFaults = output<string>();
 
   protected readonly units = injectFleetFormat();
   protected readonly now = injectFleetNow();
@@ -547,6 +553,13 @@ export class VehicleProfileView {
 
   protected statusLabel(status: keyof typeof statusTones): string {
     return this.vehicles().statuses[status];
+  }
+
+  protected requestFaultRead(vehicle: VehicleProfile): void {
+    const device = vehicle.liveDevices?.[0];
+    if (device) {
+      this.readFaults.emit(device.id);
+    }
   }
 
   protected fuelTypeLabel(vehicle: VehicleProfile): string {

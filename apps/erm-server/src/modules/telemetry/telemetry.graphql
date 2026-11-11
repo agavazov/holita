@@ -46,6 +46,10 @@ type ErmCommandRequest {
   waitingSince: DateTime
   intent: String!
   action: ErmDeviceAction!
+  "Parameters of a READ_PARAMETERS request; empty for the fixed reads."
+  parameters: [Int!]!
+  "Values from the unit's 03/45 answer; empty until a READ_PARAMETERS request is answered."
+  parameterValues: [ErmParameterValue!]!
   "Stable code for purpose translation; intent remains the operator's original text."
   actionCode: String!
   displayParameters: ErmCommandDisplayParameters!
@@ -77,6 +81,16 @@ type ErmCommandRequest {
   resultCode: String
   responseText: String
   failureReason: String
+  "READ_EDATA_FAULTS: the unit's first eData 154 report from sending until 120 s after the answer."
+  faultReadVerdict: ErmFaultReadVerdict
+}
+"eData verdict of a fault-logger read (GET DTC); it reflects the module's buffer only while CAN data arrives."
+type ErmFaultReadVerdict {
+  "154,1: the buffer holds codes, repeated by a 419 as added; 154,0: the buffer is empty."
+  activeCodes: Boolean!
+  "Distinct codes that 419 reports added within 30 s after a 154,1; null until one arrives."
+  codeCount: Int
+  receivedAt: DateTime!
 }
 enum ErmCommandWaitingReason {
   GATEWAY_UNAVAILABLE
@@ -314,6 +328,8 @@ enum ErmDeviceAction {
   READ_EDATA_DIAGNOSTICS
   "eData fault logger."
   READ_EDATA_FAULTS
+  "Selected tracker parameters: 03 for one, one 45 for up to 20; no routing or protected values."
+  READ_PARAMETERS
 }
 enum ErmEventSortField {
   TIME
@@ -352,6 +368,8 @@ input SendErmDeviceCommandInput {
   "A Fleet Device of the active Branch."
   deviceId: ID!
   action: ErmDeviceAction!
+  "Parameter numbers, required by READ_PARAMETERS and refused by the other actions."
+  parameters: [Int!]
   expiresInSeconds: Int = 7200
   intent: String
 }

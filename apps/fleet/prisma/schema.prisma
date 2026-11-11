@@ -706,8 +706,9 @@ enum FleetGeoZoneEventKind {
 }
 
 // A polygon zone; polygon is a GeoJSON Polygon in [longitude, latitude] order and the bounding
-// box prefilters point-in-polygon checks. Hand-written CHECKs: polygon is a GeoJSON Polygon,
-// bounding box ordered and within WGS84 ranges.
+// box prefilters point-in-polygon checks. A deleted zone keeps its row (deletedAt) and events.
+// Hand-written CHECKs: polygon is a GeoJSON Polygon, bounding box ordered and within WGS84 ranges.
+// Hand-written partial unique index: geoZone_activeName_key (name among zones not deleted).
 model GeoZone {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
@@ -720,9 +721,9 @@ model GeoZone {
   maxLongitude Float
   events GeoZoneEvent[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
+  deletedAt DateTime? @db.Timestamptz(3)
 
   @@unique([tenantId, branchId, id])
-  @@unique([tenantId, branchId, name])
   @@map("geoZone")
 }
 

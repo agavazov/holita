@@ -10,9 +10,12 @@ import {
   AdminVehicleTrackDocument,
   AdminVehicleMapDocument,
   AdminVehicleEdataMeasurementsDocument,
+  AdminVehicleEdataLatestDocument,
+  AdminVehicleEdataHistoryDocument,
   AdminVehicleProfileServiceDocument,
   AdminVehicleOdometerDocument,
   AdminRecordOdometerDocument,
+  AdminReadFaultsNowDocument,
   type AdminRecordOdometerMutationVariables,
 } from '../../../../generated/graphql/operations';
 import { DemoSession } from '../../../core/auth/demo-session';
@@ -125,6 +128,24 @@ export class VehicleProfileApi implements OnDestroy {
     });
   }
 
+  watchEdataLatest(vehicleId: string) {
+    return this.client().watchQuery({
+      query: AdminVehicleEdataLatestDocument,
+      variables: { vehicleId },
+      fetchPolicy: 'network-only',
+      pollInterval: 60_000,
+      skipPollAttempt: () => document.hidden,
+    });
+  }
+
+  edataHistory(vehicleId: string, parameterId: number, from: string, to: string) {
+    return this.client().query({
+      query: AdminVehicleEdataHistoryDocument,
+      variables: { vehicleId, from, to, parameterIds: [parameterId] },
+      fetchPolicy: 'network-only',
+    });
+  }
+
   watchService(vehicleId: string, page: number, pageSize: number, sort: ProfileSort) {
     return this.client().watchQuery({
       query: AdminVehicleProfileServiceDocument,
@@ -154,6 +175,29 @@ export class VehicleProfileApi implements OnDestroy {
       this.pendingWrites--;
       this.stopWhenIdle();
     }
+  }
+
+  /** Queues the allowlisted fault-logger read (GET DTC) for the Device. */
+  async readFaults(deviceId: string) {
+    const apollo = this.client();
+    this.pendingWrites++;
+    try {
+      const result = await firstValueFrom(
+        apollo.mutate({ mutation: AdminReadFaultsNowDocument, variables: { deviceId } }),
+      );
+      if (!result.data?.sendErmDeviceCommand) {
+        throw new Error('Missing sendErmDeviceCommand result.');
+      }
+      return result.data.sendErmDeviceCommand;
+    } finally {
+      this.pendingWrites--;
+      this.stopWhenIdle();
+    }
+  }
+
+  /** Reloads the open profile, for example while a fault read runs. */
+  async refreshVehicle(): Promise<void> {
+    await this.client().client.refetchQueries({ include: [AdminVehicleProfileDocument] });
   }
 
   ngOnDestroy(): void {

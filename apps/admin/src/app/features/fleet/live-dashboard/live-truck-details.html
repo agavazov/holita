@@ -51,8 +51,11 @@
   [lamps]="current.lamps"
   [reads]="unit?.ermCommandRequests ?? []"
   [freezeFrame]="detail()?.fleetVehicleFreezeFrame ?? null"
+  [canRead]="canReadFaults() && !!unit"
+  [readBusy]="readingFaults()"
   [language]="language()"
   [now]="now()"
+  (readFaults)="requestFaultRead()"
 />
 
 <p-accordion class="truck-details__sections" [multiple]="true" [value]="sections">

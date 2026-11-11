@@ -261,7 +261,14 @@ describe('ERM telemetry import with PostgreSQL', () => {
       data: [
         { key: 'engine-1', parameterId: 1, name: 'Engine Speed (RPM)', category: '1' },
         { key: 'engine-2', parameterId: 1, name: 'Engine Speed (RPM)', category: '2' },
-        { key: 'coolant', parameterId: 539, name: 'Engine Coolant Temperature (c)', category: '1' },
+        {
+          key: 'coolant',
+          parameterId: 539,
+          name: 'Engine Coolant Temperature (c)',
+          category: '1',
+          multiply: '1.0',
+          offset: '-40.0',
+        },
       ].map((parameter) => ({
         ...parameter,
         catalogId: catalog.id,
@@ -458,8 +465,56 @@ describe('ERM telemetry import with PostgreSQL', () => {
         },
       },
     });
+    async function latest(selectedScope = scopeA) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${issueDemoToken(selectedScope.tenantId)}`,
+          'x-branch-id': selectedScope.branchId,
+        },
+        body: JSON.stringify({
+          query:
+            'query($id:ID!){fleetVehicleEdataLatest(vehicleId:$id){parameterId recordedAt valueHex name value}}',
+          variables: { id: vehicleA.id },
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const body: unknown = await response.json();
+      return body;
+    }
+    expect(await latest()).toEqual({
+      data: {
+        fleetVehicleEdataLatest: [
+          {
+            parameterId: 1,
+            recordedAt: at(240).toISOString(),
+            valueHex: '0000',
+            name: 'Engine Speed (RPM)',
+            value: null,
+          },
+          {
+            parameterId: 539,
+            recordedAt: at(180).toISOString(),
+            valueHex: '00',
+            name: 'Engine Coolant Temperature (c)',
+            value: -40,
+          },
+          {
+            parameterId: 65000,
+            recordedAt: at(180).toISOString(),
+            valueHex: 'ffffffff',
+            name: null,
+            value: null,
+          },
+        ],
+      },
+    });
     for (const selectedScope of [scopeB, { ...scopeA, branchId: scopeB.branchId }]) {
       expect(await measurements(selectedScope)).toMatchObject({
+        errors: [{ extensions: { code: 'NOT_FOUND' } }],
+      });
+      expect(await latest(selectedScope)).toMatchObject({
         errors: [{ extensions: { code: 'NOT_FOUND' } }],
       });
     }

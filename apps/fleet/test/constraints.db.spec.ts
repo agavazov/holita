@@ -204,6 +204,81 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         data: { fleetGeoZones: [], fleetGeoZoneEvents: { total: 0, items: [] } },
       });
     }
+    // Zone writes: other scopes cannot update or delete; the owner's are validated, a deleted zone
+    // keeps its events and frees its name.
+    const zoneId = (await client.geoZone.findFirstOrThrow({ where: owner })).id;
+    const points = (ring: readonly (readonly [number, number])[]) =>
+      ring.map(([longitude, latitude]) => ({ latitude, longitude }));
+    const updateZone =
+      'mutation($id:ID!,$input:FleetGeoZoneInput!){updateFleetGeoZone(id:$id,input:$input){name}}';
+    const deleteZone = 'mutation($id:ID!){deleteFleetGeoZone(id:$id){name}}';
+    const createZone =
+      'mutation($input:FleetGeoZoneInput!){createFleetGeoZone(input:$input){name points{longitude}}}';
+    const notFound = { errors: [{ extensions: { code: 'NOT_FOUND' } }] };
+    for (const scope of [
+      { tenantId, branchId },
+      { tenantId: randomUUID(), branchId: owner.branchId },
+    ]) {
+      const input = { name: 'Spoofed', points: points(square) };
+      expect(await query(updateZone, { id: zoneId, input }, scope)).toMatchObject(notFound);
+      expect(await query(deleteZone, { id: zoneId }, scope)).toMatchObject(notFound);
+    }
+    const zoneWrites: [string, string, Record<string, unknown>, unknown][] = [
+      [
+        'duplicate active name',
+        createZone,
+        { input: { name: ' Owner zone ', points: points(square) } },
+        { errors: [{ extensions: { fieldErrors: [{ path: 'name', code: 'ALREADY_EXISTS' }] } }] },
+      ],
+      [
+        'crossing outline',
+        createZone,
+        {
+          input: {
+            name: 'Bow tie',
+            points: points([
+              [23, 42],
+              [24, 43],
+              [24, 42],
+              [23, 43],
+            ]),
+          },
+        },
+        { errors: [{ extensions: { fieldErrors: [{ path: 'points', code: 'INVALID_VALUE' }] } }] },
+      ],
+      [
+        'owner delete',
+        deleteZone,
+        { id: zoneId },
+        { data: { deleteFleetGeoZone: { name: 'Owner zone' } } },
+      ],
+      [
+        'name reused, open ring closed',
+        createZone,
+        { input: { name: 'Owner zone', points: points(square.slice(0, 4)) } },
+        {
+          data: {
+            createFleetGeoZone: {
+              name: 'Owner zone',
+              points: square.map(([longitude]) => ({ longitude })),
+            },
+          },
+        },
+      ],
+    ];
+    for (const [row, source, variables, expected] of zoneWrites) {
+      expect({ row, result: await query(source, variables, owner) }).toMatchObject({
+        row,
+        result: expected,
+      });
+    }
+    expect(await query(geoZones, {}, owner)).toMatchObject({
+      data: { fleetGeoZones: [{ name: 'Owner zone' }], fleetGeoZoneEvents: { total: 1 } },
+    });
+    expect(await client.geoZone.count({ where: owner })).toBe(2);
+    // Both creates that passed validation verified the Branch in Core.
+    expect(requireBranch).toHaveBeenCalledTimes(2);
+    requireBranch.mockClear();
 
     const task = await client.serviceTask.create({
       data: {

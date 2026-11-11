@@ -6,6 +6,7 @@ import type {
   QueryFleetVehicleSamplesArgs,
   QueryFleetVehicleEdataMeasurementsArgs,
   QueryFleetVehicleFreezeFrameArgs,
+  QueryFleetVehicleEdataLatestArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { TelemetryService } from './telemetry.service.js';
@@ -34,6 +35,14 @@ export class TelemetryResolver {
     @Context() context: RequestContext,
   ) {
     return this.telemetryService.edataMeasurements(context, args);
+  }
+
+  @Query('fleetVehicleEdataLatest')
+  fleetVehicleEdataLatest(
+    @Args() args: QueryFleetVehicleEdataLatestArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.telemetryService.edataLatest(context, args);
   }
 
   @Query('fleetVehicleFreezeFrame')

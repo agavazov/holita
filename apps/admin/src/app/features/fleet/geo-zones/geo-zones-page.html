@@ -2,6 +2,12 @@
   [title]="text().title"
   [count]="zones().length"
   [moduleInfo]="text().moduleInfo"
+  [actions]="
+    canEdit()
+      ? [{ id: 'create', label: text().editor.create, primary: true, disabled: !!draft() }]
+      : []
+  "
+  (action)="startCreate()"
 />
 
 @if (zonesErrorText(); as message) {
@@ -9,29 +15,101 @@
 }
 
 <div class="geo-zones__overview">
-  <discocan-geo-zone-map [language]="language()" [zones]="zones()" [focusId]="focusId()" />
-  <section class="app-card geo-zones__list" aria-labelledby="geo-zones-list">
-    <h2 id="geo-zones-list">{{ text().zones }}</h2>
-    <ul>
-      @for (zone of zones(); track zone.id) {
-        <li>
-          <button
-            type="button"
-            class="geo-zones__zone"
-            [class.geo-zones__zone--active]="focusId() === zone.id"
-            [attr.aria-label]="showZoneLabel(zone.name)"
-            [attr.aria-pressed]="focusId() === zone.id"
-            (click)="focusId.set(focusId() === zone.id ? null : zone.id)"
-          >
-            <span>{{ zone.name }}</span>
-            <span class="app-muted">{{ zonePoints(zone.points.length) }}</span>
-          </button>
-        </li>
-      } @empty {
-        <li class="app-muted">{{ text().noZones }}</li>
+  <discocan-geo-zone-map
+    [language]="language()"
+    [zones]="zones()"
+    [focusId]="focusId()"
+    [draft]="draft()?.points ?? null"
+    [editingId]="draft()?.id ?? null"
+    (draftChange)="changeDraft({ points: $event })"
+  />
+  @if (draft(); as zoneDraft) {
+    <section class="app-card geo-zones__list" aria-labelledby="geo-zones-editor">
+      <h2 id="geo-zones-editor">{{ draftHeading() }}</h2>
+      <label for="geo-zones-name">{{ text().editor.name }}</label>
+      <input
+        pInputText
+        id="geo-zones-name"
+        maxlength="120"
+        autocomplete="off"
+        [fluid]="true"
+        [ngModel]="zoneDraft.name"
+        (ngModelChange)="changeDraft({ name: $event })"
+      />
+      <p class="app-muted">{{ zonePoints(zoneDraft.points.length + 1) }}</p>
+      <p class="app-muted">{{ text().editor.hint }}</p>
+      @if (editError(); as message) {
+        <p-message severity="error" size="small">{{ message }}</p-message>
       }
-    </ul>
-  </section>
+      <div class="geo-zones__actions">
+        <button
+          pButton
+          type="button"
+          [disabled]="saving() || !zoneDraft.name.trim()"
+          (click)="saveDraft()"
+        >
+          {{ text().editor.save }}
+        </button>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [disabled]="saving()"
+          (click)="cancelDraft()"
+        >
+          {{ text().editor.cancel }}
+        </button>
+        @if (zoneDraft.id) {
+          <button
+            pButton
+            type="button"
+            severity="danger"
+            [outlined]="true"
+            [disabled]="saving()"
+            (click)="deleteDraft()"
+          >
+            {{ text().editor.delete }}
+          </button>
+        }
+      </div>
+    </section>
+  } @else {
+    <section class="app-card geo-zones__list" aria-labelledby="geo-zones-list">
+      <h2 id="geo-zones-list">{{ text().zones }}</h2>
+      <ul>
+        @for (zone of zones(); track zone.id) {
+          <li class="geo-zones__row">
+            <button
+              type="button"
+              class="geo-zones__zone"
+              [class.geo-zones__zone--active]="focusId() === zone.id"
+              [attr.aria-label]="showZoneLabel(zone.name)"
+              [attr.aria-pressed]="focusId() === zone.id"
+              (click)="focusId.set(focusId() === zone.id ? null : zone.id)"
+            >
+              <span>{{ zone.name }}</span>
+              <span class="app-muted">{{ zonePoints(zone.points.length) }}</span>
+            </button>
+            @if (canEdit()) {
+              <button
+                pButton
+                type="button"
+                size="small"
+                severity="secondary"
+                [text]="true"
+                [attr.aria-label]="text().editor.edit + ' ' + zone.name"
+                (click)="startEdit(zone)"
+              >
+                {{ text().editor.edit }}
+              </button>
+            }
+          </li>
+        } @empty {
+          <li class="app-muted">{{ text().noZones }}</li>
+        }
+      </ul>
+    </section>
+  }
 </div>
 
 <div class="geo-zones__filters" role="group" [attr.aria-label]="text().filters">
@@ -141,3 +219,5 @@
     </ng-template>
   </p-table>
 </discocan-table-panel>
+
+<p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />

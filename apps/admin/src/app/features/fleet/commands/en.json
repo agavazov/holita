@@ -72,7 +72,8 @@
     "READ_VERSION": "Read firmware version",
     "READ_ACCESSORIES": "Read connected accessories",
     "READ_EDATA_DIAGNOSTICS": "Read vehicle diagnostics",
-    "READ_EDATA_FAULTS": "Read recorded vehicle faults"
+    "READ_EDATA_FAULTS": "Read recorded vehicle faults",
+    "READ_PARAMETERS": "Read selected tracker parameters"
   },
   "fieldLabels": {
     "IGNITION": "ignition",

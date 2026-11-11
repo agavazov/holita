@@ -87,5 +87,22 @@
   <span
     >{{ text().scanner.read }}: <strong>{{ readText() }}</strong></span
   >
+  <span aria-live="polite">{{ pendingText() }}</span>
+  @if (canRead()) {
+    <button
+      pButton
+      type="button"
+      size="small"
+      severity="secondary"
+      class="fault-scanner__read-now"
+      [outlined]="true"
+      [loading]="readBusy() || pendingText() !== null"
+      [disabled]="readBusy() || pendingText() !== null"
+      (click)="readFaults.emit()"
+    >
+      {{ text().scanner.readNow }}
+    </button>
+  }
   <span class="fault-scanner__muted">{{ text().scanner.readHint }}</span>
+  <span class="fault-scanner__muted">{{ text().scanner.canHint }}</span>
 </footer>

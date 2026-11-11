@@ -2,11 +2,15 @@ import { inject, Injectable, NgZone, type OnDestroy } from '@angular/core';
 import { ApolloClient } from '@apollo/client/core';
 import { ApolloBase } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
-import { map } from 'rxjs';
+import { map, type Observable } from 'rxjs';
 import {
+  AdminCreateGeoZoneDocument,
+  AdminDeleteGeoZoneDocument,
   AdminGeoZoneEventsDocument,
   AdminGeoZonesDocument,
+  AdminUpdateGeoZoneDocument,
   type AdminGeoZoneEventsQueryVariables,
+  type FleetGeoZoneInput,
 } from '../../../../generated/graphql/operations';
 import { DemoSession } from '../../../core/auth/demo-session';
 import { AdminConfig } from '../../../core/config/admin-config';
@@ -55,6 +59,21 @@ export class GeoZonesApi implements OnDestroy {
           (result) => required(result.data, 'The geo-zone log is unavailable.').fleetGeoZoneEvents,
         ),
       );
+  }
+
+  save(id: string | null, input: FleetGeoZoneInput): Observable<void> {
+    const saved = id
+      ? this.client()
+          .mutate({ mutation: AdminUpdateGeoZoneDocument, variables: { id, input } })
+          .pipe(map(() => undefined))
+      : this.client()
+          .mutate({ mutation: AdminCreateGeoZoneDocument, variables: { input } })
+          .pipe(map(() => undefined));
+    return saved;
+  }
+
+  delete(id: string) {
+    return this.client().mutate({ mutation: AdminDeleteGeoZoneDocument, variables: { id } });
   }
 
   private client(): ApolloBase {

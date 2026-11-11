@@ -126,6 +126,8 @@ type FleetVehicleEdataMeasurement {
   valueHex: String!
   name: String
   unit: String
+  "Unsigned big-endian value times the catalog multiplier plus its offset; null without one unambiguous catalog scaling."
+  value: Float
 }
 
 type FleetVehicleEdataMeasurementSeries {
@@ -155,6 +157,17 @@ type FleetFreezeFrame {
   values: [FleetFreezeFrameValue!]!
 }
 
+"The newest periodic eData 405 value of one parameter; name and unit are the catalog labels."
+type FleetVehicleEdataLatestValue {
+  parameterId: Int!
+  name: String
+  unit: String
+  recordedAt: DateTime!
+  valueHex: String!
+  "Unsigned big-endian value times the catalog multiplier plus its offset; null without one unambiguous catalog scaling."
+  value: Float
+}
+
 type FleetDataClock {
   asOf: DateTime
   businessDate: Date!
@@ -177,6 +190,8 @@ extend type Query {
     "Only these reported parameter IDs; every ID when omitted."
     parameterIds: [Int!]
   ): FleetVehicleEdataMeasurementSeries!
+  "The newest periodic eData 405 value of every parameter the vehicle reported, ascending by parameterId."
+  fleetVehicleEdataLatest(vehicleId: ID!): [FleetVehicleEdataLatestValue!]!
   "The vehicle's newest imported freeze frame; null when it has none."
   fleetVehicleFreezeFrame(vehicleId: ID!): FleetFreezeFrame
 }

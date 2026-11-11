@@ -2,11 +2,12 @@ import { inject, Injectable, NgZone, type OnDestroy } from '@angular/core';
 import { ApolloClient } from '@apollo/client/core';
 import { ApolloBase } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
-import { map } from 'rxjs';
+import { firstValueFrom, map } from 'rxjs';
 import {
   AdminLiveFleetDocument,
   AdminLiveTrackDocument,
   AdminLiveVehicleDocument,
+  AdminReadFaultsNowDocument,
 } from '../../../../generated/graphql/operations';
 import { DemoSession } from '../../../core/auth/demo-session';
 import { AdminConfig } from '../../../core/config/admin-config';
@@ -63,6 +64,14 @@ export class LiveDashboardApi implements OnDestroy {
       .pipe(
         map((result) => required(result.data, 'The trail is unavailable.').fleetVehicleSamples),
       );
+  }
+
+  /** Queues the allowlisted fault-logger read (GET DTC) for the Device. */
+  async readFaults(deviceId: string) {
+    const result = await firstValueFrom(
+      this.client().mutate({ mutation: AdminReadFaultsNowDocument, variables: { deviceId } }),
+    );
+    return required(result.data?.sendErmDeviceCommand, 'The fault read was not queued.');
   }
 
   private client(): ApolloBase {

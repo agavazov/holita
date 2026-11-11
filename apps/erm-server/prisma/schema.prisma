@@ -68,6 +68,7 @@ enum ErmDeviceAction {
   READ_ACCESSORIES @map("readAccessories")
   READ_EDATA_DIAGNOSTICS @map("readEdataDiagnostics")
   READ_EDATA_FAULTS @map("readEdataFaults")
+  READ_PARAMETERS @map("readParameters")
   @@map("ermDeviceAction")
 }
 
@@ -261,6 +262,8 @@ model ErmCommandRequest {
   actorId String @db.VarChar(128)
   intent String @db.VarChar(200)
   action ErmDeviceAction
+  // Tracker parameters of a READ_PARAMETERS request; empty for the fixed reads.
+  parameters Int[] @default([])
   status ErmCommandRequestStatus @default(QUEUED)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   expiresAt DateTime @db.Timestamptz(3)

@@ -23,7 +23,7 @@ import { validateCommand } from '../devices/command.js';
 import { primaryUnitIds } from '../devices/config.js';
 import { CommandRequestsRepository } from './command-requests.repository.js';
 import { commandRequestView } from './command-request-view.js';
-import { deviceActions } from './device-actions.js';
+import { actionCommand, deviceActions } from './device-actions.js';
 import { FleetClient } from './fleet.client.js';
 import { LiveDevicesService } from './live-devices.service.js';
 import { auditId, operatorActor, operatorAudit, operatorScope } from './operator-audit.js';
@@ -74,7 +74,8 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
     requireOperator(context);
     const scope = operatorScope(context);
     const unitId = await this.fleet.deviceImei(input.deviceId, context);
-    validateCommand(deviceActions[input.action]);
+    const parameters = input.parameters ?? [];
+    actionCommand(input.action, parameters);
     const { seconds, intent } = commandRequestOptions(input);
     const createdAt = new Date();
     const request = await this.repository.create(
@@ -83,6 +84,8 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
       input.action,
       createdAt,
       new Date(createdAt.getTime() + seconds * 1000),
+      undefined,
+      parameters,
     );
     return commandRequestView(request, undefined, context);
   }
@@ -165,7 +168,7 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
       action: original.action,
       intent: input.intent ?? original.intent,
     });
-    validateCommand(deviceActions[original.action]);
+    actionCommand(original.action, original.parameters);
     const createdAt = new Date();
     const request = await this.repository.create(
       operatorAudit(context, original.deviceId, options.intent),
@@ -174,6 +177,7 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
       createdAt,
       new Date(createdAt.getTime() + options.seconds * 1000),
       original.id,
+      original.parameters,
     );
     return commandRequestView(request, undefined, context);
   }
@@ -199,7 +203,7 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
     const scope = operatorScope(context);
     const deviceIds = commandDeviceIds(input.deviceIds);
     const { seconds, intent } = commandRequestOptions(input);
-    validateCommand(deviceActions[input.action]);
+    actionCommand(input.action, []);
     const devices = await this.fleet.deviceImeis(deviceIds, context);
     const targets = deviceIds.map((deviceId) => {
       const unitId = devices.get(deviceId);
@@ -359,7 +363,7 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
         try {
           const result = await this.devices.sendCommand(
             request.unitId,
-            validateCommand(deviceActions[request.action]),
+            actionCommand(request.action, request.parameters),
           );
           const accepted =
             result.status === 'answered' &&

@@ -13,6 +13,7 @@ import { DOCUMENT } from '@angular/common';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Bullseye } from '@primeicons/angular/bullseye';
+import { MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import {
@@ -26,6 +27,8 @@ import {
   type Observable,
   Subject,
   switchMap,
+  take,
+  takeWhile,
   tap,
   timer,
 } from 'rxjs';
@@ -34,9 +37,11 @@ import type {
   AdminLiveFleetQuery,
   AdminLiveVehicleQuery,
 } from '../../../../generated/graphql/operations';
+import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import type { Language } from '../../../i18n/messages';
 import { WALL_CLOCK } from '../../../ui/clock';
+import { faultReadState, faultsText } from '../../../ui/fleet-live/fault-wording';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { formatRelative } from '../../../ui/format/format';
 import { interpolate } from '../../../ui/i18n/messages';
@@ -158,8 +163,11 @@ interface Trail {
           [limitKph]="limitKph()"
           [now]="now()"
           [window]="window()"
+          [canReadFaults]="canOperate()"
+          [readingFaults]="readingFaults()"
           (windowChange)="changeWindow($event)"
           (closed)="select(null)"
+          (readFaults)="readFaults($event)"
         />
       }
     </div>
@@ -178,6 +186,11 @@ export class LiveDashboardPage implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly wallClock = inject(WALL_CLOCK);
   private readonly document = inject(DOCUMENT);
+  private readonly session = inject(DemoSession);
+  private readonly notifications = inject(MessageService);
+  protected readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
+  protected readonly readingFaults = signal(false);
+  private readonly detailRefresh = new Subject<void>();
   /** Polling pauses in a hidden browser tab and resumes on its next tick. */
   private readonly visible = () => this.document.visibilityState === 'visible';
   private readonly format = injectFleetFormat();
@@ -301,8 +314,7 @@ export class LiveDashboardPage implements OnInit {
           this.detail.set(null);
           this.detailError.set(null);
           return id
-            ? timer(0, detailEveryMs).pipe(
-                filter(this.visible),
+            ? merge(timer(0, detailEveryMs).pipe(filter(this.visible)), this.detailRefresh).pipe(
                 exhaustMap(() =>
                   this.api.vehicle(id).pipe(
                     catchError((error: unknown) => {
@@ -334,6 +346,42 @@ export class LiveDashboardPage implements OnInit {
 
   protected reload(): void {
     this.refresh.next();
+  }
+
+  /** Queues a fault read, then reloads the truck every 5 s for up to 2 min while it runs. */
+  protected readFaults(deviceId: string): void {
+    if (!this.canOperate() || this.readingFaults()) {
+      return;
+    }
+    this.readingFaults.set(true);
+    this.api.readFaults(deviceId).then(
+      () => {
+        this.readingFaults.set(false);
+        this.detailRefresh.next();
+        timer(5_000, 5_000)
+          .pipe(
+            take(24),
+            takeWhile(() => {
+              const reads = this.detail()?.fleetVehicle.devices.flatMap(
+                (device) => device.ermCommandRequests,
+              );
+              return faultReadState(reads ?? [], this.wallClock()).pending !== null;
+            }),
+            takeUntilDestroyed(this.destroyRef),
+          )
+          .subscribe(() => {
+            this.detailRefresh.next();
+          });
+      },
+      (error: unknown) => {
+        this.readingFaults.set(false);
+        this.notifications.add({
+          severity: 'error',
+          summary: requestError(error, faultsText(this.language()).scanner.readFailed),
+          sticky: true,
+        });
+      },
+    );
   }
 
   protected select(id: string | null): void {

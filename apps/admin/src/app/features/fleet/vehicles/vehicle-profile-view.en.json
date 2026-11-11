@@ -2,6 +2,7 @@
   "tabs": {
     "overview": "Overview",
     "problems": "Problems",
+    "parameters": "Parameters",
     "trips": "Trips",
     "maintenance": "Maintenance",
     "commands": "Commands"

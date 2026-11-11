@@ -40,6 +40,18 @@
   }
 }
 
+.geo-zones__row {
+  display: flex;
+  align-items: center;
+  gap: var(--p-app-space-1);
+}
+
+.geo-zones__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-app-space-2);
+}
+
 .geo-zones__filters {
   display: flex;
   flex-wrap: wrap;

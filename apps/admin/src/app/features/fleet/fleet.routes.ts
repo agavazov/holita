@@ -10,7 +10,7 @@ const vehicleProfileRoute: UrlMatcher = (segments) => {
     vehicles?.path !== 'vehicles' ||
     !recordId ||
     !tab ||
-    !['overview', 'trips', 'problems', 'maintenance', 'commands'].includes(tab.path)
+    !['overview', 'trips', 'problems', 'parameters', 'maintenance', 'commands'].includes(tab.path)
   ) {
     return null;
   }

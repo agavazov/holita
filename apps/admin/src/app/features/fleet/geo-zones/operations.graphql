@@ -37,3 +37,21 @@ query AdminGeoZoneEvents($offset: Int!, $limit: Int!, $filter: FleetGeoZoneEvent
     }
   }
 }
+
+mutation AdminCreateGeoZone($input: FleetGeoZoneInput!) {
+  createFleetGeoZone(input: $input) {
+    id
+  }
+}
+
+mutation AdminUpdateGeoZone($id: ID!, $input: FleetGeoZoneInput!) {
+  updateFleetGeoZone(id: $id, input: $input) {
+    id
+  }
+}
+
+mutation AdminDeleteGeoZone($id: ID!) {
+  deleteFleetGeoZone(id: $id) {
+    id
+  }
+}

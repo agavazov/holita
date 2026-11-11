@@ -9,7 +9,9 @@ import type {
   QueryFleetVehicleSamplesArgs,
   QueryFleetVehicleEdataMeasurementsArgs,
   QueryFleetVehicleFreezeFrameArgs,
+  QueryFleetVehicleEdataLatestArgs,
   FleetFreezeFrame,
+  FleetVehicleEdataLatestValue,
   FleetVehicleEdataMeasurementSeries,
   RecordFleetOdometerReadingInput,
 } from '../../generated/graphql/types.js';
@@ -165,7 +167,7 @@ export class TelemetryService {
       vehicleId,
       from,
       to,
-      items: rows.slice(0, MAX_SERIES_SAMPLES).reverse(),
+      items: await this.scaled(rows.slice(0, MAX_SERIES_SAMPLES).reverse()),
       truncated: rows.length > MAX_SERIES_SAMPLES,
     };
   }
@@ -185,21 +187,35 @@ export class TelemetryService {
     if (!first) {
       return null;
     }
-    const scaling = await this.telemetry.catalogScaling(rows.map((row) => row.parameterId));
     return {
       deviceImei: first.deviceImei,
       recordedAt: first.recordedAt,
-      values: rows.map(({ parameterId, name, unit, valueHex }) => {
-        const scale = scaling.get(parameterId);
-        return {
-          parameterId,
-          name,
-          unit,
-          valueHex,
-          value: scale ? Number.parseInt(valueHex, 16) * scale.multiply + scale.offset : null,
-        };
-      }),
+      values: await this.scaled(rows),
     };
+  }
+
+  /** The newest periodic eData 405 value per parameter with catalog-scaled values. */
+  async edataLatest(
+    context: RequestContext,
+    args: QueryFleetVehicleEdataLatestArgs,
+  ): Promise<FleetVehicleEdataLatestValue[]> {
+    const scope = requireScope(context);
+    const vehicleId = uuid(args.vehicleId, 'vehicleId');
+    if (!(await this.telemetry.findVehicle(scope, vehicleId))) {
+      throw new NotFoundException('Vehicle not found');
+    }
+    return this.scaled(await this.telemetry.latestEdataValues(scope, vehicleId));
+  }
+
+  private async scaled<T extends { parameterId: number; valueHex: string }>(rows: T[]) {
+    const scaling = await this.telemetry.catalogScaling(rows.map((row) => row.parameterId));
+    return rows.map((row) => {
+      const scale = scaling.get(row.parameterId);
+      return {
+        ...row,
+        value: scale ? Number.parseInt(row.valueHex, 16) * scale.multiply + scale.offset : null,
+      };
+    });
   }
 
   /**

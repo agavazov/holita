@@ -437,7 +437,11 @@ READ_EDATA_FAULTS. It verifies the Device through Fleet with the caller's sessio
 Branch and returns a durable request. The Device's **Commands** tab can queue these reads while
 offline, choose expiry (default two hours, maximum 24 hours), and cancel a QUEUED request through
 `cancelErmDeviceCommand(input: {deviceId, requestId})`. Settings and snapshots still require a
-primary connection.
+primary connection. For READ_EDATA_FAULTS (GET DTC), `faultReadVerdict` is the unit's first eData
+event-33 report `154` from sending until 120 s after the answer: `154,0` (`activeCodes: false`)
+is an empty fault buffer; `154,1` is followed by a `419` that repeats every current code as added,
+and `codeCount` counts its distinct codes within 30 s. Earlier `154` replies acknowledged other
+eData commands.
 
 The command queue API also provides Branch-wide history through
 `ermCommandRequests(offset: 0, limit: 20, filter: ..., sort: ...)`, returning `items`, `total`,
@@ -518,7 +522,8 @@ shows the latest 20 runs.
 
 The Device's **Command console** (`/<lang>/<branch>/fleet/devices/<id>/console`, also a row
 action of the Branch command queue) composes the same workflows from catalogs instead of free
-input: allowlisted reads, `READ_EDATA`, a full snapshot, one `04` tracker parameter, one eData
+input: allowlisted reads, a queued `READ_PARAMETERS` read, `READ_EDATA`, a full snapshot, one `04`
+tracker parameter, one eData
 interval (an absent ID is added with the Monitor 9.56 generic definition; interval `0` keeps the
 definition but marks it not in use) and globals `302`. Before sending it shows every raw command
 of the workflow as `SRV<IMEI>,<command>,‹ref›,<fields>`; the device server adds the reference,
@@ -530,6 +535,9 @@ are reference reads for any signed-in role:
   guard. Regenerate `apps/erm-server/src/starlink/parameter-reference.ts` from the archived
   pages with `node --import tsx tools/erm-protocol/parameter-reference.mts`.
 - `ermDeviceActionCommands` returns the exact command of each allowlisted read.
+- `sendErmDeviceCommand(input: {deviceId, action: READ_PARAMETERS, parameters: [4, 22]})` queues
+  one `03` (one parameter) or `45` (2–20) read. Routing 0049–0054 and protected parameters are
+  refused. The request keeps `parameters` and exposes the answered `parameterValues`.
 - Fleet `fleetEdataProfiles` and `fleetEdataParameters(input: {profileId, search, ids, offset,
 limit})` read the newest imported [Simple eData catalog](erm-resources/simple-edata-catalog/README.md).
   The console preselects the profile the unit reported in its last eData read (`416`). Without an

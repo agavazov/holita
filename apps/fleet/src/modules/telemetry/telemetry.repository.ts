@@ -7,6 +7,7 @@ import {
   date,
   dateOrNull,
   fleetTable,
+  integer,
   integerOrNull,
   numberOrNull,
   databaseEnum,
@@ -237,6 +238,24 @@ export class TelemetryRepository {
             unit: true,
           },
         });
+  }
+
+  /** The newest periodic (405) value of each reported parameter, ascending by parameter ID. */
+  async latestEdataValues(scope: FleetScope, vehicleId: string) {
+    const rows: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
+      SELECT DISTINCT ON (m."parameterId") m."parameterId"::int AS "parameterId", m."name",
+        m."unit", m."recordedAt", m."valueHex"
+      FROM ${fleetTable(this.prisma.schema, 'vehicleEdataMeasurement')} m
+      WHERE m."tenantId" = ${scope.tenantId}::uuid AND m."branchId" = ${scope.branchId}::uuid
+        AND m."vehicleId" = ${vehicleId}::uuid AND NOT m."freezeFrame"
+      ORDER BY m."parameterId", m."recordedAt" DESC, m."sourceEventId" DESC, m."id" DESC`);
+    return rowsOf(rows, (row) => ({
+      parameterId: integer(row, 'parameterId'),
+      name: textOrNull(row, 'name'),
+      unit: textOrNull(row, 'unit'),
+      recordedAt: date(row, 'recordedAt'),
+      valueHex: text(row, 'valueHex'),
+    }));
   }
 
   /** Monitor catalog scaling per parameter; null when its catalog rows disagree or lack one. */

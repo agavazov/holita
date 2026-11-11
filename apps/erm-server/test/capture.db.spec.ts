@@ -43,6 +43,7 @@ import { DevicesService } from '../src/modules/devices/devices.service.js';
 import { InternalDevicesGuard } from '../src/modules/devices/internal-devices.guard.js';
 import { protectedParameters, validateCommand } from '../src/modules/devices/command.js';
 import { LiveDevicesService } from '../src/modules/telemetry/live-devices.service.js';
+import { ParameterCatalogService } from '../src/modules/telemetry/parameter-catalog.service.js';
 import { FleetClient } from '../src/modules/telemetry/fleet.client.js';
 import { ParameterSnapshotsRepository } from '../src/modules/telemetry/parameter-snapshots.repository.js';
 import { ParameterSnapshotsService } from '../src/modules/telemetry/parameter-snapshots.service.js';
@@ -50,6 +51,7 @@ import { ConfigurationChangesService } from '../src/modules/telemetry/configurat
 import { UnitWorkflowsService } from '../src/modules/telemetry/unit-workflows.service.js';
 import { CommandRequestsRepository } from '../src/modules/telemetry/command-requests.repository.js';
 import { CommandRequestsService } from '../src/modules/telemetry/command-requests.service.js';
+import { faultReadVerdicts } from '../src/modules/telemetry/fault-read-verdicts.js';
 import { parameterCatalog } from '../src/starlink/parameter-catalog.js';
 import {
   assembleEdataConfiguration,
@@ -2084,7 +2086,13 @@ it('persists captured connection lifecycle and raw frames through the production
     process.env.ERM_CONFIGURATION_WRITES_ENABLED = 'false';
     const resolver = new ErmDeviceResolver(api, snapshots, configurations, requests);
     const eventResolver = new ErmEventResolver();
-    const telemetryResolver = new TelemetryResolver(api, snapshots, configurations, requests);
+    const telemetryResolver = new TelemetryResolver(
+      api,
+      snapshots,
+      configurations,
+      requests,
+      new ParameterCatalogService(),
+    );
     const dateTime = new DateTimeScalar();
     const schema = buildSubgraphSchema([
       {
@@ -2386,10 +2394,11 @@ it('persists captured connection lifecycle and raw frames through the production
             command: command.command,
             reference: command.reference,
             checksum: 'ABSENT',
-            raw:
+            raw: new Uint8Array(
               command.command === '45'
                 ? secretResponse
                 : buildServerFrame(unitId, '46', command.reference, command.fields),
+            ),
           },
         }),
       ),
@@ -3567,6 +3576,27 @@ it('persists captured connection lifecycle and raw frames through the production
         fields: ['19', '0', '19', '302', '0', '1', '1', globalsWritten],
       }),
     ).toThrow();
+    // Single-record rule and histogram writes; a rule may not switch on the dashboard (bit 15).
+    for (const [data, allowed] of [
+      ['0902BC', true],
+      ['1C', true],
+      ['23', true],
+      ['0400011AAA1BBB00640707021400010E00', true],
+      ['0400011AAA1BBB80640707021400010E00', false],
+      ['0400011AAA1BBB00640807021400010E00', false],
+      ['110001', true],
+      ['0600010005FFFFFE0C000001F403000A020013002A', true],
+      ['120001', true],
+      ['0300011AAA1BBB00640707021400010E00', false],
+    ] as const) {
+      const check = () =>
+        validateCommand({ command: '30', fields: ['19', '0', '19', '301', '0', '1', '1', data] });
+      if (allowed) {
+        expect(check()).toMatchObject({ command: '30' });
+      } else {
+        expect(check).toThrow();
+      }
+    }
     for (const scenario of [
       {
         name: 'verified',
@@ -5172,6 +5202,74 @@ it('persists captured connection lifecycle and raw frames through the production
         select: { tenantId: true, branchId: true, deviceId: true, action: true, status: true },
       }),
     ).toEqual([{ ...faultReadTarget, action: 'READ_EDATA_FAULTS', status: 'QUEUED' }]);
+
+    // GET DTC verdicts (CB6711TE, 2026-11-11): the first 154 after sending decides, as a 154
+    // before it acknowledged another eData command; a 154,1 is followed by a 419 of the codes.
+    const verdictUnit = '862129080369998';
+    const verdictAt = (seconds: number) => new Date(Date.UTC(2026, 10, 11, 5, 36, 30 + seconds));
+    const verdictReports: [number, string[], Prisma.InputJsonValue?][] = [
+      [-2, ['19', '0', '154', '1']],
+      [7, ['19', '0', '154', '1']],
+      [
+        10,
+        ['19', '0', '419', '0', '1', '1', '1001', '21000004DF0B0100000E880F01'],
+        {
+          type: 419,
+          faults: [
+            { spn: 1247, fmi: 11, status: 1 },
+            { spn: 3720, fmi: 15, status: 1 },
+          ],
+        },
+      ],
+      [200, ['19', '0', '154', '0']],
+    ];
+    for (const [seconds, extra, edata] of verdictReports) {
+      await database.client.ermFrame.create({
+        data: {
+          connectionId: stored.id,
+          unitId: verdictUnit,
+          receivedAt: verdictAt(seconds),
+          direction: 'DEVICE',
+          command: '06',
+          checksum: 'ABSENT',
+          raw: Buffer.from(extra.join(',')),
+          events: {
+            create: {
+              unitId: verdictUnit,
+              eventId: '33',
+              eventTime: verdictAt(seconds - 1),
+              fields: edata === undefined ? { extra } : { extra, edata },
+            },
+          },
+        },
+      });
+    }
+    const verdictRead = (id: string, action: 'READ_EDATA_FAULTS' | 'READ_STATUS') => ({
+      id,
+      unitId: verdictUnit,
+      action,
+      commandId: id,
+    });
+    expect(
+      await faultReadVerdicts(
+        { client: database.client, schema: database.schema },
+        [
+          verdictRead('codes', 'READ_EDATA_FAULTS'),
+          verdictRead('empty', 'READ_EDATA_FAULTS'),
+          verdictRead('status', 'READ_STATUS'),
+        ],
+        [
+          { id: 'codes', sentAt: verdictAt(0), answeredAt: verdictAt(1) },
+          { id: 'empty', sentAt: verdictAt(199), answeredAt: verdictAt(199) },
+          { id: 'status', sentAt: verdictAt(0), answeredAt: verdictAt(1) },
+        ],
+      ),
+    ).toEqual(
+      new Map([
+        ['codes', { activeCodes: true, codeCount: 2, receivedAt: verdictAt(7) }],
+        ['empty', { activeCodes: false, codeCount: null, receivedAt: verdictAt(200) }],
+      ]),
+    );
   } finally {
     for (const [name, value] of previousKarmaEnvironment) {
       if (value === undefined) {

@@ -1,0 +1,101 @@
+<section class="app-card">
+  <div class="app-card__header">
+    <h2 class="app-card__title">{{ text().heading }}</h2>
+  </div>
+  <p class="app-muted">{{ text().description }}</p>
+  <label class="vehicle-parameters__search">
+    <span class="app-visually-hidden">{{ text().search }}</span>
+    <input
+      pInputText
+      type="search"
+      [placeholder]="text().search"
+      [value]="search()"
+      (input)="filter($event)"
+    />
+  </label>
+</section>
+
+@if (error(); as message) {
+  <discocan-empty-state kind="error" [title]="message" />
+} @else if (loading() && !rows().length) {
+  <p class="app-muted" role="status">{{ text().loading }}</p>
+} @else if (!groups().length) {
+  <discocan-empty-state
+    [kind]="rows().length ? 'no-results' : 'no-telemetry'"
+    [title]="rows().length ? text().noMatch : text().empty"
+  />
+}
+
+@for (group of groups(); track group.topic) {
+  <section class="app-card vehicle-parameters__group">
+    <h3 class="app-card__title">
+      {{ text().groups[group.topic] }}
+      <span class="app-muted">· {{ group.items.length }}</span>
+    </h3>
+    <div
+      class="vehicle-parameters__scroll"
+      tabindex="0"
+      role="region"
+      [attr.aria-label]="text().groups[group.topic]"
+    >
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{ text().parameter }}</th>
+            <th scope="col" class="vehicle-parameters__value">{{ text().value }}</th>
+            <th scope="col">{{ text().unit }}</th>
+            <th scope="col">{{ text().recordedAt }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of group.items; track row.id) {
+            <tr [class.vehicle-parameters__selected]="row.id === selectedId()">
+              <th scope="row">
+                <button
+                  type="button"
+                  class="app-link"
+                  [title]="row.raw"
+                  [attr.aria-expanded]="row.id === selectedId()"
+                  (click)="toggle(row.id)"
+                >
+                  {{ row.name }}
+                </button>
+              </th>
+              <td class="vehicle-parameters__value" [title]="row.raw">{{ row.value }}</td>
+              <td>{{ row.unit }}</td>
+              <td>
+                <time
+                  [attr.datetime]="row.recordedAt"
+                  [title]="format.dateTime(row.recordedAt, true)"
+                  >{{ relative(row.recordedAt) }}</time
+                >
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+  @if (selected(); as current) {
+    @if (current.topic === group.topic) {
+      @if (historyError(); as message) {
+        <discocan-empty-state kind="error" [title]="message" />
+      } @else {
+        <discocan-chart-panel
+          kind="line"
+          [title]="current.name"
+          [unit]="current.unit"
+          [period]="text().period"
+          [points]="history()?.points ?? []"
+          [series]="[{ id: 'value', label: current.name, values: history()?.values ?? [] }]"
+          [timeZone]="format.preferences().timeZone"
+          [dateFormat]="format.preferences().dateFormat"
+          [loading]="historyLoading()"
+        />
+        @if (history()?.truncated) {
+          <p class="app-muted">{{ text().truncated }}</p>
+        }
+      }
+    }
+  }
+}

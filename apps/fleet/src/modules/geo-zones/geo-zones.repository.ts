@@ -4,7 +4,10 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import type { FleetScope } from '../../validation.js';
 import {
   type GeoZoneShape,
+  polygonJson,
   type PositionSample,
+  type Ring,
+  ringBounds,
   stateKey,
   storedRing,
   type ZoneState,
@@ -19,6 +22,20 @@ export interface GeoZoneEventQuery {
   readonly occurredTo: Date | null;
   readonly offset: number;
   readonly limit: number;
+}
+
+export type GeoZoneRecord = GeoZoneShape & { readonly name: string };
+
+function zoneRecord(row: {
+  id: string;
+  name: string;
+  polygon: unknown;
+  minLatitude: number;
+  maxLatitude: number;
+  minLongitude: number;
+  maxLongitude: number;
+}): GeoZoneRecord {
+  return { ...row, ring: storedRing(row.polygon) };
 }
 
 export interface SampleCursor {
@@ -37,12 +54,40 @@ const EVENT_INCLUDE = {
 export class GeoZonesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async zones(scope: FleetScope): Promise<(GeoZoneShape & { name: string })[]> {
+  /** Zones that are not deleted. */
+  async zones(scope: FleetScope): Promise<GeoZoneRecord[]> {
     const rows = await this.prisma.client.geoZone.findMany({
-      where: { tenantId: scope.tenantId, branchId: scope.branchId },
+      where: { tenantId: scope.tenantId, branchId: scope.branchId, deletedAt: null },
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
     });
-    return rows.map((row) => ({ ...row, ring: storedRing(row.polygon) }));
+    return rows.map(zoneRecord);
+  }
+
+  async create(scope: FleetScope, name: string, ring: Ring): Promise<GeoZoneRecord> {
+    return zoneRecord(
+      await this.prisma.client.geoZone.create({
+        data: { ...scope, name, polygon: polygonJson(ring), ...ringBounds(ring) },
+      }),
+    );
+  }
+
+  async update(scope: FleetScope, id: string, name: string, ring: Ring): Promise<GeoZoneRecord> {
+    return zoneRecord(
+      await this.prisma.client.geoZone.update({
+        where: { tenantId_branchId_id: { ...scope, id }, deletedAt: null },
+        data: { name, polygon: polygonJson(ring), ...ringBounds(ring) },
+      }),
+    );
+  }
+
+  /** Marks the zone deleted; its events stay. */
+  async delete(scope: FleetScope, id: string, deletedAt: Date): Promise<GeoZoneRecord> {
+    return zoneRecord(
+      await this.prisma.client.geoZone.update({
+        where: { tenantId_branchId_id: { ...scope, id }, deletedAt: null },
+        data: { deletedAt },
+      }),
+    );
   }
 
   async events(scope: FleetScope, query: GeoZoneEventQuery) {
@@ -70,9 +115,10 @@ export class GeoZonesRepository {
     return { items, total };
   }
 
-  /** Branches with at least one zone, across all Tenants. */
+  /** Branches with at least one zone that is not deleted, across all Tenants. */
   async zoneScopes(): Promise<FleetScope[]> {
     return this.prisma.client.geoZone.findMany({
+      where: { deletedAt: null },
       distinct: ['tenantId', 'branchId'],
       select: { tenantId: true, branchId: true },
       orderBy: [{ tenantId: 'asc' }, { branchId: 'asc' }],

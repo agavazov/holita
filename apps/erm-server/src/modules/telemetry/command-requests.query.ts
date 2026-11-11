@@ -47,7 +47,7 @@ export function commandRequestOptions(input: Omit<SendErmDeviceCommandInput, 'de
   const seconds = input.expiresInSeconds ?? 7200;
   const intent = input.intent?.trim() || input.action;
   if (
-    !Object.hasOwn(deviceActions, input.action) ||
+    (input.action !== 'READ_PARAMETERS' && !Object.hasOwn(deviceActions, input.action)) ||
     !Number.isInteger(seconds) ||
     seconds < 1 ||
     seconds > 86400 ||

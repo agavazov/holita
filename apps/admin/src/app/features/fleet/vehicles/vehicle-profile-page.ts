@@ -25,7 +25,10 @@ import {
   map,
   startWith,
   switchMap,
+  take,
+  takeWhile,
 } from 'rxjs';
+import { faultReadState, faultsText } from '../../../ui/fleet-live/fault-wording';
 import type {
   AdminBranchesQuery,
   AdminVehicleProfileQuery,
@@ -149,6 +152,8 @@ const samePage = (left: ProfileListQuery, right: ProfileListQuery) =>
       (openTrip)="related('trips', $event)"
       (openAlert)="related('alerts', $event)"
       (openService)="related('service', $event)"
+      [faultReadBusy]="faultReadBusy()"
+      (readFaults)="readFaults($event)"
     />
     @if (record()) {
       <router-outlet [routerOutletData]="drawerHost()" />
@@ -180,6 +185,7 @@ export class VehicleProfilePage implements OnInit {
   });
   readonly state = signal<VehicleProfileState>('loading');
   readonly record = signal<AdminVehicleProfileQuery | null>(null);
+  protected readonly faultReadBusy = signal(false);
   readonly error = signal<unknown>(null);
   readonly tab = computed(() => profileTab(this.params().get('tab')));
   private readonly units = injectFleetFormat();
@@ -444,6 +450,41 @@ export class VehicleProfilePage implements OnInit {
       queryParamsHandling: 'preserve',
       preserveFragment: true,
     });
+  }
+
+  /** Queues a fault read, then reloads the profile every 5 s for up to 2 min while it runs. */
+  readFaults(deviceId: string): void {
+    if (!this.canOperate() || this.faultReadBusy() || this.state() !== 'ready') {
+      return;
+    }
+    this.faultReadBusy.set(true);
+    const refresh = () => {
+      this.api.refreshVehicle().catch(() => undefined);
+    };
+    this.api.readFaults(deviceId).then(
+      () => {
+        this.faultReadBusy.set(false);
+        refresh();
+        timer(5_000, 5_000)
+          .pipe(
+            take(24),
+            takeWhile(
+              () =>
+                faultReadState(this.vehicle()?.faultReads ?? [], this.wallClock()).pending !== null,
+            ),
+            takeUntilDestroyed(this.destroyRef),
+          )
+          .subscribe(refresh);
+      },
+      (error: unknown) => {
+        this.faultReadBusy.set(false);
+        this.notifications.add({
+          severity: 'error',
+          summary: requestError(error, faultsText(this.language()).scanner.readFailed),
+          sticky: true,
+        });
+      },
+    );
   }
 
   related(kind: 'trips' | 'alerts' | 'service', id: string): void {

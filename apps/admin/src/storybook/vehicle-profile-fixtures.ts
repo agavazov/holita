@@ -81,6 +81,12 @@ const fixtureFaultRead: WithTypename<AdminFaultReadFragment> = {
   completedAt: '2026-10-18T06:00:04.000Z',
   expiresAt: '2026-10-18T11:50:00.000Z',
   waitingReason: null,
+  faultReadVerdict: {
+    __typename: 'ErmFaultReadVerdict',
+    activeCodes: true,
+    codeCount: 1,
+    receivedAt: '2026-10-18T06:00:07.000Z',
+  },
 };
 // Values the eData module captured with the SPN 3251 report (eData 415).
 const freezeValue = { __typename: 'FleetFreezeFrameValue' } as const;

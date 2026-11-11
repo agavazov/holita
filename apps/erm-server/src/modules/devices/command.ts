@@ -19,8 +19,11 @@ const numberedReads = new Map([
   ['51', /^\d$/],
   ['53', /^\d{1,2}$/],
 ]);
-// The fixed eData reads Karma Client already sends: fault logger, communication diagnostics,
-// globals, profile and rules.
+// The fixed eData reads: fault logger, communication diagnostics, globals, definitions, profile,
+// rules, histograms, VIN (may send a J1939 request), tachograph driver IDs, the FMS parameter
+// scan (312, answered by 424; may change definitions, so operators take a baseline first), the
+// CAN ID sniffer (313) and the GET counters from ERM's command export (318 odometer, 320 total
+// time, 322 total fuel, 324 current values). Their SET counterparts stay blocked.
 const edataReads = new Set([
   '19,0,19,301,0,1,1,19',
   '19,0,19,306,0,1,1,',
@@ -28,7 +31,31 @@ const edataReads = new Set([
   '19,0,19,301,0,1,1,0702BC',
   '19,0,19,301,0,1,1,1F',
   '19,0,19,301,0,1,1,0802BC',
+  '19,0,19,301,0,1,1,0902BC',
+  '19,0,19,301,0,1,1,1C',
+  '19,0,19,301,0,1,1,23',
+  '19,0,19,312,0,1,1,',
+  '19,0,19,313,0,1,1,',
+  '19,0,19,318,0,1,1,',
+  '19,0,19,320,0,1,1,',
+  '19,0,19,322,0,1,1,',
+  '19,0,19,324,0,1,1,',
 ]);
+
+// Single-record eData writes: definition update/delete (02/10), rule update/delete (04/11) and
+// histogram update/delete (06/12). A rule may not switch on the vehicle dashboard (bit 15).
+function edataWrite(data: string): boolean {
+  if (
+    /^(?:02[0-9a-fA-F]{44}|(?:10|11|12)[0-9a-fA-F]{4}|06(?:[0-9a-fA-F]{2}){15,128})$/.test(data)
+  ) {
+    return true;
+  }
+  const rule =
+    /^04[0-9a-fA-F]{12}([0-7][0-9a-fA-F]{3})([0-9a-fA-F]{2})((?:[0-9a-fA-F]{2}){1,128})$/.exec(
+      data,
+    );
+  return rule !== null && Number.parseInt(rule[2] ?? '', 16) * 2 === (rule[3] ?? '').length;
+}
 // Lock codes, the SIM PIN, the authentication secret, operator/SIM locks and the Simple SMS password.
 export const protectedParameters: ReadonlySet<number> = new Set([59, 60, 61, 187, 524, 525, 593]);
 
@@ -93,8 +120,7 @@ export function validateCommand(body: unknown): DeviceCommand {
     command === '30' &&
     fields.length === 8 &&
     (edataReads.has(fields.join(',')) ||
-      (fields.slice(0, 7).join(',') === '19,0,19,301,0,1,1' &&
-        /^(?:02[0-9a-fA-F]{44}|10[0-9a-fA-F]{4})$/.test(fields[7] ?? '')))
+      (fields.slice(0, 7).join(',') === '19,0,19,301,0,1,1' && edataWrite(fields[7] ?? '')))
   ) {
     return { command, fields };
   }
@@ -119,7 +145,7 @@ export function validateCommand(body: unknown): DeviceCommand {
   throw new BadRequestException(
     'Allowed commands: 03/45 reads excluding 0049–0054, 48 and other documented reads, ' +
       '05 location, and 04/46 writes that either set only 0049/0050 or avoid 0049–0054 ' +
-      'and the protected parameters, plus single-definition eData writes',
+      'and the protected parameters, plus single-record eData definition, rule and histogram writes',
   );
 }
 

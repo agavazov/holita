@@ -1,0 +1,25 @@
+{
+  "heading": "Live parameters",
+  "description": "The latest value of every eData parameter this truck reports. Select a parameter for its last 24 hours.",
+  "search": "Search parameters",
+  "loading": "Loading parameters…",
+  "empty": "This truck has not reported eData parameters yet.",
+  "noMatch": "No parameter matches the search.",
+  "error": "The parameters could not be loaded.",
+  "parameter": "Parameter",
+  "value": "Value",
+  "unit": "Unit",
+  "recordedAt": "Reported",
+  "period": "Last 24 hours",
+  "truncated": "Only the newest 2,000 values are shown.",
+  "groups": {
+    "engine": "Engine",
+    "fuel": "Fuel and AdBlue",
+    "driving": "Driving and drivetrain",
+    "brakes": "Brakes",
+    "electrical": "Electrical",
+    "tachograph": "Tachograph",
+    "telltales": "Dashboard telltales",
+    "other": "Other"
+  }
+}

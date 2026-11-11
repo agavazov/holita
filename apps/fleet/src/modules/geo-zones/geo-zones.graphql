@@ -46,6 +46,18 @@ input FleetGeoZoneEventFilter {
   occurredTo: DateTime
 }
 
+input FleetGeoPointInput {
+  latitude: Float!
+  longitude: Float!
+}
+
+"The ring may be open or closed; the zone stores it closed."
+input FleetGeoZoneInput {
+  name: String!
+  "3 to 2000 distinct vertices forming a simple polygon (no self-intersection)."
+  points: [FleetGeoPointInput!]!
+}
+
 extend type Query {
   "Zones of the active Branch, ordered by name."
   fleetGeoZones: [FleetGeoZone!]!
@@ -55,4 +67,13 @@ extend type Query {
     limit: Int! = 20
     filter: FleetGeoZoneEventFilter
   ): FleetGeoZoneEventPage!
+}
+
+extend type Mutation {
+  "Operator and above. A new zone starts with every vehicle outside."
+  createFleetGeoZone(input: FleetGeoZoneInput!): FleetGeoZone!
+  "Operator and above. Replaces the name and geometry; detection uses them from the next position."
+  updateFleetGeoZone(id: ID!, input: FleetGeoZoneInput!): FleetGeoZone!
+  "Operator and above. The zone disappears from the map; its logged events remain."
+  deleteFleetGeoZone(id: ID!): FleetGeoZone!
 }

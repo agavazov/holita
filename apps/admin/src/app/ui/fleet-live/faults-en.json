@@ -145,8 +145,18 @@
       "CAN_REPORT": "CAN report",
       "VOLTAGE": "Voltage"
     },
-    "read": "Read from the truck",
+    "read": "Last check",
     "readNone": "none yet",
+    "readNow": "Read faults now",
+    "readPending": "Reading from the truck: {status}",
+    "readFailed": "The fault read could not be queued.",
+    "noActiveCodes": "No active codes · {time}",
+    "activeCode": "1 active code · {time}",
+    "activeCodes": "{count} active codes · {time}",
+    "codesFound": "Active codes found · {time}",
+    "awaitingVerdict": "waiting for the eData module's answer",
+    "noVerdict": "no answer from the eData module",
+    "canHint": "“No active codes” holds only while the truck sends CAN data.",
     "readStatus": {
       "QUEUED": "waiting for the connection",
       "SUBMITTING": "sending",
@@ -156,7 +166,7 @@
       "CANCELLED": "cancelled",
       "UNCERTAIN": "outcome unknown"
     },
-    "readHint": "Every 6 hours. Codes found by the module arrive as reports and appear above.",
+    "readHint": "Also every 6 hours. Codes found by the module arrive as reports and appear above.",
     "freezeFrame": "Values at the fault",
     "freezeFrameAt": "captured {time}",
     "parameter": "Parameter",

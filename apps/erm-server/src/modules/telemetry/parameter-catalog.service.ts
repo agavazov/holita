@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { requireTenant } from '../../auth/demo-auth.js';
 import type {
-  ErmDeviceAction,
   ErmDeviceActionCommand,
   ErmParameterCatalogInput,
   ErmParameterCatalogPage,
@@ -33,7 +32,7 @@ const definitions: readonly ErmParameterDefinition[] = parameterReference.map((e
   options: [...entry.options],
   writable: writable(entry.parameter),
 }));
-const actionOrder: readonly ErmDeviceAction[] = [
+const actionOrder: readonly (keyof typeof deviceActions)[] = [
   'REQUEST_LOCATION',
   'READ_STATUS',
   'READ_VERSION',

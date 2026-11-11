@@ -93,7 +93,10 @@ episode times. The admin shows them as fault lamps and a fault scanner on the li
 vehicle profile; lamps reported since the check replace the check's lamp findings. With
 `FLEET_ERM_TELEMETRY_ENABLED=true`, Fleet also asks ERM every six hours (00:00, 06:00, 12:00 and
 18:00 Europe/Sofia) to queue the fault-logger read for each Device with a vehicle; codes the module
-reports arrive through the normal import.
+reports arrive through the normal import. Operators can also queue the read from the scanner (Read
+faults now, expiry 15 minutes). The scanner footer shows the last read's eData verdict: no active
+codes, or the number of codes the following `419` repeated. An empty buffer proves nothing while
+the truck sends no CAN data.
 
 eData `415` freeze frames, the values the module captures when it reports a fault, are imported
 like `405` measurements with `freezeFrame = true`, including telltales from reports with the engine
@@ -407,8 +410,10 @@ captured clients, generated operations and shared load/error/empty states:
 
 - [Geo zones](../../apps/admin/src/app/features/fleet/geo-zones/geo-zones-page.ts) shows the
   Branch polygon zones on a Google map with their names, a zone list that focuses the map, and the
-  entry/exit log filtered by truck, zone, movement and date range. Zones are read-only; there is
-  no zone editor, rule or notification.
+  entry/exit log filtered by truck, zone, movement and date range. Operators and above draw a new
+  zone or edit one on the map: a click adds a vertex, a dragged vertex moves and a right-clicked
+  vertex is removed; they name it, save it, or delete it after confirmation. There are no rules
+  or notifications.
 
 ### Geo zones
 
@@ -422,6 +427,12 @@ outside, so the first position inside a zone logs an entry. Samples not later th
 event are ignored. The [SDL](../../apps/fleet/src/modules/geo-zones/geo-zones.graphql) offers
 `fleetGeoZones` (with the closed outer ring as points) and the paginated, newest-first
 `fleetGeoZoneEvents` filtered by vehicles, zones, kinds and an `occurredFrom`/`occurredTo` range.
+`createFleetGeoZone`, `updateFleetGeoZone` (full replacement of name and outline) and
+`deleteFleetGeoZone` require Operator; the outline needs 3 to 2000 distinct vertices without
+self-intersection and is stored closed, and names are unique among the Branch's zones that are not
+deleted. Detection reads the current zones on every run: a new zone starts with every vehicle
+outside, an edited outline applies from the next position, and a deleted zone keeps its row
+(`deletedAt`) and logged events but no longer appears or logs.
 Example zones (parking derived from overnight truck positions, Sofia, Bulgaria, border
 checkpoints and Serbia) are in [geo-zones.ts](../../apps/fleet/prisma/geo-zones.ts); the Fleet
 seed inserts the missing ones by name and never updates existing zones.

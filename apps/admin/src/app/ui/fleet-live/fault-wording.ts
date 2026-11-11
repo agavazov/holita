@@ -138,13 +138,28 @@ export function findingCode(finding: FleetFaultFinding): string | null {
     : null;
 }
 
-/** The newest fault-logger read among a device's command requests. */
-export function latestFaultRead(reads: readonly FleetFaultRead[]): FleetFaultRead | null {
-  return (
-    reads
-      .filter((read) => read.action === 'READ_EDATA_FAULTS')
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0] ?? null
-  );
+/**
+ * The newest fault-logger read with a result, and the newest read when it is still in progress:
+ * queued, sending, or answered less than two minutes ago without the eData verdict.
+ */
+export function faultReadState(
+  reads: readonly FleetFaultRead[],
+  now: number,
+): { last: FleetFaultRead | null; pending: FleetFaultRead | null } {
+  const faultReads = reads
+    .filter((read) => read.action === 'READ_EDATA_FAULTS')
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  const inProgress = (read: FleetFaultRead) =>
+    read.status === 'QUEUED' ||
+    read.status === 'SUBMITTING' ||
+    (read.status === 'ANSWERED' &&
+      read.faultReadVerdict === null &&
+      now - Date.parse(read.completedAt ?? read.createdAt) < 120_000);
+  const newest = faultReads[0] ?? null;
+  return {
+    last: faultReads.find((read) => !inProgress(read)) ?? null,
+    pending: newest && inProgress(newest) ? newest : null,
+  };
 }
 
 export const faultsText = (language: Language): typeof en => (language === 'bg' ? bg : en);

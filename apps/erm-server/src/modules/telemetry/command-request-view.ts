@@ -2,12 +2,14 @@ import type {
   ErmCommandDisplayField,
   ErmCommandRequest,
   ErmCommandWaitingReason,
+  ErmParameterValue,
 } from '../../generated/graphql/types.js';
 import type { ErmCommandRequest as StoredRequest } from '../../generated/prisma/client.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import type { CommandRequestRelations } from './command-requests.repository.js';
 import { maskCommandEvidence, maskFrameEvidence } from './command-evidence.js';
 import { maskConfigurationChange } from './configuration-change-view.js';
+import { parameterCatalog } from '../../starlink/parameter-catalog.js';
 
 const recordedReasons: Readonly<Record<string, string>> = {
   'Submission was interrupted; the command may have reached the unit and will not be replayed':
@@ -60,6 +62,7 @@ export function commandRequestView(
   return {
     ...request,
     waitingReason: waitingReason(request.waitingReason),
+    parameterValues: parameterValues(request),
     actionCode: request.action,
     displayParameters: {
       expiresInSeconds: Math.round(
@@ -82,7 +85,39 @@ export function commandRequestView(
     configurationVerification: verification ? maskConfigurationChange(verification, context) : null,
     sentFrame: sentFrame ? maskFrameEvidence(sentFrame, context) : null,
     receivedFrameHex: transport?.responseHex ?? null,
+    faultReadVerdict: related?.faultReadVerdicts.get(request.id) ?? null,
   };
+}
+
+/** The 03 reply is `parameter,value`; a 45 reply lists `parameter,value` pairs. */
+function parameterValues(request: StoredRequest): ErmParameterValue[] {
+  if (request.action !== 'READ_PARAMETERS' || request.status !== 'ANSWERED') {
+    return [];
+  }
+  const fields = request.responseText?.split(',') ?? [];
+  const values = new Map<number, string>();
+  if (request.parameters.length === 1 && fields.length >= 2) {
+    values.set(Number(fields[0]), fields.slice(1).join(','));
+  } else {
+    for (let index = 0; index + 1 < fields.length; index += 2) {
+      values.set(Number(fields[index]), fields[index + 1] ?? '');
+    }
+  }
+  return request.parameters.map((parameter) => {
+    const raw = values.get(parameter);
+    return {
+      parameter,
+      title: parameterCatalog.get(parameter) ?? null,
+      value:
+        raw === undefined
+          ? null
+          : raw.startsWith('"') && raw.endsWith('"')
+            ? raw.slice(1, -1)
+            : raw,
+      resultCode: null,
+      outcome: raw === undefined ? 'OMITTED' : 'READ',
+    };
+  });
 }
 
 function waitingReason(reason: string | null): ErmCommandWaitingReason | null {

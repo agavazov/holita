@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { CheckCircle } from '@primeicons/angular/check-circle';
 import { ExclamationTriangle } from '@primeicons/angular/exclamation-triangle';
+import { ButtonDirective } from 'primeng/button';
 import { Tag } from 'primeng/tag';
 import type { FleetFaultSystem } from '../../../generated/graphql/operations';
 import type { Language } from '../../i18n/messages';
@@ -15,7 +16,7 @@ import {
   faultsText,
   findingCode,
   findingTitle,
-  latestFaultRead,
+  faultReadState,
   severityTone,
   withCurrentLamps,
   worstSeverity,
@@ -30,11 +31,12 @@ const STALE_AFTER = 24 * 3_600_000;
 
 /**
  * A truck's current faults as a scanner shows them: a verdict, the fault lamps and one card per
- * fault. It reads the server's 15-minute check and the latest scheduled read from the truck.
+ * fault. It reads the server's 15-minute check and the latest fault-logger read from the truck;
+ * Operators can request a read now.
  */
 @Component({
   selector: 'discocan-fault-scanner',
-  imports: [CheckCircle, ExclamationTriangle, FaultCluster, FaultIcon, Tag],
+  imports: [ButtonDirective, CheckCircle, ExclamationTriangle, FaultCluster, FaultIcon, Tag],
   templateUrl: './fault-scanner.html',
   styleUrl: './fault-scanner.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,8 +49,13 @@ export class FaultScanner {
   readonly reads = input<readonly FleetFaultRead[]>([]);
   /** The truck's newest eData freeze frame: values captured when a fault was reported. */
   readonly freezeFrame = input<FleetFreezeFrame | null>(null);
+  /** Shows "Read faults now" (Operators, with a Device); the parent queues the read. */
+  readonly canRead = input(false);
+  /** The parent is queuing a read. */
+  readonly readBusy = input(false);
   readonly language = input.required<Language>();
   readonly now = input.required<number>();
+  readonly readFaults = output();
 
   protected readonly format = injectFleetFormat();
   protected readonly text = computed(() => faultsText(this.language()));
@@ -105,12 +112,38 @@ export class FaultScanner {
       ? interpolate(this.text().scanner.systemClear, { system: this.text().systems[system] })
       : this.text().scanner.allClear;
   });
+  protected readonly readState = computed(() => faultReadState(this.reads(), this.now()));
+  /** The last result: the eData verdict when it arrived, otherwise the request's outcome. */
   protected readonly readText = computed(() => {
-    const read = latestFaultRead(this.reads());
+    const read = this.readState().last;
+    const scanner = this.text().scanner;
+    if (!read) {
+      return scanner.readNone;
+    }
+    const verdict = read.faultReadVerdict;
+    if (verdict) {
+      const time = this.readTime(verdict.receivedAt);
+      return !verdict.activeCodes
+        ? interpolate(scanner.noActiveCodes, { time })
+        : verdict.codeCount === null
+          ? interpolate(scanner.codesFound, { time })
+          : interpolate(verdict.codeCount === 1 ? scanner.activeCode : scanner.activeCodes, {
+              count: verdict.codeCount,
+              time,
+            });
+    }
+    const status = read.status === 'ANSWERED' ? scanner.noVerdict : scanner.readStatus[read.status];
+    return `${status} · ${this.readTime(read.completedAt ?? read.createdAt)}`;
+  });
+  protected readonly pendingText = computed(() => {
+    const read = this.readState().pending;
     const scanner = this.text().scanner;
     return read
-      ? `${scanner.readStatus[read.status]} · ${this.format.dateTime(read.completedAt ?? read.createdAt)}`
-      : scanner.readNone;
+      ? interpolate(scanner.readPending, {
+          status:
+            read.status === 'ANSWERED' ? scanner.awaitingVerdict : scanner.readStatus[read.status],
+        })
+      : null;
   });
 
   protected readonly freezeRows = computed(() =>
@@ -128,6 +161,13 @@ export class FaultScanner {
 
   protected relative(iso: string): string {
     return formatRelative(iso, this.now(), this.language());
+  }
+
+  /** HH:MM within a day, otherwise the date and time. */
+  private readTime(iso: string): string {
+    return this.now() - Date.parse(iso) < 86_400_000
+      ? this.format.time(iso)
+      : this.format.dateTime(iso);
   }
 
   protected captured(frame: FleetFreezeFrame): string {

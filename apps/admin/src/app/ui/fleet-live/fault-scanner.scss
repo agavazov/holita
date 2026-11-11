@@ -121,6 +121,11 @@ summary:focus-visible,
   outline-offset: var(--p-focus-ring-offset);
 }
 
+.fault-scanner__read-now {
+  align-self: flex-start;
+  margin-block: var(--p-app-space-1);
+}
+
 .fault-scanner__read {
   display: flex;
   flex-direction: column;

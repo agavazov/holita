@@ -99,6 +99,7 @@ export function commandNotification(
     commands,
     frames: new Map(),
     configurations: new Map(),
+    faultReadVerdicts: new Map(),
   });
   if (request.completedAt === null) {
     throw new Error('Terminal command notification requires completion time');

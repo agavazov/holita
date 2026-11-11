@@ -119,4 +119,22 @@ fragment AdminFaultRead on ErmCommandRequest {
   completedAt
   expiresAt
   waitingReason
+  faultReadVerdict {
+    activeCodes
+    codeCount
+    receivedAt
+  }
+}
+
+mutation AdminReadFaultsNow($deviceId: ID!) {
+  sendErmDeviceCommand(
+    input: {
+      deviceId: $deviceId
+      action: READ_EDATA_FAULTS
+      expiresInSeconds: 900
+      intent: "Fault scanner: read faults now"
+    }
+  ) {
+    ...AdminFaultRead
+  }
 }

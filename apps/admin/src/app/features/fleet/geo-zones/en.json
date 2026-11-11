@@ -18,7 +18,10 @@
   "allKinds": "Entries and exits",
   "from": "From",
   "to": "To",
-  "kinds": { "ENTER": "Entry", "EXIT": "Exit" },
+  "kinds": {
+    "ENTER": "Entry",
+    "EXIT": "Exit"
+  },
   "table": {
     "heading": "Zone log",
     "occurred": "Time",
@@ -27,5 +30,22 @@
     "emptyTitle": "No zone entries yet",
     "emptyDescription": "Entries and exits appear here after the trucks report positions inside a zone."
   },
-  "loadError": "The geo zones could not be loaded."
+  "loadError": "The geo zones could not be loaded.",
+  "editor": {
+    "create": "New zone",
+    "edit": "Edit",
+    "editZone": "Edit {name}",
+    "newZone": "New zone",
+    "name": "Name",
+    "vertices": "{count} vertices",
+    "hint": "Click the map to add a vertex, drag a vertex to move it and right-click a vertex to remove it.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleteHeader": "Delete the zone?",
+    "deleteMessage": "The zone disappears from the map and stops logging. Its existing log entries stay.",
+    "saveError": "The zone could not be saved.",
+    "deleteError": "The zone could not be deleted.",
+    "tooFew": "Add at least 3 vertices."
+  }
 }

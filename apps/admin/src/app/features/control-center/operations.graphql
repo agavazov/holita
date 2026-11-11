@@ -387,6 +387,13 @@ fragment AdminControlCenterCommandRequestFields on ErmCommandRequest {
   retryOfId
   intent
   action
+  parameters
+  parameterValues {
+    parameter
+    title
+    value
+    outcome
+  }
   actionCode
   displayParameters {
     expiresInSeconds

@@ -9,6 +9,7 @@ import {
   ElementRef,
   inject,
   input,
+  output,
   signal,
   viewChild,
   ViewEncapsulation,
@@ -24,13 +25,22 @@ import {
 } from '../../../ui/location-map/google-maps';
 import { geoZonesText } from './geo-zones-text';
 
+export interface GeoPoint {
+  readonly latitude: number;
+  readonly longitude: number;
+}
+
 export interface GeoZoneShape {
   readonly id: string;
   readonly name: string;
-  readonly points: readonly { readonly latitude: number; readonly longitude: number }[];
+  readonly points: readonly GeoPoint[];
 }
 
-/** The Branch zones as named polygons; `focusId` fits the map to one zone. */
+/**
+ * The Branch zones as named polygons; `focusId` fits the map to one zone. While `draft` is set,
+ * a click adds a vertex, a dragged vertex moves and a right-clicked vertex is removed; the zone
+ * `editingId` is hidden behind its draft.
+ */
 @Component({
   selector: 'discocan-geo-zone-map',
   imports: [ButtonDirective],
@@ -56,6 +66,9 @@ export class GeoZoneMap {
   readonly language = input.required<Language>();
   readonly zones = input<readonly GeoZoneShape[]>([]);
   readonly focusId = input<string | null>(null);
+  readonly draft = input<readonly GeoPoint[] | null>(null);
+  readonly editingId = input<string | null>(null);
+  readonly draftChange = output<GeoPoint[]>();
 
   protected readonly text = computed(() => geoZonesText(this.language()));
   private readonly config = inject(AdminConfig);
@@ -72,6 +85,8 @@ export class GeoZoneMap {
   private readonly labels: google.maps.marker.AdvancedMarkerElement[] = [];
   private map?: google.maps.Map;
   private library?: google.maps.MarkerLibrary;
+  private draftShape: google.maps.Polygon | undefined;
+  private syncing = false;
 
   constructor() {
     afterNextRender(() => {
@@ -82,12 +97,24 @@ export class GeoZoneMap {
     afterRenderEffect(() => {
       const palette = this.palette.palette();
       if (this.ready() && palette) {
-        this.draw(this.zones(), palette.categories);
+        const editingId = this.editingId();
+        this.draw(
+          this.zones().filter((zone) => zone.id !== editingId),
+          palette.categories,
+        );
         this.fit(this.focusId());
+      }
+    });
+    afterRenderEffect(() => {
+      const palette = this.palette.palette();
+      if (this.ready() && palette) {
+        // The draft uses the warning tone so it stands out from the saved zones.
+        this.syncDraft(this.draft(), palette.tones[2] ?? palette.text);
       }
     });
     this.destroyRef.onDestroy(() => {
       this.clear();
+      this.draftShape?.setMap(null);
     });
   }
 
@@ -113,6 +140,9 @@ export class GeoZoneMap {
         gestureHandling: 'greedy',
         clickableIcons: false,
       });
+      this.map.addListener('click', (event: google.maps.MapMouseEvent) => {
+        this.addVertex(event.latLng);
+      });
       this.ready.set(true);
     } catch {
       this.mapFailed.set(true);
@@ -130,6 +160,80 @@ export class GeoZoneMap {
     }
     if (this.map && !bounds.isEmpty()) {
       this.map.fitBounds(bounds, 48);
+    }
+  }
+
+  private addVertex(at: google.maps.LatLng | null): void {
+    const draft = this.draft();
+    if (draft && at) {
+      this.draftChange.emit([...draft, { latitude: at.lat(), longitude: at.lng() }]);
+    }
+  }
+
+  private emitDraft(): void {
+    if (!this.syncing && this.draftShape) {
+      this.draftChange.emit(
+        this.draftShape
+          .getPath()
+          .getArray()
+          .map((point) => ({ latitude: point.lat(), longitude: point.lng() })),
+      );
+    }
+  }
+
+  private syncDraft(draft: readonly GeoPoint[] | null, color: string): void {
+    const map = this.map;
+    if (!map || !draft) {
+      this.draftShape?.setMap(null);
+      this.draftShape = undefined;
+      return;
+    }
+    if (!this.draftShape) {
+      const shape = new google.maps.Polygon({
+        map,
+        editable: true,
+        strokeColor: color,
+        strokeWeight: 3,
+        fillColor: color,
+        fillOpacity: 0.3,
+      });
+      shape.addListener('click', (event: google.maps.PolyMouseEvent) => {
+        if (event.vertex === undefined && event.edge === undefined) {
+          this.addVertex(event.latLng);
+        }
+      });
+      shape.addListener('rightclick', (event: google.maps.PolyMouseEvent) => {
+        if (event.vertex !== undefined) {
+          shape.getPath().removeAt(event.vertex);
+        }
+      });
+      this.draftShape = shape;
+    }
+    const path = this.draftShape.getPath();
+    const same =
+      path.getLength() === draft.length &&
+      path.getArray().every((point, index) => {
+        const vertex = draft[index];
+        return (
+          vertex !== undefined &&
+          point.lat() === vertex.latitude &&
+          point.lng() === vertex.longitude
+        );
+      });
+    if (same) {
+      return;
+    }
+    // Replacing the path drops its listeners, so they are attached to each new path.
+    const next = new google.maps.MVCArray(
+      draft.map((point) => new google.maps.LatLng(point.latitude, point.longitude)),
+    );
+    this.syncing = true;
+    this.draftShape.setPath(next);
+    this.syncing = false;
+    for (const name of ['set_at', 'insert_at', 'remove_at']) {
+      next.addListener(name, () => {
+        this.emitDraft();
+      });
     }
   }
 
