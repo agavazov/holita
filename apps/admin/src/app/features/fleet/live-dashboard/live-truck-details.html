@@ -50,6 +50,7 @@
   [check]="current.faultCheck"
   [lamps]="current.lamps"
   [reads]="unit?.ermCommandRequests ?? []"
+  [freezeFrame]="detail()?.fleetVehicleFreezeFrame ?? null"
   [language]="language()"
   [now]="now()"
 />

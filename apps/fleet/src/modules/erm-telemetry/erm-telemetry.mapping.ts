@@ -7,6 +7,13 @@ export type ErmTelemetryDevice = Pick<
   'id' | 'tenantId' | 'branchId' | 'imei' | 'vehicleId' | 'installedAt' | 'createdAt'
 >;
 
+/** The Simple eData vendor catalog whose Monitor names, units and scaling label measurements. */
+export const MEASUREMENT_CATALOG = {
+  sourceSha256: '01dd13e50c55fdf84078ce298bde72320d55bee458baa4c0d2a06fca7c0ca1a0',
+  extractorVersion: '1.0.0',
+  schemaVersion: 1,
+} as const;
+
 export function ermEdataMeasurementsEnabled(): boolean {
   const value = process.env.FLEET_ERM_EDATA_MEASUREMENTS_ENABLED ?? 'false';
   if (value !== 'true' && value !== 'false') {
@@ -26,12 +33,18 @@ export function ermEdataMeasurements(
   const since = device.installedAt ?? device.createdAt;
   const measurements: Prisma.VehicleEdataMeasurementCreateManyInput[] = [];
   for (const event of events) {
-    if (!importableEvent(event, since) || event.edata?.report !== '405') {
+    if (
+      !importableEvent(event, since) ||
+      (event.edata?.report !== '405' && event.edata?.report !== '415')
+    ) {
       continue;
     }
+    // A 415 freeze frame keeps every captured value; latest-value views read 405 rows only.
+    const freezeFrame = event.edata.report === '415';
     for (const measurement of event.edata.measurements) {
       // Ignition-on telltales can be red before the engine builds brake air pressure.
       if (
+        !freezeFrame &&
         event.engineOn === false &&
         WARNING_LAMP_PARAMETER_IDS.some((id) => id === measurement.parameterId)
       ) {
@@ -49,6 +62,7 @@ export function ermEdataMeasurements(
         ...measurement,
         name: labels.get(measurement.parameterId)?.name ?? null,
         unit: labels.get(measurement.parameterId)?.unit ?? null,
+        freezeFrame,
       });
     }
   }

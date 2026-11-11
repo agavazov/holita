@@ -623,6 +623,8 @@ model VehicleEdataMeasurement {
   valueHex String @db.VarChar(8)
   name String?
   unit String?
+  // eData 415: a value captured when a fault arrived, not a periodic 405 reading.
+  freezeFrame Boolean @default(false)
   vehicle Vehicle @relation(fields: [tenantId, branchId, vehicleId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
 
   @@unique([tenantId, branchId, deviceImei, sourceEventId, parameterId], map: "vehicleEdataMeasurementErmKey")

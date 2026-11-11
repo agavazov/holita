@@ -77,8 +77,10 @@ export function decodeEdata(fields: readonly string[]) {
       }
       return { ...report, rules };
     }
-    case 405: {
-      if (bytes[0] !== 0x14) {
+    // 415 reports the values captured when a fault arrived (freeze frame) in the 405 layout.
+    case 405:
+    case 415: {
+      if (bytes[0] !== (type === 405 ? 0x14 : 0x1d)) {
         return report;
       }
       const parameters = [];

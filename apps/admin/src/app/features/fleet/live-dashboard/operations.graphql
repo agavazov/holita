@@ -102,6 +102,9 @@ query AdminLiveVehicle($id: ID!) {
       }
     }
   }
+  fleetVehicleFreezeFrame(vehicleId: $id) {
+    ...AdminFreezeFrame
+  }
   fleetTrips(
     offset: 0
     limit: 5

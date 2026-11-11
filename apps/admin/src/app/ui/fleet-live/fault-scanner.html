@@ -49,6 +49,40 @@
   </ol>
 }
 
+@if (freezeFrame(); as frame) {
+  <details class="fault-scanner__frame">
+    <summary>
+      {{ text().scanner.freezeFrame }}
+      <span class="fault-scanner__muted">· {{ captured(frame) }}</span>
+    </summary>
+    <div
+      class="fault-scanner__scroll"
+      tabindex="0"
+      role="region"
+      [attr.aria-label]="text().scanner.freezeFrame"
+    >
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{ text().scanner.parameter }}</th>
+            <th scope="col" class="fault-scanner__value">{{ text().scanner.value }}</th>
+            <th scope="col">{{ text().scanner.unit }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of freezeRows(); track row.id) {
+            <tr>
+              <th scope="row" [title]="row.raw">{{ row.name }}</th>
+              <td class="fault-scanner__value">{{ row.value }}</td>
+              <td>{{ row.unit }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </details>
+}
+
 <footer class="fault-scanner__read">
   <span
     >{{ text().scanner.read }}: <strong>{{ readText() }}</strong></span

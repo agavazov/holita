@@ -18,7 +18,7 @@ export function warningLampsSql(schema: string, scope: FleetScope, deviceIds: re
         FROM ${fleetTable(schema, 'vehicleEdataMeasurement')} m
         WHERE m."tenantId" = ${scope.tenantId}::uuid AND m."branchId" = ${scope.branchId}::uuid
           AND m."vehicleId" = d."vehicleId" AND m."deviceImei" = d."imei"
-          AND m."parameterId" = ANY(${[...WARNING_LAMP_PARAMETER_IDS]}::int[])
+          AND m."parameterId" = ANY(${[...WARNING_LAMP_PARAMETER_IDS]}::int[]) AND NOT m."freezeFrame"
       ), boundaries AS (
         SELECT *, state IS DISTINCT FROM lag(state) OVER observations AS changed
         FROM decoded WINDOW observations AS (PARTITION BY "parameterId"

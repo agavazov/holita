@@ -186,7 +186,7 @@ export class VehicleProfilePage implements OnInit {
   private readonly wallClock = inject(WALL_CLOCK);
   readonly vehicle = computed(() => {
     const record = this.record();
-    return record ? vehicleProfile(record.fleetVehicle) : null;
+    return record ? vehicleProfile(record.fleetVehicle, record.fleetVehicleFreezeFrame) : null;
   });
   protected readonly distance = computed(() => {
     const record = this.record();

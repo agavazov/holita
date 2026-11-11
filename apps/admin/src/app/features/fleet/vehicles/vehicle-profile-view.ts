@@ -35,6 +35,7 @@ import {
   worstSeverity,
   type FleetFaultCheck,
   type FleetFaultRead,
+  type FleetFreezeFrame,
   type FleetWarning,
 } from '../../../ui/fleet-live/fault-wording';
 import { injectFleetNow } from '../../../ui/fleet-live/fleet-clock';
@@ -95,6 +96,7 @@ export interface VehicleProfile extends VehicleRow {
   readonly faultCheck: FleetFaultCheck | null;
   /** Command requests of the vehicle's devices, for the latest fault-logger read. */
   readonly faultReads: readonly FleetFaultRead[];
+  readonly freezeFrame: FleetFreezeFrame | null;
 }
 
 /** Counts of unverified raw observations, without assigning physical meaning to their values. */

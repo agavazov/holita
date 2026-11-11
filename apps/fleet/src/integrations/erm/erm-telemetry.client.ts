@@ -2,7 +2,8 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 
 export type ErmTelemetryEdata =
   | {
-      report: '405';
+      /** 405 periodic values; 415 values captured when a fault arrived (freeze frame). */
+      report: '405' | '415';
       measurements: {
         parameterId: number;
         parameterType: number;
@@ -103,7 +104,7 @@ function telemetryEdata(value: unknown): ErmTelemetryEdata | null {
   if (!record(value)) {
     throw unavailable();
   }
-  if (value.report === '405') {
+  if (value.report === '405' || value.report === '415') {
     if (!Array.isArray(value.measurements)) {
       throw unavailable();
     }

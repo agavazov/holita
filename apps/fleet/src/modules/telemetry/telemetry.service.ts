@@ -8,6 +8,8 @@ import type {
   FleetVehicleState,
   QueryFleetVehicleSamplesArgs,
   QueryFleetVehicleEdataMeasurementsArgs,
+  QueryFleetVehicleFreezeFrameArgs,
+  FleetFreezeFrame,
   FleetVehicleEdataMeasurementSeries,
   RecordFleetOdometerReadingInput,
 } from '../../generated/graphql/types.js';
@@ -165,6 +167,38 @@ export class TelemetryService {
       to,
       items: rows.slice(0, MAX_SERIES_SAMPLES).reverse(),
       truncated: rows.length > MAX_SERIES_SAMPLES,
+    };
+  }
+
+  /** The vehicle's newest eData 415 freeze frame with catalog-scaled values, or null. */
+  async freezeFrame(
+    context: RequestContext,
+    args: QueryFleetVehicleFreezeFrameArgs,
+  ): Promise<FleetFreezeFrame | null> {
+    const scope = requireScope(context);
+    const vehicleId = uuid(args.vehicleId, 'vehicleId');
+    if (!(await this.telemetry.findVehicle(scope, vehicleId))) {
+      throw new NotFoundException('Vehicle not found');
+    }
+    const rows = await this.telemetry.latestFreezeFrame(scope, vehicleId);
+    const [first] = rows;
+    if (!first) {
+      return null;
+    }
+    const scaling = await this.telemetry.catalogScaling(rows.map((row) => row.parameterId));
+    return {
+      deviceImei: first.deviceImei,
+      recordedAt: first.recordedAt,
+      values: rows.map(({ parameterId, name, unit, valueHex }) => {
+        const scale = scaling.get(parameterId);
+        return {
+          parameterId,
+          name,
+          unit,
+          valueHex,
+          value: scale ? Number.parseInt(valueHex, 16) * scale.multiply + scale.offset : null,
+        };
+      }),
     };
   }
 

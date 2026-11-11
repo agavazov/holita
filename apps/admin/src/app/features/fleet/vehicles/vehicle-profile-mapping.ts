@@ -6,12 +6,16 @@ import type {
 } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
 import type { SeriesPoint } from '../../../ui/charts/column-series';
+import type { FleetFreezeFrame } from '../../../ui/fleet-live/fault-wording';
 import { fleetFieldErrors } from '../field-errors';
 import type { OdometerField, PreviousOdometerReading } from './odometer-drawer';
 import { vehicleRow } from './vehicle-mapping';
 import type { EdataObservation, VehicleProfile } from './vehicle-profile-view';
 
-export function vehicleProfile(vehicle: AdminVehicleProfileFragment): VehicleProfile {
+export function vehicleProfile(
+  vehicle: AdminVehicleProfileFragment,
+  freezeFrame: FleetFreezeFrame | null,
+): VehicleProfile {
   return {
     ...vehicleRow(vehicle),
     currentDriverId: vehicle.currentDriverId,
@@ -26,6 +30,7 @@ export function vehicleProfile(vehicle: AdminVehicleProfileFragment): VehiclePro
     warningLamps: vehicle.warningLamps,
     faultCheck: vehicle.faultCheck ?? null,
     faultReads: vehicle.devices.flatMap((device) => device.ermCommandRequests),
+    freezeFrame,
     createdAt: vehicle.createdAt,
   };
 }

@@ -5,7 +5,7 @@ import { Tag } from 'primeng/tag';
 import type { FleetFaultSystem } from '../../../generated/graphql/operations';
 import type { Language } from '../../i18n/messages';
 import { injectFleetFormat } from '../format/fleet-format';
-import { formatRelative } from '../format/format';
+import { formatNumber, formatRelative } from '../format/format';
 import { interpolate } from '../i18n/messages';
 import { toneSeverity, type StatusTone } from '../tones';
 import { FaultCluster } from './fault-cluster';
@@ -22,6 +22,7 @@ import {
   type FleetFaultCheck,
   type FleetFaultFinding,
   type FleetFaultRead,
+  type FleetFreezeFrame,
   type FleetWarning,
 } from './fault-wording';
 
@@ -44,6 +45,8 @@ export class FaultScanner {
   readonly lamps = input<readonly FleetWarning[] | null>(null);
   /** The device's command requests; the newest fault-logger read is shown. */
   readonly reads = input<readonly FleetFaultRead[]>([]);
+  /** The truck's newest eData freeze frame: values captured when a fault was reported. */
+  readonly freezeFrame = input<FleetFreezeFrame | null>(null);
   readonly language = input.required<Language>();
   readonly now = input.required<number>();
 
@@ -110,8 +113,27 @@ export class FaultScanner {
       : scanner.readNone;
   });
 
+  protected readonly freezeRows = computed(() =>
+    (this.freezeFrame()?.values ?? []).map((item) => ({
+      id: item.parameterId,
+      name: item.name ?? `ID ${String(item.parameterId)}`,
+      value:
+        item.value === null
+          ? `0x${item.valueHex}`
+          : formatNumber(item.value, this.language(), { fraction: 4 }),
+      unit: item.unit ?? '—',
+      raw: `ID ${String(item.parameterId)} · 0x${item.valueHex}`,
+    })),
+  );
+
   protected relative(iso: string): string {
     return formatRelative(iso, this.now(), this.language());
+  }
+
+  protected captured(frame: FleetFreezeFrame): string {
+    return interpolate(this.text().scanner.freezeFrameAt, {
+      time: this.format.dateTime(frame.recordedAt, true),
+    });
   }
 
   protected title(finding: FleetFaultFinding): string {

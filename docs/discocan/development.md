@@ -655,7 +655,8 @@ to 500, and an empty page keeps `next` equal to `after`. Raw frames, fields and 
 excluded. Each event also has `ignitionOn` (binary Tracker flags or an `#IGN#` token, else null) and
 `edata`: null, or one of these normalized reports:
 
-- `405`: `{ report, measurements: [{ parameterId, parameterType, valueSize, valueHex }] }`.
+- `405` / `415`: `{ report, measurements: [{ parameterId, parameterType, valueSize, valueHex }] }`;
+  `415` is the freeze frame the eData module captures when it reports a fault.
 - `411`: `{ report, can, j1708, obd, obdMask, canError, ignition }`.
 - `413` / `418`: `{ report, faults: [{ code, status: ADDED | DELETED }] }`.
 - `417`: `{ report, noCanMessages: true }`, recorded as CAN communication loss.

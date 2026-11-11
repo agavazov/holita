@@ -97,6 +97,17 @@ fragment AdminFaultCheck on FleetFaultCheck {
   }
 }
 
+fragment AdminFreezeFrame on FleetFreezeFrame {
+  recordedAt
+  values {
+    parameterId
+    name
+    unit
+    valueHex
+    value
+  }
+}
+
 fragment AdminFaultRead on ErmCommandRequest {
   id
   action

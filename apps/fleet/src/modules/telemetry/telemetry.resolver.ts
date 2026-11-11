@@ -5,6 +5,7 @@ import type {
   MutationRecordFleetOdometerReadingArgs,
   QueryFleetVehicleSamplesArgs,
   QueryFleetVehicleEdataMeasurementsArgs,
+  QueryFleetVehicleFreezeFrameArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { TelemetryService } from './telemetry.service.js';
@@ -33,6 +34,14 @@ export class TelemetryResolver {
     @Context() context: RequestContext,
   ) {
     return this.telemetryService.edataMeasurements(context, args);
+  }
+
+  @Query('fleetVehicleFreezeFrame')
+  fleetVehicleFreezeFrame(
+    @Args() args: QueryFleetVehicleFreezeFrameArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.telemetryService.freezeFrame(context, args);
   }
 
   @Mutation('recordFleetOdometerReading')

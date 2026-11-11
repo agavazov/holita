@@ -95,6 +95,13 @@ vehicle profile; lamps reported since the check replace the check's lamp finding
 18:00 Europe/Sofia) to queue the fault-logger read for each Device with a vehicle; codes the module
 reports arrive through the normal import.
 
+eData `415` freeze frames, the values the module captures when it reports a fault, are imported
+like `405` measurements with `freezeFrame = true`, including telltales from reports with the engine
+off. Lamps, lamp notifications and `fleetVehicleEdataMeasurements` read `405` rows only.
+`fleetVehicleFreezeFrame(vehicleId)` returns the vehicle's newest freeze frame with the catalog
+labels and `value`: the unsigned value times the Monitor catalog multiplier plus its offset, or null
+without one unambiguous scaling. The fault scanner shows it as a collapsible table.
+
 `fleetProblems(offset, limit, filter, sort)` sorts the complete merged, scoped feed before
 pagination. `sort` accepts `field: TIME | SOURCE | SEVERITY | STATE` and `direction: ASC | DESC`;
 the default is `TIME DESC`. Severity orders INFO, WARNING, CRITICAL; source orders FLEET_ALERT,

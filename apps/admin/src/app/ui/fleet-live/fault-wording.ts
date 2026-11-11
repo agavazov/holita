@@ -2,6 +2,7 @@ import type {
   AdminFaultCheckFragment,
   AdminFaultDiagnosticFragment,
   AdminFaultReadFragment,
+  AdminFreezeFrameFragment,
   AdminWarningLampFragment,
   FleetEventSeverity,
   FleetFaultSystem,
@@ -18,6 +19,7 @@ export type FleetWarning = AdminWarningLampFragment;
 export type FleetFaultCheck = AdminFaultCheckFragment;
 export type FleetFaultFinding = FleetFaultCheck['findings'][number];
 export type FleetFaultRead = AdminFaultReadFragment;
+export type FleetFreezeFrame = AdminFreezeFrameFragment;
 
 /** Dashboard order of the fault lamps. */
 export const faultSystems: readonly FleetFaultSystem[] = [

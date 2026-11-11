@@ -137,6 +137,24 @@ type FleetVehicleEdataMeasurementSeries {
   truncated: Boolean!
 }
 
+"One value of an eData 415 freeze frame; name and unit are the same catalog labels as for 405."
+type FleetFreezeFrameValue {
+  parameterId: Int!
+  name: String
+  unit: String
+  valueHex: String!
+  "Unsigned big-endian value times the catalog multiplier plus its offset; null without one unambiguous catalog scaling."
+  value: Float
+}
+
+"Parameter values the eData module captured when it reported a fault (eData 415)."
+type FleetFreezeFrame {
+  deviceImei: String!
+  recordedAt: DateTime!
+  "Ascending by parameterId."
+  values: [FleetFreezeFrameValue!]!
+}
+
 type FleetDataClock {
   asOf: DateTime
   businessDate: Date!
@@ -159,6 +177,8 @@ extend type Query {
     "Only these reported parameter IDs; every ID when omitted."
     parameterIds: [Int!]
   ): FleetVehicleEdataMeasurementSeries!
+  "The vehicle's newest imported freeze frame; null when it has none."
+  fleetVehicleFreezeFrame(vehicleId: ID!): FleetFreezeFrame
 }
 
 extend type Mutation {

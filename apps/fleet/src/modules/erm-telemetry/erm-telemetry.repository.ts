@@ -9,6 +9,7 @@ import {
   ermSamples,
   ermEdataMeasurements,
   ermEdataMeasurementsEnabled,
+  MEASUREMENT_CATALOG,
   type ErmTelemetryDevice,
 } from './erm-telemetry.mapping.js';
 import { recordedDiagnosticNotifications } from '../notifications/notification-projection.js';
@@ -99,7 +100,7 @@ export class ErmTelemetryRepository {
         const parameterIds = [
           ...new Set(
             page.events.flatMap((event) =>
-              event.edata?.report === '405'
+              event.edata?.report === '405' || event.edata?.report === '415'
                 ? event.edata.measurements.map((item) => item.parameterId)
                 : [],
             ),
@@ -115,6 +116,7 @@ export class ErmTelemetryRepository {
                 vehicleId: device.vehicleId,
                 deviceImei: device.imei,
                 parameterId: { in: [...WARNING_LAMP_PARAMETER_IDS] },
+                freezeFrame: false,
               },
               distinct: ['parameterId'],
               orderBy: [
@@ -132,7 +134,7 @@ export class ErmTelemetryRepository {
             const lampNotifications = warningLampNotifications(
               device,
               previousLamps,
-              inserted,
+              inserted.filter((row) => !row.freezeFrame),
               notificationCursor.since > cutoff ? notificationCursor.since : cutoff,
               now,
             );
@@ -164,11 +166,7 @@ export class ErmTelemetryRepository {
 
   private async measurementLabels(transaction: Prisma.TransactionClient, parameterIds: number[]) {
     const catalog = await transaction.edataCatalog.findFirst({
-      where: {
-        sourceSha256: '01dd13e50c55fdf84078ce298bde72320d55bee458baa4c0d2a06fca7c0ca1a0',
-        extractorVersion: '1.0.0',
-        schemaVersion: 1,
-      },
+      where: MEASUREMENT_CATALOG,
       select: { id: true },
     });
     const rows =

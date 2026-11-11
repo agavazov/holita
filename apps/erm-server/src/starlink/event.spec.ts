@@ -174,7 +174,23 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
     });
   }
 
-  // Vendor examples, except 411/419 (real captures) and 418 (synthetic documented layout).
+  // CB6711TE's freeze frame (ERM event 69735, 2026-11-11), sent after its 419 added SPN 1247/FMI 11
+  // and SPN 3720/FMI 15: 65 parameter=value pairs, all of type 0.
+  const freezeFrame = [
+    ...`539=12 188=0F 1=5F 687=00020F57 64=2300 785=2D 1657=00020F57 2=00 718=00 694=63 781=18
+      696=0208 697=0208 672=22E6 688=0004E6FB 1296=06 662=00 1417=00 1551=03 651=63 153=00
+      630=00 1298=0B 1322=08 164=7D 1301=7D 579=65 23=00 189=01 660=00 838=00 1548=00
+      2236=00 1608=00 1419=00 695=00 1288=00 708=0D 1435=00 1436=00 1437=00 1438=00 1439=01
+      1441=00 1444=00 1445=00 1135=00 1447=00 1136=00 1324=00 1889=00 1890=00 1891=00
+      1892=00 1893=00 1894=00 1895=03 1896=00 1897=00 1898=00 1899=00 1900=00 1901=00
+      1902=00 1903=00`.matchAll(/(\d+)=([0-9A-F]+)/g),
+  ].map(([, parameter = '', valueHex = '']) => ({
+    parameter: Number(parameter),
+    type: 0,
+    valueSize: valueHex.length / 2,
+    valueHex,
+  }));
+  // Vendor examples, except 411/415/419 (real captures) and 418 (synthetic documented layout).
   const edataReports = [
     {
       type: 401,
@@ -247,6 +263,12 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
         ],
       },
     },
+    {
+      type: 415,
+      payload:
+        '1D021B00011200BC00010F000100015F02AF000400020F57004000022300031100012D0679000400020F57000200010002CE00010002B6000163030D00011802B80002020802B90002020802A0000222E602B000040004E6FB051000010602960001000589000100060F000103028B00016300990001000276000100051200010B052A00010800A400017D051500017D0243000165001700010000BD00010102940001000346000100060C00010008BC0001000648000100058B00010002B7000100050800010002C400010D059B000100059C000100059D000100059E000100059F00010105A100010005A400010005A5000100046F00010005A70001000470000100052C000100076100010007620001000763000100076400010007650001000766000100076700010307680001000769000100076A000100076B000100076C000100076D000100076E000100076F000100',
+      decoded: { parameters: freezeFrame },
+    },
     { type: 417, payload: '', decoded: { noCanMessages: true } },
     { type: 417, payload: '00', decoded: {} },
     {
@@ -280,6 +302,7 @@ it('decodes event tokens with UTC times, nautical speed and coordinates while pr
       },
     },
     { type: 413, payload: '1911110162', decoded: {} },
+    { type: 415, payload: '140001000155', decoded: {} },
     { type: 412, payload: '01020304', decoded: {} },
     { type: 419, payload: '21000010F3', decoded: {} },
     // The PDF's printed 418 example conflicts with its five-ASCII-character layout.

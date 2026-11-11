@@ -38,7 +38,7 @@ function feedEdata(value: unknown) {
   if (typeof value !== 'object' || value === null || !('type' in value)) {
     return null;
   }
-  if (value.type === 405) {
+  if (value.type === 405 || value.type === 415) {
     if (!('parameters' in value) || !Array.isArray(value.parameters)) {
       return null;
     }
@@ -75,7 +75,8 @@ function feedEdata(value: unknown) {
         valueHex: parameter.valueHex,
       });
     }
-    return { report: '405' as const, measurements };
+    // 415 is the freeze frame captured with a fault report, in the 405 shape.
+    return { report: value.type === 405 ? ('405' as const) : ('415' as const), measurements };
   }
   if (
     value.type === 411 &&

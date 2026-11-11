@@ -1199,5 +1199,93 @@ describe('ERM telemetry import with PostgreSQL', () => {
         expect(body).toEqual({ data: { notifications: { total: 0, items: [] } } });
       }
     }
+
+    // An eData 415 freeze frame keeps every value, scaled by the catalog when read, and never
+    // replaces the 405 lamp state or the measurement series.
+    await database.client.edataCatalogParameter.updateMany({
+      where: { catalogId: catalog.id, parameterId: 1 },
+      data: { multiply: '0.125', offset: '0.0' },
+    });
+    events.get(lampDevice.imei)?.push({
+      ...event('115', 130, false),
+      eventId: '33',
+      edata: {
+        report: '415',
+        measurements: [
+          { parameterId: 1, parameterType: 0, valueSize: 2, valueHex: '05DC' },
+          { parameterId: 1896, parameterType: 0, valueSize: 1, valueHex: '01' },
+        ],
+      },
+    });
+    await jobs.tick();
+    expect(await lampNotifications()).toEqual(lampTransitions);
+    for (const selectedScope of [
+      scopeA,
+      { tenantId: scopeA.tenantId, branchId: scopeB.branchId },
+    ]) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${issueDemoToken(selectedScope.tenantId)}`,
+          'x-branch-id': selectedScope.branchId,
+        },
+        body: JSON.stringify({
+          query:
+            'query($id:ID!,$from:DateTime!,$to:DateTime!){fleetVehicleFreezeFrame(vehicleId:$id){deviceImei recordedAt values{parameterId name unit valueHex value}} fleetVehicleEdataMeasurements(vehicleId:$id,from:$from,to:$to,parameterIds:[1]){items{valueHex}}}',
+          variables: {
+            id: lampVehicle.id,
+            from: installedAt.toISOString(),
+            to: at(360).toISOString(),
+          },
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const body: unknown = await response.json();
+      if (selectedScope === scopeA) {
+        expect(body).toEqual({
+          data: {
+            fleetVehicleFreezeFrame: {
+              deviceImei: lampDevice.imei,
+              recordedAt: at(130).toISOString(),
+              values: [
+                {
+                  parameterId: 1,
+                  name: 'Engine Speed (RPM)',
+                  unit: 'RPM',
+                  valueHex: '05DC',
+                  value: 187.5,
+                },
+                { parameterId: 1896, name: null, unit: null, valueHex: '01', value: null },
+              ],
+            },
+            fleetVehicleEdataMeasurements: { items: [] },
+          },
+        });
+      } else {
+        const notFound = { extensions: { code: 'NOT_FOUND' } };
+        expect(body).toMatchObject({ errors: [notFound, notFound] });
+      }
+    }
+    const lampResponse = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${issueDemoToken(scopeA.tenantId)}`,
+        'x-branch-id': scopeA.branchId,
+      },
+      body: JSON.stringify({
+        query: 'query($id:ID!){fleetDevice(id:$id){warningLamps{parameterId state}}}',
+        variables: { id: lampDevice.id },
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    expect(await lampResponse.json()).toEqual({
+      data: {
+        fleetDevice: {
+          warningLamps: [1896, 1906, 1910].map((parameterId) => ({ parameterId, state: 'OFF' })),
+        },
+      },
+    });
   });
 });

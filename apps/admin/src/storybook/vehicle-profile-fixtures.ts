@@ -11,6 +11,7 @@ import {
   AdminRecordOdometerDocument,
   type AdminFaultCheckFragment,
   type AdminFaultReadFragment,
+  type AdminFreezeFrameFragment,
   type AdminVehicleProfileFragment,
   type AdminVehicleProfileServiceDetailsFragment,
   type AdminRecordOdometerMutation,
@@ -81,6 +82,39 @@ const fixtureFaultRead: WithTypename<AdminFaultReadFragment> = {
   expiresAt: '2026-10-18T11:50:00.000Z',
   waitingReason: null,
 };
+// Values the eData module captured with the SPN 3251 report (eData 415).
+const freezeValue = { __typename: 'FleetFreezeFrameValue' } as const;
+const fixtureFreezeFrame: WithTypename<AdminFreezeFrameFragment> = {
+  __typename: 'FleetFreezeFrame',
+  recordedAt: '2026-10-18T05:34:04.000Z',
+  values: [
+    {
+      ...freezeValue,
+      parameterId: 1,
+      name: 'Engine Speed (RPM)',
+      unit: 'RPM',
+      valueHex: '05DC',
+      value: 1500,
+    },
+    {
+      ...freezeValue,
+      parameterId: 539,
+      name: 'Engine Coolant Temperature (c)',
+      unit: 'c',
+      valueHex: '5A',
+      value: 90,
+    },
+    {
+      ...freezeValue,
+      parameterId: 785,
+      name: 'Fuel Level (%)',
+      unit: '%',
+      valueHex: '2D',
+      value: 45,
+    },
+    { ...freezeValue, parameterId: 2236, name: null, unit: null, valueHex: '00', value: null },
+  ],
+};
 export const fixtureVehicleProfile: WithTypename<AdminVehicleProfileFragment> = {
   ...fixtureVehicle,
   devices: fixtureVehicleLiveDevices.map((device) => ({
@@ -128,6 +162,7 @@ graphqlFixture(AdminVehicleProfileDocument, (variables) => {
         { __typename: 'FleetDailyDistancePoint', date: '2026-10-18', distanceKm: 150 },
       ],
     },
+    fleetVehicleFreezeFrame: fixtureFreezeFrame,
   };
 });
 graphqlFixture(AdminVehicleOdometerDocument, (variables) => {

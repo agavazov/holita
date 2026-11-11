@@ -291,6 +291,9 @@ query AdminVehicleProfile($id: ID!) {
       distanceKm
     }
   }
+  fleetVehicleFreezeFrame(vehicleId: $id) {
+    ...AdminFreezeFrame
+  }
 }
 query AdminVehicleProfileTrips($vehicleId: ID!, $offset: Int!, $limit: Int!, $sort: FleetTripSort) {
   fleetTrips(offset: $offset, limit: $limit, filter: { vehicleIds: [$vehicleId] }, sort: $sort) {

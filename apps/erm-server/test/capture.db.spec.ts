@@ -3286,6 +3286,23 @@ it('persists captured connection lifecycle and raw frames through the production
         },
       },
     });
+    const freezeFrameEvent = await database.client.ermEvent.create({
+      data: {
+        frameId: telemetryFrame.id,
+        unitId: telemetryUnitId,
+        eventId: '33',
+        fields: {
+          edata: {
+            type: 415,
+            payload: '1D021B00011200BC00010F',
+            parameters: [
+              { parameter: 539, type: 0, valueSize: 1, valueHex: '12' },
+              { parameter: 188, type: 0, valueSize: 1, valueHex: '0F' },
+            ],
+          },
+        },
+      },
+    });
     const delayedFrame = await database.client.ermFrame.create({
       data: {
         connectionId: stored.id,
@@ -3308,8 +3325,9 @@ it('persists captured connection lifecycle and raw frames through the production
         String(thirdTelemetryEvent.id),
         String(fourthTelemetryEvent.id),
         String(fifthTelemetryEvent.id),
+        String(freezeFrameEvent.id),
       ]);
-      expect(exported.next).toBe(String(fifthTelemetryEvent.id));
+      expect(exported.next).toBe(String(freezeFrameEvent.id));
       expect(exported.events[0]).toEqual({
         id: String(firstTelemetryEvent.id),
         eventId: '04',
@@ -3358,10 +3376,17 @@ it('persists captured connection lifecycle and raw frames through the production
         ],
       });
       expect(exported.events[4]?.edata).toBeNull();
+      expect(exported.events[5]?.edata).toEqual({
+        report: '415',
+        measurements: [
+          { parameterId: 539, parameterType: 0, valueSize: 1, valueHex: '12' },
+          { parameterId: 188, parameterType: 0, valueSize: 1, valueHex: '0F' },
+        ],
+      });
       expect(
         await telemetryController.events(telemetryUnitId, String(firstTelemetryEvent.id), '1'),
       ).toEqual({ events: [exported.events[1]], next: String(secondTelemetryEvent.id) });
-      const after = String(fifthTelemetryEvent.id);
+      const after = String(freezeFrameEvent.id);
       expect(await telemetryController.events(telemetryUnitId, after, undefined)).toEqual({
         events: [],
         next: after,

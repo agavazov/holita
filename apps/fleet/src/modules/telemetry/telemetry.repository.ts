@@ -16,6 +16,7 @@ import {
 } from '../../database/sql.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { FleetScope } from '../../validation.js';
+import { MEASUREMENT_CATALOG } from '../erm-telemetry/erm-telemetry.mapping.js';
 import type { VehicleFacts } from './vehicle-state.js';
 import { vehicleFactsSql } from './vehicle-facts.sql.js';
 
@@ -188,6 +189,7 @@ export class TelemetryRepository {
         vehicleId,
         recordedAt: { gte: period.from, lt: period.to },
         ...(parameterIds === undefined ? {} : { parameterId: { in: parameterIds } }),
+        freezeFrame: false,
       },
       orderBy: [{ recordedAt: 'desc' }, { id: 'desc' }],
       take,
@@ -206,6 +208,70 @@ export class TelemetryRepository {
         unit: true,
       },
     });
+  }
+
+  /** Values of the vehicle's newest eData 415 freeze frame, ascending by parameter ID. */
+  async latestFreezeFrame(scope: FleetScope, vehicleId: string) {
+    const where = {
+      tenantId: scope.tenantId,
+      branchId: scope.branchId,
+      vehicleId,
+      freezeFrame: true,
+    };
+    const latest = await this.prisma.client.vehicleEdataMeasurement.findFirst({
+      where,
+      orderBy: [{ recordedAt: 'desc' }, { sourceEventId: 'desc' }],
+      select: { deviceImei: true, sourceEventId: true },
+    });
+    return latest === null
+      ? []
+      : this.prisma.client.vehicleEdataMeasurement.findMany({
+          where: { ...where, ...latest },
+          orderBy: { parameterId: 'asc' },
+          select: {
+            deviceImei: true,
+            recordedAt: true,
+            parameterId: true,
+            valueHex: true,
+            name: true,
+            unit: true,
+          },
+        });
+  }
+
+  /** Monitor catalog scaling per parameter; null when its catalog rows disagree or lack one. */
+  async catalogScaling(parameterIds: number[]) {
+    const catalog = await this.prisma.client.edataCatalog.findFirst({
+      where: MEASUREMENT_CATALOG,
+      select: { id: true },
+    });
+    const rows =
+      catalog === null
+        ? []
+        : await this.prisma.client.edataCatalogParameter.findMany({
+            where: {
+              catalogId: catalog.id,
+              sourceKey: 'monitor',
+              parameterId: { in: parameterIds },
+            },
+            select: { parameterId: true, multiply: true, offset: true },
+          });
+    const scaling = new Map<number, { multiply: number; offset: number } | null>();
+    for (const row of rows) {
+      const multiply = Number(row.multiply ?? Number.NaN);
+      const offset = Number(row.offset ?? Number.NaN);
+      const previous = scaling.get(row.parameterId);
+      scaling.set(
+        row.parameterId,
+        Number.isFinite(multiply) &&
+          Number.isFinite(offset) &&
+          (previous === undefined ||
+            (previous?.multiply === multiply && previous.offset === offset))
+          ? { multiply, offset }
+          : null,
+      );
+    }
+    return scaling;
   }
 
   findVehicle(scope: FleetScope, id: string) {
