@@ -273,6 +273,7 @@ test('staff creates a merchant and its administrator creates a product', async (
     throw new Error('Holita test seed configuration is required');
   }
   const cleanup: (() => Promise<void>)[] = [];
+  const errors: unknown[] = [];
   try {
     const coreDb = await database('core');
     cleanup.push(coreDb.close);
@@ -373,7 +374,6 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(merchant.getByText(productName, { exact: true })).toBeVisible();
   } finally {
-    const errors: unknown[] = [];
     for (const close of cleanup.reverse()) {
       try {
         await close();
@@ -381,8 +381,8 @@ test('staff creates a merchant and its administrator creates a product', async (
         errors.push(error);
       }
     }
-    if (errors.length) {
-      throw new AggregateError(errors, 'Isolated smoke cleanup failed');
-    }
+  }
+  if (errors.length) {
+    throw new AggregateError(errors, 'Isolated smoke cleanup failed');
   }
 });
