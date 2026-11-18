@@ -10,7 +10,10 @@ export class InternalBranchesController {
   @Post('resolve')
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
-  resolve(@Headers('x-core-internal-token') token: string | undefined, @Body() body: unknown) {
+  async resolve(
+    @Headers('x-core-internal-token') token: string | undefined,
+    @Body() body: unknown,
+  ) {
     requireInternalToken(token);
     if (
       typeof body !== 'object' ||
@@ -19,8 +22,8 @@ export class InternalBranchesController {
       typeof body.id !== 'string' ||
       !isUUID(body.id)
     ) {
-      return null;
+      return { branch: null };
     }
-    return this.branches.resolvePublic(body.id.toLowerCase());
+    return { branch: await this.branches.resolvePublic(body.id.toLowerCase()) };
   }
 }
