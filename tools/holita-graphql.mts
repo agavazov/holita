@@ -3,3 +3,7 @@ import { operationPaths, subgraphs, targets } from '../holita/tools/graphql/cont
 
 await generate(subgraphs, operationPaths, targets, 'gateway');
 await generate(subgraphs, operationPaths, targets, 'operator');
+
+const storefront = await import('../holita/tools/graphql/storefront-contracts.mjs');
+await generate(storefront.subgraphs, storefront.operationPaths, storefront.targets, 'gateway');
+await generate(storefront.subgraphs, storefront.operationPaths, storefront.targets, 'storefront');

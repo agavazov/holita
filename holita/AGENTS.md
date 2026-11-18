@@ -18,7 +18,7 @@ Discocan. Its package scope is `@holita/*` and its Nx projects are named `holita
 - A Branch is an online shop. The storefront resolves it from the request; an operator request
   takes it from the verified session and the selected Branch.
 - Start basic: a few fields per entity, enough to run and test every layer. Add depth only when
-  asked. Branch discovery is implemented; storefront, catalog, cart, checkout and orders are not.
+  asked. Branch discovery and a basic storefront catalogue are implemented; cart, checkout and orders are not.
 - The old platform in `/workspace/projects/red.bg` is a reference, not a source to port; its
   [inventory](docs/red-bg/README.md) is a reference map. Read the platform
   only when the task names it.
@@ -35,8 +35,10 @@ The pending steps are in the [backlog](../docs/todo/two-products.md).
 
 - `apps/admin` serves merchant operators on 12000; `apps/backoffice` serves platform staff on
   12001; `apps/sales` serves sales agents on 12002.
-- `apps/gateway` serves the operator graph on 12010 (health 12016), the shared Core instance uses
-  12011, and `apps/commerce` serves its subgraph on 12013.
+- `apps/storefront` serves shoppers on 12020. The operator Router uses 12010 (health 12016),
+  and the storefront Router uses 12030 (health 12036). Shared Core uses 12011 and Commerce 12013.
+- A shop URL is `/s/<branchId>`; the storefront graph uses the `x-branch-id` header and only
+  exposes its public catalogue and shop-scoped shopper accounts.
 - `npm run db:setup:holita` and `npm run db:test:setup:holita` provision only Holita roles and
   databases; `npm run db:migrate:holita` and `npm run db:seed:holita` prepare its development data.
   `npm run dev:holita` starts the product and `npm run kill` stops both products' development apps.

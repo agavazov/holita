@@ -90,7 +90,7 @@ export default tseslint.config(
   {
     files: [
       'discocan/apps/admin/**/*.ts',
-      'holita/apps/{admin,backoffice,sales}/**/*.ts',
+      'holita/apps/{admin,backoffice,sales,storefront}/**/*.ts',
       'holita/packages/operator/**/*.ts',
       'osnova/packages/ui/**/*.ts',
     ],
@@ -104,7 +104,7 @@ export default tseslint.config(
   {
     files: [
       'discocan/apps/admin/**/*.html',
-      'holita/apps/{admin,backoffice,sales}/**/*.html',
+      'holita/apps/{admin,backoffice,sales,storefront}/**/*.html',
       'holita/packages/operator/**/*.html',
       'osnova/packages/ui/**/*.html',
     ],

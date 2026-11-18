@@ -6,6 +6,8 @@ for (const [name, url] of [
   ['Backoffice', 'http://127.0.0.1:12001/'],
   ['Sales', 'http://127.0.0.1:12002/'],
   ['Router', 'http://127.0.0.1:12016/health'],
+  ['Storefront', 'http://127.0.0.1:12020/'],
+  ['Storefront Router', 'http://127.0.0.1:12036/health'],
 ] as const) {
   const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
   if (!response.ok) {

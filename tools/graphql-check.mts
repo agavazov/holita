@@ -6,11 +6,13 @@ import {
   targets,
 } from '../discocan/tools/graphql/contracts.mjs';
 import * as holita from '../holita/tools/graphql/contracts.mjs';
+import * as storefront from '../holita/tools/graphql/storefront-contracts.mjs';
 
 // Register each product with local GraphQL contracts here.
 for (const product of [
   { operationPaths, scalars, subgraphs, targets },
   { ...holita, scalars: {} },
+  { ...storefront, scalars: {} },
 ]) {
   await generate(
     product.subgraphs,

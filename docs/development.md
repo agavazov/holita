@@ -447,10 +447,12 @@ A health response does not prove database readiness. Regenerate contracts and re
 when SDL/operations change. Check the selected Branch and Fleet startup/backend flags for
 unavailable business screens. See [testing](testing.md) for guarded fixtures and cleanup.
 
-## Holita operator slice
+## Holita
 
 Holita runs its Admin, Backoffice and Sales applications on ports 12000, 12001 and 12002. Its
-operator Router uses 12010 (health 12016), Core uses 12011 and Commerce uses 12013. The first local
+operator Router uses 12010 (health 12016), Core uses 12011 and Commerce uses 12013. The
+storefront app uses 12020 and its public Router uses 12030 (health 12036). Open a shop at
+`/s/<branchId>`. The first local
 setup creates ignored, private `holita/config/core.env`, `commerce.env` and `seed-accounts.env` with
 `npx tsx holita/tools/runtime-config.mts`; preserve these files on subsequent runs. Provision and
 seed Holita without changing Discocan databases:

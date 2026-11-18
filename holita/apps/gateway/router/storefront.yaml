@@ -1,0 +1,32 @@
+supergraph:
+  listen: '127.0.0.1:${env.STOREFRONT_ROUTER_PORT:-12030}'
+  path: /graphql
+health_check:
+  listen: '127.0.0.1:${env.STOREFRONT_ROUTER_HEALTH_PORT:-12036}'
+  path: /health
+limits:
+  router:
+    http1_max_request_buf_size: 16KiB
+traffic_shaping:
+  router:
+    global_rate_limit:
+      capacity: 100
+      interval: 1s
+    timeout: 50s
+  all:
+    timeout: 5s
+override_subgraph_url:
+  commerce: '${env.STOREFRONT_COMMERCE_URL:-http://127.0.0.1:12013/storefront/graphql}'
+headers:
+  all:
+    request:
+      operations:
+        - propagate:
+            named: authorization
+        - propagate:
+            named: x-branch-id
+cors:
+  policies:
+    - origins: ['${env.STOREFRONT_ORIGIN:-http://127.0.0.1:12020}']
+      methods: [GET, POST, OPTIONS]
+      allow_headers: [authorization, content-type, x-branch-id]

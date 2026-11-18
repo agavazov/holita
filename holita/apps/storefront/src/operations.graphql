@@ -1,0 +1,57 @@
+query PublicShop {
+  shop {
+    id
+    name
+  }
+}
+query Catalogue($offset: Int!, $limit: Int!) {
+  catalogue(offset: $offset, limit: $limit) {
+    items {
+      id
+      name
+      price
+    }
+    total
+    offset
+    limit
+  }
+}
+query CatalogueProduct($id: ID!) {
+  catalogueProduct(id: $id) {
+    id
+    name
+    price
+  }
+}
+query ShopperMe {
+  shopperMe {
+    id
+    name
+    email
+  }
+}
+mutation RegisterShopper($name: String!, $email: String!, $password: String!) {
+  registerShopper(name: $name, email: $email, password: $password) {
+    token
+    expiresAt
+    shopper {
+      id
+      name
+      email
+    }
+  }
+}
+mutation SignInShopper($email: String!, $password: String!) {
+  signInShopper(email: $email, password: $password) {
+    token
+    expiresAt
+    shopper {
+      id
+      name
+      email
+    }
+  }
+}
+mutation SignOutShopper {
+  signOutShopper
+}

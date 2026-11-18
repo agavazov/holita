@@ -162,7 +162,7 @@ async function runSeed(env: NodeJS.ProcessEnv): Promise<void> {
   }
 }
 
-async function serve(app: 'admin' | 'backoffice', routerUrl: string) {
+async function serve(app: 'admin' | 'backoffice' | 'storefront', routerUrl: string) {
   const directory = join(root, `holita/apps/${app}/dist/browser`);
   const server = createServer((request, response) => {
     void (async () => {
@@ -283,6 +283,8 @@ test('staff creates a merchant and its administrator creates a product', async (
     const commercePort = await port();
     const routerPort = await port();
     const healthPort = await port();
+    const publicRouterPort = await port();
+    const publicHealthPort = await port();
     const coreEnv = {
       ...process.env,
       CORE_DATABASE_URL: coreDb.url,
@@ -318,6 +320,9 @@ test('staff creates a merchant and its administrator creates a product', async (
     cleanup.push(admin.close);
     const backoffice = await serve('backoffice', routerUrl);
     cleanup.push(backoffice.close);
+    const publicUrl = `http://127.0.0.1:${String(publicRouterPort)}/graphql`;
+    const shopApp = await serve('storefront', publicUrl);
+    cleanup.push(shopApp.close);
     const router = spawn(
       join(root, 'osnova/tools/router/dist/router'),
       [
@@ -343,6 +348,29 @@ test('staff creates a merchant and its administrator creates a product', async (
     );
     cleanup.push(() => stopChild(router));
     await waitReady(`http://127.0.0.1:${String(healthPort)}/health`, router, 'health');
+    const publicRouter = spawn(
+      join(root, 'osnova/tools/router/dist/router'),
+      [
+        '--anonymous-telemetry-disabled',
+        '--config',
+        'router/storefront.yaml',
+        '--supergraph',
+        'src/generated/storefront/supergraph.graphql',
+      ],
+      {
+        cwd: join(root, 'holita/apps/gateway'),
+        env: {
+          ...process.env,
+          STOREFRONT_ROUTER_PORT: String(publicRouterPort),
+          STOREFRONT_ROUTER_HEALTH_PORT: String(publicHealthPort),
+          STOREFRONT_COMMERCE_URL: `http://127.0.0.1:${String(commercePort)}/storefront/graphql`,
+          STOREFRONT_ORIGIN: shopApp.origin,
+        },
+        stdio: 'ignore',
+      },
+    );
+    cleanup.push(() => stopChild(publicRouter));
+    await waitReady(`http://127.0.0.1:${String(publicHealthPort)}/health`, publicRouter, 'health');
     const staffContext = await browser.newContext();
     cleanup.push(() => staffContext.close());
     const staff = await staffContext.newPage();
@@ -360,7 +388,26 @@ test('staff creates a merchant and its administrator creates a product', async (
     await staff.getByRole('link', { name: merchantName }).click();
     await staff.getByRole('button', { name: 'Create shop', exact: true }).click();
     await staff.locator('#shop-name').fill('First shop');
+    const branchResponse = staff.waitForResponse(
+      (response) => response.request().postData()?.includes('OperatorCreateBranch') === true,
+    );
     await staff.getByRole('button', { name: 'Save', exact: true }).click();
+    const branchValue: unknown = await (await branchResponse).json();
+    if (
+      typeof branchValue !== 'object' ||
+      branchValue === null ||
+      !('data' in branchValue) ||
+      typeof branchValue.data !== 'object' ||
+      branchValue.data === null ||
+      !('createMerchantBranch' in branchValue.data) ||
+      typeof branchValue.data.createMerchantBranch !== 'object' ||
+      branchValue.data.createMerchantBranch === null ||
+      !('id' in branchValue.data.createMerchantBranch) ||
+      typeof branchValue.data.createMerchantBranch.id !== 'string'
+    ) {
+      throw new Error('Shop creation did not return an ID');
+    }
+    const shopId = branchValue.data.createMerchantBranch.id;
     await expect(staff.getByText('First shop', { exact: true })).toBeVisible();
     const merchantContext = await browser.newContext();
     cleanup.push(() => merchantContext.close());
@@ -371,8 +418,23 @@ test('staff creates a merchant and its administrator creates a product', async (
     const productName = `Product ${randomUUID()}`;
     await merchant.locator('#product-name').fill(productName);
     await merchant.locator('#product-price').fill('25.50');
+    await merchant.getByRole('combobox', { name: /Status/ }).click();
+    await merchant.getByRole('option', { name: 'Active', exact: true }).click();
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(merchant.getByText(productName, { exact: true })).toBeVisible();
+    const shopperContext = await browser.newContext();
+    cleanup.push(() => shopperContext.close());
+    const shopper = await shopperContext.newPage();
+    await shopper.goto(`${shopApp.origin}/s/${shopId}`);
+    await shopper.getByRole('button', { name: 'EN', exact: true }).click();
+    await expect(shopper.getByRole('link', { name: productName })).toBeVisible();
+    await shopper.getByRole('link', { name: 'My account' }).click();
+    await shopper.getByRole('link', { name: 'Register', exact: true }).click();
+    await shopper.locator('#name').fill('Shopper');
+    await shopper.locator('#email').fill(`shopper-${randomUUID()}@example.test`);
+    await secretFill(shopper.locator('#password'), `Temporary-${randomUUID()}`);
+    await shopper.getByRole('button', { name: 'Register', exact: true }).click();
+    await expect(shopper.getByText('Shopper', { exact: true })).toBeVisible();
   } finally {
     for (const close of cleanup.reverse()) {
       try {

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start:prod": "../../../osnova/tools/router/dist/router --anonymous-telemetry-disabled --config router/router.yaml --supergraph src/generated/graphql/supergraph.graphql",
-    "router:check": "../../../osnova/tools/router/dist/router config validate router/router.yaml",
-    "build": "npm run router:check"
+    "router:check": "../../../osnova/tools/router/dist/router config validate router/router.yaml && ../../../osnova/tools/router/dist/router config validate router/storefront.yaml",
+    "build": "npm run router:check",
+    "start:storefront": "../../../osnova/tools/router/dist/router --anonymous-telemetry-disabled --config router/storefront.yaml --supergraph src/generated/storefront/supergraph.graphql"
   }
 }

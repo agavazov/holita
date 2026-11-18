@@ -10,6 +10,7 @@ await killDevelopment({
     'holita/apps/admin',
     'holita/apps/backoffice',
     'holita/apps/sales',
+    'holita/apps/storefront',
     'holita/apps/gateway',
     'holita/apps/commerce',
     'osnova/apps/core',
@@ -19,5 +20,5 @@ await killDevelopment({
     'holita/apps/commerce/dist-dev/main.js',
     'osnova/apps/core/dist-holita/main.js',
   ],
-  group: 'core,commerce,gateway,admin,backoffice,sales',
+  group: 'core,commerce,gateway,admin,backoffice,sales,storefront-router,storefront',
 });

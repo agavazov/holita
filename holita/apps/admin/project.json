@@ -61,7 +61,8 @@
             "holita-sales",
             "holita-gateway",
             "holita-commerce",
-            "osnova-core"
+            "osnova-core",
+            "holita-storefront"
           ]
         }
       ],
