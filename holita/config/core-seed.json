@@ -1,0 +1,44 @@
+{
+  "tenants": [
+    { "id": "02000000-0000-4000-8000-000000000001", "name": "Holita", "kind": "PLATFORM" },
+    { "id": "02000000-0000-4000-8000-000000000002", "name": "Demo Merchant", "kind": "CUSTOMER" }
+  ],
+  "branches": [
+    {
+      "id": "12000000-0000-4000-8000-000000000001",
+      "tenantId": "02000000-0000-4000-8000-000000000002",
+      "name": "Sofia"
+    },
+    {
+      "id": "12000000-0000-4000-8000-000000000002",
+      "tenantId": "02000000-0000-4000-8000-000000000002",
+      "name": "Plovdiv"
+    }
+  ],
+  "users": [
+    {
+      "id": "22000000-0000-4000-8000-000000000001",
+      "tenantId": "02000000-0000-4000-8000-000000000001",
+      "name": "Holita Staff",
+      "emailEnv": "HOLITA_STAFF_EMAIL",
+      "passwordEnv": "HOLITA_STAFF_PASSWORD",
+      "role": "ADMINISTRATOR"
+    },
+    {
+      "id": "22000000-0000-4000-8000-000000000002",
+      "tenantId": "02000000-0000-4000-8000-000000000001",
+      "name": "Holita Sales",
+      "emailEnv": "HOLITA_SALES_EMAIL",
+      "passwordEnv": "HOLITA_SALES_PASSWORD",
+      "role": "SALES"
+    },
+    {
+      "id": "22000000-0000-4000-8000-000000000003",
+      "tenantId": "02000000-0000-4000-8000-000000000002",
+      "name": "Merchant Administrator",
+      "emailEnv": "HOLITA_MERCHANT_EMAIL",
+      "passwordEnv": "HOLITA_MERCHANT_PASSWORD",
+      "role": "ADMINISTRATOR"
+    }
+  ]
+}

@@ -80,7 +80,9 @@
     "check:admin-styles": "tsx osnova/tools/design/check-admin-styles.mts",
     "db:setup:holita": "tsx tools/holita-database.mts",
     "db:test:setup:holita": "tsx tools/holita-database.mts --test",
-    "test:holita:commerce:db": "DOTENV_CONFIG_PATH=../../config/commerce.env nx run holita-commerce:test-db --output-style=static"
+    "test:holita:commerce:db": "DOTENV_CONFIG_PATH=../../config/commerce.env nx run holita-commerce:test-db --output-style=static",
+    "db:seed:holita": "tsx tools/holita-seed.mts",
+    "db:migrate:holita": "DOTENV_CONFIG_PATH=../../../holita/config/core.env npm run db:migrate --workspace @osnova/core && DOTENV_CONFIG_PATH=../../config/commerce.env npm run db:migrate --workspace @holita/commerce"
   },
   "devDependencies": {
     "@apollo/composition": "2.14.4",
