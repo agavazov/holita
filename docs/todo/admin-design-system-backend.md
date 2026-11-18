@@ -29,7 +29,7 @@ successful writes.
 
 ## Deferred domain work
 
-The following requires separate product scope and is not pending Storybook screen adoption:
+The following requires separate product scope:
 
 - Fuel entries; geozones/POIs; a diagnostic-fault lifecycle;
   driver-assignment history. Remaining eData measurement verification and scoped restoration

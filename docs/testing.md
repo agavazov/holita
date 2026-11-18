@@ -14,12 +14,12 @@ The [delivery policy](../AGENTS.md#delivery-policy) decides when a test may be a
 
 ## When to check
 
-| When                | What to run                                                  |
-| ------------------- | ------------------------------------------------------------ |
-| While writing       | Nothing                                                      |
-| Handing over a task | `npm run check`, plus the additions below                    |
-| On request          | The whole smoke suite, `test:gateway:db` and `test:full`     |
-| Pull request (CI)   | The complete affected checks, including federation and smoke |
+| When                | What to run                                                                |
+| ------------------- | -------------------------------------------------------------------------- |
+| While writing       | Nothing                                                                    |
+| Handing over a task | `npm run check`, plus the additions below                                  |
+| On request          | The whole smoke suite, `test:gateway:db`, `test:full` and Storybook review |
+| Pull request (CI)   | The complete affected checks, including federation and smoke               |
 
 `npm run check` works on the projects that the change affects, compared with `main` and including
 uncommitted files:
@@ -31,8 +31,15 @@ uncommitted files:
      generator itself changes.
 2. `eslint --cache` lints only the files that changed since its last run.
 
+Run Nx checks one at a time per checkout because they can regenerate GraphQL clients. Read
+summaries instead of full test output, or run long checks in a subagent. A failing spec being
+fixed may be rerun on its own while writing.
+
 The DB tests need PostgreSQL (`npm run db:up`, and `npm run db:test:setup` once). Separate
 `typecheck` targets, which also cover specs, stories and tools, run in CI.
+
+Report actual commands, results and unverified work; never declare work complete while a
+required check fails. Clean up processes and connections started by the task.
 
 When handing over, also run:
 
@@ -79,7 +86,7 @@ These commands always run fresh with `--skip-nx-cache`: `test:core:db`, `test:fl
 
 The Fleet DB target runs its files on two Jest workers (`maxWorkers` in `jest.db.config.mjs`).
 
-Never reset databases, truncate shared tables or use development connections.
+Never reset databases, remove volumes, truncate shared tables or use development connections.
 
 ## Federation
 
@@ -134,9 +141,8 @@ with `DISCOCAN_BROWSER_SCREENSHOTS=1`.
 
 ## Storybook
 
-Storybook (`npm run storybook:admin`) is a development tool, not a test suite. Its stories render
-connected screens from typed GraphQL fixtures. The Accessibility panel runs an axe check on
-request.
+Storybook (`npm run storybook:admin`) is a development tool for the design-system catalogue,
+not a test suite. The Accessibility panel runs an axe check on request.
 
 ## Affected selection and CI
 

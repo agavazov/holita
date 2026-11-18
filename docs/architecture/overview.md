@@ -41,9 +41,8 @@ coordination, while Branch discovery and selection remain in `features/branches/
 Presentation is split between the theme in `theme/`, the global styles in `src/styles/`, the
 patterns in `ui/` and the shell in `layout/`
 ([admin design system](../admin-design-system.md#where-presentation-lives)); the presentational
-views and drawers in `features/fleet/*` (`*-view.ts`, `*-drawer.ts`) are shared by live feature
-pages and Storybook examples. Storybook fixtures and sample pages stay in `src/storybook`
-and outside application output. `core/` contains only admin-local authentication,
+views and drawers in `features/fleet/*` (`*-view.ts`, `*-drawer.ts`) serve live feature
+pages. Storybook support stays in `src/storybook` and outside application output. `core/` contains only admin-local authentication,
 configuration and GraphQL transport. Feature clients and caches retain their mounted view lifetime; neither route grouping nor shared login makes business clients global.
 
 | Application | Responsibility                                                                                                       | Local port                                                   |
@@ -73,8 +72,8 @@ flowchart LR
 ## Execution and ownership
 
 The native Router and Node applications run on the host. Root `dev` waits for PostgreSQL health and starts the group
-using concurrently, including admin Storybook on port 11001, with group shutdown. Admin GraphQL
-artifacts are generated once before the Angular and Storybook processes start. Ports and CORS origins are application-local configuration.
+using concurrently with group shutdown. Admin GraphQL artifacts are generated once before
+Angular starts. Storybook runs on demand on port 11001. Ports and CORS origins are application-local configuration.
 Only PostgreSQL runs in Compose. Setup/migration/seed are explicit commands, separate from startup.
 Health endpoints prove application availability without opening database connections.
 
@@ -97,7 +96,7 @@ It consumes the same generated static supergraph and routes directly to Core, Fl
 and ERM Server on the public GraphQL port, 11010. Its health listener uses port 11016.
 Authorization, Branch scope and business behavior remain in the owning subgraphs.
 Only `authorization`, `x-branch-id` and `x-request-id` are propagated from client requests.
-`dev` starts Router, Core, Fleet, Angular and Storybook through concurrently. Angular's development
+`dev` starts Router, Core, Fleet and Angular through concurrently. Angular's development
 proxy follows `ROUTER_PORT`, defaulting to 11010. `kill` stops the native Router and the web/API Node
 application processes. Gateway has no Node implementation, Nest bootstrap or npm runtime
 dependencies. Development, federation/browser fixtures and CI all use the official binary.

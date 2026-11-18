@@ -24,8 +24,8 @@ open only the section you need.
   and takes its texts from the BG/EN catalogs. A new connected screen gets its `bg.json` with the
   implementation, so English is never a silent fallback.
 - Keep compiled component CSS below the 4 kB warning budget (the build fails above 8 kB).
-- Give every control an accessible name. Check a screen with the Storybook Accessibility panel
-  when its markup changes.
+- Give every control an accessible name. Check shared components with the Storybook Accessibility
+  panel when their markup changes.
 
 ## Change a token, brand, density or pattern centrally
 
@@ -38,8 +38,9 @@ open only the section you need.
 4. **Pattern:** change the component or CSS pattern once.
 5. **Breakpoints, layer order or font weights:** follow "Changing the design centrally" in the
    design-system document, because several files change together.
-6. **Review:** open Storybook (`npm run storybook:admin`, port 11001) with the toolbar themes,
-   brands, densities and `mobile375`.
+6. **Review:** review shared components and tokens in Storybook (`npm run storybook:admin`, port 11001) with the toolbar themes, brands, densities and `mobile375`. When a screen layout changes,
+   review it in the running dev app (`npm run dev`) with `npm run db:seed:fleet-demo` data at
+   desktop and 375 px widths.
 
 ## Add a PrimeNG control
 
@@ -71,13 +72,6 @@ open only the section you need.
 
 ## Stories
 
-Stories are a development tool and are not tests:
-
-- Titles follow `Admin/<menu group>/<menu item>[/<sub-page>]`, using the English labels and order
-  from `admin-navigation.ts`. Nest sub-pages under the item that opens them; Sign in is
-  `Admin/Sign in`.
-- Add stories beside the connected adapter, using `routeAt`, `StoryApp` and typed `graphqlFixture`
-  snapshots in `src/storybook/*-fixtures.ts`. Keep representative states, aiming for at most eight
-  per screen. Use the Language, Theme, Brand and Density globals instead of language/theme copies.
-- Add a `Design System/...` story beside a new shared component.
-- Do not add play functions or story tests, and do not build a second backend in Storybook.
+Stories are a development tool for the design-system catalogue only. Add a `Design System/...`
+story beside a new or changed shared component in `app/ui`, the `app/layout` shell or `app/theme`.
+Screens get no stories or GraphQL fixtures. Do not add play functions or story tests.

@@ -64,3 +64,5 @@ reviewed against a running backend.
   ([Discocan Fleet](../../discocan/fleet.md)), with generated TypedDocumentNodes through Gateway.
   Storybook uses those presentation components and routed containers without a backend.
   The design system is described in [admin design system](../../admin-design-system.md).
+
+2026-11-18: screen stories and their fixtures were removed; Storybook keeps the design-system catalogue and screens are reviewed in the running app.

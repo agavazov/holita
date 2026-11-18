@@ -17,7 +17,7 @@ Paths below are relative to `apps/admin/src`.
 | `app/layout/`                  | Business-independent shell, sidebar, topbar, navigation and record breadcrumb         |
 | `app/workspace/`               | Session/language composition, page context/title and PrimeNG translations             |
 | `app/features/`                | Concrete business views, typed forms, services and generated operations               |
-| `storybook/`, `../.storybook/` | Fixtures and review scenarios, excluded from application output                       |
+| `storybook/`, `../.storybook/` | Catalogue support, excluded from application output                                   |
 
 Keep colors, spacing scale, radii, shadows and breakpoints central. Component SCSS uses
 `var(--p-*)`/`--p-app-*`, shared pattern classes and breakpoint mixins; no literal colors,
@@ -359,7 +359,7 @@ search on external navigation. Do not apply a local default in place of absent s
 
 Routed drawers are child routes over a retained list/profile, with `data.drawer`, `leaveDrawer`
 and a contextual close link preserving query/fragment. Use the `ui/drawer` helpers and host
-saved notifications. Host-controlled story drawers emit `closeRequest` and await dirty confirmation.
+saved notifications.
 
 Dirty drafts ask before discard and guard unload. While saving, lock the form, prevent duplicate
 submit/navigation and disable Cancel/Close. On failure retain the draft and focus invalid controls
@@ -378,15 +378,16 @@ The speed reference generates no alert or device command.
 
 ## Storybook review
 
-Run `npm run storybook:admin` on 11001. Review real shared components with fixed fixtures;
-stories are not a backend or an automatic test suite. No play functions or story runner.
-Use `Admin/<menu group>/<menu item>[/<sub-page>]` in the navigation's English label/order;
-shared stories belong under `Design System`.
+Run `npm run storybook:admin` on port 11001 to review the design-system catalogue: shared
+components, shell and tokens. Use Language, Theme, Brand, Density and `mobile375` to review
+variants. Check keyboard behavior and the Accessibility panel when shared markup changes; the
+license notice is excluded from axe and never hidden. Storybook may serve private local
+configuration; do not publish it. Stories are not a backend or an automatic test suite; do not
+add play functions or story tests.
 
-Keep representative default/loading/empty/error/missing-scope/narrow/workflow states, aiming for
-at most eight per screen. Use Language, Theme, Brand, Density and viewport toolbar globals instead
-of copies. Review keyboard behavior and the Accessibility panel; the license notice is excluded
-from axe and never hidden. Storybook may serve private local configuration; do not publish it.
+When a screen layout changes, review it in the running app (`npm run dev`) with demo data from
+`npm run db:seed:fleet-demo`, at desktop and 375 px widths. Screens have no stories or GraphQL
+fixtures.
 
 ## Changing the design centrally
 

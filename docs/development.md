@@ -34,7 +34,7 @@ in environment examples, documentation, agent instructions, command arguments or
 
 | Command                 | Behavior                                                                     |
 | ----------------------- | ---------------------------------------------------------------------------- |
-| npm run dev             | Wait for PostgreSQL, prepare admin GraphQL, start web/API apps and Storybook |
+| npm run dev             | Wait for PostgreSQL, prepare admin GraphQL, start web/API apps                           |
 | npm run kill            | Stop this checkout's web/API processes and watchers on Ubuntu/WSL            |
 | npm run erm:relay       | ERM StarLink TCP relay to Karma with frame capture                           |
 | npm run dev:admin       | Angular watcher                                                              |
@@ -63,9 +63,9 @@ dev server's files. `npm run start:prod --workspace @discocan/core` (or fleet/er
 runs the compiled app. Gateway `build` generates the supergraph and
 validates the installed native Router configuration. `npm run start:prod --workspace @discocan/gateway`
 starts that binary using the generated supergraph; no Node bundle or Rust compilation is involved. `dev` does not migrate or seed databases.
-The group generates admin GraphQL artifacts once before starting Angular and Storybook in
-parallel; their standalone commands keep their own generation step. Ctrl+C stops the process
-group, including Storybook; `db:down` stops PostgreSQL separately and preserves the volume.
+The group generates admin GraphQL artifacts once before starting Angular; standalone Angular and
+Storybook commands keep their own generation step. Ctrl+C stops the process group; `db:down`
+stops PostgreSQL separately and preserves the volume.
 See [ERM relay](discocan/development.md#erm-relay) for the device relay and
 [ERM Server](discocan/development.md#erm-device-server) for its independent compiled service.
 Use `npm run kill` from another terminal when application processes remain running. It stops
@@ -217,8 +217,8 @@ npm run dev
 The installer verifies the release archive's pinned SHA-256 before extraction and keeps
 the binary and upstream license notices in ignored `apps/gateway/router/dist/`.
 It requires no npm dependency, Rust toolchain, container, GraphOS account or API key.
-`dev` waits for PostgreSQL and starts Router, Core, Fleet, Angular and Storybook
-using concurrently. Angular keeps the public `/graphql` URL and uses `proxy.conf.mjs`,
+`dev` waits for PostgreSQL and starts Router, Core, Fleet and Angular using concurrently. Angular
+keeps the public `/graphql` URL and uses `proxy.conf.mjs`,
 targeting `ROUTER_PORT` (11010 by default). Stop any existing development group before starting
 another because the applications share ports.
 Ctrl+C stops the group; `npm run kill` also recognizes the native Router in this checkout.
@@ -321,10 +321,10 @@ are recorded in [the admin attribution](../apps/admin/THIRD_PARTY_NOTICES.md).
 ### Admin Storybook
 
 Storybook is a development tool, not a test suite. It renders the admin's real Angular
-components with deterministic synthetic data and no backend. `npm run dev` includes Storybook, and
-`npm run storybook:admin` starts it separately. Both serve `http://127.0.0.1:11001` without
-opening a browser. Storybook starts at "Start here", followed by Admin and Design System; the
-[Storybook review](admin-design-system.md#storybook-review) lists what each title shows.
+shared design-system components with deterministic synthetic data and no backend.
+`npm run storybook:admin` serves `http://127.0.0.1:11001` without opening a browser.
+Storybook starts at "Start here", followed by Design System; see
+[Storybook review](admin-design-system.md#storybook-review).
 
 - The framework is `@storybook/angular-vite` on Vite and `@angular/build`, without webpack. It is a
   preview framework in Storybook 10.
@@ -342,9 +342,8 @@ opening a browser. Storybook starts at "Start here", followed by Admin and Desig
   rebuilds `storybookApplicationConfig(choice)` and keys a `STORY_GLOBALS` provider on brand,
   density and theme.
 - Viewports are `desktop1440`, `desktop1024`, `tablet768` and `mobile375`.
-- Stories start in English: `UI_LANGUAGE` is fixed to `en` and fixtures are English. The routed
-  Shell stories render the real `AdminWorkspace`, whose bg/en menu navigates to the other
-  language's route.
+- Stories start in English, and the Language toolbar switches between English and Bulgarian.
+  The routed Shell stories render the real `AdminWorkspace`.
 - Stories are `*.stories.ts` files beside the components they render. Story-only support lives in
   `apps/admin/src/storybook`. `storybookApplicationConfig()` reuses the application's `appConfig`
   providers with `FixtureHttpBackend` as `HttpBackend`, an in-memory location, the story clock
@@ -354,15 +353,12 @@ opening a browser. Storybook starts at "Start here", followed by Admin and Desig
   - Pattern stories wrap the component in the `onFrame` decorator (frame surface, gutter and
     content width).
   - `routeAt(path)` with `StoryApp` opens a real application route under `/en/`, with GraphQL
-    answered by fixtures. The connected `Admin/...` and routed `Design System/Shell` stories use
-    it.
+    answered by fixtures. The routed `Design System/Shell` stories use it.
 - GraphQL fixtures: a module registers an answer at load time with
   `graphqlFixture(GeneratedDocument, (variables) => result)` and must be imported by the story or
   by `story-config.ts`. Handlers read `FixtureVariables` (runtime-checked accessors and `branchId`
   from `x-branch-id`) and throw `fixtureError(code, message, fieldErrors?)` for a GraphQL error.
-  `AdminBranches` (`session-fixtures.ts`) is registered globally. Login stories also register
-  `AdminTenants` and `AdminDemoLogin` and override Branch discovery for their empty scenarios
-  through `login-fixtures.ts`, restoring the shared Branch handler on cleanup. Unregistered
+  `AdminBranches` (`session-fixtures.ts`) is registered globally. Unregistered
   operations answer with the GraphQL error `No Storybook fixture answers <Operation>.` Responses carry the request ID
   `fixture-<Operation>`.
 - `parameters.discocan` (`StoryFixtures`, declared with `satisfies StoryFixtures`) is read at runtime
@@ -381,7 +377,7 @@ opening a browser. Storybook starts at "Start here", followed by Admin and Desig
 - Before every story the preview's `beforeEach` (`prepareStory`) resets the scenario and call
   counts, the clock, the stored session, the theme and the document language. Session options
   apply before application bootstrap; fixture latency and failures affect GraphQL operations in
-  connected `Admin/...`, routed Shell and Login stories.
+  routed Shell stories.
 - `tsconfig.app.json` excludes stories and `src/storybook`; `npm run typecheck` compiles them
   through `apps/admin/.storybook/tsconfig.json`, which excludes specs, and ESLint rejects Storybook
   or fixture imports from application code.

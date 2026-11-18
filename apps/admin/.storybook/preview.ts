@@ -123,18 +123,6 @@ const preview: Preview = {
       storySort: {
         order: [
           'Start here',
-          'Admin',
-          [
-            'Dashboard',
-            ['Overview', 'Problems', 'Trips'],
-            'Fleet',
-            ['Vehicles', 'Devices', 'Drivers', 'Maintenance'],
-            'System',
-            ['Commands', 'Settings', ['General', 'Vehicle groups'], 'Users'],
-            'Notifications',
-            'Profile',
-            'Sign in',
-          ],
           'Design System',
           ['Foundations', 'Patterns', 'Shell', 'PrimeNG coverage'],
         ],

@@ -37,9 +37,8 @@ npm run db:seed
 npm run dev
 ```
 
-`npm run dev` also starts [admin Storybook](http://127.0.0.1:11001). On Ubuntu/WSL, run
-`npm run kill` in another terminal to stop the applications, Storybook in the dev group and
-their watchers. PostgreSQL remains running; `npm run db:down` stops it separately.
+On Ubuntu/WSL, run `npm run kill` in another terminal to stop the applications, on-demand
+Storybook and their watchers. PostgreSQL remains running; `npm run db:down` stops it separately.
 
 If needed, run `nvm install` before `nvm use`. Open [Angular admin](http://127.0.0.1:11000).
 Sign in with your email and password, then choose a fleet to open Dashboard. Provision the
@@ -50,7 +49,7 @@ section and resets the list query. Routes and list filters survive reloads and l
 Each mounted workspace owns its Apollo client/cache. Submitted writes settle in their original
 Branch; navigation cancels obsolete reads and callbacks.
 
-Vehicles uses the shared Storybook list and routed create/edit drawer with the full master-data
+Vehicles uses the shared list and routed create/edit drawer with the full master-data
 fields, telemetry state, whole-Branch KPIs and URL-backed AND filters. Row and selection
 delete/deactivate actions submit one IDs-array operation; partial failures retain selected
 records for retry and appear in the shared operation toast. See the
@@ -93,12 +92,12 @@ The [demo seed guide](docs/discocan/development.md#fleet-demo-data) explains its
 The shell supports keyboard/mobile navigation, a persisted sidebar rail and persisted light/dark
 themes. The startup `fleetEnabled` flag gates both business modules; Branch discovery stays available.
 The [admin design system](docs/admin-design-system.md) describes the theme, shell and patterns.
-To start it separately, `npm run storybook:admin` serves the [admin Storybook](docs/development.md#admin-storybook) at
+`npm run storybook:admin` serves the [admin Storybook](docs/development.md#admin-storybook) at
 `http://127.0.0.1:11001` with synthetic data and no backend. Storybook is a development and
 review tool; it has no automated tests.
 
-Gateway, Core and Fleet listen on loopback ports 11010, 11011 and 11013; PostgreSQL uses 11084. `dev` waits for PostgreSQL health and generates admin GraphQL artifacts once before starting the four web/API applications and Storybook. Ctrl+C stops
-the native Router, Node applications and Storybook together. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
+Gateway, Core and Fleet listen on loopback ports 11010, 11011 and 11013; PostgreSQL uses 11084. `dev` waits for PostgreSQL health and generates admin GraphQL artifacts once before starting the four web/API applications. Ctrl+C stops
+the native Router and Node applications together. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
 and seeding are explicit commands. The seed inserts RentalSofia, Discordia and Sandbox Branches, two sample Vehicles and one Device without replacing existing records.
 
 Use [Gateway GraphQL](http://127.0.0.1:11010/graphql). Sign in through `signIn(email, password)`

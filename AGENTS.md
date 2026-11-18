@@ -212,34 +212,17 @@ Do not make architectural changes solely because they may be useful later.
 
 ## Verification
 
-[docs/testing.md](docs/testing.md) has the commands.
+[docs/testing.md](docs/testing.md) is the authoritative check reference.
 
-1. **While writing:** run no checks. A failing spec you are fixing may be rerun on its own.
-2. **When handing over the task:** run `npm run check` once and fix what it reports.
-   - It builds, unit-tests and DB-tests only the projects the change affects, in parallel and from
-     the Nx cache. The build is the type check.
-   - DB results are cached only locally. `test:core:db`, `test:fleet:db`, CI (`test:affected`) and
-     `test:full` always run them fresh.
-   - It lints only the files changed since the last check.
-   - Also run one browser smoke file when login, routing, transport or a main journey changed.
-   - Also run `npm run typecheck:tools` when `tools/` changed.
-3. **Only on request:** the whole smoke suite, the federation suite (`test:gateway:db`),
-   `test:full` and Storybook review.
-
-CI runs the complete affected checks: lint, typecheck, build, unit, DB, federation and smoke.
-
-Rules for every check:
-
-- Do not pass `--skip-nx-cache` by default. Use it only to re-run a cached result you doubt.
-- When you run a single spec, read the executed count: zero tests is not a pass. Do not use watch
-  mode or `--passWithNoTests`.
-- Database checks, including those in `npm run check`, use only the dedicated test databases
-  (`db:up`, `db:test:setup`) and the guarded per-run schema helpers. Never reset databases, remove
-  volumes or reuse development connections.
-- Run Nx checks one at a time per checkout. Several of them regenerate the GraphQL clients.
-- Read summaries instead of full test output, or run long checks in a subagent.
-- Keep [PR CI](.github/workflows/affected.yml) on the real event base/head commits.
-  [Full regression](.github/workflows/full-regression.yml) stays `workflow_dispatch` only.
-- Report the actual commands, their results and any unverified work.
-  - Do not declare work complete while a required check fails.
-  - Clean up the processes and connections the task started.
+- While writing, run no checks. A failing spec you are fixing may be rerun on its own.
+- When handing over, run `npm run check` once and fix what it reports, plus the additions in
+  [testing](docs/testing.md): one smoke file for login, routing, transport or a main journey,
+  and `npm run typecheck:tools` for `tools/` changes.
+- Only on request: the whole smoke suite, `test:gateway:db`, `test:full` and Storybook review.
+- Database checks use only the dedicated test databases and guarded helpers. Never reset databases,
+  remove volumes or reuse development connections.
+- Run Nx checks one at a time per checkout.
+- Zero executed tests is not a pass. Do not use watch mode or `--passWithNoTests`; use
+  `--skip-nx-cache` only to re-run a cached result you doubt.
+- Report the actual commands, results and unverified work. Never declare work complete while a
+  required check fails. Clean up the processes and connections the task started.
