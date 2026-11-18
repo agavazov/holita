@@ -10,7 +10,6 @@ import {
   inject,
   Injector,
   input,
-  linkedSignal,
   output,
   untracked,
   viewChild,
@@ -43,13 +42,13 @@ import { UI_LANGUAGE } from '../../../ui/ui-language';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { selectMultiplePt } from '../../../ui/select-multiple';
 import {
-  daysUntil,
-  documentWarningDays,
+  documentExpiry,
   driverStatuses,
   driverLicenseCategories,
   type DriverLicenseCategory,
   type DriverStatusCode,
-  scoreTone,
+  scoreClass,
+  statusTones,
 } from './drivers-view';
 import { driversText } from './i18n/messages';
 
@@ -100,8 +99,6 @@ const fieldOrder: readonly DriverField[] = [
   'notes',
 ];
 
-const statusTones = { ACTIVE: 'success', ON_LEAVE: 'info', INACTIVE: 'neutral' } as const;
-
 /**
  * The mixed drawer: a driver opens read-only and Edit switches the same drawer to the form;
  * Cancel returns to the record. A new driver opens straight into the form. Presentation only:
@@ -127,7 +124,7 @@ const statusTones = { ACTIVE: 'success', ON_LEAVE: 'info', INACTIVE: 'neutral' }
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DriverDrawer {
-  readonly recordLinks = input<FleetRecordLinks | null>(null);
+  readonly recordLinks = input.required<FleetRecordLinks>();
   /** The driver to show; null creates a new one. */
   readonly driver = input<DriverDetails | null>(null);
   /** Opens an existing driver on the form (the row's Edit action) instead of the record. */
@@ -137,15 +134,11 @@ export class DriverDrawer {
   readonly canEdit = input(true);
   readonly state = input<RouteDrawerState>('ready');
   readonly loadError = input<string | null>(null);
-  readonly closeLink = input<readonly unknown[] | null>(null);
-  /** Routed hosts own Edit/Cancel navigation; stories keep the local mixed-drawer behavior. */
-  readonly routed = input(false);
+  readonly closeLink = input.required<readonly unknown[]>();
   readonly saveError = input<string | null>(null);
   readonly fieldErrors = input<Partial<Record<DriverField, string>>>({});
   readonly save = output<DriverForm>();
-  readonly closed = output();
   readonly openScorecard = output();
-  readonly openVehicle = output<string>();
   readonly editRequest = output();
   readonly cancelEdit = output();
   readonly retry = output();
@@ -159,7 +152,7 @@ export class DriverDrawer {
   protected readonly text = computed(() => this.catalog().drawer);
 
   /** A new record, or a saved one reopening, decides between the record and the form. */
-  protected readonly editing = linkedSignal(
+  protected readonly editing = computed(
     () => this.driver() === null || (this.canEdit() && this.startEditing()),
   );
 
@@ -289,24 +282,10 @@ export class DriverDrawer {
     return this.catalog().statuses[status];
   }
 
-  protected expiry(dateOnly: string | null): { severity: 'danger' | 'warn'; label: string } | null {
-    const today = this.businessDate();
-    if (dateOnly === null || today === null) {
-      return null;
-    }
-    const days = daysUntil(dateOnly, today);
-    if (days < 0) {
-      return { severity: 'danger', label: this.catalog().expiry.expired };
-    }
-    if (days <= documentWarningDays) {
-      return { severity: 'warn', label: interpolate(this.catalog().expiry.soon, { days }) };
-    }
-    return null;
-  }
+  protected readonly expiry = (dateOnly: string | null) =>
+    documentExpiry(dateOnly, this.businessDate(), this.catalog().expiry);
 
-  protected scoreClass(score: number): string {
-    return `app-meter app-meter--${scoreTone(score)}`;
-  }
+  protected readonly scoreClass = scoreClass;
 
   /** The message under a field: the server's error first, then the client check once shown. */
   protected errorOf(name: DriverField): string | null {
@@ -327,14 +306,9 @@ export class DriverDrawer {
   }
 
   protected edit(): void {
-    if (!this.canEdit()) {
-      return;
-    }
-    if (this.routed()) {
+    if (this.canEdit()) {
       this.editRequest.emit();
-      return;
     }
-    this.editing.set(true);
   }
 
   protected submit(): void {
@@ -373,32 +347,16 @@ export class DriverDrawer {
   }
 
   /** Cancel: an existing driver returns to the record, a new one closes the drawer. */
-  protected async cancel(): Promise<void> {
-    const driver = this.driver();
-    if (!driver) {
-      await this.requestClose();
-      return;
-    }
-    if (this.routed()) {
+  protected cancel(): void {
+    if (this.driver()) {
       this.cancelEdit.emit();
-      return;
+    } else {
+      this.requestClose();
     }
-    if (!(await this.canLeave())) {
-      return;
-    }
-    this.reset(driver);
-    this.editing.set(false);
   }
 
-  /** Close button, Escape and backdrop: unsaved changes are confirmed first. */
-  protected async requestClose(): Promise<void> {
-    if (this.closeLink() !== null) {
-      this.drawer().close();
-      return;
-    }
-    if (await this.canLeave()) {
-      this.closed.emit();
-    }
+  protected requestClose(): void {
+    this.drawer().close();
   }
 
   canLeave(): Promise<boolean> | boolean {

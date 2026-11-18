@@ -39,7 +39,6 @@ import { fleetRecordLinks, type FleetRecordLinks } from '../fleet-record-links';
       [state]="state()"
       [loadError]="loadFailure()"
       [closeLink]="listLink"
-      [routed]="true"
       [saving]="saving()"
       [saveError]="saveFailure()"
       [fieldErrors]="fieldErrors()"
@@ -48,7 +47,6 @@ import { fleetRecordLinks, type FleetRecordLinks } from '../fleet-record-links';
       (editRequest)="edit()"
       (cancelEdit)="viewRecord()"
       (openScorecard)="openScorecard()"
-      (openVehicle)="openVehicle($event)"
     />
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -197,20 +195,6 @@ export class DriverEditorPage implements OnInit {
   openScorecard(): void {
     if (this.id) {
       void this.navigate([...this.listLink, this.id, 'scorecard']);
-    }
-  }
-
-  openVehicle(vehicleId: string): void {
-    if (this.driver()?.vehicles.some((vehicle) => vehicle.id === vehicleId)) {
-      void this.router.navigate([
-        '/',
-        this.language(),
-        drawerParam(this.route, 'branchId'),
-        'fleet',
-        'vehicles',
-        vehicleId,
-        'overview',
-      ]);
     }
   }
 

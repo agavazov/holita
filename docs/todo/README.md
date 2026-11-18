@@ -8,6 +8,8 @@ Pending work and planned tasks, separate from implemented product documentation.
 - [Devices, commands and truck faults](devices-commands-faults.md): the Discocan phase after UI v2.
 - [Admin presentation and release](admin-design-system.md): remaining product/release decisions.
 - [Admin backend follow-ups](admin-design-system-backend.md): unresolved provider integrations.
+- [Admin module passes](admin-module-passes.md): the Drivers review, the next modules and the
+  pending `npm prune`.
 - [Instant tasks](_instant-tsks.md): short one-line tasks.
 
 Use an existing component backlog before adding another description. Larger plans use descriptive

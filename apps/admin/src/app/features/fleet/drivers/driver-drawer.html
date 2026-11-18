@@ -39,24 +39,14 @@
           <dt>{{ text().vehicle }}</dt>
           <dd class="app-inline">
             @for (vehicle of driver.vehicles; track vehicle.id) {
-              @if (recordLinks()?.vehicle(vehicle.id); as link) {
-                <a
-                  class="app-link"
-                  [routerLink]="link.commands"
-                  [queryParams]="link.queryParams"
-                  [title]="vehicle.plate"
-                  ><span class="app-plate">{{ vehicle.plate }}</span></a
-                >
-              } @else {
-                <button
-                  type="button"
-                  class="app-link"
-                  [title]="vehicle.plate"
-                  (click)="openVehicle.emit(vehicle.id)"
-                >
-                  <span class="app-plate">{{ vehicle.plate }}</span>
-                </button>
-              }
+              @let link = recordLinks().vehicle(vehicle.id);
+              <a
+                class="app-link"
+                [routerLink]="link.commands"
+                [queryParams]="link.queryParams"
+                [title]="vehicle.plate"
+                ><span class="app-plate">{{ vehicle.plate }}</span></a
+              >
             } @empty {
               —
             }

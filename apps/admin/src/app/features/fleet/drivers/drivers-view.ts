@@ -75,24 +75,41 @@ export interface DriverKpis {
 }
 
 /** Documents due within this many days are flagged. */
-export const documentWarningDays = 30;
+const documentWarningDays = 30;
 
-const statusTones: Record<DriverStatusCode, StatusTone> = {
+export const statusTones: Record<DriverStatusCode, StatusTone> = {
   ACTIVE: 'success',
   ON_LEAVE: 'info',
   INACTIVE: 'neutral',
 };
 
-/** Calendar days from the supplied business date to an expiry (negative after it passed). */
-export function daysUntil(dateOnly: string, businessDate: string): number {
-  return (
-    (Date.parse(`${dateOnly}T00:00:00Z`) - Date.parse(`${businessDate}T00:00:00Z`)) / 86_400_000
-  );
+/** The tag beside a document date: expired, or due within the warning window. */
+export function documentExpiry(
+  dateOnly: string | null,
+  today: string | null,
+  text: ReturnType<typeof driversText>['expiry'],
+): { severity: 'danger' | 'warn'; label: string } | null {
+  if (dateOnly === null || today === null) {
+    return null;
+  }
+  const days =
+    (Date.parse(`${dateOnly}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000;
+  if (days < 0) {
+    return { severity: 'danger', label: text.expired };
+  }
+  if (days <= documentWarningDays) {
+    return { severity: 'warn', label: interpolate(text.soon, { days }) };
+  }
+  return null;
 }
 
 /** The score bands: good, fair and poor driving. */
 export function scoreTone(score: number): StatusTone {
   return score >= 85 ? 'success' : score >= 70 ? 'warn' : 'danger';
+}
+
+export function scoreClass(score: number): string {
+  return `app-meter app-meter--${scoreTone(score)}`;
 }
 
 /**
@@ -125,7 +142,6 @@ export function scoreTone(score: number): StatusTone {
   host: { class: 'app-view' },
 })
 export class DriversView {
-  readonly branchName = input.required<string>();
   readonly businessDate = input.required<string | null>();
   readonly rows = input.required<readonly DriverRow[]>();
   readonly total = input.required<number>();
@@ -157,9 +173,6 @@ export class DriversView {
       },
     };
   });
-  protected readonly description = computed(() =>
-    interpolate(this.text().description, { branch: this.branchName() }),
-  );
   protected readonly tableMinWidth = '124.25rem';
   protected readonly columns = computed<readonly TableColumn[]>(() => {
     const text = this.text().table;
@@ -327,25 +340,10 @@ export class DriversView {
     return this.text().statuses[status];
   }
 
-  /** The tag beside a document date: expired, or due within the warning window. */
-  protected expiry(dateOnly: string | null): { severity: 'danger' | 'warn'; label: string } | null {
-    const today = this.businessDate();
-    if (dateOnly === null || today === null) {
-      return null;
-    }
-    const days = daysUntil(dateOnly, today);
-    if (days < 0) {
-      return { severity: 'danger', label: this.text().expiry.expired };
-    }
-    if (days <= documentWarningDays) {
-      return { severity: 'warn', label: interpolate(this.text().expiry.soon, { days }) };
-    }
-    return null;
-  }
+  protected readonly expiry = (dateOnly: string | null) =>
+    documentExpiry(dateOnly, this.businessDate(), this.text().expiry);
 
-  protected scoreClass(score: number): string {
-    return `app-meter app-meter--${scoreTone(score)}`;
-  }
+  protected readonly scoreClass = scoreClass;
 
   protected label(template: string, name: string): string {
     return interpolate(template, { name });

@@ -105,10 +105,6 @@ export class DriverScorecardView {
     return {
       ...text,
       maneuversPer100Km: interpolate(text.maneuversPer100Km, { unit: this.units.distanceUnit() }),
-      missingDescription: interpolate(text.missingDescription, { unit: this.units.distanceUnit() }),
-      weightedDescription: interpolate(text.weightedDescription, {
-        minimumDistance: this.units.distance(0.5, true, 6),
-      }),
     };
   });
   protected readonly maneuverRate = computed(() => {
@@ -116,7 +112,6 @@ export class DriverScorecardView {
     return rate === null || rate === undefined ? null : rate / (this.units.distanceValue(1) ?? 1);
   });
   protected readonly periods = scorecardPeriods;
-  protected readonly hint = computed(() => driversText(this.language()).hint);
   protected readonly description = computed(() => {
     const employeeNo = this.scorecard()?.employeeNo;
     return employeeNo ? `${this.text().title} · ${employeeNo}` : this.text().title;
