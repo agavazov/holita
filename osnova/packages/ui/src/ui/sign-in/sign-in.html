@@ -1,0 +1,57 @@
+<main class="sign-in">
+  <div class="sign-in__toolbar">
+    <osnova-menu-button
+      variant="text"
+      [ariaLabel]="text().language"
+      [options]="languages()"
+      (choose)="chooseLanguage($event.id)"
+      >{{ language().toUpperCase() }}</osnova-menu-button
+    >
+    <osnova-theme-menu />
+  </div>
+  <section class="sign-in__panel app-card" [attr.aria-label]="text().title">
+    <div class="sign-in__identity">
+      <span class="sign-in__mark" aria-hidden="true">{{ productMark() }}</span
+      ><strong>{{ productName() }}</strong>
+    </div>
+    <h1>{{ text().title }}</h1>
+    <p>{{ text().intro }}</p>
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <osnova-form-field
+        controlId="sign-in-email"
+        [label]="text().email"
+        [required]="true"
+        [error]="form.controls.email.touched && form.controls.email.invalid ? text().emailError : null"
+      >
+        <input
+          pInputText
+          id="sign-in-email"
+          type="email"
+          autocomplete="username"
+          formControlName="email"
+          [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid"
+          aria-describedby="sign-in-email-error"
+        />
+      </osnova-form-field>
+      <osnova-form-field
+        controlId="sign-in-password"
+        [label]="text().password"
+        [required]="true"
+        [error]="form.controls.password.touched && form.controls.password.invalid ? text().passwordError : null"
+      >
+        <input
+          pInputText
+          id="sign-in-password"
+          type="password"
+          autocomplete="current-password"
+          formControlName="password"
+          [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid"
+          aria-describedby="sign-in-password-error"
+        />
+      </osnova-form-field>
+      @if (error(); as message) { <p-message severity="error">{{ message }}</p-message> }
+      <button pButton type="submit" [disabled]="busy()">{{ text().submit }}</button>
+    </form>
+    <ng-content />
+  </section>
+</main>

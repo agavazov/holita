@@ -38,6 +38,7 @@ export * from './ui/table-panel/table-panel';
 export * from './ui/table-panel/table-view';
 export * from './ui/tabs';
 export * from './ui/theme-menu/theme-menu';
+export * from './ui/sign-in/sign-in';
 export * from './ui/tones';
 export * from './ui/ui-language';
 export * from './ui/format/display-preferences';

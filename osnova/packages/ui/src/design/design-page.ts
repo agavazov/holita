@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angu
 import { ActivatedRoute } from '@angular/router';
 import { UI_LANGUAGE } from '../ui/ui-language';
 import { ThemeMenu } from '../ui/theme-menu/theme-menu';
+import { SignIn } from '../ui/sign-in/sign-in';
 import { PageHeader } from '../ui/page-header/page-header';
 import { KpiStrip } from '../ui/kpi/kpi-strip';
 import { KpiTile } from '../ui/kpi/kpi-tile';
@@ -48,6 +49,7 @@ const vehicles = Array.from({ length: 200 }, (_, index) => `CB ${String(1001 + i
   imports: [
     FormsModule,
     ThemeMenu,
+    SignIn,
     PageHeader,
     KpiStrip,
     KpiTile,

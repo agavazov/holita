@@ -1,0 +1,50 @@
+:host {
+  display: block;
+}
+
+.sign-in {
+  min-block-size: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--p-app-space-6);
+}
+
+.sign-in__toolbar {
+  position: absolute;
+  inset-block-start: var(--p-app-space-4);
+  inset-inline-end: var(--p-app-space-4);
+  display: flex;
+  gap: var(--p-app-space-2);
+}
+
+.sign-in__panel {
+  inline-size: min(100%, 28rem);
+  display: grid;
+  gap: var(--p-app-space-4);
+}
+
+.sign-in__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--p-app-space-2);
+}
+
+.sign-in__mark {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--p-app-space-8);
+  block-size: var(--p-app-space-8);
+  border-radius: var(--p-app-radius-control);
+  background: var(--p-primary-color);
+  color: var(--p-primary-contrast-color);
+}
+
+.sign-in h1,
+.sign-in p {
+  margin: 0;
+}
+
+.sign-in form {
+  display: grid;
+  gap: var(--p-app-space-4);
+}
