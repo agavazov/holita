@@ -20,6 +20,7 @@ import { ErmTelemetryModule } from './modules/erm-telemetry/erm-telemetry.module
 import { EdataCatalogModule } from './modules/edata-catalog/edata-catalog.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { GeoZonesModule } from './modules/geo-zones/geo-zones.module.js';
+import { FaultMonitorModule } from './modules/fault-monitor/fault-monitor.module.js';
 
 import { HealthController } from './health/health.controller.js';
 
@@ -39,6 +40,7 @@ const typeDefPaths = [
   'modules/edata-catalog/edata-catalog',
   'modules/notifications/notifications',
   'modules/geo-zones/geo-zones',
+  'modules/fault-monitor/fault-monitor',
 ];
 
 @Module({
@@ -57,6 +59,7 @@ const typeDefPaths = [
     EdataCatalogModule,
     ErmTelemetryModule,
     GeoZonesModule,
+    FaultMonitorModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       fieldResolverEnhancers: ['guards'],

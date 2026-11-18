@@ -4,6 +4,7 @@ import { sqlNullableDate, sqlNullableText, sqlRows, sqlText } from '../../databa
 import { Prisma, type ErmCommandRequest } from '../../generated/prisma/client.js';
 import { categoryEventIds } from '../../starlink/event-catalog.js';
 import { commandView } from '../telemetry/command-evidence.js';
+import { SCHEDULED_FAULT_READ_ACTOR } from '../telemetry/command-requests.service.js';
 import type {
   NotificationExportCursor,
   NotificationExportScope,
@@ -72,6 +73,8 @@ export class NotificationExportRepository {
         branchId: scope.branchId,
         deviceId: scope.deviceId,
         unitId: scope.imei,
+        // Fleet's half-hourly fault reads are routine; the fault log shows their results.
+        actorId: { not: SCHEDULED_FAULT_READ_ACTOR },
         status: { in: ['ANSWERED', 'FAILED', 'EXPIRED', 'UNCERTAIN'] },
         completedAt: { gte: since },
         ...(after.commandCompletedAt !== null && after.commandId !== null

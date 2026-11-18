@@ -12,7 +12,10 @@ import {
   MEASUREMENT_CATALOG,
   type ErmTelemetryDevice,
 } from './erm-telemetry.mapping.js';
-import { recordedDiagnosticNotifications } from '../notifications/notification-projection.js';
+import {
+  recordedDiagnosticNotifications,
+  withoutRepeatedFaults,
+} from '../notifications/notification-projection.js';
 import { notificationCutoff } from '../notifications/notification-sources.repository.js';
 import { warningLampNotifications } from '../notifications/warning-lamp-notifications.js';
 import { WARNING_LAMP_PARAMETER_IDS } from '../devices/warning-lamps.js';
@@ -43,125 +46,132 @@ export class ErmTelemetryRepository {
   async importPage(device: ErmTelemetryDevice, page: ErmTelemetryPage): Promise<void> {
     const scope = { tenantId: device.tenantId, branchId: device.branchId };
     const now = this.clock.now();
-    await this.prisma.client.$transaction(async (transaction) => {
-      const data = ermSamples(device, page.events);
-      if (device.vehicleId !== null && data.length > 0) {
-        const pair = { ...scope, vehicleId: device.vehicleId, deviceImei: device.imei };
-        const latest = await transaction.vehicleStatusSample.findFirst({
-          where: { ...pair, source: 'ERM' },
-          orderBy: { recordedAt: 'desc' },
-          select: { recordedAt: true },
+    await this.prisma.client.$transaction(
+      async (transaction) => {
+        const data = ermSamples(device, page.events);
+        if (device.vehicleId !== null && data.length > 0) {
+          const pair = { ...scope, vehicleId: device.vehicleId, deviceImei: device.imei };
+          const latest = await transaction.vehicleStatusSample.findFirst({
+            where: { ...pair, source: 'ERM' },
+            orderBy: { recordedAt: 'desc' },
+            select: { recordedAt: true },
+          });
+          const samples = await transaction.vehicleStatusSample.createManyAndReturn({
+            data,
+            skipDuplicates: true,
+          });
+          await this.updateTrips(
+            transaction,
+            scope,
+            device.vehicleId,
+            device.imei,
+            samples,
+            latest?.recordedAt ?? null,
+          );
+        }
+        const events = ermFleetEvents(device, page.events);
+        if (events.length > 0) {
+          await transaction.fleetEvent.createMany({ data: events, skipDuplicates: true });
+        }
+        const settings = await transaction.fleetSettings.findUnique({
+          where: { tenantId_branchId: scope },
+          select: { notificationRetentionDays: true },
         });
-        const samples = await transaction.vehicleStatusSample.createManyAndReturn({
-          data,
-          skipDuplicates: true,
+        const cutoff = notificationCutoff(now, settings?.notificationRetentionDays ?? 7);
+        const sourceKey = `erm:${device.id}`;
+        const notificationCursor = await transaction.fleetNotificationCursor.upsert({
+          where: { tenantId_branchId_sourceKey: { ...scope, sourceKey } },
+          create: {
+            ...scope,
+            sourceKey,
+            since: device.createdAt > cutoff ? device.createdAt : cutoff,
+          },
+          update: {},
         });
-        await this.updateTrips(
+        const notifications = await withoutRepeatedFaults(
           transaction,
-          scope,
-          device.vehicleId,
-          device.imei,
-          samples,
-          latest?.recordedAt ?? null,
-        );
-      }
-      const events = ermFleetEvents(device, page.events);
-      if (events.length > 0) {
-        await transaction.fleetEvent.createMany({ data: events, skipDuplicates: true });
-      }
-      const settings = await transaction.fleetSettings.findUnique({
-        where: { tenantId_branchId: scope },
-        select: { notificationRetentionDays: true },
-      });
-      const cutoff = notificationCutoff(now, settings?.notificationRetentionDays ?? 7);
-      const sourceKey = `erm:${device.id}`;
-      const notificationCursor = await transaction.fleetNotificationCursor.upsert({
-        where: { tenantId_branchId_sourceKey: { ...scope, sourceKey } },
-        create: {
-          ...scope,
-          sourceKey,
-          since: device.createdAt > cutoff ? device.createdAt : cutoff,
-        },
-        update: {},
-      });
-      const notifications = recordedDiagnosticNotifications(
-        device,
-        page.events,
-        notificationCursor.since > cutoff ? notificationCursor.since : cutoff,
-        now,
-      );
-      if (notifications.length) {
-        await transaction.fleetNotification.createMany({
-          data: notifications,
-          skipDuplicates: true,
-        });
-      }
-      if (ermEdataMeasurementsEnabled()) {
-        const parameterIds = [
-          ...new Set(
-            page.events.flatMap((event) =>
-              event.edata?.report === '405' || event.edata?.report === '415'
-                ? event.edata.measurements.map((item) => item.parameterId)
-                : [],
-            ),
+          recordedDiagnosticNotifications(
+            device,
+            page.events,
+            notificationCursor.since > cutoff ? notificationCursor.since : cutoff,
+            now,
           ),
-        ];
-        if (device.vehicleId !== null && parameterIds.length > 0) {
-          const labels = await this.measurementLabels(transaction, parameterIds);
-          const measurements = ermEdataMeasurements(device, page.events, labels);
-          if (measurements.length > 0) {
-            const previousLamps = await transaction.vehicleEdataMeasurement.findMany({
-              where: {
-                ...scope,
-                vehicleId: device.vehicleId,
-                deviceImei: device.imei,
-                parameterId: { in: [...WARNING_LAMP_PARAMETER_IDS] },
-                freezeFrame: false,
-              },
-              distinct: ['parameterId'],
-              orderBy: [
-                { parameterId: 'asc' },
-                { recordedAt: 'desc' },
-                { receivedAt: 'desc' },
-                { sourceEventId: 'desc' },
-                { id: 'desc' },
-              ],
-            });
-            const inserted = await transaction.vehicleEdataMeasurement.createManyAndReturn({
-              data: measurements,
-              skipDuplicates: true,
-            });
-            const lampNotifications = warningLampNotifications(
-              device,
-              previousLamps,
-              inserted.filter((row) => !row.freezeFrame),
-              notificationCursor.since > cutoff ? notificationCursor.since : cutoff,
-              now,
-            );
-            if (lampNotifications.length) {
-              await transaction.fleetNotification.createMany({
-                data: lampNotifications,
+        );
+        if (notifications.length) {
+          await transaction.fleetNotification.createMany({
+            data: notifications,
+            skipDuplicates: true,
+          });
+        }
+        if (ermEdataMeasurementsEnabled()) {
+          const parameterIds = [
+            ...new Set(
+              page.events.flatMap((event) =>
+                event.edata?.report === '405' || event.edata?.report === '415'
+                  ? event.edata.measurements.map((item) => item.parameterId)
+                  : [],
+              ),
+            ),
+          ];
+          if (device.vehicleId !== null && parameterIds.length > 0) {
+            const labels = await this.measurementLabels(transaction, parameterIds);
+            const measurements = ermEdataMeasurements(device, page.events, labels);
+            if (measurements.length > 0) {
+              const previousLamps = await transaction.vehicleEdataMeasurement.findMany({
+                where: {
+                  ...scope,
+                  vehicleId: device.vehicleId,
+                  deviceImei: device.imei,
+                  parameterId: { in: [...WARNING_LAMP_PARAMETER_IDS] },
+                  freezeFrame: false,
+                },
+                distinct: ['parameterId'],
+                orderBy: [
+                  { parameterId: 'asc' },
+                  { recordedAt: 'desc' },
+                  { receivedAt: 'desc' },
+                  { sourceEventId: 'desc' },
+                  { id: 'desc' },
+                ],
+              });
+              const inserted = await transaction.vehicleEdataMeasurement.createManyAndReturn({
+                data: measurements,
                 skipDuplicates: true,
               });
+              const lampNotifications = warningLampNotifications(
+                device,
+                previousLamps,
+                inserted.filter((row) => !row.freezeFrame),
+                notificationCursor.since > cutoff ? notificationCursor.since : cutoff,
+                now,
+              );
+              if (lampNotifications.length) {
+                await transaction.fleetNotification.createMany({
+                  data: lampNotifications,
+                  skipDuplicates: true,
+                });
+              }
             }
           }
         }
-      }
-      const cursor = await transaction.fleetErmCursor.findUnique({
-        where: { ...scope, deviceId: device.id },
-        select: { lastReceivedAt: true },
-      });
-      const lastReceivedAt = page.events.reduce<Date | null>(
-        (latest, event) =>
-          latest === null || event.receivedAt > latest ? event.receivedAt : latest,
-        cursor?.lastReceivedAt ?? null,
-      );
-      await transaction.fleetErmCursor.upsert({
-        where: { ...scope, deviceId: device.id },
-        create: { ...scope, deviceId: device.id, lastEventId: page.next, lastReceivedAt },
-        update: { lastEventId: page.next, lastReceivedAt },
-      });
-    });
+        const cursor = await transaction.fleetErmCursor.findUnique({
+          where: { ...scope, deviceId: device.id },
+          select: { lastReceivedAt: true },
+        });
+        const lastReceivedAt = page.events.reduce<Date | null>(
+          (latest, event) =>
+            latest === null || event.receivedAt > latest ? event.receivedAt : latest,
+          cursor?.lastReceivedAt ?? null,
+        );
+        await transaction.fleetErmCursor.upsert({
+          where: { ...scope, deviceId: device.id },
+          create: { ...scope, deviceId: device.id, lastEventId: page.next, lastReceivedAt },
+          update: { lastEventId: page.next, lastReceivedAt },
+        });
+        // A full 500-event backlog page took 6–10 s on 2026-11-18; Prisma's default is 5 s.
+      },
+      { timeout: 60_000 },
+    );
   }
 
   private async measurementLabels(transaction: Prisma.TransactionClient, parameterIds: number[]) {

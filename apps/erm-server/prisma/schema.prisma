@@ -192,6 +192,7 @@ model ErmEvent {
   backupVoltage Float?
   fields Json
   @@index([unitId, eventTime(sort: Desc)])
+  @@index([frameId])
   @@map("ermEvent")
 }
 

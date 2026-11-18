@@ -9,10 +9,12 @@ import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import {
   ErmDashboardClient,
+  type ErmFaultRead,
   type ErmProblemEvidence,
 } from '../src/integrations/erm/erm-dashboard.client.js';
 import type { Prisma } from '../src/generated/prisma/client.js';
 import type { RequestContext } from '../src/graphql/request-context.js';
+import { FaultMonitorService } from '../src/modules/fault-monitor/fault-monitor.service.js';
 import { NotificationsService } from '../src/modules/notifications/notifications.service.js';
 import { NotificationSourcesRepository } from '../src/modules/notifications/notification-sources.repository.js';
 import { createTestDatabase } from './test-database.js';
@@ -33,6 +35,8 @@ describe('Events and alert workflow with PostgreSQL', () => {
     otherBranchId = randomUUID();
   const events = new Map<EventKey, string>();
   const ermEvidence: ErmProblemEvidence[] = [];
+  const faultReads: ErmFaultRead[] = [];
+  const faultReadCalls: { deviceIds: readonly string[] | null; count: number }[] = [];
   let van: string, truck: string, driver: string, tripId: string, foreignAlert: string;
   function event(key: EventKey): string {
     const id = events.get(key);
@@ -86,6 +90,20 @@ describe('Events and alert workflow with PostgreSQL', () => {
             items: rows.slice(page.offset, page.offset + page.limit),
             counts: [],
           });
+        },
+        // ERM scopes reads by the forwarded session; this fake answers for the main Branch only.
+        faultReads: (
+          context: Pick<RequestContext, 'branchId'>,
+          filter: { deviceIds: readonly string[] | null; from: Date; to: Date },
+          count: number,
+        ) => {
+          faultReadCalls.push({ deviceIds: filter.deviceIds, count });
+          const rows = faultReads.filter(
+            (read) =>
+              context.branchId === branchId &&
+              (filter.deviceIds === null || filter.deviceIds.includes(read.deviceId)),
+          );
+          return Promise.resolve({ total: rows.length, items: rows.slice(0, count) });
         },
       })
       .compile();
@@ -887,6 +905,212 @@ describe('Events and alert workflow with PostgreSQL', () => {
         },
       },
     });
+
+    // Fault log: logger status changes only (the repeated 4294967295 ADDED is one entry), a CAN
+    // loss after CAN data and its restoration by a 405 (a 415 freeze frame is not CAN data), lamp
+    // notifications and ERM's fault reads, merged newest first within the Tenant/Branch.
+    const measurement = (
+      at: Date,
+      sourceEventId: bigint,
+      parameterId: number,
+      freezeFrame = false,
+    ) => ({
+      tenantId,
+      branchId,
+      vehicleId: van,
+      deviceImei: device.imei,
+      sourceEventId,
+      recordedAt: at,
+      receivedAt: at,
+      parameterId,
+      parameterType: 1,
+      valueSize: 1,
+      valueHex: '00',
+      freezeFrame,
+    });
+    await database.client.vehicleEdataMeasurement.createMany({
+      data: [
+        measurement(hours(-0.3), 950n, 1896),
+        measurement(hours(-0.1), 951n, 190, true),
+        measurement(hours(-0.1), 951n, 110, true),
+        measurement(hours(-0.01), 952n, 1896),
+      ],
+    });
+    const lampNotification = (scope: string, vehicleId: string) => ({
+      tenantId,
+      branchId: scope,
+      sourceKind: 'DIAGNOSTIC' as const,
+      sourceKey: `warning-lamp:${scope}`,
+      category: 'DEVICE' as const,
+      severity: 'CRITICAL' as const,
+      occurredAt: hours(-0.02),
+      createdAt: now,
+      wordingKey: 'notification.warningLampEntered',
+      parameters: { lamp: 'BRAKE_SYSTEM', state: 'RED', previousState: 'OFF' },
+      vehicleId,
+    });
+    const otherVan = await database.client.vehicle.create({
+      data: { tenantId, branchId: otherBranchId, licensePlate: 'CB 1007 AX' },
+    });
+    await database.client.fleetNotification.createMany({
+      data: [
+        lampNotification(branchId, van),
+        lampNotification(otherBranchId, otherVan.id),
+        {
+          ...lampNotification(branchId, van),
+          sourceKey: 'not-a-lamp',
+          wordingKey: 'notification.recordedDiagnostic',
+        },
+      ],
+    });
+    faultReads.push(
+      {
+        id: randomUUID(),
+        deviceId: device.id,
+        unitId: device.imei,
+        completedAt: hours(-0.03),
+        verdict: { activeCodes: false, codeCount: null, receivedAt: hours(-0.029) },
+      },
+      {
+        id: randomUUID(),
+        deviceId: device.id,
+        unitId: device.imei,
+        completedAt: hours(-0.12),
+        verdict: { activeCodes: true, codeCount: 2, receivedAt: hours(-0.119) },
+      },
+    );
+    const faultLog = `query($offset:Int!,$limit:Int!,$filter:FleetFaultLogFilter){
+      fleetFaultLog(offset:$offset,limit:$limit,filter:$filter){
+        total items{id kind occurredAt vehicle{id} troubleCode spn fmi descriptionKey parameterId
+          lampState activeCodes codeCount valueCount}
+      }
+    }`;
+    if (!app) {
+      throw new Error('Missing test application');
+    }
+    const { items: entries, total } = await app.get(FaultMonitorService).log(
+      {
+        tenantId,
+        branchId,
+        requestId: randomUUID(),
+        authorization: undefined,
+        branchChecks: new Map(),
+      },
+      { offset: 0, limit: 100 },
+    );
+    expect(total).toBe(15);
+    expect(
+      entries.every(
+        (entry, index) =>
+          entry.occurredAt.getTime() <=
+          (entries[index - 1]?.occurredAt ?? entry.occurredAt).getTime(),
+      ),
+    ).toBe(true);
+    expect(entries).toEqual(
+      expect.arrayContaining(
+        [
+          { kind: 'CAN_RESTORED', occurredAt: hours(-0.01) },
+          {
+            kind: 'LAMP_ON',
+            parameterId: 1896,
+            lampState: 'RED',
+            vehicle: expect.objectContaining({ id: van }),
+          },
+          {
+            kind: 'FAULT_READ',
+            activeCodes: false,
+            codeCount: null,
+            vehicle: expect.objectContaining({ id: van }),
+          },
+          { kind: 'FAULT_READ', activeCodes: true, codeCount: 2 },
+          { kind: 'FREEZE_FRAME', valueCount: 2, occurredAt: hours(-0.1) },
+          { kind: 'CAN_LOST', occurredAt: hours(-0.2) },
+          {
+            kind: 'FAULT_ADDED',
+            troubleCode: 'SPN 4339 FMI 7',
+            spn: 4339,
+            fmi: 7,
+            descriptionKey: 'faults.spn.scrFeedbackControl',
+          },
+        ].map((entry) => expect.objectContaining(entry)),
+      ),
+    );
+    expect(
+      entries
+        .filter((entry) => entry.kind === 'FAULT_ADDED' || entry.kind === 'FAULT_REMOVED')
+        .map((entry) => `${entry.kind} ${String(entry.troubleCode)}`)
+        .sort(),
+    ).toEqual(
+      [
+        'FAULT_ADDED P0100',
+        'FAULT_ADDED C1234',
+        'FAULT_ADDED SPN 4294967295 FMI 31',
+        'FAULT_ADDED SPN 4339 FMI 7',
+        'FAULT_REMOVED P0200',
+        'FAULT_REMOVED P1234',
+        'FAULT_REMOVED SPN 1247 FMI 11',
+        'FAULT_REMOVED SPN 4294967295 FMI 31',
+        'FAULT_REMOVED SPN 4339 FMI 7',
+      ].sort(),
+    );
+    // A page of the merged order equals the same slice of the whole log.
+    expect(await query(faultLog, { offset: 3, limit: 4 })).toMatchObject({
+      data: {
+        fleetFaultLog: {
+          total: 15,
+          items: entries.slice(3, 7).map(({ id, occurredAt }) => ({
+            id,
+            occurredAt: occurredAt.toISOString(),
+          })),
+        },
+      },
+    });
+    faultReadCalls.length = 0;
+    expect(
+      await query(faultLog, {
+        offset: 0,
+        limit: 10,
+        filter: { kinds: ['CAN_LOST', 'CAN_RESTORED', 'FREEZE_FRAME'], vehicleIds: [van] },
+      }),
+    ).toMatchObject({ data: { fleetFaultLog: { total: 3 } } });
+    expect(
+      await query(faultLog, {
+        offset: 0,
+        limit: 10,
+        filter: { kinds: ['FAULT_READ', 'LAMP_ON'], vehicleIds: [truck] },
+      }),
+    ).toMatchObject({ data: { fleetFaultLog: { total: 0, items: [] } } });
+    expect(faultReadCalls).toEqual([]);
+    expect(
+      await query(faultLog, {
+        offset: 0,
+        limit: 10,
+        filter: { kinds: ['FAULT_READ'], vehicleIds: [van] },
+      }),
+    ).toMatchObject({ data: { fleetFaultLog: { total: 2 } } });
+    expect(faultReadCalls).toEqual([{ deviceIds: [device.id], count: 10 }]);
+    expect(await query(faultLog, { offset: 0, limit: 100 }, otherBranchId)).toMatchObject({
+      data: {
+        fleetFaultLog: { total: 1, items: [{ kind: 'LAMP_ON', vehicle: { id: otherVan.id } }] },
+      },
+    });
+
+    // Trucks with a Device and their newest CAN data and CAN loss, Branch-scoped.
+    const monitor = `{ fleetFaultMonitor { vehicle { id } devices { id } faultCheck { checkedAt } canDataAt canLostAt } }`;
+    expect(await query(monitor, {})).toEqual({
+      data: {
+        fleetFaultMonitor: [
+          {
+            vehicle: { id: van },
+            devices: [{ id: device.id }],
+            faultCheck: null,
+            canDataAt: hours(-0.01).toISOString(),
+            canLostAt: hours(-0.075).toISOString(),
+          },
+        ],
+      },
+    });
+    expect(await query(monitor, {}, otherBranchId)).toEqual({ data: { fleetFaultMonitor: [] } });
   });
 
   const transition = (name: string) =>

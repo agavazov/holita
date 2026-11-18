@@ -162,6 +162,32 @@ export function faultReadState(
   };
 }
 
+/** A read's result in words: its eData verdict when it arrived, otherwise the request's outcome. */
+export function faultReadResult(
+  read: FleetFaultRead | null,
+  language: Language,
+  time: (iso: string) => string,
+): string {
+  const scanner = faultsText(language).scanner;
+  if (!read) {
+    return scanner.readNone;
+  }
+  const verdict = read.faultReadVerdict;
+  if (verdict) {
+    const at = time(verdict.receivedAt);
+    return !verdict.activeCodes
+      ? interpolate(scanner.noActiveCodes, { time: at })
+      : verdict.codeCount === null
+        ? interpolate(scanner.codesFound, { time: at })
+        : interpolate(verdict.codeCount === 1 ? scanner.activeCode : scanner.activeCodes, {
+            count: verdict.codeCount,
+            time: at,
+          });
+  }
+  const status = read.status === 'ANSWERED' ? scanner.noVerdict : scanner.readStatus[read.status];
+  return `${status} · ${time(read.completedAt ?? read.createdAt)}`;
+}
+
 export const faultsText = (language: Language): typeof en => (language === 'bg' ? bg : en);
 
 export function faultSystem(system: FleetFaultDiagnostic['systemKey'], language: Language): string {

@@ -166,7 +166,7 @@
       "CANCELLED": "cancelled",
       "UNCERTAIN": "outcome unknown"
     },
-    "readHint": "Also every 6 hours. Codes found by the module arrive as reports and appear above.",
+    "readHint": "Also every 30 minutes. Codes found by the module arrive as reports and appear above.",
     "freezeFrame": "Values at the fault",
     "freezeFrameAt": "captured {time}",
     "parameter": "Parameter",

@@ -41,6 +41,12 @@ export function adminNavigation(
       items: [
         { id: 'vehicles', label: text.vehicles, icon: 'truck', link: [...fleet, 'vehicles'] },
         { id: 'devices', label: text.devices, icon: 'mobile', link: [...fleet, 'devices'] },
+        {
+          id: 'faults',
+          label: text.faults,
+          icon: 'exclamation-triangle',
+          link: [...fleet, 'faults'],
+        },
         { id: 'drivers', label: text.drivers, icon: 'id-card', link: [...fleet, 'drivers'] },
         {
           id: 'maintenance',

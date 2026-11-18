@@ -4,12 +4,14 @@ import {
   date,
   dateOrNull,
   integer,
+  integerOrNull,
   oneOf,
   recordOf,
   rowsOf,
   text,
   textOrNull,
 } from '../../database/sql.js';
+import type { RequestContext } from '../../graphql/request-context.js';
 import type { FleetScope } from '../../validation.js';
 
 export interface ErmDashboardUnit {
@@ -79,6 +81,21 @@ const problemsQuery = `query FleetDashboardProblems($imeis: [String!]!, $tenantI
   }
 }`;
 
+const faultReadsQuery = `query FleetFaultReads($offset: Int!, $limit: Int!, $filter: ErmCommandRequestsFilter!) {
+  ermCommandRequests(offset: $offset, limit: $limit, filter: $filter, sort: { field: COMPLETED_AT, direction: DESC }) {
+    total
+    items { id deviceId unitId completedAt faultReadVerdict { activeCodes codeCount receivedAt } }
+  }
+}`;
+
+export interface ErmFaultRead {
+  id: string;
+  deviceId: string;
+  unitId: string;
+  completedAt: Date;
+  verdict: { activeCodes: boolean; codeCount: number | null; receivedAt: Date } | null;
+}
+
 /** Internal ERM reads; callers obtain every IMEI from verified Tenant/Branch-scoped Fleet rows. */
 @Injectable()
 export class ErmDashboardClient {
@@ -140,13 +157,76 @@ export class ErmDashboardClient {
     };
   }
 
+  /**
+   * Answered fault-logger reads (GET DTC) with their eData verdicts, newest completion first,
+   * created within the period. It forwards the caller's session and Branch, so ERM applies its
+   * own Tenant/Branch scope; it reads at most `count` requests.
+   */
+  async faultReads(
+    context: Pick<RequestContext, 'authorization' | 'branchId'>,
+    filter: { deviceIds: readonly string[] | null; from: Date; to: Date },
+    count: number,
+  ): Promise<{ total: number; items: ErmFaultRead[] }> {
+    const { authorization, branchId } = context;
+    if (!authorization || !branchId) {
+      throw new ServiceUnavailableException('ERM fault reads need a signed-in Branch session');
+    }
+    const items: ErmFaultRead[] = [];
+    let total = 0;
+    for (let offset = 0; offset < count; offset += 100) {
+      const limit = Math.min(100, count - offset);
+      const value = await this.request(
+        faultReadsQuery,
+        {
+          offset,
+          limit,
+          filter: {
+            actions: ['READ_EDATA_FAULTS'],
+            statuses: ['ANSWERED'],
+            ...(filter.deviceIds ? { deviceIds: filter.deviceIds } : {}),
+            createdFrom: filter.from.toISOString(),
+            createdTo: filter.to.toISOString(),
+          },
+        },
+        'ermCommandRequests',
+        { authorization, branchId },
+      );
+      total = integer(value, 'total');
+      const rows = rowsOf(value.items, (row) => {
+        const verdict = row.faultReadVerdict === null ? null : recordOf(row.faultReadVerdict);
+        return {
+          id: text(row, 'id'),
+          deviceId: text(row, 'deviceId'),
+          unitId: text(row, 'unitId'),
+          completedAt: date(row, 'completedAt'),
+          verdict: verdict && {
+            activeCodes: boolean(verdict, 'activeCodes'),
+            codeCount: integerOrNull(verdict, 'codeCount'),
+            receivedAt: date(verdict, 'receivedAt'),
+          },
+        };
+      });
+      items.push(...rows);
+      if (rows.length < limit || items.length >= total) {
+        break;
+      }
+    }
+    return { total, items };
+  }
+
   private async request(
     query: string,
     variables: object,
     field: string,
+    caller?: { authorization: string; branchId: string },
   ): Promise<Record<string, unknown>> {
     const token = process.env.ERM_TELEMETRY_TOKEN;
-    if (!token || token.length < 32) {
+    const authorization = caller
+      ? { authorization: caller.authorization, 'x-branch-id': caller.branchId }
+      : token && token.length >= 32
+        ? { authorization: `Bearer ${token}` }
+        : null;
+    if (!authorization) {
       throw new ServiceUnavailableException('ERM dashboard access is not configured');
     }
     try {
@@ -166,7 +246,7 @@ export class ErmDashboardClient {
         method: 'POST',
         redirect: 'error',
         signal: AbortSignal.timeout(10000),
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        headers: { 'content-type': 'application/json', ...authorization },
         body: JSON.stringify({ query, variables }),
       });
       if (!response.ok) {

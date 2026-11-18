@@ -121,6 +121,7 @@ Server-derived facts and clocks remain unknown when data is absent.
 | `/fleet/maintenance`        | Planned-only edits; completion can atomically schedule the next task; DONE/CANCELLED history is read-only                                                                                                                                                                                                    |
 | `/fleet/settings/groups`    | Manage groups and counts; groups containing Vehicles cannot be deleted                                                                                                                                                                                                                                       |
 | `/fleet/settings/general`   | Branch name, zone, date format, display units, Fleet thresholds and notification retention                                                                                                                                                                                                                   |
+| `/fleet/faults`             | Tiles and one row per truck with its fault state, active codes, last check, last data and CAN state, refreshed every minute; the fault log filtered by truck, event and date range                                                                                                                           |
 | `/fleet/notifications`      | Filter Branch notifications by read state/category, open related records and mark individual/all items read                                                                                                                                                                                                  |
 
 `/:language/profile` and `/:language/settings/users` are account routes without a Branch prefix.
@@ -152,7 +153,10 @@ The bell displays recent persisted Branch notifications, the unread count, **Mar
 and **See all**. The Notifications page offers read-state/category filters and individual/bulk
 read actions. Read state belongs to the signed-in user; demo sessions can view the feed but
 cannot save read state. Sources are Fleet alert transitions, recorded device diagnostic/alarm
-evidence and terminal durable command outcomes. Recorded evidence does not establish an
+evidence and terminal durable command outcomes, except Fleet's scheduled fault reads, which the
+Faults log shows. An added fault code notifies only when the vehicle's previous report of that code
+did not add it, so the snapshot that answers each fault read does not repeat active codes; a new
+code and a code that returns after a removal still notify. Recorded evidence does not establish an
 unresolved fault. Notifications are in-app only; no email/SMS delivery provider is configured.
 
 General settings saves notification retention, default seven days. Daily cleanup removes old
@@ -673,7 +677,7 @@ excluded. Each event also has `ignitionOn` (binary Tracker flags or an `#IGN#` t
 `POST /internal/telemetry/units/:imei/fault-reads` with `{ tenantId, branchId, deviceId }` and the
 same bearer queues Fleet's scheduled READ_EDATA_FAULTS as actor `system:fault-scan`. It answers
 `{ queued }`: false when the unit is not in `ERM_PRIMARY_UNITS` or the Device already has an
-unexpired queued or submitting fault read. The request expires after 5 h 50 min, and dispatch
+unexpired queued or submitting fault read. The request expires after 27 minutes, and dispatch
 verifies the Fleet target as for operator requests.
 
 Reports retain event and receipt times. `ErmEvent.edata` shows every

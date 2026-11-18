@@ -13,6 +13,7 @@ import { FaultCluster } from './fault-cluster';
 import { FaultIcon } from './fault-icon';
 import {
   faultFmi,
+  faultReadResult,
   faultsText,
   findingCode,
   findingTitle,
@@ -114,27 +115,9 @@ export class FaultScanner {
   });
   protected readonly readState = computed(() => faultReadState(this.reads(), this.now()));
   /** The last result: the eData verdict when it arrived, otherwise the request's outcome. */
-  protected readonly readText = computed(() => {
-    const read = this.readState().last;
-    const scanner = this.text().scanner;
-    if (!read) {
-      return scanner.readNone;
-    }
-    const verdict = read.faultReadVerdict;
-    if (verdict) {
-      const time = this.readTime(verdict.receivedAt);
-      return !verdict.activeCodes
-        ? interpolate(scanner.noActiveCodes, { time })
-        : verdict.codeCount === null
-          ? interpolate(scanner.codesFound, { time })
-          : interpolate(verdict.codeCount === 1 ? scanner.activeCode : scanner.activeCodes, {
-              count: verdict.codeCount,
-              time,
-            });
-    }
-    const status = read.status === 'ANSWERED' ? scanner.noVerdict : scanner.readStatus[read.status];
-    return `${status} · ${this.readTime(read.completedAt ?? read.createdAt)}`;
-  });
+  protected readonly readText = computed(() =>
+    faultReadResult(this.readState().last, this.language(), (iso) => this.readTime(iso)),
+  );
   protected readonly pendingText = computed(() => {
     const read = this.readState().pending;
     const scanner = this.text().scanner;

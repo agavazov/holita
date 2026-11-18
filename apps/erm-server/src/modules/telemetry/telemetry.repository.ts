@@ -278,6 +278,25 @@ export class TelemetryRepository {
   async deviceStates(unitIds: string[], snapshot: Date) {
     const alarms = categoryEventIds(['ALARM']);
     const since = new Date(snapshot.getTime() - 24 * 60 * 60 * 1000);
+    // The newest matching event, newest event time first, through the (unitId, eventTime) index.
+    // Events without an event time sort by frame receipt when `untimed` is 'received', else last.
+    const latestEvent = (condition: Prisma.Sql, untimed: 'received' | 'last') => Prisma.sql`
+      SELECT candidate.id FROM (
+        (SELECT event.id, event."eventTime" AS "at" FROM ${this.table('ermEvent')} event
+          JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+          WHERE event."unitId" = u."unitId" AND event."eventTime" IS NOT NULL
+            AND frame."receivedAt" <= ${snapshot} AND ${condition}
+          ORDER BY event."eventTime" DESC, event.id DESC LIMIT 1)
+        UNION ALL
+        (SELECT event.id,
+            ${untimed === 'received' ? Prisma.sql`frame."receivedAt"` : Prisma.sql`NULL::timestamptz`}
+          FROM ${this.table('ermEvent')} event
+          JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
+          WHERE event."unitId" = u."unitId" AND event."eventTime" IS NULL
+            AND frame."receivedAt" <= ${snapshot} AND ${condition}
+          ORDER BY 2 DESC NULLS LAST, event.id DESC LIMIT 1)
+      ) candidate
+      ORDER BY candidate."at" DESC NULLS LAST, candidate.id DESC LIMIT 1`;
     const rows = sqlRows(
       await this.prisma.client.$queryRaw(Prisma.sql`
       SELECT u."unitId", c.id::text AS "connectionId", f."receivedAt" AS "lastFrameAt",
@@ -300,25 +319,12 @@ export class TelemetryRepository {
         WHERE "unitId" = u."unitId" AND direction = 'device' AND NOT partial AND "receivedAt" <= ${snapshot}
         ORDER BY "receivedAt" DESC, id DESC LIMIT 1
       ) f ON true
+      LEFT JOIN LATERAL (${latestEvent(Prisma.sql`TRUE`, 'received')}) e ON true
       LEFT JOIN LATERAL (
-        SELECT event.id FROM ${this.table('ermEvent')} event
-        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
-        WHERE event."unitId" = u."unitId" AND frame."receivedAt" <= ${snapshot}
-        ORDER BY coalesce(event."eventTime", frame."receivedAt") DESC, event.id DESC LIMIT 1
-      ) e ON true
-      LEFT JOIN LATERAL (
-        SELECT event.id FROM ${this.table('ermEvent')} event
-        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
-        WHERE event."unitId" = u."unitId" AND event.latitude IS NOT NULL AND event.longitude IS NOT NULL
-          AND frame."receivedAt" <= ${snapshot}
-        ORDER BY event."eventTime" DESC NULLS LAST, event.id DESC LIMIT 1
+        ${latestEvent(Prisma.sql`event.latitude IS NOT NULL AND event.longitude IS NOT NULL`, 'last')}
       ) p ON true
       LEFT JOIN LATERAL (
-        SELECT event.id FROM ${this.table('ermEvent')} event
-        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
-        WHERE event."unitId" = u."unitId" AND event."eventId" IN (${Prisma.join(alarms)})
-          AND frame."receivedAt" <= ${snapshot}
-        ORDER BY event."eventTime" DESC NULLS LAST, event.id DESC LIMIT 1
+        ${latestEvent(Prisma.sql`event."eventId" IN (${Prisma.join(alarms)})`, 'last')}
       ) a ON true
       LEFT JOIN LATERAL (
         SELECT count(*)::integer AS count FROM ${this.table('ermEvent')} event
@@ -329,26 +335,17 @@ export class TelemetryRepository {
           AND frame."receivedAt" <= ${snapshot}
       ) n ON true
       LEFT JOIN LATERAL (
-        SELECT event.id FROM ${this.table('ermEvent')} event
-        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
-        WHERE event."unitId" = u."unitId" AND event."mainVoltage" IS NOT NULL
-          AND frame."receivedAt" <= ${snapshot}
-        ORDER BY coalesce(event."eventTime", frame."receivedAt") DESC, event.id DESC LIMIT 1
+        ${latestEvent(Prisma.sql`event."mainVoltage" IS NOT NULL`, 'received')}
       ) mv ON true
       LEFT JOIN LATERAL (
-        SELECT event.id FROM ${this.table('ermEvent')} event
-        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
-        WHERE event."unitId" = u."unitId" AND event."backupVoltage" IS NOT NULL
-          AND frame."receivedAt" <= ${snapshot}
-        ORDER BY coalesce(event."eventTime", frame."receivedAt") DESC, event.id DESC LIMIT 1
+        ${latestEvent(Prisma.sql`event."backupVoltage" IS NOT NULL`, 'received')}
       ) bv ON true
       LEFT JOIN LATERAL (
-        SELECT event.id FROM ${this.table('ermEvent')} event
-        JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
-        WHERE event."unitId" = u."unitId" AND frame."receivedAt" <= ${snapshot}
-          AND (jsonb_typeof(event.fields -> '#CSS#') = 'number'
-            OR event.fields ->> '#CSS#' ~ '^[+-]?[0-9]+([.][0-9]+)?$')
-        ORDER BY coalesce(event."eventTime", frame."receivedAt") DESC, event.id DESC LIMIT 1
+        ${latestEvent(
+          Prisma.sql`(jsonb_typeof(event.fields -> '#CSS#') = 'number'
+            OR event.fields ->> '#CSS#' ~ '^[+-]?[0-9]+([.][0-9]+)?$')`,
+          'received',
+        )}
       ) sq ON true
       LEFT JOIN LATERAL (
         SELECT id FROM ${this.table('ermCommand')}
@@ -376,7 +373,8 @@ export class TelemetryRepository {
         SELECT event."engineOn" AS value
         FROM ${this.table('ermEvent')} event
         JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
-        WHERE event."unitId" = u."unitId" AND frame.direction = 'device' AND NOT frame.partial
+        WHERE event."unitId" = u."unitId" AND frame."unitId" = u."unitId"
+          AND frame.direction = 'device' AND NOT frame.partial
           AND frame."receivedAt" < ${since} AND event."engineOn" IS NOT NULL
         ORDER BY frame."receivedAt" DESC, frame.id DESC, event.id DESC LIMIT 1
       ) known_engine ON true
@@ -384,7 +382,8 @@ export class TelemetryRepository {
         SELECT event.fields ->> '#IGN#' = '1' AS value
         FROM ${this.table('ermEvent')} event
         JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
-        WHERE event."unitId" = u."unitId" AND frame.direction = 'device' AND NOT frame.partial
+        WHERE event."unitId" = u."unitId" AND frame."unitId" = u."unitId"
+          AND frame.direction = 'device' AND NOT frame.partial
           AND frame."receivedAt" < ${since} AND event.fields ->> '#IGN#' IN ('0', '1')
         ORDER BY frame."receivedAt" DESC, frame.id DESC, event.id DESC LIMIT 1
       ) known_ignition ON true
@@ -392,7 +391,8 @@ export class TelemetryRepository {
         SELECT event."speedKmh" AS value
         FROM ${this.table('ermEvent')} event
         JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
-        WHERE event."unitId" = u."unitId" AND frame.direction = 'device' AND NOT frame.partial
+        WHERE event."unitId" = u."unitId" AND frame."unitId" = u."unitId"
+          AND frame.direction = 'device' AND NOT frame.partial
           AND frame."receivedAt" < ${since} AND event."speedKmh" IS NOT NULL
         ORDER BY frame."receivedAt" DESC, frame.id DESC, event.id DESC LIMIT 1
       ) known_speed ON true
@@ -400,7 +400,8 @@ export class TelemetryRepository {
         SELECT nullif(event.fields ->> '#NT#', '') AS value
         FROM ${this.table('ermEvent')} event
         JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
-        WHERE event."unitId" = u."unitId" AND frame.direction = 'device' AND NOT frame.partial
+        WHERE event."unitId" = u."unitId" AND frame."unitId" = u."unitId"
+          AND frame.direction = 'device' AND NOT frame.partial
           AND frame."receivedAt" < ${since} AND nullif(event.fields ->> '#NT#', '') IS NOT NULL
         ORDER BY frame."receivedAt" DESC, frame.id DESC, event.id DESC LIMIT 1
       ) known_network ON true
@@ -408,7 +409,8 @@ export class TelemetryRepository {
         SELECT nullif(event.fields ->> '#NC#', '') AS value
         FROM ${this.table('ermEvent')} event
         JOIN ${this.table('ermFrame')} frame ON frame.id = event."frameId"
-        WHERE event."unitId" = u."unitId" AND frame.direction = 'device' AND NOT frame.partial
+        WHERE event."unitId" = u."unitId" AND frame."unitId" = u."unitId"
+          AND frame.direction = 'device' AND NOT frame.partial
           AND frame."receivedAt" < ${since} AND nullif(event.fields ->> '#NC#', '') IS NOT NULL
         ORDER BY frame."receivedAt" DESC, frame.id DESC, event.id DESC LIMIT 1
       ) known_operator ON true

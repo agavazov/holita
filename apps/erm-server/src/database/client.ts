@@ -7,6 +7,10 @@ export function createPrismaClient(
   schema = new URL(connectionString).searchParams.get('schema') ?? 'public',
 ): PrismaClient {
   return new PrismaClient({
-    adapter: new PrismaPg({ connectionString, connectionTimeoutMillis: 5000, max: 5 }, { schema }),
+    adapter: new PrismaPg(
+      // JIT compilation took about 6 s of the 9 s device-state query on 2026-11-18.
+      { connectionString, connectionTimeoutMillis: 5000, max: 5, options: '-c jit=off' },
+      { schema },
+    ),
   });
 }

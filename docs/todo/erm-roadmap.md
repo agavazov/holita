@@ -98,7 +98,7 @@ reopen them as roadmap tasks.
 - **Fault reads:** GET DTC (`301`/`19`) answers `154,0` when the fault buffer is empty and `154,1`
   plus a `419` snapshot of the active codes when it is not (CB6711TE, 2026-11-11, see
   [fleet evidence](../discocan/erm-resources/edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md#fleet-evidence-2026-11-11)).
-  Fleet's 6-hour scheduled read therefore yields the active codes when there are any.
+  Fleet's 30-minute scheduled read therefore yields the active codes when there are any.
 - **Volvo CAN connection:** CB9405PE and CB9369PE have never delivered eData CAN data (no `405`,
   repeated `417`), although their configuration matches reporting trucks. With ignition on, read
   `306`/`411`, then have the installer check the eData CAN wiring to the FMS connector and whether

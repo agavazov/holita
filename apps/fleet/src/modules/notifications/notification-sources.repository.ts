@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { FleetScope } from '../../validation.js';
-import { alertNotification } from './notification-projection.js';
+import { alertNotification, withoutRepeatedFaults } from './notification-projection.js';
 import type { ErmNotificationPage } from './erm-notifications.client.js';
 
 export const notificationCutoff = (now: Date, days: number) =>
@@ -50,26 +50,29 @@ export class NotificationSourcesRepository {
   ): Promise<void> {
     const scope = { tenantId: device.tenantId, branchId: device.branchId };
     await this.prisma.client.$transaction(async (transaction) => {
-      const data: Prisma.FleetNotificationCreateManyInput[] = page.items.map((item) => ({
-        ...scope,
-        sourceKind: item.sourceKind,
-        sourceKey: item.sourceKey,
-        category: item.sourceKind === 'COMMAND' ? 'COMMAND' : 'DEVICE',
-        severity: item.severity,
-        occurredAt: item.occurredAt,
-        createdAt,
-        wordingKey: item.wordingKey,
-        parameters: item.parameters,
-        deviceId: device.id,
-        vehicleId:
-          item.occurredAt >= (device.installedAt ?? device.createdAt) ? device.vehicleId : null,
-        ermEventId:
-          item.sourceKind === 'COMMAND' || item.sourceId.startsWith('karma-routing:')
-            ? null
-            : item.sourceId,
-        commandRequestId:
-          item.sourceKind === 'COMMAND' && !item.sourceId.includes(':') ? item.sourceId : null,
-      }));
+      const data = await withoutRepeatedFaults(
+        transaction,
+        page.items.map((item): Prisma.FleetNotificationCreateManyInput => ({
+          ...scope,
+          sourceKind: item.sourceKind,
+          sourceKey: item.sourceKey,
+          category: item.sourceKind === 'COMMAND' ? 'COMMAND' : 'DEVICE',
+          severity: item.severity,
+          occurredAt: item.occurredAt,
+          createdAt,
+          wordingKey: item.wordingKey,
+          parameters: item.parameters,
+          deviceId: device.id,
+          vehicleId:
+            item.occurredAt >= (device.installedAt ?? device.createdAt) ? device.vehicleId : null,
+          ermEventId:
+            item.sourceKind === 'COMMAND' || item.sourceId.startsWith('karma-routing:')
+              ? null
+              : item.sourceId,
+          commandRequestId:
+            item.sourceKind === 'COMMAND' && !item.sourceId.includes(':') ? item.sourceId : null,
+        })),
+      );
       if (data.length) {
         await transaction.fleetNotification.createMany({ data, skipDuplicates: true });
       }

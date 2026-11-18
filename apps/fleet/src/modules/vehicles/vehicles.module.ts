@@ -31,5 +31,6 @@ import { VehiclesService } from './vehicles.service.js';
     FaultCheckRepository,
     FaultCheckJobs,
   ],
+  exports: [FaultCheckRepository],
 })
 export class VehiclesModule {}

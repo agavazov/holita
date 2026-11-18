@@ -1342,5 +1342,94 @@ describe('ERM telemetry import with PostgreSQL', () => {
         },
       },
     });
+
+    // Each fault read's 419 snapshot repeats the active codes as added (seen every six hours on
+    // CB6711TE). Neither notification path repeats a code whose previous report added it; a new
+    // code and a code that returns after a removal still notify.
+    type Fault = readonly [spn: number, fmi: number, status: 'ADDED' | 'DELETED'];
+    const faultSnapshots: readonly (readonly [string, number, readonly Fault[]])[] = [
+      [
+        '116',
+        140,
+        [
+          [100, 1, 'ADDED'],
+          [110, 3, 'DELETED'],
+        ],
+      ],
+      [
+        '117',
+        150,
+        [
+          [100, 1, 'ADDED'],
+          [110, 3, 'ADDED'],
+          [111, 1, 'ADDED'],
+        ],
+      ],
+    ];
+    events.get(lampDevice.imei)?.push(
+      ...faultSnapshots.map(([id, seconds, faults]): FeedEvent => ({
+        ...event(id, seconds, null),
+        eventId: '33',
+        edata: {
+          report: '419',
+          faults: faults.map(([spn, fmi, status]) => ({ spn, fmi, status })),
+        },
+      })),
+    );
+    const faultNotifications = async () =>
+      (
+        await database.client.fleetNotification.findMany({
+          where: {
+            ...scopeA,
+            deviceId: lampDevice.id,
+            wordingKey: 'notification.recordedDiagnostic',
+          },
+          orderBy: [{ occurredAt: 'asc' }, { sourceKey: 'asc' }],
+        })
+      ).map(({ occurredAt, parameters }) => [occurredAt, parameters]);
+    const notified = [
+      [at(140), 'SPN 100 FMI 1', 'ADDED'],
+      [at(140), 'SPN 110 FMI 3', 'DELETED'],
+      [at(150), 'SPN 110 FMI 3', 'ADDED'],
+      [at(150), 'SPN 111 FMI 1', 'ADDED'],
+    ].map(([time, troubleCode, diagnosticStatus]) => [
+      time,
+      { eventKind: 'DIAGNOSTIC_TROUBLE_CODE', troubleCode, diagnosticStatus, alarmCode: '33' },
+    ]);
+    await jobs.tick();
+    expect(await faultNotifications()).toEqual(notified);
+    notifications.set(lampDevice.imei, {
+      items: faultSnapshots.flatMap(([id, seconds, faults]) =>
+        faults.map(([spn, fmi, status]): ExportNotification => {
+          const troubleCode = `SPN ${String(spn)} FMI ${String(fmi)}`;
+          return {
+            sourceKind: 'DIAGNOSTIC',
+            sourceId: id,
+            sourceKey: JSON.stringify([
+              lampDevice.imei,
+              at(seconds).toISOString(),
+              'DIAGNOSTIC_TROUBLE_CODE',
+              troubleCode,
+              status,
+            ]),
+            occurredAt: at(seconds).toISOString(),
+            severity: status === 'ADDED' ? 'WARNING' : 'INFO',
+            wordingKey: 'notification.recordedDiagnostic',
+            parameters: {
+              eventKind: 'DIAGNOSTIC_TROUBLE_CODE',
+              troubleCode,
+              diagnosticStatus: status,
+              alarmCode: '33',
+            },
+            target: { kind: 'DEVICE', id: lampDevice.id },
+            recorded: true,
+          };
+        }),
+      ),
+      next: 'page-lamp-1',
+    });
+    await notificationJobs.tick();
+    expect(notificationRequests.get(lampDevice.imei)?.searchParams.get('limit')).toBe('500');
+    expect(await faultNotifications()).toEqual(notified);
   });
 });

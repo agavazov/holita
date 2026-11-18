@@ -36,8 +36,10 @@ import {
   commandRequestsQuery,
 } from './command-requests.query.js';
 
-// Fleet asks every six hours; a request still waiting expires before the next one.
-const SCHEDULED_FAULT_READ_SECONDS = 21_000;
+// Fleet asks every 30 minutes; a request still waiting expires before the next one, so an
+// offline unit holds at most one pending read.
+const SCHEDULED_FAULT_READ_SECONDS = 1_620;
+export const SCHEDULED_FAULT_READ_ACTOR = 'system:fault-scan';
 
 @Injectable()
 export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
@@ -103,7 +105,7 @@ export class CommandRequestsService implements OnModuleInit, OnModuleDestroy {
       tenantId: auditId(target.get('tenantId')),
       branchId: auditId(target.get('branchId')),
       deviceId: auditId(target.get('deviceId')),
-      actorId: 'system:fault-scan',
+      actorId: SCHEDULED_FAULT_READ_ACTOR,
       intent: 'Scheduled fault read',
     };
     const createdAt = new Date();

@@ -5,6 +5,7 @@ export type NavIconName =
   | 'th-large'
   | 'bell'
   | 'directions'
+  | 'exclamation-triangle'
   | 'truck'
   | 'id-card'
   | 'mobile'

@@ -18,6 +18,7 @@ request lifecycles. Use the existing files directly; there is no generic CRUD la
 | Service tasks  | [SDL](../../apps/fleet/src/modules/service-tasks/service-tasks.graphql), [resolver](../../apps/fleet/src/modules/service-tasks/service-tasks.resolver.ts), [service](../../apps/fleet/src/modules/service-tasks/service-tasks.service.ts), [repository](../../apps/fleet/src/modules/service-tasks/service-tasks.repository.ts), [urgency SQL](../../apps/fleet/src/modules/service-tasks/service-urgency.sql.ts) |
 | Settings       | [SDL](../../apps/fleet/src/modules/settings/settings.graphql), [resolver](../../apps/fleet/src/modules/settings/settings.resolver.ts), [service](../../apps/fleet/src/modules/settings/settings.service.ts), [repository](../../apps/fleet/src/modules/settings/settings.repository.ts), [settings SQL](../../apps/fleet/src/modules/settings/settings.sql.ts)                                                    |
 | Geo zones      | [SDL](../../apps/fleet/src/modules/geo-zones/geo-zones.graphql), [resolver](../../apps/fleet/src/modules/geo-zones/geo-zones.resolver.ts), [service](../../apps/fleet/src/modules/geo-zones/geo-zones.service.ts), [repository](../../apps/fleet/src/modules/geo-zones/geo-zones.repository.ts), [job](../../apps/fleet/src/modules/geo-zones/geo-zones.jobs.ts)                                                  |
+| Fault monitor  | [SDL](../../apps/fleet/src/modules/fault-monitor/fault-monitor.graphql), [resolver](../../apps/fleet/src/modules/fault-monitor/fault-monitor.resolver.ts), [service](../../apps/fleet/src/modules/fault-monitor/fault-monitor.service.ts), [repository](../../apps/fleet/src/modules/fault-monitor/fault-monitor.repository.ts)                                                                                   |
 
 Every Fleet list (`fleetVehicles`, `fleetDevices`, `fleetDrivers`, `fleetVehicleGroups`,
 `fleetTrips`, `fleetEvents`, `fleetServiceTasks`) follows the
@@ -91,9 +92,10 @@ within six hours below 23 V (24 V systems, peak of seven days at least 20 V) or 
 carry the vehicle system (`FleetFaultSystem`, including `CAN_BUS` and `POWER`), severity, code and
 episode times. The admin shows them as fault lamps and a fault scanner on the live dashboard and the
 vehicle profile; lamps reported since the check replace the check's lamp findings. With
-`FLEET_ERM_TELEMETRY_ENABLED=true`, Fleet also asks ERM every six hours (00:00, 06:00, 12:00 and
-18:00 Europe/Sofia) to queue the fault-logger read for each Device with a vehicle; codes the module
-reports arrive through the normal import. Operators can also queue the read from the scanner (Read
+`FLEET_ERM_TELEMETRY_ENABLED=true`, Fleet also asks ERM every 30 minutes (on the hour and the half
+hour) to queue the fault-logger read for each Device with a vehicle; an unsent request expires after
+27 minutes, so an offline truck holds at most one. Codes the module reports arrive through the
+normal import. Operators can also queue the read from the scanner (Read
 faults now, expiry 15 minutes). The scanner footer shows the last read's eData verdict: no active
 codes, or the number of codes the following `419` repeated. An empty buffer proves nothing while
 the truck sends no CAN data.
@@ -414,6 +416,14 @@ captured clients, generated operations and shared load/error/empty states:
   zone or edit one on the map: a click adds a vertex, a dragged vertex moves and a right-clicked
   vertex is removed; they name it, save it, or delete it after confirmation. There are no rules
   or notifications.
+- [Faults](../../apps/admin/src/app/features/fleet/faults/faults-page.ts) refreshes every minute.
+  Tiles count the trucks with active codes, with no active codes (a clear verdict within the last
+  hour), with no CAN data and offline; one row per truck shows its state, active codes with SPN/FMI
+  and meaning, the last check, the last data, the CAN state and a link to the truck. The first state
+  that applies decides: active codes (fault-check codes or a `154,1` verdict), offline (no open ERM
+  connection), no CAN data (no `405` value within 15 minutes, or a `417` after the last one), no
+  active codes, otherwise not checked. The fault log below is filtered by truck, event and date
+  range. Alerts stay in the admin: this page, the log and the notification feed.
 
 ### Geo zones
 
@@ -436,6 +446,23 @@ outside, an edited outline applies from the next position, and a deleted zone ke
 Example zones (parking derived from overnight truck positions, Sofia, Bulgaria, border
 checkpoints and Serbia) are in [geo-zones.ts](../../apps/fleet/prisma/geo-zones.ts); the Fleet
 seed inserts the missing ones by name and never updates existing zones.
+
+### Fault monitoring
+
+`fleetFaultMonitor` returns every vehicle with a Device, by license plate, with its fault check,
+its Devices (newest report first; their ERM fields add the connection and the fault reads with
+verdicts), the newest `405` value (`canDataAt`) and the newest `417` (`canLostAt`).
+`fleetFaultLog(offset, limit, filter)` is the newest-first log of the Branch, filtered by vehicles,
+kinds and an `occurredFrom`/`occurredTo` period (default the seven days before the request, at
+most 93 days). One scoped query unions the stored sources: fault-logger status changes from
+`fleetEvent` (`FAULT_ADDED`, `FAULT_REMOVED`; the `419` snapshot that repeats an active code after
+each read is not listed again), `CAN_LOST` (the first `417` after CAN data) and `CAN_RESTORED`
+(the first `405` after the loss's last `417`), the warning-lamp notifications (`LAMP_ON`,
+`LAMP_OFF`, kept as long as the notification retention) and `415` freeze frames (`FREEZE_FRAME`).
+`FAULT_READ` entries are ERM's answered fault reads with their verdicts, read through
+`ermCommandRequests` with the caller's session; they are filtered by creation time and dated by
+completion. Fleet merges the first `offset + limit` entries of both sources. Scheduled reads do not
+create command notifications.
 
 The topbar's notification bell is labelled Demo and explains that delivery has no connected
 provider. It does not derive a notification feed or unread badge from Fleet business counts.

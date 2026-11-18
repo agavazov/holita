@@ -7,6 +7,7 @@ import { Clock } from '@primeicons/angular/clock';
 import { Cog } from '@primeicons/angular/cog';
 import { Directions } from '@primeicons/angular/directions';
 import { Envelope } from '@primeicons/angular/envelope';
+import { ExclamationTriangle } from '@primeicons/angular/exclamation-triangle';
 import { Folder } from '@primeicons/angular/folder';
 import { IdCard } from '@primeicons/angular/id-card';
 import { InfoCircle } from '@primeicons/angular/info-circle';
@@ -34,6 +35,7 @@ import { navigationContext, type NavGroup } from './navigation';
     Cog,
     Directions,
     Envelope,
+    ExclamationTriangle,
     Folder,
     IdCard,
     InfoCircle,

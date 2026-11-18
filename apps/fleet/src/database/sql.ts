@@ -15,6 +15,7 @@ export type FleetTableName =
   | 'vehicleEdataMeasurement'
   | 'trip'
   | 'fleetEvent'
+  | 'fleetNotification'
   | 'fleetSettings'
   | 'serviceTask';
 
@@ -27,6 +28,7 @@ const FLEET_TABLES: readonly FleetTableName[] = [
   'vehicleEdataMeasurement',
   'trip',
   'fleetEvent',
+  'fleetNotification',
   'fleetSettings',
   'serviceTask',
 ];

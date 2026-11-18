@@ -1,0 +1,51 @@
+query AdminFaultMonitor {
+  fleetFaultMonitor {
+    vehicle {
+      id
+      licensePlate
+    }
+    devices {
+      id
+      lastReportedAt
+      ermState {
+        online
+        lastFrameAt
+      }
+      ermCommandRequests {
+        ...AdminFaultRead
+      }
+    }
+    faultCheck {
+      ...AdminFaultCheck
+    }
+    canDataAt
+    canLostAt
+  }
+}
+
+query AdminFaultLog($offset: Int!, $limit: Int!, $filter: FleetFaultLogFilter) {
+  fleetFaultLog(offset: $offset, limit: $limit, filter: $filter) {
+    total
+    offset
+    limit
+    items {
+      id
+      kind
+      occurredAt
+      vehicle {
+        id
+        licensePlate
+      }
+      deviceImei
+      troubleCode
+      spn
+      fmi
+      descriptionKey
+      parameterId
+      lampState
+      activeCodes
+      codeCount
+      valueCount
+    }
+  }
+}

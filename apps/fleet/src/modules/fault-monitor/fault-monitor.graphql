@@ -1,0 +1,80 @@
+"A truck on the fault dashboard: Fleet's fault check and CAN evidence; its Devices add the ERM connection and fault reads."
+type FleetFaultMonitorVehicle {
+  vehicle: FleetVehicleRef!
+  "Assigned Devices, newest report first."
+  devices: [FleetDevice!]!
+  "Latest fault check; null until the first check after the vehicle got a Device."
+  faultCheck: FleetFaultCheck
+  "Newest eData 405 value of the vehicle: CAN data reached the tracker."
+  canDataAt: DateTime
+  "Newest eData 417 report: no CAN messages for 500 ms while the ignition was on."
+  canLostAt: DateTime
+}
+
+enum FleetFaultLogKind {
+  "The fault logger added a code that was not active; repeated added reports of an active code are not listed."
+  FAULT_ADDED
+  "The fault logger removed a code; this does not prove a repair."
+  FAULT_REMOVED
+  "An answered fault-logger read (GET DTC) with its eData verdict."
+  FAULT_READ
+  "The first eData 417 since CAN data last arrived."
+  CAN_LOST
+  "The first eData 405 value after the last 417 of a loss."
+  CAN_RESTORED
+  "A warning lamp turned red or yellow, as notified."
+  LAMP_ON
+  "A warning lamp returned to off, as notified."
+  LAMP_OFF
+  "eData 415 values the module captured with a fault report."
+  FREEZE_FRAME
+}
+
+type FleetFaultLogEntry {
+  "Stable source identity."
+  id: ID!
+  kind: FleetFaultLogKind!
+  occurredAt: DateTime!
+  "Null for a fault read of a Device without a vehicle."
+  vehicle: FleetVehicleRef
+  deviceImei: String
+  "FAULT_ADDED and FAULT_REMOVED: the stored code, an SPN/FMI pair or an OBD code."
+  troubleCode: String
+  "SPN uses Float to retain unsigned 32-bit values beyond GraphQL Int."
+  spn: Float
+  fmi: Int
+  "DiscoCan component-description translation key, when the code has a supported meaning."
+  descriptionKey: String
+  "LAMP_ON and LAMP_OFF: the warning lamp's eData parameter and its new state."
+  parameterId: Int
+  lampState: FleetWarningLampState
+  "FAULT_READ: true for 154,1 (codes present), false for 154,0; null without an eData answer."
+  activeCodes: Boolean
+  "FAULT_READ: distinct codes the following 419 repeated; null until it arrives."
+  codeCount: Int
+  "FREEZE_FRAME: number of captured values."
+  valueCount: Int
+}
+
+type FleetFaultLogPage {
+  items: [FleetFaultLogEntry!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+
+input FleetFaultLogFilter {
+  vehicleIds: [ID!]
+  kinds: [FleetFaultLogKind!]
+  "Defaults to seven days before occurredTo. At most 93 days."
+  occurredFrom: DateTime
+  "Exclusive; defaults to the request time."
+  occurredTo: DateTime
+}
+
+extend type Query {
+  "Vehicles with a Device in the active Branch, ordered by license plate."
+  fleetFaultMonitor: [FleetFaultMonitorVehicle!]!
+  "Fault events of the active Branch, newest first. FAULT_READ entries are ERM's answered reads, filtered by creation time and dated by completion."
+  fleetFaultLog(offset: Int! = 0, limit: Int! = 20, filter: FleetFaultLogFilter): FleetFaultLogPage!
+}

@@ -1,0 +1,76 @@
+{
+  "title": "Faults",
+  "moduleInfo": "Every truck's fault state and a log of its fault events. Fleet asks each truck's eData module for its active fault codes every 30 minutes and checks the stored reports every 15 minutes; the page refreshes every minute. “No active codes” holds only while the truck sends CAN data.",
+  "loadError": "The trucks' fault states could not be loaded.",
+  "tiles": {
+    "label": "Fault monitoring",
+    "ACTIVE": "Active codes",
+    "CLEAR": "No active codes",
+    "NO_CAN": "No CAN data",
+    "OFFLINE": "Offline",
+    "clearFootnote": "checked in the last hour",
+    "noCanFootnote": "connected, no current CAN values",
+    "offlineFootnote": "not connected to discocan"
+  },
+  "states": {
+    "ACTIVE": "Active codes",
+    "CLEAR": "No active codes",
+    "NO_CAN": "No CAN data",
+    "OFFLINE": "Offline",
+    "NOT_CHECKED": "Not checked in the last hour"
+  },
+  "can": {
+    "DATA": "CAN data",
+    "LOST": "CAN lost",
+    "NONE": "No CAN data"
+  },
+  "trucks": {
+    "heading": "Trucks",
+    "truck": "Truck",
+    "state": "State",
+    "codes": "Active codes",
+    "lastCheck": "Last check",
+    "lastData": "Last data",
+    "can": "CAN",
+    "openTruck": "Open {plate}",
+    "pending": "Reading now",
+    "errorText": "The trucks' fault states could not be loaded.",
+    "emptyTitle": "No trucks with a device",
+    "emptyDescription": "Trucks appear here once a device is assigned to them."
+  },
+  "log": {
+    "heading": "Fault log",
+    "filters": "Log filters",
+    "vehicle": "Truck",
+    "allVehicles": "All trucks",
+    "kind": "Event",
+    "allKinds": "All events",
+    "from": "From",
+    "to": "To",
+    "time": "Time",
+    "details": "Details",
+    "errorText": "The fault log could not be loaded.",
+    "emptyTitle": "No fault events",
+    "emptyDescription": "Fault codes, fault reads, CAN losses, warning lamps and freeze frames of the last seven days appear here.",
+    "kinds": {
+      "FAULT_ADDED": "Fault added",
+      "FAULT_REMOVED": "Fault removed",
+      "FAULT_READ": "Fault read",
+      "CAN_LOST": "CAN lost",
+      "CAN_RESTORED": "CAN restored",
+      "LAMP_ON": "Lamp on",
+      "LAMP_OFF": "Lamp off",
+      "FREEZE_FRAME": "Freeze frame"
+    },
+    "readNoCodes": "No active codes",
+    "readCode": "1 active code",
+    "readCodes": "{count} active codes",
+    "readCodesFound": "Active codes found",
+    "readNoAnswer": "No answer from the eData module",
+    "canLost": "No CAN messages while the ignition was on",
+    "canRestored": "CAN values arrive again",
+    "lamp": "{lamp}: {state}",
+    "freezeFrame": "{count} values captured with the fault",
+    "removedHint": "Removal does not prove a repair."
+  }
+}

@@ -21,17 +21,15 @@ export const Overdue: Story = {
   args: {
     device: {
       ...fixtureLiveDevice,
-      ermState: fixtureLiveDevice.ermState
-        ? {
-            ...fixtureLiveDevice.ermState,
-            online: false,
-            health: {
-              ...fixtureLiveDevice.ermState.health,
-              overdue: true,
-              lastFrameAgeSeconds: 1800,
-            },
-          }
-        : null,
+      ermState: {
+        ...fixtureLiveDevice.ermState,
+        online: false,
+        health: {
+          ...fixtureLiveDevice.ermState.health,
+          overdue: true,
+          lastFrameAgeSeconds: 1800,
+        },
+      },
     },
   },
 };
@@ -45,17 +43,15 @@ export const ConnectedWithReportingGap: Story = {
     mode: 'table',
     device: {
       ...fixtureLiveDevice,
-      ermState: fixtureLiveDevice.ermState
-        ? {
-            ...fixtureLiveDevice.ermState,
-            online: true,
-            health: {
-              ...fixtureLiveDevice.ermState.health,
-              overdue: true,
-              lastFrameAgeSeconds: 1800,
-            },
-          }
-        : null,
+      ermState: {
+        ...fixtureLiveDevice.ermState,
+        online: true,
+        health: {
+          ...fixtureLiveDevice.ermState.health,
+          overdue: true,
+          lastFrameAgeSeconds: 1800,
+        },
+      },
     },
   },
 };

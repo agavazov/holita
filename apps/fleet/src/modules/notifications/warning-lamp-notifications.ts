@@ -7,7 +7,8 @@ type LampMeasurement = Pick<
   'id' | 'parameterId' | 'valueSize' | 'valueHex' | 'recordedAt' | 'receivedAt' | 'sourceEventId'
 >;
 
-const LAMPS = new Map<number, string>([
+/** Lamp names stored in notification parameters, by eData parameter. */
+export const WARNING_LAMP_NAMES = new Map<number, string>([
   [1896, 'BRAKE_SYSTEM'],
   [1906, 'ENGINE'],
   [1910, 'ABS'],
@@ -65,7 +66,7 @@ export function warningLampNotifications(
       createdAt,
       wordingKey: entered ? 'notification.warningLampEntered' : 'notification.warningLampOff',
       parameters: {
-        lamp: LAMPS.get(measurement.parameterId) ?? 'OTHER',
+        lamp: WARNING_LAMP_NAMES.get(measurement.parameterId) ?? 'OTHER',
         state,
         previousState,
         deviceId: device.id,

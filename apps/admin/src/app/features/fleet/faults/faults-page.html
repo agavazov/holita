@@ -1,0 +1,255 @@
+<discocan-page-header
+  [title]="text().title"
+  [count]="trucks()?.length ?? null"
+  [moduleInfo]="text().moduleInfo"
+/>
+
+<discocan-kpi-strip
+  [label]="text().tiles.label"
+  [loading]="trucks() === null && !tilesError()"
+  [error]="tilesError()"
+  (retry)="retryTrucks()"
+>
+  <discocan-kpi-tile
+    [label]="text().tiles.ACTIVE"
+    [value]="count('ACTIVE')"
+    [tone]="counts().ACTIVE ? 'danger' : null"
+  >
+    <svg kpiIcon data-p-icon="exclamation-triangle" aria-hidden="true"></svg>
+  </discocan-kpi-tile>
+  <discocan-kpi-tile
+    [label]="text().tiles.CLEAR"
+    [value]="count('CLEAR')"
+    [footnote]="text().tiles.clearFootnote"
+    tone="success"
+  >
+    <svg kpiIcon data-p-icon="check-circle" aria-hidden="true"></svg>
+  </discocan-kpi-tile>
+  <discocan-kpi-tile
+    [label]="text().tiles.NO_CAN"
+    [value]="count('NO_CAN')"
+    [footnote]="text().tiles.noCanFootnote"
+    [tone]="counts().NO_CAN ? 'warn' : null"
+  >
+    <svg kpiIcon data-p-icon="minus-circle" aria-hidden="true"></svg>
+  </discocan-kpi-tile>
+  <discocan-kpi-tile
+    [label]="text().tiles.OFFLINE"
+    [value]="count('OFFLINE')"
+    [footnote]="text().tiles.offlineFootnote"
+    tone="neutral"
+  >
+    <svg kpiIcon data-p-icon="power-off" aria-hidden="true"></svg>
+  </discocan-kpi-tile>
+</discocan-kpi-strip>
+
+<discocan-table-panel
+  mode="local"
+  [heading]="text().trucks.heading"
+  [total]="trucks()?.length ?? null"
+  [view]="trucksView()"
+  [errorText]="monitorErrorText()"
+  [busy]="monitorLoading()"
+  [emptyTitle]="text().trucks.emptyTitle"
+  [emptyDescription]="text().trucks.emptyDescription"
+  [columns]="truckColumns()"
+  (retry)="retryTrucks()"
+>
+  <p-table
+    class="app-responsive-table"
+    [value]="trucks() ?? []"
+    dataKey="id"
+    [rowTrackBy]="trackById"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().trucks.heading } }"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of truckColumns(); track column.id) {
+          <col [style.width]="column.width" [class]="column.className ?? ''" />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity">{{ text().trucks.truck }}</th>
+        <th scope="col">{{ text().trucks.state }}</th>
+        <th scope="col">{{ text().trucks.codes }}</th>
+        <th scope="col">{{ text().trucks.lastCheck }}</th>
+        <th scope="col">{{ text().trucks.lastData }}</th>
+        <th scope="col">{{ text().trucks.can }}</th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-truck>
+      <tr>
+        <td class="app-col-identity">
+          <span class="app-cell-identity">
+            <a
+              class="app-link"
+              [routerLink]="links().vehicle(truck.id).commands"
+              [attr.aria-label]="openLabel(truck.plate)"
+              ><span class="app-plate">{{ truck.plate }}</span></a
+            >
+          </span>
+        </td>
+        <td>
+          <span class="app-cell-status">
+            <p-tag [value]="stateLabel(truck.state)" [severity]="stateSeverity(truck.state)" />
+          </span>
+        </td>
+        <td>
+          @if (truck.codes.length) {
+            <ul class="faults__codes">
+              @for (finding of truck.codes; track $index) {
+                <li [attr.title]="codeHint(finding)">{{ codeLine(finding) }}</li>
+              }
+            </ul>
+          } @else {
+            <span class="app-muted">—</span>
+          }
+        </td>
+        <td>
+          <span class="faults__check">
+            <span>{{ lastCheck(truck) }}</span>
+            @if (truck.pendingRead) {
+              <span class="app-muted">{{ text().trucks.pending }}</span>
+            }
+          </span>
+        </td>
+        <td>
+          @if (truck.lastDataAt; as lastDataAt) {
+            <time
+              class="app-cell-date"
+              [attr.datetime]="lastDataAt"
+              [attr.title]="format.dateTime(lastDataAt)"
+              >{{ relative(lastDataAt) }}</time
+            >
+          } @else {
+            <span class="app-muted">—</span>
+          }
+        </td>
+        <td>
+          <span class="faults__check">
+            <span class="app-cell-status">
+              <p-tag [value]="canLabel(truck.can)" [severity]="canTone(truck)" />
+            </span>
+            @if (truck.canAt; as canAt) {
+              <time
+                class="app-muted"
+                [attr.datetime]="canAt"
+                [attr.title]="format.dateTime(canAt)"
+                >{{ relative(canAt) }}</time
+              >
+            }
+          </span>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</discocan-table-panel>
+
+<div class="faults__filters" role="group" [attr.aria-label]="text().log.filters">
+  <p-select
+    inputId="faults-vehicle"
+    [ariaLabel]="text().log.vehicle"
+    [options]="vehicleOptions()"
+    optionLabel="label"
+    optionValue="value"
+    [filter]="true"
+    [ngModel]="filter().vehicleId"
+    (ngModelChange)="changeFilter({ vehicleId: $event })"
+  />
+  <p-select
+    inputId="faults-kind"
+    [ariaLabel]="text().log.kind"
+    [options]="kindOptions()"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="filter().kind"
+    (ngModelChange)="changeFilter({ kind: $event })"
+  />
+  <p-datepicker
+    inputId="faults-range"
+    [ariaLabel]="text().log.from + ' – ' + text().log.to"
+    [placeholder]="text().log.from + ' – ' + text().log.to"
+    selectionMode="range"
+    [dateFormat]="format.datePickerFormat()"
+    [readonlyInput]="true"
+    [showIcon]="true"
+    [showClear]="true"
+    appendTo="body"
+    [ngModel]="filter().range"
+    (ngModelChange)="changeFilter({ range: $event })"
+  />
+</div>
+
+<discocan-table-panel
+  [heading]="text().log.heading"
+  [total]="log()?.total ?? null"
+  [view]="logView()"
+  [errorText]="logErrorText()"
+  [busy]="logLoading()"
+  [emptyTitle]="text().log.emptyTitle"
+  [emptyDescription]="text().log.emptyDescription"
+  [page]="logPage()"
+  [columns]="logColumns()"
+  (pageChange)="changePage($event)"
+  (clearFilters)="clearFilters()"
+  (retry)="retryLog()"
+>
+  <p-table
+    class="app-responsive-table"
+    [value]="log()?.items ?? []"
+    dataKey="id"
+    [rowTrackBy]="trackById"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    [pt]="{ tableContainer: { tabindex: '0', 'aria-label': text().log.heading } }"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of logColumns(); track column.id) {
+          <col [style.width]="column.width" [class]="column.className ?? ''" />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col">{{ text().log.time }}</th>
+        <th scope="col" class="app-col-identity">{{ text().log.vehicle }}</th>
+        <th scope="col">{{ text().log.kind }}</th>
+        <th scope="col">{{ text().log.details }}</th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-entry>
+      <tr>
+        <td>
+          <time class="app-cell-date" [attr.datetime]="entry.occurredAt">{{
+            format.dateTime(entry.occurredAt, true)
+          }}</time>
+        </td>
+        <td class="app-col-identity">
+          <span class="app-cell-identity">
+            @if (entry.vehicle; as vehicle) {
+              <a
+                class="app-link"
+                [routerLink]="links().vehicle(vehicle.id).commands"
+                [attr.aria-label]="openLabel(vehicle.licensePlate)"
+                ><span class="app-plate">{{ vehicle.licensePlate }}</span></a
+              >
+            } @else {
+              <span class="app-mono">{{ entry.deviceImei ?? '—' }}</span>
+            }
+          </span>
+        </td>
+        <td>
+          <span class="app-cell-status">
+            <p-tag [value]="kindLabel(entry.kind)" [severity]="kindSeverity(entry.kind)" />
+          </span>
+        </td>
+        <td [attr.title]="detailsHint(entry)">{{ details(entry) }}</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</discocan-table-panel>

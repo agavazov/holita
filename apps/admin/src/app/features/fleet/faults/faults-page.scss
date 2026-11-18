@@ -1,0 +1,18 @@
+.faults__codes {
+  display: grid;
+  gap: var(--p-app-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.faults__check {
+  display: grid;
+  gap: var(--p-app-space-1);
+}
+
+.faults__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-app-space-2);
+}

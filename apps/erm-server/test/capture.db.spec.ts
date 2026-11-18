@@ -5183,7 +5183,7 @@ it('persists captured connection lifecycle and raw frames through the production
     await karma.routeUnits(new Date(automaticAt.getTime() + 30 * 60_000));
     expect(karmaSubmissions).toHaveBeenCalledTimes(4);
 
-    // Fleet's six-hourly fault read: configured primary units only, one unexpired read per Device.
+    // Fleet's half-hourly fault read: configured primary units only, one unexpired read per Device.
     const faultReadUnit = '862129080369997';
     const faultReadTarget = { tenantId, branchId, deviceId: randomUUID() };
     process.env.ERM_PRIMARY_UNITS = faultReadUnit;

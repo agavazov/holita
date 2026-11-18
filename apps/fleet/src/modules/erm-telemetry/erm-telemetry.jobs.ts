@@ -48,9 +48,9 @@ export class ErmTelemetryJobs {
     }
   }
 
-  // ERM queues the read only for primary units without a pending one; each request waits for
-  // the unit's connection and expires before the next run.
-  @Cron('0 0 */6 * * *', {
+  // Every 30 minutes. ERM queues the read only for primary units without a pending one; each
+  // request waits for the unit's connection and expires before the next run.
+  @Cron('0 */30 * * * *', {
     name: 'erm-fault-reads',
     timeZone: 'Europe/Sofia',
     waitForCompletion: true,

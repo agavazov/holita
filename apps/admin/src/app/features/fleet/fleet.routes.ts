@@ -199,6 +199,12 @@ export const fleetRoutes: Routes = [
       import('./geo-zones/geo-zones-workspace').then((module) => module.GeoZonesWorkspace),
   },
   {
+    path: ':branchId/fleet/faults',
+    data: { resource: 'faults', editor: false },
+    loadComponent: () =>
+      import('./faults/faults-workspace').then((module) => module.FaultsWorkspace),
+  },
+  {
     path: ':branchId/fleet/live',
     data: { resource: 'live', editor: false },
     loadComponent: () =>
