@@ -37,9 +37,16 @@ export class SignIn {
   protected readonly form = new FormGroup({
     email: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.email, Validators.maxLength(254)],
+      validators: [
+        (control) => Validators.required(control),
+        (control) => Validators.email(control),
+        Validators.maxLength(254),
+      ],
     }),
-    password: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    password: new FormControl('', {
+      nonNullable: true,
+      validators: [(control) => Validators.required(control)],
+    }),
   });
   protected readonly text = computed(() => (this.language() === 'bg' ? bg : en));
   protected readonly languages = computed<readonly MenuOption[]>(() => [
