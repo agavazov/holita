@@ -9,7 +9,8 @@
     "./layout": "./src/layout.ts",
     "./charts": "./src/charts.ts",
     "./design": "./src/design.ts",
-    "./app": "./src/app.ts"
+    "./app": "./src/app.ts",
+    "./styles": "./src/styles/all.scss"
   },
   "sideEffects": false,
   "peerDependencies": {
