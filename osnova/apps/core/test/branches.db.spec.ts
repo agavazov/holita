@@ -500,7 +500,8 @@ describe('Branches GraphQL with PostgreSQL', () => {
         headers: { 'content-type': 'application/json', 'x-core-internal-token': token },
         body: JSON.stringify({ id }),
       });
-      return { status: response.status, body: (await response.json()) as unknown };
+      const body: unknown = await response.json();
+      return { status: response.status, body };
     };
     expect(await resolveBranch(managedBranch.id)).toMatchObject({
       status: 200,
