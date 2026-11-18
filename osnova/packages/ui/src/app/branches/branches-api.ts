@@ -7,17 +7,17 @@ import {
   AdminBranchesDocument,
   AdminTenantsDocument,
   AdminDemoLoginDocument,
-} from '../../../generated/graphql/startup-operations';
-import { AdminConfig } from '../../core/config/admin-config';
-import { graphqlOptions } from '../../core/graphql/graphql-options';
-import { DemoSession } from '../../core/auth/demo-session';
-import type { Language } from '../../i18n/messages';
+} from '../generated/operations';
+import { OperatorConfig } from '../config/operator-config';
+import { graphqlOptions } from '../graphql/graphql-options';
+import { DemoSession } from '../auth/demo-session';
+import type { Language } from '../language';
 
 @Injectable({ providedIn: 'root' })
 export class BranchesApi {
   private readonly publicClient = inject(Apollo);
   private readonly httpLink = inject(HttpLink);
-  private readonly config = inject(AdminConfig);
+  private readonly config = inject(OperatorConfig);
   private readonly zone = inject(NgZone);
   private readonly session = inject(DemoSession);
   tenants(language: Language) {

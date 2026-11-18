@@ -17,7 +17,7 @@ export interface GenerationTarget {
   supergraph?: string;
   schema?: string;
   server?: { subgraph: string; path: string };
-  clients?: { path: string; operations: string[] }[];
+  clients?: { path: string; operations: string[]; subgraph?: string }[];
 }
 
 export async function generate(
@@ -94,9 +94,15 @@ export async function generate(
     await generateTypes(selected.server.path, schema, false);
   }
   for (const client of selected?.clients ?? []) {
+    const clientSchema = client.subgraph
+      ? composition.schemas.get(client.subgraph)
+      : composition.apiSchema;
+    if (!clientSchema) {
+      throw new Error(`Missing ${client.subgraph} schema`);
+    }
     await generateTypes(
       client.path,
-      composition.apiSchema,
+      clientSchema,
       true,
       documents.filter(({ location }) => client.operations.includes(location)),
     );

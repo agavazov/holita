@@ -7,16 +7,16 @@ import {
   AdminMeDocument,
   AdminSignInDocument,
   AdminSignOutDocument,
-} from '../../../generated/graphql/startup-operations';
-import type { Language } from '../../i18n/messages';
-import { AdminConfig } from '../config/admin-config';
+} from '../generated/operations';
+import type { Language } from '../language';
+import { OperatorConfig } from '../config/operator-config';
 import { graphqlOptions } from '../graphql/graphql-options';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApi {
   private readonly publicClient = inject(Apollo);
   private readonly httpLink = inject(HttpLink);
-  private readonly config = inject(AdminConfig);
+  private readonly config = inject(OperatorConfig);
   private readonly zone = inject(NgZone);
 
   async signIn(email: string, password: string, language: Language) {

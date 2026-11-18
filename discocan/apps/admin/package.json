@@ -10,7 +10,7 @@
     "typecheck": "ngc --noEmit --project tsconfig.app.json && ngc --noEmit --project tsconfig.spec.json",
     "lint": "eslint .",
     "test": "ng test --watch=false --progress=false",
-    "graphql:generate": "tsx ../../tools/graphql/generate.mts admin"
+    "graphql:generate": "tsx ../../../tools/graphql-operator.mts && tsx ../../tools/graphql/generate.mts admin"
   },
   "dependencies": {
     "@angular/cdk": "22.2.1",

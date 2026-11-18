@@ -12,7 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EMPTY, Subject, catchError, startWith, switchMap } from 'rxjs';
 import type { AdminTripDetailsFragment } from '../../../../generated/graphql/operations';
-import { requestError } from '../../../core/graphql/request-error';
+import { requestError } from '@osnova/ui/app';
 import { injectDrawerHost } from '@osnova/ui';
 import { drawerParam } from '@osnova/ui';
 import type { RouteDrawerState } from '@osnova/ui';

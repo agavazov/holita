@@ -13,7 +13,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { EMPTY, Subject, catchError, startWith, switchMap } from 'rxjs';
 import type { AdminUserDetailsFragment } from '../../../generated/graphql/operations';
-import { DemoSession } from '../../core/auth/demo-session';
+import { DemoSession } from '@osnova/ui/app';
 import { injectDrawerHost } from '@osnova/ui';
 import { drawerParam, drawerRouteData } from '@osnova/ui';
 import type { RouteDrawerState } from '@osnova/ui';

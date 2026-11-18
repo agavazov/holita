@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PrimeNG } from 'primeng/config';
-import { DemoSession, type AccountSession } from '../../core/auth/demo-session';
+import { DemoSession, type AccountSession } from '@osnova/ui/app';
 import { messages, readLanguage } from '../../i18n/messages';
 import { UI_LANGUAGE } from '@osnova/ui';
 import { primeNgTranslation } from '../../workspace/primeng-translation';

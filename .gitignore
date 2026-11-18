@@ -14,6 +14,7 @@ playwright-report/
 /discocan/apps/admin/public/config.local.json
 
 discocan/apps/*/src/generated/
+osnova/packages/ui/src/app/generated/
 .nx/
 .angular/
 

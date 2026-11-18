@@ -16,7 +16,7 @@ import { AdminConfig } from '../../core/config/admin-config';
 import { AdminWorkspace } from '../../workspace/admin-workspace';
 import { SettingsTabs } from '../../workspace/settings-tabs';
 import { PageLoading } from '../../workspace/page-loading';
-import { BranchContext } from '../branches/branch-context';
+import { BranchContext } from '@osnova/ui/app';
 import { DevicesPage } from './devices/devices-list-page';
 import { VehiclesPage } from './vehicles/vehicles-page';
 import { VehicleGroupsPage } from './vehicle-groups/vehicle-groups-page';
@@ -32,7 +32,7 @@ import { GeneralSettingsApi } from './settings/general-settings-api';
 import { FleetPreferences } from './settings/fleet-preferences';
 import { FLEET_DISPLAY, defaultFleetDisplay } from '../../ui/format/fleet-format';
 import { uiMessages } from '@osnova/ui';
-import { requestError } from '../../core/graphql/request-error';
+import { requestError } from '@osnova/ui/app';
 import { settingsText } from './settings/i18n/messages';
 
 @Component({

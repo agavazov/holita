@@ -6,9 +6,9 @@ import {
 } from '@angular/common/http';
 import { Router, type Routes } from '@angular/router';
 import { HttpLink } from 'apollo-angular/http';
-import { DemoSession } from './core/auth/demo-session';
-import { sessionExpiryInterceptor } from './core/auth/session-expiry-interceptor';
-import { BranchesApi } from './features/branches/branches-api';
+import { DemoSession } from '@osnova/ui/app';
+import { sessionExpiryInterceptor } from '@osnova/ui/app';
+import { BranchesApi } from '@osnova/ui/app';
 import { ACCOUNT_MENU_CONTEXT } from '@osnova/ui/layout';
 import { leaveDrawer } from '@osnova/ui/layout';
 import { fleetRoutes } from './features/fleet/fleet.routes';

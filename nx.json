@@ -35,6 +35,7 @@
       "{workspaceRoot}/discocan/apps/fleet/src/**/*.graphql",
       "{workspaceRoot}/discocan/apps/erm-server/src/**/*.graphql",
       "{workspaceRoot}/discocan/apps/admin/src/**/*.graphql",
+      "{workspaceRoot}/osnova/packages/ui/src/app/**/*.graphql",
       "{workspaceRoot}/discocan/tools/graphql/**/*",
       "{workspaceRoot}/discocan/tools/tsconfig.json",
       "{workspaceRoot}/jest.federation.config.mjs"
@@ -44,6 +45,7 @@
       "{workspaceRoot}/discocan/apps/fleet/src/**/*.graphql",
       "{workspaceRoot}/discocan/apps/erm-server/src/**/*.graphql",
       "{workspaceRoot}/discocan/apps/admin/src/**/*.graphql",
+      "{workspaceRoot}/osnova/packages/ui/src/app/**/*.graphql",
       "{workspaceRoot}/discocan/tools/graphql/contracts.mts",
       "{workspaceRoot}/discocan/tools/graphql/generate.mts",
       "{workspaceRoot}/osnova/tools/graphql/**/*",

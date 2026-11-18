@@ -26,11 +26,12 @@ import { Message } from 'primeng/message';
 import { PrimeNG } from 'primeng/config';
 import { MessageService } from 'primeng/api';
 import { OperationToast } from '@osnova/ui';
-import { DemoSession } from '../core/auth/demo-session';
+import { DemoSession } from '@osnova/ui/app';
 import { AdminConfig } from '../core/config/admin-config';
-import { requestError } from '../core/graphql/request-error';
+import { requestError } from '@osnova/ui/app';
 import { Login } from '../features/auth/login';
-import { BranchContext } from '../features/branches/branch-context';
+import { BRANCH_NAVIGATION, BranchContext } from '@osnova/ui/app';
+import { branchNavigation } from '../features/branches/branch-navigation';
 import { FleetPreferencesSession } from '../features/fleet/settings/fleet-preferences';
 import {
   NotificationsApi,
@@ -67,6 +68,10 @@ function hasLeaveGuard(component: unknown): component is LeavableDrawer {
   imports: [RouterOutlet, AdminShell, ButtonDirective, Message, Login, OperationToast],
   providers: [
     BranchContext,
+    {
+      provide: BRANCH_NAVIGATION,
+      useFactory: () => branchNavigation(inject(AdminConfig).fleetEnabled),
+    },
     FleetPreferencesSession,
     MessageService,
     NotificationsApi,

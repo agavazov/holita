@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ApolloClient } from '@apollo/client/core';
 import { HttpLink } from 'apollo-angular/http';
 import { AdminBranchesDocument } from '../../../generated/graphql/operations';
-import { graphqlOptions } from './graphql-options';
+import { graphqlOptions } from '@osnova/ui/app';
 
 const branchA = '7C9E6679-7425-40DE-944B-E07FC1F90AE7';
 const branchB = '10000000-0000-4000-8000-000000000002';

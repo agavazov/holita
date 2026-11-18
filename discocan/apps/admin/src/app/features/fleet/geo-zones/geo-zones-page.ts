@@ -25,8 +25,8 @@ import type {
   AdminGeoZonesQuery,
   FleetGeoZoneEventKind,
 } from '../../../../generated/graphql/operations';
-import { DemoSession } from '../../../core/auth/demo-session';
-import { requestError } from '../../../core/graphql/request-error';
+import { DemoSession } from '@osnova/ui/app';
+import { requestError } from '@osnova/ui/app';
 import type { Language } from '../../../i18n/messages';
 import { confirmAction, confirmDialogPt } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';

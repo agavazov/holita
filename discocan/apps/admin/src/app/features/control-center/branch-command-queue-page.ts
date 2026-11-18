@@ -36,9 +36,9 @@ import type {
   ErmCommandRequestsSortField,
   ErmDeviceAction,
 } from '../../../generated/graphql/operations';
-import { DemoSession } from '../../core/auth/demo-session';
+import { DemoSession } from '@osnova/ui/app';
 import { AdminConfig } from '../../core/config/admin-config';
-import { requestError } from '../../core/graphql/request-error';
+import { requestError } from '@osnova/ui/app';
 import type { Language } from '../../i18n/messages';
 import { confirmAction, confirmDialogPt } from '@osnova/ui';
 import { FormField } from '@osnova/ui';
@@ -61,7 +61,7 @@ import { TablePanel, type TableColumn } from '@osnova/ui';
 import { tableView } from '@osnova/ui';
 import { toneSeverity } from '@osnova/ui';
 import { AdminWorkspace } from '../../workspace/admin-workspace';
-import { BranchContext } from '../branches/branch-context';
+import { BranchContext } from '@osnova/ui/app';
 import {
   CommandDetails,
   commandPending,

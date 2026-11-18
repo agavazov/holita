@@ -12,7 +12,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EMPTY, catchError, switchMap } from 'rxjs';
 import type { AdminNotificationsQuery } from '../../../generated/graphql/operations';
-import { requestError } from '../../core/graphql/request-error';
+import { requestError } from '@osnova/ui/app';
 import { messages } from '../../i18n/messages';
 import { FLEET_DISPLAY, defaultFleetDisplay } from '../../ui/format/fleet-format';
 import type { ListQuery } from '@osnova/ui';

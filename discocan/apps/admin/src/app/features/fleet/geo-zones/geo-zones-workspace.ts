@@ -6,7 +6,7 @@ import { Message } from 'primeng/message';
 import { AdminConfig } from '../../../core/config/admin-config';
 import { FLEET_DISPLAY, defaultFleetDisplay } from '../../../ui/format/fleet-format';
 import { AdminWorkspace } from '../../../workspace/admin-workspace';
-import { BranchContext } from '../../branches/branch-context';
+import { BranchContext } from '@osnova/ui/app';
 import { FleetPreferences } from '../settings/fleet-preferences';
 import { GeneralSettingsApi } from '../settings/general-settings-api';
 import { GeoZonesPage } from './geo-zones-page';

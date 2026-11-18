@@ -2,8 +2,8 @@ import { ApolloLink, InMemoryCache, type ApolloClient } from '@apollo/client/cor
 import { ServerError } from '@apollo/client/errors';
 import { ErrorLink } from '@apollo/client/link/error';
 import type { HttpLink } from 'apollo-angular/http';
-import type { Language } from '../../i18n/messages';
-import { randomUuid } from '../random-uuid';
+import type { Language } from '../language';
+import { randomUuid } from './random-uuid';
 
 export function graphqlOptions(
   httpLink: HttpLink,

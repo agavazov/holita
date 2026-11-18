@@ -12,10 +12,10 @@ import {
 } from '@angular/core';
 import { MessageService } from 'primeng/api';
 import type { AdminBranchesQuery } from '../../../../generated/graphql/operations';
-import { requestError } from '../../../core/graphql/request-error';
-import { DemoSession } from '../../../core/auth/demo-session';
+import { requestError } from '@osnova/ui/app';
+import { DemoSession } from '@osnova/ui/app';
 import type { Language } from '../../../i18n/messages';
-import { BranchContext } from '../../branches/branch-context';
+import { BranchContext } from '@osnova/ui/app';
 import { FleetPreferences } from './fleet-preferences';
 import { GeneralSettingsApi } from './general-settings-api';
 import {

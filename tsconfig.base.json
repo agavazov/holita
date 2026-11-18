@@ -16,21 +16,12 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "paths": {
-      "@osnova/ui": [
-        "./osnova/packages/ui/src/index.ts"
-      ],
-      "@osnova/ui/theme": [
-        "./osnova/packages/ui/src/theme.ts"
-      ],
-      "@osnova/ui/layout": [
-        "./osnova/packages/ui/src/layout.ts"
-      ],
-      "@osnova/ui/charts": [
-        "./osnova/packages/ui/src/charts.ts"
-      ],
-      "@osnova/ui/design": [
-        "./osnova/packages/ui/src/design.ts"
-      ]
+      "@osnova/ui": ["./osnova/packages/ui/src/index.ts"],
+      "@osnova/ui/theme": ["./osnova/packages/ui/src/theme.ts"],
+      "@osnova/ui/layout": ["./osnova/packages/ui/src/layout.ts"],
+      "@osnova/ui/charts": ["./osnova/packages/ui/src/charts.ts"],
+      "@osnova/ui/design": ["./osnova/packages/ui/src/design.ts"],
+      "@osnova/ui/app": ["./osnova/packages/ui/src/app.ts"]
     }
   }
 }

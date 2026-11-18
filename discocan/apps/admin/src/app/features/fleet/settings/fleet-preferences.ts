@@ -3,8 +3,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EMPTY, Subject, catchError, startWith, switchMap } from 'rxjs';
 import type { AdminFleetSettingsFragment } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
-import { DemoSession } from '../../../core/auth/demo-session';
-import { BranchContext } from '../../branches/branch-context';
+import { DemoSession } from '@osnova/ui/app';
+import { BranchContext } from '@osnova/ui/app';
 import { GeneralSettingsApi } from './general-settings-api';
 
 /** Retain only the current Branch's loaded preferences within the signed-in workspace. */

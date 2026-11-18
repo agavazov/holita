@@ -21,7 +21,7 @@ import {
   switchMap,
 } from 'rxjs';
 import type { AdminBranchesQuery } from '../../../../generated/graphql/operations';
-import { requestError } from '../../../core/graphql/request-error';
+import { requestError } from '@osnova/ui/app';
 import type { Language } from '../../../i18n/messages';
 import { injectPageRecord } from '@osnova/ui';
 import { drawerParam } from '@osnova/ui';

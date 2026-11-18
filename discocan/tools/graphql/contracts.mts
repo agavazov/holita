@@ -37,8 +37,8 @@ export const subgraphs = [
 ];
 export const operationPaths = [
   'discocan/apps/admin/src/app/ui/fleet-live/operations.graphql',
-  'discocan/apps/admin/src/app/features/branches/operations.graphql',
-  'discocan/apps/admin/src/app/features/auth/operations.graphql',
+  'osnova/packages/ui/src/app/branches/operations.graphql',
+  'osnova/packages/ui/src/app/auth/operations.graphql',
   'discocan/apps/admin/src/app/features/profile/operations.graphql',
   'discocan/apps/admin/src/app/features/users/operations.graphql',
   'discocan/apps/admin/src/app/features/notifications/operations.graphql',
@@ -59,6 +59,9 @@ export const operationPaths = [
   'discocan/apps/erm-server/src/modules/telemetry/operations.graphql',
 ];
 
+const sharedOperations = operationPaths.filter((path) =>
+  path.startsWith('osnova/packages/ui/src/app/'),
+);
 const operationsFor = (app: string) =>
   operationPaths.filter((path) => path.startsWith(`discocan/apps/${app}/`));
 const generated = (app: string, name: string) =>
@@ -84,14 +87,26 @@ export const targets = {
       },
     ],
   },
+  operator: {
+    clients: [
+      {
+        path: 'osnova/packages/ui/src/app/generated/operations.ts',
+        operations: sharedOperations,
+        subgraph: 'core',
+      },
+    ],
+  },
   admin: {
     clients: [
-      { path: generated('admin', 'operations.ts'), operations: operationsFor('admin') },
+      {
+        path: generated('admin', 'operations.ts'),
+        operations: [...operationsFor('admin'), ...sharedOperations],
+      },
       {
         path: generated('admin', 'startup-operations.ts'),
         operations: [
-          'discocan/apps/admin/src/app/features/auth/operations.graphql',
-          'discocan/apps/admin/src/app/features/branches/operations.graphql',
+          'osnova/packages/ui/src/app/auth/operations.graphql',
+          'osnova/packages/ui/src/app/branches/operations.graphql',
         ],
       },
     ],

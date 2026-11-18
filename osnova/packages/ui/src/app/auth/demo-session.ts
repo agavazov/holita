@@ -3,6 +3,7 @@ import {
   DestroyRef,
   effect,
   Injectable,
+  InjectionToken,
   inject,
   isDevMode,
   signal,
@@ -14,17 +15,28 @@ import type {
   AdminAccountFragment,
   AdminDemoLoginMutation,
   UserRole,
-} from '../../../generated/graphql/operations';
+} from '../generated/operations';
 import { AuthApi } from './auth-api';
 
-// Retain the injection token so existing Fleet clients share the real session lifecycle.
+// A session may be authenticated or a development-only demo session.
 export type AccountSession = AdminDemoLoginMutation['demoLogin'] & {
   readonly user?: AdminAccountFragment;
   readonly expiresAt?: string;
 };
 export type SessionNotice = 'expired' | 'passwordChanged' | 'signOutFailed';
-const storageKey = 'discocan.admin.session';
-const legacyStorageKey = 'discocan.admin.demo-session';
+export interface SessionOptions {
+  storageKey: string;
+  legacyStorageKey: string;
+  tokenPrefix: string;
+}
+export const SESSION_OPTIONS = new InjectionToken<SessionOptions>('operator session options', {
+  providedIn: 'root',
+  factory: () => ({
+    storageKey: 'osnova.session',
+    legacyStorageKey: 'osnova.demo-session',
+    tokenPrefix: 'osnova',
+  }),
+});
 const roleRank: Readonly<Record<UserRole, number>> = {
   VIEWER: 0,
   OPERATOR: 1,
@@ -34,7 +46,11 @@ const roleRank: Readonly<Record<UserRole, number>> = {
 
 type StoredSession = AccountSession & { branchId: string | null };
 
-function readSession(stored: string | null, allowDemo: boolean): StoredSession | 'expired' | null {
+function readSession(
+  stored: string | null,
+  allowDemo: boolean,
+  prefix: string,
+): StoredSession | 'expired' | null {
   try {
     const value: unknown = JSON.parse(stored ?? 'null');
     if (
@@ -42,8 +58,8 @@ function readSession(stored: string | null, allowDemo: boolean): StoredSession |
       typeof value !== 'object' ||
       !('token' in value) ||
       typeof value.token !== 'string' ||
-      (!value.token.startsWith('discocan-session.') &&
-        !(allowDemo && value.token.startsWith('discocan-demo.'))) ||
+      (!value.token.startsWith(`${prefix}-session.`) &&
+        !(allowDemo && value.token.startsWith(`${prefix}-demo.`))) ||
       !('tenant' in value) ||
       !value.tenant ||
       typeof value.tenant !== 'object' ||
@@ -57,7 +73,7 @@ function readSession(stored: string | null, allowDemo: boolean): StoredSession |
     const expiresAt =
       'expiresAt' in value && typeof value.expiresAt === 'string' ? value.expiresAt : undefined;
     const demoExpiry =
-      allowDemo && value.token.startsWith('discocan-demo.')
+      allowDemo && value.token.startsWith(`${prefix}-demo.`)
         ? Number(value.token.split('.')[2]) * 1000
         : NaN;
     const expiry = expiresAt ? Date.parse(expiresAt) : demoExpiry;
@@ -79,15 +95,17 @@ function readSession(stored: string | null, allowDemo: boolean): StoredSession |
   }
 }
 
-function restoredSession(): StoredSession | 'expired' | null {
+function restoredSession(options: SessionOptions): StoredSession | 'expired' | null {
+  const { storageKey, legacyStorageKey, tokenPrefix: prefix } = options;
   let tab: StoredSession | 'expired' | null = null;
   try {
     tab = readSession(
       sessionStorage.getItem(storageKey) ??
         (isDevMode() ? sessionStorage.getItem(legacyStorageKey) : null),
       isDevMode(),
+      prefix,
     );
-    if (tab && tab !== 'expired' && tab.token.startsWith('discocan-demo.')) {
+    if (tab && tab !== 'expired' && tab.token.startsWith(`${prefix}-demo.`)) {
       return tab;
     }
   } catch {
@@ -96,7 +114,7 @@ function restoredSession(): StoredSession | 'expired' | null {
   try {
     const stored = localStorage.getItem(storageKey);
     if (stored) {
-      const session = readSession(stored, false);
+      const session = readSession(stored, false, prefix);
       if (session === 'expired') {
         localStorage.removeItem(storageKey);
       }
@@ -118,7 +136,8 @@ export function isUnauthenticated(error: unknown): boolean {
 
 @Injectable({ providedIn: 'root' })
 export class DemoSession {
-  private readonly restored = restoredSession();
+  private readonly options = inject(SESSION_OPTIONS);
+  private readonly restored = restoredSession(this.options);
   private readonly state = signal<AccountSession | null>(
     typeof this.restored === 'object' ? this.restored : null,
   );
@@ -144,7 +163,7 @@ export class DemoSession {
   constructor() {
     if (this.restored === 'expired') {
       this.clear();
-    } else if (this.current()?.token.startsWith('discocan-session.')) {
+    } else if (this.current()?.token.startsWith(`${this.options.tokenPrefix}-session.`)) {
       // Promote real sessions from the previous tab-only storage format.
       this.persist();
     }
@@ -152,12 +171,12 @@ export class DemoSession {
     const synchronize = (event: StorageEvent) => {
       if (
         event.storageArea !== localStorage ||
-        (event.key !== storageKey && event.key !== null) ||
-        this.current()?.token.startsWith('discocan-demo.')
+        (event.key !== this.options.storageKey && event.key !== null) ||
+        this.current()?.token.startsWith(`${this.options.tokenPrefix}-demo.`)
       ) {
         return;
       }
-      const restored = readSession(event.newValue, false);
+      const restored = readSession(event.newValue, false, this.options.tokenPrefix);
       if (restored && restored !== 'expired') {
         if (restored.token !== this.current()?.token) {
           this.notice.set(null);
@@ -165,7 +184,7 @@ export class DemoSession {
           this.state.set(restored);
           this.scheduleExpiry();
         }
-      } else if (this.current()?.token.startsWith('discocan-session.')) {
+      } else if (this.current()?.token.startsWith(`${this.options.tokenPrefix}-session.`)) {
         this.clear();
         this.notice.set(restored === 'expired' ? 'expired' : null);
         this.showSignIn();
@@ -174,7 +193,7 @@ export class DemoSession {
     window.addEventListener('storage', synchronize);
     effect((onCleanup) => {
       const token = this.token();
-      if (!token || !token.startsWith('discocan-session.')) {
+      if (!token || !token.startsWith(`${this.options.tokenPrefix}-session.`)) {
         return;
       }
       const { query, close } = this.api.watch(untracked(() => this.capture()));
@@ -234,10 +253,10 @@ export class DemoSession {
   private persist(): void {
     const current = this.current();
     try {
-      const real = current?.token.startsWith('discocan-session.');
+      const real = current?.token.startsWith(`${this.options.tokenPrefix}-session.`);
       const storage = real ? localStorage : sessionStorage;
       storage.setItem(
-        storageKey,
+        this.options.storageKey,
         JSON.stringify({
           token: current?.token,
           tenant: current?.tenant,
@@ -246,8 +265,8 @@ export class DemoSession {
         }),
       );
       if (real) {
-        sessionStorage.removeItem(storageKey);
-        sessionStorage.removeItem(legacyStorageKey);
+        sessionStorage.removeItem(this.options.storageKey);
+        sessionStorage.removeItem(this.options.legacyStorageKey);
       }
     } catch {
       /* Memory session still works. */
@@ -262,7 +281,7 @@ export class DemoSession {
     const scope = this.capture();
     this.clear();
     this.notice.set(null);
-    if (current.token.startsWith('discocan-session.')) {
+    if (current.token.startsWith(`${this.options.tokenPrefix}-session.`)) {
       void this.revoke(scope);
     }
   }
@@ -310,20 +329,22 @@ export class DemoSession {
     void this.router.navigate(['/', language, 'sign-in'], { replaceUrl: true });
   }
 
-  private clear(shared = this.current()?.token.startsWith('discocan-session.') ?? false): void {
+  private clear(
+    shared = this.current()?.token.startsWith(`${this.options.tokenPrefix}-session.`) ?? false,
+  ): void {
     this.state.set(null);
     this.selectedBranch.set(null);
     clearTimeout(this.expiryTimer);
     if (shared) {
       try {
-        localStorage.removeItem(storageKey);
+        localStorage.removeItem(this.options.storageKey);
       } catch {
         /* The current client is still retired. */
       }
     }
     try {
-      sessionStorage.removeItem(storageKey);
-      sessionStorage.removeItem(legacyStorageKey);
+      sessionStorage.removeItem(this.options.storageKey);
+      sessionStorage.removeItem(this.options.legacyStorageKey);
     } catch {
       /* The current client is still retired. */
     }

@@ -1,21 +1,27 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
-import type {
-  AdminBranchesQuery,
-  AdminDemoLoginMutation,
-} from '../../../generated/graphql/operations';
-import { DemoSession } from '../../core/auth/demo-session';
-import { AdminConfig } from '../../core/config/admin-config';
-import type { Language } from '../../i18n/messages';
-import type { LeavableDrawer } from '@osnova/ui';
+import type { AdminBranchesQuery, AdminDemoLoginMutation } from '../generated/operations';
+import { DemoSession } from '../auth/demo-session';
+import type { Language } from '../language';
+import type { LeavableDrawer } from '../../index';
 import { BranchesApi } from './branches-api';
+
+export interface BranchNavigation {
+  defaultDestination(language: Language, branchId: string): string[];
+  selectionDestination(
+    language: Language,
+    branchId: string,
+    section: readonly { path: string }[],
+  ): string[];
+}
+export const BRANCH_NAVIGATION = new InjectionToken<BranchNavigation>('branch navigation');
 
 @Injectable()
 export class BranchContext {
   private readonly session = inject(DemoSession);
-  private readonly fleetEnabled = inject(AdminConfig).fleetEnabled;
+  private readonly navigationPolicy = inject(BRANCH_NAVIGATION);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(BranchesApi);
@@ -86,7 +92,7 @@ export class BranchContext {
         const branch =
           branches.find((branch) => branch.id === this.session.branchId()) ?? branches[0];
         if (branch) {
-          void this.router.navigate(['/', language, branch.id, 'fleet', 'live'], {
+          void this.router.navigate(this.navigationPolicy.defaultDestination(language, branch.id), {
             replaceUrl: true,
             queryParamsHandling: 'preserve',
             preserveFragment: true,
@@ -104,7 +110,7 @@ export class BranchContext {
     language: Language,
   ): Promise<void> {
     const destination = this.router.createUrlTree(
-      ['/', language, selection.branchId, 'fleet', 'live'],
+      this.navigationPolicy.defaultDestination(language, selection.branchId),
       { queryParamsHandling: 'preserve', preserveFragment: true },
     );
     if (
@@ -143,22 +149,7 @@ export class BranchContext {
       this.session.selectBranch(id);
       return;
     }
-    const section = this.route.firstChild?.snapshot.url;
-    const resource = section?.[2]?.path;
-    const tab = section?.[3]?.path;
-    let destination = ['live'];
-    if (this.fleetEnabled && section?.[1]?.path === 'fleet') {
-      if (resource === 'dashboard' && tab && ['overview', 'problems', 'trips'].includes(tab)) {
-        destination = ['dashboard', tab];
-      } else if (resource === 'settings' && (tab === 'groups' || tab === 'general')) {
-        destination = ['settings', tab];
-      } else if (
-        resource &&
-        ['vehicles', 'devices', 'drivers', 'maintenance', 'notifications'].includes(resource)
-      ) {
-        destination = [resource];
-      }
-    }
-    void this.router.navigate(['/', language, id, 'fleet', ...destination]);
+    const section = this.route.firstChild?.snapshot.url ?? [];
+    void this.router.navigate(this.navigationPolicy.selectionDestination(language, id, section));
   }
 }

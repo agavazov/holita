@@ -37,8 +37,8 @@ import type {
   AdminLiveFleetQuery,
   AdminLiveVehicleQuery,
 } from '../../../../generated/graphql/operations';
-import { DemoSession } from '../../../core/auth/demo-session';
-import { requestError } from '../../../core/graphql/request-error';
+import { DemoSession } from '@osnova/ui/app';
+import { requestError } from '@osnova/ui/app';
 import type { Language } from '../../../i18n/messages';
 import { WALL_CLOCK } from '@osnova/ui';
 import { faultReadState, faultsText } from '../../../ui/fleet-live/fault-wording';

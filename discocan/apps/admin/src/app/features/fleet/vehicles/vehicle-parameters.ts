@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { InputText } from 'primeng/inputtext';
-import { requestError } from '../../../core/graphql/request-error';
+import { requestError } from '@osnova/ui/app';
 import type { Language } from '../../../i18n/messages';
 import { ChartPanel, type ChartPanelPoint } from '@osnova/ui/charts';
 import { EmptyState } from '@osnova/ui';

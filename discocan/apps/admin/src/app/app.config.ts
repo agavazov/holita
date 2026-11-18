@@ -1,3 +1,4 @@
+import { OPERATOR_RUNTIME_CONFIG, SESSION_OPTIONS } from '@osnova/ui/app';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ErrorHandler,
@@ -17,7 +18,7 @@ import {
   AdminConfig,
   type AdminRuntimeConfig,
 } from './core/config/admin-config';
-import { graphqlOptions } from './core/graphql/graphql-options';
+import { graphqlOptions } from '@osnova/ui/app';
 import { provideOsnovaTheme, THEME_STORAGE_KEY } from '@osnova/ui/theme';
 import { SHELL_STORAGE_KEY } from '@osnova/ui/layout';
 import { appTheme, type ThemeChoice } from '@osnova/ui/theme';
@@ -30,6 +31,15 @@ export function appConfig(
   return {
     providers: [
       { provide: ADMIN_RUNTIME_CONFIG, useValue: config },
+      { provide: OPERATOR_RUNTIME_CONFIG, useValue: config },
+      {
+        provide: SESSION_OPTIONS,
+        useValue: {
+          storageKey: 'discocan.admin.session',
+          legacyStorageKey: 'discocan.admin.demo-session',
+          tokenPrefix: 'discocan',
+        },
+      },
       { provide: THEME_STORAGE_KEY, useValue: 'discocan.admin.theme' },
       { provide: SHELL_STORAGE_KEY, useValue: 'discocan.admin.sidebar' },
       { provide: ErrorHandler, useClass: AdminErrorHandler },

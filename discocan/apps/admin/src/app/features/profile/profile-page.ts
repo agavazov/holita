@@ -14,7 +14,7 @@ import type {
   AdminProfileQuery,
   AdminUpdateProfileMutationVariables,
 } from '../../../generated/graphql/operations';
-import { DemoSession } from '../../core/auth/demo-session';
+import { DemoSession } from '@osnova/ui/app';
 import type { Language } from '../../i18n/messages';
 import { errorCode, fieldErrors } from '@osnova/ui';
 import { UI_LANGUAGE } from '@osnova/ui';

@@ -30,7 +30,7 @@ import type {
   AdminControlCenterParameterCatalogQuery,
   ErmDeviceAction,
 } from '../../../generated/graphql/operations';
-import { DemoSession } from '../../core/auth/demo-session';
+import { DemoSession } from '@osnova/ui/app';
 import type { Language } from '../../i18n/messages';
 import { FormField } from '@osnova/ui';
 import { FormatDateTimePipe } from '@osnova/ui';

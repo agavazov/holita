@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import type { Language } from '../../i18n/messages';
-import { BranchContext } from '../branches/branch-context';
+import { BranchContext } from '@osnova/ui/app';
 import { OverviewPage } from '../fleet/overview/overview-page';
 
 /** Retained adapter for the legacy Control center workspace. */

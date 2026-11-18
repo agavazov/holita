@@ -25,6 +25,7 @@ export default tseslint.config(
       'test-results/**',
       'playwright-report/**',
       'discocan/apps/*/src/generated/**',
+      'osnova/packages/ui/src/app/generated/**',
       '.nx/**',
       '**/.angular/**',
     ],

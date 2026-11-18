@@ -9,7 +9,7 @@ import {
   signal,
   type OnInit,
 } from '@angular/core';
-import { requestError } from '../../../core/graphql/request-error';
+import { requestError } from '@osnova/ui/app';
 import type { Language } from '../../../i18n/messages';
 import { ControlCenterApi } from '../../control-center/control-center-api';
 import { CommandDetails } from './command-details';

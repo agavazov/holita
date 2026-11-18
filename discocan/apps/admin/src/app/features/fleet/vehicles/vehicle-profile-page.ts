@@ -39,8 +39,8 @@ import type {
   AdminVehicleEdataMeasurementsQuery,
   AdminVehicleProfileServiceQuery,
 } from '../../../../generated/graphql/operations';
-import { requestError } from '../../../core/graphql/request-error';
-import { DemoSession } from '../../../core/auth/demo-session';
+import { requestError } from '@osnova/ui/app';
+import { DemoSession } from '@osnova/ui/app';
 import type { Language } from '../../../i18n/messages';
 import { injectPageRecord } from '@osnova/ui';
 import type { DrawerHost } from '@osnova/ui';

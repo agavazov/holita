@@ -13,9 +13,9 @@ import {
   type AdminCreateUserMutationVariables,
   type AdminUpdateUserMutationVariables,
 } from '../../../generated/graphql/operations';
-import { DemoSession } from '../../core/auth/demo-session';
+import { DemoSession } from '@osnova/ui/app';
 import { AdminConfig } from '../../core/config/admin-config';
-import { graphqlOptions } from '../../core/graphql/graphql-options';
+import { graphqlOptions } from '@osnova/ui/app';
 import type { Language } from '../../i18n/messages';
 import { errorCode } from '@osnova/ui';
 

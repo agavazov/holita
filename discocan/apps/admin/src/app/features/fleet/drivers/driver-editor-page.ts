@@ -11,8 +11,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, catchError, EMPTY, startWith, switchMap } from 'rxjs';
-import { DemoSession } from '../../../core/auth/demo-session';
-import { requestError } from '../../../core/graphql/request-error';
+import { DemoSession } from '@osnova/ui/app';
+import { requestError } from '@osnova/ui/app';
 import { drawerParam, drawerRouteData } from '@osnova/ui';
 import { injectDrawerHost } from '@osnova/ui';
 import type { RouteDrawerState } from '@osnova/ui';

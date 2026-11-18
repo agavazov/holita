@@ -19,7 +19,7 @@ import { Skeleton } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { Tooltip } from 'primeng/tooltip';
 import type { AdminControlCenterSmsDevicesQuery } from '../../../generated/graphql/operations';
-import { requestError } from '../../core/graphql/request-error';
+import { requestError } from '@osnova/ui/app';
 import type { Language } from '../../i18n/messages';
 import { EmptyState } from '@osnova/ui';
 import { interpolate } from '@osnova/ui';

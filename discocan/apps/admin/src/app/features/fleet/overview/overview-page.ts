@@ -17,7 +17,7 @@ import type {
   AdminOverviewMapQuery,
   AdminOverviewConnectedDevicesQuery,
 } from '../../../../generated/graphql/operations';
-import { requestError } from '../../../core/graphql/request-error';
+import { requestError } from '@osnova/ui/app';
 import { messages, type Language } from '../../../i18n/messages';
 import { WALL_CLOCK } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';

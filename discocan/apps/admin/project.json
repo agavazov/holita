@@ -12,9 +12,15 @@
       "inputs": ["graphqlGeneration"],
       "outputs": ["{projectRoot}/src/generated/graphql"],
       "options": {
-        "command": "npm run graphql:generate",
+        "command": "tsx ../../tools/graphql/generate.mts admin",
         "cwd": "discocan/apps/admin"
-      }
+      },
+      "dependsOn": [
+        {
+          "projects": ["osnova-ui"],
+          "target": "graphql-generate"
+        }
+      ]
     },
     "lint": {
       "dependsOn": ["graphql-generate"]

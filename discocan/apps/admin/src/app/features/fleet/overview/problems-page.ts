@@ -46,7 +46,7 @@ import {
   warningStateLabel,
   warningTone,
 } from '../../../ui/fleet-live/fault-wording';
-import { requestError } from '../../../core/graphql/request-error';
+import { requestError } from '@osnova/ui/app';
 import type { Language } from '../../../i18n/messages';
 import type { DrawerHost } from '@osnova/ui';
 import { FormField } from '@osnova/ui';

@@ -1,3 +1,4 @@
+import { loadRuntimeConfig } from '@osnova/ui/app';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
@@ -29,12 +30,7 @@ async function loadLocalConfig(): Promise<LocalAdminConfig> {
 
 // PrimeNG requires its license in the bootstrap providers, before its initializer runs.
 async function start(): Promise<void> {
-  const response = await fetch('/config.json', { signal: AbortSignal.timeout(10_000) });
-  if (!response.ok) {
-    throw new Error('Could not load public admin configuration.');
-  }
-  const value: unknown = await response.json();
-  const config = readAdminConfig(value);
+  const config = await loadRuntimeConfig(readAdminConfig);
   const local = await loadLocalConfig();
   await bootstrapApplication(App, appConfig({ ...config, ...local }));
 }

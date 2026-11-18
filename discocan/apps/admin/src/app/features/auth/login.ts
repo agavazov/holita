@@ -19,13 +19,13 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import type { AdminBranchesQuery, AdminTenantsQuery } from '../../../generated/graphql/operations';
-import { AuthApi } from '../../core/auth/auth-api';
-import { DemoSession, isUnauthenticated, type AccountSession } from '../../core/auth/demo-session';
+import { AuthApi } from '@osnova/ui/app';
+import { DemoSession, isUnauthenticated, type AccountSession } from '@osnova/ui/app';
 import type { Language } from '../../i18n/messages';
 import { ThemeMenu } from '@osnova/ui';
 import { Appearance } from '@osnova/ui/theme';
 import { FormField } from '@osnova/ui';
-import { BranchesApi } from '../branches/branches-api';
+import { BranchesApi } from '@osnova/ui/app';
 import bg from './login.bg.json';
 import en from './login.en.json';
 

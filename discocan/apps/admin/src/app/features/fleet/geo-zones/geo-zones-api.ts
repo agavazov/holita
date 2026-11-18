@@ -12,9 +12,9 @@ import {
   type AdminGeoZoneEventsQueryVariables,
   type FleetGeoZoneInput,
 } from '../../../../generated/graphql/operations';
-import { DemoSession } from '../../../core/auth/demo-session';
+import { DemoSession } from '@osnova/ui/app';
 import { AdminConfig } from '../../../core/config/admin-config';
-import { graphqlOptions } from '../../../core/graphql/graphql-options';
+import { graphqlOptions } from '@osnova/ui/app';
 import type { Language } from '../../../i18n/messages';
 
 /** One client per mounted geo-zones page: the zones with the Branch trucks, and the event log. */
