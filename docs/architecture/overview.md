@@ -85,10 +85,10 @@ Raw records remain provider-level. Branch-visible state/history is resolved by I
 Fleet-authorized `FleetDevice` fields; the command mutation checks Fleet with the caller's session
 and active Branch before sending one of six allowlisted reads. See
 [ADR 0007](decisions/0007-erm-gateway-and-api-processes.md) and
-[service setup](../discocan/development.md#erm-device-server). Both stay outside the web/API
+[service setup](../../discocan/docs/development.md#erm-device-server). Both stay outside the web/API
 development group; API deployments must not restart the gateway.
 
-Fleet also owns the [shared Simple eData vendor catalog](../discocan/erm-resources/simple-edata-catalog/README.md).
+Fleet also owns the [shared Simple eData vendor catalog](../../discocan/docs/erm-resources/simple-edata-catalog/README.md).
 Its offline extractor and local import CLI preserve versioned reference data independently
 of Tenant/Branch business records.
 
@@ -125,8 +125,8 @@ startup failures and normal teardown stop the child before closing downstream re
 
 ## Domain documentation
 
-[Discocan architecture](../discocan/architecture.md) describes Fleet persistence, GraphQL
-contracts, ERM device ingestion/control and the current telemetry admin. [Ecommerce Branches](../ecommerce/branches.md)
+[Discocan architecture](../../discocan/docs/architecture.md) describes Fleet persistence, GraphQL
+contracts, ERM device ingestion/control and the current telemetry admin. [Ecommerce Branches](../branches.md)
 describes the Core-owned Branch foundation currently reused by Discocan.
 
 The domains share this checkout and its infrastructure today. Their documentation boundaries

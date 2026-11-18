@@ -6,8 +6,8 @@ server and the Fleet admin.
 
 - Applications are `apps/admin`, `apps/gateway`, `apps/core`, `apps/fleet` and `apps/erm-server`.
   `packages/edata-rules` is their package and `tools/` their tooling.
-- Read the [Discocan documentation](../docs/discocan/README.md) and apply the
-  [Discocan instructions](../docs/discocan/instructions.md). The Vehicles/Devices presentation,
+- Read the [Discocan documentation](docs/README.md) and apply the
+  [Discocan instructions](docs/instructions.md). The Vehicles/Devices presentation,
   navigation and workspace lifecycle of the admin belong to this product.
 
 ## Product identity
@@ -29,5 +29,5 @@ server and the Fleet admin.
 - The `discocan-erm-server`, `discocan-erm-api` and `discocan-erm-recovery` user units run from
   the legacy `apps/erm-server/live/` and `live-api/` directories at the repository root. Do not
   stop, restart or replace them without the owner.
-  [Service management](../docs/discocan/development.md#development-and-service-management) has the
+  [Service management](docs/development.md#development-and-service-management) has the
   deploy rule.

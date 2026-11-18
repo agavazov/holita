@@ -4,7 +4,7 @@ import { join } from 'node:path';
 // Regenerates discocan/apps/erm-server/src/starlink/parameter-reference.ts from the archived StarLink
 // parameter pages (P*.md). Run from the repository root:
 //   node --import tsx discocan/tools/erm-protocol/parameter-reference.mts
-const pages = 'docs/discocan/erm-resources/starlink-online-protocol/authenticated/pages';
+const pages = 'discocan/docs/erm-resources/starlink-online-protocol/authenticated/pages';
 const output = 'discocan/apps/erm-server/src/starlink/parameter-reference.ts';
 
 function plain(text: string): string {

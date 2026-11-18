@@ -61,7 +61,7 @@ reviewed against a running backend.
 - `light-dark()` and `color-mix()` require current evergreen browsers.
 - The connected Fleet application uses the shared views and drawers for Vehicles, Devices,
   Drivers, monitoring, Maintenance and settings
-  ([Discocan Fleet](../../discocan/fleet.md)), with generated TypedDocumentNodes through Gateway.
+  ([Discocan Fleet](../../../discocan/docs/fleet.md)), with generated TypedDocumentNodes through Gateway.
   Storybook uses those presentation components and routed containers without a backend.
   The design system is described in [admin design system](../../admin-design-system.md).
 

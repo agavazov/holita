@@ -21,10 +21,6 @@ architecture with a thin Holita slice, not a port of the old platform.
 
 ## Steps
 
-1. **Housekeeping.** Move product documentation under each product (`docs/discocan/` to
-   `discocan/docs/`, `docs/ecommerce/` to `holita/docs/`) and rename the `discocan-*` skills that
-   describe the shared skeleton to `osnova-*`. Split the 1.31 MB lazy chunk that appeared with the
-   `@osnova/ui` barrel, and serve the Lato files from the package instead of each application.
 2. **Osnova backend.** Without behaviour change for Discocan:
    - Core moves to `osnova/apps/core`; each product runs it with its own configuration.
    - `@osnova/auth`: one NestJS session guard replacing the copies in Fleet and ERM Server; the

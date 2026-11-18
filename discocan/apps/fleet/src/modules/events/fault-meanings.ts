@@ -8,7 +8,7 @@ type FaultMeaning = {
 };
 
 // Generic component associations, not manufacturer-specific diagnoses or lamp severity.
-// Sources and applicability are recorded in docs/discocan/development.md#internal-unit-and-command-api.
+// Sources and applicability are recorded in discocan/docs/development.md#internal-unit-and-command-api.
 const SPNS = new Map<number, FaultMeaning>([
   [100, { systemKey: 'ENGINE', descriptionKey: 'faults.spn.oilPressure' }],
   [110, { systemKey: 'ENGINE', descriptionKey: 'faults.spn.coolantTemperature' }],

@@ -4,7 +4,7 @@
 .volumes/
 /AGENTS.local.md
 /.credentials/
-/docs/discocan/erm-resources/starlink-online-protocol/authenticated/
+/discocan/docs/erm-resources/starlink-online-protocol/authenticated/
 node_modules/
 dist/
 dist-dev/
@@ -19,10 +19,10 @@ discocan/apps/*/src/generated/
 .agents/skills/angular-developer/
 
 # Canonical generated catalog bytes are checksummed by the offline extractor.
-docs/discocan/erm-resources/simple-edata-catalog/*/catalog.json
+discocan/docs/erm-resources/simple-edata-catalog/*/catalog.json
 
 # Preserve the supplied integration note and its recorded source checksum.
-docs/discocan/erm-resources/erm-device-eg915u-la-lc86g/source/ERM_INTEGRATION_EN.md
+discocan/docs/erm-resources/erm-device-eg915u-la-lc86g/source/ERM_INTEGRATION_EN.md
 
 # Deployment copies of the running erm-server processes.
 apps/erm-server/live/

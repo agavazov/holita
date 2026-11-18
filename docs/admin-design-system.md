@@ -155,7 +155,7 @@ The document title is `<page> · discocan`; login uses the localized Sign in tit
   display the feed with read actions disabled. The shell performs no notification queries.
 - Login has its own hero/form layout, email/password then fleet selection, explicit errors/Retry
   and language/theme controls. Development demo login is a separate development-build action.
-  Session/Branch/workspace behavior belongs in [Discocan development](discocan/development.md#user-sessions).
+  Session/Branch/workspace behavior belongs in [Discocan development](../discocan/docs/development.md#user-sessions).
 
 ### Texts and languages
 
@@ -370,7 +370,7 @@ falling back to the page title. Keep loading, invalid ID, missing record and err
 
 Use the shared full-page settings view, typed forms, titled cards and sticky save/discard bar.
 Its partial-save and persisted Discard behavior is documented in
-[the operator guide](discocan/development.md#fleet-operator-workflows). Gate business views on a
+[the operator guide](../discocan/docs/development.md#fleet-operator-workflows). Gate business views on a
 successful scoped preferences read with Retry. General settings saves the Branch date format,
 time zone, units, thresholds and notification retention; external delivery toggles are absent.
 The speed reference generates no alert or device command.

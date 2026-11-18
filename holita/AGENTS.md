@@ -18,8 +18,9 @@ Discocan. Its package scope is `@holita/*` and its Nx projects are named `holita
 - A Branch is an online shop. The storefront resolves it from the request; an operator request
   takes it from the verified session and the selected Branch.
 - Start basic: a few fields per entity, enough to run and test every layer. Add depth only when
-  asked.
-- The old platform in `/workspace/projects/red.bg` is a reference, not a source to port. Read it
+  asked. Branch discovery is implemented; storefront, catalog, cart, checkout and orders are not.
+- The old platform in `/workspace/projects/red.bg` is a reference, not a source to port; its
+  [inventory](docs/red-bg/README.md) is a reference map. Read the platform
   only when the task names it.
 
 ## Look

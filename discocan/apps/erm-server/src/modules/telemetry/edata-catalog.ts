@@ -1,4 +1,4 @@
-// Names from the Monitor source of docs/discocan/erm-resources/simple-edata-catalog/v9.56/catalog.json.
+// Names from the Monitor source of discocan/docs/erm-resources/simple-edata-catalog/v9.56/catalog.json.
 // Extractor 1.0.0, schema 1; conflicting names across categories are omitted.
 // Names and explicit unit suffixes are reference labels, never a conversion or a device definition.
 const names: ReadonlyMap<number, string> = new Map([

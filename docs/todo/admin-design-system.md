@@ -3,8 +3,8 @@
 Pending product decisions, release work and presentation refinements. Current presentation,
 the design page and shared patterns are documented in the
 [admin design system](../admin-design-system.md). Connected Fleet screens and their contracts
-belong to the [Fleet implementation index](../discocan/fleet.md) and
-[Discocan architecture](../discocan/architecture.md).
+belong to the [Fleet implementation index](../../discocan/docs/fleet.md) and
+[Discocan architecture](../../discocan/docs/architecture.md).
 
 This backlog owns frontend and release work; the
 [backend backlog](admin-design-system-backend.md) owns API and provider work. Keep only pending work here.

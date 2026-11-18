@@ -65,7 +65,7 @@ One npm/Nx workspace holds two products and the code they share:
   - Where tenantId and branchId both exist, keep branchId immediately after tenantId.
   - Product terminology does not create separate persistence models.
 - Until Core moves to `osnova/`, the Core Tenant/Branch foundation is Discocan's `apps/core`,
-  documented in [Branches foundation](docs/ecommerce/branches.md).
+  documented in [Branches foundation](docs/branches.md).
 
 ## General
 
@@ -116,6 +116,9 @@ One npm/Nx workspace holds two products and the code they share:
   - Exclude both from repository-wide searches and scans, even if Git tracks files there.
 
 ## Documentation
+
+Workspace and Osnova documentation lives in `docs/`; product documentation lives in
+`discocan/docs/` and `holita/docs/`.
 
 - Start with [docs/README.md](docs/README.md). Read only the documentation the task needs; the
   code is the reference for behavior details.

@@ -117,7 +117,7 @@ export const starlinkEvents = new Map(
 );
 
 // StarLink 02 diagnostic codes, not vehicle DTCs:
-// docs/discocan/erm-resources/starlink-online-protocol/authenticated/pages/E2.md
+// discocan/docs/erm-resources/starlink-online-protocol/authenticated/pages/E2.md
 // https://sweb.erm.co.il/protocol/?i=E2 (archived 2026-10-29).
 const diagnosticCodes: ReadonlyMap<string, readonly [string, string]> = new Map([
   ['1', ['SIM card not inserted', 'SIM картата не е поставена']],

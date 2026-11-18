@@ -55,12 +55,12 @@ telemetry, trips or alerts change concurrently.
   `20261020220000_fleet_settings` migration preserves existing data. Unsaved Branches read
   defaults without inserting: Europe/Sofia, KM, LITRE, low fuel 12%, not reporting 48 hours
   and a 90 km/h speed reference. Full replacement accepts the four supported zones and bounded
-  integers; [Branch settings](../../discocan/architecture.md#branch-settings) defines them.
+  integers; [Branch settings](../../../discocan/docs/architecture.md#branch-settings) defines them.
   The feature's `settingsSql` produces one scoped/default row within the caller's SQL snapshot.
   Low-fuel/reporting predicates, sorts and captured list state use that same row in the
   `RepeatableRead` transaction. Pure classifiers receive scoped values, without process-global
   caching or per-row reads. Settings upsert verifies the Branch through Core before writing;
-  Branch rename remains [Core-owned](../../ecommerce/branches.md#graphql-contracts).
+  Branch rename remains [Core-owned](../../branches.md#graphql-contracts).
   Unit preferences preserve canonical API/storage km, km/h and litres. The speed reference
   does not generate alerts or device commands; notification delivery has no provider.
 - **Clocks.** Business dates (document expiry, service urgency and completion-date validation)
@@ -99,5 +99,5 @@ enums were removed, `filter` was added and search became tokenised (slightly mor
 `FleetDevice.vehicle` became `FleetVehicleRef`. Cyrillic case-insensitive search relies on the
 database's UTF-8 locale and is asserted by the database specs. `uniqueViolation` depends on the
 `@prisma/adapter-pg` error shape and is proven against the generated index names; a Prisma
-upgrade must re-run those specs. See [Discocan architecture](../../discocan/architecture.md)
+upgrade must re-run those specs. See [Discocan architecture](../../../discocan/docs/architecture.md)
 for the implemented contract.

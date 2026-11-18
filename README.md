@@ -7,20 +7,20 @@ Bulgarian/English catalogs.
 Its modules are Fleet management and ERM device-server inspection and controlled settings. Core provides users, sessions and Branch discovery; Gateway
 exposes their schema-first federated GraphQL API. PostgreSQL is the only container.
 
-Documentation separates [Discocan fleet telemetry](docs/discocan/README.md) from
-[Ecommerce online shops](docs/ecommerce/README.md). Fleet and the current Vehicles/Devices
-admin belong to Discocan; the Core Branch foundation is documented under Ecommerce.
+Documentation separates [Discocan fleet telemetry](discocan/docs/README.md) from
+[Ecommerce online shops](holita/AGENTS.md). Fleet and the current Vehicles/Devices
+admin belong to Discocan; the shared [Core Branch foundation](docs/branches.md) is documented at the workspace level.
 Branch is the shared organizational scope: a vehicle fleet in Discocan and an online shop in
 Ecommerce. Code, contracts, persistence and the admin use Branch terminology.
 
-Fleet also stores the [versioned Simple eData vendor catalog](docs/discocan/erm-resources/simple-edata-catalog/README.md).
+Fleet also stores the [versioned Simple eData vendor catalog](discocan/docs/erm-resources/simple-edata-catalog/README.md).
 Its EXE inspection, extraction, comparison and local import use direct commands,
 independent of the admin and sample-data seed.
 
 ERM Server receives raw StarLink device TCP traffic, mirrors it to Karma and records connections,
 frames, decoded events and commands in its own database plus private JSON Lines captures. Its
 Fleet-scoped subgraph supplies the admin's ERM Server pages. It runs independently of the
-web/API applications; see [ERM Server setup](docs/discocan/development.md#erm-device-server).
+web/API applications; see [ERM Server setup](discocan/docs/development.md#erm-device-server).
 
 ## Run locally
 
@@ -53,7 +53,7 @@ Vehicles uses the shared list and routed create/edit drawer with the full master
 fields, telemetry state, whole-Branch KPIs and URL-backed AND filters. Row and selection
 delete/deactivate actions submit one IDs-array operation; partial failures retain selected
 records for retry and appear in the shared operation toast. See the
-[Vehicles workflow](docs/discocan/development.md#fleet-operator-workflows).
+[Vehicles workflow](discocan/docs/development.md#fleet-operator-workflows).
 
 The sidebar contains Dashboard, Dashboard (old), Vehicles, Devices, Drivers, Maintenance and
 Settings. Dashboard is one truck map: every truck with its online state, activity and problem
@@ -77,7 +77,7 @@ SIM/password; sending occurs in the phone app. Unsupported hardware actions rema
 General settings saves Branch regional preferences and thresholds plus a separate Core Branch
 rename; partial saves retain the actual persisted values. Read values use the saved display units
 and time zone/date format, while editors keep explicitly labelled canonical entry units. See the
-[General settings workflow](docs/discocan/development.md#fleet-operator-workflows).
+[General settings workflow](discocan/docs/development.md#fleet-operator-workflows).
 
 The account menu opens Profile and password changes. Settings → Users manages Tenant-wide
 users; every authenticated Tenant user has equal access. The bell shows the persisted Branch
@@ -87,7 +87,7 @@ General settings controls retention (seven days by default). Delivery is in-app.
 
 For richer local Fleet data, run `npm run db:seed:fleet-demo` after setup/migrations and with Core
 running. It inserts only missing synthetic Discordia records and preserves existing edits.
-The [demo seed guide](docs/discocan/development.md#fleet-demo-data) explains its fixed anchor and guards.
+The [demo seed guide](discocan/docs/development.md#fleet-demo-data) explains its fixed anchor and guards.
 
 The shell supports keyboard/mobile navigation, a persisted sidebar rail and persisted light/dark
 themes. The startup `fleetEnabled` flag gates both business modules; Branch discovery stays available.
@@ -104,7 +104,7 @@ needs no Branch header. Fleet business operations require `x-branch-id`, for exa
 `10000000-0000-4000-8000-000000000001`. Tenant identity is verified from the session;
 business records are scoped by Tenant and Branch. `{ tenants { id name } }` and `demoLogin`
 remain development-only paths with no password or membership checks. See
-[user sessions and demo limitations](docs/discocan/development.md#user-sessions).
+[user sessions and demo limitations](discocan/docs/development.md#user-sessions).
 Router exposes `/health` on its separate loopback port 11016; the subgraphs expose `/health`
 on their normal ports. Health is independent of database/downstream availability.
 
@@ -120,7 +120,7 @@ See [Router configuration](docs/development.md#apollo-router) for health, enviro
 After SDL/operation changes run `npm run codegen` and `npm run schema:check`, then restart Router
 and the affected web/API services. Keep the ERM gateway running for API-only changes. The
 independent `ERM_ROLE=recovery` listener uses TCP 11510; see the
-[operator guide](docs/discocan/development.md#moving-a-unit-between-karma-and-discocan).
+[operator guide](discocan/docs/development.md#moving-a-unit-between-karma-and-discocan).
 Generated clients/types are ignored and must not be edited.
 
 ## Check a change

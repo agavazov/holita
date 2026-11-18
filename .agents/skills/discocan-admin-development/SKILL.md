@@ -5,11 +5,11 @@ description: Review or extend the connected discocan Discocan Fleet admin using 
 
 # DiscoCan Discocan Angular admin development
 
-Read [AGENTS.md](../../../AGENTS.md) and apply the [Discocan instructions](../../../docs/discocan/instructions.md).
+Read [AGENTS.md](../../../AGENTS.md) and apply the [Discocan instructions](../../../discocan/docs/instructions.md).
 Use the official [angular-developer](../angular-developer/SKILL.md) skill for framework conventions
 and the PrimeNG plugin for current component APIs. Open the
-[architecture](../../../docs/discocan/architecture.md#angular-admin-foundation) or the
-[Fleet index](../../../docs/discocan/fleet.md) only for the section you need.
+[architecture](../../../discocan/docs/architecture.md#angular-admin-foundation) or the
+[Fleet index](../../../discocan/docs/fleet.md) only for the section you need.
 
 ## Where things are
 

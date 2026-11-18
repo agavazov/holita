@@ -1,4 +1,4 @@
-// Generated from docs/discocan/erm-resources/starlink-online-protocol/authenticated/README.md.
+// Generated from discocan/docs/erm-resources/starlink-online-protocol/authenticated/README.md.
 // Authenticated StarLink protocol archive retrieved on 2026-10-29.
 export const parameterCatalog: ReadonlyMap<number, string> = new Map([
   [1, 'Unit ID selection'],

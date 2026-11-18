@@ -17,7 +17,7 @@ Pending work and planned tasks, separate from implemented product documentation.
 Use an existing component backlog before adding another description. Larger plans use descriptive
 Markdown files here. Write in English, distinguish proposals from implemented behavior and remove
 completed/cancelled tasks. Keep product documentation in
-[Discocan](../discocan/README.md), [Ecommerce](../ecommerce/README.md) or the
+[Discocan](../../discocan/docs/README.md), [Ecommerce](../../holita/AGENTS.md) or the
 [shared workspace](../README.md). Do not keep verification journals or handoffs here.
 When no short tasks remain, retain the instant file with `No open instant tasks.`
 

@@ -64,8 +64,8 @@ validates the installed native Router configuration. `npm run start:prod --works
 starts that binary using the generated supergraph; no Node bundle or Rust compilation is involved. `dev` does not migrate or seed databases.
 The group generates admin GraphQL artifacts once before starting Angular. Ctrl+C stops the process group; `db:down`
 stops PostgreSQL separately and preserves the volume.
-See [ERM relay](discocan/development.md#erm-relay) for the device relay and
-[ERM Server](discocan/development.md#erm-device-server) for its independent compiled service.
+See [ERM relay](../discocan/docs/development.md#erm-relay) for the device relay and
+[ERM Server](../discocan/docs/development.md#erm-device-server) for its independent compiled service.
 Use `npm run kill` from another terminal when application processes remain running. It stops
 the dev group, individual Angular/Nest watchers and compiled
 web/API backend processes from this checkout,
@@ -125,7 +125,7 @@ Gateway uses `CORE_GRAPHQL_URL`, `FLEET_GRAPHQL_URL`,
 Fleet uses `CORE_GRAPHQL_URL`, `FLEET_ENABLED` and `ADMIN_ORIGINS`, a comma-separated
 exact origin allowlist with `ADMIN_ORIGIN` as the single-origin fallback. Defaults allow the
 Angular loopback origin. Database URLs belong only to Core/Fleet/ERM Server. Device control uses the
-[ERM gateway/API workflow](discocan/development.md#erm-device-server).
+[ERM gateway/API workflow](../discocan/docs/development.md#erm-device-server).
 
 The admin reads browser configuration from `discocan/apps/admin/public/config.json` and optional
 Git-ignored `discocan/apps/admin/public/config.local.json`. Local configuration overrides the public
@@ -250,7 +250,7 @@ needs its own user unit and ERM database access. It has no HTTP endpoint. The
 `npm run dev` and `npm run kill` continue to exclude it. Set its shared `DEMO_AUTH_ENABLED` and
 `DEMO_AUTH_SECRET` consistently with the other subgraphs. After adding or changing its endpoint,
 regenerate the supergraph and restart Router with the exported `ERM_SERVER_GRAPHQL_URL`.
-See [ERM inspection](discocan/development.md#graphql-and-admin-inspection) for Branch-scoped device inspection and the six allowlisted operator reads.
+See [ERM inspection](../discocan/docs/development.md#graphql-and-admin-inspection) for Branch-scoped device inspection and the six allowlisted operator reads.
 
 For example, `ROUTER_PORT=11018 npm run dev` changes Router's GraphQL listener and the Angular proxy together; health remains on 11016.
 The configured origin can send GET/POST/OPTIONS with `authorization`, `content-type`,
@@ -299,8 +299,8 @@ asserts the public contract through Router over real subgraphs and isolated test
 
 ## Domain development
 
-- [Discocan development](discocan/development.md): telemetry admin, demo login, Vehicles/Devices and API usage.
-- [Ecommerce Branches](ecommerce/branches.md): Branch discovery contracts and implementation.
+- [Discocan development](../discocan/docs/development.md): telemetry admin, demo login, Vehicles/Devices and API usage.
+- [Ecommerce Branches](branches.md): Branch discovery contracts and implementation.
 
 ## Angular presentation and agent tools
 
@@ -376,8 +376,8 @@ npm run schema:check
 ```
 
 Regenerate and restart after SDL/operation changes. Domain API examples are in
-[Discocan development](discocan/development.md#graphql-usage) and
-[Ecommerce Branches](ecommerce/branches.md#graphql-contracts).
+[Discocan development](../discocan/docs/development.md#graphql-usage) and
+[Ecommerce Branches](branches.md#graphql-contracts).
 
 ## PostgreSQL and Prisma
 
@@ -435,7 +435,7 @@ restart after `npm run db:migrate`.
 with a leading-zero IMEI. Existing keys and edits are preserved. Core runs before Fleet; Fleet
 fixtures belong to RentalSofia's Discordia Branch.
 
-The [Simple eData catalog procedure](discocan/erm-resources/simple-edata-catalog/README.md)
+The [Simple eData catalog procedure](../discocan/docs/erm-resources/simple-edata-catalog/README.md)
 uses direct commands for EXE inspection, extraction, comparison and local Fleet import.
 It is separate from the sample-data seed and has no npm workflow registration.
 

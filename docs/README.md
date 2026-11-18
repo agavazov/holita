@@ -1,11 +1,8 @@
 # Documentation
 
-The repository has two distinct domains with separate documentation and contributor instructions:
-
-| Domain                    | Documentation                         | Current implementation                                                                          |
-| ------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Discocan: fleet telemetry | [docs/discocan](discocan/README.md)   | Fleet master data, telemetry, trips, alerts and service tasks, ERM Server and the Angular admin |
-| Ecommerce: online shops   | [docs/ecommerce](ecommerce/README.md) | Core Tenant/Branch foundation; no storefront, catalog, cart or orders                           |
+Workspace and Osnova documentation live in `docs/`; Discocan documentation lives in
+[discocan/docs](../discocan/docs/README.md), and Holita documentation lives in `holita/docs/`.
+The shared [Core Branch foundation](branches.md) describes the current Tenant/Branch implementation.
 
 Branch is the shared organizational scope: a vehicle fleet in Discocan and an online shop
 in Ecommerce. Code, APIs, routes and persistence use Branch/branchId/x-branch-id with
@@ -50,4 +47,4 @@ file under `docs/todo/` for larger plans.
 [Deprecated reference material](archive/README.md), including Karma API/interface sources and
 historical integration guides, is read only when a task needs it. It is excluded from routine
 repository-wide documentation updates. Protocols, hardware and ERM correspondence remain in
-[ERM resources](discocan/erm-resources/README.md).
+[ERM resources](../discocan/docs/erm-resources/README.md).

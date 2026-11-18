@@ -6,10 +6,10 @@ description: Implement discocan backend GraphQL features using the Fleet modules
 # Backend feature reference
 
 Read [AGENTS.md](../../../AGENTS.md) and, for Fleet, the
-[Discocan instructions](../../../docs/discocan/instructions.md). For Core Branch changes apply the
-[Ecommerce instructions](../../../docs/ecommerce/instructions.md), and check Discocan consumers when
-the shared Branch contract changes. Open [architecture](../../../docs/discocan/architecture.md)
-or the [Fleet implementation index](../../../docs/discocan/fleet.md) only for the section you need.
+[Discocan instructions](../../../discocan/docs/instructions.md). For Core Branch changes apply the
+[Branch foundation](../../../docs/branches.md), and check Discocan consumers when
+the shared Branch contract changes. Open [architecture](../../../discocan/docs/architecture.md)
+or the [Fleet implementation index](../../../discocan/docs/fleet.md) only for the section you need.
 
 ## Follow the reference module
 
@@ -30,7 +30,7 @@ repositories require the verified Tenant and Branch scope on every operation. In
   Branch existence on creation and on the Settings upsert. Other reads, updates and deletes do not
   call Core. Never import another application's implementation.
 - **Lists.** Every list follows the
-  [standard list contract](../../../docs/discocan/architecture.md#standard-list-contract):
+  [standard list contract](../../../discocan/docs/architecture.md#standard-list-contract):
   - validate input with [validation.ts](../../../discocan/apps/fleet/src/validation.ts);
   - build explicit predicates with the [search helpers](../../../discocan/apps/fleet/src/database/search.ts);
   - load `…Ref` links in scoped batches;

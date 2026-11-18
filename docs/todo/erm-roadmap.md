@@ -2,8 +2,8 @@
 
 Remaining work to run every StarLink unit on discocan, verify its data and commands, and retire
 Karma. Follow [ADR 0007](../architecture/decisions/0007-erm-gateway-and-api-processes.md),
-the [operator guide](../discocan/development.md#erm-device-server) and the retained
-[ERM sources](../discocan/erm-resources/README.md).
+the [operator guide](../../discocan/docs/development.md#erm-device-server) and the retained
+[ERM sources](../../discocan/docs/erm-resources/README.md).
 
 The delivery baseline includes Fleet `serialNumber`/`edataModule`, the ten registered trucks,
 `ERM_ROLE=api` on 11017, the event catalog/categories/severities, federated Device state/history,
@@ -53,7 +53,7 @@ reopen them as roadmap tasks.
 - A gateway restart sends about half of the driving units to their Karma backup, and a unit can
   also fall back without one (CB1147TP after a mobile-network change on 2026-11-04). Restart the
   gateway only while no routed truck is driving. Fleet marks such units `KARMA_BACKUP`; bring them
-  back once parked as in [moving a unit](../discocan/development.md#moving-a-unit-between-karma-and-discocan).
+  back once parked as in [moving a unit](../../discocan/docs/development.md#moving-a-unit-between-karma-and-discocan).
 - For each unit, snapshot parameters and verify its next ordinary connection, gapless Karma
   `/events`, and no Karma `46` rewrite for an hour. Require seven days of gapless relaying for
   all ten units before closing rollout.
@@ -97,7 +97,7 @@ reopen them as roadmap tasks.
   confirmed ECU clearance.
 - **Fault reads:** GET DTC (`301`/`19`) answers `154,0` when the fault buffer is empty and `154,1`
   plus a `419` snapshot of the active codes when it is not (CB6711TE, 2026-11-11, see
-  [fleet evidence](../discocan/erm-resources/edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md#fleet-evidence-2026-11-11)).
+  [fleet evidence](../../discocan/docs/erm-resources/edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md#fleet-evidence-2026-11-11)).
   Fleet's 30-minute scheduled read therefore yields the active codes when there are any.
 - **Volvo CAN connection:** CB9405PE and CB9369PE have never delivered eData CAN data (no `405`,
   repeated `417`), although their configuration matches reporting trucks. With ignition on, read
@@ -175,7 +175,7 @@ inert rule `2` and the globals are unchanged.
 
 ## Questions for ERM
 
-These questions are unsent. The [support correspondence and verification register](../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/README.md)
+These questions are unsent. The [support correspondence and verification register](../../discocan/docs/erm-resources/erm-support-diagnostics-protocol-test-server/README.md)
 remains the evidence source; do not request already supplied protocol access or Test Server downloads.
 
 ### Device sessions, hardware and recovery
@@ -201,7 +201,7 @@ remains the evidence source; do not request already supplied protocol access or 
 
 1. Supply the hardware/firmware/profile compatibility matrix and extended `412` fields.
 2. Are StarLink 2069/2070 required on these installations? The byte 7 question is answered by the
-   [1 November field table](../discocan/erm-resources/erm-support-diagnostics-protocol-test-server/reply-2026-11-01.md#global-settings-302--410).
+   [1 November field table](../../discocan/docs/erm-resources/erm-support-diagnostics-protocol-test-server/reply-2026-11-01.md#global-settings-302--410).
 3. Correct the `418` P1482 example with a real five-character capture and expected status. ERM
    R&D confirmed the four-byte `419` SPN on 2026-11-01.
 4. Confirm that `301`/`19` answers `154,0` for an empty fault buffer and `154,1` plus a `419`
@@ -220,7 +220,7 @@ remains the evidence source; do not request already supplied protocol access or 
    connection can deliver Volvo ECU faults?
 8. eData Simple 6.56 keeps only predefined parameters: twelve custom-decoding variants were stored
    as ID and interval only, and the module reports itself as `eData Fms` (see
-   [custom decoding](../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md#custom-decoding-is-discarded-2026-11-10)).
+   [custom decoding](../../discocan/docs/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md#custom-decoding-is-discarded-2026-11-10)).
    Can our modules be upgraded to eData Pro (custom CAN signals, raw capture, J1939 requests such as
    DM2), how, and at what cost? Is 120 the definition limit of every Simple firmware?
 
@@ -274,6 +274,6 @@ the owner's list truncated it. Missing VINs remain unknown.
 ## Maintaining this roadmap
 
 Remove tasks when proved and document operator behavior in the
-[ERM guide](../discocan/development.md#erm-device-server); vendor facts belong in
-[ERM resources](../discocan/erm-resources/README.md). Keep raw evidence private, and do not
+[ERM guide](../../discocan/docs/development.md#erm-device-server); vendor facts belong in
+[ERM resources](../../discocan/docs/erm-resources/README.md). Keep raw evidence private, and do not
 replay historical device campaigns merely to tidy documentation.

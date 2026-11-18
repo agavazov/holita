@@ -9,5 +9,5 @@ The filename supplies the package label; Windows file/product version fields are
 configuration export or catalog input. The extractor does not execute or flash either
 file. Retain new Monitor versions alongside these original binaries.
 
-See the [catalog and direct-command procedure](../../../docs/discocan/erm-resources/simple-edata-catalog/README.md)
-and [v9.56 extraction](../../../docs/discocan/erm-resources/simple-edata-catalog/v9.56/README.md).
+See the [catalog and direct-command procedure](../../docs/erm-resources/simple-edata-catalog/README.md)
+and [v9.56 extraction](../../docs/erm-resources/simple-edata-catalog/v9.56/README.md).

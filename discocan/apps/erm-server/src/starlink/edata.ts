@@ -1,5 +1,5 @@
 // Simple eData 4.04 report layouts, with capture corrections from
-// docs/discocan/erm-resources/edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md.
+// discocan/docs/erm-resources/edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md.
 export function decodeEdata(fields: readonly string[]) {
   const reportType = fields[2];
   if (

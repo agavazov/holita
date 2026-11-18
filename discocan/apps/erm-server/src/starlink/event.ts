@@ -106,7 +106,7 @@ export function decodeEvent(
 
 // $SLB reports (protocol format 0182=3): after G9 replacement, 04, the BCD IMEI, two bytes, the command
 // (06, or 86 without confirmation) and tag/value pairs, mapped from 2026-11-03 captures in
-// docs/discocan/erm-resources/starlink-binary-formats.md. An unknown tag leaves the report undecoded.
+// discocan/docs/erm-resources/starlink-binary-formats.md. An unknown tag leaves the report undecoded.
 const binarySizes = new Map([
   [0x03, 4],
   [0x0c, 4],

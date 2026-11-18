@@ -5,7 +5,7 @@
 .volumes/
 /AGENTS.local.md
 /.credentials/
-/docs/discocan/erm-resources/starlink-online-protocol/authenticated/
+/discocan/docs/erm-resources/starlink-online-protocol/authenticated/
 discocan/apps/erm-server/live/
 discocan/apps/erm-server/live-api/
 

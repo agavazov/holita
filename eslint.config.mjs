@@ -11,7 +11,7 @@ export default tseslint.config(
       '.tmp/**',
       '.misc/**',
       '.credentials/**',
-      'docs/discocan/erm-resources/starlink-online-protocol/authenticated/**',
+      'discocan/docs/erm-resources/starlink-online-protocol/authenticated/**',
       '.references/**',
       '.volumes/**',
       '**/node_modules/**',
