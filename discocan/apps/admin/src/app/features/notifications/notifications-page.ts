@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES } from '@osnova/ui';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -14,10 +15,10 @@ import type { AdminNotificationsQuery } from '../../../generated/graphql/operati
 import { requestError } from '../../core/graphql/request-error';
 import { messages } from '../../i18n/messages';
 import { FLEET_DISPLAY, defaultFleetDisplay } from '../../ui/format/fleet-format';
-import type { ListQuery } from '../../ui/list/list-query';
-import { normalizeSearch, sameListState, searchApplies } from '../../ui/list/list-state';
-import { UrlListState } from '../../ui/list/url-list-state';
-import { uiMessages } from '../../ui/i18n/messages';
+import type { ListQuery } from '@osnova/ui';
+import { normalizeSearch, sameListState, searchApplies } from '@osnova/ui';
+import { UrlListState } from '@osnova/ui';
+import { uiMessages } from '@osnova/ui';
 import { AdminWorkspace } from '../../workspace/admin-workspace';
 import { FleetPreferences } from '../fleet/settings/fleet-preferences';
 import { GeneralSettingsApi } from '../fleet/settings/general-settings-api';
@@ -37,6 +38,7 @@ import { NotificationsView } from './notifications-view';
   providers: [
     GeneralSettingsApi,
     FleetPreferences,
+    { provide: DISPLAY_PREFERENCES, useExisting: FLEET_DISPLAY },
     {
       provide: FLEET_DISPLAY,
       useFactory: () => {

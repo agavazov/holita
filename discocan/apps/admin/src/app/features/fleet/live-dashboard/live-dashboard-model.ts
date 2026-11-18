@@ -11,8 +11,8 @@ import {
   type FleetFaultCheck,
   type FleetWarning,
 } from '../../../ui/fleet-live/fault-wording';
-import { mapCoordinates, type MapCoordinates } from '../../../ui/map-preview/location-map';
-import { isoToZonedParts, zonedWallTimeToIso } from '../../../ui/format/zoned-time';
+import { mapCoordinates, type MapCoordinates } from '@osnova/ui';
+import { isoToZonedParts, zonedWallTimeToIso } from '@osnova/ui';
 
 export type TruckFilter = 'all' | 'online' | 'moving' | 'problems';
 export const truckFilters: readonly TruckFilter[] = ['all', 'online', 'moving', 'problems'];

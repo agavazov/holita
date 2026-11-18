@@ -1,0 +1,16 @@
+{
+  "account": "Профил: {name}",
+  "branchPrefix": "Клон:",
+  "branches": "Избери клон",
+  "breadcrumb": "Навигационна пътека",
+  "closeNavigation": "Затвори навигацията",
+  "emptyBranches": "Няма налични клонове.",
+  "languagePrefix": "Език:",
+  "loadingBranches": "Зареждане на клонове…",
+  "navigation": "Навигация",
+  "profile": "Профил",
+  "signOut": "Изход",
+  "skipNavigation": "Към съдържанието",
+  "themePersistenceError": "Браузърът не успя да запази предпочитаната тема.",
+  "toggleNavigation": "Отвори или затвори навигацията"
+}

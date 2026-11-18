@@ -6,8 +6,8 @@ import { Tag } from 'primeng/tag';
 import { Timeline } from 'primeng/timeline';
 import type { Language } from '../../../i18n/messages';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { formatNumber } from '../../../ui/format/format';
-import { interpolate } from '../../../ui/i18n/messages';
+import { formatNumber } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
 import {
   commandNextStep,
   commandOutcome,

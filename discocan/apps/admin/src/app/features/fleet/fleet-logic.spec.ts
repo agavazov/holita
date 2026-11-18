@@ -1,15 +1,10 @@
 import { convertToParamMap } from '@angular/router';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { fleetObservationIsRecent } from '../../ui/fleet-live/fleet-live';
-import type { FilterCondition } from '../../ui/filter-builder/filter-model';
-import { uiMessages } from '../../ui/i18n/messages';
-import type { ListQuery } from '../../ui/list/list-query';
-import {
-  listStateParams,
-  readListState,
-  type ListDefinition,
-  type ListState,
-} from '../../ui/list/list-state';
+import type { FilterCondition } from '@osnova/ui';
+import { uiMessages } from '@osnova/ui';
+import type { ListQuery } from '@osnova/ui';
+import { listStateParams, readListState, type ListDefinition, type ListState } from '@osnova/ui';
 import { alertRemarkError } from './alerts/alert-mapping';
 import { alertDefinition, alertQueryState, alertVariables } from './alerts/alert-query';
 import { deviceFieldErrors } from './devices/device-mapping';

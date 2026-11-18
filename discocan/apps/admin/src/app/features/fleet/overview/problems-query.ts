@@ -6,12 +6,7 @@ import type {
   FleetProblemState,
   FleetProblemSortField,
 } from '../../../../generated/graphql/operations';
-import {
-  codecs,
-  type FilterCodec,
-  type ListDefinition,
-  type ListState,
-} from '../../../ui/list/list-state';
+import { codecs, type FilterCodec, type ListDefinition, type ListState } from '@osnova/ui';
 
 export const problemSources = [
   'FLEET_ALERT',

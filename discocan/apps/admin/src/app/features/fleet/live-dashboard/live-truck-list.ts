@@ -9,8 +9,8 @@ import type { Language } from '../../../i18n/messages';
 import { FaultIcon } from '../../../ui/fleet-live/fault-icon';
 import { faultsText, severityTone } from '../../../ui/fleet-live/fault-wording';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { formatRelative } from '../../../ui/format/format';
-import { interpolate } from '../../../ui/i18n/messages';
+import { formatRelative } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
 import {
   isMoving,
   truckFilters,

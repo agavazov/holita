@@ -6,7 +6,7 @@
   }
   <form [formGroup]="form" (ngSubmit)="review()" class="app-form-section">
     <div class="app-form-grid">
-      <discocan-form-field [label]="text().kind" controlId="erm-console-kind">
+      <osnova-form-field [label]="text().kind" controlId="erm-console-kind">
         <p-select
           inputId="erm-console-kind"
           formControlName="kind"
@@ -16,10 +16,10 @@
           optionValue="value"
           (onChange)="chooseKind()"
         />
-      </discocan-form-field>
+      </osnova-form-field>
       @switch (kind()) {
         @case ('READ_ACTION') {
-          <discocan-form-field [label]="text().action" controlId="erm-console-action">
+          <osnova-form-field [label]="text().action" controlId="erm-console-action">
             <p-select
               inputId="erm-console-action"
               formControlName="action"
@@ -28,10 +28,10 @@
               optionLabel="label"
               optionValue="value"
             />
-          </discocan-form-field>
+          </osnova-form-field>
         }
         @case ('READ_PARAMETERS') {
-          <discocan-form-field
+          <osnova-form-field
             [label]="text().readParameters"
             controlId="erm-console-read-parameters"
             [hint]="text().readParametersHint"
@@ -55,10 +55,10 @@
                 <small class="app-muted">{{ parameterMatches() }}</small>
               </ng-template>
             </p-autocomplete>
-          </discocan-form-field>
+          </osnova-form-field>
         }
         @case ('PARAMETER') {
-          <discocan-form-field [label]="text().feature" controlId="erm-console-feature">
+          <osnova-form-field [label]="text().feature" controlId="erm-console-feature">
             <p-select
               inputId="erm-console-feature"
               formControlName="feature"
@@ -68,8 +68,8 @@
               [showClear]="true"
               [filter]="true"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().parameter"
             controlId="erm-console-parameter"
             [hint]="text().parameterHint"
@@ -101,7 +101,7 @@
                 <small class="app-muted">{{ parameterMatches() }}</small>
               </ng-template>
             </p-autocomplete>
-          </discocan-form-field>
+          </osnova-form-field>
           @if (selectedParameter(); as parameter) {
             <dl class="app-facts">
               <dt>{{ text().currentValue }}</dt>
@@ -113,7 +113,7 @@
                 <dd>{{ parameter.summary }}</dd>
               }
             </dl>
-            <discocan-form-field [label]="text().value" controlId="erm-console-value">
+            <osnova-form-field [label]="text().value" controlId="erm-console-value">
               @if (valueOptions().length) {
                 <p-select
                   inputId="erm-console-value"
@@ -133,11 +133,11 @@
                   autocomplete="off"
                 />
               }
-            </discocan-form-field>
+            </osnova-form-field>
           }
         }
         @case ('EDATA_INTERVAL') {
-          <discocan-form-field [label]="text().vehicleCategory" controlId="erm-console-category">
+          <osnova-form-field [label]="text().vehicleCategory" controlId="erm-console-category">
             <p-select
               inputId="erm-console-category"
               formControlName="category"
@@ -148,8 +148,8 @@
               [placeholder]="text().allCategories"
               [showClear]="true"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().vehicleType"
             controlId="erm-console-profile"
             [hint]="profileHint()"
@@ -164,8 +164,8 @@
               [placeholder]="text().allProfiles"
               [showClear]="true"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().edataParameter"
             controlId="erm-console-edata"
             [hint]="catalogHint()"
@@ -189,8 +189,8 @@
                 <small class="app-muted">{{ edataMatches() }}</small>
               </ng-template>
             </p-autocomplete>
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().interval"
             controlId="erm-console-interval"
             [hint]="intervalHint()"
@@ -204,10 +204,10 @@
               max="65000"
               step="1"
             />
-          </discocan-form-field>
+          </osnova-form-field>
         }
         @case ('GLOBALS') {
-          <discocan-form-field
+          <osnova-form-field
             [label]="text().globals"
             controlId="erm-console-globals"
             [hint]="text().globalsHint"
@@ -220,7 +220,7 @@
               autocomplete="off"
               spellcheck="false"
             />
-          </discocan-form-field>
+          </osnova-form-field>
         }
       }
       @if (isWrite()) {
@@ -328,7 +328,7 @@
   <h2>{{ text().configured }}</h2>
   @if (latestRead(); as read) {
     <p class="app-muted">
-      {{ text().readAt }} {{ read.startedAt | discocanDateTime }} · {{ capacity() }}
+      {{ text().readAt }} {{ read.startedAt | osnovaDateTime }} · {{ capacity() }}
     </p>
     @if (readStale()) {
       <p-message severity="warn">{{ text().readStale }}</p-message>

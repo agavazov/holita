@@ -4,14 +4,10 @@ import type {
   FleetServiceTaskSortField,
 } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
-import {
-  isComplete,
-  type FilterCondition,
-  type FilterOperator,
-} from '../../../ui/filter-builder/filter-model';
-import { fromDateOnly } from '../../../ui/format/zoned-time';
-import type { ListQuery } from '../../../ui/list/list-query';
-import type { FilterCodec, ListDefinition, ListState } from '../../../ui/list/list-state';
+import { isComplete, type FilterCondition, type FilterOperator } from '@osnova/ui';
+import { fromDateOnly } from '@osnova/ui';
+import type { ListQuery } from '@osnova/ui';
+import type { FilterCodec, ListDefinition, ListState } from '@osnova/ui';
 import { vehicleStatuses } from '../vehicles/vehicles-view';
 import { maintenanceText } from './i18n/messages';
 import { serviceStatuses, serviceTypes, serviceUrgencies } from './service-task';

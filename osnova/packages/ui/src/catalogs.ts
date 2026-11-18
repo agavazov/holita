@@ -1,0 +1,15 @@
+import uiBg from './ui/i18n/bg.json';
+import uiEn from './ui/i18n/en.json';
+import chartBg from './ui/chart-panel/bg.json';
+import chartEn from './ui/chart-panel/en.json';
+import formatBg from './ui/format/bg.json';
+import formatEn from './ui/format/en.json';
+import shellBg from './i18n/bg.json';
+import shellEn from './i18n/en.json';
+import notificationBg from './layout/notification-bg.json';
+import notificationEn from './layout/notification-en.json';
+export const uiCatalogs = { bg: uiBg, en: uiEn };
+export const chartPanelCatalogs = { bg: chartBg, en: chartEn };
+export const formatCatalogs = { bg: formatBg, en: formatEn };
+export const shellCatalogs = { bg: shellBg, en: shellEn };
+export const notificationCatalogs = { bg: notificationBg, en: notificationEn };

@@ -10,22 +10,17 @@ import { Select } from 'primeng/select';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import type { FilterCondition } from '../../ui/filter-builder/filter-model';
+import type { FilterCondition } from '@osnova/ui';
 import { injectFleetFormat } from '../../ui/format/fleet-format';
-import {
-  listRecord,
-  trackById,
-  type ListAction,
-  type ListActionRequest,
-} from '../../ui/list/list-actions';
-import { injectSortReady, listQuery, type ListQuery } from '../../ui/list/list-query';
-import { ListSortMenu } from '../../ui/list/list-sort-menu';
-import { maxSearchLength } from '../../ui/list/list-state';
-import { PageHeader } from '../../ui/page-header/page-header';
-import { RowActions } from '../../ui/row-actions/row-actions';
-import { TablePanel, type TableColumn } from '../../ui/table-panel/table-panel';
-import { tableView } from '../../ui/table-panel/table-view';
-import { UI_LANGUAGE } from '../../ui/ui-language';
+import { listRecord, trackById, type ListAction, type ListActionRequest } from '@osnova/ui';
+import { injectSortReady, listQuery, type ListQuery } from '@osnova/ui';
+import { ListSortMenu } from '@osnova/ui';
+import { maxSearchLength } from '@osnova/ui';
+import { PageHeader } from '@osnova/ui';
+import { RowActions } from '@osnova/ui';
+import { TablePanel, type TableColumn } from '@osnova/ui';
+import { tableView } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { notificationsText } from './i18n/messages';
 import { notificationTone, type NotificationRow } from './notification-presentation';
 

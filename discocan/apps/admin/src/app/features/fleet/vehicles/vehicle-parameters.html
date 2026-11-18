@@ -16,11 +16,11 @@
 </section>
 
 @if (error(); as message) {
-  <discocan-empty-state kind="error" [title]="message" />
+  <osnova-empty-state kind="error" [title]="message" />
 } @else if (loading() && !rows().length) {
   <p class="app-muted" role="status">{{ text().loading }}</p>
 } @else if (!groups().length) {
-  <discocan-empty-state
+  <osnova-empty-state
     [kind]="rows().length ? 'no-results' : 'no-telemetry'"
     [title]="rows().length ? text().noMatch : text().empty"
   />
@@ -79,9 +79,9 @@
   @if (selected(); as current) {
     @if (current.topic === group.topic) {
       @if (historyError(); as message) {
-        <discocan-empty-state kind="error" [title]="message" />
+        <osnova-empty-state kind="error" [title]="message" />
       } @else {
-        <discocan-chart-panel
+        <osnova-chart-panel
           kind="line"
           [title]="current.name"
           [unit]="current.unit"

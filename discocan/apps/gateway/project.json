@@ -4,7 +4,7 @@
   "projectType": "application",
   "sourceRoot": "discocan/apps/gateway/router",
   "implicitDependencies": ["core", "fleet", "erm-server"],
-  "tags": ["type:app", "scope:gateway"],
+  "tags": ["product:discocan", "type:app", "scope:gateway"],
   "targets": {
     "graphql-generate": {
       "executor": "nx:run-commands",

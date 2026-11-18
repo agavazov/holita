@@ -23,22 +23,22 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
-import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
-import { FormField } from '../../../ui/form-field/form-field';
-import { fromDateOnly, toDateOnly } from '../../../ui/format/zoned-time';
-import { focusFirstInvalid } from '../../../ui/forms/focus';
-import { datePickerInputPt, innerInputPt } from '../../../ui/forms/inner-input-pt';
+import { RouteDrawer, type RouteDrawerState } from '@osnova/ui';
+import { FormField } from '@osnova/ui';
+import { fromDateOnly, toDateOnly } from '@osnova/ui';
+import { focusFirstInvalid } from '@osnova/ui';
+import { datePickerInputPt, innerInputPt } from '@osnova/ui';
 import {
   dateOnlyValidator,
   integerValidator,
   requireOneOf,
   textValidator,
   validationMessage,
-} from '../../../ui/forms/validators';
-import { interpolate, uiMessages } from '../../../ui/i18n/messages';
-import { UI_LANGUAGE } from '../../../ui/ui-language';
+} from '@osnova/ui';
+import { interpolate, uiMessages } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { lockWhileSaving } from '../../../ui/forms/saving';
+import { lockWhileSaving } from '@osnova/ui';
 import { maintenanceText } from './i18n/messages';
 import type { MaintenanceOption } from './maintenance-view';
 import { serviceTypes, type ServiceType } from './service-task';

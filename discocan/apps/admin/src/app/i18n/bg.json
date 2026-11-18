@@ -130,5 +130,6 @@
     "searchMessage": "{0} налични резултата"
   },
   "system": "Системни",
-  "deviceOverview": "Общ преглед"
+  "deviceOverview": "Общ преглед",
+  "notificationEmpty": "Няма известия за този автопарк."
 }

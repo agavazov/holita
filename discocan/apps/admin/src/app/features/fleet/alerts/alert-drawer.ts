@@ -20,15 +20,15 @@ import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
-import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
-import { FormField } from '../../../ui/form-field/form-field';
+import { RouteDrawer, type RouteDrawerState } from '@osnova/ui';
+import { FormField } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { FormatRelativePipe } from '../../../ui/format/format.pipes';
-import { textValidator, validationMessage } from '../../../ui/forms/validators';
-import { lockWhileSaving } from '../../../ui/forms/saving';
-import { uiMessages } from '../../../ui/i18n/messages';
-import { toneSeverity } from '../../../ui/tones';
-import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { FormatRelativePipe } from '@osnova/ui';
+import { textValidator, validationMessage } from '@osnova/ui';
+import { lockWhileSaving } from '@osnova/ui';
+import { uiMessages } from '@osnova/ui';
+import { toneSeverity } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import {
   type AlertRow,
   type AlertSeverityCode,

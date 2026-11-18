@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES } from '@osnova/ui';
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -18,6 +19,7 @@ import { faultsPageText } from './faults-text';
   providers: [
     GeneralSettingsApi,
     FleetPreferences,
+    { provide: DISPLAY_PREFERENCES, useExisting: FLEET_DISPLAY },
     {
       provide: FLEET_DISPLAY,
       useFactory: () => {

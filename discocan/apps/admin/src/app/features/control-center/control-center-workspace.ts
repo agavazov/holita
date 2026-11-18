@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES } from '@osnova/ui';
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -6,7 +7,7 @@ import { Message } from 'primeng/message';
 import { AdminConfig } from '../../core/config/admin-config';
 import { requestError } from '../../core/graphql/request-error';
 import { FLEET_DISPLAY, defaultFleetDisplay } from '../../ui/format/fleet-format';
-import { uiMessages } from '../../ui/i18n/messages';
+import { uiMessages } from '@osnova/ui';
 import { AdminWorkspace } from '../../workspace/admin-workspace';
 import { BranchContext } from '../branches/branch-context';
 import { FleetPreferences } from '../fleet/settings/fleet-preferences';
@@ -25,6 +26,7 @@ import { DevicePage, deviceTabs } from './device-page';
   providers: [
     GeneralSettingsApi,
     FleetPreferences,
+    { provide: DISPLAY_PREFERENCES, useExisting: FLEET_DISPLAY },
     {
       provide: FLEET_DISPLAY,
       useFactory: () => {

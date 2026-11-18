@@ -21,14 +21,14 @@ import type {
 import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import { messages, type Language } from '../../../i18n/messages';
-import type { DrawerHost } from '../../../ui/drawer/drawer-host';
+import type { DrawerHost } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { interpolate, uiMessages } from '../../../ui/i18n/messages';
-import type { ListActionRequest, ListRecord } from '../../../ui/list/list-actions';
-import { listQuery, type ListQuery } from '../../../ui/list/list-query';
-import { normalizeSearch, sameListState, searchApplies } from '../../../ui/list/list-state';
-import { UrlListState } from '../../../ui/list/url-list-state';
-import { tableView } from '../../../ui/table-panel/table-view';
+import { interpolate, uiMessages } from '@osnova/ui';
+import type { ListActionRequest, ListRecord } from '@osnova/ui';
+import { listQuery, type ListQuery } from '@osnova/ui';
+import { normalizeSearch, sameListState, searchApplies } from '@osnova/ui';
+import { UrlListState } from '@osnova/ui';
+import { tableView } from '@osnova/ui';
 import { deviceRow } from './device-mapping';
 import {
   deviceDefinition,

@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES } from '@osnova/ui';
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -5,7 +6,7 @@ import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { AdminConfig } from '../../../core/config/admin-config';
 import { requestError } from '../../../core/graphql/request-error';
-import { uiMessages } from '../../../ui/i18n/messages';
+import { uiMessages } from '@osnova/ui';
 import { FLEET_DISPLAY, defaultFleetDisplay } from '../../../ui/format/fleet-format';
 import { AdminWorkspace } from '../../../workspace/admin-workspace';
 import { PageLoading } from '../../../workspace/page-loading';
@@ -23,6 +24,7 @@ import { liveDashboardText } from './live-dashboard-text';
   providers: [
     GeneralSettingsApi,
     FleetPreferences,
+    { provide: DISPLAY_PREFERENCES, useExisting: FLEET_DISPLAY },
     {
       provide: FLEET_DISPLAY,
       useFactory: () => {

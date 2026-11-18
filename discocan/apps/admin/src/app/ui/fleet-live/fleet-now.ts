@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { injectFleetFormat } from '../format/fleet-format';
-import { interpolate } from '../i18n/messages';
-import { UI_LANGUAGE } from '../ui-language';
+import { interpolate } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import {
   fleetLiveText,
   fleetObservationIsRecent,

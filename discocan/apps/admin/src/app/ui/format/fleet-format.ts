@@ -1,8 +1,8 @@
 import { computed, inject, InjectionToken, signal, type Signal } from '@angular/core';
 import type { Language } from '../../i18n/messages';
 import type { AdminFleetSettingsFragment } from '../../../generated/graphql/operations';
-import { UI_LANGUAGE } from '../ui-language';
-import { uiMessages } from '../i18n/messages';
+import { UI_LANGUAGE } from '@osnova/ui';
+import { uiMessages } from '@osnova/ui';
 import {
   datePickerFormat,
   defaultDateFormat,
@@ -14,7 +14,7 @@ import {
   formatNumber,
   formatTime,
   formatUtcInstant,
-} from './format';
+} from '@osnova/ui';
 
 export type FleetDisplayPreferences = Readonly<
   Pick<

@@ -16,8 +16,8 @@ import type {
 } from '../../../generated/graphql/operations';
 import { DemoSession } from '../../core/auth/demo-session';
 import type { Language } from '../../i18n/messages';
-import { errorCode, fieldErrors } from '../../ui/forms/field-errors';
-import { UI_LANGUAGE } from '../../ui/ui-language';
+import { errorCode, fieldErrors } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { profileText } from './i18n/messages';
 import { ProfileApi } from './profile-api';
 import { ProfileView, type PasswordField, type ProfileField } from './profile-view';

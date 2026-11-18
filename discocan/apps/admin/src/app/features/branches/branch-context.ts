@@ -9,7 +9,7 @@ import type {
 import { DemoSession } from '../../core/auth/demo-session';
 import { AdminConfig } from '../../core/config/admin-config';
 import type { Language } from '../../i18n/messages';
-import type { LeavableDrawer } from '../../ui/drawer/leave-drawer.guard';
+import type { LeavableDrawer } from '@osnova/ui';
 import { BranchesApi } from './branches-api';
 
 @Injectable()

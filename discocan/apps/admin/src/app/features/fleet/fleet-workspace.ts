@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES } from '@osnova/ui';
 import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -30,7 +31,7 @@ import { GeneralSettingsPage } from './settings/general-settings-page';
 import { GeneralSettingsApi } from './settings/general-settings-api';
 import { FleetPreferences } from './settings/fleet-preferences';
 import { FLEET_DISPLAY, defaultFleetDisplay } from '../../ui/format/fleet-format';
-import { uiMessages } from '../../ui/i18n/messages';
+import { uiMessages } from '@osnova/ui';
 import { requestError } from '../../core/graphql/request-error';
 import { settingsText } from './settings/i18n/messages';
 
@@ -56,6 +57,7 @@ import { settingsText } from './settings/i18n/messages';
   providers: [
     GeneralSettingsApi,
     FleetPreferences,
+    { provide: DISPLAY_PREFERENCES, useExisting: FLEET_DISPLAY },
     {
       provide: FLEET_DISPLAY,
       useFactory: () => {

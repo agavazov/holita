@@ -1,5 +1,5 @@
 <section class="app-view">
-  <discocan-page-header
+  <osnova-page-header
     [title]="title()"
     [moduleInfo]="moduleInfo().body"
     [moduleInfoTitle]="tabTitle()"
@@ -398,14 +398,14 @@
                     fmt.dateTimeRange(problems()?.counts?.periodFrom, problems()?.counts?.periodTo)
                   }}
                 </p>
-                <discocan-filter-builder
+                <osnova-filter-builder
                   [searchLabel]="text().detail.problem"
                   [searchable]="false"
                   [fields]="problemFields()"
                   [conditions]="problemConditions()"
                   (conditionsChange)="filterProblems($event)"
                 />
-                <discocan-table-panel
+                <osnova-table-panel
                   #problemsPanel
                   [heading]="faultText().history"
                   [view]="problemView()"
@@ -426,7 +426,7 @@
                   (clearFilters)="problemList.clearFilters()"
                   (retry)="refresh()"
                 >
-                  <discocan-list-sort-menu
+                  <osnova-list-sort-menu
                     panelActions
                     [fields]="problemSortFields()"
                     [sort]="problemSort()"
@@ -516,7 +516,7 @@
                             <span class="app-muted" [title]="row.summary">{{ row.summary }}</span>
                           </div>
                           <div class="app-table-mobile-actions">
-                            <discocan-row-actions
+                            <osnova-row-actions
                               [actions]="actions()"
                               [record]="record(row.id, problemLabel(row))"
                               (choose)="
@@ -577,7 +577,7 @@
                           </div>
                         </td>
                         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-                          <discocan-row-actions
+                          <osnova-row-actions
                             [actions]="actions()"
                             [record]="record(row.id, problemLabel(row))"
                             (choose)="
@@ -591,7 +591,7 @@
                         </td></tr
                     ></ng-template>
                   </p-table>
-                </discocan-table-panel>
+                </osnova-table-panel>
                 <discocan-fleet-fault-coverage
                   [lamps]="device.warningLamps"
                   [hasFaultReports]="hasFaultReports()"
@@ -660,7 +660,7 @@
                     </button>
                   </div>
                 </section>
-                <discocan-table-panel
+                <osnova-table-panel
                   #snapshotsPanel
                   [heading]="text().snapshots.history"
                   [view]="historyView()"
@@ -677,7 +677,7 @@
                   (pageChange)="changeHistoryPage($event)"
                   (retry)="refresh()"
                 >
-                  <discocan-list-sort-menu
+                  <osnova-list-sort-menu
                     panelActions
                     [fields]="timeSortFields()"
                     [sort]="timeSort()"
@@ -755,7 +755,7 @@
                             </button>
                           </div>
                           <div class="app-table-mobile-actions">
-                            <discocan-row-actions
+                            <osnova-row-actions
                               [actions]="actions()"
                               [record]="record(row.id, fmt.dateTime(row.startedAt))"
                               (choose)="
@@ -785,7 +785,7 @@
                           <span class="app-cell-number">{{ number(row.changes.length) }}</span>
                         </td>
                         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-                          <discocan-row-actions
+                          <osnova-row-actions
                             [actions]="actions()"
                             [record]="record(row.id, fmt.dateTime(row.startedAt))"
                             (choose)="
@@ -799,7 +799,7 @@
                         </td></tr
                     ></ng-template>
                   </p-table>
-                </discocan-table-panel>
+                </osnova-table-panel>
               }
               @default {
                 <p-tabs [value]="tab()" (valueChange)="selectTab($event)">
@@ -813,7 +813,7 @@
                     <p-tabpanel [value]="tab()">
                       <div class="app-tab-content">
                         @if (tab() === 'events') {
-                          <discocan-filter-builder
+                          <osnova-filter-builder
                             [searchLabel]="text().tabs.events"
                             [searchable]="false"
                             [fields]="eventFields()"
@@ -851,7 +851,7 @@
                                 </button>
                               }
                             </div>
-                          </discocan-filter-builder>
+                          </osnova-filter-builder>
                         } @else {
                           <div
                             class="control-center__actions"
@@ -910,7 +910,7 @@
                             }
                           </div>
                         }
-                        <discocan-table-panel
+                        <osnova-table-panel
                           #technicalPanel
                           [heading]="tab() === 'events' ? text().tabs.events : text().tabs.frames"
                           [view]="historyView()"
@@ -932,14 +932,14 @@
                           (clearFilters)="clearTechnicalFilters()"
                         >
                           @if (tab() === 'events') {
-                            <discocan-list-sort-menu
+                            <osnova-list-sort-menu
                               panelActions
                               [fields]="eventSortFields()"
                               [sort]="eventSort()"
                               (sortChange)="chooseEventSort($event)"
                             />
                           } @else {
-                            <discocan-list-sort-menu
+                            <osnova-list-sort-menu
                               panelActions
                               [fields]="timeSortFields()"
                               [sort]="timeSort()"
@@ -1032,7 +1032,7 @@
                                     }}</span>
                                   </div>
                                   <div class="app-table-mobile-actions">
-                                    <discocan-row-actions
+                                    <osnova-row-actions
                                       [actions]="actions()"
                                       [record]="
                                         record(
@@ -1091,7 +1091,7 @@
                                   </div>
                                 </td>
                                 <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-                                  <discocan-row-actions
+                                  <osnova-row-actions
                                     [actions]="actions()"
                                     [record]="
                                       record(
@@ -1112,7 +1112,7 @@
                                 </td></tr
                             ></ng-template>
                           </p-table>
-                        </discocan-table-panel>
+                        </osnova-table-panel>
                         <details class="app-card">
                           <summary>{{ text().detail.registryTechnical }}</summary>
                           <dl class="app-facts">
@@ -1173,7 +1173,7 @@
   } @else if (deviceLoading()) {
     <p-skeleton height="12rem" />
   } @else {
-    <discocan-empty-state kind="error" [title]="failure()" />
+    <osnova-empty-state kind="error" [title]="failure()" />
   }
 </section>
 <p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }"
@@ -1336,7 +1336,7 @@
               </ul>
             </section>
           }
-          <discocan-table-panel
+          <osnova-table-panel
             mode="local"
             [heading]="text().snapshots.changes"
             [view]="detail.value.changes.length ? { kind: 'rows' } : { kind: 'empty' }"
@@ -1390,8 +1390,8 @@
                 </tr></ng-template
               ></p-table
             >
-          </discocan-table-panel>
-          <discocan-table-panel
+          </osnova-table-panel>
+          <osnova-table-panel
             mode="local"
             [heading]="text().snapshots.values"
             [view]="detail.value.values.length ? { kind: 'rows' } : { kind: 'empty' }"
@@ -1442,7 +1442,7 @@
                 </tr></ng-template
               ></p-table
             >
-          </discocan-table-panel>
+          </osnova-table-panel>
           <details class="app-card">
             <summary>{{ text().detail.tabs['technical-details'] }}</summary>
             <dl class="app-facts">

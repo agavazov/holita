@@ -1,6 +1,6 @@
 import { UrlSegment, type Routes, type UrlMatcher } from '@angular/router';
 import { legacyFleetRoute, redirectLegacyAdminUrl } from '../../workspace/legacy-admin-redirect';
-import { leaveDrawer } from '../../ui/drawer/leave-drawer.guard';
+import { leaveDrawer } from '@osnova/ui/layout';
 
 const vehicleProfileRoute: UrlMatcher = (segments) => {
   const [branchId, fleet, vehicles, recordId, tab] = segments;

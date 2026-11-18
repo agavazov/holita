@@ -3,8 +3,8 @@ import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { Language } from '../../i18n/messages';
 import { injectFleetFormat } from '../format/fleet-format';
-import { TablePanel, type TableColumn } from '../table-panel/table-panel';
-import { toneSeverity } from '../tones';
+import { TablePanel, type TableColumn } from '@osnova/ui';
+import { toneSeverity } from '@osnova/ui';
 import {
   faultsText,
   warningLampLabel,
@@ -18,7 +18,7 @@ import {
   imports: [TablePanel, TableModule, Tag],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <discocan-table-panel
+    <osnova-table-panel
       mode="local"
       [heading]="text().currentWarnings"
       [view]="{ kind: rows().length ? 'rows' : 'empty' }"
@@ -70,7 +70,7 @@ import {
           </tr></ng-template
         >
       </p-table>
-    </discocan-table-panel>
+    </osnova-table-panel>
   `,
 })
 export class FleetCurrentWarnings {

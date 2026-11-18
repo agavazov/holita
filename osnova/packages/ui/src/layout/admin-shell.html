@@ -1,0 +1,95 @@
+<a class="app-skip-link" href="#main-content">{{ text().skipNavigation }}</a>
+<div class="app-shell" [class.app-shell--rail]="rail() && !mobile()">
+  <header class="app-topbar">
+    <osnova-admin-topbar
+      class="app-topbar__bar"
+      [language]="language()"
+      [languages]="languages()"
+      (languageChange)="languageChange.emit($event)"
+      [context]="context()"
+      [branches]="branches()"
+      [branchId]="branchId()"
+      (branchChange)="chooseBranch($event)"
+      [loading]="loading()"
+      [tenantName]="tenantName()"
+      [account]="account()"
+      [notifications]="notifications()"
+      [notificationUnreadCount]="notificationUnreadCount()"
+      [notificationsLoading]="notificationsLoading()"
+      [notificationsError]="notificationsError()"
+      [notificationsReadAllowed]="notificationsReadAllowed()"
+      [notificationsBusy]="notificationsBusy()"
+      [notificationSeeAllLink]="notificationSeeAllLink()"
+      (notificationOpen)="notificationOpen.emit($event)"
+      (notificationsRead)="notificationsRead.emit()"
+      (notificationsRetry)="notificationsRetry.emit()"
+      [productName]="productName()"
+      [productMark]="productMark()"
+      [profileLink]="profileLink()"
+      [notificationEmpty]="notificationEmpty()"
+      [homeLink]="homeLink()"
+      [showLogo]="mobile()"
+      [menuExpanded]="menuExpanded()"
+      [menuControls]="mobile() ? 'mobile-navigation' : 'desktop-navigation'"
+      (menuToggle)="toggleNavigation()"
+      (signOut)="signOut.emit()"
+    />
+  </header>
+  @if (!mobile()) {
+  <aside class="app-sidebar" id="desktop-navigation" [attr.aria-label]="text().navigation">
+    <osnova-admin-sidebar
+      [productName]="productName()"
+      [productMark]="productMark()"
+      [navigation]="navigation()"
+      [language]="language()"
+      [homeLink]="homeLink()"
+      [tenantName]="tenantName()"
+      [rail]="rail()"
+    />
+  </aside>
+  }
+  <main id="main-content" class="app-main" tabindex="-1">
+    <div class="app-page">
+      @if (appearance.persistenceFailed()) {
+      <p-message severity="warn" [pt]="{ root: { role: 'status', 'aria-live': 'polite' } }">
+        {{ text().themePersistenceError }}
+      </p-message>
+      }
+      <ng-content />
+    </div>
+  </main>
+</div>
+<!-- Keep the closing drawer mounted across breakpoints until PrimeNG removes its mask. -->
+<p-drawer
+  [visible]="mobileOpen()"
+  (visibleChange)="drawerVisibilityChanged($event)"
+  (onShow)="focusNavigation()"
+  [modal]="true"
+  [blockScroll]="true"
+  appendTo="body"
+  styleClass="app-nav-drawer"
+  [ariaCloseLabel]="text().closeNavigation"
+  [pt]="{
+    root: { 'aria-label': text().navigation },
+    pcCloseButton: { root: { id: 'mobile-navigation-close' } },
+  }"
+>
+  <ng-template #header>
+    <span class="app-logo" aria-hidden="true">
+      <span class="app-logo__mark">{{ productMark() }}</span>
+      <span class="app-logo__word">{{ productName() }}</span>
+    </span>
+  </ng-template>
+  <div id="mobile-navigation" class="app-nav-drawer__content">
+    <osnova-admin-sidebar
+      [productName]="productName()"
+      [productMark]="productMark()"
+      [navigation]="navigation()"
+      [language]="language()"
+      [homeLink]="homeLink()"
+      [tenantName]="tenantName()"
+      [showLogo]="false"
+      idPrefix="mobile-nav"
+    />
+  </div>
+</p-drawer>

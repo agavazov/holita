@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Tag } from 'primeng/tag';
-import type { StatusTone } from '../tones';
-import { toneSeverity } from '../tones';
-import { UI_LANGUAGE } from '../ui-language';
+import type { StatusTone } from '@osnova/ui';
+import { toneSeverity } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import {
   fleetCloseReason,
   fleetLiveText,
@@ -10,8 +10,8 @@ import {
   type FleetLiveMode,
 } from './fleet-live';
 import { injectFleetFormat } from '../format/fleet-format';
-import { formatDuration } from '../format/format';
-import { interpolate } from '../i18n/messages';
+import { formatDuration } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
 
 @Component({
   selector: 'discocan-fleet-connection',

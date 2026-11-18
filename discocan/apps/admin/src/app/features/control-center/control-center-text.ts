@@ -1,7 +1,7 @@
 import type { ErmEventSeverity, ErmLanguage } from '../../../generated/graphql/operations';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import type { Language } from '../../i18n/messages';
-import { toneSeverity } from '../../ui/tones';
+import { toneSeverity } from '@osnova/ui';
 import bg from './bg.json';
 import en from './en.json';
 

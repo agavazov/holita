@@ -40,13 +40,13 @@ import type {
 import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import type { Language } from '../../../i18n/messages';
-import { WALL_CLOCK } from '../../../ui/clock';
+import { WALL_CLOCK } from '@osnova/ui';
 import { faultReadState, faultsText } from '../../../ui/fleet-live/fault-wording';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { formatRelative } from '../../../ui/format/format';
-import { interpolate } from '../../../ui/i18n/messages';
-import { mapCoordinates, type MapCoordinates } from '../../../ui/map-preview/location-map';
-import { ModuleInfo } from '../../../ui/page-header/module-info';
+import { formatRelative } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { mapCoordinates, type MapCoordinates } from '@osnova/ui';
+import { ModuleInfo } from '@osnova/ui';
 import { StreetViewPopup } from '../../../ui/street-view/street-view-popup';
 import { FleetPreferences } from '../settings/fleet-preferences';
 import { LiveDashboardApi } from './live-dashboard-api';

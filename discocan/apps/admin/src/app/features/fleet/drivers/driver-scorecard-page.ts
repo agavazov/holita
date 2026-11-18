@@ -23,9 +23,9 @@ import {
 import type { AdminBranchesQuery } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
 import type { Language } from '../../../i18n/messages';
-import { injectPageRecord } from '../../../layout/page-record';
-import { drawerParam } from '../../../ui/drawer/drawer-route';
-import { errorCode } from '../../../ui/forms/field-errors';
+import { injectPageRecord } from '@osnova/ui';
+import { drawerParam } from '@osnova/ui';
+import { errorCode } from '@osnova/ui';
 import { driverScorecard } from './driver-mapping';
 import {
   DriverScorecardView,

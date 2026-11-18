@@ -42,7 +42,7 @@ test('sign-in gates deep links and business reads, survives reload, clears on lo
   await page.goto(`${app.url}/en/${app.branchB.id}/fleet/devices/new?search=old`);
   await expect(page).toHaveURL(`${app.url}/en/${app.branchB.id}/fleet/devices/new?search=old`);
   await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
-  await expect(page.locator('discocan-admin-shell')).toHaveCount(0);
+  await expect(page.locator('osnova-admin-shell')).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: 'Choose a fleet', exact: true })).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: /^Email/ })).toBeVisible();
   expect(business).toEqual([]);
@@ -62,7 +62,7 @@ test('sign-in gates deep links and business reads, survives reload, clears on lo
   await expect(page).toHaveURL(`${app.url}/en/${app.branchA.id}/fleet/live?search=old`);
   await expect(
     page
-      .locator('discocan-admin-topbar')
+      .locator('osnova-admin-topbar')
       .getByRole('button', { name: `Branch: ${app.branchA.name}`, exact: true }),
   ).toBeVisible();
   expect(business.length).toBeGreaterThan(0);
@@ -86,7 +86,7 @@ test('sign-in gates deep links and business reads, survives reload, clears on lo
   await signIn(page, isolationAccount);
   await expect(
     page
-      .locator('discocan-admin-topbar')
+      .locator('osnova-admin-topbar')
       .getByRole('button', { name: 'Branch: Isolation branch', exact: true }),
   ).toBeVisible();
   // The first tenant's cached Vehicles must not survive the session change.

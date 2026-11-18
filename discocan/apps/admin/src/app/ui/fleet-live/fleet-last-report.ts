@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { injectFleetFormat } from '../format/fleet-format';
-import { formatRelative } from '../format/format';
-import { UI_LANGUAGE } from '../ui-language';
+import { formatRelative } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { fleetLiveText, type FleetLiveDevice, type FleetLiveMode } from './fleet-live';
 import { injectFleetNow } from './fleet-clock';
 

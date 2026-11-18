@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { uiMessages } from '../ui/i18n/messages';
-import { UI_LANGUAGE } from '../ui/ui-language';
+import { uiMessages } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 
 /** Neutral page geometry while Branch preferences load, without a temporary page title. */
 @Component({

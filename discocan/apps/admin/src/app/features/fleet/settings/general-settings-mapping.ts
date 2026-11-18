@@ -3,7 +3,7 @@ import type {
   AdminFleetSettingsFragment,
   UpdateFleetSettingsInput,
 } from '../../../../generated/graphql/operations';
-import { fieldErrors } from '../../../ui/forms/field-errors';
+import { fieldErrors } from '@osnova/ui';
 import type { GeneralSettings, GeneralSettingsField } from './general-settings-view';
 
 export const generalSettingsFields = [

@@ -4,7 +4,7 @@ import type {
 } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
 import { fleetLiveText } from '../../../ui/fleet-live/fleet-live';
-import { interpolate } from '../../../ui/i18n/messages';
+import { interpolate } from '@osnova/ui';
 import type { LocationMapRecord, LocationMapTrack } from '../../../ui/location-map/location-map';
 import type { VehicleProfile } from './vehicle-profile-view';
 import { vehicleConnectionStatus } from './vehicle-live';

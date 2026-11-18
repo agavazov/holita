@@ -1,7 +1,7 @@
 import type { AdminNotificationFragment } from '../../../generated/graphql/operations';
 import type { Language } from '../../i18n/messages';
-import type { StatusTone } from '../../theme/status-tones';
-import { interpolate } from '../../ui/i18n/messages';
+import type { StatusTone } from '@osnova/ui/theme';
+import { interpolate } from '@osnova/ui';
 import { faultsText } from '../../ui/fleet-live/fault-wording';
 import { alertsText } from '../fleet/alerts/i18n/messages';
 import { commandText } from '../fleet/commands/command-presentation';

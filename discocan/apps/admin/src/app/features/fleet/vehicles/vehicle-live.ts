@@ -1,6 +1,6 @@
 import type { Language } from '../../../i18n/messages';
 import { fleetLiveText, type FleetLiveDevice } from '../../../ui/fleet-live/fleet-live';
-import type { StatusTone } from '../../../ui/tones';
+import type { StatusTone } from '@osnova/ui';
 
 export function vehicleConnectionStatus(
   state: { live: boolean; connected: boolean; reporting: boolean; hasDevices: boolean },

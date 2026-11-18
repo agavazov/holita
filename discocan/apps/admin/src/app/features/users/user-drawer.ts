@@ -25,13 +25,13 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import type { AdminUserDetailsFragment, UserRole } from '../../../generated/graphql/operations';
-import { RouteDrawer, type RouteDrawerState } from '../../ui/drawer/route-drawer';
-import { FormField } from '../../ui/form-field/form-field';
-import { focusFirstInvalid } from '../../ui/forms/focus';
-import { lockWhileSaving } from '../../ui/forms/saving';
-import { textValidator, validationMessage } from '../../ui/forms/validators';
-import { interpolate } from '../../ui/i18n/messages';
-import { UI_LANGUAGE } from '../../ui/ui-language';
+import { RouteDrawer, type RouteDrawerState } from '@osnova/ui';
+import { FormField } from '@osnova/ui';
+import { focusFirstInvalid } from '@osnova/ui';
+import { lockWhileSaving } from '@osnova/ui';
+import { textValidator, validationMessage } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { usersText } from './i18n/messages';
 
 export interface UserForm {

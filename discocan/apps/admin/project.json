@@ -3,7 +3,7 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "sourceRoot": "discocan/apps/admin/src",
-  "tags": ["type:app", "scope:admin"],
+  "tags": ["product:discocan", "type:app", "scope:admin"],
   "implicitDependencies": ["gateway"],
   "targets": {
     "graphql-generate": {
@@ -56,7 +56,8 @@
       "{projectRoot}/**/*",
       "sharedGlobals",
       "graphqlContracts",
-      "{workspaceRoot}/discocan/tools/browser/**/*"
+      "{workspaceRoot}/discocan/tools/browser/**/*",
+      "{workspaceRoot}/osnova/packages/ui/**/*"
     ]
   }
 }

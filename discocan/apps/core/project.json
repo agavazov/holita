@@ -3,7 +3,7 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "sourceRoot": "discocan/apps/core/src",
-  "tags": ["type:app", "scope:core"],
+  "tags": ["product:discocan", "type:app", "scope:core"],
   "targets": {
     "test": {
       "executor": "nx:run-commands",

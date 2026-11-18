@@ -1,5 +1,5 @@
 import { messages, type Language } from '../i18n/messages';
-import type { PageContext } from '../layout/navigation';
+import type { PageContext } from '@osnova/ui';
 
 /**
  * Page destinations that are more specific than the sidebar. Account and notification entries

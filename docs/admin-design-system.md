@@ -1,22 +1,22 @@
 # Admin design system
 
-The shared presentation rules for `discocan/apps/admin`: theme, global styles, shell and reusable
+The shared presentation rules in `@osnova/ui`, consumed by `discocan/apps/admin`: theme, global styles, shell and reusable
 patterns. Use the [design-system skill](../.agents/skills/discocan-admin-design-system/SKILL.md)
 when changing presentation. Meridian is visual inspiration only; no copied source/assets.
 The code defines individual component inputs and implementation details.
 
 ## Where presentation lives
 
-Paths below are relative to `discocan/apps/admin/src`.
+Shared paths below are relative to `osnova/packages/ui/src`; application paths are under `discocan/apps/admin/src`.
 
-| Area             | Owns                                                                                  |
-| ---------------- | ------------------------------------------------------------------------------------- |
-| `app/theme/`     | PrimeNG preset, brands, density, tokens, status/category palettes and contrast checks |
-| `styles/`        | Fonts, layers, breakpoints, reset/base, shell and shared CSS patterns                 |
-| `app/ui/`        | Repeated domain-neutral components/helpers, BG/EN texts and stories                   |
-| `app/layout/`    | Business-independent shell, sidebar, topbar, navigation and record breadcrumb         |
-| `app/workspace/` | Session/language composition, page context/title and PrimeNG translations             |
-| `app/features/`  | Concrete business views, typed forms, services and generated operations               |
+| Area                   | Owns                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| `theme/`               | PrimeNG preset, brands, density, tokens, status/category palettes and contrast checks |
+| `styles/`              | Fonts, layers, breakpoints, reset/base, shell and shared CSS patterns                 |
+| `ui/`                  | Repeated domain-neutral components/helpers, BG/EN texts and stories                   |
+| `layout/`              | Business-independent shell, sidebar, topbar, navigation and record breadcrumb         |
+| admin `app/workspace/` | Session/language composition, page context/title and PrimeNG translations             |
+| admin `app/features/`  | Concrete business views, typed forms, services and generated operations               |
 
 Keep colors, spacing scale, radii, shadows and breakpoints central. Component SCSS uses
 `var(--p-*)`/`--p-app-*`, shared pattern classes and breakpoint mixins; no literal colors,
@@ -25,10 +25,10 @@ Never use shell classes in feature code. Compiled component CSS warns at 4 kB an
 
 ## Theme
 
-`discocanPreset(choice)` extends Aura through registered component presets.
-`provideDiscoCanTheme` supplies it to PrimeNG with ripple disabled and makes table scroll
+`uiPreset(choice)` extends Aura through registered component presets.
+`provideOsnovaTheme` supplies it to PrimeNG with ripple disabled and makes table scroll
 containers keyboard reachable. `.app-dark` is the central dark-mode selector.
-Layer order is `discocan-reset, primeng, discocan`; keep Sass and `discocanThemeOptions` aligned.
+Layer order is `osnova-reset, primeng, osnova`; keep Sass and `uiThemeOptions` aligned.
 
 ### The configured choice
 
@@ -74,7 +74,7 @@ accessibility audit. Use canvas-muted tokens on canvas backgrounds, not panel mu
 | Status/series | `tone-<name>-color/background/solid`, category solids `category-c1` through `category-c8` and each slot’s `-background`/`-color` pair                     |
 | Accent/plate  | Teal `accent-background/color/solid`, `hero-background/color`, `plate-background/color/border-color/band-background/band-color`                           |
 
-Define tokens under `extend.app` in `theme/discocan-preset.ts`; nested paths become kebab-case
+Define tokens under `extend.app` in `theme/ui-preset.ts`; nested paths become kebab-case
 CSS properties. Reference Aura/discocan tokens centrally. Shadows are for floating surfaces.
 Table column titles use the DataTable density token, not `text-xs`.
 
@@ -95,7 +95,7 @@ tables; sparkline names state range and last value. Null is a gap, zero a real v
 ### Light and dark
 
 `Appearance` sets the root scheme to light, dark or automatic (the system setting, the default)
-and stores the choice in `discocan.admin.theme`. The `discocan-theme-menu` icon on Login and in the
+and stores the choice in `discocan.admin.theme`. The `osnova-theme-menu` icon on Login and in the
 topbar offers the three choices. Denied storage keeps switching usable and reports a warning. Scheme differences belong in the preset/tokens, not component selectors.
 Private license/map configuration and production asset exclusions are documented once in
 [development](development.md#ports-and-environment); never hide the PrimeUI license notice.
@@ -164,24 +164,24 @@ for shell, PrimeNG texts, patterns and connected features. Preserve key/placehol
 PrimeNG uses localized calendar/overlay labels, the saved Branch date format and Monday first. Source record text
 is not translated.
 
-## Patterns (`src/app/ui`)
+## Patterns (`osnova/packages/ui/src/ui`)
 
 Use components only for repeated structure/state/behavior. Single PrimeNG controls stay direct.
 Components are standalone and OnPush, with signal inputs/outputs, `discocan-` selectors and BG/EN
 texts. Source files define full signatures; the table identifies which pattern to use.
 
-| Pattern                                                                 | Use and required behavior                                                                                                     |
-| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `discocan-page-header`                                                  | One page `h1` with `id="page-title"`, optional count/back link, one primary action and a complete action menu                 |
-| `discocan-kpi-strip` / `discocan-kpi-tile`                              | Named group, optional icon/category/status tint and record link; stable loading tracks; null shows “—” without a unit         |
-| `discocan-filter-builder`                                               | Quick search and independent AND conditions; bounds/errors stay visible; incomplete/invalid drafts cannot apply               |
-| `discocan-table-panel`                                                  | Shared offset/cursor/local geometry, column skeletons, retained refresh/stale rows, empty/error states, selection and actions |
-| `discocan-row-actions`                                                  | Named row menu; send choices through `TablePanel.run`; destructive actions last                                               |
-| `discocan-menu-button`                                                  | Accessible popup actions/navigation; real anchors for routes, current-choice labels and disabled/danger states                |
-| `discocan-route-drawer`                                                 | Loading/missing/error/ready states, labelled Close, sticky footer, dirty/pending guards                                       |
-| `discocan-form-field`                                                   | Label/control/hint/error association, required state and Unicode counter                                                      |
-| `discocan-empty-state`                                                  | Empty/no-results/error/missing/disabled/no-telemetry/done; alert only for errors/missing records                              |
-| `discocan-column-series`, `discocan-stacked-bars`, `discocan-sparkline` | Accessible chart/table alternatives, null gaps and preserved zero values                                                      |
+| Pattern                                                           | Use and required behavior                                                                                                     |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `osnova-page-header`                                              | One page `h1` with `id="page-title"`, optional count/back link, one primary action and a complete action menu                 |
+| `osnova-kpi-strip` / `osnova-kpi-tile`                            | Named group, optional icon/category/status tint and record link; stable loading tracks; null shows “—” without a unit         |
+| `osnova-filter-builder`                                           | Quick search and independent AND conditions; bounds/errors stay visible; incomplete/invalid drafts cannot apply               |
+| `osnova-table-panel`                                              | Shared offset/cursor/local geometry, column skeletons, retained refresh/stale rows, empty/error states, selection and actions |
+| `osnova-row-actions`                                              | Named row menu; send choices through `TablePanel.run`; destructive actions last                                               |
+| `osnova-menu-button`                                              | Accessible popup actions/navigation; real anchors for routes, current-choice labels and disabled/danger states                |
+| `osnova-route-drawer`                                             | Loading/missing/error/ready states, labelled Close, sticky footer, dirty/pending guards                                       |
+| `osnova-form-field`                                               | Label/control/hint/error association, required state and Unicode counter                                                      |
+| `osnova-empty-state`                                              | Empty/no-results/error/missing/disabled/no-telemetry/done; alert only for errors/missing records                              |
+| `osnova-column-series`, `osnova-stacked-bars`, `osnova-sparkline` | Accessible chart/table alternatives, null gaps and preserved zero values                                                      |
 
 Page headers show a title and count on the left, and at most one primary action followed by the
 page-action menu on the right. Define actions once with `actions`; mark the primary action with
@@ -233,7 +233,7 @@ or actions. Keep source identity, retrieval and event clocks, gaps and missing f
 
 ### Maps and charts
 
-`discocan-location-map` (`ui/location-map`) uses Google Maps JavaScript API for one record or a
+`discocan-location-map` (`discocan/apps/admin/src/app/ui/location-map`) uses Google Maps JavaScript API for one record or a
 fleet, with truck pins coloured by status, a recorded track and a matching accessible list.
 Selected pins are highlighted; heading arrows appear only for fresh moving positions.
 Callers establish motion with optional canonical `speedKph` or source-provided `moving`; a heading
@@ -252,7 +252,7 @@ actions available. Browser key and Map ID configuration are documented in
 [development](development.md#ports-and-environment). Google external links remain available.
 Review `Design System/Maps` for missing-key, fleet, single, stale, heading/track and narrow states.
 
-`discocan-chart-panel` (`ui/chart-panel`) uses `p-chart`/Chart.js for donut, line and bar summaries.
+`osnova-chart-panel` (`ui/chart-panel`) uses `p-chart`/Chart.js for donut, line and bar summaries.
 Supply localized point/series labels, canonical numeric values, units, time zone/date format,
 period/as-of and a useful summary. Null values remain gaps; measured zero stays zero. Category
 slots c1–c8 and explicit status tones resolve from the current tokens at runtime, including brand
@@ -312,7 +312,7 @@ Cancel restores trigger focus; destructive/bulk actions restore the panel headin
 
 ### Operation feedback
 
-`AdminWorkspace` owns one `discocan-operation-toast` outlet and scoped `MessageService`; stories use
+`AdminWorkspace` owns one `osnova-operation-toast` outlet and scoped `MessageService`; stories use
 the same presentation. Workspace changes clear messages. Publish one batch result, retaining
 failed record labels/details. Success closes after five seconds; warning/error stays until dismissed.
 The top-right outlet must not shift page/table layout or steal focus.
@@ -377,7 +377,7 @@ The speed reference generates no alert or device command.
 
 ## Design page
 
-The development-only `/:language/design` page displays the theme and shared patterns.
+The development-only `/:language/design` page displays the theme and shared patterns. Applications can mount `loadDesignPage` from `@osnova/ui`; the Discocan wrapper projects its Fleet examples into the shared page.
 
 ## Changing the design centrally
 
@@ -386,9 +386,9 @@ The development-only `/:language/design` page displays the theme and shared patt
 3. Brand/density: update choice unions/arrays and records; extend palette unions when needed.
 4. Pattern: change the shared component/CSS once and its design page block.
 5. Breakpoint: update the Sass map, test-setup restatement, `BreakpointName` and design page.
-6. Layer order: change `_layers.scss` and `discocanThemeOptions.cssLayer.order` together.
+6. Layer order: change `_layers.scss` and `uiThemeOptions.cssLayer.order` together.
 7. PrimeNG control: follow [usage rules](#primeng-usage-rules) and coverage.
-8. Font weight: add its licensed WOFF under `public/fonts/lato` and the `_fonts.scss` weight entry.
+8. Font weight: add its licensed WOFF under `discocan/apps/admin/public/fonts/lato` and the `_fonts.scss` weight entry.
 
 Follow [focused validation](../.agents/skills/discocan-focused-validation/SKILL.md) at handover;
 review the development design page and changed screens at desktop and 375 px.

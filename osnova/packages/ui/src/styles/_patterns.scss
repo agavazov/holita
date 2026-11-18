@@ -1,0 +1,947 @@
+// Domain-neutral CSS patterns (spec 3.1). Components own their structure; these classes are pure
+// presentation shared by every screen.
+@use 'breakpoints' as bp;
+
+$tones: success, info, warn, danger, neutral, accent;
+$categories: c1, c2, c3, c4, c5, c6, c7, c8;
+
+@layer osnova {
+  // Brand mark and word, used by the sidebar, the topbar below `lg` and the login page.
+  .app-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--p-app-space-2);
+    border-radius: var(--p-app-radius-control);
+    font-size: 1.0625rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--p-text-color);
+  }
+
+  .app-logo__mark {
+    display: grid;
+    place-items: center;
+    flex: none;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    border-radius: var(--p-app-radius-panel);
+    background: var(--p-primary-color);
+    color: var(--p-primary-contrast-color);
+    font-size: 1.125rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  // Square ghost button for icon-only actions (topbar, panels, popover triggers).
+  .app-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    inline-size: var(--p-app-control-height);
+    block-size: var(--p-app-control-height);
+    padding: 0;
+    border: 0;
+    border-radius: var(--p-app-radius-control);
+    background: transparent;
+    color: var(--p-text-muted-color);
+    cursor: pointer;
+    transition:
+      background-color var(--p-transition-duration),
+      color var(--p-transition-duration);
+
+    &:hover:not(:disabled) {
+      background: var(--p-content-hover-background);
+      color: var(--p-text-color);
+    }
+
+    &:disabled {
+      opacity: var(--p-disabled-opacity);
+      cursor: default;
+    }
+
+    svg {
+      inline-size: 1rem;
+      block-size: 1rem;
+    }
+  }
+
+  .app-link {
+    color: var(--p-primary-color);
+    font-weight: 500;
+    text-underline-offset: 0.2em;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  // The record link of a table row that opens its drawer.
+  button.app-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  // Panel surface for cards, KPI strips and table panels.
+  .app-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p-app-space-3);
+    min-inline-size: 0;
+    padding: var(--p-app-panel-padding);
+    background: var(--p-app-panel-background);
+    border: 1px solid var(--p-app-panel-border-color);
+    border-radius: var(--p-app-panel-radius);
+  }
+
+  // A page view (`host: { class: 'app-view' }`): header, KPIs, filters and panels stacked.
+  .app-view,
+  .app-tab-content {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--p-app-stack-gap);
+    min-inline-size: 0;
+  }
+
+  // Stretch siblings inside a card; app-stack is reserved for start-aligned content.
+  .app-card__body {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--p-app-space-3);
+    min-inline-size: 0;
+  }
+
+  .app-card--accent {
+    background: var(--p-app-panel-accent-background);
+    color: var(--p-app-panel-accent-color);
+
+    :is(h2, h3, .app-card__title) {
+      color: inherit;
+    }
+
+    .app-link {
+      color: inherit;
+      text-decoration: underline;
+    }
+  }
+
+  // Route-backed sections: real links with an underline and a non-colour current-page cue.
+  .app-route-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--p-app-space-1);
+    min-inline-size: 0;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    border-block-end: 1px solid var(--p-content-border-color);
+
+    > li {
+      display: flex;
+      flex: none;
+      min-inline-size: 0;
+    }
+  }
+
+  .app-route-nav__link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--p-app-space-2);
+    min-block-size: var(--p-app-control-height);
+    padding: var(--p-app-space-3) var(--p-app-space-4);
+    border: 0;
+    border-block-end: 2px solid transparent;
+    border-radius: var(--p-app-radius-control) var(--p-app-radius-control) 0 0;
+    background: transparent;
+    color: var(--p-text-muted-color);
+    font: inherit;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--p-text-color);
+      background: var(--p-content-hover-background);
+    }
+
+    &:focus-visible {
+      outline-offset: calc(-1 * var(--p-focus-ring-width));
+    }
+  }
+
+  .app-route-nav__link--active {
+    color: var(--p-highlight-color);
+    background: var(--p-highlight-background);
+    border-block-end-color: var(--p-primary-color);
+    font-weight: 600;
+  }
+
+  // Context actions follow the identity header and section navigation.
+  .app-context-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--p-app-space-3);
+    min-inline-size: 0;
+
+    > h2 {
+      margin: 0;
+      font-size: var(--p-app-text-lg);
+    }
+  }
+
+  .app-page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--p-app-space-2);
+  }
+
+  .app-filter-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    align-items: end;
+    gap: var(--p-app-space-3);
+  }
+
+  .app-filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--p-app-space-2);
+  }
+
+  .app-filter-hint {
+    grid-column: 1 / -1;
+  }
+
+  .app-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--p-app-space-3);
+  }
+
+  .app-source-details {
+    min-inline-size: 0;
+
+    > summary {
+      padding-block: var(--p-app-space-3);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    > :not(summary) {
+      margin-block-start: var(--p-app-space-3);
+    }
+
+    dd {
+      white-space: pre-wrap;
+    }
+  }
+
+  // Vertical stack of blocks (messages, text, actions) inside a card.
+  .app-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--p-app-space-3);
+    min-inline-size: 0;
+  }
+
+  .app-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--p-app-space-3);
+    min-inline-size: 0;
+  }
+
+  .app-card__title {
+    font-size: var(--p-app-text-md);
+    font-weight: 600;
+  }
+
+  .app-card-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--p-app-stack-gap);
+
+    @include bp.from(md) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @include bp.from(xl) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  // Definition-list facts: label above value in an auto-filling grid.
+  .app-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: var(--p-app-space-4) var(--p-app-space-5);
+    margin: 0;
+
+    > div {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-inline-size: 0;
+    }
+
+    dt {
+      font-size: var(--p-app-text-sm);
+      color: var(--p-text-muted-color);
+    }
+
+    dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .app-facts--wide {
+    grid-column: 1 / -1;
+  }
+
+  // Editor drawers: titled sections with a responsive one/two-column field grid.
+  .app-form-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p-app-space-4);
+    padding-block: var(--p-app-space-5);
+    border-block-start: 1px solid var(--p-content-border-color);
+
+    &:first-child {
+      padding-block-start: var(--p-app-space-1);
+      border-block-start: 0;
+    }
+
+    > h3 {
+      font-size: var(--p-app-text-base);
+      font-weight: 600;
+    }
+
+    > p {
+      margin-block-start: calc(-1 * var(--p-app-space-3));
+      font-size: var(--p-app-text-sm);
+      color: var(--p-text-muted-color);
+    }
+  }
+
+  .app-form-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--p-app-space-4);
+
+    @include bp.from(sm) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    > .app-form-grid--wide {
+      grid-column: 1 / -1;
+    }
+  }
+
+  // Controls projected into FormField fill its width.
+  osnova-form-field > :is(input, textarea, p-select, p-autocomplete, p-inputnumber, p-datepicker) {
+    inline-size: 100%;
+  }
+
+  // Route drawers (RouteDrawer): token widths, full width on narrow screens.
+  .p-drawer.app-route-drawer {
+    inline-size: var(--p-app-drawer-width-md);
+    max-inline-size: 100vw;
+    // Appended to the body, the drawer misses PrimeNG's positional border widths; only the
+    // inner edge has a border.
+    border-width: 0;
+    border-inline-start: 1px solid var(--p-content-border-color);
+    box-shadow: var(--p-app-shadow-floating);
+
+    &.app-route-drawer--lg {
+      inline-size: var(--p-app-drawer-width-lg);
+    }
+
+    @include bp.below(md) {
+      inline-size: 100vw;
+      border-inline-start: 0;
+    }
+  }
+
+  // Sticky drawer footer actions: primary action last on the right; stacked on phones.
+  // Page forms (settings): each card has its title and hint beside the fields on wide screens.
+  .app-settings-section {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--p-app-space-4);
+
+    @include bp.from(lg) {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      gap: var(--p-app-space-6);
+    }
+
+    > header {
+      display: flex;
+      flex-direction: column;
+      gap: var(--p-app-space-1);
+
+      > h2 {
+        font-size: var(--p-app-text-md);
+        font-weight: 600;
+      }
+
+      > p {
+        font-size: var(--p-app-text-sm);
+        color: var(--p-text-muted-color);
+      }
+    }
+  }
+
+  // Page forms: Discard and Save stick to the bottom of the viewport while there are changes.
+  .app-save-bar {
+    position: sticky;
+    inset-block-end: var(--p-app-space-3);
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--p-app-space-3);
+    padding: var(--p-app-space-3) var(--p-app-space-4);
+    background: var(--p-app-panel-background);
+    border: 1px solid var(--p-app-panel-border-color);
+    border-radius: var(--p-app-panel-radius);
+    box-shadow: var(--p-app-shadow-floating);
+  }
+
+  .app-drawer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--p-app-space-2);
+
+    @include bp.below(sm) {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+  }
+
+  // Status and category dots; colour never carries meaning alone (a label sits beside it).
+  .app-dot {
+    display: inline-block;
+    flex: none;
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background: currentColor;
+    vertical-align: middle;
+  }
+
+  @each $tone in $tones {
+    .app-dot--#{$tone} {
+      background: var(--p-app-tone-#{$tone}-solid);
+    }
+
+    .app-problem-panel--#{$tone},
+    .app-icon-well--#{$tone} {
+      --app-tone-background: var(--p-app-tone-#{$tone}-background);
+      --app-tone-color: var(--p-app-tone-#{$tone}-color);
+      --app-tone-solid: var(--p-app-tone-#{$tone}-solid);
+    }
+  }
+
+  @each $slot in $categories {
+    .app-dot--#{$slot} {
+      background: var(--p-app-category-#{$slot});
+    }
+
+    .app-icon-well--#{$slot} {
+      --app-tone-background: var(--p-app-category-#{$slot}-background);
+      --app-tone-color: var(--p-app-category-#{$slot}-color);
+    }
+  }
+
+  .app-icon-well {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    inline-size: var(--p-app-control-height);
+    block-size: var(--p-app-control-height);
+    border-radius: var(--p-app-radius-control);
+    background: var(--app-tone-background, var(--p-app-accent-background));
+    color: var(--app-tone-color, var(--p-app-accent-color));
+
+    > svg {
+      inline-size: 1rem;
+      block-size: 1rem;
+    }
+  }
+
+  .app-problem-panel {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--p-app-space-3);
+    min-inline-size: 0;
+    padding: var(--p-app-space-4);
+    border-inline-start: 3px solid var(--app-tone-solid, var(--p-app-tone-info-solid));
+    border-radius: var(--p-app-radius-control);
+    background: var(--app-tone-background, var(--p-app-tone-info-background));
+    color: var(--app-tone-color, var(--p-app-tone-info-color));
+
+    :is(h2, h3, .app-card__title) {
+      color: inherit;
+    }
+
+    .app-link {
+      color: inherit;
+      text-decoration: underline;
+    }
+  }
+
+  .app-num {
+    font-variant-numeric: var(--p-app-font-numeric);
+    white-space: nowrap;
+  }
+
+  th.app-num,
+  td.app-num {
+    text-align: end;
+  }
+
+  .app-mono {
+    font-family: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, monospace;
+    font-size: 0.92em;
+    letter-spacing: 0;
+  }
+
+  // Compact EU-style plate, usable on records, table identities and map popups.
+  // data-country is optional; supply the actual registration country when it is known.
+  .app-plate {
+    display: inline-flex;
+    align-items: stretch;
+    flex: none;
+    max-inline-size: 100%;
+    overflow: hidden;
+    border: 1px solid var(--p-app-plate-border-color);
+    border-radius: var(--p-app-radius-tag);
+    background: var(--p-app-plate-background);
+    color: var(--p-app-plate-color);
+    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    font-size: var(--p-app-text-base);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+    white-space: nowrap;
+    vertical-align: middle;
+
+    &::before {
+      content: attr(data-country);
+      display: grid;
+      place-items: center;
+      flex: none;
+      min-inline-size: 1.1rem;
+      margin-inline-end: var(--p-app-space-2);
+      padding-inline: var(--p-app-space-1);
+      background: var(--p-app-plate-band-background);
+      color: var(--p-app-plate-band-color);
+      font-family: var(--p-app-font-family);
+      font-size: var(--p-app-text-xs);
+      letter-spacing: 0;
+    }
+
+    &::after {
+      content: '';
+      flex: none;
+      inline-size: var(--p-app-space-2);
+    }
+  }
+
+  .app-muted {
+    color: var(--p-text-muted-color);
+  }
+
+  // One-line cell text cut with an ellipsis; the host puts the full text in `title`.
+  .app-cell-truncate {
+    display: block;
+    max-inline-size: var(--app-truncate-width, 28rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Opt in after defining explicit columns; old lists keep their intrinsic geometry until migrated.
+  .app-table-fixed .p-datatable-table,
+  table.app-table-fixed {
+    table-layout: fixed;
+    min-inline-size: var(--app-table-min-width, 100%);
+  }
+
+  // All tables share cell alignment, including record links and action buttons.
+  th,
+  td {
+    vertical-align: middle;
+  }
+
+  td :is(a, button, p-tag) {
+    vertical-align: middle;
+  }
+
+  td :is(a, button).app-link {
+    margin: 0;
+    text-align: start;
+    line-height: inherit;
+  }
+
+  .app-cell-identity {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: var(--p-app-space-1);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    block-size: calc(var(--p-app-space-8) + var(--p-app-space-1));
+    overflow: hidden;
+    line-height: 1.2;
+
+    > * {
+      min-inline-size: 0;
+      max-inline-size: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    > :nth-child(2) {
+      color: var(--p-text-muted-color);
+      font-size: var(--p-app-text-sm);
+    }
+
+    .app-plate {
+      align-self: flex-start;
+      color: var(--p-app-plate-color);
+      font-size: var(--p-app-text-table);
+      line-height: 1.1;
+    }
+  }
+
+  .app-cell-status,
+  .app-cell-problems {
+    display: flex;
+    align-items: center;
+    gap: var(--p-app-space-2);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+
+    > :is(span, a, button) {
+      min-inline-size: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    > p-tag {
+      flex: none;
+      max-inline-size: 100%;
+    }
+
+    .p-tag {
+      max-inline-size: 100%;
+      overflow: hidden;
+    }
+
+    .p-tag-label {
+      min-inline-size: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .app-cell-date,
+  .app-cell-number {
+    overflow: hidden;
+    font-variant-numeric: var(--p-app-font-numeric);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-cell-number {
+    text-align: end;
+  }
+
+  :is(.app-cell-date, .app-cell-number):not(td):not(th) {
+    display: block;
+    max-inline-size: 100%;
+  }
+
+  // Popup menus (MenuButton `menuClass`): a capped, scrolling list and a wider panel.
+  .p-menu.app-menu-scroll .p-menu-list {
+    max-block-size: min(24rem, 60vh);
+    overflow-y: auto;
+  }
+
+  .p-menu.app-menu-wide {
+    inline-size: min(24rem, calc(100vw - 2rem));
+  }
+
+  // Destructive entries of popup menus (row actions are appended to the body).
+  .p-menu .app-menu-danger .p-menu-item-content,
+  .p-menu .app-menu-danger .p-menu-item-link,
+  .p-menu .app-menu-danger .p-menu-item-icon {
+    color: var(--p-app-tone-danger-color);
+  }
+
+  // Headings wrap within their columns; row values keep a single line and scroll with the table.
+  // Long free text uses `.app-cell-truncate`.
+  th,
+  .p-datatable-thead > tr > th {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .p-datatable-tbody > tr > td {
+    white-space: nowrap;
+  }
+
+  // The scroll container is focusable (provideOsnovaTheme) so the keyboard can scroll it.
+  .p-datatable-table-container:focus-visible {
+    outline: var(--p-focus-ring-width) var(--p-focus-ring-style) var(--p-focus-ring-color);
+    outline-offset: calc(-1 * var(--p-focus-ring-width));
+  }
+
+  // Two-line table cell: primary line plus a muted secondary line.
+  .app-cell-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-inline-size: 0;
+
+    > :nth-child(2) {
+      font-size: var(--p-app-text-sm);
+      color: var(--p-text-muted-color);
+    }
+  }
+
+  // Thin horizontal meter; the host sets `--app-meter-value` (0–100%).
+  .app-meter {
+    position: relative;
+    display: block;
+    inline-size: 100%;
+    min-inline-size: 3rem;
+    block-size: 0.375rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--p-content-hover-background);
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: 0;
+      inline-size: var(--app-meter-value, 0%);
+      border-radius: inherit;
+      background: var(--app-meter-color, var(--p-primary-color));
+    }
+  }
+
+  @each $tone in $tones {
+    .app-meter--#{$tone} {
+      --app-meter-color: var(--p-app-tone-#{$tone}-solid);
+    }
+  }
+
+  // A value with its marker on one line: a dot before a label, a tag after a date.
+  .app-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--p-app-space-2);
+  }
+
+  // Table cell with a short meter and its value (fuel level, score).
+  .app-meter-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--p-app-space-2);
+    min-inline-size: 6.5rem;
+    font-variant-numeric: var(--p-app-font-numeric);
+
+    .app-meter {
+      inline-size: 3.5rem;
+    }
+  }
+
+  // Secondary table columns disappear on narrow screens.
+  .app-col-secondary {
+    @include bp.below(md) {
+      display: none;
+    }
+  }
+
+  // Narrow fixed columns: the selection checkbox first, the row-actions menu last.
+  .app-col-check {
+    inline-size: 3rem;
+  }
+
+  .app-col-actions {
+    inline-size: 3.25rem;
+    text-align: end;
+  }
+
+  .app-col-actions-pair {
+    inline-size: 7rem;
+  }
+
+  .app-table-inline-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--p-app-space-1);
+    white-space: nowrap;
+  }
+
+  // One compact identity stays with its row actions while the remaining values scroll.
+  .app-table-mobile-actions,
+  .app-table-mobile-meta {
+    display: none;
+  }
+
+  @include bp.below(sm) {
+    .app-responsive-table {
+      .app-col-actions,
+      .app-table-merged-column {
+        display: none;
+      }
+
+      .app-col-identity {
+        position: sticky;
+        inset-inline-start: 0;
+        z-index: 1;
+        vertical-align: middle;
+        white-space: normal;
+        border-inline-end: 1px solid var(--p-content-border-color);
+        background: var(--p-content-background);
+
+        > .app-cell-stack,
+        > .app-cell-identity,
+        > .app-table-identity {
+          inline-size: 8.5rem;
+          min-inline-size: 8.5rem;
+          max-inline-size: 8.5rem;
+          overflow-wrap: anywhere;
+        }
+
+        .app-link,
+        .content-link {
+          display: -webkit-box;
+          overflow: hidden;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+          white-space: normal;
+          overflow-wrap: anywhere;
+          text-align: start;
+        }
+
+        .app-cell-identity .app-link {
+          display: block;
+          white-space: nowrap;
+        }
+      }
+
+      .p-datatable-thead .app-col-identity {
+        z-index: 2;
+        background: var(--p-app-panel-header-background);
+      }
+
+      .app-table-mobile-meta {
+        display: block;
+        font-size: var(--p-app-text-sm);
+        color: var(--p-text-muted-color);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .app-table-mobile-actions {
+        display: flex;
+        margin-block-start: var(--p-app-space-2);
+      }
+
+      .p-datatable-tbody > tr:hover > .app-col-identity {
+        background: var(--p-app-panel-header-background);
+      }
+
+      .p-datatable-tbody > tr[aria-selected='true'] > .app-col-identity {
+        background: var(--p-highlight-background);
+      }
+    }
+  }
+
+  // Content template for p-timeline events.
+  .app-timeline-event {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-block-end: var(--p-app-space-4);
+  }
+
+  .app-timeline-event__title {
+    font-weight: 600;
+  }
+
+  .app-timeline-event__meta {
+    font-size: var(--p-app-text-sm);
+    color: var(--p-text-muted-color);
+  }
+
+  .app-timeline-event__body {
+    margin-block-start: var(--p-app-space-1);
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+
+  // TablePanel confirmation content is displayed in an overlay appended to the body.
+  .table-panel__confirm {
+    display: flex;
+    flex-direction: column;
+    gap: var(--p-app-space-3);
+    min-inline-size: 0;
+    inline-size: 100%;
+  }
+
+  .table-panel__confirm-records {
+    max-block-size: min(16rem, 40dvh);
+    overflow-y: auto;
+    margin: 0;
+    padding: var(--p-app-space-2) var(--p-app-space-3);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-app-radius-control);
+    list-style: none;
+
+    > li {
+      padding-block: var(--p-app-space-1);
+      overflow: hidden;
+      font-weight: 600;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .table-panel__confirm-count,
+  .table-panel__confirm-skipped {
+    font-weight: 400;
+    color: var(--p-text-muted-color);
+  }
+}

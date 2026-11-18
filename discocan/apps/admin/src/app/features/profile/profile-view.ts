@@ -24,13 +24,13 @@ import type {
   AdminProfileQuery,
   AdminUpdateProfileMutationVariables,
 } from '../../../generated/graphql/operations';
-import { confirmDialogPt, confirmDiscard } from '../../ui/confirm';
-import { EmptyState } from '../../ui/empty-state/empty-state';
-import { FormField } from '../../ui/form-field/form-field';
-import { focusFirstInvalid } from '../../ui/forms/focus';
-import { textValidator, validationMessage } from '../../ui/forms/validators';
-import { PageHeader } from '../../ui/page-header/page-header';
-import { UI_LANGUAGE } from '../../ui/ui-language';
+import { confirmDialogPt, confirmDiscard } from '@osnova/ui';
+import { EmptyState } from '@osnova/ui';
+import { FormField } from '@osnova/ui';
+import { focusFirstInvalid } from '@osnova/ui';
+import { textValidator, validationMessage } from '@osnova/ui';
+import { PageHeader } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { profileText } from './i18n/messages';
 
 export type ProfileField = 'name' | 'email';

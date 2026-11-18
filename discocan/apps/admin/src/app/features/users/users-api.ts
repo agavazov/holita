@@ -17,7 +17,7 @@ import { DemoSession } from '../../core/auth/demo-session';
 import { AdminConfig } from '../../core/config/admin-config';
 import { graphqlOptions } from '../../core/graphql/graphql-options';
 import type { Language } from '../../i18n/messages';
-import { errorCode } from '../../ui/forms/field-errors';
+import { errorCode } from '@osnova/ui';
 
 /** One captured organization session and language, independent of the selected Branch. */
 @Injectable()

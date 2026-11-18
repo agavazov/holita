@@ -1,4 +1,4 @@
-<discocan-route-drawer
+<osnova-route-drawer
   [title]="title()"
   [subtitle]="modelSubtitle()"
   [saving]="saving()"
@@ -25,7 +25,7 @@
       <section class="app-form-section">
         <h3>{{ text().installation }}</h3>
         <div class="app-form-grid">
-          <discocan-form-field
+          <osnova-form-field
             [label]="text().imei"
             controlId="device-imei"
             [hint]="text().imeiHint"
@@ -42,8 +42,8 @@
               [attr.aria-invalid]="errorOf('imei') ? 'true' : null"
               [attr.aria-describedby]="describedBy('imei')"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().serialNumber"
             controlId="device-serialNumber"
             [hint]="text().serialNumberHint"
@@ -58,8 +58,8 @@
               [attr.aria-invalid]="errorOf('serialNumber') ? 'true' : null"
               [attr.aria-describedby]="describedBy('serialNumber')"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().model"
             controlId="device-model"
             [error]="errorOf('model')"
@@ -81,8 +81,8 @@
                 },
               }"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().options"
             controlId="device-options"
             [error]="errorOf('options')"
@@ -99,8 +99,8 @@
               [ariaLabel]="text().options"
               [invalid]="!!errorOf('options')"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().firmware"
             controlId="device-firmwareVersion"
             [error]="errorOf('firmwareVersion')"
@@ -113,8 +113,8 @@
               [attr.aria-invalid]="errorOf('firmwareVersion') ? 'true' : null"
               [attr.aria-describedby]="describedBy('firmwareVersion')"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().edataModule"
             controlId="device-edataModule"
             [hint]="text().edataModuleHint"
@@ -128,8 +128,8 @@
               [attr.aria-invalid]="errorOf('edataModule') ? 'true' : null"
               [attr.aria-describedby]="describedBy('edataModule')"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().simPhone"
             controlId="device-simPhoneNumber"
             [error]="errorOf('simPhoneNumber')"
@@ -142,8 +142,8 @@
               [attr.aria-invalid]="errorOf('simPhoneNumber') ? 'true' : null"
               [attr.aria-describedby]="describedBy('simPhoneNumber')"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().smsPassword"
             controlId="device-smsPassword"
             [hint]="text().smsPasswordHint"
@@ -159,8 +159,8 @@
               [attr.aria-invalid]="errorOf('smsPassword') ? 'true' : null"
               [attr.aria-describedby]="describedBy('smsPassword')"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().installedAt"
             controlId="device-installedAt"
             [hint]="installedAtHint()"
@@ -183,8 +183,8 @@
               [invalid]="!!errorOf('installedAt')"
               [pt]="installedAtPt()"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().sim"
             controlId="device-simIccid"
             [hint]="text().simHint"
@@ -200,8 +200,8 @@
               [attr.aria-invalid]="errorOf('simIccid') ? 'true' : null"
               [attr.aria-describedby]="describedBy('simIccid')"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             [label]="text().vehicle"
             controlId="device-vehicleId"
             [error]="errorOf('vehicleId')"
@@ -223,8 +223,8 @@
                 },
               }"
             />
-          </discocan-form-field>
-          <discocan-form-field
+          </osnova-form-field>
+          <osnova-form-field
             class="app-form-grid--wide"
             [label]="text().notes"
             controlId="device-notes"
@@ -240,7 +240,7 @@
               [attr.aria-invalid]="errorOf('notes') ? 'true' : null"
               [attr.aria-describedby]="describedBy('notes')"
             ></textarea>
-          </discocan-form-field>
+          </osnova-form-field>
         </div>
       </section>
     </form>
@@ -268,4 +268,4 @@
       </button>
     </div>
   }
-</discocan-route-drawer>
+</osnova-route-drawer>

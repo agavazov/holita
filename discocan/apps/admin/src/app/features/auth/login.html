@@ -19,7 +19,7 @@
         [attr.lang]="language() === 'bg' ? 'en' : 'bg'"
         >{{ language() === 'bg' ? 'English' : 'Български' }}</a
       >
-      <discocan-theme-menu />
+      <osnova-theme-menu />
     </div>
     <main class="login-container">
       <section class="login-card app-card" aria-labelledby="login-title">
@@ -63,7 +63,7 @@
             </button>
           }
           @if (branches().length) {
-            <discocan-form-field
+            <osnova-form-field
               controlId="login-branch"
               [label]="text().chooseBranch"
               [required]="true"
@@ -79,7 +79,7 @@
                 [disabled]="branchesLoading() || submitted()"
                 appendTo="body"
               />
-            </discocan-form-field>
+            </osnova-form-field>
             <button
               pButton
               type="button"
@@ -117,7 +117,7 @@
             (ngSubmit)="login()"
             [attr.aria-busy]="busy()"
           >
-            <discocan-form-field
+            <osnova-form-field
               controlId="login-email"
               [label]="text().email"
               [error]="fieldError('email')"
@@ -134,8 +134,8 @@
                 [attr.aria-invalid]="!!fieldError('email')"
                 [attr.aria-describedby]="fieldError('email') ? 'login-email-error' : null"
               />
-            </discocan-form-field>
-            <discocan-form-field
+            </osnova-form-field>
+            <osnova-form-field
               controlId="login-password"
               [label]="text().password"
               [error]="fieldError('password')"
@@ -151,7 +151,7 @@
                 [attr.aria-invalid]="!!fieldError('password')"
                 [attr.aria-describedby]="fieldError('password') ? 'login-password-error' : null"
               />
-            </discocan-form-field>
+            </osnova-form-field>
             <button pButton type="submit" [disabled]="busy() || session.signingOut()">
               {{ busy() ? text().signingIn : text().signIn }}
             </button>
@@ -172,7 +172,7 @@
               <section class="app-form-section" aria-labelledby="demo-title">
                 <h2 id="demo-title">{{ text().demo }}</h2>
                 <p class="app-muted">{{ text().demoHint }}</p>
-                <discocan-form-field controlId="login-tenant" [label]="text().tenant">
+                <osnova-form-field controlId="login-tenant" [label]="text().tenant">
                   <p-select
                     inputId="login-tenant"
                     [options]="tenants()"
@@ -184,7 +184,7 @@
                     [loading]="tenantsLoading()"
                     appendTo="body"
                   />
-                </discocan-form-field>
+                </osnova-form-field>
                 @if (!tenantsLoading() && !tenants().length && !failure()) {
                   <p>{{ text().emptyTenants }}</p>
                 }

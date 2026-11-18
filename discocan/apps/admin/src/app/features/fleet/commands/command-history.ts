@@ -5,17 +5,12 @@ import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { Language } from '../../../i18n/messages';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import {
-  listRecord,
-  trackById,
-  type ListAction,
-  type ListActionRequest,
-} from '../../../ui/list/list-actions';
-import { RowActions } from '../../../ui/row-actions/row-actions';
-import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
-import { ListSortMenu } from '../../../ui/list/list-sort-menu';
-import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-panel';
-import { tableView } from '../../../ui/table-panel/table-view';
+import { listRecord, trackById, type ListAction, type ListActionRequest } from '@osnova/ui';
+import { RowActions } from '@osnova/ui';
+import { injectSortReady, listQuery, type ListQuery } from '@osnova/ui';
+import { ListSortMenu } from '@osnova/ui';
+import { TablePanel, type TableColumn } from '@osnova/ui';
+import { tableView } from '@osnova/ui';
 import {
   commandOutcome,
   commandPurpose,

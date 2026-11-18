@@ -22,19 +22,19 @@ import {
   type ChartPanelPoint,
   type ChartPanelSelection,
   type ChartPanelSeries,
-} from '../../../ui/chart-panel/chart-panel';
-import { EmptyState } from '../../../ui/empty-state/empty-state';
+} from '@osnova/ui';
+import { EmptyState } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { formatNumber } from '../../../ui/format/format';
-import { interpolate } from '../../../ui/i18n/messages';
-import { KpiStrip } from '../../../ui/kpi/kpi-strip';
-import { KpiTile } from '../../../ui/kpi/kpi-tile';
+import { formatNumber } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { KpiStrip } from '@osnova/ui';
+import { KpiTile } from '@osnova/ui';
 import { LocationMap, type LocationMapRecord } from '../../../ui/location-map/location-map';
-import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-panel';
-import { tableView } from '../../../ui/table-panel/table-view';
-import { toneSeverity } from '../../../ui/tones';
-import { UI_LANGUAGE } from '../../../ui/ui-language';
-import { PageHeader } from '../../../ui/page-header/page-header';
+import { TablePanel, type TableColumn } from '@osnova/ui';
+import { tableView } from '@osnova/ui';
+import { toneSeverity } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
+import { PageHeader } from '@osnova/ui';
 import { maintenanceText } from '../maintenance/i18n/messages';
 import { overviewText } from './i18n/messages';
 import { problemTitle, problemsText, problemSeverityTones } from './problems-presentation';

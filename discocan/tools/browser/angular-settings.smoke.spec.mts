@@ -82,7 +82,7 @@ test('persists General settings and the Core Branch name, applies display units 
   await expect(page.getByText('Settings saved.', { exact: true })).toBeVisible();
   await expect(
     page
-      .locator('discocan-admin-topbar')
+      .locator('osnova-admin-topbar')
       .getByRole('button', { name: 'Branch: Browser Fleet', exact: true }),
   ).toBeVisible();
   await page.reload();
@@ -105,7 +105,7 @@ test('persists General settings and the Core Branch name, applies display units 
   });
   await page.goto(app.url + `/en/${branchA.id}/fleet/vehicles/${vehicleId}/overview`);
   const odometer = page
-    .locator('discocan-kpi-tile')
+    .locator('osnova-kpi-tile')
     .filter({ has: page.getByText('Odometer', { exact: true }) });
   await expect(odometer.locator('.kpi-tile__value .app-num')).toHaveText('1,000');
   await expect(odometer.locator('.kpi-tile__unit')).toHaveText('mi');

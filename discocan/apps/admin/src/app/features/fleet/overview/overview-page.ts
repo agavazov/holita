@@ -19,7 +19,7 @@ import type {
 } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
 import { messages, type Language } from '../../../i18n/messages';
-import { WALL_CLOCK } from '../../../ui/clock';
+import { WALL_CLOCK } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { OverviewApi } from './overview-api';
 import { OverviewView, type OverviewLinks } from './overview-view';

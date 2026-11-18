@@ -19,19 +19,16 @@ import { ButtonDirective } from 'primeng/button';
 import { DatePicker } from 'primeng/datepicker';
 import { InputNumber } from 'primeng/inputnumber';
 import { Message } from 'primeng/message';
-import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
-import { FormField } from '../../../ui/form-field/form-field';
-import { FormatDateTimePipe } from '../../../ui/format/format.pipes';
-import { defaultDateFormat, type FleetDateFormat } from '../../../ui/format/format';
-import {
-  dateTimePickerInputInstants,
-  formatDateTimePickerInput,
-} from '../../../ui/forms/date-time-input';
-import { focusFirstInvalid } from '../../../ui/forms/focus';
-import { datePickerInputPt, innerInputPt } from '../../../ui/forms/inner-input-pt';
-import { validationMessage } from '../../../ui/forms/validators';
-import { interpolate } from '../../../ui/i18n/messages';
-import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { RouteDrawer, type RouteDrawerState } from '@osnova/ui';
+import { FormField } from '@osnova/ui';
+import { FormatDateTimePipe } from '@osnova/ui';
+import { defaultDateFormat, type DateFormat as FleetDateFormat } from '@osnova/ui';
+import { dateTimePickerInputInstants, formatDateTimePickerInput } from '@osnova/ui';
+import { focusFirstInvalid } from '@osnova/ui';
+import { datePickerInputPt, innerInputPt } from '@osnova/ui';
+import { validationMessage } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { vehiclesText } from './i18n/messages';
 

@@ -22,9 +22,9 @@ import type { AdminBranchesQuery, AdminTenantsQuery } from '../../../generated/g
 import { AuthApi } from '../../core/auth/auth-api';
 import { DemoSession, isUnauthenticated, type AccountSession } from '../../core/auth/demo-session';
 import type { Language } from '../../i18n/messages';
-import { ThemeMenu } from '../../ui/theme-menu/theme-menu';
-import { Appearance } from '../../theme/appearance';
-import { FormField } from '../../ui/form-field/form-field';
+import { ThemeMenu } from '@osnova/ui';
+import { Appearance } from '@osnova/ui/theme';
+import { FormField } from '@osnova/ui';
 import { BranchesApi } from '../branches/branches-api';
 import bg from './login.bg.json';
 import en from './login.en.json';

@@ -12,22 +12,22 @@ import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { AdminUserDetailsFragment } from '../../../generated/graphql/operations';
 import { injectFleetFormat } from '../../ui/format/fleet-format';
-import { interpolate } from '../../ui/i18n/messages';
+import { interpolate } from '@osnova/ui';
 import {
   listRecord,
   trackById,
   type ListAction,
   type ListActionRequest,
   type ListRecord,
-} from '../../ui/list/list-actions';
-import { PageHeader } from '../../ui/page-header/page-header';
-import { injectSortReady, listQuery, type ListQuery } from '../../ui/list/list-query';
-import { ListSortMenu } from '../../ui/list/list-sort-menu';
-import { RowActions } from '../../ui/row-actions/row-actions';
-import { TablePanel, type TableColumn } from '../../ui/table-panel/table-panel';
-import type { TableView } from '../../ui/table-panel/table-view';
-import { toneSeverity } from '../../ui/tones';
-import { UI_LANGUAGE } from '../../ui/ui-language';
+} from '@osnova/ui';
+import { PageHeader } from '@osnova/ui';
+import { injectSortReady, listQuery, type ListQuery } from '@osnova/ui';
+import { ListSortMenu } from '@osnova/ui';
+import { RowActions } from '@osnova/ui';
+import { TablePanel, type TableColumn } from '@osnova/ui';
+import type { TableView } from '@osnova/ui';
+import { toneSeverity } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { usersText } from './i18n/messages';
 
 export type UserActionId = 'edit' | 'deactivate' | 'reactivate';

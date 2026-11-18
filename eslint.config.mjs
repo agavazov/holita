@@ -45,7 +45,18 @@ export default tseslint.config(
         'error',
         {
           banTransitiveDependencies: true,
-          depConstraints: [{ sourceTag: 'type:app', notDependOnLibsWithTags: ['type:app'] }],
+          depConstraints: [
+            { sourceTag: 'type:app', notDependOnLibsWithTags: ['type:app'] },
+            { sourceTag: 'product:osnova', onlyDependOnLibsWithTags: ['product:osnova'] },
+            {
+              sourceTag: 'product:discocan',
+              onlyDependOnLibsWithTags: ['product:discocan', 'product:osnova'],
+            },
+            {
+              sourceTag: 'product:holita',
+              onlyDependOnLibsWithTags: ['product:holita', 'product:osnova'],
+            },
+          ],
         },
       ],
       '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
@@ -68,7 +79,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['discocan/apps/admin/**/*.ts'],
+    files: ['discocan/apps/admin/**/*.ts', 'osnova/packages/ui/**/*.ts'],
     languageOptions: { globals: globals.browser },
     extends: [angular.configs.tsRecommended],
     processor: angular.processInlineTemplates,
@@ -77,7 +88,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['discocan/apps/admin/**/*.html'],
+    files: ['discocan/apps/admin/**/*.html', 'osnova/packages/ui/**/*.html'],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
   },
   eslintConfigPrettier,

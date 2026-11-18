@@ -1,6 +1,6 @@
 @switch (state()) {
   @case ('not-found') {
-    <discocan-page-header
+    <osnova-page-header
       [title]="text().eyebrow"
       [backLink]="backLink()"
       [backLabel]="backLabel() ?? text().back"
@@ -8,14 +8,14 @@
       [backFragment]="backFragment()"
       [moduleInfo]="text().moduleInfo"
     />
-    <discocan-empty-state
+    <osnova-empty-state
       kind="not-found"
       [title]="text().notFoundTitle"
       [description]="text().notFoundDescription"
     />
   }
   @case ('error') {
-    <discocan-page-header
+    <osnova-page-header
       [title]="text().eyebrow"
       [backLink]="backLink()"
       [backLabel]="backLabel() ?? text().back"
@@ -23,16 +23,16 @@
       [backFragment]="backFragment()"
       [moduleInfo]="text().moduleInfo"
     />
-    <discocan-empty-state
+    <osnova-empty-state
       kind="error"
       [title]="text().errorTitle"
       [description]="errorText() ?? text().errorText"
     >
       <button emptyActions pButton type="button" (click)="retry.emit()">{{ text().retry }}</button>
-    </discocan-empty-state>
+    </osnova-empty-state>
   }
   @case ('loading') {
-    <discocan-page-header
+    <osnova-page-header
       title="…"
       [backLink]="backLink()"
       [backLabel]="backLabel() ?? text().back"
@@ -42,23 +42,23 @@
     />
     <p-skeleton height="3rem" />
     <p-skeleton height="4rem" />
-    <discocan-kpi-strip [label]="text().kpis.label" [loading]="true">
-      <discocan-kpi-tile [label]="text().kpis.odometer" category="c1"
+    <osnova-kpi-strip [label]="text().kpis.label" [loading]="true">
+      <osnova-kpi-tile [label]="text().kpis.odometer" category="c1"
         ><svg kpiIcon data-p-icon="gauge"
-      /></discocan-kpi-tile>
-      <discocan-kpi-tile [label]="text().kpis.fuel" category="c2"
+      /></osnova-kpi-tile>
+      <osnova-kpi-tile [label]="text().kpis.fuel" category="c2"
         ><svg kpiIcon data-p-icon="gauge"
-      /></discocan-kpi-tile>
-      <discocan-kpi-tile [label]="text().kpis.distance" category="c3"
+      /></osnova-kpi-tile>
+      <osnova-kpi-tile [label]="text().kpis.distance" category="c3"
         ><svg kpiIcon data-p-icon="chart-line"
-      /></discocan-kpi-tile>
-      <discocan-kpi-tile [label]="v2().problemKpi" tone="warn"
+      /></osnova-kpi-tile>
+      <osnova-kpi-tile [label]="v2().problemKpi" tone="warn"
         ><svg kpiIcon data-p-icon="exclamation-triangle"
-      /></discocan-kpi-tile>
-      <discocan-kpi-tile [label]="text().kpis.nextService" category="c4"
+      /></osnova-kpi-tile>
+      <osnova-kpi-tile [label]="text().kpis.nextService" category="c4"
         ><svg kpiIcon data-p-icon="wrench"
-      /></discocan-kpi-tile>
-    </discocan-kpi-strip>
+      /></osnova-kpi-tile>
+    </osnova-kpi-strip>
     <section
       class="app-card vehicle-profile__map-placeholder"
       [attr.aria-label]="v2().map"
@@ -70,7 +70,7 @@
   }
   @case ('ready') {
     @if (vehicle(); as vehicle) {
-      <discocan-page-header
+      <osnova-page-header
         [title]="vehicle.plate"
         [backLink]="backLink()"
         [backLabel]="backLabel() ?? text().back"
@@ -85,7 +85,7 @@
           [severity]="statusSeverity(vehicle.status)"
           [value]="statusLabel(vehicle.status)"
         />
-      </discocan-page-header>
+      </osnova-page-header>
 
       <p-tabs [value]="tab()" (valueChange)="selectTab($event)">
         <p-tablist [pt]="{ content: { 'aria-label': text().eyebrow } }">
@@ -119,45 +119,45 @@
                 (selectedChange)="tabChange.emit('problems')"
               />
 
-              <discocan-kpi-strip [label]="text().kpis.label">
-                <discocan-kpi-tile
+              <osnova-kpi-strip [label]="text().kpis.label">
+                <osnova-kpi-tile
                   [label]="text().kpis.odometer"
                   [value]="units.distance(vehicle.odometerKm, false, 0)"
                   [unit]="units.distanceUnit()"
                   category="c1"
                   ><svg kpiIcon data-p-icon="gauge"
-                /></discocan-kpi-tile>
-                <discocan-kpi-tile
+                /></osnova-kpi-tile>
+                <osnova-kpi-tile
                   [label]="text().kpis.fuel"
-                  [value]="vehicle.fuelPct === null ? null : (vehicle.fuelPct | discocanNumber)"
+                  [value]="vehicle.fuelPct === null ? null : (vehicle.fuelPct | osnovaNumber)"
                   [unit]="vehicle.fuelPct === null ? null : '%'"
                   [tone]="vehicle.fuelStatus === 'LOW' ? 'danger' : null"
                   [category]="vehicle.fuelStatus === 'LOW' ? null : 'c2'"
                   [footnote]="vehicle.fuelStatus === 'STALE' ? staleFuelText() : null"
                   ><svg kpiIcon data-p-icon="gauge"
-                /></discocan-kpi-tile>
-                <discocan-kpi-tile
+                /></osnova-kpi-tile>
+                <osnova-kpi-tile
                   [label]="text().kpis.distance"
                   [value]="units.distance(distanceTotal(), false, 0)"
                   [unit]="units.distanceUnit()"
                   category="c3"
                   ><svg kpiIcon data-p-icon="chart-line"
-                /></discocan-kpi-tile>
-                <discocan-kpi-tile
+                /></osnova-kpi-tile>
+                <osnova-kpi-tile
                   [label]="faults().activeFaults"
-                  [value]="faultCount() === null ? null : (faultCount() | discocanNumber)"
+                  [value]="faultCount() === null ? null : (faultCount() | osnovaNumber)"
                   [tone]="faultTone()"
                   ><svg kpiIcon data-p-icon="exclamation-triangle"
-                /></discocan-kpi-tile>
-                <discocan-kpi-tile
+                /></osnova-kpi-tile>
+                <osnova-kpi-tile
                   [label]="text().kpis.nextService"
                   [value]="nextService().value"
                   [footnote]="nextService().footnote"
                   [tone]="nextService().tone"
                   [category]="nextService().tone ? null : 'c4'"
                   ><svg kpiIcon data-p-icon="wrench"
-                /></discocan-kpi-tile>
-              </discocan-kpi-strip>
+                /></osnova-kpi-tile>
+              </osnova-kpi-strip>
               @defer (on immediate) {
                 <discocan-location-map
                   [language]="language()"
@@ -229,7 +229,7 @@
                     <div>
                       <dt>{{ v2().positionAge }}</dt>
                       <dd [title]="units.utc(positionAt())">
-                        {{ positionAt() | discocanRelative: now() }}
+                        {{ positionAt() | osnovaRelative: now() }}
                       </dd>
                     </div>
                     <div>
@@ -266,7 +266,7 @@
                 </section>
                 <section class="app-card">
                   <h2 class="app-card__title">{{ text().distanceChart }}</h2>
-                  <discocan-column-series
+                  <osnova-column-series
                     [label]="text().distanceChart"
                     [points]="distancePoints()"
                   />
@@ -330,7 +330,7 @@
                   @if (edataTruncated()) {
                     <p class="app-muted">{{ v2().edata.truncated }}</p>
                   }
-                  <discocan-table-panel
+                  <osnova-table-panel
                     [heading]="v2().edata.heading"
                     [headingLevel]="3"
                     [total]="edataObservations().length"
@@ -343,7 +343,7 @@
                     (retry)="retryEdata.emit()"
                     (pageChange)="changeEdataPage($event)"
                   >
-                    <discocan-list-sort-menu
+                    <osnova-list-sort-menu
                       panelActions
                       [fields]="edataSortFields()"
                       [sort]="edataSort()"
@@ -388,7 +388,7 @@
                               ><span class="app-muted app-mono">ID {{ observation.id }}</span></span
                             >
                           </td>
-                          <td class="app-cell-number">{{ observation.count | discocanNumber }}</td>
+                          <td class="app-cell-number">{{ observation.count | osnovaNumber }}</td>
                           <td class="app-cell-date">
                             <time
                               [attr.datetime]="observation.lastAt"
@@ -399,7 +399,7 @@
                         </tr></ng-template
                       >
                     </p-table>
-                  </discocan-table-panel>
+                  </osnova-table-panel>
                 </div>
               </details>
             </div>
@@ -431,7 +431,7 @@
                   {{ units.preferences().timeZone }}
                 </p>
               }
-              <discocan-table-panel
+              <osnova-table-panel
                 [heading]="faults().history"
                 [total]="problemPage()?.total ?? problems().length"
                 [page]="problemPage()"
@@ -443,7 +443,7 @@
                 (pageChange)="problemPageChange.emit($event)"
                 (retry)="retryProblems.emit()"
               >
-                <discocan-list-sort-menu
+                <osnova-list-sort-menu
                   panelActions
                   [fields]="problemSortFields()"
                   [sort]="problemSort()"
@@ -562,7 +562,7 @@
                     </tr></ng-template
                   >
                 </p-table>
-              </discocan-table-panel>
+              </osnova-table-panel>
               @if (diagnosticProblems().length) {
                 <details class="app-card vehicle-profile__technical">
                   <summary>{{ v2().technical }}</summary>
@@ -658,7 +658,7 @@
 
           <p-tabpanel value="trips">
             <div class="app-tab-content">
-              <discocan-table-panel
+              <osnova-table-panel
                 [heading]="text().recentTrips"
                 [total]="tripPage()?.total ?? trips().length"
                 [page]="tripPage()"
@@ -670,7 +670,7 @@
                 (pageChange)="tripPageChange.emit($event)"
                 (retry)="retryTrips.emit()"
               >
-                <discocan-list-sort-menu
+                <osnova-list-sort-menu
                   panelActions
                   [fields]="tripSortFields()"
                   [sort]="tripSort()"
@@ -736,7 +736,7 @@
                       <td class="app-cell-number">
                         {{
                           (trip.durationMin === null ? null : trip.durationMin * 60)
-                            | discocanDuration
+                            | osnovaDuration
                         }}
                       </td>
                       <td class="app-cell-number">
@@ -765,13 +765,13 @@
                     </tr></ng-template
                   >
                 </p-table>
-              </discocan-table-panel>
+              </osnova-table-panel>
             </div>
           </p-tabpanel>
 
           <p-tabpanel value="maintenance">
             <div class="app-tab-content">
-              <discocan-table-panel
+              <osnova-table-panel
                 [heading]="text().serviceHeading"
                 [total]="servicePage()?.total ?? service().length"
                 [page]="servicePage()"
@@ -783,7 +783,7 @@
                 (pageChange)="servicePageChange.emit($event)"
                 (retry)="retryService.emit()"
               >
-                <discocan-list-sort-menu
+                <osnova-list-sort-menu
                   panelActions
                   [fields]="serviceSortFields()"
                   [sort]="serviceSort()"
@@ -849,11 +849,11 @@
                           ><p-tag [severity]="urgencySeverity(task)" [value]="urgencyLabel(task)"
                         /></span>
                       </td>
-                      <td class="app-cell-number">{{ task.costCents | discocanMoney }}</td>
+                      <td class="app-cell-number">{{ task.costCents | osnovaMoney }}</td>
                     </tr></ng-template
                   >
                 </p-table>
-              </discocan-table-panel>
+              </osnova-table-panel>
             </div>
           </p-tabpanel>
 

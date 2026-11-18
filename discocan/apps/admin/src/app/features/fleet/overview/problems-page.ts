@@ -48,26 +48,21 @@ import {
 } from '../../../ui/fleet-live/fault-wording';
 import { requestError } from '../../../core/graphql/request-error';
 import type { Language } from '../../../i18n/messages';
-import type { DrawerHost } from '../../../ui/drawer/drawer-host';
-import { FormField } from '../../../ui/form-field/form-field';
+import type { DrawerHost } from '@osnova/ui';
+import { FormField } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { FormatNumberPipe } from '../../../ui/format/format.pipes';
-import {
-  listRecord,
-  trackById,
-  type ListAction,
-  type ListActionRequest,
-} from '../../../ui/list/list-actions';
-import { uiMessages } from '../../../ui/i18n/messages';
-import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
-import { injectSortReady, type ListQuery } from '../../../ui/list/list-query';
-import { UrlListState } from '../../../ui/list/url-list-state';
-import { PageHeader } from '../../../ui/page-header/page-header';
-import { RowActions } from '../../../ui/row-actions/row-actions';
-import { selectMultiplePt } from '../../../ui/select-multiple';
-import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-panel';
-import { tableView } from '../../../ui/table-panel/table-view';
-import { toneSeverity } from '../../../ui/tones';
+import { FormatNumberPipe } from '@osnova/ui';
+import { listRecord, trackById, type ListAction, type ListActionRequest } from '@osnova/ui';
+import { uiMessages } from '@osnova/ui';
+import { ListSortMenu, type ListSortField } from '@osnova/ui';
+import { injectSortReady, type ListQuery } from '@osnova/ui';
+import { UrlListState } from '@osnova/ui';
+import { PageHeader } from '@osnova/ui';
+import { RowActions } from '@osnova/ui';
+import { selectMultiplePt } from '@osnova/ui';
+import { TablePanel, type TableColumn } from '@osnova/ui';
+import { tableView } from '@osnova/ui';
+import { toneSeverity } from '@osnova/ui';
 import { ProblemsApi } from './problems-api';
 import {
   problemSeverityTones,

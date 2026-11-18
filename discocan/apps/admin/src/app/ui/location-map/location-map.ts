@@ -17,15 +17,15 @@ import {
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
-import { injectChartPalette } from '../chart-panel/chart-palette';
+import { injectChartPalette } from '@osnova/ui';
 import { injectFleetNow } from '../fleet-live/fleet-clock';
 import { fleetObservationIsRecent, fleetRecordedValue } from '../fleet-live/fleet-live';
 import { AdminConfig } from '../../core/config/admin-config';
 import type { Language } from '../../i18n/messages';
-import { formatNumber, type FleetDateFormat } from '../format/format';
+import { formatNumber, type DateFormat as FleetDateFormat } from '@osnova/ui';
 import { FLEET_DISPLAY, injectFleetFormat } from '../format/fleet-format';
-import { interpolate } from '../i18n/messages';
-import { locationMap, mapCoordinates } from '../map-preview/location-map';
+import { interpolate } from '@osnova/ui';
+import { locationMap, mapCoordinates } from '@osnova/ui';
 import { StreetViewPopup } from '../street-view/street-view-popup';
 import {
   recordedTrackSegments,

@@ -1,5 +1,5 @@
 import { messages, type Language } from '../i18n/messages';
-import type { NavGroup } from '../layout/navigation';
+import type { NavGroup } from '@osnova/ui';
 
 /** Dashboard, Fleet and System destinations for the selected Branch. */
 export function adminNavigation(

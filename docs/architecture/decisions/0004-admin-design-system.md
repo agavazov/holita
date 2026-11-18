@@ -21,19 +21,19 @@ reviewed against a running backend.
 
 ## Decision
 
-- **One theme module.** `discocan/apps/admin/src/app/theme/` holds the only visual decisions:
-  `discocanPreset(choice)` = `definePreset` over standard Aura with brand ramps, density tokens,
+- **One theme module.** `osnova/packages/ui/src/theme/` holds the only visual decisions:
+  `uiPreset(choice)` = `definePreset` over standard Aura with brand ramps, density tokens,
   status tones, component tokens and the `extend.app` tokens (`--p-app-*`). `appTheme` in
   `theme-choice.ts` is the application's single configured choice of brand (`cobalt`, `ember`,
   `pine`) and density (`compact`, `comfortable`). The text, border and status-mark pairs the admin
   relies on are checked for WCAG AA by a unit spec from the Aura primitives (`theme/contrast.ts`).
-- **CSS layers and one dark-mode mechanism.** Global styles live in `src/styles/` in the layers
-  `discocan-reset, primeng, discocan`; PrimeNG emits its tokens into `primeng`. Every value that
-  differs between schemes is a `light-dark()` token, so `.app-dark` switches PrimeNG and discocan
+- **CSS layers and one dark-mode mechanism.** Global styles live in `osnova/packages/ui/src/styles/` in the layers
+  `osnova-reset, primeng, osnova`; PrimeNG emits its tokens into `primeng`. Every value that
+  differs between schemes is a `light-dark()` token, so `.app-dark` switches PrimeNG and shared
   tokens alike. Breakpoints are declared once in Sass and exposed to TypeScript as `--app-bp-*`.
 - **A new shell** (canvas, grouped sidebar with a rail, framed topbar and content) replaces the
   Sakai layout; it reads no business data.
-- **Domain-neutral patterns** in `app/ui` (page header, KPI strip, filter builder, table panel
+- **Domain-neutral patterns** in `osnova/packages/ui/src/ui` (page header, KPI strip, filter builder, table panel
   with row actions, menu button, route drawer, form field, empty state, charts) and helpers (list
   actions and query, URL list state, sequential bulk actions, confirmations, GraphQL field errors,
   validators, formatting, remote options) are the only building blocks of new screens. Single

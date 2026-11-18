@@ -6,9 +6,9 @@ import { Tag } from 'primeng/tag';
 import type { FleetFaultSystem } from '../../../generated/graphql/operations';
 import type { Language } from '../../i18n/messages';
 import { injectFleetFormat } from '../format/fleet-format';
-import { formatNumber, formatRelative } from '../format/format';
-import { interpolate } from '../i18n/messages';
-import { toneSeverity, type StatusTone } from '../tones';
+import { formatNumber, formatRelative } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { toneSeverity, type StatusTone } from '@osnova/ui';
 import { FaultCluster } from './fault-cluster';
 import { FaultIcon } from './fault-icon';
 import {

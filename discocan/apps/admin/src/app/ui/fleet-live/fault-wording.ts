@@ -8,9 +8,9 @@ import type {
   FleetFaultSystem,
 } from '../../../generated/graphql/operations';
 import type { Language } from '../../i18n/messages';
-import { formatNumber } from '../format/format';
-import { interpolate } from '../i18n/messages';
-import type { StatusTone } from '../tones';
+import { formatNumber } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import type { StatusTone } from '@osnova/ui';
 import bg from './faults-bg.json';
 import en from './faults-en.json';
 

@@ -1,0 +1,4 @@
+// Cascade order for the whole admin: the reset, PrimeNG's tokens and component styles (emitted by
+// the preset into `primeng`), then application rules, which win over PrimeNG without !important.
+// Component stylesheets are unlayered and win over all three.
+@layer osnova-reset, primeng, osnova;

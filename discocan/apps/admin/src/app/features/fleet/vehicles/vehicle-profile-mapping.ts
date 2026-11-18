@@ -5,7 +5,7 @@ import type {
   AdminVehicleDetailsFragment,
 } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
-import type { SeriesPoint } from '../../../ui/charts/column-series';
+import type { SeriesPoint } from '@osnova/ui';
 import type { FleetFreezeFrame } from '../../../ui/fleet-live/fault-wording';
 import { fleetFieldErrors } from '../field-errors';
 import type { OdometerField, PreviousOdometerReading } from './odometer-drawer';

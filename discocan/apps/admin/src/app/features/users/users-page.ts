@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES } from '@osnova/ui';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -18,16 +19,16 @@ import type { AdminUserDetailsFragment } from '../../../generated/graphql/operat
 import { DemoSession } from '../../core/auth/demo-session';
 import { AdminConfig } from '../../core/config/admin-config';
 import type { Language } from '../../i18n/messages';
-import type { DrawerHost } from '../../ui/drawer/drawer-host';
+import type { DrawerHost } from '@osnova/ui';
 import {
   FLEET_DISPLAY,
   defaultFleetDisplay,
   type FleetDisplayPreferences,
 } from '../../ui/format/fleet-format';
-import { interpolate } from '../../ui/i18n/messages';
-import type { ListActionRequest } from '../../ui/list/list-actions';
-import { tableView, type TableView } from '../../ui/table-panel/table-view';
-import { UI_LANGUAGE } from '../../ui/ui-language';
+import { interpolate } from '@osnova/ui';
+import type { ListActionRequest } from '@osnova/ui';
+import { tableView, type TableView } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { BranchContext } from '../branches/branch-context';
 import { usersText } from './i18n/messages';
 import { UsersApi } from './users-api';
@@ -38,6 +39,7 @@ import { UsersView, type UserActionId } from './users-view';
   imports: [UsersView, RouterOutlet],
   providers: [
     UsersApi,
+    { provide: DISPLAY_PREFERENCES, useExisting: FLEET_DISPLAY },
     { provide: FLEET_DISPLAY, useFactory: () => inject(UsersContent).displayPreferences },
   ],
   template: `

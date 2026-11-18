@@ -38,8 +38,7 @@ Angular keeps business pages, concrete API services, GraphQL operations and test
 `features/`. Fleet and ERM Server own separate route arrays composed by `app.routes.ts`
 at the existing route level. `workspace/` owns the common admin session/language/login
 coordination, while Branch discovery and selection remain in `features/branches/`.
-Presentation is split between the theme in `theme/`, the global styles in `src/styles/`, the
-patterns in `ui/` and the shell in `layout/`
+Presentation is shared in `osnova/packages/ui/src`: the theme, global styles, patterns and shell
 ([admin design system](../admin-design-system.md#where-presentation-lives)); the presentational
 views and drawers in `features/fleet/*` (`*-view.ts`, `*-drawer.ts`) serve live feature
 pages. `core/` contains only admin-local authentication,
@@ -52,6 +51,8 @@ configuration and GraphQL transport. Feature clients and caches retain their mou
 | core        | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                          | 11011                                                        |
 | fleet       | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database      | 11013                                                        |
 | erm-server  | StarLink gateway, owning database, separate GraphQL API/control and read-only recovery processes                       | 11015 gateway HTTP; 11500 TCP; 11017 API; 11510 recovery TCP |
+
+`@osnova/ui` is the shared Angular source library for operator screens. Applications compile it directly and supply their navigation, identity and display preferences; the package has no independent build.
 
 ```mermaid
 flowchart LR

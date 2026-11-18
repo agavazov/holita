@@ -3,13 +3,9 @@ import type {
   FleetDeviceCondition,
   FleetDeviceSortField,
 } from '../../../../generated/graphql/operations';
-import {
-  isComplete,
-  type FilterCondition,
-  type FilterOperator,
-} from '../../../ui/filter-builder/filter-model';
-import type { ListQuery } from '../../../ui/list/list-query';
-import type { FilterCodec, ListDefinition, ListState } from '../../../ui/list/list-state';
+import { isComplete, type FilterCondition, type FilterOperator } from '@osnova/ui';
+import type { ListQuery } from '@osnova/ui';
+import type { FilterCodec, ListDefinition, ListState } from '@osnova/ui';
 
 export const deviceModels = ['STARLINK_TRACKER', 'STARLINK_SCOUT', 'OTHER'] as const;
 export const deviceOptions = [

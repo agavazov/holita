@@ -1,0 +1,7 @@
+{
+  "name": "osnova-ui",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "osnova/packages/ui/src",
+  "tags": ["type:lib", "product:osnova"]
+}

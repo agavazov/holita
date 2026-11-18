@@ -25,7 +25,7 @@ import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { PrimeNG } from 'primeng/config';
 import { MessageService } from 'primeng/api';
-import { OperationToast } from '../ui/operation-toast';
+import { OperationToast } from '@osnova/ui';
 import { DemoSession } from '../core/auth/demo-session';
 import { AdminConfig } from '../core/config/admin-config';
 import { requestError } from '../core/graphql/request-error';
@@ -42,13 +42,13 @@ import {
 } from '../features/notifications/notification-presentation';
 import type { AdminNotificationsQuery } from '../../generated/graphql/operations';
 import { messages, readLanguage, type Language } from '../i18n/messages';
-import { AdminShell } from '../layout/admin-shell';
-import type { LanguageOption, ShellNotification } from '../layout/admin-topbar';
-import { navigationContext } from '../layout/navigation';
-import { PageRecord } from '../layout/page-record';
-import { UI_LANGUAGE } from '../ui/ui-language';
+import { AdminShell } from '@osnova/ui';
+import type { LanguageOption, ShellNotification } from '@osnova/ui';
+import { navigationContext } from '@osnova/ui';
+import { PageRecord } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { injectFleetFormat } from '../ui/format/fleet-format';
-import type { LeavableDrawer } from '../ui/drawer/leave-drawer.guard';
+import type { LeavableDrawer } from '@osnova/ui';
 import { adminNavigation } from './admin-navigation';
 import { pageMetadata } from './page-metadata';
 import { primeNgTranslation } from './primeng-translation';
@@ -154,6 +154,10 @@ export class AdminWorkspace {
     { code: 'bg', label: 'Български' },
     { code: 'en', label: 'English' },
   ];
+  readonly homeLink = computed(() => {
+    const branch = this.branches.selectedId();
+    return branch ? ['/', this.language(), branch, 'fleet', 'live'] : ['/', this.language()];
+  });
   readonly navigation = computed(() =>
     adminNavigation(this.language(), this.branches.selectedId(), this.fleetEnabled),
   );

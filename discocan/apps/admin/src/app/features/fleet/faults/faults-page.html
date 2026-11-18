@@ -1,49 +1,49 @@
-<discocan-page-header
+<osnova-page-header
   [title]="text().title"
   [count]="trucks()?.length ?? null"
   [moduleInfo]="text().moduleInfo"
 />
 
-<discocan-kpi-strip
+<osnova-kpi-strip
   [label]="text().tiles.label"
   [loading]="trucks() === null && !tilesError()"
   [error]="tilesError()"
   (retry)="retryTrucks()"
 >
-  <discocan-kpi-tile
+  <osnova-kpi-tile
     [label]="text().tiles.ACTIVE"
     [value]="count('ACTIVE')"
     [tone]="counts().ACTIVE ? 'danger' : null"
   >
     <svg kpiIcon data-p-icon="exclamation-triangle" aria-hidden="true"></svg>
-  </discocan-kpi-tile>
-  <discocan-kpi-tile
+  </osnova-kpi-tile>
+  <osnova-kpi-tile
     [label]="text().tiles.CLEAR"
     [value]="count('CLEAR')"
     [footnote]="text().tiles.clearFootnote"
     tone="success"
   >
     <svg kpiIcon data-p-icon="check-circle" aria-hidden="true"></svg>
-  </discocan-kpi-tile>
-  <discocan-kpi-tile
+  </osnova-kpi-tile>
+  <osnova-kpi-tile
     [label]="text().tiles.NO_CAN"
     [value]="count('NO_CAN')"
     [footnote]="text().tiles.noCanFootnote"
     [tone]="counts().NO_CAN ? 'warn' : null"
   >
     <svg kpiIcon data-p-icon="minus-circle" aria-hidden="true"></svg>
-  </discocan-kpi-tile>
-  <discocan-kpi-tile
+  </osnova-kpi-tile>
+  <osnova-kpi-tile
     [label]="text().tiles.OFFLINE"
     [value]="count('OFFLINE')"
     [footnote]="text().tiles.offlineFootnote"
     tone="neutral"
   >
     <svg kpiIcon data-p-icon="power-off" aria-hidden="true"></svg>
-  </discocan-kpi-tile>
-</discocan-kpi-strip>
+  </osnova-kpi-tile>
+</osnova-kpi-strip>
 
-<discocan-table-panel
+<osnova-table-panel
   mode="local"
   [heading]="text().trucks.heading"
   [total]="trucks()?.length ?? null"
@@ -147,7 +147,7 @@
       </tr>
     </ng-template>
   </p-table>
-</discocan-table-panel>
+</osnova-table-panel>
 
 <div class="faults__filters" role="group" [attr.aria-label]="text().log.filters">
   <p-select
@@ -184,7 +184,7 @@
   />
 </div>
 
-<discocan-table-panel
+<osnova-table-panel
   [heading]="text().log.heading"
   [total]="log()?.total ?? null"
   [view]="logView()"
@@ -252,4 +252,4 @@
       </tr>
     </ng-template>
   </p-table>
-</discocan-table-panel>
+</osnova-table-panel>

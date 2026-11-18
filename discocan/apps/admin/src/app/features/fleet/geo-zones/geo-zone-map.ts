@@ -18,7 +18,7 @@ import { DOCUMENT } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
 import { AdminConfig } from '../../../core/config/admin-config';
 import type { Language } from '../../../i18n/messages';
-import { injectChartPalette } from '../../../ui/chart-panel/chart-palette';
+import { injectChartPalette } from '@osnova/ui';
 import {
   googleMapsAuthenticationFailed,
   loadGoogleMaps,

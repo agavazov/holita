@@ -1,4 +1,4 @@
-import { isoToZonedParts, zonedWallTimeToIso } from '../../../ui/format/zoned-time';
+import { isoToZonedParts, zonedWallTimeToIso } from '@osnova/ui';
 
 export type OverviewDays = 7 | 14 | 30;
 export type OverviewFilter = 'all' | 'live' | 'waiting' | 'disconnected' | 'connected';

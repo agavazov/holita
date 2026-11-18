@@ -4,7 +4,7 @@
   "projectType": "application",
   "sourceRoot": "discocan/apps/fleet/src",
   "implicitDependencies": ["core"],
-  "tags": ["type:app", "scope:fleet"],
+  "tags": ["product:discocan", "type:app", "scope:fleet"],
   "targets": {
     "test": {
       "executor": "nx:run-commands",

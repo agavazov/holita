@@ -1,4 +1,4 @@
-<discocan-page-header
+<osnova-page-header
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
   [moduleInfo]="text().moduleInfo"
@@ -7,40 +7,40 @@
 />
 
 @if (kpis(); as kpis) {
-  <discocan-kpi-strip [label]="text().kpis.label">
-    <discocan-kpi-tile
+  <osnova-kpi-strip [label]="text().kpis.label">
+    <osnova-kpi-tile
       [label]="text().kpis.overdue"
-      [value]="kpis.overdue | discocanNumber"
+      [value]="kpis.overdue | osnovaNumber"
       [tone]="kpis.overdue ? 'danger' : null"
     >
       <svg kpiIcon data-p-icon="exclamation-triangle" />
-    </discocan-kpi-tile>
-    <discocan-kpi-tile
+    </osnova-kpi-tile>
+    <osnova-kpi-tile
       [label]="text().kpis.dueSoon"
-      [value]="kpis.dueSoon | discocanNumber"
+      [value]="kpis.dueSoon | osnovaNumber"
       [footnote]="text().kpis.dueSoonFootnote"
       [tone]="kpis.dueSoon ? 'warn' : null"
     >
       <svg kpiIcon data-p-icon="clock" />
-    </discocan-kpi-tile>
-    <discocan-kpi-tile
+    </osnova-kpi-tile>
+    <osnova-kpi-tile
       [label]="text().kpis.planned"
-      [value]="kpis.planned | discocanNumber"
+      [value]="kpis.planned | osnovaNumber"
       category="c1"
     >
       <svg kpiIcon data-p-icon="calendar" />
-    </discocan-kpi-tile>
-    <discocan-kpi-tile
+    </osnova-kpi-tile>
+    <osnova-kpi-tile
       [label]="text().kpis.cost"
-      [value]="kpis.costCents | discocanMoney"
+      [value]="kpis.costCents | osnovaMoney"
       category="c2"
     >
       <svg kpiIcon data-p-icon="wallet" />
-    </discocan-kpi-tile>
-  </discocan-kpi-strip>
+    </osnova-kpi-tile>
+  </osnova-kpi-strip>
 }
 
-<discocan-filter-builder
+<osnova-filter-builder
   [searchLabel]="text().search"
   [search]="state().search"
   [searchError]="searchError()"
@@ -51,7 +51,7 @@
   (conditionsChange)="changeConditions($event)"
 />
 
-<discocan-table-panel
+<osnova-table-panel
   #panel
   [heading]="text().table.heading"
   [total]="total()"
@@ -72,7 +72,7 @@
   (retry)="retry.emit()"
   (clearSelection)="selectionChange.emit([])"
 >
-  <discocan-list-sort-menu
+  <osnova-list-sort-menu
     panelActions
     [fields]="sortFields()"
     [sort]="state().sort"
@@ -183,7 +183,7 @@
               >
             </div>
             <div class="app-table-mobile-actions">
-              <discocan-row-actions
+              <osnova-row-actions
                 [actions]="actions()"
                 [record]="recordOf(row)"
                 (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -234,7 +234,7 @@
           </span>
         </td>
         <td class="app-num">
-          <span class="app-cell-number">{{ row.costCents | discocanMoney }}</span>
+          <span class="app-cell-number">{{ row.costCents | osnovaMoney }}</span>
         </td>
         <td class="app-col-secondary">
           @if (row.notes) {
@@ -244,7 +244,7 @@
           }
         </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-          <discocan-row-actions
+          <osnova-row-actions
             [actions]="actions()"
             [record]="recordOf(row)"
             (choose)="panel.run($event.action, [recordOf(row)], $event.origin)"
@@ -253,4 +253,4 @@
       </tr>
     </ng-template>
   </p-table>
-</discocan-table-panel>
+</osnova-table-panel>

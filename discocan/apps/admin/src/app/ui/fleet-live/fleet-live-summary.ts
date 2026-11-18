@@ -1,41 +1,41 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { FormatNumberPipe } from '../format/format.pipes';
-import { KpiStrip } from '../kpi/kpi-strip';
-import { KpiTile } from '../kpi/kpi-tile';
-import { UI_LANGUAGE } from '../ui-language';
+import { FormatNumberPipe } from '@osnova/ui';
+import { KpiStrip } from '@osnova/ui';
+import { KpiTile } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { fleetLiveText, hasFleetFaults, type FleetLiveDevice } from './fleet-live';
 
 @Component({
   selector: 'discocan-fleet-live-summary',
   imports: [KpiStrip, KpiTile, FormatNumberPipe],
   template: `
-    <discocan-kpi-strip [label]="text().summary" [loading]="loading()">
-      <discocan-kpi-tile
+    <osnova-kpi-strip [label]="text().summary" [loading]="loading()">
+      <osnova-kpi-tile
         [label]="text().online"
-        [value]="counts().online | discocanNumber"
+        [value]="counts().online | osnovaNumber"
         tone="success"
       />
-      <discocan-kpi-tile
+      <osnova-kpi-tile
         [label]="text().overdue"
-        [value]="counts().overdue | discocanNumber"
+        [value]="counts().overdue | osnovaNumber"
         tone="warn"
       />
-      <discocan-kpi-tile
+      <osnova-kpi-tile
         [label]="text().backup"
-        [value]="counts().backup | discocanNumber"
+        [value]="counts().backup | osnovaNumber"
         tone="warn"
       />
-      <discocan-kpi-tile
+      <osnova-kpi-tile
         [label]="text().withFaults"
-        [value]="counts().faults | discocanNumber"
+        [value]="counts().faults | osnovaNumber"
         tone="danger"
       />
-      <discocan-kpi-tile
+      <osnova-kpi-tile
         [label]="unassigned() === 'vehicles' ? text().withoutDevice : text().unassigned"
-        [value]="counts().unassigned | discocanNumber"
+        [value]="counts().unassigned | osnovaNumber"
         tone="neutral"
       />
-    </discocan-kpi-strip>
+    </osnova-kpi-strip>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'app-view' },

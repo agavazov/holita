@@ -1,4 +1,4 @@
-<discocan-page-header
+<osnova-page-header
   [title]="text().title"
   [count]="view().kind === 'rows' || view().kind === 'rows-error' ? total() : null"
   [moduleInfo]="text().moduleInfo + (!readAllowed() ? ' ' + text().demo : '')"
@@ -62,7 +62,7 @@
           />
         </div>
 
-        <discocan-table-panel
+        <osnova-table-panel
           #panel
           [heading]="text().table.heading"
           [total]="total()"
@@ -81,7 +81,7 @@
           (clearFilters)="clearFilters()"
           (retry)="retry.emit()"
         >
-          <discocan-list-sort-menu
+          <osnova-list-sort-menu
             panelActions
             [fields]="sortFields()"
             [sort]="state().sort"
@@ -144,7 +144,7 @@
                     <span>{{ severityLabel(row.severity) }}</span>
                   </span>
                   <div class="app-table-mobile-actions">
-                    <discocan-row-actions
+                    <osnova-row-actions
                       [actions]="actions()"
                       [record]="row.record"
                       (choose)="panel.run($event.action, [row.record], $event.origin)"
@@ -211,7 +211,7 @@
                   </span>
                 </td>
                 <td class="app-col-actions" pFrozenColumn alignFrozen="right">
-                  <discocan-row-actions
+                  <osnova-row-actions
                     [actions]="actions()"
                     [record]="row.record"
                     (choose)="panel.run($event.action, [row.record], $event.origin)"
@@ -220,7 +220,7 @@
               </tr>
             </ng-template>
           </p-table>
-        </discocan-table-panel>
+        </osnova-table-panel>
       </div>
     </p-tabpanel>
   </p-tabpanels>

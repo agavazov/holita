@@ -23,9 +23,9 @@ import { WindowMaximize } from '@primeicons/angular/window-maximize';
 import { WindowMinimize } from '@primeicons/angular/window-minimize';
 import { AdminConfig } from '../../core/config/admin-config';
 import type { Language } from '../../i18n/messages';
-import { formatNumber } from '../format/format';
+import { formatNumber } from '@osnova/ui';
 import { googleMapsAuthenticationFailed, loadGoogleStreetView } from '../location-map/google-maps';
-import { locationMap } from '../map-preview/location-map';
+import { locationMap } from '@osnova/ui';
 import bg from './bg.json';
 import en from './en.json';
 

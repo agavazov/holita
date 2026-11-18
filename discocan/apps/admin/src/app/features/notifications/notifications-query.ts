@@ -3,9 +3,9 @@ import type {
   FleetNotificationCategory,
   FleetNotificationReadState,
 } from '../../../generated/graphql/operations';
-import type { FilterCondition } from '../../ui/filter-builder/filter-model';
-import type { ListQuery } from '../../ui/list/list-query';
-import { codecs, type ListDefinition, type ListState } from '../../ui/list/list-state';
+import type { FilterCondition } from '@osnova/ui';
+import type { ListQuery } from '@osnova/ui';
+import { codecs, type ListDefinition, type ListState } from '@osnova/ui';
 
 interface NotificationFilters {
   readonly readState: FleetNotificationReadState;

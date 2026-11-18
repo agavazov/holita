@@ -1,22 +1,22 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
-import { FormatNumberPipe } from '../../../ui/format/format.pipes';
-import { interpolate } from '../../../ui/i18n/messages';
+import { FormatNumberPipe } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
 import {
   type ListAction,
   type ListActionRequest,
   type ListRecord,
   listRecord,
   trackById,
-} from '../../../ui/list/list-actions';
-import { injectSortReady, type ListQuery } from '../../../ui/list/list-query';
-import { ListSortMenu } from '../../../ui/list/list-sort-menu';
-import { PageHeader } from '../../../ui/page-header/page-header';
-import { RowActions } from '../../../ui/row-actions/row-actions';
-import { TablePanel, type TableColumn, type TablePage } from '../../../ui/table-panel/table-panel';
-import type { TableView } from '../../../ui/table-panel/table-view';
-import { UI_LANGUAGE } from '../../../ui/ui-language';
+} from '@osnova/ui';
+import { injectSortReady, type ListQuery } from '@osnova/ui';
+import { ListSortMenu } from '@osnova/ui';
+import { PageHeader } from '@osnova/ui';
+import { RowActions } from '@osnova/ui';
+import { TablePanel, type TableColumn, type TablePage } from '@osnova/ui';
+import type { TableView } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { settingsText } from './i18n/messages';
 import bg from './groups-view.bg.json';
 import en from './groups-view.en.json';

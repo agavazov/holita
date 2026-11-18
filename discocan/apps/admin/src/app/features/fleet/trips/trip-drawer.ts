@@ -12,10 +12,10 @@ import {
 import { ButtonDirective } from 'primeng/button';
 import { Timeline } from 'primeng/timeline';
 import { Tag } from 'primeng/tag';
-import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
-import { FormatDurationPipe, FormatNumberPipe } from '../../../ui/format/format.pipes';
-import { interpolate } from '../../../ui/i18n/messages';
-import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { RouteDrawer, type RouteDrawerState } from '@osnova/ui';
+import { FormatDurationPipe, FormatNumberPipe } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { scoreTone } from '../drivers/drivers-view';
 import { tripsText } from './i18n/messages';

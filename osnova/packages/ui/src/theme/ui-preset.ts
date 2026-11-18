@@ -1,0 +1,357 @@
+import type {} from './aura-base';
+import { definePreset, type Preset } from '@primeuix/themes';
+import { primitive, semantic } from '@primeuix/themes/aura/base';
+import Accordion from '@primeuix/themes/aura/accordion';
+import AutoComplete from '@primeuix/themes/aura/autocomplete';
+import Avatar from '@primeuix/themes/aura/avatar';
+import Badge from '@primeuix/themes/aura/badge';
+import Button from '@primeuix/themes/aura/button';
+import Checkbox from '@primeuix/themes/aura/checkbox';
+import Chip from '@primeuix/themes/aura/chip';
+import ConfirmDialog from '@primeuix/themes/aura/confirmdialog';
+import DataTable from '@primeuix/themes/aura/datatable';
+import DatePicker from '@primeuix/themes/aura/datepicker';
+import Dialog from '@primeuix/themes/aura/dialog';
+import Drawer from '@primeuix/themes/aura/drawer';
+import IconField from '@primeuix/themes/aura/iconfield';
+import InputNumber from '@primeuix/themes/aura/inputnumber';
+import InputText from '@primeuix/themes/aura/inputtext';
+import Menu from '@primeuix/themes/aura/menu';
+import Message from '@primeuix/themes/aura/message';
+import MeterGroup from '@primeuix/themes/aura/metergroup';
+import Paginator from '@primeuix/themes/aura/paginator';
+import Popover from '@primeuix/themes/aura/popover';
+import Select from '@primeuix/themes/aura/select';
+import SelectButton from '@primeuix/themes/aura/selectbutton';
+import Skeleton from '@primeuix/themes/aura/skeleton';
+import Tabs from '@primeuix/themes/aura/tabs';
+import Tag from '@primeuix/themes/aura/tag';
+import Textarea from '@primeuix/themes/aura/textarea';
+import Timeline from '@primeuix/themes/aura/timeline';
+import Toast from '@primeuix/themes/aura/toast';
+import ToggleButton from '@primeuix/themes/aura/togglebutton';
+import ToggleSwitch from '@primeuix/themes/aura/toggleswitch';
+import Tooltip from '@primeuix/themes/aura/tooltip';
+import VirtualScroller from '@primeuix/themes/aura/virtualscroller';
+import { brands, paletteSteps, type Brand } from './brands';
+import { densities, type Density } from './densities';
+import {
+  appCategoryTokens,
+  appToneTokens,
+  badgeToneTokens,
+  buttonToneTokens,
+  buttonVariantToneTokens,
+  messageToneTokens,
+  tagToneTokens,
+  toastToneTokens,
+} from './status-tones';
+import type { ThemeChoice } from './theme-choice';
+
+/**
+ * The PrimeNG controls the admin renders plus the controls they render internally. Adding a
+ * PrimeNG control means adding its preset here and to the "PrimeNG coverage" story.
+ * ProgressBar is not used: it renders an `aria-level` attribute that a progress bar may not
+ * carry (axe `aria-allowed-attr`).
+ */
+export const registeredComponents = {
+  accordion: Accordion,
+  autocomplete: AutoComplete,
+  avatar: Avatar,
+  badge: Badge,
+  button: Button,
+  // p-chart exposes no Aura tokens; ChartPanel resolves the app palette for its canvas.
+  chart: {},
+  checkbox: Checkbox,
+  chip: Chip,
+  confirmdialog: ConfirmDialog,
+  datatable: DataTable,
+  datepicker: DatePicker,
+  dialog: Dialog,
+  drawer: Drawer,
+  iconfield: IconField,
+  inputnumber: InputNumber,
+  inputtext: InputText,
+  menu: Menu,
+  message: Message,
+  metergroup: MeterGroup,
+  paginator: Paginator,
+  popover: Popover,
+  select: Select,
+  selectbutton: SelectButton,
+  skeleton: Skeleton,
+  tabs: Tabs,
+  tag: Tag,
+  textarea: Textarea,
+  timeline: Timeline,
+  toast: Toast,
+  togglebutton: ToggleButton,
+  toggleswitch: ToggleSwitch,
+  tooltip: Tooltip,
+  virtualscroller: VirtualScroller,
+};
+
+function ramp(palette: string): Record<string, string> {
+  const steps: Record<string, string> = {};
+  for (const step of paletteSteps) {
+    steps[String(step)] = `{${palette}.${String(step)}}`;
+  }
+  return steps;
+}
+
+function semanticTokens(brand: Brand, density: Density) {
+  const { light, dark } = brand;
+  return {
+    transitionDuration: '0.15s',
+    focusRing: {
+      width: '2px',
+      style: 'solid',
+      color: '{primary.color}',
+      offset: '2px',
+      shadow: 'none',
+    },
+    primary: {
+      ...ramp(brand.primary),
+      color: `light-dark({primary.${String(light.color)}}, {primary.${String(dark.color)}})`,
+      contrastColor: 'light-dark(#ffffff, {surface.950})',
+      hoverColor: `light-dark({primary.${String(light.hover)}}, {primary.${String(dark.hover)}})`,
+      activeColor: `light-dark({primary.${String(light.active)}}, {primary.${String(dark.active)}})`,
+    },
+    // One neutral per brand in both schemes keeps the grey character stable across themes.
+    surface: { 0: '#ffffff', ...ramp(brand.neutral) },
+    highlight: {
+      color: `light-dark({primary.${String(brand.emphasis)}}, rgba(255,255,255,.87))`,
+      focusColor: `light-dark({primary.${String(Math.min(brand.emphasis + 100, 900))}}, rgba(255,255,255,.87))`,
+    },
+    content: {
+      borderRadius: '{border.radius.lg}',
+      borderColor: 'light-dark({surface.200}, {surface.800})',
+    },
+    formField: {
+      paddingX: density.formField.paddingX,
+      paddingY: density.formField.paddingY,
+      // Component boundaries need 3:1 against the panel (WCAG 1.4.11).
+      borderColor: 'light-dark(color-mix(in srgb, {surface.500}, {surface.400}), {surface.500})',
+      hoverBorderColor: 'light-dark({surface.500}, {surface.400})',
+    },
+    list: { option: { padding: density.listOptionPadding } },
+  };
+}
+
+function appTokens(brand: Brand, density: Density) {
+  return {
+    font: {
+      family: "'Lato', system-ui, -apple-system, 'Segoe UI', sans-serif",
+      numeric: 'tabular-nums',
+    },
+    text: {
+      xs: '0.6875rem',
+      sm: '0.75rem',
+      table: density.table.bodyFontSize,
+      base: '0.875rem',
+      md: '1rem',
+      lg: '1.125rem',
+      title: density.app.titleSize,
+      kpi: '1.5rem',
+    },
+    space: {
+      1: '0.25rem',
+      2: '0.5rem',
+      3: '0.75rem',
+      4: '1rem',
+      5: '1.25rem',
+      6: '1.5rem',
+      8: '2rem',
+      10: '2.5rem',
+    },
+    radius: {
+      frame: '{border.radius.xl}',
+      panel: '{border.radius.lg}',
+      control: '{border.radius.md}',
+      tag: '{border.radius.sm}',
+    },
+    shadow: {
+      floating: '0 8px 24px -8px rgb(0 0 0 / 0.2), 0 2px 6px -2px rgb(0 0 0 / 0.08)',
+    },
+    canvas: {
+      background: 'light-dark({surface.100}, {surface.950})',
+      mutedColor: 'light-dark({surface.600}, {surface.400})',
+    },
+    frame: {
+      background: 'light-dark({surface.50}, {surface.950})',
+      borderColor: '{content.border.color}',
+      gap: '0.5rem',
+      radius: '{app.radius.frame}',
+    },
+    sidebar: {
+      width: '15.5rem',
+      railWidth: '4rem',
+      background: 'light-dark({surface.900}, {surface.950})',
+      color: 'light-dark({surface.0}, {surface.100})',
+      mutedColor: 'light-dark({surface.300}, {surface.400})',
+      borderColor: 'light-dark({surface.700}, {surface.800})',
+      groupColor: '{app.sidebar.muted.color}',
+      footerColor: '{app.sidebar.muted.color}',
+      // The outline sits outside the item, against the sidebar rather than the active fill.
+      focusColor: '{surface.0}',
+      drawerBackground: '{app.sidebar.background}',
+      drawerColor: '{app.sidebar.color}',
+      item: {
+        color: '{surface.100}',
+        mutedColor: '{app.sidebar.muted.color}',
+        iconColor: '{app.sidebar.muted.color}',
+        hoverBackground: '{surface.800}',
+        activeBackground: 'light-dark({primary.700}, {primary.400})',
+        activeColor: 'light-dark({surface.0}, {surface.950})',
+        activeIconColor: '{app.sidebar.item.active.color}',
+        indicator: '{app.sidebar.item.active.color}',
+      },
+    },
+    topbar: { height: density.app.topbarHeight },
+    content: { maxWidth: '100rem' },
+    gutter: density.app.gutter,
+    gutterNarrow: '1rem',
+    panel: {
+      background: 'light-dark({surface.0}, {surface.900})',
+      borderColor: '{content.border.color}',
+      headerBackground: 'light-dark({surface.50}, {surface.800})',
+      accentBackground: 'light-dark({primary.50}, {primary.950})',
+      accentColor: 'light-dark({primary.800}, {primary.200})',
+      padding: density.app.panelPadding,
+      radius: '{app.radius.panel}',
+    },
+    accent: {
+      background: 'light-dark({teal.50}, {teal.950})',
+      color: 'light-dark({teal.800}, {teal.200})',
+      solid: 'light-dark({teal.700}, {teal.400})',
+    },
+    hero: {
+      background:
+        'linear-gradient(120deg, light-dark({primary.700}, {primary.900}) 0%, light-dark({primary.900}, {teal.950}) 100%)',
+      color: '{surface.0}',
+    },
+    plate: {
+      background: '{surface.0}',
+      color: '{surface.950}',
+      borderColor: '{surface.500}',
+      bandBackground: '{blue.700}',
+      bandColor: '{surface.0}',
+    },
+    stack: { gap: density.app.stackGap },
+    control: { height: density.app.controlHeight },
+    row: { height: density.app.rowHeight },
+    drawer: { width: { md: '35rem', lg: '45rem' } },
+    kpi: { minWidth: '10.5rem' },
+    tone: appToneTokens(brand),
+    category: appCategoryTokens(),
+  };
+}
+
+function componentTokens(brand: Brand, density: Density) {
+  const button = {
+    root: {
+      paddingX: density.button.paddingX,
+      paddingY: density.button.paddingY,
+      ...buttonToneTokens(),
+    },
+    ...buttonVariantToneTokens(),
+  };
+  // Unselected segment and toggle labels sit on surface 100, where Aura's muted 500 fails AA.
+  const togglebutton = {
+    root: { color: 'light-dark({surface.600}, {surface.400})' },
+    icon: { color: 'light-dark({surface.600}, {surface.400})' },
+  };
+  const datatable = {
+    headerCell: {
+      padding: density.table.headerCellPadding,
+      background: '{app.panel.header.background}',
+      color: '{text.muted.color}',
+    },
+    columnTitle: { fontSize: density.table.columnTitleFontSize, fontWeight: '600' },
+    bodyCell: { padding: density.table.bodyCellPadding, fontSize: density.table.bodyFontSize },
+    row: { hoverBackground: 'light-dark({surface.50}, {surface.800})' },
+  };
+  const drawer = {
+    header: { padding: '1rem 1.25rem' },
+    title: { fontSize: '1.125rem', fontWeight: '600' },
+    content: { padding: density.drawerContentPadding },
+    footer: { padding: '0.75rem 1.25rem' },
+  };
+  const tag = {
+    root: {
+      fontSize: '0.75rem',
+      fontWeight: '600',
+      padding: '0.125rem 0.5rem',
+      borderRadius: '{app.radius.tag}',
+    },
+    ...tagToneTokens(brand),
+  };
+  const tooltip = {
+    root: {
+      background: 'light-dark({surface.800}, {surface.100})',
+      color: 'light-dark({surface.0}, {surface.900})',
+    },
+  };
+  return {
+    badge: badgeToneTokens(),
+    button,
+    datatable,
+    drawer,
+    message: messageToneTokens(),
+    tabs: {
+      tab: { borderWidth: '0 0 1px 0', activeBorderColor: '{primary.color}' },
+      activeBar: { height: '0' },
+    },
+    tag,
+    toast: { ...toastToneTokens(), summary: { fontWeight: '600' } },
+    togglebutton,
+    tooltip,
+  };
+}
+
+/**
+ * Central rules that tokens alone cannot express: small uppercase column titles (also for plain
+ * header cells without a sortable title), the density row height, the tab bar alignment,
+ * single-sided timelines and calendar days outside the month in the muted text colour
+ * (PrimeNG dims them with opacity below AA contrast and without `aria-disabled`).
+ */
+const presetCss = `
+.p-datatable-thead > tr > th {
+  font-size: var(--p-datatable-column-title-font-size);
+  font-weight: var(--p-datatable-column-title-font-weight);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.p-timeline-event-opposite:empty {
+  display: none;
+}
+.p-datatable-tbody > tr {
+  height: var(--p-app-row-height);
+}
+.p-tablist-tab-list {
+  gap: var(--p-app-space-1);
+}
+li.p-select-option,
+li.p-autocomplete-option,
+.p-datatable-tbody > tr,
+th.p-datatable-header-cell {
+  transition: none;
+}
+.p-datepicker-day.p-disabled {
+  opacity: 1;
+  color: var(--p-text-muted-color);
+}
+`;
+
+/** The UI preset for one brand and density: standard Aura plus the UI tokens. */
+export function uiPreset(choice: ThemeChoice): Preset {
+  const brand = brands[choice.brand];
+  const density = densities[choice.density];
+  const base: Preset = { primitive, semantic, components: registeredComponents };
+  const ui: Preset = {
+    semantic: semanticTokens(brand, density),
+    components: componentTokens(brand, density),
+    extend: { app: appTokens(brand, density) },
+    css: presetCss,
+  };
+  return definePreset(base, ui);
+}

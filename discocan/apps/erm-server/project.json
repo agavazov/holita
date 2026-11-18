@@ -3,7 +3,7 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "sourceRoot": "discocan/apps/erm-server/src",
-  "tags": ["type:app", "scope:erm-server"],
+  "tags": ["product:discocan", "type:app", "scope:erm-server"],
   "targets": {
     "test": {
       "executor": "nx:run-commands",

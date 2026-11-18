@@ -21,9 +21,9 @@ import type { ErmDeviceAction } from '../../../generated/graphql/operations';
 import { DemoSession } from '../../core/auth/demo-session';
 import { requestError } from '../../core/graphql/request-error';
 import type { Language } from '../../i18n/messages';
-import { confirmAction, confirmDialogPt } from '../../ui/confirm';
-import { FormField } from '../../ui/form-field/form-field';
-import { interpolate } from '../../ui/i18n/messages';
+import { confirmAction, confirmDialogPt } from '@osnova/ui';
+import { FormField } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
 import {
   CommandDetails,
   CommandHistory,

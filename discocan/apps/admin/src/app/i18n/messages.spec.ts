@@ -16,10 +16,15 @@ import fleetTripsBg from '../features/fleet/trips/i18n/bg.json';
 import fleetTripsEn from '../features/fleet/trips/i18n/en.json';
 import fleetVehiclesBg from '../features/fleet/vehicles/i18n/bg.json';
 import fleetVehiclesEn from '../features/fleet/vehicles/i18n/en.json';
+import {
+  uiCatalogs,
+  chartPanelCatalogs,
+  formatCatalogs,
+  shellCatalogs,
+  notificationCatalogs,
+} from '@osnova/ui';
 import mapPreviewBg from '../ui/map-preview/bg.json';
 import mapPreviewEn from '../ui/map-preview/en.json';
-import uiBg from '../ui/i18n/bg.json';
-import uiEn from '../ui/i18n/en.json';
 import bg from './bg.json';
 import en from './en.json';
 import { catalogParityProblems } from './catalog-parity';
@@ -27,7 +32,11 @@ import { catalogParityProblems } from './catalog-parity';
 /** Every Bulgarian/English catalog pair of the admin. */
 const catalogs: readonly { readonly name: string; readonly bg: unknown; readonly en: unknown }[] = [
   { name: 'i18n', bg, en },
-  { name: 'ui/i18n', bg: uiBg, en: uiEn },
+  { name: 'ui/i18n', ...uiCatalogs },
+  { name: 'ui/chart-panel', ...chartPanelCatalogs },
+  { name: 'ui/format', ...formatCatalogs },
+  { name: 'ui/shell', ...shellCatalogs },
+  { name: 'ui/notification', ...notificationCatalogs },
   { name: 'features/fleet/i18n', bg: fleetBg, en: fleetEn },
   { name: 'features/fleet/alerts', bg: fleetAlertsBg, en: fleetAlertsEn },
   { name: 'features/fleet/devices', bg: fleetDevicesBg, en: fleetDevicesEn },

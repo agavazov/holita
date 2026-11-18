@@ -1,0 +1,16 @@
+{
+  "account": "Account: {name}",
+  "branchPrefix": "Branch:",
+  "branches": "Choose a branch",
+  "breadcrumb": "Breadcrumb",
+  "closeNavigation": "Close navigation",
+  "emptyBranches": "No branches available.",
+  "languagePrefix": "Language:",
+  "loadingBranches": "Loading branches…",
+  "navigation": "Navigation",
+  "profile": "Profile",
+  "signOut": "Sign out",
+  "skipNavigation": "Skip to content",
+  "themePersistenceError": "Your browser could not save the theme preference.",
+  "toggleNavigation": "Toggle navigation"
+}

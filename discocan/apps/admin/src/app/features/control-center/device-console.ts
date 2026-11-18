@@ -32,10 +32,10 @@ import type {
 } from '../../../generated/graphql/operations';
 import { DemoSession } from '../../core/auth/demo-session';
 import type { Language } from '../../i18n/messages';
-import { FormField } from '../../ui/form-field/form-field';
-import { FormatDateTimePipe } from '../../ui/format/format.pipes';
-import { interpolate } from '../../ui/i18n/messages';
-import { toneSeverity } from '../../ui/tones';
+import { FormField } from '@osnova/ui';
+import { FormatDateTimePipe } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { toneSeverity } from '@osnova/ui';
 import { ControlCenterApi } from './control-center-api';
 import { controlCenterError, controlCenterReason, controlCenterText } from './control-center-text';
 

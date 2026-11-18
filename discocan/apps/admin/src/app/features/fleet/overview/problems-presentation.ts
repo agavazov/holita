@@ -5,7 +5,7 @@ import type {
 } from '../../../../generated/graphql/operations';
 import { faultDescription, type FleetFaultDiagnostic } from '../../../ui/fleet-live/fault-wording';
 import type { Language } from '../../../i18n/messages';
-import type { StatusTone } from '../../../theme/status-tones';
+import type { StatusTone } from '@osnova/ui/theme';
 import { alertsText } from '../alerts/i18n/messages';
 import bg from './problems-bg.json';
 import en from './problems-en.json';

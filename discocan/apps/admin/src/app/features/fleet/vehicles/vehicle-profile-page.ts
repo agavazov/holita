@@ -42,12 +42,12 @@ import type {
 import { requestError } from '../../../core/graphql/request-error';
 import { DemoSession } from '../../../core/auth/demo-session';
 import type { Language } from '../../../i18n/messages';
-import { injectPageRecord } from '../../../layout/page-record';
-import type { DrawerHost } from '../../../ui/drawer/drawer-host';
-import { drawerParam } from '../../../ui/drawer/drawer-route';
-import { errorCode } from '../../../ui/forms/field-errors';
-import { WALL_CLOCK } from '../../../ui/clock';
-import { tableView } from '../../../ui/table-panel/table-view';
+import { injectPageRecord } from '@osnova/ui';
+import type { DrawerHost } from '@osnova/ui';
+import { drawerParam } from '@osnova/ui';
+import { errorCode } from '@osnova/ui';
+import { WALL_CLOCK } from '@osnova/ui';
+import { tableView } from '@osnova/ui';
 import { serviceTaskRow } from '../maintenance/service-task-mapping';
 import { tripRow } from '../trips/trip-mapping';
 import { vehiclesText } from './i18n/messages';

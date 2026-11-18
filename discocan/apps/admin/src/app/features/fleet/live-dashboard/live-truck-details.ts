@@ -10,10 +10,10 @@ import type { AdminLiveVehicleQuery } from '../../../../generated/graphql/operat
 import type { Language } from '../../../i18n/messages';
 import { FaultScanner } from '../../../ui/fleet-live/fault-scanner';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { formatDuration, formatNumber, formatRelative } from '../../../ui/format/format';
-import { interpolate } from '../../../ui/i18n/messages';
-import { locationMap } from '../../../ui/map-preview/location-map';
-import { toneSeverity } from '../../../ui/tones';
+import { formatDuration, formatNumber, formatRelative } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { locationMap } from '@osnova/ui';
+import { toneSeverity } from '@osnova/ui';
 import {
   problemSeverityTones,
   problemsText,

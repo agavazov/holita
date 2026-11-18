@@ -3,10 +3,10 @@ import { RouterLink } from '@angular/router';
 import { ExternalLink } from '@primeicons/angular/external-link';
 import { Tag } from 'primeng/tag';
 import { injectFleetFormat } from '../format/fleet-format';
-import { formatNumber } from '../format/format';
-import { interpolate } from '../i18n/messages';
-import { toneSeverity, type StatusTone } from '../tones';
-import { UI_LANGUAGE } from '../ui-language';
+import { formatNumber } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { toneSeverity, type StatusTone } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { faultsText, warningLampLabel, warningStateLabel } from './fault-wording';
 import { fleetLiveText, type FleetLiveDevice, type FleetLiveMode } from './fleet-live';
 

@@ -7,19 +7,15 @@ import { Map } from '@primeicons/angular/map';
 import { Star } from '@primeicons/angular/star';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
-import {
-  StackedBars,
-  type StackedLegendItem,
-  type StackedRow,
-} from '../../../ui/charts/stacked-bars';
-import { EmptyState } from '../../../ui/empty-state/empty-state';
-import { FormatNumberPipe } from '../../../ui/format/format.pipes';
-import { formatNumber } from '../../../ui/format/format';
-import { interpolate } from '../../../ui/i18n/messages';
-import { KpiStrip } from '../../../ui/kpi/kpi-strip';
-import { KpiTile } from '../../../ui/kpi/kpi-tile';
-import { PageHeader } from '../../../ui/page-header/page-header';
-import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { StackedBars, type StackedLegendItem, type StackedRow } from '@osnova/ui';
+import { EmptyState } from '@osnova/ui';
+import { FormatNumberPipe } from '@osnova/ui';
+import { formatNumber } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { KpiStrip } from '@osnova/ui';
+import { KpiTile } from '@osnova/ui';
+import { PageHeader } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { driversText } from './i18n/messages';
 

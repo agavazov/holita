@@ -7,10 +7,10 @@
     <p-message severity="warn">{{ error }}</p-message>
   }
   <div [formGroup]="form" class="app-form-grid">
-    <discocan-form-field [label]="text().intent" controlId="erm-command-intent">
+    <osnova-form-field [label]="text().intent" controlId="erm-command-intent">
       <input pInputText id="erm-command-intent" formControlName="intent" maxlength="200" />
-    </discocan-form-field>
-    <discocan-form-field [label]="text().expiry" controlId="erm-command-expiry">
+    </osnova-form-field>
+    <osnova-form-field [label]="text().expiry" controlId="erm-command-expiry">
       <input
         pInputText
         id="erm-command-expiry"
@@ -20,7 +20,7 @@
         max="1440"
         step="1"
       />
-    </discocan-form-field>
+    </osnova-form-field>
   </div>
   <div class="command-queue__actions">
     @for (action of actions; track action) {

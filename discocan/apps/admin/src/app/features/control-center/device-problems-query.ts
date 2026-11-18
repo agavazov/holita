@@ -3,7 +3,7 @@ import type {
   FleetProblemSortField,
   FleetProblemState,
 } from '../../../generated/graphql/operations';
-import { codecs, type ListDefinition } from '../../ui/list/list-state';
+import { codecs, type ListDefinition } from '@osnova/ui';
 import { problemSeverities, problemStates } from '../fleet/overview/problems-query';
 
 interface DeviceProblemFilters {

@@ -14,6 +14,17 @@
     "verbatimModuleSyntax": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@osnova/ui": [
+        "./osnova/packages/ui/src/index.ts"
+      ],
+      "@osnova/ui/theme": [
+        "./osnova/packages/ui/src/theme.ts"
+      ],
+      "@osnova/ui/layout": [
+        "./osnova/packages/ui/src/layout.ts"
+      ]
+    }
   }
 }

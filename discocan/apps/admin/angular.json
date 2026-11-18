@@ -28,7 +28,7 @@
             ],
             "styles": ["src/styles.scss"],
             "stylePreprocessorOptions": {
-              "includePaths": ["src/styles"]
+              "includePaths": ["../../../osnova/packages/ui/src/styles"]
             },
             "outputPath": "dist"
           },

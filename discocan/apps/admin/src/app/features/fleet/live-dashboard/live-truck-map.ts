@@ -19,12 +19,12 @@ import { DOCUMENT } from '@angular/common';
 import { ButtonDirective } from 'primeng/button';
 import { AdminConfig } from '../../../core/config/admin-config';
 import type { Language } from '../../../i18n/messages';
-import { injectChartPalette } from '../../../ui/chart-panel/chart-palette';
+import { injectChartPalette } from '@osnova/ui';
 import {
   googleMapsAuthenticationFailed,
   loadGoogleMaps,
 } from '../../../ui/location-map/google-maps';
-import type { MapCoordinates } from '../../../ui/map-preview/location-map';
+import type { MapCoordinates } from '@osnova/ui';
 import { isMoving, type LiveTruck, type SpeedBand, type TrailLine } from './live-dashboard-model';
 import { liveDashboardText } from './live-dashboard-text';
 

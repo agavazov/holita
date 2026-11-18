@@ -9,7 +9,8 @@
   },
   "workspaces": [
     "discocan/apps/*",
-    "discocan/packages/*"
+    "discocan/packages/*",
+    "osnova/packages/*"
   ],
   "overrides": {
     "mysql2": "3.24.4",
@@ -62,7 +63,7 @@
     "db:seed:driver-scorecards": "tsx discocan/apps/fleet/prisma/demo/driver-scorecards-cli.ts",
     "test:core:db": "nx run core:test-db --skip-nx-cache --output-style=static",
     "prelint": "npm run db:generate && npm run codegen",
-    "typecheck:tools": "tsc --project discocan/tools/tsconfig.json",
+    "typecheck:tools": "tsc --project discocan/tools/tsconfig.json && tsc --project osnova/tools/tsconfig.json",
     "codegen": "nx run-many -t graphql-generate",
     "schema:compose": "npm run graphql:generate --workspace @discocan/gateway",
     "schema:check": "tsx discocan/tools/graphql/generate.mts check",
@@ -73,7 +74,7 @@
     "test:fleet:db": "nx run fleet:test-db --skip-nx-cache --output-style=static",
     "test:smoke:admin": "nx run admin:test-smoke --output-style=static",
     "router:check": "npm run router:check --workspace @discocan/gateway",
-    "check:admin-styles": "tsx discocan/tools/design/check-admin-styles.mts"
+    "check:admin-styles": "tsx osnova/tools/design/check-admin-styles.mts"
   },
   "devDependencies": {
     "@apollo/composition": "2.14.4",

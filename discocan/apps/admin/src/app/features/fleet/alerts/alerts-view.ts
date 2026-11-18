@@ -6,29 +6,29 @@ import { ExclamationTriangle } from '@primeicons/angular/exclamation-triangle';
 import type { FleetRecordLinks } from '../fleet-record-links';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
-import type { StatusTone } from '../../../theme/status-tones';
-import type { FilterCondition, FilterField } from '../../../ui/filter-builder/filter-model';
-import { FilterBuilder } from '../../../ui/filter-builder/filter-builder';
+import type { StatusTone } from '@osnova/ui/theme';
+import type { FilterCondition, FilterField } from '@osnova/ui';
+import { FilterBuilder } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { FormatNumberPipe } from '../../../ui/format/format.pipes';
-import { interpolate } from '../../../ui/i18n/messages';
-import { KpiStrip } from '../../../ui/kpi/kpi-strip';
-import { KpiTile } from '../../../ui/kpi/kpi-tile';
+import { FormatNumberPipe } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { KpiStrip } from '@osnova/ui';
+import { KpiTile } from '@osnova/ui';
 import {
   type ListAction,
   type ListActionRequest,
   type ListRecord,
   listRecord,
   trackById,
-} from '../../../ui/list/list-actions';
-import { injectSortReady, listQuery, type ListQuery } from '../../../ui/list/list-query';
-import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
-import { PageHeader } from '../../../ui/page-header/page-header';
-import { RowActions } from '../../../ui/row-actions/row-actions';
-import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-panel';
-import type { TableView } from '../../../ui/table-panel/table-view';
-import { toneSeverity } from '../../../ui/tones';
-import { UI_LANGUAGE } from '../../../ui/ui-language';
+} from '@osnova/ui';
+import { injectSortReady, listQuery, type ListQuery } from '@osnova/ui';
+import { ListSortMenu, type ListSortField } from '@osnova/ui';
+import { PageHeader } from '@osnova/ui';
+import { RowActions } from '@osnova/ui';
+import { TablePanel, type TableColumn } from '@osnova/ui';
+import type { TableView } from '@osnova/ui';
+import { toneSeverity } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { alertsText } from './i18n/messages';
 
 export const alertSeverities = ['CRITICAL', 'WARNING', 'INFO'] as const;

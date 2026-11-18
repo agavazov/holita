@@ -1,6 +1,6 @@
 @switch (state()) {
   @case ('not-found') {
-    <discocan-empty-state
+    <osnova-empty-state
       kind="not-found"
       [title]="text().notFoundTitle"
       [description]="text().notFoundDescription"
@@ -13,10 +13,10 @@
         [fragment]="backFragment() ?? undefined"
         >{{ text().back }}</a
       >
-    </discocan-empty-state>
+    </osnova-empty-state>
   }
   @case ('error') {
-    <discocan-empty-state
+    <osnova-empty-state
       kind="error"
       [title]="text().errorTitle"
       [description]="errorText() ?? text().errorDescription"
@@ -32,10 +32,10 @@
         [fragment]="backFragment() ?? undefined"
         >{{ text().back }}</a
       >
-    </discocan-empty-state>
+    </osnova-empty-state>
   }
   @case ('loading') {
-    <discocan-page-header
+    <osnova-page-header
       [title]="text().title"
       [backLink]="backLink()"
       [backLabel]="text().back"
@@ -43,27 +43,27 @@
       [backFragment]="backFragment()"
       [moduleInfo]="text().moduleInfo"
     />
-    <discocan-kpi-strip [label]="text().summary" [loading]="true">
-      <discocan-kpi-tile [label]="text().drivingScore" [loading]="true" category="c3"
+    <osnova-kpi-strip [label]="text().summary" [loading]="true">
+      <osnova-kpi-tile [label]="text().drivingScore" [loading]="true" category="c3"
         ><svg kpiIcon data-p-icon="star"
-      /></discocan-kpi-tile>
-      <discocan-kpi-tile [label]="text().ecoScore" [loading]="true" tone="success"
+      /></osnova-kpi-tile>
+      <osnova-kpi-tile [label]="text().ecoScore" [loading]="true" tone="success"
         ><svg kpiIcon data-p-icon="chart-line"
-      /></discocan-kpi-tile>
-      <discocan-kpi-tile [label]="text().distance" [loading]="true" category="c4"
+      /></osnova-kpi-tile>
+      <osnova-kpi-tile [label]="text().distance" [loading]="true" category="c4"
         ><svg kpiIcon data-p-icon="compass"
-      /></discocan-kpi-tile>
-      <discocan-kpi-tile [label]="text().trips" [loading]="true" category="c2"
+      /></osnova-kpi-tile>
+      <osnova-kpi-tile [label]="text().trips" [loading]="true" category="c2"
         ><svg kpiIcon data-p-icon="map"
-      /></discocan-kpi-tile>
-      <discocan-kpi-tile [label]="text().maneuversPer100Km" [loading]="true" tone="warn"
+      /></osnova-kpi-tile>
+      <osnova-kpi-tile [label]="text().maneuversPer100Km" [loading]="true" tone="warn"
         ><svg kpiIcon data-p-icon="exclamation-triangle"
-      /></discocan-kpi-tile>
-    </discocan-kpi-strip>
+      /></osnova-kpi-tile>
+    </osnova-kpi-strip>
   }
   @case ('ready') {
     @if (scorecard(); as card) {
-      <discocan-page-header
+      <osnova-page-header
         [title]="card.name"
         [backLink]="backLink()"
         [backLabel]="text().back"
@@ -101,51 +101,51 @@
       </section>
 
       @if (!card.asOf) {
-        <discocan-empty-state
+        <osnova-empty-state
           kind="no-telemetry"
           [title]="text().noTelemetryTitle"
           [description]="text().noTelemetryDescription"
         />
       } @else {
-        <discocan-kpi-strip [label]="text().summary">
-          <discocan-kpi-tile
+        <osnova-kpi-strip [label]="text().summary">
+          <osnova-kpi-tile
             [label]="text().drivingScore"
-            [value]="card.averageDrivingScore | discocanNumber: 1"
+            [value]="card.averageDrivingScore | osnovaNumber: 1"
             [footnote]="text().outOf100"
             category="c3"
             ><svg kpiIcon data-p-icon="star"
-          /></discocan-kpi-tile>
-          <discocan-kpi-tile
+          /></osnova-kpi-tile>
+          <osnova-kpi-tile
             [label]="text().ecoScore"
-            [value]="card.averageEcoScore | discocanNumber: 1"
+            [value]="card.averageEcoScore | osnovaNumber: 1"
             [footnote]="text().outOf100"
             tone="success"
             ><svg kpiIcon data-p-icon="chart-line"
-          /></discocan-kpi-tile>
-          <discocan-kpi-tile
+          /></osnova-kpi-tile>
+          <osnova-kpi-tile
             [label]="text().distance"
             [value]="units.distance(card.distanceKm, false, 1)"
             [unit]="units.distanceUnit()"
             category="c4"
             ><svg kpiIcon data-p-icon="compass"
-          /></discocan-kpi-tile>
-          <discocan-kpi-tile
+          /></osnova-kpi-tile>
+          <osnova-kpi-tile
             [label]="text().trips"
-            [value]="card.tripCount | discocanNumber"
+            [value]="card.tripCount | osnovaNumber"
             [footnote]="coverage()"
             category="c2"
             ><svg kpiIcon data-p-icon="map"
-          /></discocan-kpi-tile>
-          <discocan-kpi-tile
+          /></osnova-kpi-tile>
+          <osnova-kpi-tile
             [label]="text().maneuversPer100Km"
-            [value]="maneuverRate() | discocanNumber: 1"
+            [value]="maneuverRate() | osnovaNumber: 1"
             tone="warn"
             ><svg kpiIcon data-p-icon="exclamation-triangle"
-          /></discocan-kpi-tile>
-        </discocan-kpi-strip>
+          /></osnova-kpi-tile>
+        </osnova-kpi-strip>
 
         @if (!card.tripCount) {
-          <discocan-empty-state
+          <osnova-empty-state
             kind="empty"
             [title]="text().noTripsTitle"
             [description]="text().noTripsDescription"
@@ -157,13 +157,13 @@
         <div class="app-card-grid scorecard__details">
           <section class="app-card">
             <h2 class="app-card__title app-card__header">{{ text().maneuvers }}</h2>
-            <discocan-stacked-bars
+            <osnova-stacked-bars
               [label]="text().maneuvers"
               [rows]="maneuverRows()"
               [legend]="legend()"
             />
             <p class="app-muted scorecard__total">
-              {{ text().maneuverTotal }} {{ card.maneuverCount | discocanNumber }}
+              {{ text().maneuverTotal }} {{ card.maneuverCount | osnovaNumber }}
             </p>
           </section>
           <section class="app-card">
@@ -195,7 +195,7 @@
               </div>
               <div>
                 <dt>{{ text().scoredTrips }}</dt>
-                <dd>{{ card.scoredTripCount | discocanNumber }}</dd>
+                <dd>{{ card.scoredTripCount | osnovaNumber }}</dd>
               </div>
             </dl>
           </section>

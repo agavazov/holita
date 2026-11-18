@@ -2,8 +2,8 @@ import type { AdminFleetLiveDeviceFragment } from '../../../generated/graphql/op
 import type { Language } from '../../i18n/messages';
 import en from './en.json';
 import bg from './bg.json';
-import { formatRelative } from '../format/format';
-import { interpolate } from '../i18n/messages';
+import { formatRelative } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
 
 /** Null means no installed device; undefined means the live request is unavailable. */
 export type FleetLiveDevice = AdminFleetLiveDeviceFragment | null | undefined;

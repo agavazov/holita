@@ -19,12 +19,12 @@ import type {
 import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
 import { messages, type Language } from '../../../i18n/messages';
-import type { DrawerHost } from '../../../ui/drawer/drawer-host';
-import { interpolate } from '../../../ui/i18n/messages';
-import type { ListActionRequest } from '../../../ui/list/list-actions';
-import type { ListDefinition } from '../../../ui/list/list-state';
-import { UrlListState } from '../../../ui/list/url-list-state';
-import { tableView } from '../../../ui/table-panel/table-view';
+import type { DrawerHost } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import type { ListActionRequest } from '@osnova/ui';
+import type { ListDefinition } from '@osnova/ui';
+import { UrlListState } from '@osnova/ui';
+import { tableView } from '@osnova/ui';
 import { GroupsView, type GroupActionId } from '../settings/groups-view';
 import { settingsText } from '../settings/i18n/messages';
 import { vehicleGroupRow } from './vehicle-group-mapping';

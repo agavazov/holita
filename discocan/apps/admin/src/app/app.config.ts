@@ -18,8 +18,9 @@ import {
   type AdminRuntimeConfig,
 } from './core/config/admin-config';
 import { graphqlOptions } from './core/graphql/graphql-options';
-import { provideDiscoCanTheme } from './theme/provide-discocan-theme';
-import { appTheme, type ThemeChoice } from './theme/theme-choice';
+import { provideOsnovaTheme, THEME_STORAGE_KEY } from '@osnova/ui/theme';
+import { SHELL_STORAGE_KEY } from '@osnova/ui/layout';
+import { appTheme, type ThemeChoice } from '@osnova/ui/theme';
 
 /** The application providers. */
 export function appConfig(
@@ -29,10 +30,12 @@ export function appConfig(
   return {
     providers: [
       { provide: ADMIN_RUNTIME_CONFIG, useValue: config },
+      { provide: THEME_STORAGE_KEY, useValue: 'discocan.admin.theme' },
+      { provide: SHELL_STORAGE_KEY, useValue: 'discocan.admin.sidebar' },
       { provide: ErrorHandler, useClass: AdminErrorHandler },
       provideBrowserGlobalErrorListeners(),
       provideHttpClient(withInterceptors([(request, next) => next(request).pipe(timeout(10_000))])),
-      provideDiscoCanTheme(theme, config.primeUiLicense),
+      provideOsnovaTheme(theme, config.primeUiLicense),
       provideApollo(() => graphqlOptions(inject(HttpLink), inject(AdminConfig).graphqlUrl)),
       provideRouter(routes),
       { provide: RouteReuseStrategy, useClass: FleetRouteReuseStrategy },

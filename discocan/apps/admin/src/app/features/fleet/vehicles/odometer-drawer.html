@@ -1,4 +1,4 @@
-<discocan-route-drawer
+<osnova-route-drawer
   [title]="title()"
   [saving]="saving()"
   [dirty]="dirty()"
@@ -26,7 +26,7 @@
           <div>
             <dt>{{ text().recordedAt }}</dt>
             <dd>
-              {{ previous.recordedAt | discocanDateTime: units.preferences().timeZone : true }}
+              {{ previous.recordedAt | osnovaDateTime: units.preferences().timeZone : true }}
             </dd>
           </div>
           <div>
@@ -39,10 +39,10 @@
       }
       <p class="app-muted">
         {{ text().latestAllowed }}:
-        {{ latestAllowedAt() | discocanDateTime: units.preferences().timeZone : true }}
+        {{ latestAllowedAt() | osnovaDateTime: units.preferences().timeZone : true }}
       </p>
       <div class="app-form-grid">
-        <discocan-form-field
+        <osnova-form-field
           [label]="odometerLabel()"
           controlId="odometer-odometerKm"
           [required]="true"
@@ -56,8 +56,8 @@
             [invalid]="!!errorOf('odometerKm')"
             [pt]="numberPt()"
           />
-        </discocan-form-field>
-        <discocan-form-field
+        </osnova-form-field>
+        <osnova-form-field
           [label]="text().recordedAt"
           controlId="odometer-recordedAt"
           [required]="true"
@@ -80,7 +80,7 @@
             [invalid]="!!errorOf('recordedAt')"
             [pt]="datePt()"
           />
-        </discocan-form-field>
+        </osnova-form-field>
       </div>
     </section>
   </form>
@@ -105,4 +105,4 @@
       {{ text().save }}
     </button>
   </div>
-</discocan-route-drawer>
+</osnova-route-drawer>

@@ -23,24 +23,19 @@ import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
-import { RouteDrawer, type RouteDrawerState } from '../../../ui/drawer/route-drawer';
-import { FormField } from '../../../ui/form-field/form-field';
-import { FormatNumberPipe } from '../../../ui/format/format.pipes';
-import { fromDateOnly, toDateOnly } from '../../../ui/format/zoned-time';
-import { focusFirstInvalid } from '../../../ui/forms/focus';
-import { datePickerInputPt } from '../../../ui/forms/inner-input-pt';
-import { lockWhileSaving } from '../../../ui/forms/saving';
-import {
-  dateOnlyValidator,
-  patternValidator,
-  textValidator,
-  validationMessage,
-} from '../../../ui/forms/validators';
-import { interpolate } from '../../../ui/i18n/messages';
-import { toneSeverity } from '../../../ui/tones';
-import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { RouteDrawer, type RouteDrawerState } from '@osnova/ui';
+import { FormField } from '@osnova/ui';
+import { FormatNumberPipe } from '@osnova/ui';
+import { fromDateOnly, toDateOnly } from '@osnova/ui';
+import { focusFirstInvalid } from '@osnova/ui';
+import { datePickerInputPt } from '@osnova/ui';
+import { lockWhileSaving } from '@osnova/ui';
+import { dateOnlyValidator, patternValidator, textValidator, validationMessage } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { toneSeverity } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { selectMultiplePt } from '../../../ui/select-multiple';
+import { selectMultiplePt } from '@osnova/ui';
 import {
   documentExpiry,
   driverStatuses,

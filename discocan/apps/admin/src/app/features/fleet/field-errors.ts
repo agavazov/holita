@@ -1,5 +1,5 @@
 import type { Language } from '../../i18n/messages';
-import { fieldErrors } from '../../ui/forms/field-errors';
+import { fieldErrors } from '@osnova/ui';
 import { devicesText } from './devices/i18n/messages';
 import { driversText } from './drivers/i18n/messages';
 import { fleetValidationText } from './i18n/messages';

@@ -37,7 +37,7 @@ import type {
 } from '../../../../generated/graphql/operations';
 import { requestError } from '../../../core/graphql/request-error';
 import type { Language } from '../../../i18n/messages';
-import { WALL_CLOCK } from '../../../ui/clock';
+import { WALL_CLOCK } from '@osnova/ui';
 import {
   faultFmi,
   faultReadResult,
@@ -48,15 +48,15 @@ import {
   type FleetFaultFinding,
 } from '../../../ui/fleet-live/fault-wording';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { formatNumber, formatRelative } from '../../../ui/format/format';
-import { interpolate } from '../../../ui/i18n/messages';
-import { KpiStrip } from '../../../ui/kpi/kpi-strip';
-import { KpiTile } from '../../../ui/kpi/kpi-tile';
-import { trackById } from '../../../ui/list/list-actions';
-import { PageHeader } from '../../../ui/page-header/page-header';
-import { TablePanel, type TableColumn } from '../../../ui/table-panel/table-panel';
-import { tableView } from '../../../ui/table-panel/table-view';
-import { toneSeverity } from '../../../ui/tones';
+import { formatNumber, formatRelative } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { KpiStrip } from '@osnova/ui';
+import { KpiTile } from '@osnova/ui';
+import { trackById } from '@osnova/ui';
+import { PageHeader } from '@osnova/ui';
+import { TablePanel, type TableColumn } from '@osnova/ui';
+import { tableView } from '@osnova/ui';
+import { toneSeverity } from '@osnova/ui';
 import { fleetRecordLinks } from '../fleet-record-links';
 import { FaultsApi } from './faults-api';
 import {

@@ -1,4 +1,4 @@
-<discocan-operation-toast />
+<osnova-operation-toast />
 @if (navigating()) {
   <div class="app-route-progress" role="progressbar" [attr.aria-label]="text().loading"></div>
 }
@@ -9,7 +9,12 @@
     (signedIn)="branches.enter($event, language())"
   />
 } @else {
-  <discocan-admin-shell
+  <osnova-admin-shell
+    productName="DiscoCan"
+    productMark="D"
+    [homeLink]="homeLink()"
+    [profileLink]="['/', language(), 'profile']"
+    [notificationEmpty]="text().notificationEmpty"
     [branches]="branches.branches() ?? []"
     [branchId]="branches.selectedId()"
     [language]="language()"
@@ -59,5 +64,5 @@
     @if (!branches.required() || branches.available()) {
       <router-outlet />
     }
-  </discocan-admin-shell>
+  </osnova-admin-shell>
 }

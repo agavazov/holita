@@ -1,4 +1,4 @@
-<discocan-route-drawer
+<osnova-route-drawer
   [title]="title()"
   [subtitle]="subtitle()"
   [state]="state()"
@@ -62,7 +62,7 @@
           <div>
             <dt>{{ text().duration }}</dt>
             <dd>
-              {{ (record.durationMin === null ? null : record.durationMin * 60) | discocanDuration }}
+              {{ (record.durationMin === null ? null : record.durationMin * 60) | osnovaDuration }}
             </dd>
           </div>
           <div>
@@ -97,7 +97,7 @@
                     [style.--app-meter-value]="record.score + '%'"
                     aria-hidden="true"
                   ></span>
-                  <span>{{ record.score | discocanNumber }}</span>
+                  <span>{{ record.score | osnovaNumber }}</span>
                 </span>
               } @else {
                 —
@@ -147,4 +147,4 @@
       }
     }
   </div>
-</discocan-route-drawer>
+</osnova-route-drawer>

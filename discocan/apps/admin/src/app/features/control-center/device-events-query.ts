@@ -3,7 +3,7 @@ import type {
   ErmEventSeverity,
   ErmEventSortField,
 } from '../../../generated/graphql/operations';
-import { codecs, type ListDefinition } from '../../ui/list/list-state';
+import { codecs, type ListDefinition } from '@osnova/ui';
 
 export const eventCategories: readonly ErmEventCategory[] = [
   'POSITION',

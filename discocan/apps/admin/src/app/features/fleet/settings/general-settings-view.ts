@@ -27,21 +27,17 @@ import bg from './general-settings-view.bg.json';
 import en from './general-settings-view.en.json';
 import { map, timer } from 'rxjs';
 import { injectFleetFormat, type FleetDisplayPreferences } from '../../../ui/format/fleet-format';
-import {
-  dateFormatLabels,
-  defaultDateFormat,
-  supportedDateFormats,
-} from '../../../ui/format/format';
-import { WALL_CLOCK } from '../../../ui/clock';
-import { confirmDialogPt, confirmDiscard } from '../../../ui/confirm';
-import { FormField } from '../../../ui/form-field/form-field';
-import { focusFirstInvalid } from '../../../ui/forms/focus';
-import { innerInputPt } from '../../../ui/forms/inner-input-pt';
-import { EmptyState } from '../../../ui/empty-state/empty-state';
-import { integerValidator, textValidator, validationMessage } from '../../../ui/forms/validators';
-import { interpolate } from '../../../ui/i18n/messages';
-import { PageHeader } from '../../../ui/page-header/page-header';
-import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { dateFormatLabels, defaultDateFormat, supportedDateFormats } from '@osnova/ui';
+import { WALL_CLOCK } from '@osnova/ui';
+import { confirmDialogPt, confirmDiscard } from '@osnova/ui';
+import { FormField } from '@osnova/ui';
+import { focusFirstInvalid } from '@osnova/ui';
+import { innerInputPt } from '@osnova/ui';
+import { EmptyState } from '@osnova/ui';
+import { integerValidator, textValidator, validationMessage } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { PageHeader } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { settingsText } from './i18n/messages';
 
 export interface GeneralSettings {

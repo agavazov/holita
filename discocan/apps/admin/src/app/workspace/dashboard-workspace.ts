@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES } from '@osnova/ui';
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -14,7 +15,7 @@ import { GeneralSettingsApi } from '../features/fleet/settings/general-settings-
 import { settingsText } from '../features/fleet/settings/i18n/messages';
 import { TripsPage } from '../features/fleet/trips/trips-page';
 import { FLEET_DISPLAY, defaultFleetDisplay } from '../ui/format/fleet-format';
-import { uiMessages } from '../ui/i18n/messages';
+import { uiMessages } from '@osnova/ui';
 import { AdminWorkspace } from './admin-workspace';
 import { PageLoading } from './page-loading';
 
@@ -37,6 +38,7 @@ import { PageLoading } from './page-loading';
   providers: [
     GeneralSettingsApi,
     FleetPreferences,
+    { provide: DISPLAY_PREFERENCES, useExisting: FLEET_DISPLAY },
     {
       provide: FLEET_DISPLAY,
       useFactory: () => {

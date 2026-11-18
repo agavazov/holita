@@ -1,4 +1,4 @@
-import type { StatusTone } from '../../../theme/status-tones';
+import type { StatusTone } from '@osnova/ui/theme';
 
 export const serviceTypes = [
   'GENERAL_SERVICE',

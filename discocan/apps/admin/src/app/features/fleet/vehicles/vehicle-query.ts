@@ -3,13 +3,9 @@ import type {
   FleetVehicleSortField,
   AdminVehiclesQueryVariables,
 } from '../../../../generated/graphql/operations';
-import {
-  isComplete,
-  type FilterCondition,
-  type FilterOperator,
-} from '../../../ui/filter-builder/filter-model';
-import type { ListQuery } from '../../../ui/list/list-query';
-import { type FilterCodec, type ListDefinition, type ListState } from '../../../ui/list/list-state';
+import { isComplete, type FilterCondition, type FilterOperator } from '@osnova/ui';
+import type { ListQuery } from '@osnova/ui';
+import { type FilterCodec, type ListDefinition, type ListState } from '@osnova/ui';
 import { vehicleActivities, vehicleStatuses, vehicleTypes } from './vehicles-view';
 import { vehicleFuelTypes } from './vehicle-drawer';
 

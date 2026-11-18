@@ -21,7 +21,7 @@ import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
-import { toneSeverity } from '../../ui/tones';
+import { toneSeverity } from '@osnova/ui';
 import type {
   AdminControlCenterConfigurationChangesQuery,
   AdminControlCenterConfigurationBatchQuery,
@@ -32,22 +32,17 @@ import type {
 } from '../../../generated/graphql/operations';
 import { DemoSession } from '../../core/auth/demo-session';
 import type { Language } from '../../i18n/messages';
-import { confirmAction, confirmDialogPt } from '../../ui/confirm';
-import { FormField } from '../../ui/form-field/form-field';
+import { confirmAction, confirmDialogPt } from '@osnova/ui';
+import { FormField } from '@osnova/ui';
 import { injectFleetFormat } from '../../ui/format/fleet-format';
-import { interpolate } from '../../ui/i18n/messages';
-import {
-  listRecord,
-  trackById,
-  type ListAction,
-  type ListActionRequest,
-} from '../../ui/list/list-actions';
-import { RowActions } from '../../ui/row-actions/row-actions';
-import { injectSortReady, listQuery, type ListQuery } from '../../ui/list/list-query';
-import { ListSortMenu } from '../../ui/list/list-sort-menu';
-import { selectMultiplePt } from '../../ui/select-multiple';
-import { TablePanel, type TableColumn } from '../../ui/table-panel/table-panel';
-import { tableView } from '../../ui/table-panel/table-view';
+import { interpolate } from '@osnova/ui';
+import { listRecord, trackById, type ListAction, type ListActionRequest } from '@osnova/ui';
+import { RowActions } from '@osnova/ui';
+import { injectSortReady, listQuery, type ListQuery } from '@osnova/ui';
+import { ListSortMenu } from '@osnova/ui';
+import { selectMultiplePt } from '@osnova/ui';
+import { TablePanel, type TableColumn } from '@osnova/ui';
+import { tableView } from '@osnova/ui';
 import { ControlCenterApi } from './control-center-api';
 import {
   controlCenterError,

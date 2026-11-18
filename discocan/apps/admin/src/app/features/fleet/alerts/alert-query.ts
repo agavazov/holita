@@ -3,14 +3,10 @@ import type {
   FleetEventCondition,
   FleetEventSortField,
 } from '../../../../generated/graphql/operations';
-import {
-  isComplete,
-  type FilterCondition,
-  type FilterOperator,
-} from '../../../ui/filter-builder/filter-model';
-import { fromDateOnly, zonedWallTimeToIso } from '../../../ui/format/zoned-time';
-import type { ListQuery } from '../../../ui/list/list-query';
-import type { FilterCodec, ListDefinition, ListState } from '../../../ui/list/list-state';
+import { isComplete, type FilterCondition, type FilterOperator } from '@osnova/ui';
+import { fromDateOnly, zonedWallTimeToIso } from '@osnova/ui';
+import type { ListQuery } from '@osnova/ui';
+import type { FilterCodec, ListDefinition, ListState } from '@osnova/ui';
 import { alertSeverities, alertStatuses } from './alerts-view';
 
 const sorts = {

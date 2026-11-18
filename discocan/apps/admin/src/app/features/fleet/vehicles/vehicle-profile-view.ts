@@ -19,8 +19,8 @@ import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Skeleton } from 'primeng/skeleton';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { Tag } from 'primeng/tag';
-import { ColumnSeries, type SeriesPoint } from '../../../ui/charts/column-series';
-import { EmptyState } from '../../../ui/empty-state/empty-state';
+import { ColumnSeries, type SeriesPoint } from '@osnova/ui';
+import { EmptyState } from '@osnova/ui';
 import { FleetNow } from '../../../ui/fleet-live/fleet-now';
 import { FaultCluster } from '../../../ui/fleet-live/fault-cluster';
 import { FaultScanner } from '../../../ui/fleet-live/fault-scanner';
@@ -45,25 +45,25 @@ import {
   FormatMoneyPipe,
   FormatNumberPipe,
   FormatRelativePipe,
-} from '../../../ui/format/format.pipes';
-import { interpolate } from '../../../ui/i18n/messages';
-import { KpiStrip } from '../../../ui/kpi/kpi-strip';
-import { KpiTile } from '../../../ui/kpi/kpi-tile';
-import { trackById } from '../../../ui/list/list-actions';
-import { injectSortReady } from '../../../ui/list/list-query';
-import { ListSortMenu, type ListSortField } from '../../../ui/list/list-sort-menu';
+} from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { KpiStrip } from '@osnova/ui';
+import { KpiTile } from '@osnova/ui';
+import { trackById } from '@osnova/ui';
+import { injectSortReady } from '@osnova/ui';
+import { ListSortMenu, type ListSortField } from '@osnova/ui';
 import {
   LocationMap,
   type LocationMapRecord,
   type LocationMapTrack,
 } from '../../../ui/location-map/location-map';
-import { PageHeader, type PageHeaderAction } from '../../../ui/page-header/page-header';
-import { TablePanel, type TableColumn, type TablePage } from '../../../ui/table-panel/table-panel';
-import type { TableView } from '../../../ui/table-panel/table-view';
-import { toneSeverity, type StatusTone } from '../../../ui/tones';
-import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { PageHeader, type PageHeaderAction } from '@osnova/ui';
+import { TablePanel, type TableColumn, type TablePage } from '@osnova/ui';
+import type { TableView } from '@osnova/ui';
+import { toneSeverity, type StatusTone } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
-import { formatNumber } from '../../../ui/format/format';
+import { formatNumber } from '@osnova/ui';
 import { type AlertSeverityCode, severityTones } from '../alerts/alerts-view';
 import { alertsText } from '../alerts/i18n/messages';
 import { scoreTone } from '../drivers/drivers-view';

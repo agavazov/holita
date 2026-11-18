@@ -1,3 +1,4 @@
+import { DISPLAY_PREFERENCES } from '@osnova/ui';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -39,31 +40,26 @@ import { DemoSession } from '../../core/auth/demo-session';
 import { AdminConfig } from '../../core/config/admin-config';
 import { requestError } from '../../core/graphql/request-error';
 import type { Language } from '../../i18n/messages';
-import { confirmAction, confirmDialogPt } from '../../ui/confirm';
-import { FormField } from '../../ui/form-field/form-field';
+import { confirmAction, confirmDialogPt } from '@osnova/ui';
+import { FormField } from '@osnova/ui';
 import {
   FLEET_DISPLAY,
   defaultFleetDisplay,
   injectFleetFormat,
 } from '../../ui/format/fleet-format';
-import { formatNumber } from '../../ui/format/format';
-import { interpolate, uiMessages } from '../../ui/i18n/messages';
-import {
-  listRecord,
-  trackById,
-  type ListAction,
-  type ListActionRequest,
-} from '../../ui/list/list-actions';
-import { codecs, type ListDefinition } from '../../ui/list/list-state';
-import { injectSortReady, type ListQuery } from '../../ui/list/list-query';
-import { ListSortMenu, type ListSortField } from '../../ui/list/list-sort-menu';
-import { UrlListState } from '../../ui/list/url-list-state';
-import { PageHeader } from '../../ui/page-header/page-header';
-import { RowActions } from '../../ui/row-actions/row-actions';
-import { selectMultiplePt } from '../../ui/select-multiple';
-import { TablePanel, type TableColumn } from '../../ui/table-panel/table-panel';
-import { tableView } from '../../ui/table-panel/table-view';
-import { toneSeverity } from '../../ui/tones';
+import { formatNumber } from '@osnova/ui';
+import { interpolate, uiMessages } from '@osnova/ui';
+import { listRecord, trackById, type ListAction, type ListActionRequest } from '@osnova/ui';
+import { codecs, type ListDefinition } from '@osnova/ui';
+import { injectSortReady, type ListQuery } from '@osnova/ui';
+import { ListSortMenu, type ListSortField } from '@osnova/ui';
+import { UrlListState } from '@osnova/ui';
+import { PageHeader } from '@osnova/ui';
+import { RowActions } from '@osnova/ui';
+import { selectMultiplePt } from '@osnova/ui';
+import { TablePanel, type TableColumn } from '@osnova/ui';
+import { tableView } from '@osnova/ui';
+import { toneSeverity } from '@osnova/ui';
 import { AdminWorkspace } from '../../workspace/admin-workspace';
 import { BranchContext } from '../branches/branch-context';
 import {
@@ -733,6 +729,7 @@ export class BranchCommandQueue implements OnInit {
   providers: [
     GeneralSettingsApi,
     FleetPreferences,
+    { provide: DISPLAY_PREFERENCES, useExisting: FLEET_DISPLAY },
     {
       provide: FLEET_DISPLAY,
       useFactory: () => {

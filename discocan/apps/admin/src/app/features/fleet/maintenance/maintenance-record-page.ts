@@ -15,12 +15,12 @@ import { EMPTY, Subject, catchError, filter, forkJoin, of, startWith, switchMap,
 import type { AdminServiceTaskDetailsFragment } from '../../../../generated/graphql/operations';
 import { DemoSession } from '../../../core/auth/demo-session';
 import { requestError } from '../../../core/graphql/request-error';
-import { injectDrawerHost } from '../../../ui/drawer/drawer-host';
-import { drawerParam, drawerRouteData } from '../../../ui/drawer/drawer-route';
-import type { RouteDrawerState } from '../../../ui/drawer/route-drawer';
-import { errorCode } from '../../../ui/forms/field-errors';
-import { interpolate } from '../../../ui/i18n/messages';
-import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { injectDrawerHost } from '@osnova/ui';
+import { drawerParam, drawerRouteData } from '@osnova/ui';
+import type { RouteDrawerState } from '@osnova/ui';
+import { errorCode } from '@osnova/ui';
+import { interpolate } from '@osnova/ui';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { maintenanceText } from './i18n/messages';
 import { MaintenanceApi } from './maintenance-api';
 import { MaintenanceChoices } from './maintenance-choices';

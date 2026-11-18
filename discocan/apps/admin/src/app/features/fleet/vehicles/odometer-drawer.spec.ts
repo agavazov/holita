@@ -1,9 +1,10 @@
+import { DISPLAY_PREFERENCES } from '@osnova/ui';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { FormGroupDirective } from '@angular/forms';
 import { By } from '@angular/platform-browser';
-import { UI_LANGUAGE } from '../../../ui/ui-language';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { defaultFleetDisplay, FLEET_DISPLAY } from '../../../ui/format/fleet-format';
 import { OdometerDrawer, type OdometerReading } from './odometer-drawer';
 
@@ -19,6 +20,7 @@ describe('OdometerDrawer', () => {
       providers: [
         provideRouter([]),
         { provide: UI_LANGUAGE, useValue: signal('en') },
+        { provide: DISPLAY_PREFERENCES, useExisting: FLEET_DISPLAY },
         {
           provide: FLEET_DISPLAY,
           useValue: signal({

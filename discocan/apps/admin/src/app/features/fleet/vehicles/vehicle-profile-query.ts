@@ -4,7 +4,7 @@ import type {
   FleetServiceTaskSort,
   FleetTripSort,
 } from '../../../../generated/graphql/operations';
-import type { ListQuery } from '../../../ui/list/list-query';
+import type { ListQuery } from '@osnova/ui';
 import { vehicleProfileTabs, type VehicleProfileTab } from './vehicle-profile-view';
 
 export const profileListTabs = ['trips', 'problems', 'service'] as const;

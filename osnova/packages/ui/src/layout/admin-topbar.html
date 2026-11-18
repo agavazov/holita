@@ -1,0 +1,125 @@
+<button
+  #menuButton
+  type="button"
+  class="app-icon-button app-topbar__menu"
+  [attr.aria-label]="text().toggleNavigation"
+  [attr.aria-expanded]="menuExpanded()"
+  [attr.aria-controls]="menuControls()"
+  (click)="menuToggle.emit()"
+>
+  <svg data-p-icon="bars" aria-hidden="true"></svg>
+</button>
+@if (showLogo()) {
+<a class="app-logo app-topbar__logo" [routerLink]="homeLink()">
+  <span class="app-logo__mark" aria-hidden="true">{{ productMark() }}</span>
+  <span class="app-logo__word">{{ productName() }}</span>
+</a>
+}
+<div class="app-topbar__context">
+  @if (context()) {
+  <nav [attr.aria-label]="text().breadcrumb">
+    <ol class="app-breadcrumb">
+      @for (crumb of breadcrumbs(); track $index) {
+      <li
+        [class.app-breadcrumb__group]="crumb.group"
+        [class.app-breadcrumb__ancestor]="!crumb.group && !$last"
+        [class.app-breadcrumb__current]="$last"
+      >
+        @if (!$first) {
+        <svg data-p-icon="chevron-right" class="app-breadcrumb__separator" aria-hidden="true"></svg>
+        } @if (crumb.link && !$last) {
+        <a class="app-breadcrumb__text" [routerLink]="crumb.link" [title]="crumb.label"
+          >{{ crumb.label }}</a
+        >
+        } @else {
+        <span
+          class="app-breadcrumb__text"
+          [attr.aria-current]="$last ? 'page' : null"
+          [title]="crumb.label"
+          >{{ crumb.label }}</span
+        >
+        } @if ($last && moduleInfo.info()) {
+        <button
+          type="button"
+          class="app-icon-button app-breadcrumb__info"
+          [attr.aria-label]="aboutLabel()"
+          [attr.aria-expanded]="infoOpen()"
+          aria-controls="module-info"
+          aria-haspopup="dialog"
+          (click)="infoPopover.toggle($event)"
+        >
+          <svg data-p-icon="info-circle" aria-hidden="true"></svg>
+        </button>
+        }
+      </li>
+      }
+    </ol>
+  </nav>
+  }
+</div>
+<p-popover
+  #infoPopover
+  [style]="{ maxWidth: 'min(26rem, calc(100vw - 2rem))' }"
+  (onShow)="infoOpen.set(true)"
+  (onHide)="infoOpen.set(false)"
+>
+  @if (moduleInfo.info(); as info) {
+  <div id="module-info" class="app-module-info" role="region" [attr.aria-label]="info.title">
+    <strong>{{ info.title }}</strong>
+    <p>{{ info.body }}</p>
+  </div>
+  }
+</p-popover>
+<osnova-menu-button
+  class="app-topbar__branch"
+  variant="text"
+  menuClass="app-menu-scroll"
+  [options]="branchOptions()"
+  [disabled]="!branches().length"
+  (choose)="chooseBranch($event.id)"
+>
+  <span class="app-visually-hidden">{{ text().branchPrefix }}&#32;</span>
+  <span id="active-branch" class="app-topbar__branch-name">{{ branchLabel() }}</span>
+</osnova-menu-button>
+<div class="app-topbar__actions">
+  <osnova-theme-menu />
+  @if (languageOptions().length > 1) {
+  <osnova-menu-button
+    variant="text"
+    [options]="languageOptions()"
+    (choose)="chooseLanguage($event.id)"
+  >
+    <span class="app-visually-hidden">{{ text().languagePrefix }}&#32;</span>
+    <span class="app-topbar__language-label" [attr.lang]="currentLanguage().code"
+      >{{ currentLanguage().label }}</span
+    >
+    <span class="app-topbar__language-code" [attr.lang]="currentLanguage().code"
+      >{{ currentLanguage().code.toUpperCase() }}</span
+    >
+  </osnova-menu-button>
+  } @if (notifications(); as notifications) {
+  <osnova-notification-bell
+    [emptyText]="notificationEmpty()"
+    [language]="language()"
+    [notifications]="notifications"
+    [unreadCount]="notificationUnreadCount()"
+    [loading]="notificationsLoading()"
+    [error]="notificationsError()"
+    [readAllowed]="notificationsReadAllowed()"
+    [busy]="notificationsBusy()"
+    [seeAllLink]="notificationSeeAllLink()"
+    (notificationOpen)="notificationOpen.emit($event)"
+    (markAllRead)="notificationsRead.emit()"
+    (retry)="notificationsRetry.emit()"
+  />
+  }
+  <osnova-menu-button
+    buttonClass="app-topbar__account"
+    [header]="accountHeader()"
+    [options]="accountOptions()"
+    (choose)="chooseAccount($event.id)"
+  >
+    <span class="app-topbar__avatar" aria-hidden="true">{{ initials() }}</span>
+    <span class="app-visually-hidden">{{ accountLabel() }}</span>
+  </osnova-menu-button>
+</div>

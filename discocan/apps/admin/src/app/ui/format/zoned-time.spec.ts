@@ -6,12 +6,8 @@ import {
   formatDateRange,
   formatDateTimeRange,
   datePickerFormat,
-} from './format';
-import {
-  formatDateTimeInput,
-  parseDateTimeInput,
-  dateTimeInputInstants,
-} from '../forms/date-time-input';
+} from '@osnova/ui';
+import { formatDateTimeInput, parseDateTimeInput, dateTimeInputInstants } from '@osnova/ui';
 import {
   fromDateOnly,
   isoToZonedParts,
@@ -19,7 +15,7 @@ import {
   toDateOnly,
   zonedWallTimeInstants,
   zonedWallTimeToIso,
-} from './zoned-time';
+} from '@osnova/ui';
 
 describe('zoned time', () => {
   it('zoned wall time and instants convert exactly across DST gaps and overlaps', () => {

@@ -1,4 +1,4 @@
-<discocan-page-header
+<osnova-page-header
   [title]="text().title"
   [count]="zones().length"
   [moduleInfo]="text().moduleInfo"
@@ -156,7 +156,7 @@
   />
 </div>
 
-<discocan-table-panel
+<osnova-table-panel
   [heading]="text().table.heading"
   [total]="events()?.total ?? null"
   [view]="view()"
@@ -218,6 +218,6 @@
       </tr>
     </ng-template>
   </p-table>
-</discocan-table-panel>
+</osnova-table-panel>
 
 <p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }" />

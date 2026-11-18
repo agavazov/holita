@@ -1,5 +1,5 @@
 import type { AdminFaultMonitorQuery } from '../../../../generated/graphql/operations';
-import type { StatusTone } from '../../../theme/status-tones';
+import type { StatusTone } from '@osnova/ui/theme';
 import {
   faultReadState,
   type FleetFaultFinding,

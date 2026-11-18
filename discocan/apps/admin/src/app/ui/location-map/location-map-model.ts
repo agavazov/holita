@@ -1,5 +1,5 @@
-import type { StatusTone } from '../../theme/status-tones';
-import { mapCoordinates, type MapCoordinates } from '../map-preview/location-map';
+import type { StatusTone } from '@osnova/ui/theme';
+import { mapCoordinates, type MapCoordinates } from '@osnova/ui';
 
 export interface LocationMapRecord {
   readonly id: string;

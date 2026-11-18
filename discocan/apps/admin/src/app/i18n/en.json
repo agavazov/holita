@@ -130,5 +130,6 @@
     "searchMessage": "{0} results are available"
   },
   "system": "System",
-  "deviceOverview": "Overview"
+  "deviceOverview": "Overview",
+  "notificationEmpty": "No notifications for this fleet."
 }

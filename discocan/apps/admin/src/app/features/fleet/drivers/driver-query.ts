@@ -3,14 +3,10 @@ import type {
   FleetDriverCondition,
   FleetDriverSortField,
 } from '../../../../generated/graphql/operations';
-import {
-  isComplete,
-  type FilterCondition,
-  type FilterField,
-} from '../../../ui/filter-builder/filter-model';
-import { fromDateOnly } from '../../../ui/format/zoned-time';
-import type { ListQuery } from '../../../ui/list/list-query';
-import type { FilterCodec, ListDefinition, ListState } from '../../../ui/list/list-state';
+import { isComplete, type FilterCondition, type FilterField } from '@osnova/ui';
+import { fromDateOnly } from '@osnova/ui';
+import type { ListQuery } from '@osnova/ui';
+import type { FilterCodec, ListDefinition, ListState } from '@osnova/ui';
 import { driverLicenseCategories, driverStatuses } from './drivers-view';
 
 const sortFields = {

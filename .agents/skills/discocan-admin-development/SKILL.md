@@ -13,6 +13,8 @@ and the PrimeNG plugin for current component APIs. Open the
 
 ## Where things are
 
+Shared presentation comes from [`@osnova/ui`](../../../osnova/packages/ui/), through its public entries. The application supplies shell navigation, identity and account data, and Fleet display preferences.
+
 - [app.config.ts](../../../discocan/apps/admin/src/app/app.config.ts) configures routing, HTTP, the theme
   and Branch discovery. Startup config chooses the Gateway URL and availability.
 - [AdminWorkspace](../../../discocan/apps/admin/src/app/workspace/admin-workspace.ts) owns the session,
