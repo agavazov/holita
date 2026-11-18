@@ -23,8 +23,9 @@ architecture with a thin Holita slice, not a port of the old platform.
 
 2. **Osnova backend.** Without behaviour change for Discocan:
    - Core moves to `osnova/apps/core`; each product runs it with its own configuration.
-   - `@osnova/auth`: one NestJS session guard replacing the copies in Fleet and ERM Server; the
-     token prefix stops carrying the product name (users sign in again once).
+   - `@osnova/auth`: one session check replacing the copies in Fleet and ERM Server. The token
+     prefix becomes per-instance configuration; Discocan keeps `discocan-session.` because the live
+     ERM API build accepts only that form.
    - Core gains platform accounts beside tenant accounts (Holita: staff and sales agents) through
      an additive migration.
    - The shared sign-in page moves to `@osnova/ui`.
@@ -47,9 +48,8 @@ architecture with a thin Holita slice, not a port of the old platform.
 - Before the next ERM deploy, repoint the `discocan-erm-*` user units to `discocan/apps/erm-server`
   and the inactive `holita-erm-relay` unit to `discocan/tools/erm-relay/relay.mts`. It restarts the
   ERM gateway, so the owner picks the moment.
-- Take a database dump before step 2 changes Core.
-- The 60-case test budget is shared by both products (47 used); Holita's isolation and contract
-  tests need room, so a per-product budget needs the owner.
+- The 60-case test budget is shared by both products (47 used) and stays at 60 (owner,
+  2026-11-18): Holita's isolation and contract tests extend existing cases with internal tables.
 - `npm run format:check` fails on 14 tracked files that predate the move.
 - Later: OpenID Connect sign-in, cart/checkout/orders, the storefront rendering engine, per-product
   CI and `osnova/` as its own repository.
