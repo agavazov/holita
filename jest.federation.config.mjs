@@ -1,10 +1,10 @@
 import { createDefaultEsmPreset } from 'ts-jest';
 
 export default {
-  ...createDefaultEsmPreset({ tsconfig: './tools/tsconfig.json' }),
+  ...createDefaultEsmPreset({ tsconfig: './discocan/tools/tsconfig.json' }),
   rootDir: import.meta.dirname,
   testEnvironment: 'node',
-  testMatch: ['<rootDir>/tools/graphql/**/*.db.spec.mts'],
+  testMatch: ['<rootDir>/discocan/tools/graphql/**/*.db.spec.mts'],
   testTimeout: 60000,
   modulePathIgnorePatterns: [
     '<rootDir>/.tmp/',

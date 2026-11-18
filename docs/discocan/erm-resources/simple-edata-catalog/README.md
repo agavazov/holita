@@ -8,7 +8,7 @@ no import/editing API or standalone catalog screen. The offline catalog tools do
 ## Sources and prerequisites
 
 The only required input is a supplied Monitor EXE. Original binaries are retained in
-[resources/discocan/Simple eData FMS Monitor](../../../../resources/discocan/Simple%20eData%20FMS%20Monitor/README.md).
+[discocan/resources/Simple eData FMS Monitor](../../../../discocan/resources/Simple%20eData%20FMS%20Monitor/README.md).
 Keep each version's original filename and bytes. No unpacked XML, firmware INI,
 existing JSON, credentials or device connection is needed for extraction. Vendor
 download discovery and automatic updates are not implemented.
@@ -25,10 +25,10 @@ host without starting the EXE, loading its assemblies or using a debugger.
 Run from the repository root. Set the EXE and independent operator-supplied label:
 
 ```bash
-exe='resources/discocan/Simple eData FMS Monitor/Simple eData FMS Monitor v9.56.exe'
+exe='discocan/resources/Simple eData FMS Monitor/Simple eData FMS Monitor v9.56.exe'
 label='v9.56'
 work=$(mktemp -d -t discocan-edata-XXXXXX)
-node --import tsx tools/erm-edata/catalog.mts inspect "$exe" > "$work/inspection.json"
+node --import tsx discocan/tools/erm-edata/catalog.mts inspect "$exe" > "$work/inspection.json"
 ```
 
 Compare the EXE hash with the previous catalog before processing an update. An unchanged
@@ -42,9 +42,9 @@ values. The package label does not establish a device's installed firmware versi
 ## Extract and compare before import
 
 ```bash
-node --import tsx tools/erm-edata/catalog.mts extract "$exe" \
+node --import tsx discocan/tools/erm-edata/catalog.mts extract "$exe" \
   --label "$label" --out "$work/catalog"
-node --import tsx tools/erm-edata/catalog.mts diff \
+node --import tsx discocan/tools/erm-edata/catalog.mts diff \
   docs/discocan/erm-resources/simple-edata-catalog/v9.56/catalog.json \
   "$work/catalog/catalog.json" --out "$work/diff.json"
 ```
@@ -85,15 +85,15 @@ masters/ranges remain available beside each follower.
 ## Migrate, preview, import and verify
 
 The CLI supports only the local development database `discocan_fleet` using the Fleet
-role and `apps/fleet/.env`/`FLEET_DATABASE_URL` through the existing connection config.
+role and `discocan/apps/fleet/.env`/`FLEET_DATABASE_URL` through the existing connection config.
 Other/nonlocal databases and URL options are rejected. Passwords are never logged.
 Provision PostgreSQL and development/test roles using [workspace setup](../../../development.md#postgresql-and-prisma).
 Apply the reviewed additive migration and regenerate the client directly:
 
 ```bash
-(cd apps/fleet && node ../../node_modules/prisma/build/index.js migrate deploy)
-(cd apps/fleet && node ../../node_modules/prisma/build/index.js generate)
-node --import tsx apps/fleet/src/modules/edata-catalog/cli.ts \
+(cd discocan/apps/fleet && node ../../../node_modules/prisma/build/index.js migrate deploy)
+(cd discocan/apps/fleet && node ../../../node_modules/prisma/build/index.js generate)
+node --import tsx discocan/apps/fleet/src/modules/edata-catalog/cli.ts \
   --catalog "$work/catalog/catalog.json" --exe "$exe"
 ```
 
@@ -103,10 +103,10 @@ source references, memberships, unique keys and profile relationships. It prints
 After reviewing inspection, differences and preview, supply that exact digest to write:
 
 ```bash
-node --import tsx apps/fleet/src/modules/edata-catalog/cli.ts \
+node --import tsx discocan/apps/fleet/src/modules/edata-catalog/cli.ts \
   --catalog "$work/catalog/catalog.json" --exe "$exe" \
   --write --expect-sha256 '<reviewed contentSha256>'
-node --import tsx apps/fleet/src/modules/edata-catalog/cli.ts \
+node --import tsx discocan/apps/fleet/src/modules/edata-catalog/cli.ts \
   --catalog "$work/catalog/catalog.json" --exe "$exe"
 ```
 

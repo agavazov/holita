@@ -1,0 +1,3 @@
+# Discocan
+
+@AGENTS.md

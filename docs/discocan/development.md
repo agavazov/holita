@@ -13,11 +13,11 @@ Branch switching keeps the Fleet section and clears record/list context; languag
 preserves path/query/hash. The [design system](../admin-design-system.md#shell) defines shell,
 keyboard, theme and responsive behavior.
 
-Public `apps/admin/public/config.json` supplies `graphqlUrl`, optional `fleetEnabled` (default
+Public `discocan/apps/admin/public/config.json` supplies `graphqlUrl`, optional `fleetEnabled` (default
 true) and optional `primeUiLicense`. GraphQL accepts root-relative or HTTP(S) URLs without
 credentials/fragments. The development proxy forwards `/graphql` to Router. Invalid startup
 configuration shows a localized error. Issued keys belong only in the ignored
-`apps/admin/public/config.local.json`, never in Git. Production excludes that file; do not
+`discocan/apps/admin/public/config.local.json`, never in Git. Production excludes that file; do not
 publish development output. See
 [shared configuration](../development.md#ports-and-environment) for the environment reference.
 Keep `fleetEnabled` and backend `FLEET_ENABLED` consistent when disabling Fleet.
@@ -200,7 +200,7 @@ then follow [generation/validation](../../AGENTS.md#nestjs) after contract chang
 ## ERM relay
 
 `npm run erm:relay` runs a transparent TCP relay for ERM StarLink devices
-([source](../../tools/erm-relay/relay.mts)). It is a standalone process outside `npm run dev`,
+([source](../../discocan/tools/erm-relay/relay.mts)). It is a standalone process outside `npm run dev`,
 so application restarts do not drop device connections. Configure it from the root `.env.example`.
 
 - A device connection whose first byte is the StarLink header `$` is forwarded byte for byte to
@@ -219,7 +219,7 @@ so application restarts do not drop device connections. Configure it from the ro
 
 ## ERM device server
 
-`apps/erm-server` (`@discocan/erm-server`) runs independently from compiled output. It remains
+`discocan/apps/erm-server` (`@discocan/erm-server`) runs independently from compiled output. It remains
 outside `npm run dev` and `npm run kill`, so restarting the web/API group leaves its device
 connections open. The gateway process (`ERM_ROLE=gateway`) owns device sessions and the internal API on
 HTTP 11015/TCP 11500. The api process (`ERM_ROLE=api`, HTTP 11017) owns the GraphQL subgraph
@@ -246,7 +246,7 @@ connect by name, both modes retry at once with the last Karma IP address that wo
 process. Changing the allowlist affects new connections.
 
 Copy the ERM Server entries from the [root environment reference](../../.env.example) into the
-ignored `apps/erm-server/.env`, preserving existing settings. HTTP `/health` defaults to
+ignored `discocan/apps/erm-server/.env`, preserving existing settings. HTTP `/health` defaults to
 `127.0.0.1:11015`; `ERM_DEVICE_HOST`/`ERM_DEVICE_PORT` default to `0.0.0.0:11500`.
 `ERM_UPSTREAM` defaults to `in.karma.online:500`. `ERM_CAPTURE_DIR` defaults to
 `.references/erm-server` relative to the repository root, including when started from the app
@@ -287,7 +287,7 @@ A resent report with the same unit, reference, event ID and event time is stored
 
 After correcting `ERM_EVENT_STRUCTURE` or deploying a decoder change, re-decode stored frames
 with the same `ERM_DATABASE_URL` and `ERM_EVENT_STRUCTURE` as the gateway. From
-`apps/erm-server`, run the deployed copy with its environment file:
+`discocan/apps/erm-server`, run the deployed copy with its environment file:
 
 ```bash
 node --env-file=/home/sysadmin/.config/discocan/erm-server.env live-api/redecode.js
@@ -536,8 +536,8 @@ are reference reads for any signed-in role:
 
 - `ermParameterCatalog(input: {search, feature, writableOnly, offset, limit})` searches the
   StarLink parameters by number, title, summary or portal feature. `writable` applies the `04`
-  guard. Regenerate `apps/erm-server/src/starlink/parameter-reference.ts` from the archived
-  pages with `node --import tsx tools/erm-protocol/parameter-reference.mts`.
+  guard. Regenerate `discocan/apps/erm-server/src/starlink/parameter-reference.ts` from the archived
+  pages with `node --import tsx discocan/tools/erm-protocol/parameter-reference.mts`.
 - `ermDeviceActionCommands` returns the exact command of each allowlisted read.
 - `sendErmDeviceCommand(input: {deviceId, action: READ_PARAMETERS, parameters: [4, 22]})` queues
   one `03` (one parameter) or `45` (2–20) read. Routing 0049–0054 and protected parameters are
@@ -570,7 +570,7 @@ values such as 0593 are masked for Viewers and visible to Operators and above. A
 RUNNING as FAILED with `interrupted by an api restart`.
 
 For controlled single-record eData configuration changes, run the operator command from
-`apps/erm-server` with `ERM_DATABASE_URL`, `ERM_GATEWAY_URL` and `ERM_INTERNAL_TOKEN` in the
+`discocan/apps/erm-server` with `ERM_DATABASE_URL`, `ERM_GATEWAY_URL` and `ERM_INTERNAL_TOKEN` in the
 environment file below. Set `IMEI` to the selected primary-mode unit and `DEFINITION` to one
 approved 44-hex, 22-byte definition; `--split <Monitor-export-file-or-301-payload>` works offline
 and prints each parameter ID, interval and definition without executing the export. A read prints
@@ -709,7 +709,7 @@ is inferred.
 observations of the same code/kind/report on the same Vehicle/IMEI within the requested evidence
 period, across added/deleted reports. Alert-backed diagnostic entries use their own observation
 time. Missing code meanings use OTHER with no description.
-The versioned catalog in [Fleet](../../apps/fleet/src/modules/events/fault-meanings.ts) provides
+The versioned catalog in [Fleet](../../discocan/apps/fleet/src/modules/events/fault-meanings.ts) provides
 discocan component wording keys for engine, brakes, ABS/EBS and aftertreatment. Generic SPN
 associations come from the manufacturer [Prevost service manual, Group 28](https://techpub.prevostcar.com/content/media/18633/view),
 [Basler DGC-2020ES manual, section 6-9](https://www.basler.com/resource-hub/manuals/instruction-manual/dgc-2020es-operation-instruction-manual-rev-d-english/9469200996.pdf),
@@ -725,7 +725,12 @@ the admin catalogs.
 
 For development only, `npm run dev:erm-server` runs its watcher with the same configuration.
 The running `discocan-erm-server` user service uses `apps/erm-server/live/`; do not restart it
-or replace its files without the owner. Deploying the new gateway is a separate owner step.
+or replace its files without the owner. The build output is now `discocan/apps/erm-server/dist`,
+while the running live directories and the units' working directory remain `apps/erm-server/`
+until the units are repointed. Do not copy a new build into those legacy directories: the server
+derives the repository root from its own depth, so a new build runs only from
+`discocan/apps/erm-server/live/` and `live-api/` with the units' working directory moved there.
+Deploying the new gateway is a separate owner step.
 For a **new, separate installation**, save a user unit such as
 `~/.config/systemd/user/discocan-erm-server.service`, replacing paths with this installation's
 absolute repository and Node executable paths (`command -v node`):
@@ -738,11 +743,11 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/path/to/discocan/apps/erm-server
+WorkingDirectory=/path/to/repository/discocan/apps/erm-server
 Environment=NODE_ENV=production
 Environment=ERM_ROLE=gateway
-EnvironmentFile=/path/to/discocan/apps/erm-server/.env
-ExecStart=/absolute/path/to/node /path/to/discocan/apps/erm-server/dist/main.js
+EnvironmentFile=/path/to/repository/discocan/apps/erm-server/.env
+ExecStart=/absolute/path/to/node /path/to/repository/discocan/apps/erm-server/dist/main.js
 Restart=on-failure
 RestartSec=5
 UMask=0077
@@ -764,7 +769,7 @@ checkout does not deploy to `live`. API-only deployments must leave the gateway 
 Karma API v2 rejects StarLink parameter writes (`04`, `46`, `PUT /parameters`) but accepts command
 `98` ([connect to configuration server](erm-resources/starlink-online-protocol/authenticated/pages/C98.md)),
 which opens a temporary session from the unit to a given host and port without changing its
-configuration. `npm run erm:route-unit` ([source](../../tools/erm-relay/route-unit.mts)) serves that
+configuration. `npm run erm:route-unit` ([source](../../discocan/tools/erm-relay/route-unit.mts)) serves that
 session: it reads 0049–0052 with `45`, writes 0049/0050 with `46` only when they hold the other
 server, reads them back and writes the previous values again if they differ or the backup
 0051/0052 changed. It confirms the `45` replies, sends no other command, ends the session 2 s after
@@ -829,7 +834,7 @@ configuration session are lost (CB6711TE's ten driving reports during its 2026-1
 never reached Karma and were not resent).
 
 Port **11510 is reserved for permanent read-only recovery**. Deploy the compiled ERM entry
-`apps/erm-server/dist/main.js` with `ERM_ROLE=recovery` in a separate user unit, using the ERM
+`discocan/apps/erm-server/dist/main.js` with `ERM_ROLE=recovery` in a separate user unit, using the ERM
 database configuration. Forward TCP 11510 to it. This role reads only 0049/0050, confirms the read
 reply and closes; it never writes routing or forwards a session to Karma. It records either
 `ALREADY_DISCOCAN` (65.108.137.165:11500) or `NEEDS_OPERATOR`, including a timeout, disconnect or

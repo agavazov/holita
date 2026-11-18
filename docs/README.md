@@ -19,7 +19,7 @@ verified Tenant scope.
 - [Testing](testing.md): the test budget, checks by tier, database, federation and browser smoke
   checks, affected CI and manual regression.
 - [Admin design system](admin-design-system.md): theme, global styles, shell, patterns and the
-  design page of `apps/admin`.
+  design page of `discocan/apps/admin`.
 - [Workspace decision](architecture/decisions/0001-npm-workspaces-and-nx.md).
 - [Database ownership](architecture/decisions/0002-database-ownership.md).
 - [Schema-first federation](architecture/decisions/0003-schema-first-federation.md).

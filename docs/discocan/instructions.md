@@ -11,8 +11,8 @@ code is the reference for behavior details.
 
 ## Fleet backend
 
-- Follow the actual [Vehicles resolver/service/repository](../../apps/fleet/src/modules/vehicles/vehicles.resolver.ts)
-  and its [SDL](../../apps/fleet/src/modules/vehicles/vehicles.graphql).
+- Follow the actual [Vehicles resolver/service/repository](../../discocan/apps/fleet/src/modules/vehicles/vehicles.resolver.ts)
+  and its [SDL](../../discocan/apps/fleet/src/modules/vehicles/vehicles.graphql).
   - Resolve Vehicle/Device references through scoped service access.
   - Use @Parent on a federation reference parameter when you combine it with Nest parameter
     decorators.
@@ -28,13 +28,13 @@ code is the reference for behavior details.
 - Raw SQL rules:
   - use `$queryRaw` with `Prisma.sql` only;
   - reach every table through `fleetTable(schema, …)` with its own Tenant/Branch predicate;
-  - cast explicitly and parse rows with the concrete parsers from `apps/fleet/src/database/sql.ts`;
+  - cast explicitly and parse rows with the concrete parsers from `discocan/apps/fleet/src/database/sql.ts`;
   - pass business clocks as parameters; raw SQL never calls `now()`.
 - There are two clocks:
   - telemetry values use the Branch data clock from device samples;
   - business dates use `FleetClock.now()` in the configured Branch time zone;
   - MANUAL odometer readings never move the data clock.
-- The concrete [Settings module](../../apps/fleet/src/modules/settings/settings.module.ts) owns the
+- The concrete [Settings module](../../discocan/apps/fleet/src/modules/settings/settings.module.ts) owns the
   unique Tenant/Branch `FleetSettings` row.
   - Reads return defaults without inserting.
   - Derived SQL reads the settings in the same snapshot.
@@ -52,7 +52,7 @@ code is the reference for behavior details.
 - The [Simple eData vendor catalog](erm-resources/simple-edata-catalog/README.md) is shared
   manufacturer reference data scoped by catalog version, without Tenant/Branch columns.
 
-## Angular admin (apps/admin)
+## Angular admin (discocan/apps/admin)
 
 - Follow [discocan-admin-development](../../.agents/skills/discocan-admin-development/SKILL.md) and the
   [admin design-system skill](../../.agents/skills/discocan-admin-design-system/SKILL.md). Framework

@@ -15,10 +15,10 @@ or the [Fleet implementation index](../../../docs/discocan/fleet.md) only for th
 
 Vehicles is the reference implementation:
 
-- [SDL](../../../apps/fleet/src/modules/vehicles/vehicles.graphql)
-- [resolver](../../../apps/fleet/src/modules/vehicles/vehicles.resolver.ts)
-- [service](../../../apps/fleet/src/modules/vehicles/vehicles.service.ts)
-- [repository](../../../apps/fleet/src/modules/vehicles/vehicles.repository.ts)
+- [SDL](../../../discocan/apps/fleet/src/modules/vehicles/vehicles.graphql)
+- [resolver](../../../discocan/apps/fleet/src/modules/vehicles/vehicles.resolver.ts)
+- [service](../../../discocan/apps/fleet/src/modules/vehicles/vehicles.service.ts)
+- [repository](../../../discocan/apps/fleet/src/modules/vehicles/vehicles.repository.ts)
 
 The SDL owns the API definition, and generated types own resolver signatures. Concrete
 repositories require the verified Tenant and Branch scope on every operation. Inputs never own
@@ -26,18 +26,18 @@ repositories require the verified Tenant and Branch scope on every operation. In
 
 ## Invariants
 
-- **Core client.** The [Core client](../../../apps/fleet/src/integrations/core/core.client.ts) checks
+- **Core client.** The [Core client](../../../discocan/apps/fleet/src/integrations/core/core.client.ts) checks
   Branch existence on creation and on the Settings upsert. Other reads, updates and deletes do not
   call Core. Never import another application's implementation.
 - **Lists.** Every list follows the
   [standard list contract](../../../docs/discocan/architecture.md#standard-list-contract):
-  - validate input with [validation.ts](../../../apps/fleet/src/validation.ts);
-  - build explicit predicates with the [search helpers](../../../apps/fleet/src/database/search.ts);
+  - validate input with [validation.ts](../../../discocan/apps/fleet/src/validation.ts);
+  - build explicit predicates with the [search helpers](../../../discocan/apps/fleet/src/database/search.ts);
   - load `…Ref` links in scoped batches;
   - add no per-row field queries.
 - **Raw SQL.** Use `$queryRaw` with `Prisma.sql`, reach every table through `fleetTable(schema, …)`
   with its own Tenant/Branch predicate, and parse rows explicitly with
-  [sql.ts](../../../apps/fleet/src/database/sql.ts). Derived facts used by filters or sorting
+  [sql.ts](../../../discocan/apps/fleet/src/database/sql.ts). Derived facts used by filters or sorting
   stay in the same snapshot as row selection and totals. Raw SQL never calls `now()`.
 - **Clocks.** Business dates come from `FleetClock.now()` in the Branch time zone. Telemetry
   values use the Branch data clock.

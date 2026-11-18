@@ -20,7 +20,7 @@ Branches without modifying existing rows. Fleet sample records are documented in
 
 ## GraphQL contracts
 
-[Core SDL](../../apps/core/src/modules/branches/branches.graphql) exposes `Branch { id name }`,
+[Core SDL](../../discocan/apps/core/src/modules/branches/branches.graphql) exposes `Branch { id name }`,
 `branches` and `branch(id: ID!)` through Gateway federation. Authenticated Branch discovery needs
 no `x-branch-id` header. Every Branch query and federation reference resolves within the verified
 Tenant; a missing or foreign Branch lookup returns null. List order is Name then ID.
@@ -34,10 +34,10 @@ references and insert-only seeds keep their identity. Discovery and federation r
 persisted new name. There are no Branch create/delete mutations.
 
 Public `tenants` and `demoLogin(tenantId: ID!)` support the current development-only demo session.
-Their SDL belongs to [Tenants](../../apps/core/src/modules/tenants/tenants.graphql), while
+Their SDL belongs to [Tenants](../../discocan/apps/core/src/modules/tenants/tenants.graphql), while
 Branch queries and federation definitions belong to the Branch module. Core loads both
 files explicitly into the same subgraph. Both feature repositories use the Core-local
-[DatabaseModule](../../apps/core/src/database/database.module.ts) and its single Prisma client.
+[DatabaseModule](../../discocan/apps/core/src/database/database.module.ts) and its single Prisma client.
 The token is sent as `Authorization: Bearer <token>` for `{ branches { id name } }` or
 `{ branch(id: "10000000-0000-4000-8000-000000000001") { id name } }`.
 Renaming also sends `x-branch-id` with the same Branch UUID as the mutation's `id` argument.
@@ -47,10 +47,10 @@ in [Discocan development](../discocan/development.md#demo-tenant-login).
 
 ## Implementation references
 
-- [Prisma schema](../../apps/core/prisma/schema.prisma).
-- [Resolver](../../apps/core/src/modules/branches/branches.resolver.ts).
-- [Service](../../apps/core/src/modules/branches/branches.service.ts).
-- [Repository](../../apps/core/src/modules/branches/branches.repository.ts).
+- [Prisma schema](../../discocan/apps/core/prisma/schema.prisma).
+- [Resolver](../../discocan/apps/core/src/modules/branches/branches.resolver.ts).
+- [Service](../../discocan/apps/core/src/modules/branches/branches.service.ts).
+- [Repository](../../discocan/apps/core/src/modules/branches/branches.repository.ts).
 
 The resolver delegates to the concrete service/repository. Branch IDs are validated as UUIDs;
 Tenant identity comes from the verified session, never a caller-supplied tenant header/input.

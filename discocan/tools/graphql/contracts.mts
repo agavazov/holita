@@ -1,0 +1,131 @@
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { composeServices } from '@apollo/composition';
+import { buildSubgraphSchema } from '@apollo/subgraph';
+import {
+  concatAST,
+  lexicographicSortSchema,
+  parse,
+  printSchema,
+  Source,
+  validate,
+  type GraphQLSchema,
+} from 'graphql';
+
+export const workspaceRoot = fileURLToPath(new URL('../../../', import.meta.url));
+export const subgraphs = [
+  {
+    name: 'erm-server',
+    url: 'http://127.0.0.1:11015/graphql',
+    path: 'discocan/apps/erm-server/src/modules/telemetry/telemetry.graphql',
+    additionalPaths: ['discocan/apps/erm-server/src/modules/karma/karma.graphql'],
+  },
+  {
+    name: 'core',
+    url: 'http://127.0.0.1:11011/graphql',
+    path: 'discocan/apps/core/src/modules/branches/branches.graphql',
+    additionalPaths: ['discocan/apps/core/src/modules/tenants/tenants.graphql'],
+  },
+  {
+    name: 'fleet',
+    url: 'http://127.0.0.1:11013/graphql',
+    path: 'discocan/apps/fleet/src/graphql/common.graphql',
+    additionalPaths: [
+      'discocan/apps/fleet/src/modules/vehicles/vehicles.graphql',
+      'discocan/apps/fleet/src/modules/devices/devices.graphql',
+      'discocan/apps/fleet/src/modules/drivers/drivers.graphql',
+      'discocan/apps/fleet/src/modules/vehicle-groups/vehicle-groups.graphql',
+      'discocan/apps/fleet/src/modules/telemetry/telemetry.graphql',
+      'discocan/apps/fleet/src/modules/trips/trips.graphql',
+      'discocan/apps/fleet/src/modules/events/events.graphql',
+      'discocan/apps/fleet/src/modules/service-tasks/service-tasks.graphql',
+      'discocan/apps/fleet/src/modules/overview/overview.graphql',
+      'discocan/apps/fleet/src/modules/settings/settings.graphql',
+      'discocan/apps/fleet/src/modules/edata-catalog/edata-catalog.graphql',
+      'discocan/apps/fleet/src/modules/notifications/notifications.graphql',
+      'discocan/apps/fleet/src/modules/geo-zones/geo-zones.graphql',
+      'discocan/apps/fleet/src/modules/fault-monitor/fault-monitor.graphql',
+    ],
+  },
+];
+export const operationPaths = [
+  'discocan/apps/admin/src/app/ui/fleet-live/operations.graphql',
+  'discocan/apps/admin/src/app/features/branches/operations.graphql',
+  'discocan/apps/admin/src/app/features/auth/operations.graphql',
+  'discocan/apps/admin/src/app/features/profile/operations.graphql',
+  'discocan/apps/admin/src/app/features/users/operations.graphql',
+  'discocan/apps/admin/src/app/features/notifications/operations.graphql',
+  'discocan/apps/admin/src/app/features/fleet/vehicles/operations.graphql',
+  'discocan/apps/admin/src/app/features/fleet/vehicle-groups/operations.graphql',
+  'discocan/apps/admin/src/app/features/fleet/alerts/operations.graphql',
+  'discocan/apps/admin/src/app/features/fleet/overview/operations.graphql',
+  'discocan/apps/admin/src/app/features/fleet/live-dashboard/operations.graphql',
+  'discocan/apps/admin/src/app/features/fleet/trips/operations.graphql',
+  'discocan/apps/admin/src/app/features/fleet/drivers/operations.graphql',
+  'discocan/apps/admin/src/app/features/fleet/maintenance/operations.graphql',
+  'discocan/apps/admin/src/app/features/fleet/devices/operations.graphql',
+  'discocan/apps/admin/src/app/features/fleet/settings/operations.graphql',
+  'discocan/apps/admin/src/app/features/fleet/geo-zones/operations.graphql',
+  'discocan/apps/admin/src/app/features/fleet/faults/operations.graphql',
+  'discocan/apps/admin/src/app/features/control-center/operations.graphql',
+  'discocan/apps/fleet/src/integrations/core/operations.graphql',
+  'discocan/apps/erm-server/src/modules/telemetry/operations.graphql',
+];
+
+export async function readContracts() {
+  return Promise.all(
+    subgraphs.map(async (subgraph) => ({
+      ...subgraph,
+      typeDefs: parse(
+        (
+          await Promise.all(
+            [subgraph.path, ...subgraph.additionalPaths].map((path) =>
+              readFile(new URL(`../../../${path}`, import.meta.url), 'utf8'),
+            ),
+          )
+        ).join('\n'),
+      ),
+    })),
+  );
+}
+
+export function composeContracts(contracts: Awaited<ReturnType<typeof readContracts>>) {
+  const result = composeServices(contracts);
+  if (!result.schema || !result.supergraphSdl) {
+    throw new Error(
+      `Composition failed:\n${result.errors?.map((error) => error.message).join('\n') ?? 'No supergraph produced'}`,
+    );
+  }
+  const apiSchema = result.schema.toAPISchema().toGraphQLJSSchema();
+  const schemas = new Map(
+    contracts.map((contract) => [
+      contract.name,
+      buildSubgraphSchema({ typeDefs: contract.typeDefs }),
+    ]),
+  );
+  return {
+    apiSchema,
+    schemas,
+    supergraphSdl: result.supergraphSdl,
+    clientSdl: printSchema(lexicographicSortSchema(apiSchema)) + '\n',
+  };
+}
+
+export async function readOperations(schema: GraphQLSchema) {
+  const documents = await Promise.all(
+    operationPaths.map(async (location) => ({
+      document: parse(
+        new Source(
+          await readFile(new URL(`../../../${location}`, import.meta.url), 'utf8'),
+          location,
+        ),
+      ),
+      location,
+    })),
+  );
+  const errors = validate(schema, concatAST(documents.map(({ document }) => document)));
+  if (errors.length) {
+    throw new Error(errors.map((error) => error.toString()).join('\n'));
+  }
+  return documents;
+}

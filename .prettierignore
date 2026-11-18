@@ -11,7 +11,7 @@ dist-dev/
 coverage/
 test-results/
 playwright-report/
-apps/*/src/generated/
+discocan/apps/*/src/generated/
 .nx/
 .angular/
 
@@ -27,3 +27,5 @@ docs/discocan/erm-resources/erm-device-eg915u-la-lc86g/source/ERM_INTEGRATION_EN
 # Deployment copies of the running erm-server processes.
 apps/erm-server/live/
 apps/erm-server/live-api/
+discocan/apps/erm-server/live/
+discocan/apps/erm-server/live-api/

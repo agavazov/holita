@@ -21,7 +21,7 @@ reviewed against a running backend.
 
 ## Decision
 
-- **One theme module.** `apps/admin/src/app/theme/` holds the only visual decisions:
+- **One theme module.** `discocan/apps/admin/src/app/theme/` holds the only visual decisions:
   `discocanPreset(choice)` = `definePreset` over standard Aura with brand ramps, density tokens,
   status tones, component tokens and the `extend.app` tokens (`--p-app-*`). `appTheme` in
   `theme-choice.ts` is the application's single configured choice of brand (`cobalt`, `ember`,

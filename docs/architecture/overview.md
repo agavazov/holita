@@ -3,7 +3,7 @@
 The repository uses npm workspaces and Nx, with five applications and the shared `@discocan/edata-rules` package.
 Applications never import another application's implementation, Prisma models or generated client.
 
-`packages/edata-rules` provides the rule expression parser and binary record codec for device
+`discocan/packages/edata-rules` provides the rule expression parser and binary record codec for device
 configuration. It preserves opaque rule data for inspection and does not simulate device evaluation. Application startup and Nx dependency
 targets build the package before its consumers.
 

@@ -1,0 +1,45 @@
+{
+  "name": "gateway",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "discocan/apps/gateway/router",
+  "implicitDependencies": ["core", "fleet", "erm-server"],
+  "tags": ["type:app", "scope:gateway"],
+  "targets": {
+    "graphql-generate": {
+      "executor": "nx:run-commands",
+      "inputs": ["graphqlGeneration"],
+      "cache": true,
+      "outputs": ["{projectRoot}/src/generated/graphql"],
+      "options": {
+        "command": "npm run graphql:generate",
+        "cwd": "discocan/apps/gateway"
+      }
+    },
+    "lint": {},
+    "build": {
+      "cache": true,
+      "inputs": ["default"],
+      "outputs": [],
+      "dependsOn": ["graphql-generate"]
+    },
+    "test-federation": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "dependsOn": [
+        {
+          "projects": ["core", "gateway", "fleet", "erm-server"],
+          "target": "build"
+        }
+      ],
+      "options": {
+        "command": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.federation.config.mjs --runInBand",
+        "cwd": ".",
+        "forwardAllArgs": true
+      }
+    }
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals", "graphqlContracts"]
+  }
+}

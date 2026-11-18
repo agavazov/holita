@@ -2,6 +2,8 @@
 
 Pending work and planned tasks, separate from implemented product documentation.
 
+- [Two products on a shared architecture](two-products.md): Discocan and Holita in one workspace,
+  the `osnova/` extraction and the thin Holita slice.
 - [ERM roadmap](erm-roadmap.md): fleet routing, safety/test levels, device control, recovery,
   questions for ERM, owner decisions and production deployment.
 - [Admin UI v2 follow-ups](ui-v2.md): visual acceptance and tile-provider deployment work.

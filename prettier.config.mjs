@@ -6,7 +6,7 @@ const config = {
   trailingComma: 'all',
   overrides: [
     {
-      files: 'apps/admin/src/**/*.html',
+      files: 'discocan/apps/admin/src/**/*.html',
       options: { parser: 'angular' },
     },
   ],

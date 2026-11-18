@@ -9,7 +9,7 @@ The provider-level ERM data had no Branch scope, and operators had no authentica
 
 ## Decision
 
-Keep one codebase, `apps/erm-server`, and independently deployed processes selected by
+Keep one codebase, `discocan/apps/erm-server`, and independently deployed processes selected by
 `ERM_ROLE`, sharing the `discocan_erm` database:
 
 - **`gateway`** keeps long-lived device sessions, the Karma relay, confirmations,

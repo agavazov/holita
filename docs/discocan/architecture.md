@@ -26,7 +26,7 @@ One physical unit belongs to one Branch.
 records the reported module/version. A Device may be stock or assigned to a Vehicle in the
 same scope; several Devices may share a Vehicle. Activity records retain the reporting IMEI
 as a snapshot. Vehicles and Drivers with history are deactivated instead of deleted.
-See the [Device SDL](../../apps/fleet/src/modules/devices/devices.graphql) for the field contract.
+See the [Device SDL](../../discocan/apps/fleet/src/modules/devices/devices.graphql) for the field contract.
 
 The [Simple eData catalog](erm-resources/simple-edata-catalog/README.md) is shared versioned
 manufacturer metadata without Tenant/Branch columns. Its offline CLI preserves provenance
@@ -36,7 +36,7 @@ access to a vehicle or authorize a device write.
 ### ERM device ingestion
 
 [ADR 0007](../architecture/decisions/0007-erm-gateway-and-api-processes.md) separates two
-processes in `apps/erm-server`, selected by `ERM_ROLE`:
+processes in `discocan/apps/erm-server`, selected by `ERM_ROLE`:
 
 | Role      | Responsibility                                                                                         | Default listeners                       |
 | --------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------- |
@@ -60,7 +60,7 @@ remain separate from this Branch access path. `sendErmDeviceCommand` checks the 
 Fleet using the caller's session and Branch, then delivers one of six allowlisted reads
 through the gateway. There is no arbitrary command input. See
 [setup and operator access](development.md#erm-device-server) and the
-[ERM SDL](../../apps/erm-server/src/modules/telemetry/telemetry.graphql).
+[ERM SDL](../../discocan/apps/erm-server/src/modules/telemetry/telemetry.graphql).
 
 `ermEvents` accepts either a zero-based `offset` or an opaque `cursor`, with `pageSize` 25, 50
 or 100. Its page includes the filtered `total`, `offset` and `limit`; category/severity filters
@@ -102,11 +102,11 @@ Notifications have no delivery provider. Branch naming belongs to
 
 ## GraphQL contracts and context
 
-SDL defines the API: [Core Branches](../../apps/core/src/modules/branches/branches.graphql),
-[Fleet common types](../../apps/fleet/src/graphql/common.graphql), the feature SDL linked in
-[the Fleet index](fleet.md) and the [ERM subgraph](../../apps/erm-server/src/modules/telemetry/telemetry.graphql).
+SDL defines the API: [Core Branches](../../discocan/apps/core/src/modules/branches/branches.graphql),
+[Fleet common types](../../discocan/apps/fleet/src/graphql/common.graphql), the feature SDL linked in
+[the Fleet index](fleet.md) and the [ERM subgraph](../../discocan/apps/erm-server/src/modules/telemetry/telemetry.graphql).
 Use generated types/TypedDocumentNodes from explicit inputs in
-[contracts.mts](../../tools/graphql/contracts.mts); keep runtime SDL in builds.
+[contracts.mts](../../discocan/tools/graphql/contracts.mts); keep runtime SDL in builds.
 Router consumes a generated static supergraph without runtime introspection.
 After SDL or operation changes, follow the [generation and validation rules](../../AGENTS.md#nestjs).
 

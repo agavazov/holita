@@ -1,13 +1,13 @@
 # Admin design system
 
-The shared presentation rules for `apps/admin`: theme, global styles, shell and reusable
+The shared presentation rules for `discocan/apps/admin`: theme, global styles, shell and reusable
 patterns. Use the [design-system skill](../.agents/skills/discocan-admin-design-system/SKILL.md)
 when changing presentation. Meridian is visual inspiration only; no copied source/assets.
 The code defines individual component inputs and implementation details.
 
 ## Where presentation lives
 
-Paths below are relative to `apps/admin/src`.
+Paths below are relative to `discocan/apps/admin/src`.
 
 | Area             | Owns                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------- |
@@ -105,7 +105,7 @@ Private license/map configuration and production asset exclusions are documented
 Global styles load layers, fonts, breakpoint properties, reset, base, shell and patterns.
 Use the central layer order instead of `!important`; reduced-motion overrides are the exception.
 Local Lato weights are 400/500/600/700/800, normal only; preserve the
-[font license/attribution](../apps/admin/THIRD_PARTY_NOTICES.md).
+[font license/attribution](../discocan/apps/admin/THIRD_PARTY_NOTICES.md).
 
 `styles/_breakpoints.scss` owns sm 640, md 768, lg 1024, xl 1280 and xxl 1536px.
 SCSS uses `@use 'breakpoints' as bp` and `bp.below`/`bp.from`; TypeScript uses `ui/media.ts`

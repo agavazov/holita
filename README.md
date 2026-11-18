@@ -114,7 +114,7 @@ all interfaces at 11500. It is outside `npm run dev` and `npm run kill`; run its
 as an independent service to retain device connections during web/API restarts.
 `npm run dev` starts the official Apollo Router on 11010; Angular proxies `/graphql` to it.
 Install the pinned binary once with `npm run router:install` before development, builds or
-Gateway/browser checks. Router reads exported process variables, not `apps/gateway/.env`;
+Gateway/browser checks. Router reads exported process variables, not `discocan/apps/gateway/.env`;
 use `ROUTER_PORT` instead of `PORT`. There is no Node Gateway runtime or runtime selector.
 See [Router configuration](docs/development.md#apollo-router) for health, environment and error behavior.
 After SDL/operation changes run `npm run codegen` and `npm run schema:check`, then restart Router

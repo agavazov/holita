@@ -11,9 +11,9 @@ playwright-report/
 
 /AGENTS.local.md
 /.credentials/
-/apps/admin/public/config.local.json
+/discocan/apps/admin/public/config.local.json
 
-apps/*/src/generated/
+discocan/apps/*/src/generated/
 .nx/
 .angular/
 
@@ -28,3 +28,8 @@ apps/*/src/generated/
 # Temporary Aurora visual-review captures and metadata.
 /artifacts/aurora/
 /.misc/
+
+/apps/erm-server/live/
+/apps/erm-server/live-api/
+/discocan/apps/erm-server/live/
+/discocan/apps/erm-server/live-api/

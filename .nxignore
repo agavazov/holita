@@ -6,5 +6,8 @@
 /AGENTS.local.md
 /.credentials/
 /docs/discocan/erm-resources/starlink-online-protocol/authenticated/
-apps/erm-server/live/
-apps/erm-server/live-api/
+discocan/apps/erm-server/live/
+discocan/apps/erm-server/live-api/
+
+/apps/erm-server/live/
+/apps/erm-server/live-api/

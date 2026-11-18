@@ -56,8 +56,8 @@ ESLint requires braces for every conditional and loop body (`curly: ['error', 'a
 including single-statement bodies in application code, tests and tools.
 The rule is configured after `eslint-config-prettier` so that it remains enabled.
 
-Builds, checks and `start:prod` use `apps/NAME/dist`; the `npm run dev` watchers for Core and Fleet
-compile to `apps/NAME/dist-dev` (`tsconfig.dev.json`), so a check never replaces a running
+Builds, checks and `start:prod` use `discocan/apps/NAME/dist`; the `npm run dev` watchers for Core and Fleet
+compile to `discocan/apps/NAME/dist-dev` (`tsconfig.dev.json`), so a check never replaces a running
 dev server's files. `npm run start:prod --workspace @discocan/core` (or fleet/erm-server)
 runs the compiled app. Gateway `build` generates the supergraph and
 validates the installed native Router configuration. `npm run start:prod --workspace @discocan/gateway`
@@ -106,14 +106,14 @@ environment and use `ROUTER_PORT` instead of `PORT`. The admin proxy reads the s
 Copy only the relevant entries from the reference into the consuming process's ignored
 runtime file, preserving existing settings:
 
-| Consumer                 | Runtime configuration                                                                                                                                   |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`; Compose also reads `POSTGRES_VOLUME`                                                                 |
-| Core and Prisma          | `apps/core/.env`: Core database URLs and shared demo settings                                                                                           |
-| Fleet and Prisma         | `apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins                                     |
-| ERM Server and Prisma    | `apps/erm-server/.env`: ERM database URLs, shared demo settings, `ERM_ROLE`, gateway listener/capture settings, internal API connection and HTTP `PORT` |
-| Router and Angular proxy | Export Router variables in the shell that launches npm; proxy reads `ROUTER_PORT`                                                                       |
-| ERM relay                | Root `.env`: `ERM_RELAY_HOST`, `ERM_RELAY_PORT`, `ERM_RELAY_UPSTREAM` and `ERM_RELAY_CAPTURE_DIR`                                                       |
+| Consumer                 | Runtime configuration                                                                                                                                            |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`; Compose also reads `POSTGRES_VOLUME`                                                                          |
+| Core and Prisma          | `discocan/apps/core/.env`: Core database URLs and shared demo settings                                                                                           |
+| Fleet and Prisma         | `discocan/apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins                                     |
+| ERM Server and Prisma    | `discocan/apps/erm-server/.env`: ERM database URLs, shared demo settings, `ERM_ROLE`, gateway listener/capture settings, internal API connection and HTTP `PORT` |
+| Router and Angular proxy | Export Router variables in the shell that launches npm; proxy reads `ROUTER_PORT`                                                                                |
+| ERM relay                | Root `.env`: `ERM_RELAY_HOST`, `ERM_RELAY_PORT`, `ERM_RELAY_UPSTREAM` and `ERM_RELAY_CAPTURE_DIR`                                                                |
 
 An optional `PORT` override belongs only to an individual Node application; omit it to
 keep that application's default. Exporting one `PORT` for the development group gives
@@ -127,8 +127,8 @@ exact origin allowlist with `ADMIN_ORIGIN` as the single-origin fallback. Defaul
 Angular loopback origin. Database URLs belong only to Core/Fleet/ERM Server. Device control uses the
 [ERM gateway/API workflow](discocan/development.md#erm-device-server).
 
-The admin reads browser configuration from `apps/admin/public/config.json` and optional
-Git-ignored `apps/admin/public/config.local.json`. Local configuration overrides the public
+The admin reads browser configuration from `discocan/apps/admin/public/config.json` and optional
+Git-ignored `discocan/apps/admin/public/config.local.json`. Local configuration overrides the public
 file and is excluded from production assets.
 
 The public file requires `graphqlUrl` and optionally accepts `fleetEnabled` (default `true`),
@@ -210,7 +210,7 @@ npm run dev
 ```
 
 The installer verifies the release archive's pinned SHA-256 before extraction and keeps
-the binary and upstream license notices in ignored `apps/gateway/router/dist/`.
+the binary and upstream license notices in ignored `discocan/apps/gateway/router/dist/`.
 It requires no npm dependency, Rust toolchain, container, GraphOS account or API key.
 `dev` waits for PostgreSQL and starts Router, Core, Fleet and Angular using concurrently. Angular
 keeps the public `/graphql` URL and uses `proxy.conf.mjs`,
@@ -231,8 +231,8 @@ It does not watch configuration/SDL changes; restart Router after changes.
 `router:check` validates YAML with the installed binary. Installation is explicit, including
 in CI; development and tests do not silently download or replace the executable.
 
-The [Router configuration](../apps/gateway/router/router.yaml) reads exported process variables;
-it does not load `apps/gateway/.env`. Defaults are:
+The [Router configuration](../discocan/apps/gateway/router/router.yaml) reads exported process variables;
+it does not load `discocan/apps/gateway/.env`. Defaults are:
 
 | Variable               | Default                        |
 | ---------------------- | ------------------------------ |
@@ -257,7 +257,7 @@ The configured origin can send GET/POST/OPTIONS with `authorization`, `content-t
 `x-branch-id` and `x-request-id`. The three context headers are forwarded to all subgraphs.
 Health returns `{"status":"UP"}` from the dedicated health port, independently of downstream health.
 
-The [Rhai compatibility hook](../apps/gateway/router/compatibility.rhai)
+The [Rhai compatibility hook](../discocan/apps/gateway/router/compatibility.rhai)
 applies after GraphQL parsing/schema validation, at the supergraph boundary:
 
 - A single `x-request-id` matching `[A-Za-z0-9._:-]{1,100}` is preserved; missing, invalid
@@ -310,8 +310,8 @@ The [admin design system](admin-design-system.md) describes the implemented them
 over standard Aura), global styles, shell, patterns and the design page; the decision is
 [ADR 0004](architecture/decisions/0004-admin-design-system.md). The root font size is the browser
 default (16 px). Lato weights 400, 500, 600, 700 and 800, including Cyrillic glyphs, are served
-from `apps/admin/public/fonts/lato`; no external font CDN is required. Font sources and licenses
-are recorded in [the admin attribution](../apps/admin/THIRD_PARTY_NOTICES.md).
+from `discocan/apps/admin/public/fonts/lato`; no external font CDN is required. Font sources and licenses
+are recorded in [the admin attribution](../discocan/apps/admin/THIRD_PARTY_NOTICES.md).
 
 ### Angular agent tools
 
@@ -351,17 +351,17 @@ eight-tool contract, documentation retrieval and valid/invalid API handling. Hos
 discovery may be reported as unsupported separately from those passing runtime checks;
 verify tool availability in the new session. These checks do not replace application tests.
 
-The root Prettier configuration selects the Angular parser for `apps/admin/src/**/*.html`,
+The root Prettier configuration selects the Angular parser for `discocan/apps/admin/src/**/*.html`,
 including suffixless component templates. To format or check only these templates:
 
 ```bash
-npm exec -- prettier --write 'apps/admin/src/**/*.html'
-npm exec -- prettier --check 'apps/admin/src/**/*.html'
+npm exec -- prettier --write 'discocan/apps/admin/src/**/*.html'
+npm exec -- prettier --check 'discocan/apps/admin/src/**/*.html'
 ```
 
 ## GraphQL and generation
 
-SDL and named operation paths are explicit in `tools/graphql/contracts.mts`. Runtime Fleet
+SDL and named operation paths are explicit in `discocan/tools/graphql/contracts.mts`. Runtime Fleet
 loads its common SDL followed by the Vehicle, Device, Driver, Vehicle group, Telemetry, Trip,
 Event, Service task, Overview and Settings SDL in the same order;
 Gateway loads the generated static supergraph. No database or running
@@ -425,7 +425,7 @@ deploys Core, Fleet and ERM Server; `db:generate` generates all three ignored cl
 explicitly authorized database rebuild. `db:migrate` never resets databases. Subsequent schema
 changes require new reviewed SQL migrations, not edits to applied history or db push.
 
-Produce Fleet migration SQL from `apps/fleet` (the CLI needs its `prisma.config.ts`): copy the
+Produce Fleet migration SQL from `discocan/apps/fleet` (the CLI needs its `prisma.config.ts`): copy the
 committed schema outside the repository, edit `prisma/schema.prisma`, run `npm run db:validate`,
 then `npx prisma migrate diff --from-schema "$PREV" --to-schema prisma/schema.prisma --script`.
 Wrap the output in `BEGIN;`/`COMMIT;`, append the hand-written CHECK constraints Prisma cannot

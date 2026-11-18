@@ -15,7 +15,7 @@ traffic, but it has no application-owned persistence for connection and frame in
 
 ## Decision
 
-Add one independent NestJS host application, `apps/erm-server` (`@discocan/erm-server`), with its own
+Add one independent NestJS host application, `discocan/apps/erm-server` (`@discocan/erm-server`), with its own
 `discocan_erm` database, login role, Prisma client and migrations. Run compiled output as a separate
 service outside `npm run dev` and `npm run kill`. HTTP exposes health and an internal API on
 loopback protected by a bearer token; the device listener uses a separate TCP port.

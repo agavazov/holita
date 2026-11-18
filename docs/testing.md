@@ -46,7 +46,7 @@ required check fails. Clean up processes and connections started by the task.
 When handing over, also run:
 
 - **Login, routing, transport or a main journey:** one `npm run test:smoke:admin -- <file>`.
-- **`tools/` changes:** `npm run typecheck:tools`.
+- **`discocan/tools/` changes:** `npm run typecheck:tools`.
 - **Root tooling:** `npm run lint`, `npm run typecheck` and `npm run build`.
 
 ## Unit targets
@@ -58,8 +58,8 @@ npm run test:admin -- --include=app/ui/format/zoned-time.spec.ts
 ```
 
 Jest runs the backend specs. Angular CLI runs the admin specs with Vitest in jsdom, and
-`apps/admin/src/test-setup.ts` stubs `matchMedia`, `ResizeObserver` and `scrollIntoView`. Admin
-`--include` paths are relative to `apps/admin/src`.
+`discocan/apps/admin/src/test-setup.ts` stubs `matchMedia`, `ResizeObserver` and `scrollIntoView`. Admin
+`--include` paths are relative to `discocan/apps/admin/src`.
 
 - Read the executed count: zero tests is not a pass.
 - Do not use watch mode or `--passWithNoTests`.
@@ -101,7 +101,7 @@ The script runs the `gateway:test-federation` Nx target. That target is not part
 `npm run check`, because every backend change affects the gateway. CI runs it through
 `test:affected`.
 
-`tools/graphql/federation.db.spec.mts` builds the subgraphs and starts:
+`discocan/tools/graphql/federation.db.spec.mts` builds the subgraphs and starts:
 
 - Core, Fleet and ERM Server, each with an isolated test schema;
 - the native Router.

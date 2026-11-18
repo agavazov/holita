@@ -5,20 +5,20 @@ request lifecycles. Use the existing files directly; there is no generic CRUD la
 
 ## Fleet backend modules
 
-| Module         | Files                                                                                                                                                                                                                                                                                                                                                                                                             |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Shared         | [common SDL](../../apps/fleet/src/graphql/common.graphql), [scalars](../../apps/fleet/src/graphql/scalars.ts), [validation](../../apps/fleet/src/validation.ts), [search helpers](../../apps/fleet/src/database/search.ts), [raw SQL helpers](../../apps/fleet/src/database/sql.ts), [FleetClock](../../apps/fleet/src/clock/fleet-clock.ts), [thresholds](../../apps/fleet/src/fleet-thresholds.ts)              |
-| Vehicles       | [SDL](../../apps/fleet/src/modules/vehicles/vehicles.graphql), [resolver](../../apps/fleet/src/modules/vehicles/vehicles.resolver.ts), [service](../../apps/fleet/src/modules/vehicles/vehicles.service.ts), [repository](../../apps/fleet/src/modules/vehicles/vehicles.repository.ts)                                                                                                                           |
-| Devices        | [SDL](../../apps/fleet/src/modules/devices/devices.graphql), [resolver](../../apps/fleet/src/modules/devices/devices.resolver.ts), [service](../../apps/fleet/src/modules/devices/devices.service.ts), [repository](../../apps/fleet/src/modules/devices/devices.repository.ts)                                                                                                                                   |
-| Drivers        | [SDL](../../apps/fleet/src/modules/drivers/drivers.graphql), [resolver](../../apps/fleet/src/modules/drivers/drivers.resolver.ts), [service](../../apps/fleet/src/modules/drivers/drivers.service.ts), [repository](../../apps/fleet/src/modules/drivers/drivers.repository.ts)                                                                                                                                   |
-| Vehicle groups | [SDL](../../apps/fleet/src/modules/vehicle-groups/vehicle-groups.graphql), [resolver](../../apps/fleet/src/modules/vehicle-groups/vehicle-groups.resolver.ts), [service](../../apps/fleet/src/modules/vehicle-groups/vehicle-groups.service.ts), [repository](../../apps/fleet/src/modules/vehicle-groups/vehicle-groups.repository.ts)                                                                           |
-| Telemetry      | [SDL](../../apps/fleet/src/modules/telemetry/telemetry.graphql), [resolver](../../apps/fleet/src/modules/telemetry/telemetry.resolver.ts), [service](../../apps/fleet/src/modules/telemetry/telemetry.service.ts), [repository](../../apps/fleet/src/modules/telemetry/telemetry.repository.ts), [state classifier](../../apps/fleet/src/modules/telemetry/vehicle-state.ts)                                      |
-| Trips          | [SDL](../../apps/fleet/src/modules/trips/trips.graphql), [resolver](../../apps/fleet/src/modules/trips/trips.resolver.ts), [service](../../apps/fleet/src/modules/trips/trips.service.ts), [repository](../../apps/fleet/src/modules/trips/trips.repository.ts)                                                                                                                                                   |
-| Events         | [SDL](../../apps/fleet/src/modules/events/events.graphql), [resolver](../../apps/fleet/src/modules/events/events.resolver.ts), [service](../../apps/fleet/src/modules/events/events.service.ts), [repository](../../apps/fleet/src/modules/events/events.repository.ts)                                                                                                                                           |
-| Service tasks  | [SDL](../../apps/fleet/src/modules/service-tasks/service-tasks.graphql), [resolver](../../apps/fleet/src/modules/service-tasks/service-tasks.resolver.ts), [service](../../apps/fleet/src/modules/service-tasks/service-tasks.service.ts), [repository](../../apps/fleet/src/modules/service-tasks/service-tasks.repository.ts), [urgency SQL](../../apps/fleet/src/modules/service-tasks/service-urgency.sql.ts) |
-| Settings       | [SDL](../../apps/fleet/src/modules/settings/settings.graphql), [resolver](../../apps/fleet/src/modules/settings/settings.resolver.ts), [service](../../apps/fleet/src/modules/settings/settings.service.ts), [repository](../../apps/fleet/src/modules/settings/settings.repository.ts), [settings SQL](../../apps/fleet/src/modules/settings/settings.sql.ts)                                                    |
-| Geo zones      | [SDL](../../apps/fleet/src/modules/geo-zones/geo-zones.graphql), [resolver](../../apps/fleet/src/modules/geo-zones/geo-zones.resolver.ts), [service](../../apps/fleet/src/modules/geo-zones/geo-zones.service.ts), [repository](../../apps/fleet/src/modules/geo-zones/geo-zones.repository.ts), [job](../../apps/fleet/src/modules/geo-zones/geo-zones.jobs.ts)                                                  |
-| Fault monitor  | [SDL](../../apps/fleet/src/modules/fault-monitor/fault-monitor.graphql), [resolver](../../apps/fleet/src/modules/fault-monitor/fault-monitor.resolver.ts), [service](../../apps/fleet/src/modules/fault-monitor/fault-monitor.service.ts), [repository](../../apps/fleet/src/modules/fault-monitor/fault-monitor.repository.ts)                                                                                   |
+| Module         | Files                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared         | [common SDL](../../discocan/apps/fleet/src/graphql/common.graphql), [scalars](../../discocan/apps/fleet/src/graphql/scalars.ts), [validation](../../discocan/apps/fleet/src/validation.ts), [search helpers](../../discocan/apps/fleet/src/database/search.ts), [raw SQL helpers](../../discocan/apps/fleet/src/database/sql.ts), [FleetClock](../../discocan/apps/fleet/src/clock/fleet-clock.ts), [thresholds](../../discocan/apps/fleet/src/fleet-thresholds.ts) |
+| Vehicles       | [SDL](../../discocan/apps/fleet/src/modules/vehicles/vehicles.graphql), [resolver](../../discocan/apps/fleet/src/modules/vehicles/vehicles.resolver.ts), [service](../../discocan/apps/fleet/src/modules/vehicles/vehicles.service.ts), [repository](../../discocan/apps/fleet/src/modules/vehicles/vehicles.repository.ts)                                                                                                                                         |
+| Devices        | [SDL](../../discocan/apps/fleet/src/modules/devices/devices.graphql), [resolver](../../discocan/apps/fleet/src/modules/devices/devices.resolver.ts), [service](../../discocan/apps/fleet/src/modules/devices/devices.service.ts), [repository](../../discocan/apps/fleet/src/modules/devices/devices.repository.ts)                                                                                                                                                 |
+| Drivers        | [SDL](../../discocan/apps/fleet/src/modules/drivers/drivers.graphql), [resolver](../../discocan/apps/fleet/src/modules/drivers/drivers.resolver.ts), [service](../../discocan/apps/fleet/src/modules/drivers/drivers.service.ts), [repository](../../discocan/apps/fleet/src/modules/drivers/drivers.repository.ts)                                                                                                                                                 |
+| Vehicle groups | [SDL](../../discocan/apps/fleet/src/modules/vehicle-groups/vehicle-groups.graphql), [resolver](../../discocan/apps/fleet/src/modules/vehicle-groups/vehicle-groups.resolver.ts), [service](../../discocan/apps/fleet/src/modules/vehicle-groups/vehicle-groups.service.ts), [repository](../../discocan/apps/fleet/src/modules/vehicle-groups/vehicle-groups.repository.ts)                                                                                         |
+| Telemetry      | [SDL](../../discocan/apps/fleet/src/modules/telemetry/telemetry.graphql), [resolver](../../discocan/apps/fleet/src/modules/telemetry/telemetry.resolver.ts), [service](../../discocan/apps/fleet/src/modules/telemetry/telemetry.service.ts), [repository](../../discocan/apps/fleet/src/modules/telemetry/telemetry.repository.ts), [state classifier](../../discocan/apps/fleet/src/modules/telemetry/vehicle-state.ts)                                           |
+| Trips          | [SDL](../../discocan/apps/fleet/src/modules/trips/trips.graphql), [resolver](../../discocan/apps/fleet/src/modules/trips/trips.resolver.ts), [service](../../discocan/apps/fleet/src/modules/trips/trips.service.ts), [repository](../../discocan/apps/fleet/src/modules/trips/trips.repository.ts)                                                                                                                                                                 |
+| Events         | [SDL](../../discocan/apps/fleet/src/modules/events/events.graphql), [resolver](../../discocan/apps/fleet/src/modules/events/events.resolver.ts), [service](../../discocan/apps/fleet/src/modules/events/events.service.ts), [repository](../../discocan/apps/fleet/src/modules/events/events.repository.ts)                                                                                                                                                         |
+| Service tasks  | [SDL](../../discocan/apps/fleet/src/modules/service-tasks/service-tasks.graphql), [resolver](../../discocan/apps/fleet/src/modules/service-tasks/service-tasks.resolver.ts), [service](../../discocan/apps/fleet/src/modules/service-tasks/service-tasks.service.ts), [repository](../../discocan/apps/fleet/src/modules/service-tasks/service-tasks.repository.ts), [urgency SQL](../../discocan/apps/fleet/src/modules/service-tasks/service-urgency.sql.ts)      |
+| Settings       | [SDL](../../discocan/apps/fleet/src/modules/settings/settings.graphql), [resolver](../../discocan/apps/fleet/src/modules/settings/settings.resolver.ts), [service](../../discocan/apps/fleet/src/modules/settings/settings.service.ts), [repository](../../discocan/apps/fleet/src/modules/settings/settings.repository.ts), [settings SQL](../../discocan/apps/fleet/src/modules/settings/settings.sql.ts)                                                         |
+| Geo zones      | [SDL](../../discocan/apps/fleet/src/modules/geo-zones/geo-zones.graphql), [resolver](../../discocan/apps/fleet/src/modules/geo-zones/geo-zones.resolver.ts), [service](../../discocan/apps/fleet/src/modules/geo-zones/geo-zones.service.ts), [repository](../../discocan/apps/fleet/src/modules/geo-zones/geo-zones.repository.ts), [job](../../discocan/apps/fleet/src/modules/geo-zones/geo-zones.jobs.ts)                                                       |
+| Fault monitor  | [SDL](../../discocan/apps/fleet/src/modules/fault-monitor/fault-monitor.graphql), [resolver](../../discocan/apps/fleet/src/modules/fault-monitor/fault-monitor.resolver.ts), [service](../../discocan/apps/fleet/src/modules/fault-monitor/fault-monitor.service.ts), [repository](../../discocan/apps/fleet/src/modules/fault-monitor/fault-monitor.repository.ts)                                                                                                 |
 
 Every Fleet list (`fleetVehicles`, `fleetDevices`, `fleetDrivers`, `fleetVehicleGroups`,
 `fleetTrips`, `fleetEvents`, `fleetServiceTasks`) follows the
@@ -32,9 +32,9 @@ no per-row resolver query. Resolvers only delegate, resolve federation reference
 list and summary paths retain their full-Branch facts. The decision is recorded in
 [ADR 0005](../architecture/decisions/0005-fleet-list-contract-and-derived-values.md).
 
-The [Vehicles list SQL](../../apps/fleet/src/modules/vehicles/vehicle-list.sql.ts) computes
+The [Vehicles list SQL](../../discocan/apps/fleet/src/modules/vehicles/vehicle-list.sql.ts) computes
 activity/last-report/odometer filters and order before pagination and counting, using the shared
-[telemetry facts SQL](../../apps/fleet/src/modules/telemetry/vehicle-facts.sql.ts). Its
+[telemetry facts SQL](../../discocan/apps/fleet/src/modules/telemetry/vehicle-facts.sql.ts). Its
 nonrecursive `allOf` conditions preserve independent AND semantics, including repeated fields,
 literal make text and created dates in the configured Branch time zone. `fleetVehicleSummary` uses the same facts and
 data clock for exact whole-Branch counts independent of the current list page or filters.
@@ -57,7 +57,7 @@ database specs override `FleetClock`. Driver document status: a licence or tacho
 before the business date is `EXPIRED`, on or before the business date plus 30 days is
 `EXPIRING`, otherwise `VALID`; the driver shows the worst of the two, or `NOT_RECORDED` when both
 are empty. Device installation time must not be after `FleetClock.now()`.
-[fleet-thresholds.ts](../../apps/fleet/src/fleet-thresholds.ts) holds the fixed demo rules:
+[fleet-thresholds.ts](../../discocan/apps/fleet/src/fleet-thresholds.ts) holds the fixed demo rules:
 5 km/h moving, 6 h fuel freshness, 14 days / 1,500 km due soon, 30-day documents and driver
 statistics, 0.5 km score minimum, 24 h open trips and 5 trips for confident scorecards.
 Branch settings configure the calendar time zone (default Europe/Sofia), not-reporting cutoff
@@ -263,30 +263,30 @@ required field or an update without fields is BAD_USER_INPUT. Every create check
 through Core once per request after validation.
 
 The shared [Simple eData vendor catalog](erm-resources/simple-edata-catalog/README.md)
-is implemented by [file validation](../../apps/fleet/src/modules/edata-catalog/catalog-file.ts),
-[transactional persistence](../../apps/fleet/src/modules/edata-catalog/catalog.repository.ts)
-and a [local CLI](../../apps/fleet/src/modules/edata-catalog/cli.ts). Its offline TypeScript extractor
-is [tools/erm-edata/catalog.mts](../../tools/erm-edata/catalog.mts). Catalog import/editing remains
+is implemented by [file validation](../../discocan/apps/fleet/src/modules/edata-catalog/catalog-file.ts),
+[transactional persistence](../../discocan/apps/fleet/src/modules/edata-catalog/catalog.repository.ts)
+and a [local CLI](../../discocan/apps/fleet/src/modules/edata-catalog/cli.ts). Its offline TypeScript extractor
+is [discocan/tools/erm-edata/catalog.mts](../../discocan/tools/erm-edata/catalog.mts). Catalog import/editing remains
 local CLI only.
 
 ## Angular foundation
 
-[AdminWorkspace](../../apps/admin/src/app/workspace/admin-workspace.ts) owns common session/language
+[AdminWorkspace](../../discocan/apps/admin/src/app/workspace/admin-workspace.ts) owns common session/language
 coordination and the shell. Its component-scoped
-[BranchContext](../../apps/admin/src/app/features/branches/branch-context.ts) owns authenticated
-discovery and Branch selection/routing. [Login](../../apps/admin/src/app/features/auth/login.ts)
+[BranchContext](../../discocan/apps/admin/src/app/features/branches/branch-context.ts) owns authenticated
+discovery and Branch selection/routing. [Login](../../discocan/apps/admin/src/app/features/auth/login.ts)
 provides an independent layout and sequential Tenant/Branch dropdowns. Candidate discovery is retired
 on Tenant/language changes; only submitting a valid Branch activates the session and opens Overview.
 The language root redirects signed-in sessions to their saved Branch, without a Branch list page. Switching Branches preserves
-the current Fleet section and resets list context. [FleetWorkspace](../../apps/admin/src/app/features/fleet/fleet-workspace.ts)
+the current Fleet section and resets list context. [FleetWorkspace](../../discocan/apps/admin/src/app/features/fleet/fleet-workspace.ts)
 checks availability/discovery and keys mounted pages/editors by session/Branch/language/resource/mode/ID.
-[GraphQL transport](../../apps/admin/src/app/core/graphql/graphql-options.ts) captures immutable
+[GraphQL transport](../../discocan/apps/admin/src/app/core/graphql/graphql-options.ts) captures immutable
 session/Branch/language headers; each feature API owns its own Apollo client and cache. Retired reads unsubscribe;
 submitted writes settle and invalidate only their initiating client.
 
 ## Vehicles admin
 
-- [API](../../apps/admin/src/app/features/fleet/vehicles/vehicles-api.ts), [page](../../apps/admin/src/app/features/fleet/vehicles/vehicles-page.ts), [URL/filter mapping](../../apps/admin/src/app/features/fleet/vehicles/vehicle-query.ts), [editor host](../../apps/admin/src/app/features/fleet/vehicles/vehicle-editor-page.ts), [contract/form mapping](../../apps/admin/src/app/features/fleet/vehicles/vehicle-mapping.ts), [shared view](../../apps/admin/src/app/features/fleet/vehicles/vehicles-view.ts), [shared drawer](../../apps/admin/src/app/features/fleet/vehicles/vehicle-drawer.ts).
+- [API](../../discocan/apps/admin/src/app/features/fleet/vehicles/vehicles-api.ts), [page](../../discocan/apps/admin/src/app/features/fleet/vehicles/vehicles-page.ts), [URL/filter mapping](../../discocan/apps/admin/src/app/features/fleet/vehicles/vehicle-query.ts), [editor host](../../discocan/apps/admin/src/app/features/fleet/vehicles/vehicle-editor-page.ts), [contract/form mapping](../../discocan/apps/admin/src/app/features/fleet/vehicles/vehicle-mapping.ts), [shared view](../../discocan/apps/admin/src/app/features/fleet/vehicles/vehicles-view.ts), [shared drawer](../../discocan/apps/admin/src/app/features/fleet/vehicles/vehicle-drawer.ts).
 
 The live screen uses shared presentation components, with BG/EN catalogs. It edits
 License Plate (required, up to 32 Unicode code points after trimming), fleet number, VIN, type,
@@ -310,7 +310,7 @@ load and form errors remain inline. A submitted batch settles against its captur
 retirement without navigating or publishing into another workspace. Typed drawers retain failed
 drafts, focus invalid fields and guard dirty navigation.
 
-[Vehicle profile](../../apps/admin/src/app/features/fleet/vehicles/vehicle-profile-page.ts)
+[Vehicle profile](../../discocan/apps/admin/src/app/features/fleet/vehicles/vehicle-profile-page.ts)
 opens at `vehicles/:recordId/:tab`, where tab is `overview`, `trips`, `alerts` or `service`.
 It reads the exact open-alert count, next service and fourteen-day distance series from the
 server. Related tables have independent URL paging, totals and retry. Edit reuses the Vehicle
@@ -348,7 +348,7 @@ and General settings links.
 
 ## Devices admin
 
-- [API](../../apps/admin/src/app/features/fleet/devices/devices-api.ts), [page](../../apps/admin/src/app/features/fleet/devices/devices-list-page.ts), [editor](../../apps/admin/src/app/features/fleet/devices/device-editor-page.ts), [mapping](../../apps/admin/src/app/features/fleet/devices/device-mapping.ts), [diagnostics](../../apps/admin/src/app/features/fleet/devices/device-diagnostics-page.ts).
+- [API](../../discocan/apps/admin/src/app/features/fleet/devices/devices-api.ts), [page](../../discocan/apps/admin/src/app/features/fleet/devices/devices-list-page.ts), [editor](../../discocan/apps/admin/src/app/features/fleet/devices/device-editor-page.ts), [mapping](../../discocan/apps/admin/src/app/features/fleet/devices/device-mapping.ts), [diagnostics](../../discocan/apps/admin/src/app/features/fleet/devices/device-diagnostics-page.ts).
 
 IMEI is exactly 15 digits and globally unique, retaining leading zeros; one unit belongs to one
 Branch. Assignment is optional; unassigned Devices are stock. Multiple Devices may share a scoped
@@ -376,33 +376,33 @@ Diagnostics on save/cancel; the row-menu Edit action retains its direct list ret
 The live containers feed shared presentation components and use BG/EN catalogs,
 captured clients, generated operations and shared load/error/empty states:
 
-- [Overview](../../apps/admin/src/app/features/fleet/overview/overview-page.ts) displays the Branch
+- [Overview](../../discocan/apps/admin/src/app/features/fleet/overview/overview-page.ts) displays the Branch
   snapshot, fourteen-day distance, activity by group, recent trips and attention links. The read
   uses the server's data clock and supports retry with retained data after a refresh failure.
-- [Alerts](../../apps/admin/src/app/features/fleet/alerts/alerts-page.ts) lists actionable events,
+- [Alerts](../../discocan/apps/admin/src/app/features/fleet/alerts/alerts-page.ts) lists actionable events,
   with filtered counts independent of alert status. Acknowledge accepts an IDs-array with partial
   results; detail resolve/reopen uses the loaded expected status and retains failed remarks.
   An optimistic conflict reloads the latest status before enabling another action, preserving a
   dirty remark. Failed refreshes block stale writes and expose read retry; mutations are never
   retried automatically.
-- [Trips](../../apps/admin/src/app/features/fleet/trips/trips-page.ts) preserves URL filters and
+- [Trips](../../discocan/apps/admin/src/app/features/fleet/trips/trips-page.ts) preserves URL filters and
   half-open date ranges in the configured Branch time zone. Its detail drawer shows the complete chronological maneuver timeline;
   whole-Branch KPIs remain independent of the current list page.
-- [Drivers](../../apps/admin/src/app/features/fleet/drivers/drivers-page.ts) edits identity, contact,
+- [Drivers](../../discocan/apps/admin/src/app/features/fleet/drivers/drivers-page.ts) edits identity, contact,
   licence and tachograph documents and supports protected partial delete/deactivate batches. Expiry
   badges use the actual Fleet business date, including when telemetry has no data clock. Scorecards
   accept 7, 30 or 90 days and preserve the list context on Back. Each assigned vehicle in the
   read-only Driver record opens that vehicle's profile in the current Branch.
-- [Maintenance](../../apps/admin/src/app/features/fleet/maintenance/maintenance-page.ts) supports
+- [Maintenance](../../discocan/apps/admin/src/app/features/fleet/maintenance/maintenance-page.ts) supports
   planning, editing PLANNED tasks, completion with optional next task, cancellation and protected
   deletion. Row and selected cancellation require the shared destructive-action confirmation,
   naming the affected records before submission. DONE/CANCELLED records open as read-only history. Costs convert decimal text to exact
   EUR cents; zero and unknown remain distinct. Completion uses the service business date and the
   inactive-Vehicle/earlier-date rules above.
-- [Vehicle groups](../../apps/admin/src/app/features/fleet/vehicle-groups/vehicle-groups-page.ts)
+- [Vehicle groups](../../discocan/apps/admin/src/app/features/fleet/vehicle-groups/vehicle-groups-page.ts)
   lists the complete scoped groups through bounded pages, with create/edit drawers, color tokens
   and protected deletion.
-- [General settings](../../apps/admin/src/app/features/fleet/settings/general-settings-page.ts)
+- [General settings](../../discocan/apps/admin/src/app/features/fleet/settings/general-settings-page.ts)
   edits regional display preferences, configured thresholds and the stored speed-limit reference.
   Fleet settings save before the separate Core Branch-name mutation; a failed rename retains
   the saved Fleet preferences and the rejected name draft. Notification switches remain
@@ -410,13 +410,13 @@ captured clients, generated operations and shared load/error/empty states:
   and the [General settings workflow](development.md#fleet-operator-workflows) for the
   initial preference gate, display versus entry units and partial-save behavior.
 
-- [Geo zones](../../apps/admin/src/app/features/fleet/geo-zones/geo-zones-page.ts) shows the
+- [Geo zones](../../discocan/apps/admin/src/app/features/fleet/geo-zones/geo-zones-page.ts) shows the
   Branch polygon zones on a Google map with their names, a zone list that focuses the map, and the
   entry/exit log filtered by truck, zone, movement and date range. Operators and above draw a new
   zone or edit one on the map: a click adds a vertex, a dragged vertex moves and a right-clicked
   vertex is removed; they name it, save it, or delete it after confirmation. There are no rules
   or notifications.
-- [Faults](../../apps/admin/src/app/features/fleet/faults/faults-page.ts) refreshes every minute.
+- [Faults](../../discocan/apps/admin/src/app/features/fleet/faults/faults-page.ts) refreshes every minute.
   Tiles count the trucks with active codes, with no active codes (a clear verdict within the last
   hour), with no CAN data and offline; one row per truck shows its state, active codes with SPN/FMI
   and meaning, the last check, the last data, the CAN state and a link to the truck. The first state
@@ -427,14 +427,14 @@ captured clients, generated operations and shared load/error/empty states:
 
 ### Geo zones
 
-The [geo-zones module](../../apps/fleet/src/modules/geo-zones/) stores each zone as a GeoJSON
+The [geo-zones module](../../discocan/apps/fleet/src/modules/geo-zones/) stores each zone as a GeoJSON
 Polygon (`[longitude, latitude]`) with a bounding box; no PostGIS is used. Every minute
-[`GeoZonesJobs`](../../apps/fleet/src/modules/geo-zones/geo-zones.jobs.ts) reads the positioned
+[`GeoZonesJobs`](../../discocan/apps/fleet/src/modules/geo-zones/geo-zones.jobs.ts) reads the positioned
 `VehicleStatusSample` rows of each Branch that has zones, after a per-Branch cursor and within the
 last seven days (the first run is the backfill), and writes `GeoZoneEvent` ENTER/EXIT rows in time
 order per vehicle. The last event of a vehicle and zone is its state; without one the vehicle is
 outside, so the first position inside a zone logs an entry. Samples not later than that last
-event are ignored. The [SDL](../../apps/fleet/src/modules/geo-zones/geo-zones.graphql) offers
+event are ignored. The [SDL](../../discocan/apps/fleet/src/modules/geo-zones/geo-zones.graphql) offers
 `fleetGeoZones` (with the closed outer ring as points) and the paginated, newest-first
 `fleetGeoZoneEvents` filtered by vehicles, zones, kinds and an `occurredFrom`/`occurredTo` range.
 `createFleetGeoZone`, `updateFleetGeoZone` (full replacement of name and outline) and
@@ -444,7 +444,7 @@ deleted. Detection reads the current zones on every run: a new zone starts with 
 outside, an edited outline applies from the next position, and a deleted zone keeps its row
 (`deletedAt`) and logged events but no longer appears or logs.
 Example zones (parking derived from overnight truck positions, Sofia, Bulgaria, border
-checkpoints and Serbia) are in [geo-zones.ts](../../apps/fleet/prisma/geo-zones.ts); the Fleet
+checkpoints and Serbia) are in [geo-zones.ts](../../discocan/apps/fleet/prisma/geo-zones.ts); the Fleet
 seed inserts the missing ones by name and never updates existing zones.
 
 ### Fault monitoring
@@ -470,7 +470,7 @@ The account menu uses the actual demo tenant identity and offers Profile and Sig
 
 ## Boundaries to preserve
 
-Creation checks Branch existence through the [Fleet Core client](../../apps/fleet/src/integrations/core/core.client.ts)
+Creation checks Branch existence through the [Fleet Core client](../../discocan/apps/fleet/src/integrations/core/core.client.ts)
 once per request. Every repository predicate, relation, count and federation lookup includes verified Tenant and Branch scope. No cross-app
 implementation imports or shared Prisma models exist. Inputs never own tenantId or branchId. Generated
 TypedDocumentNodes/types come from explicit SDL/operation inputs. Backend availability also

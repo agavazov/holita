@@ -1,4 +1,4 @@
-# discocan coding guide
+# Workspace coding guide
 
 Also read `AGENTS.local.md` at the repository root if it exists. This optional,
 Git-ignored file holds instructions specific to the local checkout, including
@@ -7,7 +7,7 @@ Keep shared rules in this guide and never put credential values in agent instruc
 
 ## Delivery policy
 
-discocan is an internal test release. Deliver what was asked quickly and correctly. This policy
+Both products are internal test releases. Deliver what was asked quickly and correctly. This policy
 overrides more detailed guidance in documentation and skills.
 
 - Make the smallest change that solves the task. Add no speculative hardening, such as race
@@ -35,36 +35,37 @@ overrides more detailed guidance in documentation and skills.
 - Do not re-grow what was deliberately removed: tests, test suites, rules, documentation or
   verification steps. If something seems missing, propose it to the user instead of adding it.
 
-## Product identity
+## Products and boundaries
 
-- The repository, current packages and infrastructure resources are named `discocan`.
-  Discocan and Ecommerce identify the separate domains documented below.
-- `red.bg` is a temporary domain used to present the service. It is not the product,
-  package, namespace or infrastructure name. Preserve it only when it refers to the
-  actual domain or a required compatibility reference.
-- Use `discocan` / `@discocan/*` / `discocan_*` for product labels, packages and resource
-  names. Preserve legacy identifiers only in explicit migration/rollback guidance and
-  historical local artifacts.
-- Rename existing resources together with their configuration and documentation. Preserve
-  data, credentials and applied migration history. A Compose project rename must not silently
-  switch to an empty volume. The user will rename the repository itself separately.
+One npm/Nx workspace holds two products and the code they share:
 
-## Domain boundaries and instruction routing
+| Folder      | What it is                                               | Rules                                    |
+| ----------- | -------------------------------------------------------- | ---------------------------------------- |
+| `discocan/` | Fleet telemetry                                          | [discocan/AGENTS.md](discocan/AGENTS.md) |
+| `holita/`   | SaaS platform for online shops                           | [holita/AGENTS.md](holita/AGENTS.md)     |
+| `osnova/`   | Osnova, the foundation both products use (by extraction) | this guide                               |
 
-- This repository supports two distinct domains: Discocan (fleet telemetry) and Ecommerce
-  (online shops). Documentation separation does not rename current discocan packages or resources.
-- For telemetry, Vehicles/Devices and the current Fleet admin, read the
-  [Discocan documentation](docs/discocan/README.md) and apply the
-  [Discocan instructions](docs/discocan/instructions.md).
-- For online shops and Core Branch behavior, read the
-  [Ecommerce documentation](docs/ecommerce/README.md) and apply the
-  [Ecommerce instructions](docs/ecommerce/instructions.md). When a shared Branch change affects
-  Fleet, consult both domains.
-- Branch is the shared organizational scope in both domains: an online shop in Ecommerce
-  and a vehicle fleet in Discocan.
+- A task belongs to one product. Read that product's `AGENTS.md` first and work only in its
+  folder.
+- Do not open, list, search or change the other product's folder. Scope repository-wide searches
+  and scans to your product folder, `osnova/` and the root.
+- Read `osnova/` freely. Change it only when the task says so: a change there reaches both
+  products, and its checks cover both.
+- Products never import each other. Code that both need moves to `osnova/`; it is never copied.
+- `osnova/` imports nothing from a product and holds no product name, route or business rule.
+  Products use it only through its package names (`@osnova/*`), never through relative paths, so
+  that it can later move to its own repository without changing product code.
+- Root files (manifests, lockfile, Nx, ESLint, TypeScript, Jest, Prettier, CI and this guide)
+  serve both products. Change them only as far as the task requires.
+- Package scopes are `@discocan/*`, `@holita/*` and `@osnova/*`. Keep each product's ports,
+  databases, environment and running processes separate, so that either can be split off.
+- Branch is the shared organizational scope: a vehicle fleet in Discocan and an online shop in
+  Holita.
   - Use Branch/branchId/x-branch-id consistently and preserve tenant-scoped access.
   - Where tenantId and branchId both exist, keep branchId immediately after tenantId.
-  - Domain terminology does not create separate persistence models.
+  - Product terminology does not create separate persistence models.
+- Until Core moves to `osnova/`, the Core Tenant/Branch foundation is Discocan's `apps/core`,
+  documented in [Branches foundation](docs/ecommerce/branches.md).
 
 ## General
 
@@ -83,16 +84,16 @@ overrides more detailed guidance in documentation and skills.
 ## Repository
 
 - Use npm workspaces, the existing lockfile, and Nx.
-  - The five applications are `apps/admin`, `apps/gateway`, `apps/core`, `apps/fleet`
-    and `apps/erm-server`.
+  - Each product keeps its applications in `<product>/apps/`, its packages in
+    `<product>/packages/` and its tooling in `<product>/tools/`.
 - Do not import another application's implementation, Prisma client or database model, including
   through relative paths. ESLint/Nx enforce application boundaries.
 - Expose daily commands through root npm scripts. Do not add another build system, a custom
   process supervisor or a custom test-selection framework.
   - Add shared packages only for demonstrated current reuse.
 - Applications run on the host.
-  - Angular and the subgraphs use Node.js. Gateway runs only the official native Apollo Router
-    in `apps/gateway/router`.
+  - Angular and the subgraphs use Node.js. A gateway runs only the official native Apollo Router
+    from its `router/` folder.
   - PostgreSQL is the only containerized infrastructure.
   - Never reset databases or remove volumes to fix setup.
 - Keep configuration at the narrowest sensible scope and avoid duplicating root tooling.
@@ -134,8 +135,8 @@ overrides more detailed guidance in documentation and skills.
   `.references/review/`; do not commit them or make documentation depend on them.
 - Report check results in the task response, not in documentation. Do not store credentials or
   private transcripts.
-- Shared mandatory rules live here, domain rules in the linked domain instructions and focused
-  procedures in the skills. `CLAUDE.md` imports this guide.
+- Shared mandatory rules live here, product rules in each product's `AGENTS.md` and focused
+  procedures in the skills. Each `CLAUDE.md` imports the `AGENTS.md` beside it.
 - When the user authorizes a checkpoint in `.tmp/`, update it with progress, exact check results
   and next steps.
 - Skills:
@@ -179,10 +180,14 @@ overrides more detailed guidance in documentation and skills.
   - Seeds insert missing fixtures without updating existing rows.
 - Use standard NestJS exceptions and avoid custom exception frameworks.
 
-## Angular admin (apps/admin)
+## Angular applications
 
-- Meridian is visual inspiration only. Do not copy its source, assets or dependencies into discocan.
-- Never read, print or commit `apps/admin/public/config.local.json`.
+- Meridian is visual inspiration only. Do not copy its source, assets or dependencies into this
+  repository.
+- Never read, print or commit an application's `public/config.local.json`.
+- Every operator screen uses the one [design system](docs/admin-design-system.md). Add no
+  application-local colours, spacing or copies of a shared pattern. When a pattern lacks an
+  override point, add it to the pattern instead of forking the pattern.
 - Follow the official [angular-developer](.agents/skills/angular-developer/SKILL.md) skill for
   framework conventions, and the PrimeNG plugin/MCP for current component APIs.
   [Agent setup](docs/development.md#angular-agent-tools) is documented separately.
@@ -191,9 +196,7 @@ overrides more detailed guidance in documentation and skills.
   - Business editors use typed Reactive Forms.
   - Do not add generic CRUD, facades, repositories, duplicate API models or duplicate business
     screens.
-- The current Vehicles/Devices presentation, navigation and workspace lifecycle belong to
-  Discocan. Apply the [Discocan instructions](docs/discocan/instructions.md#angular-admin-appsadmin)
-  for this admin, and do not transfer its Fleet workflows to Ecommerce.
+- Product screens, navigation and workflows stay in their product; only presentation is shared.
 
 ## Architectural changes
 
@@ -212,7 +215,7 @@ Do not make architectural changes solely because they may be useful later.
 - While writing, run no checks. A failing spec you are fixing may be rerun on its own.
 - When handing over, run `npm run check` once and fix what it reports, plus the additions in
   [testing](docs/testing.md): one smoke file for login, routing, transport or a main journey,
-  and `npm run typecheck:tools` for `tools/` changes.
+  and `npm run typecheck:tools` for `discocan/tools/` changes.
 - Only on request: the whole smoke suite, `test:gateway:db`, `test:full`.
 - Database checks use only the dedicated test databases and guarded helpers. Never reset databases,
   remove volumes or reuse development connections.

@@ -19,10 +19,12 @@ export default tseslint.config(
       '**/dist-dev/**',
       'apps/erm-server/live/**',
       'apps/erm-server/live-api/**',
+      'discocan/apps/erm-server/live/**',
+      'discocan/apps/erm-server/live-api/**',
       '**/coverage/**',
       'test-results/**',
       'playwright-report/**',
-      'apps/*/src/generated/**',
+      'discocan/apps/*/src/generated/**',
       '.nx/**',
       '**/.angular/**',
     ],
@@ -57,7 +59,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/{core,fleet,erm-server}/**/*.ts'],
+    files: ['discocan/apps/{core,fleet,erm-server}/**/*.ts'],
     languageOptions: {
       globals: globals.node,
     },
@@ -66,7 +68,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/admin/**/*.ts'],
+    files: ['discocan/apps/admin/**/*.ts'],
     languageOptions: { globals: globals.browser },
     extends: [angular.configs.tsRecommended],
     processor: angular.processInlineTemplates,
@@ -75,7 +77,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/admin/**/*.html'],
+    files: ['discocan/apps/admin/**/*.html'],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
   },
   eslintConfigPrettier,

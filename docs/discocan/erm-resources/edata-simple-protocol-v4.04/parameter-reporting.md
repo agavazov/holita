@@ -206,7 +206,7 @@ the shortest encodable interval is supported or operationally appropriate.
 
 ### Monitor 9.56 predefined-parameter construction
 
-The supplied [Monitor 9.56 binary](../../../../resources/discocan/Simple%20eData%20FMS%20Monitor/README.md)
+The supplied [Monitor 9.56 binary](../../../../discocan/resources/Simple%20eData%20FMS%20Monitor/README.md)
 establishes a generic definition builder for its predefined parameter grid. This
 was inspected offline through its CLI metadata and method bodies, without running
 the executable or communicating with a device. The binary SHA-256 is
