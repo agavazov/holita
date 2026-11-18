@@ -24,6 +24,11 @@
                 "glob": "**/*",
                 "input": "public",
                 "ignore": ["config.local.json"]
+              },
+              {
+                "glob": "**/*",
+                "input": "assets/osnova-ui/fonts/lato",
+                "output": "fonts/lato"
               }
             ],
             "styles": ["src/styles.scss"],
@@ -62,6 +67,11 @@
                 {
                   "glob": "**/*",
                   "input": "public"
+                },
+                {
+                  "glob": "**/*",
+                  "input": "assets/osnova-ui/fonts/lato",
+                  "output": "fonts/lato"
                 }
               ]
             }
