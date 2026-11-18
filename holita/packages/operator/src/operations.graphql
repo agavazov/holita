@@ -1,0 +1,93 @@
+query OperatorMerchants {
+  merchants {
+    id
+    name
+    status
+    branchCount
+    branches {
+      id
+      name
+      status
+    }
+  }
+}
+mutation OperatorCreateMerchant(
+  $name: String!
+  $adminName: String!
+  $adminEmail: String!
+  $password: String!
+) {
+  createMerchant(
+    name: $name
+    adminName: $adminName
+    adminEmail: $adminEmail
+    initialPassword: $password
+  ) {
+    id
+    name
+  }
+}
+mutation OperatorSetMerchantStatus($tenantId: ID!, $status: AccountStatus!) {
+  setMerchantStatus(tenantId: $tenantId, status: $status) {
+    id
+    status
+  }
+}
+mutation OperatorCreateBranch($tenantId: ID!, $name: String!) {
+  createMerchantBranch(tenantId: $tenantId, name: $name) {
+    id
+    name
+    status
+  }
+}
+mutation OperatorSetBranchStatus($tenantId: ID!, $branchId: ID!, $status: AccountStatus!) {
+  setMerchantBranchStatus(tenantId: $tenantId, branchId: $branchId, status: $status) {
+    id
+    status
+  }
+}
+query OperatorProducts(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $filter: ProductFilter
+  $sort: ProductSort
+) {
+  products(offset: $offset, limit: $limit, search: $search, filter: $filter, sort: $sort) {
+    items {
+      id
+      name
+      price
+      status
+      createdAt
+      updatedAt
+    }
+    total
+    offset
+    limit
+  }
+}
+query OperatorCustomers {
+  customers {
+    id
+    name
+    email
+    createdAt
+  }
+}
+mutation OperatorCreateProduct($input: ProductInput!) {
+  createProduct(input: $input) {
+    id
+    name
+    price
+    status
+  }
+}
+mutation OperatorUpdateProduct($id: ID!, $input: ProductInput!) {
+  updateProduct(id: $id, input: $input) {
+    id
+    name
+    price
+    status
+  }
+}

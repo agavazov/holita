@@ -1,0 +1,22 @@
+{
+  "name": "@holita/operator",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "@angular/common": "22.2.1",
+    "@angular/core": "22.2.1",
+    "@angular/forms": "22.2.1",
+    "@angular/platform-browser": "22.2.1",
+    "@angular/router": "22.2.1",
+    "@apollo/client": "4.3.1",
+    "@graphql-typed-document-node/core": "3.2.0",
+    "@osnova/ui": "0.0.0",
+    "apollo-angular": "14.2.0",
+    "primeng": "22.1.2",
+    "rxjs": "7.8.2"
+  }
+}

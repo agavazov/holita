@@ -64,7 +64,7 @@
         }
       ],
       "options": {
-        "command": "npm run test:db --",
+        "command": "DOTENV_CONFIG_PATH=../../config/commerce.env npm run test:db --",
         "cwd": "holita/apps/commerce",
         "forwardAllArgs": true
       }

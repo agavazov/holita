@@ -1,0 +1,11 @@
+{
+  "name": "@holita/gateway",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start:prod": "../../../osnova/tools/router/dist/router --anonymous-telemetry-disabled --config router/router.yaml --supergraph src/generated/graphql/supergraph.graphql",
+    "router:check": "../../../osnova/tools/router/dist/router config validate router/router.yaml",
+    "build": "npm run router:check"
+  }
+}

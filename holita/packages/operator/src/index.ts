@@ -1,0 +1,1 @@
+export { startOperator } from './application';

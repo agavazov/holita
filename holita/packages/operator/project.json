@@ -1,0 +1,7 @@
+{
+  "name": "holita-operator",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "holita/packages/operator/src",
+  "tags": ["type:lib", "product:holita"]
+}

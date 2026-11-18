@@ -1,0 +1,51 @@
+supergraph:
+  listen: '127.0.0.1:${env.ROUTER_PORT:-12010}'
+  path: /graphql
+
+health_check:
+  listen: '127.0.0.1:${env.ROUTER_HEALTH_PORT:-12016}'
+  path: /health
+
+limits:
+  router:
+    http1_max_request_buf_size: 16KiB
+
+rhai:
+  scripts: ../../../osnova/tools/router
+  main: compatibility.rhai
+
+include_subgraph_errors:
+  all:
+    redact_message: false
+    allow_extensions_keys: [code, fieldErrors]
+
+traffic_shaping:
+  router:
+    timeout: 50s
+  all:
+    timeout: 5s
+
+override_subgraph_url:
+  core: '${env.CORE_GRAPHQL_URL:-http://127.0.0.1:12011/graphql}'
+  commerce: '${env.COMMERCE_GRAPHQL_URL:-http://127.0.0.1:12013/graphql}'
+
+headers:
+  all:
+    request:
+      operations:
+        - propagate:
+            named: authorization
+        - propagate:
+            named: x-branch-id
+        - propagate:
+            named: x-request-id
+
+cors:
+  policies:
+    - origins:
+        - '${env.ADMIN_ORIGIN:-http://127.0.0.1:12000}'
+        - '${env.BACKOFFICE_ORIGIN:-http://127.0.0.1:12001}'
+        - '${env.SALES_ORIGIN:-http://127.0.0.1:12002}'
+      methods: [GET, POST, OPTIONS]
+      allow_headers: [authorization, content-type, x-branch-id, x-request-id]
+      expose_headers: [x-request-id]

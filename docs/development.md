@@ -446,3 +446,24 @@ are explicit prerequisites. Check application health endpoints and GraphQL error
 A health response does not prove database readiness. Regenerate contracts and restart the group
 when SDL/operations change. Check the selected Branch and Fleet startup/backend flags for
 unavailable business screens. See [testing](testing.md) for guarded fixtures and cleanup.
+
+## Holita operator slice
+
+Holita runs its Admin, Backoffice and Sales applications on ports 12000, 12001 and 12002. Its
+operator Router uses 12010 (health 12016), Core uses 12011 and Commerce uses 12013. The first local
+setup creates ignored, private `holita/config/core.env`, `commerce.env` and `seed-accounts.env` with
+`npx tsx holita/tools/runtime-config.mts`; preserve these files on subsequent runs. Provision and
+seed Holita without changing Discocan databases:
+
+```bash
+npm run db:setup:holita
+npm run db:test:setup:holita
+npm run db:migrate:holita
+npm run db:seed:holita
+npm run dev:holita
+```
+
+`npm run dev` starts both products. `npm run kill` stops their development applications while
+leaving PostgreSQL and the ERM units running. Discocan Core reads `discocan/config/core.env`;
+Holita Core reads `holita/config/core.env`. Their watch outputs are `dist-discocan` and
+`dist-holita` under the shared Core project.

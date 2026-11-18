@@ -30,3 +30,16 @@ Discocan. Its package scope is `@holita/*` and its Nx projects are named `holita
   own task.
 
 The pending steps are in the [backlog](../docs/todo/two-products.md).
+
+## Applications and local development
+
+- `apps/admin` serves merchant operators on 12000; `apps/backoffice` serves platform staff on
+  12001; `apps/sales` serves sales agents on 12002.
+- `apps/gateway` serves the operator graph on 12010 (health 12016), the shared Core instance uses
+  12011, and `apps/commerce` serves its subgraph on 12013.
+- `npm run db:setup:holita` and `npm run db:test:setup:holita` provision only Holita roles and
+  databases; `npm run db:migrate:holita` and `npm run db:seed:holita` prepare its development data.
+  `npm run dev:holita` starts the product and `npm run kill` stops both products' development apps.
+- Instance settings live in ignored `holita/config/core.env` and `holita/config/commerce.env`;
+  insert-only account seeds read ignored `holita/config/seed-accounts.env`. Never commit or print
+  their values. `holita/tools/runtime-config.mts` creates them once when none exist.

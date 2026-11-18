@@ -9,10 +9,11 @@
   },
   "workspaces": [
     "discocan/apps/*",
+    "holita/apps/*",
+    "holita/packages/*",
     "discocan/packages/*",
     "osnova/packages/*",
-    "osnova/apps/*",
-    "holita/apps/*"
+    "osnova/apps/*"
   ],
   "overrides": {
     "mysql2": "3.24.4",
@@ -31,8 +32,8 @@
   },
   "scripts": {
     "dev:discocan": "npm run db:up && nx run edata-rules:build && nx run admin:graphql-generate && concurrently --kill-others --names gateway,core,fleet,admin --prefix-colors blue,green,cyan,red \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:fleet\" \"npm run dev:admin --ignore-scripts\"",
-    "dev": "npm run dev:discocan",
-    "kill": "tsx discocan/tools/development/kill.mts",
+    "dev": "concurrently --kill-others --names discocan,holita \"npm:dev:discocan\" \"npm:dev:holita\"",
+    "kill": "tsx tools/kill.mts",
     "erm:relay": "tsx discocan/tools/erm-relay/relay.mts",
     "erm:route-unit": "tsx discocan/tools/erm-relay/route-unit.mts",
     "dev:gateway": "npm run dev --workspace @discocan/gateway",
@@ -78,11 +79,19 @@
     "test:smoke:admin": "nx run admin:test-smoke --output-style=static",
     "router:check": "npm run router:check --workspace @discocan/gateway",
     "check:admin-styles": "tsx osnova/tools/design/check-admin-styles.mts",
+    "dev:holita": "nx run osnova-auth:build && nx run osnova-core:db-generate && nx run osnova-core:graphql-generate && nx run osnova-ui:graphql-generate && nx run holita-commerce:db-generate && nx run holita-commerce:graphql-generate && nx run holita-gateway:graphql-generate && concurrently --kill-others --names core,commerce,gateway,admin,backoffice,sales \"npm:dev:holita:core\" \"npm:dev:holita:commerce\" \"npm:dev:holita:gateway\" \"npm:dev:holita:admin\" \"npm:dev:holita:backoffice\" \"npm:dev:holita:sales\"",
+    "dev:holita:core": "DOTENV_CONFIG_PATH=../../../holita/config/core.env npm run dev:instance --workspace @osnova/core -- --path ../../../holita/config/core.tsconfig.json",
+    "dev:holita:commerce": "DOTENV_CONFIG_PATH=../../config/commerce.env npm run dev --workspace @holita/commerce",
+    "dev:holita:gateway": "npm run start:prod --workspace @holita/gateway",
+    "dev:holita:admin": "npm run dev --workspace @holita/admin",
+    "dev:holita:backoffice": "npm run dev --workspace @holita/backoffice",
+    "dev:holita:sales": "npm run dev --workspace @holita/sales",
     "db:setup:holita": "tsx tools/holita-database.mts",
     "db:test:setup:holita": "tsx tools/holita-database.mts --test",
     "test:holita:commerce:db": "DOTENV_CONFIG_PATH=../../config/commerce.env nx run holita-commerce:test-db --output-style=static",
     "db:seed:holita": "tsx tools/holita-seed.mts",
-    "db:migrate:holita": "DOTENV_CONFIG_PATH=../../../holita/config/core.env npm run db:migrate --workspace @osnova/core && DOTENV_CONFIG_PATH=../../config/commerce.env npm run db:migrate --workspace @holita/commerce"
+    "db:migrate:holita": "DOTENV_CONFIG_PATH=../../../holita/config/core.env npm run db:migrate --workspace @osnova/core && DOTENV_CONFIG_PATH=../../config/commerce.env npm run db:migrate --workspace @holita/commerce",
+    "test:smoke:holita": "nx run holita-admin:test-smoke --output-style=static"
   },
   "devDependencies": {
     "@apollo/composition": "2.14.4",
