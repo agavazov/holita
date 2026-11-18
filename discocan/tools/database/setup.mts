@@ -10,7 +10,7 @@ await setupDatabase(
     services: ['core', 'fleet', 'erm'],
     envPaths: [
       '.env',
-      'discocan/apps/core/.env',
+      'discocan/config/core.env',
       'discocan/apps/fleet/.env',
       'discocan/apps/erm-server/.env',
     ],

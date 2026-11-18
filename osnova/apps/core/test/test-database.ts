@@ -4,7 +4,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import pg from 'pg';
 import { createPrismaClient } from '../src/database/client.js';
 import { getTestDatabaseUrl } from './test-database-url.js';
-import { tenantSeeds } from '../prisma/seed-data.js';
+import { testSeedData } from './seed-data.js';
 
 const migrations = new URL('../prisma/migrations/', import.meta.url);
 
@@ -48,7 +48,7 @@ export async function createTestDatabase() {
     await connection.query(`CREATE SCHEMA ${pg.escapeIdentifier(schema)}`);
     created = true;
     await applyMigrations(connection, schema);
-    await client.tenant.createMany({ data: tenantSeeds, skipDuplicates: true });
+    await client.tenant.createMany({ data: testSeedData.tenants, skipDuplicates: true });
     return { client, close };
   } catch (error) {
     await close();

@@ -1,7 +1,7 @@
 export function getDatabaseUrl(): string {
   const value =
     process.env.CORE_DATABASE_URL ??
-    'postgresql://discocan_core:discocan_core_local@127.0.0.1:11084/discocan_core';
+    'postgresql://osnova_core:osnova_core_local@127.0.0.1:11084/osnova_core';
   try {
     const url = new URL(value);
     if (!['postgresql:', 'postgres:'].includes(url.protocol)) {

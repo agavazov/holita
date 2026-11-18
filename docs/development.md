@@ -58,7 +58,7 @@ The rule is configured after `eslint-config-prettier` so that it remains enabled
 
 Builds, checks and `start:prod` use `discocan/apps/NAME/dist`; the `npm run dev` watchers for Core and Fleet
 compile to `discocan/apps/NAME/dist-dev` (`tsconfig.dev.json`), so a check never replaces a running
-dev server's files. `npm run start:prod --workspace @discocan/core` (or fleet/erm-server)
+dev server's files. `npm run start:prod --workspace @osnova/core` (or fleet/erm-server)
 runs the compiled app. Gateway `build` generates the supergraph and
 validates the installed native Router configuration. `npm run start:prod --workspace @discocan/gateway`
 starts that binary using the generated supergraph; no Node bundle or Rust compilation is involved. `dev` does not migrate or seed databases.
@@ -109,7 +109,7 @@ runtime file, preserving existing settings:
 | Consumer                 | Runtime configuration                                                                                                                                            |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`; Compose also reads `POSTGRES_VOLUME`                                                                          |
-| Core and Prisma          | `discocan/apps/core/.env`: Core database URLs and shared demo settings                                                                                           |
+| Core and Prisma          | `discocan/config/core.env`: Core database URLs and shared demo settings                                                                                          |
 | Fleet and Prisma         | `discocan/apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins                                     |
 | ERM Server and Prisma    | `discocan/apps/erm-server/.env`: ERM database URLs, shared demo settings, `ERM_ROLE`, gateway listener/capture settings, internal API connection and HTTP `PORT` |
 | Router and Angular proxy | Export Router variables in the shell that launches npm; proxy reads `ROUTER_PORT`                                                                                |
@@ -158,7 +158,7 @@ Apply the additive Core migration before using account authentication, then gene
 and GraphQL clients. Provision the first user for an existing Tenant from the repository root:
 
 ```bash
-npm run user:create --workspace @discocan/core -- --tenant TENANT_UUID --email person@example.test --name "First user" < /secure/password-file
+DOTENV_CONFIG_PATH=../../../discocan/config/core.env npm run user:create --workspace @osnova/core -- --tenant TENANT_UUID --email person@example.test --name "First user" < /secure/password-file
 ```
 
 The password comes only from stdin or the transient `CORE_SETUP_PASSWORD` environment variable;

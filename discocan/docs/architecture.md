@@ -102,7 +102,7 @@ Notifications have no delivery provider. Branch naming belongs to
 
 ## GraphQL contracts and context
 
-SDL defines the API: [Core Branches](../apps/core/src/modules/branches/branches.graphql),
+SDL defines the API: [Core Branches](../../osnova/apps/core/src/modules/branches/branches.graphql),
 [Fleet common types](../apps/fleet/src/graphql/common.graphql), the feature SDL linked in
 [the Fleet index](fleet.md) and the [ERM subgraph](../apps/erm-server/src/modules/telemetry/telemetry.graphql).
 Use generated types/TypedDocumentNodes from explicit inputs in

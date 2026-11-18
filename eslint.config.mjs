@@ -25,6 +25,7 @@ export default tseslint.config(
       'test-results/**',
       'playwright-report/**',
       'discocan/apps/*/src/generated/**',
+      'osnova/apps/*/src/generated/**',
       'osnova/packages/ui/src/app/generated/**',
       '.nx/**',
       '**/.angular/**',
@@ -71,7 +72,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['discocan/apps/{core,fleet,erm-server}/**/*.ts'],
+    files: ['osnova/apps/core/**/*.ts', 'discocan/apps/{fleet,erm-server}/**/*.ts'],
     languageOptions: {
       globals: globals.node,
     },

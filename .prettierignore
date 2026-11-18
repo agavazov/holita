@@ -12,6 +12,7 @@ coverage/
 test-results/
 playwright-report/
 discocan/apps/*/src/generated/
+osnova/apps/*/src/generated/
 .nx/
 .angular/
 

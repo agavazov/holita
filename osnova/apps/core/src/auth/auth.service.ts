@@ -6,6 +6,7 @@ import { normalizedEmail, validatePassword } from './account-input.js';
 import { AuthRepository } from './auth.repository.js';
 import { hashPassword, verifyPassword } from './password.js';
 import { requireSession, type SessionIdentity } from './session.js';
+import { tokenPrefix } from './token-prefix.js';
 
 const sessionLifetimeMs = 8 * 60 * 60 * 1000;
 const signInFailure = 'Invalid email or password';
@@ -37,7 +38,7 @@ export class AuthService {
     ) {
       throw new UnauthorizedException(signInFailure);
     }
-    const token = `discocan-session.${randomBytes(32).toString('base64url')}`;
+    const token = `${tokenPrefix()}-session.${randomBytes(32).toString('base64url')}`;
     const now = new Date();
     const expiresAt = new Date(now.getTime() + sessionLifetimeMs);
     const user = await this.auth.createSession(
@@ -53,7 +54,9 @@ export class AuthService {
   async verifyAuthorization(
     authorization: string | undefined,
   ): Promise<SessionIdentity | undefined> {
-    const match = /^Bearer (discocan-session\.[A-Za-z0-9_-]{43})$/i.exec(authorization ?? '');
+    const match = new RegExp(`^Bearer (${tokenPrefix()}-session\\.[A-Za-z0-9_-]{43})$`, 'i').exec(
+      authorization ?? '',
+    );
     const token = match?.[1];
     if (!token) {
       return undefined;

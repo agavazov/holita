@@ -8,7 +8,8 @@ import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import type { UserRole } from '../src/generated/graphql/types.js';
 import { createTestDatabase } from './test-database.js';
-import { branchSeeds, seedBranches } from '../prisma/seed-data.js';
+import { seedBranches } from '../prisma/seed-data.js';
+import { testSeedData } from './seed-data.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
 const internalAuthToken = 'core-test-internal-auth-token-only-32-characters';
@@ -550,8 +551,8 @@ describe('Branches GraphQL with PostgreSQL', () => {
   });
 
   it('renames only the selected Branch of the session tenant; invalid, foreign or mismatched renames write nothing', async () => {
-    await seedBranches(database.client);
-    const [seed] = branchSeeds;
+    await seedBranches(database.client, testSeedData);
+    const [seed] = testSeedData.branches;
     if (!seed) {
       throw new Error('Missing stable Branch seed.');
     }
@@ -583,7 +584,7 @@ describe('Branches GraphQL with PostgreSQL', () => {
       ['whitespace name', seed.id, seed.id, ' \t ', nameError('REQUIRED')],
       ['81 characters', seed.id, seed.id, 'x'.repeat(81), nameError('TOO_LONG')],
       ['81 emoji', seed.id, seed.id, '🚚'.repeat(81), nameError('TOO_LONG')],
-      ['NUL character', seed.id, seed.id, 'Fleet\u0000name', nameError('INVALID_FORMAT')],
+      ['NUL character', seed.id, seed.id, 'Branch\u0000name', nameError('INVALID_FORMAT')],
       [
         'missing selected Branch',
         seed.id,
@@ -657,7 +658,7 @@ describe('Branches GraphQL with PostgreSQL', () => {
         seed.id.toUpperCase(),
       ),
     ).toEqual({ data: { updateBranchName: { id: seed.id, name } } });
-    expect((await seedBranches(database.client)).count).toBe(0);
+    expect((await seedBranches(database.client, testSeedData)).count).toBe(0);
     expect(
       await database.client.branch.findUniqueOrThrow({ where: { id: seed.id, tenantId } }),
     ).toMatchObject({ id: before.id, tenantId, name, createdAt: before.createdAt });

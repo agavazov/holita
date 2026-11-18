@@ -64,8 +64,8 @@ One npm/Nx workspace holds two products and the code they share:
   - Use Branch/branchId/x-branch-id consistently and preserve tenant-scoped access.
   - Where tenantId and branchId both exist, keep branchId immediately after tenantId.
   - Product terminology does not create separate persistence models.
-- Until Core moves to `osnova/`, the Core Tenant/Branch foundation is Discocan's `apps/core`,
-  documented in [Branches foundation](docs/branches.md).
+- The shared Core Tenant/Branch foundation lives in `osnova/apps/core` and is documented in
+  [Branches foundation](docs/branches.md).
 
 ## General
 

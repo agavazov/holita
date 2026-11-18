@@ -12,8 +12,10 @@ playwright-report/
 /AGENTS.local.md
 /.credentials/
 /discocan/apps/admin/public/config.local.json
+/discocan/config/core.env
 
 discocan/apps/*/src/generated/
+osnova/apps/*/src/generated/
 osnova/packages/ui/src/app/generated/
 .nx/
 .angular/

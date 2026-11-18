@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from '@jest/globals';
 import { createHmac, randomUUID } from 'node:crypto';
 import { issueDemoToken, readDemoTenant, requireTenant } from './demo-auth.js';
+import { tokenPrefix } from './token-prefix.js';
 
 const initial = {
   secret: process.env.DEMO_AUTH_SECRET,
@@ -40,7 +41,7 @@ describe('Demo tenant session verification', () => {
     process.env.DEMO_AUTH_ENABLED = 'true';
     const tenantId = randomUUID();
     const token = issueDemoToken(tenantId);
-    const expired = `discocan-demo.${tenantId}.${String(Math.floor(Date.now() / 1000) - 1)}`;
+    const expired = `${tokenPrefix()}-demo.${tenantId}.${String(Math.floor(Date.now() / 1000) - 1)}`;
     const signature = createHmac('sha256', secret).update(expired).digest('base64url');
     for (const [row, header, expected] of [
       ['issued token', `Bearer ${token}`, tenantId],

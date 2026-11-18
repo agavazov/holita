@@ -1,15 +1,15 @@
 {
-  "name": "core",
+  "name": "osnova-core",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
-  "sourceRoot": "discocan/apps/core/src",
-  "tags": ["product:discocan", "type:app", "scope:core"],
+  "sourceRoot": "osnova/apps/core/src",
+  "tags": ["product:osnova", "type:app"],
   "targets": {
     "test": {
       "executor": "nx:run-commands",
       "options": {
         "command": "npm run test --",
-        "cwd": "discocan/apps/core",
+        "cwd": "osnova/apps/core",
         "forwardAllArgs": true
       },
       "dependsOn": ["db-generate", "graphql-generate"]
@@ -34,7 +34,7 @@
       "outputs": ["{projectRoot}/src/generated/prisma"],
       "options": {
         "command": "npm run db:generate",
-        "cwd": "discocan/apps/core"
+        "cwd": "osnova/apps/core"
       }
     },
     "test-db": {
@@ -43,8 +43,8 @@
       "cache": true,
       "inputs": ["default"],
       "options": {
-        "command": "npm run test:db --",
-        "cwd": "discocan/apps/core",
+        "command": "tsx tools/core-test.mts",
+        "cwd": ".",
         "forwardAllArgs": true
       }
     },
@@ -55,7 +55,7 @@
       "outputs": ["{projectRoot}/src/generated/graphql"],
       "options": {
         "command": "npm run graphql:generate",
-        "cwd": "discocan/apps/core"
+        "cwd": "osnova/apps/core"
       }
     }
   },

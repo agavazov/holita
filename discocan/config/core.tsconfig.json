@@ -1,0 +1,4 @@
+{
+  "extends": "../../osnova/apps/core/tsconfig.build.json",
+  "compilerOptions": { "outDir": "../../osnova/apps/core/dist-discocan" }
+}

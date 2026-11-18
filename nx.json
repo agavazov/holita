@@ -31,7 +31,7 @@
       "{workspaceRoot}/discocan/tools/tsconfig.json"
     ],
     "graphqlContracts": [
-      "{workspaceRoot}/discocan/apps/core/src/**/*.graphql",
+      "{workspaceRoot}/osnova/apps/core/src/**/*.graphql",
       "{workspaceRoot}/discocan/apps/fleet/src/**/*.graphql",
       "{workspaceRoot}/discocan/apps/erm-server/src/**/*.graphql",
       "{workspaceRoot}/discocan/apps/admin/src/**/*.graphql",
@@ -41,7 +41,7 @@
       "{workspaceRoot}/jest.federation.config.mjs"
     ],
     "graphqlGeneration": [
-      "{workspaceRoot}/discocan/apps/core/src/**/*.graphql",
+      "{workspaceRoot}/osnova/apps/core/src/**/*.graphql",
       "{workspaceRoot}/discocan/apps/fleet/src/**/*.graphql",
       "{workspaceRoot}/discocan/apps/erm-server/src/**/*.graphql",
       "{workspaceRoot}/discocan/apps/admin/src/**/*.graphql",

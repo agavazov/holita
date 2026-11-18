@@ -209,7 +209,13 @@ async function prepareDatabase(service: 'core' | 'fleet' | 'erm') {
     const databaseUrl = url.toString();
     url.searchParams.set('schema', schema);
     const env = { ...process.env, [`${service.toUpperCase()}_DATABASE_URL`]: url.toString() };
-    const cwd = join(workspaceRoot, 'discocan/apps', service === 'erm' ? 'erm-server' : service);
+    const cwd =
+      service === 'core'
+        ? join(workspaceRoot, 'osnova/apps/core')
+        : join(workspaceRoot, 'discocan/apps', service === 'erm' ? 'erm-server' : service);
+    if (service === 'core') {
+      env.CORE_SEED_FILE = join(workspaceRoot, 'discocan/config/core-seed.json');
+    }
     await execute(
       process.execPath,
       [join(workspaceRoot, 'node_modules/prisma/build/index.js'), 'migrate', 'deploy'],
@@ -494,7 +500,10 @@ async function startRouter(options: {
 async function startApplication(service: string, env: NodeJS.ProcessEnv) {
   const port = await availablePort();
   const child = spawn(process.execPath, ['dist/main.js'], {
-    cwd: join(workspaceRoot, 'discocan/apps', service),
+    cwd:
+      service === 'core'
+        ? join(workspaceRoot, 'osnova/apps/core')
+        : join(workspaceRoot, 'discocan/apps', service),
     env: { ...process.env, ...env, PORT: String(port), NODE_ENV: 'test' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -638,7 +647,7 @@ async function observeRequests(target: string) {
 export async function createFederationFixture(options: { adminOrigin?: string } = {}) {
   config({
     path: [
-      join(workspaceRoot, 'discocan/apps/core/.env'),
+      join(workspaceRoot, 'discocan/config/core.env'),
       join(workspaceRoot, 'discocan/apps/fleet/.env'),
       join(workspaceRoot, 'discocan/apps/erm-server/.env'),
     ],

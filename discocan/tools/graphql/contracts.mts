@@ -10,8 +10,8 @@ export const subgraphs = [
   {
     name: 'core',
     url: 'http://127.0.0.1:11011/graphql',
-    path: 'discocan/apps/core/src/modules/branches/branches.graphql',
-    additionalPaths: ['discocan/apps/core/src/modules/tenants/tenants.graphql'],
+    path: 'osnova/apps/core/src/modules/branches/branches.graphql',
+    additionalPaths: ['osnova/apps/core/src/modules/tenants/tenants.graphql'],
   },
   {
     name: 'fleet',
@@ -71,7 +71,7 @@ export const targets = {
     supergraph: generated('gateway', 'supergraph.graphql'),
     schema: generated('gateway', 'schema.graphql'),
   },
-  core: { server: { subgraph: 'core', path: generated('core', 'types.ts') } },
+  core: { server: { subgraph: 'core', path: 'osnova/apps/core/src/generated/graphql/types.ts' } },
   fleet: {
     server: { subgraph: 'fleet', path: generated('fleet', 'types.ts') },
     clients: [

@@ -1,5 +1,5 @@
 {
-  "name": "@discocan/core",
+  "name": "@osnova/core",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -20,7 +20,8 @@
     "db:seed": "prisma db seed",
     "user:create": "tsx prisma/create-user.ts",
     "test:db": "node --experimental-vm-modules ../../../node_modules/jest/bin/jest.js --config jest.db.config.mjs --runInBand",
-    "graphql:generate": "tsx ../../tools/graphql/generate.mts core"
+    "graphql:generate": "tsx ../../tools/graphql/core-generation.mts",
+    "dev:instance": "nest start --watch"
   },
   "dependencies": {
     "@nestjs/common": "12.0.4",

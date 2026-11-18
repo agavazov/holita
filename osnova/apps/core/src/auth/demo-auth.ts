@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { UnauthorizedException } from '@nestjs/common';
+import { tokenPrefix } from './token-prefix.js';
 
 // Demo session protocol shared with the other subgraph; covered by federation tests.
 function key(): string {
@@ -10,7 +11,7 @@ function key(): string {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('DEMO_AUTH_SECRET must contain at least 32 characters.');
   }
-  return 'discocan-local-demo-only-change-before-deployment';
+  return `${tokenPrefix()}-local-demo-only-change-before-deployment`;
 }
 export function demoAuthEnabled(): boolean {
   return (
@@ -22,17 +23,16 @@ export function issueDemoToken(tenantId: string): string {
   if (!demoAuthEnabled()) {
     throw new UnauthorizedException('Demo login is disabled');
   }
-  const payload = `discocan-demo.${tenantId}.${String(Math.floor(Date.now() / 1000) + 28800)}`;
+  const payload = `${tokenPrefix()}-demo.${tenantId}.${String(Math.floor(Date.now() / 1000) + 28800)}`;
   return `${payload}.${createHmac('sha256', key()).update(payload).digest('base64url')}`;
 }
 export function readDemoTenant(authorization: unknown): string | undefined {
   if (!demoAuthEnabled() || typeof authorization !== 'string' || authorization.length > 256) {
     return undefined;
   }
-  const match =
-    /^Bearer (discocan-demo\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.([0-9]{10}))\.([A-Za-z0-9_-]{43})$/.exec(
-      authorization,
-    );
+  const match = new RegExp(
+    `^Bearer (${tokenPrefix()}-demo\\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\.([0-9]{10}))\\.([A-Za-z0-9_-]{43})$`,
+  ).exec(authorization);
   if (!match) {
     return undefined;
   }
