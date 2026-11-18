@@ -23,17 +23,13 @@ architecture with a thin Holita slice, not a port of the old platform.
 
 1. **Discocan shared sign-in.** Adopt the shared sign-in page in the Discocan admin, preserving
    its demo Tenant/Branch selection and existing appearance.
-2. **Holita storefront.** A second, public schema on the commerce subgraph and its own Router;
-   the shop resolved from the request; per-shop shopper registration and sign-in with a
-   shop-scoped token issued by commerce, not Core; `holita/apps/storefront` with the product list,
-   a product page, registration, sign-in and the shopper's account page.
 
 ## Open items
 
 - Before the next ERM deploy, repoint the `discocan-erm-*` user units to `discocan/apps/erm-server`
   and the inactive `holita-erm-relay` unit to `discocan/tools/erm-relay/relay.mts`. It restarts the
   ERM gateway, so the owner picks the moment.
-- The 60-case test budget is shared by both products (49 used) and stays at 60 (owner,
+- The 60-case test budget is shared by both products (50 used) and stays at 60 (owner,
   2026-11-18): Holita's isolation and contract tests extend existing cases with internal tables.
 - `npm run format:check` fails on 14 tracked files that predate the move.
 - Later: OpenID Connect sign-in, cart/checkout/orders, the storefront rendering engine, per-product
