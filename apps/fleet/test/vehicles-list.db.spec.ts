@@ -13,7 +13,7 @@ const list = `query($filter:FleetVehicleFilter,$sort:FleetVehicleSort,$offset:In
   fleetVehicles(filter:$filter,sort:$sort,offset:$offset,limit:$limit,search:$search){items{licensePlate}total}}`;
 const summary = `query{fleetVehicleSummary{dataAsOf inOperation inWorkshop moving notReporting openAlerts lowFuel}}`;
 
-describe('Vehicles Storybook list contract with PostgreSQL', () => {
+describe('Vehicles list contract with PostgreSQL', () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;
   let app: INestApplication | undefined;
   let url: string;

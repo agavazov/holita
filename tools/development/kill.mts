@@ -2,7 +2,6 @@ import { readdirSync, readFileSync, readlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import { isAdminStorybook } from './admin-storybook-process.mjs';
 
 if (process.platform !== 'linux') {
   throw new Error('npm run kill requires Linux (Ubuntu/WSL).');
@@ -42,18 +41,17 @@ for (const entry of readdirSync('/proc')) {
       args.includes('--watch');
     const group =
       args.includes(resolve(root, 'node_modules/.bin/concurrently')) &&
-      args.includes('gateway,core,fleet,admin,storybook');
+      args.includes('gateway,core,fleet,admin');
     const admin =
       directory === appDirectories[0] &&
       (args.some((arg) => arg.startsWith('ng serve')) ||
         (args.includes(resolve(root, 'node_modules/.bin/ng')) && args.includes('serve')));
     const backend = args.slice(1).some((arg) => backendEntries.includes(resolve(directory, arg)));
-    const storybook = isAdminStorybook(root, directory, args);
     const router = readlinkSync(`/proc/${entry}/exe`) === routerBinary;
     processes.push({
       pid,
       parent,
-      service: workspace && (watcher || group || admin || storybook || backend || router),
+      service: workspace && (watcher || group || admin || backend || router),
     });
   } catch (error) {
     // Processes may exit during discovery; inaccessible processes belong to another user.

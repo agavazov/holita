@@ -9,15 +9,14 @@ The code defines individual component inputs and implementation details.
 
 Paths below are relative to `apps/admin/src`.
 
-| Area                           | Owns                                                                                  |
-| ------------------------------ | ------------------------------------------------------------------------------------- |
-| `app/theme/`                   | PrimeNG preset, brands, density, tokens, status/category palettes and contrast checks |
-| `styles/`                      | Fonts, layers, breakpoints, reset/base, shell and shared CSS patterns                 |
-| `app/ui/`                      | Repeated domain-neutral components/helpers, BG/EN texts and stories                   |
-| `app/layout/`                  | Business-independent shell, sidebar, topbar, navigation and record breadcrumb         |
-| `app/workspace/`               | Session/language composition, page context/title and PrimeNG translations             |
-| `app/features/`                | Concrete business views, typed forms, services and generated operations               |
-| `storybook/`, `../.storybook/` | Catalogue support, excluded from application output                                   |
+| Area             | Owns                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| `app/theme/`     | PrimeNG preset, brands, density, tokens, status/category palettes and contrast checks |
+| `styles/`        | Fonts, layers, breakpoints, reset/base, shell and shared CSS patterns                 |
+| `app/ui/`        | Repeated domain-neutral components/helpers, BG/EN texts and stories                   |
+| `app/layout/`    | Business-independent shell, sidebar, topbar, navigation and record breadcrumb         |
+| `app/workspace/` | Session/language composition, page context/title and PrimeNG translations             |
+| `app/features/`  | Concrete business views, typed forms, services and generated operations               |
 
 Keep colors, spacing scale, radii, shadows and breakpoints central. Component SCSS uses
 `var(--p-*)`/`--p-app-*`, shared pattern classes and breakpoint mixins; no literal colors,
@@ -34,7 +33,7 @@ Layer order is `discocan-reset, primeng, discocan`; keep Sass and `discocanTheme
 ### The configured choice
 
 `appTheme` in `theme/theme-choice.ts` is the application's sole brand/density choice:
-`{ brand: 'cobalt', density: 'compact' }`. Storybook toolbar choices affect only its preview.
+`{ brand: 'cobalt', density: 'compact' }`.
 
 ### Brands
 
@@ -163,7 +162,7 @@ The document title is `<page> · discocan`; login uses the localized Sign in tit
 Routes start with `/bg` or `/en`; unknown languages redirect to Bulgarian. Use BG/EN catalogs
 for shell, PrimeNG texts, patterns and connected features. Preserve key/placeholder parity.
 PrimeNG uses localized calendar/overlay labels, the saved Branch date format and Monday first. Source record text
-is not translated. Storybook uses the same texts with a language toolbar.
+is not translated.
 
 ## Patterns (`src/app/ui`)
 
@@ -376,32 +375,23 @@ successful scoped preferences read with Retry. General settings saves the Branch
 time zone, units, thresholds and notification retention; external delivery toggles are absent.
 The speed reference generates no alert or device command.
 
-## Storybook review
+## Design page
 
-Run `npm run storybook:admin` on port 11001 to review the design-system catalogue: shared
-components, shell and tokens. Use Language, Theme, Brand, Density and `mobile375` to review
-variants. Check keyboard behavior and the Accessibility panel when shared markup changes; the
-license notice is excluded from axe and never hidden. Storybook may serve private local
-configuration; do not publish it. Stories are not a backend or an automatic test suite; do not
-add play functions or story tests.
-
-When a screen layout changes, review it in the running app (`npm run dev`) with demo data from
-`npm run db:seed:fleet-demo`, at desktop and 375 px widths. Screens have no stories or GraphQL
-fixtures.
+The development-only `/:language/design` page displays the theme and shared patterns.
 
 ## Changing the design centrally
 
 1. Application look: change `appTheme` in `theme/theme-choice.ts`.
 2. Token/color: change the owning theme record or `appTokens`; update the relevant contrast pairs.
 3. Brand/density: update choice unions/arrays and records; extend palette unions when needed.
-4. Pattern: change the shared component/CSS once and its representative stories.
-5. Breakpoint: update the Sass map, test-setup restatement, `BreakpointName` and Foundations story.
+4. Pattern: change the shared component/CSS once and its design page block.
+5. Breakpoint: update the Sass map, test-setup restatement, `BreakpointName` and design page.
 6. Layer order: change `_layers.scss` and `discocanThemeOptions.cssLayer.order` together.
-7. PrimeNG control: follow [usage rules](#primeng-usage-rules) and coverage stories.
+7. PrimeNG control: follow [usage rules](#primeng-usage-rules) and coverage.
 8. Font weight: add its licensed WOFF under `public/fonts/lato` and the `_fonts.scss` weight entry.
 
 Follow [focused validation](../.agents/skills/discocan-focused-validation/SKILL.md) at handover;
-request Storybook review when needed, including both schemes/brands/densities and mobile375.
+review the development design page and changed screens at desktop and 375 px.
 
 ## Extending
 

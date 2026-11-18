@@ -27,7 +27,9 @@
               }
             ],
             "styles": ["src/styles.scss"],
-            "stylePreprocessorOptions": { "includePaths": ["src/styles"] },
+            "stylePreprocessorOptions": {
+              "includePaths": ["src/styles"]
+            },
             "outputPath": "dist"
           },
           "configurations": {
@@ -44,13 +46,24 @@
                   "maximumError": "8kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/app/dev-routes.ts",
+                  "with": "src/app/dev-routes.production.ts"
+                }
+              ]
             },
             "development": {
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
-              "assets": [{ "glob": "**/*", "input": "public" }]
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "public"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -75,18 +88,6 @@
           "options": {
             "tsConfig": "tsconfig.spec.json",
             "setupFiles": ["src/test-setup.ts"]
-          }
-        },
-        "storybook": {
-          "builder": "@storybook/angular-vite:start-storybook",
-          "options": {
-            "configDir": ".storybook",
-            "tsConfig": ".storybook/tsconfig.json",
-            "host": "0.0.0.0",
-            "port": 11001,
-            "open": false,
-            "styles": ["src/styles.scss"],
-            "stylePreprocessorOptions": { "includePaths": ["src/styles"] }
           }
         }
       }

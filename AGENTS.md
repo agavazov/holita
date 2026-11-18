@@ -89,9 +89,6 @@ overrides more detailed guidance in documentation and skills.
   through relative paths. ESLint/Nx enforce application boundaries.
 - Expose daily commands through root npm scripts. Do not add another build system, a custom
   process supervisor or a custom test-selection framework.
-  - The development-only admin Storybook (`@storybook/angular-vite` in
-    `apps/admin/angular.json`) is the one documented exception. It never builds application
-    output.
   - Add shared packages only for demonstrated current reuse.
 - Applications run on the host.
   - Angular and the subgraphs use Node.js. Gateway runs only the official native Apollo Router
@@ -194,8 +191,6 @@ overrides more detailed guidance in documentation and skills.
   - Business editors use typed Reactive Forms.
   - Do not add generic CRUD, facades, repositories, duplicate API models or duplicate business
     screens.
-- Admin stories and fixtures stay out of application code; the tsconfig exclusion and ESLint
-  enforce it.
 - The current Vehicles/Devices presentation, navigation and workspace lifecycle belong to
   Discocan. Apply the [Discocan instructions](docs/discocan/instructions.md#angular-admin-appsadmin)
   for this admin, and do not transfer its Fleet workflows to Ecommerce.
@@ -218,7 +213,7 @@ Do not make architectural changes solely because they may be useful later.
 - When handing over, run `npm run check` once and fix what it reports, plus the additions in
   [testing](docs/testing.md): one smoke file for login, routing, transport or a main journey,
   and `npm run typecheck:tools` for `tools/` changes.
-- Only on request: the whole smoke suite, `test:gateway:db`, `test:full` and Storybook review.
+- Only on request: the whole smoke suite, `test:gateway:db`, `test:full`.
 - Database checks use only the dedicated test databases and guarded helpers. Never reset databases,
   remove volumes or reuse development connections.
 - Run Nx checks one at a time per checkout.

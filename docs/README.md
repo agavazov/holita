@@ -19,7 +19,7 @@ verified Tenant scope.
 - [Testing](testing.md): the test budget, checks by tier, database, federation and browser smoke
   checks, affected CI and manual regression.
 - [Admin design system](admin-design-system.md): theme, global styles, shell, patterns and the
-  Storybook review of `apps/admin`.
+  design page of `apps/admin`.
 - [Workspace decision](architecture/decisions/0001-npm-workspaces-and-nx.md).
 - [Database ownership](architecture/decisions/0002-database-ownership.md).
 - [Schema-first federation](architecture/decisions/0003-schema-first-federation.md).
@@ -33,8 +33,7 @@ verified Tenant scope.
 - [Angular admin skill](../.agents/skills/discocan-admin-development/SKILL.md).
 - [Admin design-system skill](../.agents/skills/discocan-admin-design-system/SKILL.md).
 - [Focused validation skill](../.agents/skills/discocan-focused-validation/SKILL.md).
-- [Admin Storybook](development.md#admin-storybook) and
-  [Angular agent tools](development.md#angular-agent-tools).
+- [Angular agent tools](development.md#angular-agent-tools).
 
 Choose the domain before reading or updating its documentation. Shared tooling remains in
 this directory; business behavior belongs in its domain directory. Product descriptions

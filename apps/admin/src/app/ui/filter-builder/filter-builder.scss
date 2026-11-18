@@ -97,7 +97,7 @@
 .filter-builder__chip-label {
   min-inline-size: 0;
   overflow: hidden;
-  padding: 0.125rem var(--p-app-space-1) 0.125rem var(--p-app-space-3);
+  padding: var(--p-app-space-1) var(--p-app-space-1) var(--p-app-space-1) var(--p-app-space-3);
   border-start-start-radius: 999px;
   border-end-start-radius: 999px;
   text-overflow: ellipsis;
@@ -105,7 +105,7 @@
 }
 
 .filter-builder__chip-remove {
-  padding: 0.125rem var(--p-app-space-2) 0.125rem var(--p-app-space-1);
+  padding: var(--p-app-space-1) var(--p-app-space-2) var(--p-app-space-1) var(--p-app-space-1);
   border-start-end-radius: 999px;
   border-end-end-radius: 999px;
   color: var(--p-text-muted-color);

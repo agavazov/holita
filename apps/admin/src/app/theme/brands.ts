@@ -13,7 +13,7 @@ export interface BrandSteps {
 
 export interface Brand {
   readonly name: BrandName;
-  /** Storybook toolbar title. */
+  /** Display title. */
   readonly title: string;
   readonly primary: AccentPalette;
   readonly neutral: NeutralPalette;

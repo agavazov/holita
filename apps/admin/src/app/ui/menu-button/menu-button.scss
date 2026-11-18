@@ -50,7 +50,7 @@
 .menu-button__header {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--p-app-space-1);
   max-inline-size: 18rem;
   padding: var(--p-app-space-2) var(--p-app-space-3);
   border-block-end: 1px solid var(--p-content-border-color);
@@ -88,7 +88,7 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--p-app-space-1);
   min-inline-size: 0;
 }
 

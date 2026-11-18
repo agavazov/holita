@@ -66,3 +66,5 @@ reviewed against a running backend.
   The design system is described in [admin design system](../../admin-design-system.md).
 
 2026-11-18: screen stories and their fixtures were removed; Storybook keeps the design-system catalogue and screens are reviewed in the running app.
+
+2026-11-18: Storybook removed; the in-app design page and the style check replace it.

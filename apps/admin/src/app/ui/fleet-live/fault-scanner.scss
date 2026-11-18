@@ -62,7 +62,7 @@
 .fault-finding__body {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: var(--p-app-space-1);
   min-inline-size: 0;
 }
 
@@ -129,7 +129,7 @@ summary:focus-visible,
 .fault-scanner__read {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: var(--p-app-space-1);
   padding-block-start: var(--p-app-space-2);
   border-block-start: 1px solid var(--p-content-border-color);
   font-size: var(--p-app-text-sm);

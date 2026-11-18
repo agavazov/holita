@@ -21,7 +21,7 @@ import { graphqlOptions } from './core/graphql/graphql-options';
 import { provideDiscoCanTheme } from './theme/provide-discocan-theme';
 import { appTheme, type ThemeChoice } from './theme/theme-choice';
 
-/** The application providers; `theme` is `appTheme` except in Storybook's brand/density review. */
+/** The application providers. */
 export function appConfig(
   config: AdminRuntimeConfig,
   theme: ThemeChoice = appTheme,

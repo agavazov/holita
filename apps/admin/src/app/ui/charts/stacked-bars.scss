@@ -39,7 +39,7 @@
 
 .stacked-bars__track {
   display: flex;
-  gap: 2px;
+  gap: var(--p-app-space-1);
   block-size: 0.625rem;
   overflow: hidden;
   border-radius: 999px;

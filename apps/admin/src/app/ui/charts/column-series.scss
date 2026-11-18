@@ -10,7 +10,7 @@
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
   grid-auto-flow: column;
-  gap: 3px;
+  gap: var(--p-app-space-1);
 }
 
 .column-series__plot {
@@ -29,7 +29,7 @@
   display: block;
   inline-size: 100%;
   min-block-size: 2px;
-  border-radius: 3px 3px 0 0;
+  border-radius: var(--p-app-radius-tag) var(--p-app-radius-tag) 0 0;
   background: color-mix(in srgb, var(--p-primary-color) 45%, transparent);
 }
 
@@ -47,7 +47,7 @@
   block-size: 30%;
   border: 1px dashed var(--p-content-border-color);
   border-block-end: 0;
-  border-radius: 3px 3px 0 0;
+  border-radius: var(--p-app-radius-tag) var(--p-app-radius-tag) 0 0;
 }
 
 // Only every n-th tick has a label, so a label may spread over its empty neighbours (centred).

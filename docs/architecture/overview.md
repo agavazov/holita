@@ -42,16 +42,16 @@ Presentation is split between the theme in `theme/`, the global styles in `src/s
 patterns in `ui/` and the shell in `layout/`
 ([admin design system](../admin-design-system.md#where-presentation-lives)); the presentational
 views and drawers in `features/fleet/*` (`*-view.ts`, `*-drawer.ts`) serve live feature
-pages. Storybook support stays in `src/storybook` and outside application output. `core/` contains only admin-local authentication,
+pages. `core/` contains only admin-local authentication,
 configuration and GraphQL transport. Feature clients and caches retain their mounted view lifetime; neither route grouping nor shared login makes business clients global.
 
-| Application | Responsibility                                                                                                       | Local port                                                   |
-| ----------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Application | Responsibility                                                                                                         | Local port                                                   |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | admin       | Standalone Angular, PrimeNG with the discocan design system, Branch discovery, Fleet management and ERM device control | 11000                                                        |
-| gateway     | Native Apollo Router federation, `/graphql`; `/health` on 11016                                                      | 11010                                                        |
-| core        | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                        | 11011                                                        |
-| fleet       | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database    | 11013                                                        |
-| erm-server  | StarLink gateway, owning database, separate GraphQL API/control and read-only recovery processes                     | 11015 gateway HTTP; 11500 TCP; 11017 API; 11510 recovery TCP |
+| gateway     | Native Apollo Router federation, `/graphql`; `/health` on 11016                                                        | 11010                                                        |
+| core        | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                          | 11011                                                        |
+| fleet       | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database      | 11013                                                        |
+| erm-server  | StarLink gateway, owning database, separate GraphQL API/control and read-only recovery processes                       | 11015 gateway HTTP; 11500 TCP; 11017 API; 11510 recovery TCP |
 
 ```mermaid
 flowchart LR
@@ -73,7 +73,7 @@ flowchart LR
 
 The native Router and Node applications run on the host. Root `dev` waits for PostgreSQL health and starts the group
 using concurrently with group shutdown. Admin GraphQL artifacts are generated once before
-Angular starts. Storybook runs on demand on port 11001. Ports and CORS origins are application-local configuration.
+Angular starts. Ports and CORS origins are application-local configuration.
 Only PostgreSQL runs in Compose. Setup/migration/seed are explicit commands, separate from startup.
 Health endpoints prove application availability without opening database connections.
 

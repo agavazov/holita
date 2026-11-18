@@ -1,7 +1,7 @@
 # Discocan development
 
 Use the [shared development guide](../development.md) for installation, database setup,
-environment, host commands, Storybook and Angular agent tools. The
+environment, host commands, the design page and Angular agent tools. The
 [domain index](README.md#terminology) defines Branch scope.
 
 ## Telemetry admin
@@ -18,7 +18,7 @@ true) and optional `primeUiLicense`. GraphQL accepts root-relative or HTTP(S) UR
 credentials/fragments. The development proxy forwards `/graphql` to Router. Invalid startup
 configuration shows a localized error. Issued keys belong only in the ignored
 `apps/admin/public/config.local.json`, never in Git. Production excludes that file; do not
-publish development output or Storybook serving local configuration. See
+publish development output. See
 [shared configuration](../development.md#ports-and-environment) for the environment reference.
 Keep `fleetEnabled` and backend `FLEET_ENABLED` consistent when disabling Fleet.
 

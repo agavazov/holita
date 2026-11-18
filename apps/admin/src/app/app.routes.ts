@@ -12,6 +12,7 @@ import { BranchesApi } from './features/branches/branches-api';
 import { ACCOUNT_MENU_CONTEXT } from './layout/account-menu-context';
 import { leaveDrawer } from './ui/drawer/leave-drawer.guard';
 import { fleetRoutes } from './features/fleet/fleet.routes';
+import { devRoutes } from './dev-routes';
 import { controlCenterRoutes } from './features/control-center/control-center.routes';
 
 export const routes: Routes = [
@@ -25,6 +26,7 @@ export const routes: Routes = [
     ],
     loadComponent: () => import('./features/auth/sign-in-page').then((module) => module.SignInPage),
   },
+  ...devRoutes,
   {
     path: ':language',
     providers: [

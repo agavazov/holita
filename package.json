@@ -36,14 +36,13 @@
     "dev:core": "npm run dev --workspace @discocan/core",
     "dev:erm-server": "npm run dev --workspace @discocan/erm-server",
     "dev:admin": "nx run edata-rules:build && npm run dev --workspace @discocan/admin",
-    "storybook:admin": "nx run admin:storybook",
     "build": "nx run-many -t build",
     "lint": "eslint .",
     "typecheck": "npm run typecheck:tools && nx run-many -t typecheck",
     "test:core": "nx run core:test --output-style=static",
     "test:admin": "nx run admin:test --output-style=static",
     "test:budget": "tsx tools/testing/test-budget.mts",
-    "check": "nx affected -t build,test,test-db --output-style=static && eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/ .",
+    "check": "npm run check:admin-styles && nx affected -t build,test,test-db --output-style=static && eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/ .",
     "test:affected": "nx affected -t test,test-db,test-federation --skip-nx-cache --output-style=static",
     "test:full": "nx run-many -t test,test-db,test-federation --skip-nx-cache --output-style=static && npm run test:smoke:admin",
     "check:affected": "npm run lint:tools && npm run typecheck:tools && nx affected -t lint,typecheck,build",
@@ -73,7 +72,8 @@
     "test:fleet": "nx run fleet:test --output-style=static",
     "test:fleet:db": "nx run fleet:test-db --skip-nx-cache --output-style=static",
     "test:smoke:admin": "nx run admin:test-smoke --output-style=static",
-    "router:check": "npm run router:check --workspace @discocan/gateway"
+    "router:check": "npm run router:check --workspace @discocan/gateway",
+    "check:admin-styles": "tsx tools/design/check-admin-styles.mts"
   },
   "devDependencies": {
     "@apollo/composition": "2.14.4",

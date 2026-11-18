@@ -19,7 +19,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--p-app-space-1);
   min-inline-size: 0;
 }
 
@@ -42,7 +42,7 @@
 }
 
 .route-drawer__close {
-  margin-block-start: -0.25rem;
+  margin-block-start: calc(-1 * var(--p-app-space-1));
 }
 
 .route-drawer__body {

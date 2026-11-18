@@ -19,7 +19,6 @@ export default tseslint.config(
       '**/dist-dev/**',
       'apps/erm-server/live/**',
       'apps/erm-server/live-api/**',
-      '**/storybook-static/**',
       '**/coverage/**',
       'test-results/**',
       'playwright-report/**',
@@ -73,24 +72,6 @@ export default tseslint.config(
     processor: angular.processInlineTemplates,
     rules: {
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
-    },
-  },
-  {
-    // Storybook and its fixtures are development tooling; application code never depends on them.
-    files: ['apps/admin/src/**/*.ts'],
-    ignores: ['apps/admin/src/**/*.stories.ts', 'apps/admin/src/storybook/**'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['storybook', 'storybook/*', '@storybook/*', '**/storybook/*'],
-              message: 'Only stories and src/storybook may use Storybook or its fixtures.',
-            },
-          ],
-        },
-      ],
     },
   },
   {

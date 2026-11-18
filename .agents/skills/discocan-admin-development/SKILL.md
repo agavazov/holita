@@ -54,7 +54,6 @@ Vehicles is the reference feature, with `vehicles-page.ts`, `vehicle-editor-page
   unavailable.
 - Presentation follows the [admin design-system skill](../discocan-admin-design-system/SKILL.md).
   Keep the Bulgarian/English catalogs, light/dark themes and loading/error/empty states.
-- Do not import Storybook fixtures into application code.
 
 ## Checks
 

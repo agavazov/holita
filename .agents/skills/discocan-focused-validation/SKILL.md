@@ -20,8 +20,7 @@ Apply the [delivery policy](../../../AGENTS.md#delivery-policy) and the
    - Add one `npm run test:smoke:admin -- <file>` when login, routing, transport or a main
      journey changed.
    - Add `npm run typecheck:tools` when `tools/` changed.
-3. **Only on request:** the whole smoke suite, `test:gateway:db`, `test:full` and Storybook
-   review.
+3. **Only on request:** the whole smoke suite, `test:gateway:db`, `test:full`.
 
 Do not use watch mode, `--passWithNoTests` or `--skip-nx-cache` by default. Database checks use
 only the guarded per-run schema helpers, never development connections, resets or truncation.

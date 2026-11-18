@@ -1,7 +1,7 @@
 # Admin design system
 
 Pending product decisions, release work and presentation refinements. Current presentation,
-Storybook workflow and shared patterns are documented in the
+the design page and shared patterns are documented in the
 [admin design system](../admin-design-system.md). Connected Fleet screens and their contracts
 belong to the [Fleet implementation index](../discocan/fleet.md) and
 [Discocan architecture](../discocan/architecture.md).
@@ -25,7 +25,7 @@ dependencies belong to the [backend backlog](admin-design-system-backend.md#prov
   create a production Map ID (`googleMapsMapId`) before client demos; development uses `DEMO_MAP_ID`.
 - Configure the production PrimeUI license before public release. The internal test release
   accepts the visible license notice; never hide it with CSS or JavaScript. Retain the
-  local-file developer setup and exclude the local key from production/static Storybook output.
+  local-file developer setup and exclude the local key from production output.
 - Rotate the PrimeUI key retained in Git history through the license provider. This requires
   the user's license action; removing it from the tracked file does not rotate it. Never read,
   print or commit the local license file or copy its key into documentation. Remove this entry

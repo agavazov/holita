@@ -135,7 +135,7 @@
 .kpi-tile__delta {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--p-app-space-1);
   font-weight: 600;
   color: var(--p-text-muted-color);
 

@@ -34,11 +34,6 @@
         "forwardAllArgs": true
       }
     },
-    "storybook": {
-      "dependsOn": ["graphql-generate"],
-      "cache": false,
-      "continuous": true
-    },
     "test-smoke": {
       "executor": "nx:run-commands",
       "cache": false,

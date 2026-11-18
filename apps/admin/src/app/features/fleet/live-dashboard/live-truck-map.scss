@@ -91,7 +91,7 @@ discocan-live-truck-map {
     display: flex;
     align-items: center;
     gap: var(--p-app-space-1);
-    padding: 0.125rem var(--p-app-space-2) 0.125rem 0.125rem;
+    padding: var(--p-app-space-1) var(--p-app-space-2) var(--p-app-space-1) var(--p-app-space-1);
     font: 600 var(--p-app-text-xs) / 1 var(--p-app-font-family);
     font-variant-numeric: var(--p-app-font-numeric);
     color: var(--p-text-color);
@@ -138,7 +138,7 @@ discocan-live-truck-map {
     place-content: center;
     inline-size: 1.125rem;
     block-size: 1.125rem;
-    font-size: 0.6875rem;
+    font-size: var(--p-app-text-xs);
     color: var(--p-app-panel-background);
     border-radius: 50%;
     background: var(--p-app-tone-warn-solid);

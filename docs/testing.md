@@ -12,14 +12,16 @@ discocan keeps a small test budget: at most 60 test cases in the whole repositor
 
 The [delivery policy](../AGENTS.md#delivery-policy) decides when a test may be added.
 
+`npm run check:admin-styles` checks admin presentation rules.
+
 ## When to check
 
-| When                | What to run                                                                |
-| ------------------- | -------------------------------------------------------------------------- |
-| While writing       | Nothing                                                                    |
-| Handing over a task | `npm run check`, plus the additions below                                  |
-| On request          | The whole smoke suite, `test:gateway:db`, `test:full` and Storybook review |
-| Pull request (CI)   | The complete affected checks, including federation and smoke               |
+| When                | What to run                                                  |
+| ------------------- | ------------------------------------------------------------ |
+| While writing       | Nothing                                                      |
+| Handing over a task | `npm run check`, plus the additions below                    |
+| On request          | The whole smoke suite, `test:gateway:db`, `test:full`        |
+| Pull request (CI)   | The complete affected checks, including federation and smoke |
 
 `npm run check` works on the projects that the change affects, compared with `main` and including
 uncommitted files:
@@ -138,11 +140,6 @@ The suite covers:
 
 Failure traces stay under the ignored `test-results/` directory. Failure screenshots are opt-in
 with `DISCOCAN_BROWSER_SCREENSHOTS=1`.
-
-## Storybook
-
-Storybook (`npm run storybook:admin`) is a development tool for the design-system catalogue,
-not a test suite. The Accessibility panel runs an axe check on request.
 
 ## Affected selection and CI
 

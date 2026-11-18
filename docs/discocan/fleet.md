@@ -288,7 +288,7 @@ submitted writes settle and invalidate only their initiating client.
 
 - [API](../../apps/admin/src/app/features/fleet/vehicles/vehicles-api.ts), [page](../../apps/admin/src/app/features/fleet/vehicles/vehicles-page.ts), [URL/filter mapping](../../apps/admin/src/app/features/fleet/vehicles/vehicle-query.ts), [editor host](../../apps/admin/src/app/features/fleet/vehicles/vehicle-editor-page.ts), [contract/form mapping](../../apps/admin/src/app/features/fleet/vehicles/vehicle-mapping.ts), [shared view](../../apps/admin/src/app/features/fleet/vehicles/vehicles-view.ts), [shared drawer](../../apps/admin/src/app/features/fleet/vehicles/vehicle-drawer.ts).
 
-The live screen uses the same presentation components as Storybook, with BG/EN catalogs. It edits
+The live screen uses shared presentation components, with BG/EN catalogs. It edits
 License Plate (required, up to 32 Unicode code points after trimming), fleet number, VIN, type,
 make/model/year, fuel type/tank capacity, status, group, current driver and multiline Notes
 (up to 2000 code points). Optional empty values clear to null. Group and driver choices load in
@@ -373,7 +373,7 @@ Diagnostics on save/cancel; the row-menu Edit action retains its direct list ret
 
 ## Other Fleet admin screens
 
-The live containers feed the same presentation components as Storybook and use BG/EN catalogs,
+The live containers feed shared presentation components and use BG/EN catalogs,
 captured clients, generated operations and shared load/error/empty states:
 
 - [Overview](../../apps/admin/src/app/features/fleet/overview/overview-page.ts) displays the Branch

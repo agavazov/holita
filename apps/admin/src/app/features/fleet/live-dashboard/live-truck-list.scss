@@ -58,7 +58,7 @@
   flex: none;
   inline-size: 0.625rem;
   block-size: 0.625rem;
-  margin-block-start: 0.4rem;
+  margin-block-start: var(--p-app-space-2);
   border-radius: 50%;
   background: var(--p-app-tone-neutral-solid);
 }
@@ -75,7 +75,7 @@
 .truck-list__main {
   display: grid;
   flex: 1;
-  gap: 0.125rem;
+  gap: var(--p-app-space-1);
   min-inline-size: 0;
 }
 

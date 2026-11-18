@@ -32,29 +32,28 @@ in environment examples, documentation, agent instructions, command arguments or
 
 ## Commands
 
-| Command                 | Behavior                                                                     |
-| ----------------------- | ---------------------------------------------------------------------------- |
-| npm run dev             | Wait for PostgreSQL, prepare admin GraphQL, start web/API apps                           |
-| npm run kill            | Stop this checkout's web/API processes and watchers on Ubuntu/WSL            |
-| npm run erm:relay       | ERM StarLink TCP relay to Karma with frame capture                           |
-| npm run dev:admin       | Angular watcher                                                              |
-| npm run storybook:admin | Admin Storybook with synthetic data on port 11001                            |
-| npm run dev:gateway     | Native Router after Nx supergraph generation                                 |
-| npm run dev:core        | Core watcher                                                                 |
-| npm run dev:fleet       | Fleet watcher                                                                |
-| npm run dev:erm-server  | Independent ERM Server watcher                                               |
-| npm run projects        | List five Nx applications                                                    |
-| npm run lint            | Lint source/tooling and application boundaries                               |
-| npm run check           | Build, test and lint only what the change affects, before handing over       |
-| npm run typecheck       | Check tools and all applications                                             |
-| npm run build           | Build all applications                                                       |
-| npm run format:check    | Check formatting                                                             |
-| npm run codegen         | Generate application GraphQL contracts                                       |
-| npm run schema:check    | Compose SDL and validate operations offline                                  |
-| npm run test:budget     | Count test cases against the repository budget of 60                         |
+| Command                | Behavior                                                               |
+| ---------------------- | ---------------------------------------------------------------------- |
+| npm run dev            | Wait for PostgreSQL, prepare admin GraphQL, start web/API apps         |
+| npm run kill           | Stop this checkout's web/API processes and watchers on Ubuntu/WSL      |
+| npm run erm:relay      | ERM StarLink TCP relay to Karma with frame capture                     |
+| npm run dev:admin      | Angular watcher                                                        |
+| npm run dev:gateway    | Native Router after Nx supergraph generation                           |
+| npm run dev:core       | Core watcher                                                           |
+| npm run dev:fleet      | Fleet watcher                                                          |
+| npm run dev:erm-server | Independent ERM Server watcher                                         |
+| npm run projects       | List five Nx applications                                              |
+| npm run lint           | Lint source/tooling and application boundaries                         |
+| npm run check          | Build, test and lint only what the change affects, before handing over |
+| npm run typecheck      | Check tools and all applications                                       |
+| npm run build          | Build all applications                                                 |
+| npm run format:check   | Check formatting                                                       |
+| npm run codegen        | Generate application GraphQL contracts                                 |
+| npm run schema:check   | Compose SDL and validate operations offline                            |
+| npm run test:budget    | Count test cases against the repository budget of 60                   |
 
 ESLint requires braces for every conditional and loop body (`curly: ['error', 'all']`),
-including single-statement bodies in application code, tests, tools and Storybook stories.
+including single-statement bodies in application code, tests and tools.
 The rule is configured after `eslint-config-prettier` so that it remains enabled.
 
 Builds, checks and `start:prod` use `apps/NAME/dist`; the `npm run dev` watchers for Core and Fleet
@@ -63,13 +62,12 @@ dev server's files. `npm run start:prod --workspace @discocan/core` (or fleet/er
 runs the compiled app. Gateway `build` generates the supergraph and
 validates the installed native Router configuration. `npm run start:prod --workspace @discocan/gateway`
 starts that binary using the generated supergraph; no Node bundle or Rust compilation is involved. `dev` does not migrate or seed databases.
-The group generates admin GraphQL artifacts once before starting Angular; standalone Angular and
-Storybook commands keep their own generation step. Ctrl+C stops the process group; `db:down`
+The group generates admin GraphQL artifacts once before starting Angular. Ctrl+C stops the process group; `db:down`
 stops PostgreSQL separately and preserves the volume.
 See [ERM relay](discocan/development.md#erm-relay) for the device relay and
 [ERM Server](discocan/development.md#erm-device-server) for its independent compiled service.
 Use `npm run kill` from another terminal when application processes remain running. It stops
-the dev group, standalone `admin:storybook`, individual Angular/Nest watchers and compiled
+the dev group, individual Angular/Nest watchers and compiled
 web/API backend processes from this checkout,
 including the native Router, the concurrently group and their child workers. It sends
 SIGTERM, then SIGKILL to survivors after two seconds.
@@ -82,7 +80,6 @@ web/API restarts.
 | Application                | Default listener      |
 | -------------------------- | --------------------- |
 | Angular admin              | 11000                 |
-| Admin Storybook            | 11001                 |
 | Gateway GraphQL            | 11010                 |
 | Gateway health             | 11016                 |
 | Core                       | 11011                 |
@@ -94,9 +91,7 @@ web/API restarts.
 | PostgreSQL                 | 11084                 |
 | ERM relay                  | 11500, all interfaces |
 
-Visual previews use 11000–11009; the admin Storybook uses 11001. The admin dev server and
-Storybook listen on all interfaces and accept the `dev.lab` host, so devices on the local network
-open them as `http://dev.lab:11000` and `http://dev.lab:11001`; the other HTTP services stay on loopback. ERM Server and the relay share
+The admin listens on all interfaces and accepts `http://dev.lab:11000`; the other HTTP services stay on loopback. ERM Server and the relay share
 the default device port and need distinct configured ports when run together. The single root
 [`.env.example`](../.env.example) describes all variables, their consumers, safe examples,
 types and sensitivity using [`@env-spec` style annotations](https://varlock.dev/reference/data-types/).
@@ -113,7 +108,7 @@ runtime file, preserving existing settings:
 
 | Consumer                 | Runtime configuration                                                                                                                                   |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`; Compose also reads `POSTGRES_VOLUME`                                                                   |
+| Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`; Compose also reads `POSTGRES_VOLUME`                                                                 |
 | Core and Prisma          | `apps/core/.env`: Core database URLs and shared demo settings                                                                                           |
 | Fleet and Prisma         | `apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins                                     |
 | ERM Server and Prisma    | `apps/erm-server/.env`: ERM database URLs, shared demo settings, `ERM_ROLE`, gateway listener/capture settings, internal API connection and HTTP `PORT` |
@@ -149,7 +144,7 @@ Without a key, the map shows a configuration notice and its accessible record li
 links to Google Maps still work. The browser key is public configuration. Enable billing and
 the [Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/get-api-key)
 in the owner's Google Cloud project, authorize that API on the key and restrict the key to the
-admin website origins (including the development/Storybook origins used locally). Maps Embed,
+admin website origins (including the development origins used locally). Maps Embed,
 Places and Geocoding APIs are not used.
 
 Advanced Markers require a [JavaScript map ID](https://developers.google.com/maps/documentation/javascript/advanced-markers/add-marker).
@@ -312,88 +307,11 @@ asserts the public contract through Router over real subgraphs and isolated test
 ### Admin presentation
 
 The [admin design system](admin-design-system.md) describes the implemented theme (`discocanPreset`
-over standard Aura), global styles, shell, patterns and their Storybook review; the decision is
+over standard Aura), global styles, shell, patterns and the design page; the decision is
 [ADR 0004](architecture/decisions/0004-admin-design-system.md). The root font size is the browser
 default (16 px). Lato weights 400, 500, 600, 700 and 800, including Cyrillic glyphs, are served
 from `apps/admin/public/fonts/lato`; no external font CDN is required. Font sources and licenses
 are recorded in [the admin attribution](../apps/admin/THIRD_PARTY_NOTICES.md).
-
-### Admin Storybook
-
-Storybook is a development tool, not a test suite. It renders the admin's real Angular
-shared design-system components with deterministic synthetic data and no backend.
-`npm run storybook:admin` serves `http://127.0.0.1:11001` without opening a browser.
-Storybook starts at "Start here", followed by Design System; see
-[Storybook review](admin-design-system.md#storybook-review).
-
-- The framework is `@storybook/angular-vite` on Vite and `@angular/build`, without webpack. It is a
-  preview framework in Storybook 10.
-- Configuration is in `apps/admin/.storybook`:
-  - `main.ts`: stories, the a11y addon, telemetry disabled.
-  - `preview.ts`: the decorator, toolbar globals, viewports and story order.
-- The builder does not inherit the application build's styles. `src/styles.scss` and the
-  `src/styles` SCSS path are therefore repeated in the `storybook` target of
-  `apps/admin/angular.json`; keep them aligned with the `build` target.
-- Vite's public directory, `apps/admin/public`, serves `/fonts` and `/config.local.json`.
-- The Nx target `storybook` in `apps/admin/project.json` is continuous and uncached, and first
-  runs `graphql-generate`.
-- Toolbar globals switch the theme (light/dark), brand and density. The application itself uses
-  `appTheme`. A change re-bootstraps the story: the `discocanApplication` decorator in `preview.ts`
-  rebuilds `storybookApplicationConfig(choice)` and keys a `STORY_GLOBALS` provider on brand,
-  density and theme.
-- Viewports are `desktop1440`, `desktop1024`, `tablet768` and `mobile375`.
-- Stories start in English, and the Language toolbar switches between English and Bulgarian.
-  The routed Shell stories render the real `AdminWorkspace`.
-- Stories are `*.stories.ts` files beside the components they render. Story-only support lives in
-  `apps/admin/src/storybook`. `storybookApplicationConfig()` reuses the application's `appConfig`
-  providers with `FixtureHttpBackend` as `HttpBackend`, an in-memory location, the story clock
-  (`WALL_CLOCK`) and PrimeNG texts. Feature services, their Apollo clients, error mapping and
-  request headers run unchanged.
-- Render helpers:
-  - Pattern stories wrap the component in the `onFrame` decorator (frame surface, gutter and
-    content width).
-  - `routeAt(path)` with `StoryApp` opens a real application route under `/en/`, with GraphQL
-    answered by fixtures. The routed `Design System/Shell` stories use it.
-- GraphQL fixtures: a module registers an answer at load time with
-  `graphqlFixture(GeneratedDocument, (variables) => result)` and must be imported by the story or
-  by `story-config.ts`. Handlers read `FixtureVariables` (runtime-checked accessors and `branchId`
-  from `x-branch-id`) and throw `fixtureError(code, message, fieldErrors?)` for a GraphQL error.
-  `AdminBranches` (`session-fixtures.ts`) is registered globally. Unregistered
-  operations answer with the GraphQL error `No Storybook fixture answers <Operation>.` Responses carry the request ID
-  `fixture-<Operation>`.
-- `parameters.discocan` (`StoryFixtures`, declared with `satisfies StoryFixtures`) is read at runtime
-  by `readStoryFixtures`, which ignores unknown values:
-  - `signedIn: false` clears the stored demo session; by default a story starts signed in as the
-    synthetic tenant `Demo Logistics Ltd` on its first Branch, `Sofia Fleet`.
-  - `fleetEnabled: false` sets the runtime `fleetEnabled` flag.
-  - `now` is the ISO instant behind `WALL_CLOCK` (`AdminTopbar` uses it for relative notification
-    times); the default is `2026-10-18T07:00:00.000Z`, and an invalid value falls back to it.
-  - `scenario.latencyMs` delays every answered operation.
-  - `scenario.failures` maps an operation name, or `<Operation>:<id>` for calls whose `id`
-    variable matches (that key wins), to `network` (HTTP 503), `graphql` (an error without a
-    code), `pending` (no answer), `not-found`, `conflict`, `unavailable`, `bad-input` (errors with
-    `NOT_FOUND`, `CONFLICT`, `SERVICE_UNAVAILABLE` and `BAD_USER_INPUT`) or `network-after-first`
-    (the first call answers, later calls get HTTP 503).
-- Before every story the preview's `beforeEach` (`prepareStory`) resets the scenario and call
-  counts, the clock, the stored session, the theme and the document language. Session options
-  apply before application bootstrap; fixture latency and failures affect GraphQL operations in
-  routed Shell stories.
-- `tsconfig.app.json` excludes stories and `src/storybook`; `npm run typecheck` compiles them
-  through `apps/admin/.storybook/tsconfig.json`, which excludes specs, and ESLint rejects Storybook
-  or fixture imports from application code.
-- PrimeUI license:
-  - The interactive Storybook serves the Git-ignored `apps/admin/public/config.local.json` at
-    `/config.local.json`. `loadStoryLicense()` passes its `primeUiLicense` to the theme once per
-    page.
-  - A missing file, a non-JSON answer or an invalid file means no key. The application, in
-    contrast, rejects an invalid file.
-  - The application `build` excludes `config.local.json` from its base assets; only its
-    `development` configuration copies it. `ng serve` serves that development output from
-    memory. `admin:build:development` writes it into `apps/admin/dist/browser` and the Nx cache,
-    so never publish or share that output.
-  - The production `build` excludes the file even when it exists locally. Compiled-app browser
-    smokes therefore run without a key and show the "Invalid PrimeUI License" notice. The notice
-    is accepted and is never hidden.
 
 ### Angular agent tools
 
@@ -477,11 +395,11 @@ Provisioning creates/verifies six databases and matching roles, preserves existi
 passwords, checks role privileges/ownership and revokes PUBLIC database access. The loopback
 provisioning role is `discocan_admin`; application URLs never use it.
 
-| Service    | Development database/role | Test database/role | Environment variables                       |
-| ---------- | ------------------------- | ------------------ | ------------------------------------------- |
-| Core       | discocan_core               | discocan_core_test   | CORE_DATABASE_URL, CORE_TEST_DATABASE_URL   |
-| Fleet      | discocan_fleet              | discocan_fleet_test  | FLEET_DATABASE_URL, FLEET_TEST_DATABASE_URL |
-| ERM Server | discocan_erm                | discocan_erm_test    | ERM_DATABASE_URL, ERM_TEST_DATABASE_URL     |
+| Service    | Development database/role | Test database/role  | Environment variables                       |
+| ---------- | ------------------------- | ------------------- | ------------------------------------------- |
+| Core       | discocan_core             | discocan_core_test  | CORE_DATABASE_URL, CORE_TEST_DATABASE_URL   |
+| Fleet      | discocan_fleet            | discocan_fleet_test | FLEET_DATABASE_URL, FLEET_TEST_DATABASE_URL |
+| ERM Server | discocan_erm              | discocan_erm_test   | ERM_DATABASE_URL, ERM_TEST_DATABASE_URL     |
 
 Roles cannot connect to another service's databases or the corresponding dev/test database.
 The [root environment example](../.env.example) configures POSTGRES_PORT, POSTGRES_PASSWORD and POSTGRES_VOLUME.
