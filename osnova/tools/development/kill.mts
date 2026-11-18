@@ -41,7 +41,7 @@ export async function killDevelopment(product: {
         args.includes(resolve(root, 'node_modules/.bin/concurrently')) &&
         args.includes(product.group);
       const admin =
-        directory === appDirectories[0] &&
+        appDirectories.includes(directory) &&
         (args.some((arg) => arg.startsWith('ng serve')) ||
           (args.includes(resolve(root, 'node_modules/.bin/ng')) && args.includes('serve')));
       const backend = args.slice(1).some((arg) => backendEntries.includes(resolve(directory, arg)));
