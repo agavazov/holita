@@ -1,18 +1,5 @@
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import { composeServices } from '@apollo/composition';
-import { buildSubgraphSchema } from '@apollo/subgraph';
-import {
-  concatAST,
-  lexicographicSortSchema,
-  parse,
-  printSchema,
-  Source,
-  validate,
-  type GraphQLSchema,
-} from 'graphql';
+export { workspaceRoot } from '../../../osnova/tools/graphql/contracts.mjs';
 
-export const workspaceRoot = fileURLToPath(new URL('../../../', import.meta.url));
 export const subgraphs = [
   {
     name: 'erm-server',
@@ -72,60 +59,43 @@ export const operationPaths = [
   'discocan/apps/erm-server/src/modules/telemetry/operations.graphql',
 ];
 
-export async function readContracts() {
-  return Promise.all(
-    subgraphs.map(async (subgraph) => ({
-      ...subgraph,
-      typeDefs: parse(
-        (
-          await Promise.all(
-            [subgraph.path, ...subgraph.additionalPaths].map((path) =>
-              readFile(new URL(`../../../${path}`, import.meta.url), 'utf8'),
-            ),
-          )
-        ).join('\n'),
-      ),
-    })),
-  );
-}
+const operationsFor = (app: string) =>
+  operationPaths.filter((path) => path.startsWith(`discocan/apps/${app}/`));
+const generated = (app: string, name: string) =>
+  `discocan/apps/${app}/src/generated/graphql/${name}`;
+export const targets = {
+  gateway: {
+    supergraph: generated('gateway', 'supergraph.graphql'),
+    schema: generated('gateway', 'schema.graphql'),
+  },
+  core: { server: { subgraph: 'core', path: generated('core', 'types.ts') } },
+  fleet: {
+    server: { subgraph: 'fleet', path: generated('fleet', 'types.ts') },
+    clients: [
+      { path: generated('fleet', 'core-operations.ts'), operations: operationsFor('fleet') },
+    ],
+  },
+  'erm-server': {
+    server: { subgraph: 'erm-server', path: generated('erm-server', 'types.ts') },
+    clients: [
+      {
+        path: generated('erm-server', 'fleet-operations.ts'),
+        operations: operationsFor('erm-server'),
+      },
+    ],
+  },
+  admin: {
+    clients: [
+      { path: generated('admin', 'operations.ts'), operations: operationsFor('admin') },
+      {
+        path: generated('admin', 'startup-operations.ts'),
+        operations: [
+          'discocan/apps/admin/src/app/features/auth/operations.graphql',
+          'discocan/apps/admin/src/app/features/branches/operations.graphql',
+        ],
+      },
+    ],
+  },
+};
 
-export function composeContracts(contracts: Awaited<ReturnType<typeof readContracts>>) {
-  const result = composeServices(contracts);
-  if (!result.schema || !result.supergraphSdl) {
-    throw new Error(
-      `Composition failed:\n${result.errors?.map((error) => error.message).join('\n') ?? 'No supergraph produced'}`,
-    );
-  }
-  const apiSchema = result.schema.toAPISchema().toGraphQLJSSchema();
-  const schemas = new Map(
-    contracts.map((contract) => [
-      contract.name,
-      buildSubgraphSchema({ typeDefs: contract.typeDefs }),
-    ]),
-  );
-  return {
-    apiSchema,
-    schemas,
-    supergraphSdl: result.supergraphSdl,
-    clientSdl: printSchema(lexicographicSortSchema(apiSchema)) + '\n',
-  };
-}
-
-export async function readOperations(schema: GraphQLSchema) {
-  const documents = await Promise.all(
-    operationPaths.map(async (location) => ({
-      document: parse(
-        new Source(
-          await readFile(new URL(`../../../${location}`, import.meta.url), 'utf8'),
-          location,
-        ),
-      ),
-      location,
-    })),
-  );
-  const errors = validate(schema, concatAST(documents.map(({ document }) => document)));
-  if (errors.length) {
-    throw new Error(errors.map((error) => error.toString()).join('\n'));
-  }
-  return documents;
-}
+export const scalars = { ErmJSON: 'unknown' };
