@@ -14,7 +14,7 @@ export interface StorefrontContext {
   branchId: string | undefined;
   authorization: string | undefined;
 }
-interface ShopScope {
+export interface ShopScope {
   id: string;
   tenantId: string;
   name: string;
