@@ -250,7 +250,7 @@ class StorefrontPage {
   private readonly api = inject(StorefrontApi);
   readonly shopId = this.route.snapshot.paramMap.get('shopId') ?? '';
   readonly base = ['/s', this.shopId];
-  readonly page: string = this.route.snapshot.data['page'];
+  readonly page = this.route.snapshot.routeConfig?.path?.split('/').at(2) ?? 'catalogue';
   readonly language = signal<Language>(
     sessionStorage.getItem('holita.storefront.language') === 'en' ? 'en' : 'bg',
   );

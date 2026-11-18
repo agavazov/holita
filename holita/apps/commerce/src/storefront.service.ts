@@ -192,7 +192,7 @@ export class StorefrontService {
           passwordHash: await hashPassword(password),
         },
       });
-      return this.createSession(shop, shopper);
+      return await this.createSession(shop, shopper);
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new BadRequestException('Email is already registered');
