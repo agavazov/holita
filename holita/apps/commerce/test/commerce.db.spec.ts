@@ -16,6 +16,9 @@ const tenantB = randomUUID();
 const branchA = randomUUID();
 const branchB = randomUUID();
 const branchForeign = randomUUID();
+const publicA = randomUUID();
+const publicB = randomUUID();
+const suspended = randomUUID();
 const tokens = {
   viewer: `holita-session.${'a'.repeat(43)}`,
   operator: `holita-session.${'b'.repeat(43)}`,
@@ -41,6 +44,7 @@ let core: Server | undefined;
 let app: INestApplication | undefined;
 let schema = '';
 let endpoint: string;
+let publicEndpoint: string;
 
 beforeAll(async () => {
   const configured = process.env.COMMERCE_TEST_DATABASE_URL;
@@ -65,6 +69,15 @@ beforeAll(async () => {
     'utf8',
   );
   await connection.query(sql);
+  await connection.query(
+    await readFile(
+      new URL(
+        '../prisma/migrations/20261119010000_shopper_accounts/migration.sql',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
   database = new PrismaClient({
     adapter: new PrismaPg({ connectionString: configured }, { schema }),
   });
@@ -97,6 +110,17 @@ beforeAll(async () => {
         'id' in value.variables
           ? value.variables.id
           : undefined;
+      if (request.url === '/internal/branches/resolve') {
+        const branch =
+          typeof value === 'object' && value !== null && 'id' in value ? value.id : null;
+        const shop =
+          branch === publicA || branch === publicB
+            ? { id: branch, tenantId: tenantA, name: 'Shop' }
+            : null;
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end(JSON.stringify({ branch: shop }));
+        return;
+      }
       const allowed =
         identity &&
         !identity.platform &&
@@ -122,6 +146,7 @@ beforeAll(async () => {
   app = module.createNestApplication({ logger: false });
   await app.listen(0, '127.0.0.1');
   endpoint = `${await app.getUrl()}/graphql`;
+  publicEndpoint = `${await app.getUrl()}/storefront/graphql`;
 });
 
 afterAll(async () => {
@@ -270,4 +295,79 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       { id: rows[2].id },
     ),
   ).toMatchObject({ data: null, errors: expect.any(Array) });
+});
+
+async function storefront(
+  branch: string,
+  source: string,
+  variables: Record<string, unknown> = {},
+  token?: string,
+): Promise<unknown> {
+  const response = await fetch(publicEndpoint, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-branch-id': branch,
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ query: source, variables }),
+  });
+  return response.json();
+}
+function registeredToken(value: unknown): string {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('data' in value) ||
+    typeof value.data !== 'object' ||
+    value.data === null ||
+    !('registerShopper' in value.data) ||
+    typeof value.data.registerShopper !== 'object' ||
+    value.data.registerShopper === null ||
+    !('token' in value.data.registerShopper) ||
+    typeof value.data.registerShopper.token !== 'string'
+  ) {
+    throw new Error('Registration failed');
+  }
+  return value.data.registerShopper.token;
+}
+it('isolates shoppers and active catalogue by shop and hides suspended shops', async () => {
+  if (!database) {
+    throw new Error('Missing database');
+  }
+  for (const [name, status] of [
+    ['Visible', 'ACTIVE'],
+    ['Draft', 'DRAFT'],
+    ['Archived', 'ARCHIVED'],
+  ] as const) {
+    await database.product.create({
+      data: { tenantId: tenantA, branchId: publicA, name, price: '1.00', status },
+    });
+  }
+  const mutation =
+    'mutation($email:String!){registerShopper(name:"Person",email:$email,password:"temporary-password"){token shopper{email}}}';
+  const token = registeredToken(
+    await storefront(publicA, mutation, { email: 'same@example.test' }),
+  );
+  expect(token).toMatch(/^holita-shopper\.[A-Za-z0-9_-]{43}$/);
+  expect(await storefront(publicB, mutation, { email: 'same@example.test' })).toMatchObject({
+    data: { registerShopper: { shopper: { email: 'same@example.test' } } },
+  });
+  for (const [branch, expected] of [
+    [publicA, { name: 'Person' }],
+    [publicB, null],
+  ] as const) {
+    expect(await storefront(branch, '{shopperMe{name}}', {}, token)).toMatchObject({
+      data: { shopperMe: expected },
+    });
+  }
+  expect(await storefront(publicA, '{catalogue{total items{name}}}')).toMatchObject({
+    data: { catalogue: { total: 1, items: [{ name: 'Visible' }] } },
+  });
+  expect(await storefront(suspended, '{shop{id}}')).toEqual({ data: { shop: null } });
+  expect(await storefront(suspended, '{catalogue{total}}')).toMatchObject({
+    data: null,
+    errors: expect.any(Array),
+  });
+  expect(await storefront(publicA, '{products{total}}')).toHaveProperty('errors');
 });

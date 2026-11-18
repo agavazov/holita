@@ -1,0 +1,36 @@
+type Shop {
+  id: ID!
+  name: String!
+}
+type CatalogueProduct {
+  id: ID!
+  name: String!
+  price: String!
+}
+type CataloguePage {
+  items: [CatalogueProduct!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+type Shopper {
+  id: ID!
+  name: String!
+  email: String!
+}
+type ShopperSession {
+  token: String!
+  shopper: Shopper!
+  expiresAt: String!
+}
+type Query {
+  shop: Shop
+  catalogue(offset: Int! = 0, limit: Int! = 20): CataloguePage!
+  catalogueProduct(id: ID!): CatalogueProduct
+  shopperMe: Shopper
+}
+type Mutation {
+  registerShopper(name: String!, email: String!, password: String!): ShopperSession!
+  signInShopper(email: String!, password: String!): ShopperSession!
+  signOutShopper: Boolean!
+}

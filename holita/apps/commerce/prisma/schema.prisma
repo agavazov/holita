@@ -36,9 +36,24 @@ model Customer {
   branchId String @db.Uuid
   email String @db.VarChar(254)
   name String @db.VarChar(200)
+  passwordHash String? @db.VarChar(255)
+  sessions ShopperSession[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
   @@unique([tenantId, branchId, id])
   @@index([tenantId, branchId, name, id])
   @@map("customer")
+}
+
+model ShopperSession {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  customerId String @db.Uuid
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tokenHash String @unique @db.Char(64)
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([tenantId, branchId, customerId])
+  @@map("shopperSession")
 }
