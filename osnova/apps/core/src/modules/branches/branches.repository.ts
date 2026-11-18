@@ -18,6 +18,13 @@ export class BranchesRepository {
     });
   }
 
+  resolvePublic(id: string) {
+    return this.prisma.client.branch.findUnique({
+      where: { id, status: 'ACTIVE', tenant: { kind: 'CUSTOMER', status: 'ACTIVE' } },
+      select: { id: true, tenantId: true, name: true },
+    });
+  }
+
   updateName(tenantId: string, id: string, name: string) {
     return this.prisma.client.branch.update({
       where: { id, tenantId, status: 'ACTIVE', tenant: { status: 'ACTIVE' } },

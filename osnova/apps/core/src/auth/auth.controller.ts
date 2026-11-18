@@ -1,15 +1,7 @@
-import {
-  Controller,
-  Header,
-  Headers,
-  HttpCode,
-  Post,
-  ServiceUnavailableException,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { Controller, Header, Headers, HttpCode, Post } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import type { SessionIdentity } from './session.js';
+import { requireInternalToken } from './internal-token.js';
 
 @Controller('internal/auth')
 export class AuthController {
@@ -22,19 +14,7 @@ export class AuthController {
     @Headers('x-core-internal-token') internalToken: string | undefined,
     @Headers('authorization') authorization: string | undefined,
   ): Promise<SessionIdentity | { authenticated: false }> {
-    const expected = process.env.CORE_INTERNAL_AUTH_TOKEN;
-    if (!expected || expected.length < 32) {
-      throw new ServiceUnavailableException('Internal session verification is not configured');
-    }
-    if (
-      !internalToken ||
-      !timingSafeEqual(
-        createHash('sha256').update(internalToken).digest(),
-        createHash('sha256').update(expected).digest(),
-      )
-    ) {
-      throw new UnauthorizedException('Invalid internal authentication');
-    }
+    requireInternalToken(internalToken);
     const identity = await this.auth.verifyAuthorization(authorization);
     return identity ?? { authenticated: false };
   }
