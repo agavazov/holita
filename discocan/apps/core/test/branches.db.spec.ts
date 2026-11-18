@@ -335,6 +335,7 @@ describe('Branches GraphQL with PostgreSQL', () => {
       userId: owner.id,
       sessionId: currentSession.id,
       role: 'ADMINISTRATOR',
+      platform: false,
     });
     for (const [internalToken, sessionToken, status] of [
       ['incorrect-internal-token', token, 401],
@@ -411,6 +412,141 @@ describe('Branches GraphQL with PostgreSQL', () => {
     expect(await accountQuery('{me{id}}', {}, reactivatedToken)).toEqual({
       data: { me: { id: colleague.id } },
     });
+
+    const platform = await database.client.tenant.create({
+      data: { name: `Platform ${randomUUID()}`, kind: 'PLATFORM' },
+    });
+    const actors = await Promise.all(
+      (['ADMINISTRATOR', 'OPERATOR', 'SALES'] as const).map((role) =>
+        database.client.user.create({
+          data: {
+            tenantId: platform.id,
+            name: role,
+            email: `${role.toLowerCase()}-${randomUUID()}@example.test`,
+            passwordHash,
+            role,
+          },
+        }),
+      ),
+    );
+    const platformTokens = await Promise.all(actors.map((actor) => signIn(actor.email, password)));
+    const [platformAdmin, platformOperator, sales] = platformTokens;
+    if (!platformAdmin || !platformOperator || !sales) {
+      throw new Error('Missing platform sessions');
+    }
+    const customer = reactivatedToken;
+    for (const [role, bearer, canList, canWrite] of [
+      ['platform administrator', platformAdmin, true, true],
+      ['platform operator', platformOperator, true, true],
+      ['platform sales', sales, true, false],
+      ['customer administrator', customer, false, false],
+    ] satisfies [string, string, boolean, boolean][]) {
+      const list = await accountQuery(
+        '{merchants{id name status branchCount branches{id status}}}',
+        {},
+        bearer,
+      );
+      expect({ role, list }).toMatchObject({
+        role,
+        list: canList
+          ? {
+              data: {
+                merchants: expect.arrayContaining([
+                  expect.objectContaining({ id: tenantId, status: 'ACTIVE' }),
+                ]),
+              },
+            }
+          : { data: null, errors: [{ extensions: { code: 'FORBIDDEN' } }] },
+      });
+      const attempts: [string, Record<string, unknown>][] = [
+        [
+          'mutation($name:String!,$email:String!,$password:String!){createMerchant(name:$name,adminName:"Merchant admin",adminEmail:$email,initialPassword:$password){id branchCount status}}',
+          {
+            name: `Merchant ${randomUUID()}`,
+            email: `merchant-${randomUUID()}@example.test`,
+            password,
+          },
+        ],
+        [
+          'mutation($tenant:ID!){createMerchantBranch(tenantId:$tenant,name:"Platform created"){id status}}',
+          { tenant: otherTenant.id },
+        ],
+        [
+          'mutation($tenant:ID!){setMerchantStatus(tenantId:$tenant,status:ACTIVE){id status}}',
+          { tenant: otherTenant.id },
+        ],
+        [
+          'mutation($tenant:ID!,$branch:ID!){setMerchantBranchStatus(tenantId:$tenant,branchId:$branch,status:ACTIVE){id status}}',
+          { tenant: otherTenant.id, branch: foreign.id },
+        ],
+      ];
+      for (const [source, variables] of attempts) {
+        const result = await accountQuery(source, variables, bearer);
+        expect({ role, result }).toMatchObject({
+          role,
+          result: canWrite
+            ? { data: expect.any(Object) }
+            : { data: null, errors: [{ extensions: { code: 'FORBIDDEN' } }] },
+        });
+      }
+    }
+    expect(
+      await accountQuery(
+        'mutation($tenant:ID!,$branch:ID!){setMerchantBranchStatus(tenantId:$tenant,branchId:$branch,status:SUSPENDED){id status}}',
+        { tenant: tenantId, branch: managedBranch.id },
+        platformAdmin,
+      ),
+    ).toEqual({ data: { setMerchantBranchStatus: { id: managedBranch.id, status: 'SUSPENDED' } } });
+    expect(
+      await accountQuery(
+        'query($id:ID!){branch(id:$id){id} branches{id}}',
+        { id: managedBranch.id },
+        customer,
+      ),
+    ).toMatchObject({
+      data: { branch: null, branches: expect.not.arrayContaining([{ id: managedBranch.id }]) },
+    });
+    expect(
+      await accountQuery(
+        'mutation($tenant:ID!){setMerchantStatus(tenantId:$tenant,status:SUSPENDED){id status}}',
+        { tenant: tenantId },
+        platformAdmin,
+      ),
+    ).toEqual({ data: { setMerchantStatus: { id: tenantId, status: 'SUSPENDED' } } });
+    expect(await accountQuery('{me{id}}', {}, customer)).toMatchObject({
+      errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
+    });
+    const suspended = await fetch(verifyUrl, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${customer}`, 'x-core-internal-token': internalAuthToken },
+    });
+    expect(await suspended.json()).toEqual({ authenticated: false });
+    expect(
+      await accountQuery(
+        'mutation($email:String!,$password:String!){signIn(email:$email,password:$password){token}}',
+        { email, password },
+        undefined,
+      ),
+    ).toMatchObject({ errors: [{ extensions: { code: 'UNAUTHENTICATED' } }] });
+    expect(
+      await accountQuery('mutation($tenant:ID!){demoLogin(tenantId:$tenant){token}}', {
+        tenant: tenantId,
+      }),
+    ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    expect(
+      await accountQuery(
+        'mutation($tenant:ID!){setMerchantStatus(tenantId:$tenant,status:ACTIVE){id status}}',
+        { tenant: tenantId },
+        platformAdmin,
+      ),
+    ).toEqual({ data: { setMerchantStatus: { id: tenantId, status: 'ACTIVE' } } });
+    expect(
+      await accountQuery(
+        'mutation($tenant:ID!,$branch:ID!){setMerchantBranchStatus(tenantId:$tenant,branchId:$branch,status:ACTIVE){id status}}',
+        { tenant: tenantId, branch: managedBranch.id },
+        platformAdmin,
+      ),
+    ).toEqual({ data: { setMerchantBranchStatus: { id: managedBranch.id, status: 'ACTIVE' } } });
   });
 
   it('renames only the selected Branch of the session tenant; invalid, foreign or mismatched renames write nothing', async () => {

@@ -38,6 +38,7 @@ export const SESSION_OPTIONS = new InjectionToken<SessionOptions>('operator sess
   }),
 });
 const roleRank: Readonly<Record<UserRole, number>> = {
+  SALES: -1,
   VIEWER: 0,
   OPERATOR: 1,
   ENGINEER: 2,

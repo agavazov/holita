@@ -10,6 +10,7 @@ export interface RequestContext {
   userId: string | undefined;
   sessionId: string | undefined;
   role: UserRole | undefined;
+  platform?: boolean;
   branchId: string | undefined;
   authorization: string | undefined;
 }
@@ -33,12 +34,17 @@ export async function createRequestContext(
   const authorization = req.headers.authorization;
   res.setHeader('x-request-id', requestId);
   const identity = await auth.verifyAuthorization(authorization);
-  const demoTenantId = identity ? undefined : readDemoTenant(authorization);
+  const requestedDemoTenant = identity ? undefined : readDemoTenant(authorization);
+  const demoTenantId =
+    requestedDemoTenant && (await auth.activeDemoTenant(requestedDemoTenant))
+      ? requestedDemoTenant
+      : undefined;
   return {
     requestId,
     tenantId: identity?.tenantId ?? demoTenantId,
     userId: identity?.userId,
     sessionId: identity?.sessionId,
+    platform: identity?.platform ?? false,
     role: identity?.role ?? (demoTenantId ? 'ADMINISTRATOR' : undefined),
     branchId: typeof header === 'string' ? header : undefined,
     authorization,

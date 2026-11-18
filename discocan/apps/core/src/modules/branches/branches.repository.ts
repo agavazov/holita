@@ -7,16 +7,21 @@ export class BranchesRepository {
 
   list(tenantId: string) {
     return this.prisma.client.branch.findMany({
-      where: { tenantId },
+      where: { tenantId, status: 'ACTIVE', tenant: { status: 'ACTIVE' } },
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
     });
   }
 
   find(tenantId: string, id: string) {
-    return this.prisma.client.branch.findUnique({ where: { id, tenantId } });
+    return this.prisma.client.branch.findUnique({
+      where: { id, tenantId, status: 'ACTIVE', tenant: { status: 'ACTIVE' } },
+    });
   }
 
   updateName(tenantId: string, id: string, name: string) {
-    return this.prisma.client.branch.update({ where: { id, tenantId }, data: { name } });
+    return this.prisma.client.branch.update({
+      where: { id, tenantId, status: 'ACTIVE', tenant: { status: 'ACTIVE' } },
+      data: { name },
+    });
   }
 }

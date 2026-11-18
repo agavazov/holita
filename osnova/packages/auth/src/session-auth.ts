@@ -6,6 +6,7 @@ export interface SessionIdentity {
   userId: string;
   sessionId: string;
   role: string;
+  platform: boolean;
 }
 
 const verifiedSessions = new Map<string, { identity: SessionIdentity; expiresAt: number }>();
@@ -64,7 +65,8 @@ export async function readSession(
       !('sessionId' in body) ||
       !isUuid(body.sessionId) ||
       !('role' in body) ||
-      typeof body.role !== 'string'
+      typeof body.role !== 'string' ||
+      ('platform' in body && typeof body.platform !== 'boolean')
     ) {
       return undefined;
     }
@@ -73,6 +75,7 @@ export async function readSession(
       userId: body.userId,
       sessionId: body.sessionId,
       role: body.role,
+      platform: 'platform' in body && body.platform === true,
     };
     verifiedSessions.set(hash, { identity, expiresAt: now + cacheMilliseconds });
     return identity;

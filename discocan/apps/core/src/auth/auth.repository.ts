@@ -8,7 +8,13 @@ export class AuthRepository {
 
   // Email is globally unique: this lookup establishes identity before a session exists.
   findCredentials(email: string) {
-    return this.prisma.client.user.findUnique({ where: { email } });
+    return this.prisma.client.user.findUnique({ where: { email }, include: { tenant: true } });
+  }
+
+  findActiveDemoTenant(tenantId: string) {
+    return this.prisma.client.tenant.findUnique({
+      where: { id: tenantId, kind: 'CUSTOMER', status: 'ACTIVE' },
+    });
   }
 
   findUser(identity: SessionIdentity) {
@@ -34,8 +40,14 @@ export class AuthRepository {
   // Only the hash of a cryptographically random bearer can select the session's Tenant.
   findSession(tokenHash: string, now: Date) {
     return this.prisma.client.session.findUnique({
-      where: { tokenHash, revokedAt: null, expiresAt: { gt: now }, user: { active: true } },
-      include: { user: { select: { role: true } } },
+      where: {
+        tokenHash,
+        revokedAt: null,
+        expiresAt: { gt: now },
+        user: { active: true },
+        tenant: { status: 'ACTIVE' },
+      },
+      include: { user: { select: { role: true } }, tenant: { select: { kind: true } } },
     });
   }
 

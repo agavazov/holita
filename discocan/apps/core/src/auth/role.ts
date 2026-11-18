@@ -15,12 +15,15 @@ export function setupUserRole(value: string | undefined): UserRole {
     return 'VIEWER';
   }
   switch (value) {
+    case 'SALES':
     case 'VIEWER':
     case 'OPERATOR':
     case 'ENGINEER':
     case 'ADMINISTRATOR':
       return value;
     default:
-      throw new BadRequestException('Role must be VIEWER, OPERATOR, ENGINEER or ADMINISTRATOR.');
+      throw new BadRequestException(
+        'Role must be SALES, VIEWER, OPERATOR, ENGINEER or ADMINISTRATOR.',
+      );
   }
 }

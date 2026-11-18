@@ -12,6 +12,8 @@ datasource db {
 model Tenant {
   id String @id @default(uuid()) @db.Uuid
   name String @unique @db.VarChar(200)
+  kind TenantKind @default(CUSTOMER)
+  status AccountStatus @default(ACTIVE)
   branches Branch[]
   users User[]
   sessions Session[]
@@ -25,6 +27,7 @@ model Branch {
   tenantId String @db.Uuid
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   name String @db.VarChar(200)
+  status AccountStatus @default(ACTIVE)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
   @@unique([tenantId, id])
@@ -50,7 +53,20 @@ model User {
   @@map("user")
 }
 
+enum TenantKind {
+  CUSTOMER @map("customer")
+  PLATFORM @map("platform")
+  @@map("tenantKind")
+}
+
+enum AccountStatus {
+  ACTIVE @map("active")
+  SUSPENDED @map("suspended")
+  @@map("accountStatus")
+}
+
 enum UserRole {
+  SALES @map("sales")
   VIEWER @map("viewer")
   OPERATOR @map("operator")
   ENGINEER @map("engineer")

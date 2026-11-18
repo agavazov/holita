@@ -7,6 +7,7 @@ export interface SessionIdentity {
   userId: string;
   sessionId: string;
   role: UserRole;
+  platform: boolean;
 }
 
 export function requireSession(context: RequestContext): SessionIdentity {
@@ -18,5 +19,6 @@ export function requireSession(context: RequestContext): SessionIdentity {
     userId: context.userId,
     sessionId: context.sessionId,
     role: context.role,
+    platform: context.platform === true,
   };
 }

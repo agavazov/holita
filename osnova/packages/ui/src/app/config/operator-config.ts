@@ -38,7 +38,9 @@ export function readGraphqlUrl(value: unknown): string {
 
 export async function loadRuntimeConfig<T>(parse: (value: unknown) => T): Promise<T> {
   const response = await fetch('/config.json', { signal: AbortSignal.timeout(10_000) });
-  if (!response.ok) throw new Error('Could not load public admin configuration.');
+  if (!response.ok) {
+    throw new Error('Could not load public admin configuration.');
+  }
   const value: unknown = await response.json();
   return parse(value);
 }

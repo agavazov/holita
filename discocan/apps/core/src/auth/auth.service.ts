@@ -30,7 +30,11 @@ export class AuthService {
       throw error;
     }
     const credentials = await this.auth.findCredentials(normalized);
-    if (!credentials?.active || !(await verifyPassword(password, credentials.passwordHash))) {
+    if (
+      !credentials?.active ||
+      credentials.tenant.status !== 'ACTIVE' ||
+      !(await verifyPassword(password, credentials.passwordHash))
+    ) {
       throw new UnauthorizedException(signInFailure);
     }
     const token = `discocan-session.${randomBytes(32).toString('base64url')}`;
@@ -64,9 +68,14 @@ export class AuthService {
       userId: session.userId,
       sessionId: session.id,
       role: session.user.role,
+      platform: session.tenant.kind === 'PLATFORM',
     };
     await this.auth.touchSession(identity, now);
     return identity;
+  }
+
+  async activeDemoTenant(tenantId: string): Promise<boolean> {
+    return (await this.auth.findActiveDemoTenant(tenantId)) !== null;
   }
 
   async signOut(context: RequestContext): Promise<boolean> {

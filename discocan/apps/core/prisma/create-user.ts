@@ -60,8 +60,17 @@ async function createUser(): Promise<void> {
     if (await client.user.findUnique({ where: { email }, select: { id: true } })) {
       throw new BadRequestException('A user with this email already exists; no changes were made.');
     }
-    if (!(await client.tenant.findUnique({ where: { id: tenantId }, select: { id: true } }))) {
+    const tenant = await client.tenant.findUnique({
+      where: { id: tenantId },
+      select: { kind: true },
+    });
+    if (!tenant) {
       throw new BadRequestException('Tenant not found; no changes were made.');
+    }
+    if (role === 'SALES' && tenant.kind !== 'PLATFORM') {
+      throw new BadRequestException(
+        'Sales role requires a platform account; no changes were made.',
+      );
     }
     await client.user.create({
       data: { tenantId, email, name, role, passwordHash: await hashPassword(password) },

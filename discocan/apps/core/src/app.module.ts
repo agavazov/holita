@@ -5,6 +5,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { formatGraphqlError, graphqlDiagnostics } from './graphql/errors.js';
 import { createRequestContext } from './graphql/request-context.js';
 import { TenantsModule } from './modules/tenants/tenants.module.js';
+import { PlatformModule } from './modules/platform/platform.module.js';
 import { BranchesModule } from './modules/branches/branches.module.js';
 
 import { HealthController } from './health/health.controller.js';
@@ -16,6 +17,7 @@ import { DateTimeScalar } from './graphql/scalars.js';
 @Module({
   imports: [
     BranchesModule,
+    PlatformModule,
     TenantsModule,
     AuthModule,
     UsersModule,

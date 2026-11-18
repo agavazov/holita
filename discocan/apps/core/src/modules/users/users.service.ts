@@ -42,7 +42,11 @@ export class UsersService {
   constructor(private readonly users: UsersRepository) {}
 
   list(context: RequestContext): Promise<User[]> {
-    return this.users.list(requireSession(context).tenantId);
+    const identity = requireSession(context);
+    if (identity.platform && identity.role === 'SALES') {
+      throw new ForbiddenException('Sales accounts cannot list platform users');
+    }
+    return this.users.list(identity.tenantId);
   }
 
   async me(context: RequestContext): Promise<User> {
@@ -61,8 +65,12 @@ export class UsersService {
     password: string,
     role?: UserRole | null,
   ): Promise<User> {
-    const { tenantId } = requireSession(context);
+    const identity = requireSession(context);
+    const { tenantId } = identity;
     requireAdministrator(context);
+    if (role === 'SALES' && !identity.platform) {
+      throw new ForbiddenException('Sales role requires a platform account');
+    }
     const normalizedName = userName(name);
     const normalized = normalizedEmail(email);
     const passwordHash = await hashPassword(validatePassword(password));
@@ -94,6 +102,9 @@ export class UsersService {
     const identity = requireSession(context);
     requireAdministrator(context);
     const recordId = userId(id);
+    if (role === 'SALES' && !identity.platform) {
+      throw new ForbiddenException('Sales role requires a platform account');
+    }
     if (recordId === identity.userId && role != null && role !== identity.role) {
       throw new ForbiddenException('You cannot change your own role');
     }

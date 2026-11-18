@@ -86,7 +86,9 @@ export class UserDrawer {
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('formElement');
   protected readonly text = computed(() => usersText(this.language()));
   protected readonly roleOptions = computed(() =>
-    Object.entries(this.text().roles).map(([value, label]) => ({ value, label })),
+    Object.entries(this.text().roles)
+      .filter(([value]) => value !== 'SALES')
+      .map(([value, label]) => ({ value, label })),
   );
   protected readonly form = new FormGroup({
     name: new FormControl('', {

@@ -98,7 +98,7 @@ export async function generate(
       ? composition.schemas.get(client.subgraph)
       : composition.apiSchema;
     if (!clientSchema) {
-      throw new Error(`Missing ${client.subgraph} schema`);
+      throw new Error(`Missing ${client.subgraph ?? 'client'} schema`);
     }
     await generateTypes(
       client.path,

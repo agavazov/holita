@@ -54,6 +54,7 @@
   },
   "role": "Role",
   "roles": {
+    "SALES": "Sales",
     "VIEWER": "Viewer",
     "OPERATOR": "Operator",
     "ENGINEER": "Engineer",

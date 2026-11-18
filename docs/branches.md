@@ -45,6 +45,19 @@ The demo flow allows anyone to select any Tenant; it is not production authentic
 tenant membership authorization. The current Angular login and session lifecycle are described
 in [Discocan development](../discocan/docs/development.md#demo-tenant-login).
 
+## Platform administration and suspension
+
+Core stores one optional PLATFORM Tenant and CUSTOMER Tenants. Tenant and Branch status is ACTIVE
+by default and can be SUSPENDED. Suspended Tenants cannot sign in and their sessions fail Core
+verification; suspended Branches are excluded from discovery and lookup. Demo Tenant discovery
+also excludes suspended and platform Tenants.
+
+Verified platform ADMINISTRATOR and OPERATOR sessions can query `merchants` and call
+`createMerchant`, `createMerchantBranch`, `setMerchantStatus`, and `setMerchantBranchStatus`.
+`createMerchant` creates its first administrator in the same transaction. Platform SALES sessions
+can query merchants; CUSTOMER sessions cannot use these operations. A merchant includes its Branch
+count and Branch statuses. `createUser` and user setup permit SALES only within the platform Tenant.
+
 ## Implementation references
 
 - [Prisma schema](../discocan/apps/core/prisma/schema.prisma).
