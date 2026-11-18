@@ -29,7 +29,10 @@
                 "output": "fonts/lato",
                 "followSymlinks": true
               }
-            ]
+            ],
+            "stylePreprocessorOptions": {
+              "includePaths": ["../../../osnova/packages/ui/src/styles"]
+            }
           }
         },
         "serve": {

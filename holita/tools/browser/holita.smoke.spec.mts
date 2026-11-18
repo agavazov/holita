@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { createServer, type Server } from 'node:http';
+import { createServer } from 'node:http';
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve, extname, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -22,7 +22,9 @@ config({
 function testUrl(service: 'core' | 'commerce'): URL {
   const name = `holita_${service}_test`;
   const value = process.env[`${service.toUpperCase()}_TEST_DATABASE_URL`];
-  if (!value) throw new Error('The dedicated Holita test database is required');
+  if (!value) {
+    throw new Error('The dedicated Holita test database is required');
+  }
   const url = new URL(value);
   if (
     url.protocol !== 'postgresql:' ||
@@ -70,7 +72,9 @@ async function database(service: 'core' | 'commerce') {
       },
     };
   } catch (error: unknown) {
-    if (created) await client.query(`DROP SCHEMA ${pg.escapeIdentifier(schema)} CASCADE`);
+    if (created) {
+      await client.query(`DROP SCHEMA ${pg.escapeIdentifier(schema)} CASCADE`);
+    }
     await client.end();
     throw error;
   }
@@ -83,9 +87,17 @@ async function port(): Promise<number> {
     server.listen(0, '127.0.0.1', resolvePort);
   });
   const address = server.address();
-  if (!address || typeof address === 'string') throw new Error('Missing test port');
+  if (!address || typeof address === 'string') {
+    throw new Error('Missing test port');
+  }
   await new Promise<void>((resolveClose, reject) =>
-    server.close((error) => (error ? reject(error) : resolveClose())),
+    server.close((error) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolveClose();
+      }
+    }),
   );
   return address.port;
 }
@@ -108,7 +120,9 @@ async function waitReady(
             }
           : {},
       );
-      if (response.ok) return;
+      if (response.ok) {
+        return;
+      }
     } catch {
       /* The child may still be starting. */
     }
@@ -118,10 +132,19 @@ async function waitReady(
 }
 
 async function stopChild(child: ChildProcess): Promise<void> {
-  if (child.exitCode !== null || child.signalCode !== null) return;
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return;
+  }
   child.kill('SIGTERM');
-  await Promise.race([new Promise<void>((done) => child.once('exit', () => done())), delay(5000)]);
-  if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+  await Promise.race([
+    new Promise<void>((done) =>
+      child.once('exit', () => {
+        done();
+      }),
+    ),
+    delay(5000),
+  ]);
+  child.kill('SIGKILL');
 }
 
 async function runSeed(env: NodeJS.ProcessEnv): Promise<void> {
@@ -134,7 +157,9 @@ async function runSeed(env: NodeJS.ProcessEnv): Promise<void> {
     child.once('error', reject);
     child.once('exit', done);
   });
-  if (code !== 0) throw new Error('The isolated Core seed failed');
+  if (code !== 0) {
+    throw new Error('The isolated Core seed failed');
+  }
 }
 
 async function serve(app: 'admin' | 'backoffice', routerUrl: string) {
@@ -144,7 +169,9 @@ async function serve(app: 'admin' | 'backoffice', routerUrl: string) {
       if (request.url?.startsWith('/graphql')) {
         const chunks: Buffer[] = [];
         for await (const chunk of request) {
-          if (Buffer.isBuffer(chunk)) chunks.push(chunk);
+          if (Buffer.isBuffer(chunk)) {
+            chunks.push(chunk);
+          }
         }
         const headers = new Headers();
         for (const key of [
@@ -156,7 +183,9 @@ async function serve(app: 'admin' | 'backoffice', routerUrl: string) {
           'origin',
         ]) {
           const value = request.headers[key];
-          if (typeof value === 'string') headers.set(key, value);
+          if (typeof value === 'string') {
+            headers.set(key, value);
+          }
         }
         const upstream = await fetch(routerUrl, {
           method: 'POST',
@@ -198,12 +227,20 @@ async function serve(app: 'admin' | 'backoffice', routerUrl: string) {
   });
   await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
   const address = server.address();
-  if (!address || typeof address === 'string') throw new Error('Missing application test port');
+  if (!address || typeof address === 'string') {
+    throw new Error('Missing application test port');
+  }
   return {
     origin: `http://127.0.0.1:${String(address.port)}`,
     close: async () => {
       await new Promise<void>((done, reject) =>
-        server.close((error) => (error ? reject(error) : done())),
+        server.close((error) => {
+          if (error) {
+            reject(error);
+          } else {
+            done();
+          }
+        }),
       );
       server.closeAllConnections();
     },
@@ -212,7 +249,9 @@ async function serve(app: 'admin' | 'backoffice', routerUrl: string) {
 
 async function secretFill(locator: Locator, value: string): Promise<void> {
   await locator.evaluate((element, secret) => {
-    if (!(element instanceof HTMLInputElement)) throw new Error('Missing password input');
+    if (!(element instanceof HTMLInputElement)) {
+      throw new Error('Missing password input');
+    }
     element.value = secret;
     element.dispatchEvent(new Event('input', { bubbles: true }));
   }, value);
@@ -230,8 +269,9 @@ test('staff creates a merchant and its administrator creates a product', async (
   const staffEmail = process.env.HOLITA_STAFF_EMAIL;
   const staffPassword = process.env.HOLITA_STAFF_PASSWORD;
   const internal = process.env.CORE_INTERNAL_AUTH_TOKEN;
-  if (!staffEmail || !staffPassword || !internal)
+  if (!staffEmail || !staffPassword || !internal) {
     throw new Error('Holita test seed configuration is required');
+  }
   const cleanup: (() => Promise<void>)[] = [];
   try {
     const coreDb = await database('core');
@@ -333,6 +373,8 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(merchant.getByText(productName, { exact: true })).toBeVisible();
   } finally {
-    for (const close of cleanup.reverse()) await close();
+    for (const close of cleanup.reverse()) {
+      await close();
+    }
   }
 });

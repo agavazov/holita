@@ -158,19 +158,26 @@ export class MerchantsPage {
   readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(200)],
+      validators: [(control) => Validators.required(control), Validators.maxLength(200)],
     }),
     adminName: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(200)],
+      validators: [(control) => Validators.required(control), Validators.maxLength(200)],
     }),
     adminEmail: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.email],
+      validators: [
+        (control) => Validators.required(control),
+        (control) => Validators.email(control),
+      ],
     }),
     password: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.minLength(12), Validators.maxLength(128)],
+      validators: [
+        (control) => Validators.required(control),
+        Validators.minLength(12),
+        Validators.maxLength(128),
+      ],
     }),
   });
   constructor() {
@@ -325,7 +332,7 @@ export class MerchantDetailPage {
   readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(200)],
+      validators: [(control) => Validators.required(control), Validators.maxLength(200)],
     }),
   });
   constructor() {
@@ -554,11 +561,14 @@ export class ProductsPage {
   readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(200)],
+      validators: [(control) => Validators.required(control), Validators.maxLength(200)],
     }),
     price: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.pattern(/^\d{1,10}(?:\.\d{1,2})?$/)],
+      validators: [
+        (control) => Validators.required(control),
+        Validators.pattern(/^\d{1,10}(?:\.\d{1,2})?$/),
+      ],
     }),
     status: new FormControl<ProductStatus>('DRAFT', { nonNullable: true }),
   });
