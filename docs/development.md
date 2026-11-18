@@ -210,7 +210,7 @@ npm run dev
 ```
 
 The installer verifies the release archive's pinned SHA-256 before extraction and keeps
-the binary and upstream license notices in ignored `discocan/apps/gateway/router/dist/`.
+the binary and upstream license notices in ignored `osnova/tools/router/dist/`.
 It requires no npm dependency, Rust toolchain, container, GraphOS account or API key.
 `dev` waits for PostgreSQL and starts Router, Core, Fleet and Angular using concurrently. Angular
 keeps the public `/graphql` URL and uses `proxy.conf.mjs`,
@@ -257,7 +257,7 @@ The configured origin can send GET/POST/OPTIONS with `authorization`, `content-t
 `x-branch-id` and `x-request-id`. The three context headers are forwarded to all subgraphs.
 Health returns `{"status":"UP"}` from the dedicated health port, independently of downstream health.
 
-The [Rhai compatibility hook](../discocan/apps/gateway/router/compatibility.rhai)
+The [Rhai compatibility hook](../osnova/tools/router/compatibility.rhai)
 applies after GraphQL parsing/schema validation, at the supergraph boundary:
 
 - A single `x-request-id` matching `[A-Za-z0-9._:-]{1,100}` is preserved; missing, invalid

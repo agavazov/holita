@@ -11,7 +11,7 @@ limits:
     http1_max_request_buf_size: 16KiB
 
 rhai:
-  scripts: router
+  scripts: ../../../osnova/tools/router
   main: compatibility.rhai
 
 include_subgraph_errors:

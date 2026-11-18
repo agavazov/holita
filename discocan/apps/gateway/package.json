@@ -7,10 +7,10 @@
     "build": "npm run router:check",
     "dev": "nx run gateway:graphql-generate --output-style=stream && npm run start:prod",
     "start": "npm run dev",
-    "start:prod": "router/dist/router --anonymous-telemetry-disabled --config router/router.yaml --supergraph src/generated/graphql/supergraph.graphql",
-    "lint": "bash -n router/install.sh",
-    "router:install": "bash router/install.sh",
-    "router:check": "router/dist/router config validate router/router.yaml",
+    "start:prod": "../../../osnova/tools/router/dist/router --anonymous-telemetry-disabled --config router/router.yaml --supergraph src/generated/graphql/supergraph.graphql",
+    "lint": "bash -n ../../../osnova/tools/router/install.sh",
+    "router:install": "bash ../../../osnova/tools/router/install.sh",
+    "router:check": "../../../osnova/tools/router/dist/router config validate router/router.yaml",
     "graphql:generate": "tsx ../../tools/graphql/generate.mts gateway"
   },
   "nx": {

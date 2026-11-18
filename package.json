@@ -33,7 +33,7 @@
     "erm:relay": "tsx discocan/tools/erm-relay/relay.mts",
     "erm:route-unit": "tsx discocan/tools/erm-relay/route-unit.mts",
     "dev:gateway": "npm run dev --workspace @discocan/gateway",
-    "router:install": "npm run router:install --workspace @discocan/gateway",
+    "router:install": "bash osnova/tools/router/install.sh",
     "dev:core": "npm run dev --workspace @discocan/core",
     "dev:erm-server": "npm run dev --workspace @discocan/erm-server",
     "dev:admin": "nx run edata-rules:build && npm run dev --workspace @discocan/admin",

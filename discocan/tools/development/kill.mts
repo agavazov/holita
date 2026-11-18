@@ -8,7 +8,7 @@ if (process.platform !== 'linux') {
 }
 
 const root = fileURLToPath(new URL('../../../', import.meta.url)).replace(/\/$/, '');
-const routerBinary = resolve(root, 'discocan/apps/gateway/router/dist/router');
+const routerBinary = resolve(root, 'osnova/tools/router/dist/router');
 const appDirectories = ['admin', 'gateway', 'core', 'fleet'].map((app) =>
   resolve(root, 'discocan/apps', app),
 );

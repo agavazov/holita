@@ -403,7 +403,7 @@ async function startRouter(options: {
   subgraphUrls: { core: string; fleet: string; 'erm-server': string };
 }) {
   const cwd = join(workspaceRoot, 'discocan/apps/gateway');
-  const binary = join(cwd, 'router/dist/router');
+  const binary = join(workspaceRoot, 'osnova/tools/router/dist/router');
   const version = await execute(binary, ['--version']);
   if (version.stdout.trim() !== '2.18.0') {
     throw new Error('Install Apollo Router 2.18.0 with npm run router:install.');
