@@ -1,0 +1,73 @@
+{
+  "name": "holita-commerce",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "holita/apps/commerce/src",
+  "tags": ["type:app", "product:holita"],
+  "targets": {
+    "db-generate": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["{projectRoot}/prisma/schema.prisma", "{workspaceRoot}/package-lock.json"],
+      "outputs": ["{projectRoot}/src/generated/prisma"],
+      "options": {
+        "command": "npm run db:generate",
+        "cwd": "holita/apps/commerce"
+      }
+    },
+    "graphql-generate": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/src/**/*.graphql",
+        "{workspaceRoot}/holita/tools/graphql/commerce-generation.mts",
+        "{workspaceRoot}/package-lock.json"
+      ],
+      "outputs": ["{projectRoot}/src/generated/graphql"],
+      "options": {
+        "command": "npm run graphql:generate",
+        "cwd": "holita/apps/commerce"
+      }
+    },
+    "build": {
+      "dependsOn": [
+        "db-generate",
+        "graphql-generate",
+        {
+          "projects": ["osnova-auth"],
+          "target": "build"
+        }
+      ]
+    },
+    "typecheck": {
+      "dependsOn": [
+        "db-generate",
+        "graphql-generate",
+        {
+          "projects": ["osnova-auth"],
+          "target": "build"
+        }
+      ]
+    },
+    "lint": {
+      "dependsOn": ["db-generate", "graphql-generate"]
+    },
+    "test-db": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "dependsOn": [
+        "db-generate",
+        "graphql-generate",
+        {
+          "projects": ["osnova-auth"],
+          "target": "build"
+        }
+      ],
+      "options": {
+        "command": "npm run test:db --",
+        "cwd": "holita/apps/commerce",
+        "forwardAllArgs": true
+      }
+    }
+  }
+}

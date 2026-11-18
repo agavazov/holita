@@ -1,0 +1,273 @@
+import 'dotenv/config';
+import { afterAll, beforeAll, expect, it } from '@jest/globals';
+import { Test } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { createServer, type Server } from 'node:http';
+import pg from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../src/generated/prisma/client.js';
+import { AppModule } from '../src/app.module.js';
+import { DatabaseService } from '../src/database.service.js';
+
+const tenantA = randomUUID();
+const tenantB = randomUUID();
+const branchA = randomUUID();
+const branchB = randomUUID();
+const branchForeign = randomUUID();
+const tokens = {
+  viewer: `holita-session.${'a'.repeat(43)}`,
+  operator: `holita-session.${'b'.repeat(43)}`,
+  administrator: `holita-session.${'c'.repeat(43)}`,
+  foreign: `holita-session.${'d'.repeat(43)}`,
+  platform: `holita-session.${'e'.repeat(43)}`,
+};
+const identities = new Map([
+  [tokens.viewer, { tenantId: tenantA, role: 'VIEWER', platform: false }],
+  [tokens.operator, { tenantId: tenantA, role: 'OPERATOR', platform: false }],
+  [tokens.administrator, { tenantId: tenantA, role: 'ADMINISTRATOR', platform: false }],
+  [tokens.foreign, { tenantId: tenantB, role: 'ADMINISTRATOR', platform: false }],
+  [tokens.platform, { tenantId: tenantB, role: 'ADMINISTRATOR', platform: true }],
+]);
+const previous = {
+  token: process.env.CORE_INTERNAL_AUTH_TOKEN,
+  verify: process.env.CORE_AUTH_VERIFY_URL,
+  graphql: process.env.CORE_GRAPHQL_URL,
+};
+let connection: pg.Client | undefined;
+let database: PrismaClient | undefined;
+let core: Server | undefined;
+let app: INestApplication | undefined;
+let schema = '';
+let endpoint: string;
+
+beforeAll(async () => {
+  const configured = process.env.COMMERCE_TEST_DATABASE_URL;
+  if (!configured) {
+    throw new Error('COMMERCE_TEST_DATABASE_URL is required');
+  }
+  const url = new URL(configured);
+  if (
+    url.hostname !== '127.0.0.1' ||
+    url.pathname !== '/holita_commerce_test' ||
+    url.username !== 'holita_commerce_test'
+  ) {
+    throw new Error('The dedicated local holita_commerce_test database is required');
+  }
+  schema = `test_${randomUUID().replaceAll('-', '')}`;
+  connection = new pg.Client({ connectionString: configured });
+  await connection.connect();
+  await connection.query(`CREATE SCHEMA ${pg.escapeIdentifier(schema)}`);
+  await connection.query(`SET search_path TO ${pg.escapeIdentifier(schema)}`);
+  const sql = await readFile(
+    new URL('../prisma/migrations/20261119000000_baseline/migration.sql', import.meta.url),
+    'utf8',
+  );
+  await connection.query(sql);
+  database = new PrismaClient({
+    adapter: new PrismaPg({ connectionString: configured }, { schema }),
+  });
+  const coreServer = createServer((request, response) => {
+    const token = request.headers.authorization?.replace(/^Bearer /, '') ?? '';
+    const identity = identities.get(token);
+    if (request.url === '/internal/auth/verify') {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(
+        JSON.stringify(
+          identity
+            ? { ...identity, userId: tenantA, sessionId: branchA }
+            : { authenticated: false },
+        ),
+      );
+      return;
+    }
+    let body = '';
+    request.on('data', (chunk: Buffer) => {
+      body += chunk.toString();
+    });
+    request.on('end', () => {
+      const value: unknown = JSON.parse(body);
+      const id =
+        typeof value === 'object' &&
+        value !== null &&
+        'variables' in value &&
+        typeof value.variables === 'object' &&
+        value.variables !== null &&
+        'id' in value.variables
+          ? value.variables.id
+          : undefined;
+      const allowed =
+        identity &&
+        !identity.platform &&
+        ((identity.tenantId === tenantA && (id === branchA || id === branchB)) ||
+          (identity.tenantId === tenantB && id === branchForeign));
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ data: { branch: allowed ? { id } : null } }));
+    });
+  });
+  core = coreServer;
+  await new Promise<void>((resolve) => coreServer.listen(0, '127.0.0.1', resolve));
+  const address = coreServer.address();
+  if (!address || typeof address === 'string') {
+    throw new Error('Missing test Core address');
+  }
+  process.env.CORE_INTERNAL_AUTH_TOKEN = 'commerce-test-internal-token-at-least-32-characters';
+  process.env.CORE_AUTH_VERIFY_URL = `http://127.0.0.1:${String(address.port)}/internal/auth/verify`;
+  process.env.CORE_GRAPHQL_URL = `http://127.0.0.1:${String(address.port)}/graphql`;
+  const module = await Test.createTestingModule({ imports: [AppModule] })
+    .overrideProvider(DatabaseService)
+    .useValue({ client: database })
+    .compile();
+  app = module.createNestApplication({ logger: false });
+  await app.listen(0, '127.0.0.1');
+  endpoint = `${await app.getUrl()}/graphql`;
+});
+
+afterAll(async () => {
+  await app?.close();
+  await database?.$disconnect();
+  if (connection) {
+    await connection.query(`DROP SCHEMA ${pg.escapeIdentifier(schema)} CASCADE`);
+    await connection.end();
+  }
+  if (core) {
+    const server = core;
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+  if (previous.token === undefined) {
+    delete process.env.CORE_INTERNAL_AUTH_TOKEN;
+  } else {
+    process.env.CORE_INTERNAL_AUTH_TOKEN = previous.token;
+  }
+  if (previous.verify === undefined) {
+    delete process.env.CORE_AUTH_VERIFY_URL;
+  } else {
+    process.env.CORE_AUTH_VERIFY_URL = previous.verify;
+  }
+  if (previous.graphql === undefined) {
+    delete process.env.CORE_GRAPHQL_URL;
+  } else {
+    process.env.CORE_GRAPHQL_URL = previous.graphql;
+  }
+});
+
+async function query(
+  token: string,
+  branch: string,
+  source: string,
+  variables: Record<string, unknown> = {},
+): Promise<unknown> {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+      'x-branch-id': branch,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ query: source, variables }),
+  });
+  return response.json();
+}
+
+it('enforces tenant and Branch isolation and merchant roles through Core', async () => {
+  if (!database) {
+    throw new Error('Missing test database');
+  }
+  const rows = await Promise.all([
+    database.product.create({
+      data: {
+        tenantId: tenantA,
+        branchId: branchA,
+        name: 'Local',
+        price: '19.95',
+        status: 'ACTIVE',
+      },
+    }),
+    database.product.create({
+      data: { tenantId: tenantA, branchId: branchB, name: 'Other shop', price: '4.00' },
+    }),
+    database.product.create({
+      data: { tenantId: tenantB, branchId: branchForeign, name: 'Other merchant', price: '2.00' },
+    }),
+  ]);
+  await database.customer.create({
+    data: { tenantId: tenantA, branchId: branchA, name: 'Customer', email: 'Person@example.test' },
+  });
+  await expect(
+    database.customer.create({
+      data: {
+        tenantId: tenantA,
+        branchId: branchA,
+        name: 'Duplicate',
+        email: 'person@example.test',
+      },
+    }),
+  ).rejects.toThrow();
+  await expect(
+    database.customer.create({
+      data: {
+        tenantId: tenantA,
+        branchId: branchB,
+        name: 'Other shop',
+        email: 'person@example.test',
+      },
+    }),
+  ).resolves.toBeDefined();
+  for (const [role, bearer, branch, expectedId, canWrite] of [
+    ['viewer', tokens.viewer, branchA, rows[0].id, false],
+    ['operator', tokens.operator, branchA, rows[0].id, true],
+    ['administrator', tokens.administrator, branchB, rows[1].id, true],
+    ['foreign', tokens.foreign, branchForeign, rows[2].id, true],
+  ] as const) {
+    const result = await query(
+      bearer,
+      branch,
+      '{products{items{id name price} total offset limit}}',
+    );
+    expect({ role, result }).toMatchObject({
+      role,
+      result: { data: { products: { total: 1, items: [{ id: expectedId }] } } },
+    });
+    const write = await query(
+      bearer,
+      branch,
+      'mutation{createProduct(input:{name:"Added",price:"1.25",status:ACTIVE}){name price}}',
+    );
+    expect({ role, write }).toMatchObject({
+      role,
+      write: canWrite
+        ? { data: { createProduct: { name: 'Added', price: '1.25' } } }
+        : { data: null, errors: expect.any(Array) },
+    });
+  }
+  expect(await query(tokens.operator, branchForeign, '{products{total}}')).toMatchObject({
+    data: null,
+    errors: expect.any(Array),
+  });
+  expect(await query(tokens.platform, branchForeign, '{products{total}}')).toMatchObject({
+    data: null,
+    errors: expect.any(Array),
+  });
+  expect(
+    await query(tokens.operator, branchA, 'query($id:ID!){product(id:$id){id}}', {
+      id: rows[1].id,
+    }),
+  ).toEqual({ data: { product: null } });
+  expect(
+    await query(
+      tokens.operator,
+      branchA,
+      'mutation($id:ID!){updateProduct(id:$id,input:{name:"No",price:"1.00",status:DRAFT}){id}}',
+      { id: rows[2].id },
+    ),
+  ).toMatchObject({ data: null, errors: expect.any(Array) });
+});

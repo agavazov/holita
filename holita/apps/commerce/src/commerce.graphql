@@ -1,0 +1,70 @@
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+enum ProductSortField {
+  NAME
+  PRICE
+  STATUS
+  CREATED_AT
+}
+enum SortDirection {
+  ASC
+  DESC
+}
+input ProductSort {
+  field: ProductSortField! = NAME
+  direction: SortDirection! = ASC
+}
+input ProductCondition {
+  nameContains: String
+  statuses: [ProductStatus!]
+  minimumPrice: String
+  maximumPrice: String
+}
+input ProductFilter {
+  statuses: [ProductStatus!]
+  allOf: [ProductCondition!]
+}
+input ProductInput {
+  name: String!
+  price: String!
+  status: ProductStatus!
+}
+type Product {
+  id: ID!
+  name: String!
+  price: String!
+  status: ProductStatus!
+  createdAt: String!
+  updatedAt: String!
+}
+type ProductPage {
+  items: [Product!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+type Customer {
+  id: ID!
+  name: String!
+  email: String!
+  createdAt: String!
+  updatedAt: String!
+}
+type Query {
+  products(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    filter: ProductFilter
+    sort: ProductSort
+  ): ProductPage!
+  product(id: ID!): Product
+  customers: [Customer!]!
+}
+type Mutation {
+  createProduct(input: ProductInput!): Product!
+  updateProduct(id: ID!, input: ProductInput!): Product!
+}

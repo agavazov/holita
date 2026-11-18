@@ -26,6 +26,8 @@ export default tseslint.config(
       'playwright-report/**',
       'discocan/apps/*/src/generated/**',
       'osnova/apps/*/src/generated/**',
+      'holita/apps/*/src/generated/**',
+      'holita/packages/*/src/generated/**',
       'osnova/packages/ui/src/app/generated/**',
       '.nx/**',
       '**/.angular/**',
@@ -72,7 +74,11 @@ export default tseslint.config(
     },
   },
   {
-    files: ['osnova/apps/core/**/*.ts', 'discocan/apps/{fleet,erm-server}/**/*.ts'],
+    files: [
+      'osnova/apps/core/**/*.ts',
+      'discocan/apps/{fleet,erm-server}/**/*.ts',
+      'holita/apps/commerce/**/*.ts',
+    ],
     languageOptions: {
       globals: globals.node,
     },
@@ -81,7 +87,12 @@ export default tseslint.config(
     },
   },
   {
-    files: ['discocan/apps/admin/**/*.ts', 'osnova/packages/ui/**/*.ts'],
+    files: [
+      'discocan/apps/admin/**/*.ts',
+      'holita/apps/{admin,backoffice,sales}/**/*.ts',
+      'holita/packages/operator/**/*.ts',
+      'osnova/packages/ui/**/*.ts',
+    ],
     languageOptions: { globals: globals.browser },
     extends: [angular.configs.tsRecommended],
     processor: angular.processInlineTemplates,
@@ -90,7 +101,12 @@ export default tseslint.config(
     },
   },
   {
-    files: ['discocan/apps/admin/**/*.html', 'osnova/packages/ui/**/*.html'],
+    files: [
+      'discocan/apps/admin/**/*.html',
+      'holita/apps/{admin,backoffice,sales}/**/*.html',
+      'holita/packages/operator/**/*.html',
+      'osnova/packages/ui/**/*.html',
+    ],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
   },
   eslintConfigPrettier,

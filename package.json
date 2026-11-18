@@ -11,7 +11,8 @@
     "discocan/apps/*",
     "discocan/packages/*",
     "osnova/packages/*",
-    "osnova/apps/*"
+    "osnova/apps/*",
+    "holita/apps/*"
   ],
   "overrides": {
     "mysql2": "3.24.4",
@@ -65,7 +66,7 @@
     "db:seed:driver-scorecards": "tsx discocan/apps/fleet/prisma/demo/driver-scorecards-cli.ts",
     "test:core:db": "nx run osnova-core:test-db --skip-nx-cache --output-style=static",
     "prelint": "npm run db:generate && npm run codegen",
-    "typecheck:tools": "tsc --project discocan/tools/tsconfig.json && tsc --project osnova/tools/tsconfig.json && tsc --project tools/tsconfig.json",
+    "typecheck:tools": "tsc --project discocan/tools/tsconfig.json && tsc --project osnova/tools/tsconfig.json && tsc --project tools/tsconfig.json && tsc --project holita/tools/tsconfig.json",
     "codegen": "nx run-many -t graphql-generate",
     "schema:compose": "npm run graphql:generate --workspace @discocan/gateway",
     "schema:check": "tsx tools/graphql-check.mts",
@@ -76,7 +77,10 @@
     "test:fleet:db": "nx run fleet:test-db --skip-nx-cache --output-style=static",
     "test:smoke:admin": "nx run admin:test-smoke --output-style=static",
     "router:check": "npm run router:check --workspace @discocan/gateway",
-    "check:admin-styles": "tsx osnova/tools/design/check-admin-styles.mts"
+    "check:admin-styles": "tsx osnova/tools/design/check-admin-styles.mts",
+    "db:setup:holita": "tsx tools/holita-database.mts",
+    "db:test:setup:holita": "tsx tools/holita-database.mts --test",
+    "test:holita:commerce:db": "DOTENV_CONFIG_PATH=../../config/commerce.env nx run holita-commerce:test-db --output-style=static"
   },
   "devDependencies": {
     "@apollo/composition": "2.14.4",
