@@ -491,6 +491,9 @@ describe('Branches GraphQL with PostgreSQL', () => {
         });
       }
     }
+    const activeBranch = await database.client.branch.create({
+      data: { tenantId, name: 'Active during merchant suspension' },
+    });
     const resolveBranch = async (id: string, token: string = internalAuthToken) => {
       const response = await fetch(new URL('/internal/branches/resolve', url), {
         method: 'POST',
@@ -528,9 +531,6 @@ describe('Branches GraphQL with PostgreSQL', () => {
         platformAdmin,
       ),
     ).toEqual({ data: { setMerchantStatus: { id: tenantId, status: 'SUSPENDED' } } });
-    const activeBranch = await database.client.branch.findFirstOrThrow({
-      where: { tenantId, status: 'ACTIVE' },
-    });
     expect(await resolveBranch(activeBranch.id)).toEqual({ status: 200, body: { branch: null } });
     expect(await accountQuery('{me{id}}', {}, customer)).toMatchObject({
       errors: [{ extensions: { code: 'UNAUTHENTICATED' } }],
