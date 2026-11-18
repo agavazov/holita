@@ -6,7 +6,7 @@ import type { INestApplication } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../src/app.module.js';
-import { issueDemoToken } from '../src/auth/demo-auth.js';
+import { issueDemoToken } from '@osnova/auth';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
@@ -203,7 +203,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${issueDemoToken(selectedScope.tenantId)}`,
+        authorization: `Bearer ${issueDemoToken(selectedScope.tenantId, 'discocan')}`,
         'x-branch-id': selectedScope.branchId,
       },
       body: JSON.stringify({
@@ -431,7 +431,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          authorization: `Bearer ${issueDemoToken(selectedScope.tenantId)}`,
+          authorization: `Bearer ${issueDemoToken(selectedScope.tenantId, 'discocan')}`,
           'x-branch-id': selectedScope.branchId,
         },
         body: JSON.stringify({
@@ -470,7 +470,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          authorization: `Bearer ${issueDemoToken(selectedScope.tenantId)}`,
+          authorization: `Bearer ${issueDemoToken(selectedScope.tenantId, 'discocan')}`,
           'x-branch-id': selectedScope.branchId,
         },
         body: JSON.stringify({
@@ -1129,7 +1129,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          authorization: `Bearer ${issueDemoToken(scopeA.tenantId)}`,
+          authorization: `Bearer ${issueDemoToken(scopeA.tenantId, 'discocan')}`,
           'x-branch-id': scopeA.branchId,
         },
         body: JSON.stringify({
@@ -1228,7 +1228,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          authorization: `Bearer ${issueDemoToken(selectedScope.tenantId)}`,
+          authorization: `Bearer ${issueDemoToken(selectedScope.tenantId, 'discocan')}`,
           'x-branch-id': selectedScope.branchId,
         },
         body: JSON.stringify({
@@ -1282,7 +1282,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          authorization: `Bearer ${issueDemoToken(selectedScope.tenantId)}`,
+          authorization: `Bearer ${issueDemoToken(selectedScope.tenantId, 'discocan')}`,
           'x-branch-id': selectedScope.branchId,
         },
         body: JSON.stringify({
@@ -1326,7 +1326,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${issueDemoToken(scopeA.tenantId)}`,
+        authorization: `Bearer ${issueDemoToken(scopeA.tenantId, 'discocan')}`,
         'x-branch-id': scopeA.branchId,
       },
       body: JSON.stringify({

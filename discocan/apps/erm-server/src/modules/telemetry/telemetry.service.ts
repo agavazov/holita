@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { getArgumentValues, type GraphQLResolveInfo } from 'graphql';
-import { requireTenant } from '../../auth/demo-auth.js';
+import { requireTenant } from '@osnova/auth';
 import type {
   ErmDeviceEventsInput,
   ErmDevicePageInput,

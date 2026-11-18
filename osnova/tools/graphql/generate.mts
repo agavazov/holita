@@ -27,7 +27,9 @@ export async function generate(
   target: string,
   extraScalars: Record<string, string> = {},
 ) {
-  if (target !== 'check' && !targets[target]) throw new Error(`Unknown GraphQL target: ${target}`);
+  if (target !== 'check' && !targets[target]) {
+    throw new Error(`Unknown GraphQL target: ${target}`);
+  }
   const composition = composeContracts(await readContracts(subgraphs));
   const documents = await readOperations(composition.apiSchema, operationPaths);
   async function writeChanged(path: string, content: string) {
@@ -78,12 +80,17 @@ export async function generate(
   }
 
   const selected = targets[target];
-  if (selected?.supergraph)
+  if (selected?.supergraph) {
     await writeChanged(selected.supergraph, composition.supergraphSdl + '\n');
-  if (selected?.schema) await writeChanged(selected.schema, composition.clientSdl);
+  }
+  if (selected?.schema) {
+    await writeChanged(selected.schema, composition.clientSdl);
+  }
   if (selected?.server) {
     const schema = composition.schemas.get(selected.server.subgraph);
-    if (!schema) throw new Error(`Missing ${selected.server.subgraph} schema`);
+    if (!schema) {
+      throw new Error(`Missing ${selected.server.subgraph} schema`);
+    }
     await generateTypes(selected.server.path, schema, false);
   }
   for (const client of selected?.clients ?? []) {

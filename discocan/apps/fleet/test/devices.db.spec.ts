@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app.module.js';
-import { issueDemoToken } from '../src/auth/demo-auth.js';
+import { issueDemoToken } from '@osnova/auth';
 import { CoreClient } from '../src/integrations/core/core.client.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { uniqueViolation } from '../src/validation.js';
@@ -58,7 +58,7 @@ describe('Device GraphQL with PostgreSQL', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${issueDemoToken(authTenantId)}`,
+        authorization: `Bearer ${issueDemoToken(authTenantId, 'discocan')}`,
         'x-branch-id': branchId,
       },
       body: JSON.stringify({ query: source, variables }),

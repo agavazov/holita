@@ -1,7 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import type { RequestContext } from '../graphql/request-context.js';
-import { readDemoTenant, requireTenant } from './demo-auth.js';
-import { readSession } from './session-auth.js';
+import { readDemoTenant, readSession, requireTenant } from '@osnova/auth';
 
 export type UserRole = 'VIEWER' | 'OPERATOR' | 'ENGINEER' | 'ADMINISTRATOR';
 
@@ -12,11 +11,17 @@ const ROLE_LEVEL: Record<UserRole, number> = {
   ADMINISTRATOR: 3,
 };
 
+export function isUserRole(value: string): value is UserRole {
+  return (
+    value === 'VIEWER' || value === 'OPERATOR' || value === 'ENGINEER' || value === 'ADMINISTRATOR'
+  );
+}
+
 export async function hasRole(context: RequestContext, minimum: UserRole): Promise<boolean> {
   const tenantId = requireTenant(context);
   const identity = await readSession(context.authorization);
   const role =
-    identity?.tenantId === tenantId
+    identity?.tenantId === tenantId && isUserRole(identity.role)
       ? identity.role
       : readDemoTenant(context.authorization) === tenantId
         ? 'ADMINISTRATOR'

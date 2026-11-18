@@ -5,7 +5,7 @@ import { NotFoundException, type INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import pg from 'pg';
 import { AppModule } from '../src/app.module.js';
-import { issueDemoToken } from '../src/auth/demo-auth.js';
+import { issueDemoToken } from '@osnova/auth';
 import type { UserRole } from '../src/auth/roles.js';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
@@ -113,7 +113,7 @@ describe('Fleet scope isolation and referential integrity in PostgreSQL', () => 
         ...(scope.authorization
           ? { authorization: scope.authorization }
           : scope.tenantId
-            ? { authorization: `Bearer ${issueDemoToken(scope.tenantId)}` }
+            ? { authorization: `Bearer ${issueDemoToken(scope.tenantId, 'discocan')}` }
             : {}),
         ...(scope.branchId ? { 'x-branch-id': scope.branchId } : {}),
       },

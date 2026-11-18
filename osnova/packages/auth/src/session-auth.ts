@@ -1,12 +1,11 @@
 import { createHash } from 'node:crypto';
 import { ServiceUnavailableException } from '@nestjs/common';
-import { isUserRole, type UserRole } from './roles.js';
 
-interface SessionIdentity {
+export interface SessionIdentity {
   tenantId: string;
   userId: string;
   sessionId: string;
-  role: UserRole;
+  role: string;
 }
 
 const verifiedSessions = new Map<string, { identity: SessionIdentity; expiresAt: number }>();
@@ -19,7 +18,10 @@ function isUuid(value: unknown): value is string {
 export async function readSession(
   authorization: string | undefined,
 ): Promise<SessionIdentity | undefined> {
-  if (!authorization || !/^Bearer discocan-session\.[A-Za-z0-9_-]{43}$/i.test(authorization)) {
+  if (
+    !authorization ||
+    !/^[Bb][Ee][Aa][Rr][Ee][Rr] [a-z0-9-]+-session\.[A-Za-z0-9_-]{43}$/.test(authorization)
+  ) {
     return undefined;
   }
   const internalToken = process.env.CORE_INTERNAL_AUTH_TOKEN;
@@ -62,11 +64,11 @@ export async function readSession(
       !('sessionId' in body) ||
       !isUuid(body.sessionId) ||
       !('role' in body) ||
-      !isUserRole(body.role)
+      typeof body.role !== 'string'
     ) {
       return undefined;
     }
-    const identity = {
+    const identity: SessionIdentity = {
       tenantId: body.tenantId,
       userId: body.userId,
       sessionId: body.sessionId,

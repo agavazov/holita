@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
-import { issueDemoToken } from '../../src/auth/demo-auth.js';
+import { issueDemoToken } from '@osnova/auth';
 import { createPrismaClient } from '../../src/database/client.js';
 import { getDatabaseUrl } from '../../src/database/connection.js';
 import { CoreClient } from '../../src/integrations/core/core.client.js';
@@ -25,7 +25,7 @@ async function run(): Promise<void> {
     tenantId: DEMO_TENANT_ID,
     branchId: DEMO_BRANCH_ID,
     requestId: randomUUID(),
-    authorization: `Bearer ${issueDemoToken(DEMO_TENANT_ID)}`,
+    authorization: `Bearer ${issueDemoToken(DEMO_TENANT_ID, 'discocan')}`,
     branchChecks: new Map(),
   });
   const client = createPrismaClient(options.connectionString, options.schema);

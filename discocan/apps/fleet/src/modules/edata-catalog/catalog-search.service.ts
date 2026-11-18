@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { requireTenant } from '../../auth/demo-auth.js';
+import { requireTenant } from '@osnova/auth';
 import type {
   FleetEdataParameter,
   FleetEdataParameterPage,

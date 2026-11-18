@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { print } from 'graphql';
-import { requireTenant } from '../../auth/demo-auth.js';
+import { requireTenant } from '@osnova/auth';
 import {
   ErmFleetDeviceDocument,
   type ErmFleetDeviceQueryVariables,

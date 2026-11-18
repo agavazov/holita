@@ -8,7 +8,7 @@ import {
   type OnModuleDestroy,
   type OnModuleInit,
 } from '@nestjs/common';
-import { requireTenant } from '../../auth/demo-auth.js';
+import { requireTenant } from '@osnova/auth';
 import { PrismaService } from '../../database/prisma.service.js';
 import type {
   StartErmEdataChangeInput,

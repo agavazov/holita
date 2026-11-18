@@ -6,6 +6,7 @@ import {
   targets,
 } from '../discocan/tools/graphql/contracts.mjs';
 
+// Register each product with local GraphQL contracts here.
 for (const product of [{ operationPaths, scalars, subgraphs, targets }]) {
   await generate(
     product.subgraphs,

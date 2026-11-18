@@ -64,7 +64,7 @@
     "db:seed:driver-scorecards": "tsx discocan/apps/fleet/prisma/demo/driver-scorecards-cli.ts",
     "test:core:db": "nx run core:test-db --skip-nx-cache --output-style=static",
     "prelint": "npm run db:generate && npm run codegen",
-    "typecheck:tools": "tsc --project discocan/tools/tsconfig.json && tsc --project osnova/tools/tsconfig.json",
+    "typecheck:tools": "tsc --project discocan/tools/tsconfig.json && tsc --project osnova/tools/tsconfig.json && tsc --project tools/tsconfig.json",
     "codegen": "nx run-many -t graphql-generate",
     "schema:compose": "npm run graphql:generate --workspace @discocan/gateway",
     "schema:check": "tsx tools/graphql-check.mts",

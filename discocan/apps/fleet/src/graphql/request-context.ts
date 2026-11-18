@@ -1,5 +1,6 @@
-import { readDemoTenant } from '../auth/demo-auth.js';
-import { readSession } from '../auth/session-auth.js';
+import { readDemoTenant } from '@osnova/auth';
+import { readSession } from '@osnova/auth';
+import { isUserRole } from '../auth/roles.js';
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
@@ -28,8 +29,9 @@ export async function createRequestContext({
   const header = req.headers['x-branch-id'];
   const authorization = req.headers.authorization;
   res.setHeader('x-request-id', requestId);
-  const isSession = /^Bearer discocan-session\./i.test(authorization ?? '');
-  const identity = isSession ? await readSession(authorization) : undefined;
+  const isSession = /^[Bb][Ee][Aa][Rr][Ee][Rr] [a-z0-9-]+-session\./.test(authorization ?? '');
+  const verified = isSession ? await readSession(authorization) : undefined;
+  const identity = verified && isUserRole(verified.role) ? verified : undefined;
   return {
     requestId,
     tenantId: isSession ? identity?.tenantId : readDemoTenant(authorization),

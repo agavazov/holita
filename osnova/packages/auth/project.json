@@ -1,0 +1,12 @@
+{
+  "name": "osnova-auth",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "osnova/packages/auth/src",
+  "tags": ["type:lib", "product:osnova"],
+  "targets": {
+    "build": {
+      "outputs": ["{projectRoot}/dist"]
+    }
+  }
+}

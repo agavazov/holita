@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
-import { requireTenant } from './auth/demo-auth.js';
+import { requireTenant } from '@osnova/auth';
 import { Prisma } from './generated/prisma/client.js';
 import { dateOnlyToDate, isDateOnly } from './graphql/scalars.js';
 

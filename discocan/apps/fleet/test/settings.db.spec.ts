@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from '@je
 import { NotFoundException, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../src/app.module.js';
-import { issueDemoToken } from '../src/auth/demo-auth.js';
+import { issueDemoToken } from '@osnova/auth';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import type { UpdateFleetSettingsInput } from '../src/generated/graphql/types.js';
@@ -57,7 +57,9 @@ describe('Fleet settings persistence and scoped calculation with PostgreSQL', ()
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        ...(tenant === null ? {} : { authorization: `Bearer ${issueDemoToken(tenant)}` }),
+        ...(tenant === null
+          ? {}
+          : { authorization: `Bearer ${issueDemoToken(tenant, 'discocan')}` }),
         'x-branch-id': branchId,
       },
       body: JSON.stringify({ query: source, variables }),

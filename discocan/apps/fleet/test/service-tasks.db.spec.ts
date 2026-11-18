@@ -4,7 +4,7 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import pg from 'pg';
 import { AppModule } from '../src/app.module.js';
-import { issueDemoToken } from '../src/auth/demo-auth.js';
+import { issueDemoToken } from '@osnova/auth';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import type { Prisma } from '../src/generated/prisma/client.js';
@@ -226,7 +226,7 @@ describe('Service tasks and urgency with PostgreSQL', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${issueDemoToken(tenantId)}`,
+        authorization: `Bearer ${issueDemoToken(tenantId, 'discocan')}`,
         'x-branch-id': scope,
       },
       body: JSON.stringify({ query: source, variables }),

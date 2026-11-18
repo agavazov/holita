@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "lint": "eslint .",
     "test": "node --experimental-vm-modules ../../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
-    "predev": "npm run db:generate && npm run graphql:generate",
+    "predev": "nx run osnova-auth:build && npm run db:generate && npm run graphql:generate",
     "prestart": "npm run db:generate && npm run graphql:generate",
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
@@ -39,7 +39,8 @@
     "graphql": "16.14.2",
     "pg": "8.23.0",
     "reflect-metadata": "0.2.2",
-    "rxjs": "7.8.2"
+    "rxjs": "7.8.2",
+    "@osnova/auth": "*"
   },
   "devDependencies": {
     "@nestjs/cli": "12.0.0",

@@ -99,7 +99,7 @@ import {
 import { TelemetryRepository } from '../src/modules/telemetry/telemetry.repository.js';
 import { TelemetryService } from '../src/modules/telemetry/telemetry.service.js';
 import { deviceTelemetryRequest } from '../src/modules/telemetry/device-request.js';
-import { issueDemoToken, readDemoTenant } from '../src/auth/demo-auth.js';
+import { issueDemoToken, readDemoTenant } from '@osnova/auth';
 import { createTestDatabase } from './test-database.js';
 
 it('persists captured connection lifecycle and raw frames through the production repository', async () => {
@@ -559,7 +559,7 @@ it('persists captured connection lifecycle and raw frames through the production
     const tenantId = randomUUID();
     const context = {
       requestId: randomUUID(),
-      tenantId: readDemoTenant(`Bearer ${issueDemoToken(tenantId)}`),
+      tenantId: readDemoTenant(`Bearer ${issueDemoToken(tenantId, 'discocan')}`),
       role: 'ADMINISTRATOR' as const,
     };
     const unauthenticated = { requestId: randomUUID(), tenantId: undefined };
@@ -804,7 +804,7 @@ it('persists captured connection lifecycle and raw frames through the production
     const scopedContext = {
       ...context,
       branchId,
-      authorization: `Bearer ${issueDemoToken(tenantId)}`,
+      authorization: `Bearer ${issueDemoToken(tenantId, 'discocan')}`,
     };
     let fleetError: string | undefined;
     let gatewayStatus = 200;
@@ -1792,7 +1792,7 @@ it('persists captured connection lifecycle and raw frames through the production
       const foreignContext = {
         ...scopedContext,
         ...foreignScope,
-        authorization: `Bearer ${issueDemoToken(foreignScope.tenantId)}`,
+        authorization: `Bearer ${issueDemoToken(foreignScope.tenantId, 'discocan')}`,
       };
       expect((await requests.list({}, foreignContext)).total).toBe(0);
       expect(await requests.batch(blockedBatch.id, foreignContext)).toBeNull();
@@ -2581,7 +2581,7 @@ it('persists captured connection lifecycle and raw frames through the production
       {
         ...scopedContext,
         tenantId: foreignTenantId,
-        authorization: `Bearer ${issueDemoToken(foreignTenantId)}`,
+        authorization: `Bearer ${issueDemoToken(foreignTenantId, 'discocan')}`,
       },
     ]) {
       const denied = await graphql({
@@ -5043,7 +5043,10 @@ it('persists captured connection lifecycle and raw frames through the production
     ]);
     for (const foreignScope of [
       { branchId: randomUUID() },
-      { tenantId: foreignTenantId, authorization: `Bearer ${issueDemoToken(foreignTenantId)}` },
+      {
+        tenantId: foreignTenantId,
+        authorization: `Bearer ${issueDemoToken(foreignTenantId, 'discocan')}`,
+      },
     ]) {
       const foreignRouting = await graphql({
         schema: karmaSchema,
