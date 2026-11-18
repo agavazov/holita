@@ -1,5 +1,5 @@
 ---
-name: discocan-admin-development
+name: osnova-admin-development
 description: Review or extend the connected discocan Discocan Fleet admin using shared screen presentation, generated Gateway contracts and scoped Apollo lifecycles. Not for backend implementation.
 ---
 
@@ -54,12 +54,12 @@ Vehicles is the reference feature, with `vehicles-page.ts`, `vehicle-editor-page
   litres, integer EUR cents).
 - Live restart, firmware policy and signal/voltage have no provider contract and stay
   unavailable.
-- Presentation follows the [admin design-system skill](../discocan-admin-design-system/SKILL.md).
+- Presentation follows the [admin design-system skill](../osnova-admin-design-system/SKILL.md).
   Keep the Bulgarian/English catalogs, light/dark themes and loading/error/empty states.
 
 ## Checks
 
-Use [focused validation](../discocan-focused-validation/SKILL.md): run `npm run check` once when
+Use [focused validation](../osnova-focused-validation/SKILL.md): run `npm run check` once when
 handing over. A change to login, routing, transport or a main journey also runs the matching file
 of `npm run test:smoke:admin`. Do not add specs beyond the
 [delivery policy](../../../AGENTS.md#delivery-policy).

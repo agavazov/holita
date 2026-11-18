@@ -54,8 +54,8 @@ code is the reference for behavior details.
 
 ## Angular admin (discocan/apps/admin)
 
-- Follow [discocan-admin-development](../../.agents/skills/discocan-admin-development/SKILL.md) and the
-  [admin design-system skill](../../.agents/skills/discocan-admin-design-system/SKILL.md). Framework
+- Follow [osnova-admin-development](../../.agents/skills/osnova-admin-development/SKILL.md) and the
+  [admin design-system skill](../../.agents/skills/osnova-admin-design-system/SKILL.md). Framework
   conventions come from [angular-developer](../../.agents/skills/angular-developer/SKILL.md).
 - Keep standalone Angular and Component → concrete feature service → Apollo with generated
   TypedDocumentNodes through the actual Gateway. Do not add generic CRUD, facades, repositories,

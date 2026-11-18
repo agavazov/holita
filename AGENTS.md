@@ -143,10 +143,10 @@ Workspace and Osnova documentation lives in `docs/`; product documentation lives
 - When the user authorizes a checkpoint in `.tmp/`, update it with progress, exact check results
   and next steps.
 - Skills:
-  - [validation](.agents/skills/discocan-focused-validation/SKILL.md)
-  - [backend](.agents/skills/discocan-backend-feature/SKILL.md)
-  - [Angular admin](.agents/skills/discocan-admin-development/SKILL.md)
-  - [admin design system](.agents/skills/discocan-admin-design-system/SKILL.md)
+  - [validation](.agents/skills/osnova-focused-validation/SKILL.md)
+  - [backend](.agents/skills/osnova-backend-feature/SKILL.md)
+  - [Angular admin](.agents/skills/osnova-admin-development/SKILL.md)
+  - [admin design system](.agents/skills/osnova-admin-design-system/SKILL.md)
 
 ## Project backlog
 

@@ -1,5 +1,5 @@
 ---
-name: discocan-admin-design-system
+name: osnova-admin-design-system
 description: Apply the shared design system to any presentation change in discocan/apps/admin.
 ---
 

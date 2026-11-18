@@ -1,7 +1,7 @@
 # Admin design system
 
 The shared presentation rules in `@osnova/ui`, consumed by `discocan/apps/admin`: theme, global styles, shell and reusable
-patterns. Use the [design-system skill](../.agents/skills/discocan-admin-design-system/SKILL.md)
+patterns. Use the [design-system skill](../.agents/skills/osnova-admin-design-system/SKILL.md)
 when changing presentation. Meridian is visual inspiration only; no copied source/assets.
 The code defines individual component inputs and implementation details.
 
@@ -390,7 +390,7 @@ The development-only `/:language/design` page displays the theme and shared patt
 7. PrimeNG control: follow [usage rules](#primeng-usage-rules) and coverage.
 8. Font weight: add its licensed WOFF under `discocan/apps/admin/public/fonts/lato` and the `_fonts.scss` weight entry.
 
-Follow [focused validation](../.agents/skills/discocan-focused-validation/SKILL.md) at handover;
+Follow [focused validation](../.agents/skills/osnova-focused-validation/SKILL.md) at handover;
 review the development design page and changed screens at desktop and 375 px.
 
 ## Extending

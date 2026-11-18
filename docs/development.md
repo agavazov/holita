@@ -323,9 +323,9 @@ The repository includes the official
 from the official source, keeping its referenced files together. Codex discovers repository
 skills automatically; start a new turn, or restart Codex if the new skill does not appear.
 
-[discocan-admin-development](../.agents/skills/discocan-admin-development/SKILL.md) adds only
+[osnova-admin-development](../.agents/skills/osnova-admin-development/SKILL.md) adds only
 DiscoCan's application boundaries, generated contracts, lifecycle and check selection.
-[discocan-admin-design-system](../.agents/skills/discocan-admin-design-system/SKILL.md) covers central
+[osnova-admin-design-system](../.agents/skills/osnova-admin-design-system/SKILL.md) covers central
 token, brand, density and pattern changes, new PrimeNG controls and screens built from the
 patterns, with their stories and checks.
 

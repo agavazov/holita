@@ -26,10 +26,10 @@ verified Tenant scope.
 - [ERM gateway and API processes](architecture/decisions/0007-erm-gateway-and-api-processes.md).
 - [ERM telemetry into Fleet activity](architecture/decisions/0008-erm-telemetry-into-fleet-activity.md).
 - [Contributor rules](../AGENTS.md).
-- [Backend skill](../.agents/skills/discocan-backend-feature/SKILL.md).
-- [Angular admin skill](../.agents/skills/discocan-admin-development/SKILL.md).
-- [Admin design-system skill](../.agents/skills/discocan-admin-design-system/SKILL.md).
-- [Focused validation skill](../.agents/skills/discocan-focused-validation/SKILL.md).
+- [Backend skill](../.agents/skills/osnova-backend-feature/SKILL.md).
+- [Angular admin skill](../.agents/skills/osnova-admin-development/SKILL.md).
+- [Admin design-system skill](../.agents/skills/osnova-admin-design-system/SKILL.md).
+- [Focused validation skill](../.agents/skills/osnova-focused-validation/SKILL.md).
 - [Angular agent tools](development.md#angular-agent-tools).
 
 Choose the domain before reading or updating its documentation. Shared tooling remains in
