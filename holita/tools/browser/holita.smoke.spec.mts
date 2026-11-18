@@ -418,7 +418,7 @@ test('staff creates a merchant and its administrator creates a product', async (
     const productName = `Product ${randomUUID()}`;
     await merchant.locator('#product-name').fill(productName);
     await merchant.locator('#product-price').fill('25.50');
-    await merchant.getByRole('combobox', { name: /Status/ }).click();
+    await merchant.locator('p-select[formcontrolname="status"]').click();
     await merchant.getByRole('option', { name: 'Active', exact: true }).click();
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(merchant.getByText(productName, { exact: true })).toBeVisible();
@@ -435,6 +435,10 @@ test('staff creates a merchant and its administrator creates a product', async (
     await secretFill(shopper.locator('#password'), `Temporary-${randomUUID()}`);
     await shopper.getByRole('button', { name: 'Register', exact: true }).click();
     await expect(shopper.getByText('Shopper', { exact: true })).toBeVisible();
+    await shopper.getByRole('link', { name: 'Products', exact: true }).click();
+    await expect(shopper.getByRole('link', { name: productName })).toBeVisible();
+    await merchant.getByRole('link', { name: 'Customers', exact: true }).click();
+    await expect(merchant.getByText('Shopper', { exact: true })).toBeVisible();
   } finally {
     for (const close of cleanup.reverse()) {
       try {
