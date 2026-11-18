@@ -1,0 +1,10 @@
+{
+  "title": "Sign in",
+  "intro": "Sign in to your account.",
+  "email": "Email",
+  "password": "Password",
+  "submit": "Sign in",
+  "language": "Language",
+  "emailError": "Enter a valid email.",
+  "passwordError": "Enter a password."
+}

@@ -1,3 +1,5 @@
+import bg from './bg.json';
+import en from './en.json';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonDirective } from 'primeng/button';
@@ -39,29 +41,7 @@ export class SignIn {
     }),
     password: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
   });
-  protected readonly text = computed(() =>
-    this.language() === 'bg'
-      ? {
-          title: 'Вход',
-          intro: 'Влезте във Вашия профил.',
-          email: 'Имейл',
-          password: 'Парола',
-          submit: 'Вход',
-          language: 'Език',
-          emailError: 'Въведете валиден имейл.',
-          passwordError: 'Въведете парола.',
-        }
-      : {
-          title: 'Sign in',
-          intro: 'Sign in to your account.',
-          email: 'Email',
-          password: 'Password',
-          submit: 'Sign in',
-          language: 'Language',
-          emailError: 'Enter a valid email.',
-          passwordError: 'Enter a password.',
-        },
-  );
+  protected readonly text = computed(() => (this.language() === 'bg' ? bg : en));
   protected readonly languages = computed<readonly MenuOption[]>(() => [
     { id: 'bg', label: 'Български', lang: 'bg', selected: this.language() === 'bg' },
     { id: 'en', label: 'English', lang: 'en', selected: this.language() === 'en' },
