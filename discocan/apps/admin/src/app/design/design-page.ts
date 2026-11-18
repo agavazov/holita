@@ -9,7 +9,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { loadDesignPage, UI_LANGUAGE } from '@osnova/ui';
+import { loadDesignPage } from '@osnova/ui/design';
+import { UI_LANGUAGE } from '@osnova/ui';
 import { FleetConnection } from '../ui/fleet-live/fleet-connection';
 import { FleetLastReport } from '../ui/fleet-live/fleet-last-report';
 import { FleetNow } from '../ui/fleet-live/fleet-now';

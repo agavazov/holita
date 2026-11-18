@@ -7,7 +7,7 @@ import { Map } from '@primeicons/angular/map';
 import { Star } from '@primeicons/angular/star';
 import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
-import { StackedBars, type StackedLegendItem, type StackedRow } from '@osnova/ui';
+import { StackedBars, type StackedLegendItem, type StackedRow } from '@osnova/ui/charts';
 import { EmptyState } from '@osnova/ui';
 import { FormatNumberPipe } from '@osnova/ui';
 import { formatNumber } from '@osnova/ui';

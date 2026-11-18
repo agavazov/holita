@@ -1,6 +1,6 @@
 # Admin design system
 
-The shared presentation rules in `@osnova/ui`, consumed by `discocan/apps/admin`: theme, global styles, shell and reusable
+The shared presentation rules in `@osnova/ui` (with chart patterns in `@osnova/ui/charts`), consumed by `discocan/apps/admin`: theme, global styles, shell and reusable
 patterns. Use the [design-system skill](../.agents/skills/osnova-admin-design-system/SKILL.md)
 when changing presentation. Meridian is visual inspiration only; no copied source/assets.
 The code defines individual component inputs and implementation details.
@@ -377,7 +377,7 @@ The speed reference generates no alert or device command.
 
 ## Design page
 
-The development-only `/:language/design` page displays the theme and shared patterns. Applications can mount `loadDesignPage` from `@osnova/ui`; the Discocan wrapper projects its Fleet examples into the shared page.
+The development-only `/:language/design` page displays the theme and shared patterns. Applications can mount `loadDesignPage` from `@osnova/ui/design`; the Discocan wrapper projects its Fleet examples into the shared page.
 
 ## Changing the design centrally
 

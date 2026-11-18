@@ -19,7 +19,7 @@ import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Skeleton } from 'primeng/skeleton';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { Tag } from 'primeng/tag';
-import { ColumnSeries, type SeriesPoint } from '@osnova/ui';
+import { ColumnSeries, type SeriesPoint } from '@osnova/ui/charts';
 import { EmptyState } from '@osnova/ui';
 import { FleetNow } from '../../../ui/fleet-live/fleet-now';
 import { FaultCluster } from '../../../ui/fleet-live/fault-cluster';

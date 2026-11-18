@@ -1,9 +1,4 @@
-export * from './ui/chart-panel/chart-model';
 export * from './ui/chart-panel/chart-palette';
-export * from './ui/chart-panel/chart-panel';
-export * from './ui/charts/column-series';
-export * from './ui/charts/sparkline';
-export * from './ui/charts/stacked-bars';
 export * from './ui/clock';
 export * from './ui/confirm';
 export * from './ui/drawer/drawer-host';
@@ -47,7 +42,6 @@ export * from './ui/tones';
 export * from './ui/ui-language';
 export * from './ui/format/display-preferences';
 export type { Language } from './i18n/messages';
-export { loadDesignPage } from './design/load-design-page';
 export * from './catalogs';
 
 export * from './layout/admin-shell';

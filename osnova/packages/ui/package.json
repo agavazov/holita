@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./theme": "./src/theme.ts",
-    "./layout": "./src/layout.ts"
+    "./layout": "./src/layout.ts",
+    "./charts": "./src/charts.ts",
+    "./design": "./src/design.ts"
   },
   "sideEffects": false,
   "peerDependencies": {

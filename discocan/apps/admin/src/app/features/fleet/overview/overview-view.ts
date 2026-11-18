@@ -22,7 +22,7 @@ import {
   type ChartPanelPoint,
   type ChartPanelSelection,
   type ChartPanelSeries,
-} from '@osnova/ui';
+} from '@osnova/ui/charts';
 import { EmptyState } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { formatNumber } from '@osnova/ui';
