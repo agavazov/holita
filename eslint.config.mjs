@@ -17,6 +17,7 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/dist/**',
       '**/dist-dev/**',
+      '**/dist-*/**',
       'apps/erm-server/live/**',
       'apps/erm-server/live-api/**',
       'discocan/apps/erm-server/live/**',

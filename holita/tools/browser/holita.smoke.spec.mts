@@ -260,8 +260,8 @@ async function secretFill(locator: Locator, value: string): Promise<void> {
 async function signIn(page: Page, email: string, password: string): Promise<void> {
   await page.getByRole('button', { name: 'Език' }).click();
   await page.getByText('English', { exact: true }).click();
-  await page.getByLabel('Email', { exact: true }).fill(email);
-  await secretFill(page.getByLabel('Password', { exact: true }), password);
+  await page.locator('#sign-in-email').fill(email);
+  await secretFill(page.locator('#sign-in-password'), password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
@@ -351,14 +351,14 @@ test('staff creates a merchant and its administrator creates a product', async (
     const merchantName = `Merchant ${randomUUID()}`;
     const merchantEmail = `merchant-${randomUUID()}@example.test`;
     const merchantPassword = `Temporary-${randomUUID()}`;
-    await staff.getByLabel('Name', { exact: true }).fill(merchantName);
-    await staff.getByLabel('Administrator name').fill('Merchant administrator');
-    await staff.getByLabel('Email', { exact: true }).fill(merchantEmail);
-    await secretFill(staff.getByLabel('Initial password'), merchantPassword);
+    await staff.locator('#merchant-name').fill(merchantName);
+    await staff.locator('#merchant-admin-name').fill('Merchant administrator');
+    await staff.locator('#merchant-admin-email').fill(merchantEmail);
+    await secretFill(staff.locator('#merchant-password'), merchantPassword);
     await staff.getByRole('button', { name: 'Save', exact: true }).click();
     await staff.getByRole('link', { name: merchantName }).click();
     await staff.getByRole('button', { name: 'Create shop', exact: true }).click();
-    await staff.getByLabel('Name', { exact: true }).fill('First shop');
+    await staff.locator('#shop-name').fill('First shop');
     await staff.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(staff.getByText('First shop', { exact: true })).toBeVisible();
     const merchantContext = await browser.newContext();
@@ -368,13 +368,21 @@ test('staff creates a merchant and its administrator creates a product', async (
     await signIn(merchant, merchantEmail, merchantPassword);
     await merchant.getByRole('button', { name: 'Create product', exact: true }).click();
     const productName = `Product ${randomUUID()}`;
-    await merchant.getByLabel('Name', { exact: true }).fill(productName);
-    await merchant.getByLabel('Price', { exact: true }).fill('25.50');
+    await merchant.locator('#product-name').fill(productName);
+    await merchant.locator('#product-price').fill('25.50');
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(merchant.getByText(productName, { exact: true })).toBeVisible();
   } finally {
+    const errors: unknown[] = [];
     for (const close of cleanup.reverse()) {
-      await close();
+      try {
+        await close();
+      } catch (error: unknown) {
+        errors.push(error);
+      }
+    }
+    if (errors.length) {
+      throw new AggregateError(errors, 'Isolated smoke cleanup failed');
     }
   }
 });

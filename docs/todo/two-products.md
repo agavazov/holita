@@ -21,24 +21,9 @@ architecture with a thin Holita slice, not a port of the old platform.
 
 ## Steps
 
-2. **Osnova backend.** Without behaviour change for Discocan:
-   - Core moves to `osnova/apps/core`; each product runs it with its own configuration.
-   - `@osnova/auth`: one session check replacing the copies in Fleet and ERM Server. The token
-     prefix becomes per-instance configuration; Discocan keeps `discocan-session.` because the live
-     ERM API build accepts only that form.
-   - Core gains platform accounts beside tenant accounts (Holita: staff and sales agents) through
-     an additive migration.
-   - The shared sign-in page moves to `@osnova/ui`.
-   - The Router base (binary install, configuration, Rhai hook) moves to Osnova; each product
-     keeps a small gateway with its subgraph list.
-   - Tooling becomes product-aware: GraphQL contracts, database setup, `kill`, the smoke fixture and
-     `dev:discocan` / `dev:holita`.
-3. **Holita operator slice.** Core instance and seeds (one staff account, one merchant with two
-   shops); a `holita/apps/commerce` subgraph with products (name, price, status) and customers;
-   the operator gateway; Backoffice (merchants and shops: list, create, suspend), Admin (shop
-   selection, products list and editor, customers list) and Sales (the merchant list read-only for
-   a sales agent). All three use the shared shell, sign-in and listings.
-4. **Holita storefront.** A second, public schema on the commerce subgraph and its own Router;
+1. **Discocan shared sign-in.** Adopt the shared sign-in page in the Discocan admin, preserving
+   its demo Tenant/Branch selection and existing appearance.
+2. **Holita storefront.** A second, public schema on the commerce subgraph and its own Router;
    the shop resolved from the request; per-shop shopper registration and sign-in with a
    shop-scoped token issued by commerce, not Core; `holita/apps/storefront` with the product list,
    a product page, registration, sign-in and the shopper's account page.
@@ -48,7 +33,7 @@ architecture with a thin Holita slice, not a port of the old platform.
 - Before the next ERM deploy, repoint the `discocan-erm-*` user units to `discocan/apps/erm-server`
   and the inactive `holita-erm-relay` unit to `discocan/tools/erm-relay/relay.mts`. It restarts the
   ERM gateway, so the owner picks the moment.
-- The 60-case test budget is shared by both products (47 used) and stays at 60 (owner,
+- The 60-case test budget is shared by both products (49 used) and stays at 60 (owner,
   2026-11-18): Holita's isolation and contract tests extend existing cases with internal tables.
 - `npm run format:check` fails on 14 tracked files that predate the move.
 - Later: OpenID Connect sign-in, cart/checkout/orders, the storefront rendering engine, per-product
