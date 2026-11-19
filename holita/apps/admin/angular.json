@@ -33,12 +33,29 @@
             "stylePreprocessorOptions": {
               "includePaths": ["../../../osnova/packages/ui/src/styles"]
             }
+          },
+          "configurations": {
+            "development": {
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "public",
+                  "output": "/"
+                },
+                {
+                  "glob": "**/*",
+                  "input": "public/fonts/lato",
+                  "output": "fonts/lato",
+                  "followSymlinks": true
+                }
+              ]
+            }
           }
         },
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
-            "buildTarget": "admin:build",
+            "buildTarget": "admin:build:development",
             "host": "127.0.0.1",
             "port": 12000,
             "proxyConfig": "proxy.conf.mjs"
