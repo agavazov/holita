@@ -10,6 +10,8 @@ import { FormField } from '../form-field/form-field';
 import { MenuButton, type MenuOption } from '../menu-button/menu-button';
 import { ThemeMenu } from '../theme-menu/theme-menu';
 
+export type SignInForm = FormGroup<{ email: FormControl<string>; password: FormControl<string> }>;
+
 /** A credential screen; the application owns authentication and navigation. */
 @Component({
   selector: 'osnova-sign-in',
@@ -32,9 +34,16 @@ export class SignIn {
   readonly language = input.required<Language>();
   readonly busy = input(false);
   readonly error = input<string | null>(null);
+  readonly heroTitle = input<string | null>(null);
+  readonly heroDescription = input('');
+  readonly customToolbar = input(false);
+  readonly showCredentials = input(true);
+  readonly fieldIdPrefix = input('sign-in');
+  readonly textOverrides = input<Partial<typeof en>>({});
+  readonly credentialsForm = input<SignInForm | null>(null);
   readonly languageChange = output<Language>();
   readonly submitCredentials = output<{ email: string; password: string }>();
-  protected readonly form = new FormGroup({
+  private readonly defaultForm = new FormGroup({
     email: new FormControl('', {
       nonNullable: true,
       validators: [
@@ -48,7 +57,11 @@ export class SignIn {
       validators: [(control) => Validators.required(control)],
     }),
   });
-  protected readonly text = computed(() => (this.language() === 'bg' ? bg : en));
+  protected readonly form = computed(() => this.credentialsForm() ?? this.defaultForm);
+  protected readonly text = computed(() => ({
+    ...(this.language() === 'bg' ? bg : en),
+    ...this.textOverrides(),
+  }));
   protected readonly languages = computed<readonly MenuOption[]>(() => [
     { id: 'bg', label: 'Български', lang: 'bg', selected: this.language() === 'bg' },
     { id: 'en', label: 'English', lang: 'en', selected: this.language() === 'en' },
@@ -59,9 +72,16 @@ export class SignIn {
     }
   }
   protected submit(): void {
-    this.form.markAllAsTouched();
-    if (this.form.valid && !this.busy()) {
-      this.submitCredentials.emit(this.form.getRawValue());
+    const form = this.form();
+    form.markAllAsTouched();
+    if (form.invalid) {
+      document
+        .getElementById(
+          `${this.fieldIdPrefix()}-${form.controls.email.invalid ? 'email' : 'password'}`,
+        )
+        ?.focus();
+    } else if (!this.busy()) {
+      this.submitCredentials.emit(form.getRawValue());
     }
   }
 }

@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
@@ -7,6 +9,10 @@
   display: grid;
   place-items: center;
   padding: var(--p-app-space-6);
+}
+
+.sign-in__main {
+  inline-size: min(100%, 28rem);
 }
 
 .sign-in__toolbar {
@@ -47,4 +53,123 @@
 .sign-in form {
   display: grid;
   gap: var(--p-app-space-4);
+}
+
+.sign-in--hero {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  place-items: stretch;
+  min-block-size: 100dvh;
+  padding: 0;
+  background: var(--p-app-canvas-background);
+}
+.sign-in__hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--p-app-space-10);
+  padding: var(--p-app-space-10);
+  background: var(--p-app-hero-background);
+  color: var(--p-app-hero-color);
+}
+.sign-in__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--p-app-space-3);
+  font-weight: 800;
+  font-size: var(--p-app-text-title);
+}
+.sign-in__hero-mark {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border: 1px solid currentColor;
+  border-radius: var(--p-app-radius-panel);
+}
+.sign-in__hero-message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-app-space-5);
+  margin-block: auto;
+  max-inline-size: 30rem;
+  padding-block: var(--p-app-space-10);
+}
+.sign-in__eyebrow {
+  font-size: var(--p-app-text-sm);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+.sign-in__hero h2 {
+  color: var(--p-app-hero-color);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1.1;
+  font-weight: 800;
+}
+.sign-in__hero p {
+  font-size: var(--p-app-text-lg);
+  line-height: 1.6;
+}
+.sign-in--hero .sign-in__main {
+  inline-size: auto;
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+.sign-in--hero .sign-in__toolbar {
+  position: static;
+  justify-content: flex-end;
+  gap: var(--p-app-space-1);
+  padding: var(--p-app-space-3) var(--p-app-space-4);
+}
+.sign-in--hero .sign-in__container {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: var(--p-app-space-6) var(--p-app-space-4) var(--p-app-space-10);
+}
+.sign-in--hero .sign-in__panel {
+  padding: var(--p-app-space-8);
+  overflow-wrap: anywhere;
+}
+.sign-in--hero h1 {
+  font-size: var(--p-app-text-title);
+}
+.sign-in--hero input {
+  inline-size: 100%;
+}
+.sign-in--hero button[type='submit'] {
+  justify-content: center;
+}
+@include bp.below(lg) {
+  .sign-in--hero {
+    grid-template-columns: 1fr;
+  }
+  .sign-in__hero {
+    padding: var(--p-app-space-6);
+  }
+  .sign-in__hero-message {
+    margin: 0;
+    padding: 0;
+    gap: var(--p-app-space-2);
+    max-inline-size: none;
+  }
+  .sign-in__hero h2 {
+    font-size: var(--p-app-text-title);
+  }
+  .sign-in__eyebrow {
+    display: none;
+  }
+}
+@include bp.below(sm) {
+  .sign-in--hero .sign-in__panel {
+    padding: var(--p-app-space-5);
+  }
+  .sign-in__hero {
+    padding: var(--p-app-space-5);
+    gap: var(--p-app-space-4);
+  }
+  .sign-in__hero p {
+    font-size: var(--p-app-text-sm);
+  }
 }

@@ -10,7 +10,7 @@ const exceptions = [
     reason: 'Map marker icon',
   },
   {
-    file: `${app}/features/auth/login.scss`,
+    file: 'osnova/packages/ui/src/ui/sign-in/sign-in.scss',
     property: 'font-size',
     value: 'clamp(2rem, 4vw, 3.5rem)',
     reason: 'Responsive sign-in heading',

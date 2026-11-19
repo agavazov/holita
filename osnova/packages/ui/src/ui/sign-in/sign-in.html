@@ -1,57 +1,85 @@
-<main class="sign-in">
-  <div class="sign-in__toolbar">
-    <osnova-menu-button
-      variant="text"
-      [ariaLabel]="text().language"
-      [options]="languages()"
-      (choose)="chooseLanguage($event.id)"
-      >{{ language().toUpperCase() }}</osnova-menu-button
-    >
-    <osnova-theme-menu />
-  </div>
-  <section class="sign-in__panel app-card" [attr.aria-label]="text().title">
-    <div class="sign-in__identity">
-      <span class="sign-in__mark" aria-hidden="true">{{ productMark() }}</span
-      ><strong>{{ productName() }}</strong>
+<div class="sign-in" [class.sign-in--hero]="heroTitle()">
+  @if (heroTitle(); as title) {
+  <aside class="sign-in__hero" aria-labelledby="sign-in-hero-title">
+    <div class="sign-in__brand" [attr.aria-label]="productName()">
+      <span class="sign-in__hero-mark" aria-hidden="true">{{ productMark() }}</span>
+      <span>{{ productName() }}</span>
     </div>
-    <h1>{{ text().title }}</h1>
-    <p>{{ text().intro }}</p>
-    <form [formGroup]="form" (ngSubmit)="submit()">
-      <osnova-form-field
-        controlId="sign-in-email"
-        [label]="text().email"
-        [required]="true"
-        [error]="form.controls.email.touched && form.controls.email.invalid ? text().emailError : null"
+    <div class="sign-in__hero-message">
+      <span class="sign-in__eyebrow">{{ productName() }}</span>
+      <h2 id="sign-in-hero-title">{{ title }}</h2>
+      <p>{{ heroDescription() }}</p>
+    </div>
+  </aside>
+  }
+  <div class="sign-in__main">
+    <div class="sign-in__toolbar">
+      @if (!customToolbar()) {
+      <osnova-menu-button
+        variant="text"
+        [ariaLabel]="text().language"
+        [options]="languages()"
+        (choose)="chooseLanguage($event.id)"
+        >{{ language().toUpperCase() }}</osnova-menu-button
       >
-        <input
-          pInputText
-          id="sign-in-email"
-          type="email"
-          autocomplete="username"
-          formControlName="email"
-          [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid"
-          aria-describedby="sign-in-email-error"
-        />
-      </osnova-form-field>
-      <osnova-form-field
-        controlId="sign-in-password"
-        [label]="text().password"
-        [required]="true"
-        [error]="form.controls.password.touched && form.controls.password.invalid ? text().passwordError : null"
-      >
-        <input
-          pInputText
-          id="sign-in-password"
-          type="password"
-          autocomplete="current-password"
-          formControlName="password"
-          [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid"
-          aria-describedby="sign-in-password-error"
-        />
-      </osnova-form-field>
-      @if (error(); as message) { <p-message severity="error">{{ message }}</p-message> }
-      <button pButton type="submit" [disabled]="busy()">{{ text().submit }}</button>
-    </form>
-    <ng-content />
-  </section>
-</main>
+      <osnova-theme-menu />
+      }
+      <ng-content select="[signInToolbar]" />
+    </div>
+    <main class="sign-in__container">
+      <section class="sign-in__panel app-card" aria-labelledby="sign-in-title">
+        @if (!heroTitle()) {
+        <div class="sign-in__identity">
+          <span class="sign-in__mark" aria-hidden="true">{{ productMark() }}</span
+          ><strong>{{ productName() }}</strong>
+        </div>
+        }
+        <h1 id="sign-in-title" tabindex="-1">{{ text().title }}</h1>
+        <p class="app-muted">{{ text().intro }}</p>
+        <ng-content select="[signInBefore]" />
+        @if (showCredentials()) {
+        <form [formGroup]="form()" (ngSubmit)="submit()" [attr.aria-busy]="busy()">
+          <osnova-form-field
+            [controlId]="fieldIdPrefix() + '-email'"
+            [label]="text().email"
+            [required]="true"
+            [error]="form().controls.email.touched && form().controls.email.invalid ? text().emailError : null"
+          >
+            <input
+              pInputText
+              [id]="fieldIdPrefix() + '-email'"
+              type="email"
+              autocomplete="username"
+              maxlength="254"
+              formControlName="email"
+              [invalid]="form().controls.email.touched && form().controls.email.invalid"
+              [attr.aria-invalid]="form().controls.email.touched && form().controls.email.invalid"
+              [attr.aria-describedby]="form().controls.email.touched && form().controls.email.invalid ? fieldIdPrefix() + '-email-error' : null"
+            />
+          </osnova-form-field>
+          <osnova-form-field
+            [controlId]="fieldIdPrefix() + '-password'"
+            [label]="text().password"
+            [required]="true"
+            [error]="form().controls.password.touched && form().controls.password.invalid ? text().passwordError : null"
+          >
+            <input
+              pInputText
+              [id]="fieldIdPrefix() + '-password'"
+              type="password"
+              autocomplete="current-password"
+              formControlName="password"
+              [invalid]="form().controls.password.touched && form().controls.password.invalid"
+              [attr.aria-invalid]="form().controls.password.touched && form().controls.password.invalid"
+              [attr.aria-describedby]="form().controls.password.touched && form().controls.password.invalid ? fieldIdPrefix() + '-password-error' : null"
+            />
+          </osnova-form-field>
+          @if (error(); as message) { <p-message severity="error">{{ message }}</p-message> }
+          <button pButton type="submit" [disabled]="busy()">{{ text().submit }}</button>
+        </form>
+        }
+        <ng-content />
+      </section>
+    </main>
+  </div>
+</div>
