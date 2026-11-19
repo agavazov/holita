@@ -6,7 +6,11 @@ import type {
   FleetDeviceStatus,
   FleetDeviceSummary,
 } from '../../generated/graphql/types.js';
-import type { FleetDeviceModel, FleetDeviceOption } from '../../generated/prisma/enums.js';
+import type {
+  FleetDeviceModel,
+  FleetDeviceOption,
+  FleetDeviceType,
+} from '../../generated/prisma/enums.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { FleetScope, SortDirection } from '../../validation.js';
 import { vehicleDataClockSql } from '../telemetry/vehicle-facts.sql.js';
@@ -17,7 +21,8 @@ import { warningLampsSql } from './warning-lamps.sql.js';
 
 /** The vehicle reference is loaded with every device through the composite relation. */
 const deviceInclude = {
-  ermCursor: { select: { lastReceivedAt: true } },
+  erm: true,
+  cursor: { select: { lastReceivedAt: true } },
   vehicle: {
     select: { id: true, licensePlate: true, fleetNumber: true, vehicleType: true, status: true },
   },
@@ -36,7 +41,6 @@ export interface DeviceData {
   serialNumber: string | null;
   options: FleetDeviceOption[];
   firmwareVersion: string | null;
-  edataModule: string | null;
   simPhoneNumber: string | null;
   simIccid: string | null;
   smsPassword: string | null;
@@ -133,11 +137,44 @@ export class DevicesRepository {
     });
   }
 
+  forIds(scope: FleetScope, ids: readonly string[]): Promise<DeviceRow[]> {
+    return this.prisma.client.device.findMany({
+      where: { ...scope, id: { in: [...ids] } },
+      include: deviceInclude,
+    });
+  }
+
+  countByImeis(scope: FleetScope, type: FleetDeviceType, imeis: string[]) {
+    return this.prisma.client.device.count({ where: { ...scope, type, imei: { in: imeis } } });
+  }
+
   forVehicles(scope: FleetScope, vehicleIds: readonly string[]): Promise<DeviceRow[]> {
     return this.prisma.client.device.findMany({
       where: { ...scope, vehicleId: { in: [...vehicleIds] } },
       include: deviceInclude,
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  forScheduledFaultRead(types: readonly FleetDeviceType[]) {
+    return this.prisma.client.device.findMany({
+      where: { type: { in: [...types] }, vehicleId: { not: null } },
+      select: { id: true, tenantId: true, branchId: true, imei: true, type: true },
+    });
+  }
+
+  forAnsweredFaultReads(
+    scope: FleetScope,
+    types: readonly FleetDeviceType[],
+    vehicleIds: readonly string[] | undefined,
+  ) {
+    return this.prisma.client.device.findMany({
+      where: {
+        ...scope,
+        type: { in: [...types] },
+        ...(vehicleIds ? { vehicleId: { in: [...vehicleIds] } } : {}),
+      },
+      select: { id: true, vehicleId: true, type: true },
     });
   }
 
@@ -228,17 +265,37 @@ export class DevicesRepository {
     return row !== null;
   }
 
-  create(scope: FleetScope, data: DeviceData): Promise<DeviceRow> {
+  create(
+    scope: FleetScope,
+    data: DeviceData,
+    type: FleetDeviceType,
+    edataModule: string | null,
+  ): Promise<DeviceRow> {
     return this.prisma.client.device.create({
-      data: { ...data, tenantId: scope.tenantId, branchId: scope.branchId },
+      data: {
+        ...data,
+        ...scope,
+        type,
+        ...(type === 'ERM' ? { erm: { create: { edataModule } } } : {}),
+      },
       include: deviceInclude,
     });
   }
 
-  update(scope: FleetScope, id: string, data: Partial<DeviceData>): Promise<DeviceRow> {
+  update(
+    scope: FleetScope,
+    id: string,
+    data: Partial<DeviceData>,
+    edataModule: string | null | undefined,
+  ): Promise<DeviceRow> {
     return this.prisma.client.device.update({
       where: { id, tenantId: scope.tenantId, branchId: scope.branchId },
-      data,
+      data: {
+        ...data,
+        ...(edataModule === undefined
+          ? {}
+          : { erm: { upsert: { create: { edataModule }, update: { edataModule } } } }),
+      },
       include: deviceInclude,
     });
   }

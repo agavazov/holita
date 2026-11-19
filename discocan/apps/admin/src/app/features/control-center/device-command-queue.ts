@@ -17,12 +17,12 @@ import { ButtonDirective } from 'primeng/button';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
-import type { ErmDeviceAction } from '../../../generated/graphql/operations';
+import type { FleetDeviceAction, FleetDeviceType } from '../../../generated/graphql/operations';
 import { DemoSession } from '@osnova/ui/app';
 import { requestError } from '@osnova/ui/app';
 import type { Language } from '../../i18n/messages';
 import { confirmAction, confirmDialogPt } from '@osnova/ui';
-import { FormField } from '@osnova/ui';
+import { EmptyState, FormField } from '@osnova/ui';
 import { interpolate } from '@osnova/ui';
 import {
   CommandDetails,
@@ -34,15 +34,6 @@ import {
 import { ControlCenterApi } from './control-center-api';
 import { commandError, controlCenterText } from './control-center-text';
 
-const actions: readonly ErmDeviceAction[] = [
-  'REQUEST_LOCATION',
-  'READ_STATUS',
-  'READ_VERSION',
-  'READ_ACCESSORIES',
-  'READ_EDATA_DIAGNOSTICS',
-  'READ_EDATA_FAULTS',
-];
-
 @Component({
   selector: 'discocan-device-command-queue',
   imports: [
@@ -51,6 +42,7 @@ const actions: readonly ErmDeviceAction[] = [
     ConfirmDialog,
     InputText,
     Message,
+    EmptyState,
     FormField,
     CommandHistory,
     CommandDetails,
@@ -62,13 +54,14 @@ const actions: readonly ErmDeviceAction[] = [
   host: { class: 'app-view' },
 })
 export class DeviceCommandQueue {
+  readonly deviceType = input.required<FleetDeviceType>();
   readonly deviceId = input.required<string>();
   readonly branchId = input<string | null>(null);
   readonly language = input.required<Language>();
   readonly target = input.required<string>();
   readonly requestId = input<string | null>(null);
   readonly changed = output();
-  protected readonly actions = actions;
+  protected readonly actions = signal<readonly FleetDeviceAction[] | null>(null);
   protected readonly catalog = computed(() => controlCenterText[this.language()]);
   protected readonly text = computed(() => this.catalog().queue);
   protected readonly confirmPt = computed(() =>
@@ -98,7 +91,7 @@ export class DeviceCommandQueue {
   });
   protected readonly requests = signal<readonly CommandRequest[]>([]);
   protected readonly loading = signal(true);
-  protected readonly sending = signal<ErmDeviceAction | null>(null);
+  protected readonly sending = signal<FleetDeviceAction | null>(null);
   protected readonly cancelling = signal<string | null>(null);
   private readonly loadError = signal<string | null>(null);
   private readonly actionError = signal<string | null>(null);
@@ -120,6 +113,29 @@ export class DeviceCommandQueue {
   });
 
   constructor() {
+    effect((onCleanup) => {
+      const deviceType = this.deviceType();
+      this.actions.set(null);
+      const subscription = this.api.watchActionCommands(deviceType).valueChanges.subscribe({
+        next: (result) => {
+          if (result.error) {
+            this.actionError.set(commandError(result.error, this.language()));
+          } else if (result.dataState === 'complete') {
+            this.actions.set(
+              result.data.fleetDeviceActionCatalog
+                .filter((entry) => !entry.requiresParameters)
+                .map((entry) => entry.action),
+            );
+          }
+        },
+        error: (error: unknown) => {
+          this.actionError.set(commandError(error, this.language()));
+        },
+      });
+      onCleanup(() => {
+        subscription.unsubscribe();
+      });
+    });
     effect(() => {
       const requestId = this.requestId();
       if (requestId) {
@@ -138,7 +154,7 @@ export class DeviceCommandQueue {
             this.loadError.set(requestError(result.error, this.text().unavailable));
           } else if (result.dataState === 'complete') {
             this.loadError.set(null);
-            const rows = result.data.fleetDevice.ermCommandRequests;
+            const rows = result.data.fleetDevice.commandRequests;
             this.requests.update((current) => [
               ...rows,
               ...current.filter(
@@ -181,7 +197,7 @@ export class DeviceCommandQueue {
             if (result.error) {
               this.loadError.set(requestError(result.error, this.text().unavailable));
             } else if (result.dataState === 'complete') {
-              const request = result.data.ermCommandRequest;
+              const request = result.data.fleetDeviceCommandRequest;
               if (request?.deviceId === this.deviceId()) {
                 this.upsert(request);
                 this.loadError.set(null);
@@ -225,8 +241,13 @@ export class DeviceCommandQueue {
     );
   }
 
-  protected async send(action: ErmDeviceAction): Promise<void> {
-    if (!this.canOperate() || this.form.invalid || this.sending() !== null) {
+  protected async send(action: FleetDeviceAction): Promise<void> {
+    if (
+      !this.canOperate() ||
+      !this.actions()?.includes(action) ||
+      this.form.invalid ||
+      this.sending() !== null
+    ) {
       return;
     }
     const values = this.form.getRawValue();

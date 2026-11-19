@@ -1,3 +1,4 @@
+import type { DeviceLiveSnapshot, DeviceProblemEvidence } from '@discocan/device-contract';
 import { Injectable } from '@nestjs/common';
 import { FleetClock } from '../../clock/fleet-clock.js';
 import type {
@@ -12,11 +13,11 @@ import type {
 } from '../../generated/graphql/types.js';
 import type { FleetEventSeverity } from '../../generated/prisma/enums.js';
 import type { RequestContext } from '../../graphql/request-context.js';
+import { DeviceAdapters } from '../../integrations/device-adapters.js';
 import {
-  ErmDashboardClient,
-  type ErmDashboardTelemetry,
-  type ErmProblemEvidence,
-} from '../../integrations/erm/erm-dashboard.client.js';
+  storedDiagnosticReport,
+  storedDiagnosticStatus,
+} from '../../database/device-diagnostics.js';
 import {
   booleanFilter,
   dateTimeRange,
@@ -57,26 +58,11 @@ function reportIdentity(imei: string | null, sourceId: string): string {
   return JSON.stringify([imei, sourceId]);
 }
 
-function diagnosticReport(event: ErmProblemEvidence): number | null {
-  if (event.code === 'CAN_DISCONNECTED') {
-    return 417;
-  }
-  const report = /^EDATA_(411|413|417|418|419)$/.exec(event.code);
-  return report ? Number(report[1]) : null;
-}
-
-function rawDiagnostics(event: ErmProblemEvidence) {
-  return event.code === 'CAN_DISCONNECTED' && event.diagnostics.length === 0
-    ? [{ kind: 'CAN_DISCONNECTED' as const, troubleCode: null, status: null }]
-    : event.diagnostics;
-}
-
 function storedDiagnostic(event: StoredEvent): FleetProblemDiagnostic[] {
   if (!['DIAGNOSTIC_TROUBLE_CODE', 'CAN_ERROR', 'CAN_DISCONNECTED'].includes(event.kind)) {
     return [];
   }
-  const legacyFault =
-    event.kind === 'DIAGNOSTIC_TROUBLE_CODE' && event.details?.startsWith('eData 419:');
+  const evidence = event.kind === 'DIAGNOSTIC_TROUBLE_CODE' ? event : { ...event, details: null };
   const faultCode = /^SPN (\d+) FMI (\d+)$/.exec(event.troubleCode ?? '');
   const diagnostic: Omit<
     FleetProblemDiagnostic,
@@ -84,17 +70,8 @@ function storedDiagnostic(event: StoredEvent): FleetProblemDiagnostic[] {
   > = {
     kind: event.kind,
     troubleCode: event.troubleCode,
-    status:
-      event.diagnosticStatus === 1
-        ? 'ADDED'
-        : event.diagnosticStatus === 2
-          ? 'DELETED'
-          : legacyFault
-            ? event.details?.includes('logger deleted')
-              ? 'DELETED'
-              : 'ADDED'
-            : null,
-    report: event.diagnosticReport ?? (legacyFault ? 419 : null),
+    status: storedDiagnosticStatus(evidence),
+    report: storedDiagnosticReport(evidence),
     spn:
       event.diagnosticSpn === null
         ? faultCode
@@ -167,16 +144,13 @@ function diagnosticIdentity(
 }
 
 function importedIdentity(event: StoredEvent): string | null {
-  if (event.source !== 'ERM' || event.deviceImei === null || event.alertStatus !== null) {
+  if (event.source === 'MANUAL' || event.deviceImei === null || event.alertStatus !== null) {
     return null;
   }
   if (event.kind === 'CAN_ERROR' || event.kind === 'CAN_DISCONNECTED') {
     return diagnosticIdentity(event.deviceImei, event.occurredAt, event.kind, null, null);
   }
-  if (
-    event.kind === 'DIAGNOSTIC_TROUBLE_CODE' &&
-    (event.diagnosticReport !== null || event.details?.startsWith('eData 419:'))
-  ) {
+  if (event.kind === 'DIAGNOSTIC_TROUBLE_CODE' && storedDiagnosticReport(event) !== null) {
     return diagnosticIdentity(
       event.deviceImei,
       event.occurredAt,
@@ -188,9 +162,9 @@ function importedIdentity(event: StoredEvent): string | null {
   return null;
 }
 
-function rawIdentities(event: ErmProblemEvidence): string[] {
+function rawIdentities(event: DeviceProblemEvidence): string[] {
   const at = event.eventTime ?? event.occurredAt;
-  return rawDiagnostics(event).map((diagnostic) =>
+  return event.diagnostics.map((diagnostic) =>
     diagnosticIdentity(event.imei, at, diagnostic.kind, diagnostic.troubleCode, diagnostic.status),
   );
 }
@@ -199,7 +173,7 @@ function counts(
   items: FleetProblem[],
   asOf: Date,
   dataAsOf: Date | null,
-  ermAsOf: Date | null,
+  liveAsOf: Date | null,
   period: ProblemPeriod,
 ): FleetProblemCounts {
   const totals = (rows: FleetProblem[]) => ({
@@ -210,7 +184,7 @@ function counts(
   return {
     asOf,
     dataAsOf,
-    ermAsOf,
+    liveAsOf,
     periodFrom: period.from,
     periodTo: period.to,
     ...totals(items),
@@ -229,7 +203,7 @@ function counts(
 export class ProblemsService {
   constructor(
     private readonly problems: ProblemsRepository,
-    private readonly erm: ErmDashboardClient,
+    private readonly adapters: DeviceAdapters,
     private readonly clock: FleetClock,
   ) {}
 
@@ -289,46 +263,56 @@ export class ProblemsService {
       ...page,
       items: items.slice(page.offset, page.offset + page.limit),
       total: items.length,
-      counts: counts(items, asOf, snapshot.dataAsOf, snapshot.ermAsOf, period),
+      counts: counts(items, asOf, snapshot.dataAsOf, snapshot.liveAsOf, period),
     };
   }
 
   async summary(
     context: RequestContext,
     period: ProblemPeriod,
-    telemetry?: ErmDashboardTelemetry,
+    telemetry?: DeviceLiveSnapshot | null,
   ): Promise<FleetProblemCounts> {
     const asOf = this.clock.now();
     const snapshot = await this.snapshot(requireScope(context), period, asOf, telemetry);
-    return counts(snapshot.items, asOf, snapshot.dataAsOf, snapshot.ermAsOf, period);
+    return counts(snapshot.items, asOf, snapshot.dataAsOf, snapshot.liveAsOf, period);
   }
 
   private async snapshot(
     scope: FleetScope,
     period: ProblemPeriod,
     asOf: Date,
-    suppliedTelemetry?: ErmDashboardTelemetry,
+    suppliedTelemetry?: DeviceLiveSnapshot | null,
   ) {
     const stored = await this.problems.snapshot(scope, period);
-    const imeis = stored.devices.map((device) => device.imei);
-    const telemetry = imeis.length
-      ? (suppliedTelemetry ?? (await this.erm.telemetry(imeis)))
-      : null;
-    const raw: ErmProblemEvidence[] = [];
-    let ermAsOf: Date | null = telemetry?.asOf ?? null;
-    for (let start = 0; start < imeis.length; start += 500) {
-      const batch = imeis.slice(start, start + 500);
-      let offset = 0;
-      for (;;) {
-        const page = await this.erm.problems(scope, batch, period, { offset, limit: 500 });
-        raw.push(...page.items);
-        if (ermAsOf === null || page.asOf < ermAsOf) {
-          ermAsOf = page.asOf;
+    const telemetry =
+      suppliedTelemetry === undefined
+        ? await this.adapters.liveStates(stored.devices)
+        : suppliedTelemetry;
+    const raw: DeviceProblemEvidence[] = [];
+    let liveAsOf: Date | null = telemetry?.asOf ?? null;
+    for (const [type, devices] of this.adapters.group(stored.devices, 'problems')) {
+      const adapter = this.adapters.for(type);
+      const imeis = devices.map((device) => device.imei);
+      for (let start = 0; start < imeis.length; start += 500) {
+        const batch = imeis.slice(start, start + 500);
+        let offset = 0;
+        for (;;) {
+          const page = await adapter.problems({
+            ...scope,
+            ...period,
+            imeis: batch,
+            offset,
+            limit: 500,
+          });
+          raw.push(...page.items);
+          if (liveAsOf === null || page.asOf < liveAsOf) {
+            liveAsOf = page.asOf;
+          }
+          if (!page.hasMore) {
+            break;
+          }
+          offset += page.items.length;
         }
-        if (!page.hasMore) {
-          break;
-        }
-        offset += page.items.length;
       }
     }
 
@@ -411,7 +395,7 @@ export class ProblemsService {
         deviceImei: event.deviceImei,
         alertId: event.alertStatus === null ? null : event.id,
         fleetEventId: event.id,
-        ermEventId: event.sourceEventId?.toString() ?? null,
+        sourceEventId: event.sourceEventId?.toString() ?? null,
         commandRequestId: null,
       };
       items.set(id, problem);
@@ -431,7 +415,7 @@ export class ProblemsService {
         rawIdentities(evidence)
           .map((key) => imported.get(key))
           .find((event) => event !== undefined);
-      const diagnostics: FleetProblemDiagnostic[] = rawDiagnostics(evidence).map((diagnostic) => {
+      const diagnostics: FleetProblemDiagnostic[] = evidence.diagnostics.map((diagnostic) => {
         const faultCode = /^SPN (\d+) FMI (\d+)$/.exec(diagnostic.troubleCode ?? '');
         const storedEvent =
           reportEvents.find(
@@ -442,7 +426,7 @@ export class ProblemsService {
           ) ?? importedEvent;
         return {
           ...diagnostic,
-          report: diagnosticReport(evidence) ?? storedEvent?.diagnosticReport ?? null,
+          report: diagnostic.report ?? storedEvent?.diagnosticReport ?? null,
           spn: faultCode ? Number(faultCode[1]) : null,
           fmi: faultCode ? Number(faultCode[2]) : null,
           ...faultMeaning(faultCode ? Number(faultCode[1]) : null, diagnostic.kind),
@@ -453,7 +437,10 @@ export class ProblemsService {
         };
       });
       const currentTarget = evidence.sourceKind !== 'COMMAND' || device.id === evidence.deviceId;
-      const id = `${evidence.sourceKind}:${evidence.sourceId}`;
+      const id =
+        device.type === 'DISCOCAN'
+          ? `${evidence.sourceKind}:device:${device.id}:${evidence.sourceId}`
+          : `${evidence.sourceKind}:${evidence.sourceId}`;
       items.set(id, {
         id,
         sourceKind: evidence.sourceKind,
@@ -471,19 +458,19 @@ export class ProblemsService {
         deviceImei: device.imei,
         alertId: null,
         fleetEventId: importedEvent?.id ?? null,
-        ermEventId: evidence.sourceKind === 'COMMAND' ? null : evidence.sourceId,
+        sourceEventId: evidence.sourceKind === 'COMMAND' ? null : evidence.sourceId,
         commandRequestId: evidence.sourceKind === 'COMMAND' ? evidence.sourceId : null,
       });
     }
-    for (const unit of telemetry?.units ?? []) {
+    for (const unit of telemetry?.devices ?? []) {
       const device = deviceByImei.get(unit.imei);
-      if (!device || unit.lastFrameAt === null || unit.reporting) {
+      if (!device || unit.lastReportAt === null || unit.reporting) {
         continue;
       }
       const occurredAt = new Date(
-        unit.lastFrameAt.getTime() + 2 * unit.expectedIntervalSeconds * 1000,
+        unit.lastReportAt.getTime() + 2 * unit.expectedIntervalSeconds * 1000,
       );
-      const sourceId = `${device.id}:${unit.lastFrameAt.toISOString()}`;
+      const sourceId = `${device.id}:${unit.lastReportAt.toISOString()}`;
       const id = `REPORTING_GAP:${sourceId}`;
       items.set(id, {
         id,
@@ -502,7 +489,7 @@ export class ProblemsService {
         deviceImei: device.imei,
         alertId: null,
         fleetEventId: null,
-        ermEventId: null,
+        sourceEventId: null,
         commandRequestId: null,
       });
     }
@@ -512,7 +499,7 @@ export class ProblemsService {
           right.occurredAt.getTime() - left.occurredAt.getTime() || left.id.localeCompare(right.id),
       ),
       dataAsOf: stored.dataAsOf,
-      ermAsOf,
+      liveAsOf,
       asOf,
     };
   }

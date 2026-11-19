@@ -43,6 +43,32 @@
               [attr.aria-describedby]="describedBy('imei')"
             />
           </osnova-form-field>
+          @if (!device()) {
+            <osnova-form-field
+              [label]="text().type"
+              controlId="device-type"
+              [required]="true"
+              [error]="errorOf('type')"
+            >
+              <p-select
+                inputId="device-type"
+                formControlName="type"
+                [options]="deviceTypes()"
+                optionLabel="label"
+                optionValue="value"
+                appendTo="body"
+                [ariaLabel]="text().type"
+                [invalid]="!!errorOf('type')"
+                [pt]="{
+                  label: {
+                    'aria-invalid': errorOf('type') ? 'true' : undefined,
+                    'aria-describedby': describedBy('type'),
+                  },
+                }"
+                (onChange)="clearHiddenEdataModule()"
+              />
+            </osnova-form-field>
+          }
           <osnova-form-field
             [label]="text().serialNumber"
             controlId="device-serialNumber"
@@ -114,21 +140,23 @@
               [attr.aria-describedby]="describedBy('firmwareVersion')"
             />
           </osnova-form-field>
-          <osnova-form-field
-            [label]="text().edataModule"
-            controlId="device-edataModule"
-            [hint]="text().edataModuleHint"
-            [error]="errorOf('edataModule')"
-          >
-            <input
-              pInputText
-              id="device-edataModule"
-              formControlName="edataModule"
-              [invalid]="!!errorOf('edataModule')"
-              [attr.aria-invalid]="errorOf('edataModule') ? 'true' : null"
-              [attr.aria-describedby]="describedBy('edataModule')"
-            />
-          </osnova-form-field>
+          @if (type() === 'ERM') {
+            <osnova-form-field
+              [label]="text().edataModule"
+              controlId="device-edataModule"
+              [hint]="text().edataModuleHint"
+              [error]="errorOf('edataModule')"
+            >
+              <input
+                pInputText
+                id="device-edataModule"
+                formControlName="edataModule"
+                [invalid]="!!errorOf('edataModule')"
+                [attr.aria-invalid]="errorOf('edataModule') ? 'true' : null"
+                [attr.aria-describedby]="describedBy('edataModule')"
+              />
+            </osnova-form-field>
+          }
           <osnova-form-field
             [label]="text().simPhone"
             controlId="device-simPhoneNumber"

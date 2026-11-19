@@ -12,6 +12,8 @@ import {
 import { injectFleetFormat } from '../format/fleet-format';
 import { formatDuration } from '@osnova/ui';
 import { interpolate } from '@osnova/ui';
+import { karmaBackup } from '../../features/erm/karma-connection';
+import { ermText } from '../../features/erm/erm-text';
 
 @Component({
   selector: 'discocan-fleet-connection',
@@ -21,10 +23,10 @@ import { interpolate } from '@osnova/ui';
       <span class="app-inline">
         <p-tag [value]="status().label" [severity]="toneSeverity(status().tone)" />
         @if (mode() === 'record') {
-          @if (device()?.routing === 'KARMA_BACKUP') {
-            <p-tag [value]="text().backup" [severity]="toneSeverity('warn')" />
+          @if (backup()) {
+            <p-tag [value]="karmaText().backup" [severity]="toneSeverity('warn')" />
           }
-          @if (device()?.ermState?.online && device()?.ermState?.health?.overdue) {
+          @if (device()?.state?.connected && device()?.state?.health?.overdue) {
             <p-tag [value]="text().overdue" [severity]="toneSeverity('warn')" />
           }
         }
@@ -50,34 +52,37 @@ export class FleetConnection {
   readonly mode = input<FleetLiveMode>('record');
   private readonly language = inject(UI_LANGUAGE);
   protected readonly text = computed(() => fleetLiveText(this.language()));
+  protected readonly karmaText = computed(() => ermText[this.language()].connection);
+  protected readonly backup = computed(() => karmaBackup(this.device()));
   private readonly units = injectFleetFormat();
   protected readonly reason = computed(() => {
     const device = this.device(),
-      state = device?.ermState,
+      state = device?.state,
       text = this.text();
-    if (device?.routing === 'KARMA_BACKUP' && device.routingHealth?.backupSince) {
-      return interpolate(text.backupSince, {
-        time: this.units.dateTime(device.routingHealth.backupSince),
+    const backupSince = this.backup()?.routingHealth?.backupSince;
+    if (backupSince) {
+      return interpolate(this.karmaText().backupSince, {
+        time: this.units.dateTime(backupSince),
       });
     }
     if (!state) {
       return null;
     }
-    if (state.health.overdue && state.health.lastFrameAgeSeconds !== null) {
+    if (state.health.overdue && state.health.lastReportAgeSeconds !== null) {
       return interpolate(text.gap, {
-        duration: formatDuration(state.health.lastFrameAgeSeconds, this.language()),
+        duration: formatDuration(state.health.lastReportAgeSeconds, this.language()),
       });
     }
-    if (state.online) {
+    if (state.connected) {
       return null;
     }
     const event = state.latestEvent;
     if (
-      state.lastFrameAt &&
-      (event?.ignitionOn === false || (event?.engineOn === false && (event.speedKmh ?? 0) === 0))
+      state.lastReportAt &&
+      (event?.ignition === false || (event?.engineOn === false && (event.speedKph ?? 0) === 0))
     ) {
       const next = new Date(
-        Date.parse(state.lastFrameAt) + state.health.expectedIntervalSeconds * 1000,
+        Date.parse(state.lastReportAt) + state.health.expectedIntervalSeconds * 1000,
       ).toISOString();
       return interpolate(text.parkedNext, { time: this.units.time(next) });
     }
@@ -88,10 +93,10 @@ export class FleetConnection {
   protected readonly shortReason = computed(() => {
     const device = this.device(),
       text = this.text();
-    if (device?.routing === 'KARMA_BACKUP') {
-      return text.backup;
+    if (this.backup()) {
+      return this.karmaText().backup;
     }
-    if (device?.ermState?.health.overdue) {
+    if (device?.state?.health.overdue) {
       return this.reason();
     }
     return device && !device.vehicleId ? text.unassigned : null;
@@ -106,15 +111,15 @@ export class FleetConnection {
     if (!device) {
       return { label: text.unavailable, tone: 'neutral' };
     }
-    if (device.ermState?.online) {
-      return device.ermState.lastFrameAt && !device.ermState.health.overdue
+    if (device.state?.connected) {
+      return device.state.lastReportAt && !device.state.health.overdue
         ? { label: text.live, tone: 'success' }
         : { label: text.connected, tone: 'info' };
     }
-    if (device.ermState?.lastFrameAt && device.ermState.health.overdue) {
+    if (device.state?.lastReportAt && device.state.health.overdue) {
       return { label: text.overdue, tone: 'warn' };
     }
-    if (device.ermState?.lastFrameAt) {
+    if (device.state?.lastReportAt) {
       return { label: text.reporting, tone: 'info' };
     }
     return { label: text.never, tone: 'neutral' };

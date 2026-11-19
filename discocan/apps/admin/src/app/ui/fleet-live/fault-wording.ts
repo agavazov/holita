@@ -147,7 +147,7 @@ export function faultReadState(
   now: number,
 ): { last: FleetFaultRead | null; pending: FleetFaultRead | null } {
   const faultReads = reads
-    .filter((read) => read.action === 'READ_EDATA_FAULTS')
+    .filter((read) => read.action === 'READ_FAULTS')
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   const inProgress = (read: FleetFaultRead) =>
     read.status === 'QUEUED' ||

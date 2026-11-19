@@ -2,7 +2,7 @@ import { inject, Injectable, NgZone, type OnDestroy } from '@angular/core';
 import { ApolloClient } from '@apollo/client/core';
 import { ApolloBase } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
-import { firstValueFrom, map } from 'rxjs';
+import { firstValueFrom, map, switchMap, type ObservedValueOf } from 'rxjs';
 import {
   AdminLiveFleetDocument,
   AdminLiveTrackDocument,
@@ -13,6 +13,7 @@ import { DemoSession } from '@osnova/ui/app';
 import { AdminConfig } from '../../../core/config/admin-config';
 import { graphqlOptions } from '@osnova/ui/app';
 import type { Language } from '../../../i18n/messages';
+import { readFaultHistories } from '../../../ui/fleet-live/fault-reads';
 
 /** One client per mounted dashboard: the fleet, the selected truck and its recorded trail. */
 @Injectable()
@@ -49,9 +50,18 @@ export class LiveDashboardApi implements OnDestroy {
   }
 
   vehicle(id: string) {
-    return this.client()
+    const client = this.client();
+    return client
       .query({ query: AdminLiveVehicleDocument, variables: { id }, fetchPolicy: 'network-only' })
-      .pipe(map((result) => required(result.data, 'The truck is unavailable.')));
+      .pipe(
+        map((result) => required(result.data, 'The truck is unavailable.')),
+        switchMap((detail) =>
+          readFaultHistories(
+            client,
+            detail.fleetVehicle.devices.map((device) => device.id),
+          ).pipe(map((faultReadsByDevice) => ({ ...detail, faultReadsByDevice }))),
+        ),
+      );
   }
 
   track(vehicleId: string, from: string, to: string) {
@@ -71,7 +81,7 @@ export class LiveDashboardApi implements OnDestroy {
     const result = await firstValueFrom(
       this.client().mutate({ mutation: AdminReadFaultsNowDocument, variables: { deviceId } }),
     );
-    return required(result.data?.sendErmDeviceCommand, 'The fault read was not queued.');
+    return required(result.data?.sendDeviceCommand, 'The fault read was not queued.');
   }
 
   private client(): ApolloBase {
@@ -87,6 +97,8 @@ export class LiveDashboardApi implements OnDestroy {
     this.apollo = undefined;
   }
 }
+
+export type LiveVehicleDetail = ObservedValueOf<ReturnType<LiveDashboardApi['vehicle']>>;
 
 function required<T>(data: T | undefined, message: string): T {
   if (!data) {

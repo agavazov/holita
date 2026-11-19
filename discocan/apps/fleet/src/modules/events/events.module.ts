@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ClockModule } from '../../clock/clock.module.js';
 import { DatabaseModule } from '../../database/database.module.js';
 import { FleetEnabledGuard } from '../../fleet-enabled.guard.js';
-import { ErmDashboardClientModule } from '../../integrations/erm/erm-dashboard.module.js';
+import { DeviceAdaptersModule } from '../../integrations/device-adapters.module.js';
 import { EventsRepository } from './events.repository.js';
 import { EventsResolver } from './events.resolver.js';
 import { EventsService } from './events.service.js';
@@ -11,7 +11,7 @@ import { ProblemsResolver } from './problems.resolver.js';
 import { ProblemsService } from './problems.service.js';
 
 @Module({
-  imports: [DatabaseModule, ClockModule, ErmDashboardClientModule],
+  imports: [DatabaseModule, ClockModule, DeviceAdaptersModule],
   exports: [EventsService, ProblemsService],
   providers: [
     FleetEnabledGuard,

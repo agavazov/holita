@@ -1,3 +1,7 @@
+import {
+  storedDiagnosticReport,
+  storedDiagnosticStatus,
+} from '../../database/device-diagnostics.js';
 import type {
   FleetEventSeverity,
   FleetFaultCheck,
@@ -72,16 +76,6 @@ const SYSTEM_24V_PEAK = 20;
 const LOW_VOLTAGE_24V = 23;
 const LOW_VOLTAGE_12V = 11.5;
 
-function loggerStatus(event: FaultEvidenceEvent): 'ADDED' | 'DELETED' | null {
-  if (event.diagnosticStatus === 1 || event.diagnosticStatus === 2) {
-    return event.diagnosticStatus === 1 ? 'ADDED' : 'DELETED';
-  }
-  if (event.details?.startsWith('eData 419:')) {
-    return event.details.includes('logger deleted') ? 'DELETED' : 'ADDED';
-  }
-  return null;
-}
-
 function finding(
   values: Pick<FleetFaultFinding, 'system' | 'severity' | 'source' | 'since' | 'lastSeenAt'> &
     Partial<FleetFaultFinding>,
@@ -155,9 +149,9 @@ export function faultFindings(
   const codes = new Map<string, { event: FaultEvidenceEvent; since: Date; count: number }>();
   const alerts = new Map<string, { event: FaultEvidenceEvent; since: Date; count: number }>();
   for (const event of evidence.faults) {
-    const report = event.diagnosticReport ?? (event.details?.startsWith('eData 419:') ? 419 : null);
+    const report = storedDiagnosticReport(event);
     const key = JSON.stringify([event.deviceImei, report, event.troubleCode]);
-    const status = loggerStatus(event);
+    const status = storedDiagnosticStatus(event);
     if (status === 'DELETED') {
       codes.delete(key);
     } else if (status === 'ADDED') {

@@ -20,6 +20,9 @@ export const subgraphs = [
     additionalPaths: [
       'discocan/apps/fleet/src/modules/vehicles/vehicles.graphql',
       'discocan/apps/fleet/src/modules/devices/devices.graphql',
+      'discocan/apps/fleet/src/modules/device-inspection/device-inspection.graphql',
+      'discocan/apps/fleet/src/modules/device-commands/device-commands.graphql',
+      'discocan/apps/fleet/src/modules/device-configuration/device-configuration.graphql',
       'discocan/apps/fleet/src/modules/drivers/drivers.graphql',
       'discocan/apps/fleet/src/modules/vehicle-groups/vehicle-groups.graphql',
       'discocan/apps/fleet/src/modules/telemetry/telemetry.graphql',
@@ -55,6 +58,7 @@ export const operationPaths = [
   'discocan/apps/admin/src/app/features/fleet/geo-zones/operations.graphql',
   'discocan/apps/admin/src/app/features/fleet/faults/operations.graphql',
   'discocan/apps/admin/src/app/features/control-center/operations.graphql',
+  'discocan/apps/admin/src/app/features/erm/operations.graphql',
   'discocan/apps/fleet/src/integrations/core/operations.graphql',
   'discocan/apps/erm-server/src/modules/telemetry/operations.graphql',
 ];

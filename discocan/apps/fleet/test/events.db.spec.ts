@@ -1,3 +1,7 @@
+import type {
+  DeviceAnsweredFaultRead,
+  DeviceAnsweredFaultReadsQuery,
+} from '@discocan/device-contract';
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import type { INestApplication } from '@nestjs/common';
@@ -7,11 +11,9 @@ import { issueDemoToken } from '@osnova/auth';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
-import {
-  ErmDashboardClient,
-  type ErmFaultRead,
-  type ErmProblemEvidence,
-} from '../src/integrations/erm/erm-dashboard.client.js';
+import { DiscocanDeviceAdapter } from '../src/integrations/discocan/discocan-device-adapter.js';
+import { ErmFaultReads } from '../src/integrations/erm/erm-fault-reads.js';
+import { ErmStatus, type ErmProblemEvidence } from '../src/integrations/erm/erm-status.js';
 import type { Prisma } from '../src/generated/prisma/client.js';
 import type { RequestContext } from '../src/graphql/request-context.js';
 import { FaultMonitorService } from '../src/modules/fault-monitor/fault-monitor.service.js';
@@ -35,8 +37,10 @@ describe('Events and alert workflow with PostgreSQL', () => {
     otherBranchId = randomUUID();
   const events = new Map<EventKey, string>();
   const ermEvidence: ErmProblemEvidence[] = [];
-  const faultReads: ErmFaultRead[] = [];
-  const faultReadCalls: { deviceIds: readonly string[] | null; count: number }[] = [];
+  const faultReads: DeviceAnsweredFaultRead[] = [];
+  const discocanFaultCalls: DeviceAnsweredFaultReadsQuery[] = [];
+  const discocanFaultReads: DeviceAnsweredFaultRead[] = [];
+  const faultReadCalls: { deviceIds: readonly string[]; count: number }[] = [];
   let van: string, truck: string, driver: string, tripId: string, foreignAlert: string;
   function event(key: EventKey): string {
     const id = events.get(key);
@@ -55,7 +59,17 @@ describe('Events and alert workflow with PostgreSQL', () => {
       .useValue({ requireBranch: jest.fn<CoreClient['requireBranch']>() })
       .overrideProvider(FleetClock)
       .useValue({ now: () => now })
-      .overrideProvider(ErmDashboardClient)
+      .overrideProvider(DiscocanDeviceAdapter)
+      .useValue({
+        answeredFaultReads: (input: DeviceAnsweredFaultReadsQuery) => {
+          discocanFaultCalls.push(input);
+          const rows = discocanFaultReads.filter(({ deviceId }) =>
+            input.deviceIds.includes(deviceId),
+          );
+          return Promise.resolve({ total: rows.length, items: rows.slice(0, input.count) });
+        },
+      })
+      .overrideProvider(ErmStatus)
       .useValue({
         telemetry: (imeis: readonly string[]) =>
           Promise.resolve({
@@ -91,17 +105,18 @@ describe('Events and alert workflow with PostgreSQL', () => {
             counts: [],
           });
         },
+      })
+      .overrideProvider(ErmFaultReads)
+      .useValue({
         // ERM scopes reads by the forwarded session; this fake answers for the main Branch only.
         faultReads: (
           context: Pick<RequestContext, 'branchId'>,
-          filter: { deviceIds: readonly string[] | null; from: Date; to: Date },
+          filter: { deviceIds: readonly string[]; from: Date; to: Date },
           count: number,
         ) => {
           faultReadCalls.push({ deviceIds: filter.deviceIds, count });
           const rows = faultReads.filter(
-            (read) =>
-              context.branchId === branchId &&
-              (filter.deviceIds === null || filter.deviceIds.includes(read.deviceId)),
+            (read) => context.branchId === branchId && filter.deviceIds.includes(read.deviceId),
           );
           return Promise.resolve({ total: rows.length, items: rows.slice(0, count) });
         },
@@ -420,7 +435,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
     // The combined feed exhausts Fleet and ERM pages, deduplicates imported evidence and keeps
     // unresolved alerts independent of the evidence period. Only real alerts carry actions.
     const device = await database.client.device.create({
-      data: { tenantId, branchId, vehicleId: van, imei: '862129080254620' },
+      data: { tenantId, branchId, vehicleId: van, imei: '862129080254620', type: 'ERM' },
     });
     await database.client.fleetEvent.createMany({
       data: Array.from({ length: 101 }, (): Prisma.FleetEventCreateManyInput => ({
@@ -494,7 +509,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
     });
     const problems = `query($filter:FleetProblemFilter,$offset:Int!,$sort:FleetProblemSort){
       fleetProblems(filter:$filter,offset:$offset,limit:1,sort:$sort){
-        total offset limit items{id sourceKind sourceId severity occurredAt state requiringAttention alertId fleetEventId ermEventId commandRequestId deviceId}
+        total offset limit items{id sourceKind sourceId severity occurredAt state requiringAttention alertId fleetEventId sourceEventId commandRequestId deviceId}
         counts{total requiringAttention recorded bySource{sourceKind total requiringAttention recorded}}
       }
     }`;
@@ -531,7 +546,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
               requiringAttention: false,
               alertId: null,
               fleetEventId: imported.id,
-              ermEventId: '901',
+              sourceEventId: '901',
               commandRequestId: null,
               deviceId: device.id,
             },
@@ -770,7 +785,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
         state: 'RECORDED',
         requiringAttention: false,
         alertId: null,
-        ermEventId: report.sourceId,
+        sourceEventId: report.sourceId,
         diagnostics: expectedDiagnostics,
       };
       expectedReports.unshift({
@@ -807,7 +822,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
     }
     const diagnosticProblems = `query($from:DateTime,$to:DateTime) {
       fleetProblems(filter:{sourceKinds:[DIAGNOSTIC],occurredFrom:$from,occurredTo:$to},limit:100){
-        total items{sourceKind sourceId state requiringAttention alertId ermEventId
+        total items{sourceKind sourceId state requiringAttention alertId sourceEventId
           diagnostics{kind troubleCode status report spn fmi systemKey descriptionKey catalogVersion
             firstObservedAt lastObservedAt occurredAt receivedAt}}
       }
@@ -967,14 +982,14 @@ describe('Events and alert workflow with PostgreSQL', () => {
       {
         id: randomUUID(),
         deviceId: device.id,
-        unitId: device.imei,
+        imei: device.imei,
         completedAt: hours(-0.03),
         verdict: { activeCodes: false, codeCount: null, receivedAt: hours(-0.029) },
       },
       {
         id: randomUUID(),
         deviceId: device.id,
-        unitId: device.imei,
+        imei: device.imei,
         completedAt: hours(-0.12),
         verdict: { activeCodes: true, codeCount: 2, receivedAt: hours(-0.119) },
       },
@@ -1094,6 +1109,52 @@ describe('Events and alert workflow with PostgreSQL', () => {
         fleetFaultLog: { total: 1, items: [{ kind: 'LAMP_ON', vehicle: { id: otherVan.id } }] },
       },
     });
+
+    const discocan = await database.client.device.create({
+      data: { tenantId, branchId, imei: '123456789012349', type: 'DISCOCAN' },
+    });
+    const discocanRead = {
+      id: randomUUID(),
+      deviceId: discocan.id,
+      imei: discocan.imei,
+      completedAt: hours(-0.02),
+      verdict: { activeCodes: true, codeCount: 1, receivedAt: hours(-0.019) },
+    };
+    discocanFaultReads.push(discocanRead);
+    const previous = process.env.FLEET_DEVICE_SERVER_ENABLED;
+    process.env.FLEET_DEVICE_SERVER_ENABLED = 'true';
+    try {
+      expect(
+        await query(faultLog, { offset: 0, limit: 1, filter: { kinds: ['FAULT_READ'] } }),
+      ).toMatchObject({
+        data: {
+          fleetFaultLog: {
+            total: 3,
+            items: [
+              {
+                id: `read:${discocanRead.id}`,
+                activeCodes: true,
+                codeCount: 1,
+              },
+            ],
+          },
+        },
+      });
+      expect(discocanFaultCalls).toEqual([
+        expect.objectContaining({
+          tenantId,
+          branchId,
+          deviceIds: [discocan.id],
+          count: 1,
+        }),
+      ]);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.FLEET_DEVICE_SERVER_ENABLED;
+      } else {
+        process.env.FLEET_DEVICE_SERVER_ENABLED = previous;
+      }
+    }
 
     // Trucks with a Device and their newest CAN data and CAN loss, Branch-scoped.
     const monitor = `{ fleetFaultMonitor { vehicle { id } devices { id } faultCheck { checkedAt } canDataAt canLostAt } }`;

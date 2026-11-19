@@ -6,7 +6,7 @@ import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { SelectButton } from 'primeng/selectbutton';
 import { Tag } from 'primeng/tag';
-import type { AdminLiveVehicleQuery } from '../../../../generated/graphql/operations';
+import type { LiveVehicleDetail } from './live-dashboard-api';
 import type { Language } from '../../../i18n/messages';
 import { FaultScanner } from '../../../ui/fleet-live/fault-scanner';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
@@ -51,7 +51,7 @@ export class LiveTruckDetails {
   readonly language = input.required<Language>();
   readonly branchId = input.required<string>();
   readonly truck = input.required<LiveTruck>();
-  readonly detail = input<AdminLiveVehicleQuery | null>(null);
+  readonly detail = input<LiveVehicleDetail | null>(null);
   readonly detailError = input<string | null>(null);
   readonly trail = input<readonly TrailPoint[]>([]);
   readonly trailError = input<string | null>(null);
@@ -73,6 +73,10 @@ export class LiveTruckDetails {
   );
   protected readonly vehicle = computed(() => this.detail()?.fleetVehicle ?? null);
   protected readonly device = computed(() => this.vehicle()?.devices[0] ?? null);
+  protected readonly faultReads = computed(() => {
+    const device = this.device();
+    return device ? (this.detail()?.faultReadsByDevice.get(device.id) ?? []) : [];
+  });
   protected readonly problems = computed(() =>
     (this.detail()?.fleetProblems.items ?? []).filter((problem) => problem.requiringAttention),
   );
@@ -122,7 +126,7 @@ export class LiveTruckDetails {
 
   protected requestFaultRead(): void {
     const device = this.device();
-    if (device) {
+    if (device?.type === 'ERM') {
       this.readFaults.emit(device.id);
     }
   }
@@ -146,11 +150,11 @@ export class LiveTruckDetails {
     return locationMap(truck.position?.latitude, truck.position?.longitude);
   }
 
-  protected title(problem: AdminLiveVehicleQuery['fleetProblems']['items'][number]): string {
+  protected title(problem: LiveVehicleDetail['fleetProblems']['items'][number]): string {
     return problemTitle(problem, this.language());
   }
 
-  protected severity(problem: AdminLiveVehicleQuery['fleetProblems']['items'][number]) {
+  protected severity(problem: LiveVehicleDetail['fleetProblems']['items'][number]) {
     return {
       label: problemsText(this.language()).severities[problem.severity],
       severity: toneSeverity(problemSeverityTones[problem.severity]),
@@ -158,7 +162,7 @@ export class LiveTruckDetails {
   }
 
   protected eventName(): string | null {
-    const event = this.device()?.ermState?.latestEvent;
+    const event = this.device()?.state?.latestEvent;
     return (this.language() === 'bg' ? event?.nameBg : event?.nameEn) ?? null;
   }
 

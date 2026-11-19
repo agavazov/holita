@@ -5,20 +5,31 @@ request lifecycles. Use the existing files directly; there is no generic CRUD la
 
 ## Fleet backend modules
 
-| Module         | Files                                                                                                                                                                                                                                                                                                                                                                                              |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Shared         | [common SDL](../apps/fleet/src/graphql/common.graphql), [scalars](../apps/fleet/src/graphql/scalars.ts), [validation](../apps/fleet/src/validation.ts), [search helpers](../apps/fleet/src/database/search.ts), [raw SQL helpers](../apps/fleet/src/database/sql.ts), [FleetClock](../apps/fleet/src/clock/fleet-clock.ts), [thresholds](../apps/fleet/src/fleet-thresholds.ts)                    |
-| Vehicles       | [SDL](../apps/fleet/src/modules/vehicles/vehicles.graphql), [resolver](../apps/fleet/src/modules/vehicles/vehicles.resolver.ts), [service](../apps/fleet/src/modules/vehicles/vehicles.service.ts), [repository](../apps/fleet/src/modules/vehicles/vehicles.repository.ts)                                                                                                                        |
-| Devices        | [SDL](../apps/fleet/src/modules/devices/devices.graphql), [resolver](../apps/fleet/src/modules/devices/devices.resolver.ts), [service](../apps/fleet/src/modules/devices/devices.service.ts), [repository](../apps/fleet/src/modules/devices/devices.repository.ts)                                                                                                                                |
-| Drivers        | [SDL](../apps/fleet/src/modules/drivers/drivers.graphql), [resolver](../apps/fleet/src/modules/drivers/drivers.resolver.ts), [service](../apps/fleet/src/modules/drivers/drivers.service.ts), [repository](../apps/fleet/src/modules/drivers/drivers.repository.ts)                                                                                                                                |
-| Vehicle groups | [SDL](../apps/fleet/src/modules/vehicle-groups/vehicle-groups.graphql), [resolver](../apps/fleet/src/modules/vehicle-groups/vehicle-groups.resolver.ts), [service](../apps/fleet/src/modules/vehicle-groups/vehicle-groups.service.ts), [repository](../apps/fleet/src/modules/vehicle-groups/vehicle-groups.repository.ts)                                                                        |
-| Telemetry      | [SDL](../apps/fleet/src/modules/telemetry/telemetry.graphql), [resolver](../apps/fleet/src/modules/telemetry/telemetry.resolver.ts), [service](../apps/fleet/src/modules/telemetry/telemetry.service.ts), [repository](../apps/fleet/src/modules/telemetry/telemetry.repository.ts), [state classifier](../apps/fleet/src/modules/telemetry/vehicle-state.ts)                                      |
-| Trips          | [SDL](../apps/fleet/src/modules/trips/trips.graphql), [resolver](../apps/fleet/src/modules/trips/trips.resolver.ts), [service](../apps/fleet/src/modules/trips/trips.service.ts), [repository](../apps/fleet/src/modules/trips/trips.repository.ts)                                                                                                                                                |
-| Events         | [SDL](../apps/fleet/src/modules/events/events.graphql), [resolver](../apps/fleet/src/modules/events/events.resolver.ts), [service](../apps/fleet/src/modules/events/events.service.ts), [repository](../apps/fleet/src/modules/events/events.repository.ts)                                                                                                                                        |
-| Service tasks  | [SDL](../apps/fleet/src/modules/service-tasks/service-tasks.graphql), [resolver](../apps/fleet/src/modules/service-tasks/service-tasks.resolver.ts), [service](../apps/fleet/src/modules/service-tasks/service-tasks.service.ts), [repository](../apps/fleet/src/modules/service-tasks/service-tasks.repository.ts), [urgency SQL](../apps/fleet/src/modules/service-tasks/service-urgency.sql.ts) |
-| Settings       | [SDL](../apps/fleet/src/modules/settings/settings.graphql), [resolver](../apps/fleet/src/modules/settings/settings.resolver.ts), [service](../apps/fleet/src/modules/settings/settings.service.ts), [repository](../apps/fleet/src/modules/settings/settings.repository.ts), [settings SQL](../apps/fleet/src/modules/settings/settings.sql.ts)                                                    |
-| Geo zones      | [SDL](../apps/fleet/src/modules/geo-zones/geo-zones.graphql), [resolver](../apps/fleet/src/modules/geo-zones/geo-zones.resolver.ts), [service](../apps/fleet/src/modules/geo-zones/geo-zones.service.ts), [repository](../apps/fleet/src/modules/geo-zones/geo-zones.repository.ts), [job](../apps/fleet/src/modules/geo-zones/geo-zones.jobs.ts)                                                  |
-| Fault monitor  | [SDL](../apps/fleet/src/modules/fault-monitor/fault-monitor.graphql), [resolver](../apps/fleet/src/modules/fault-monitor/fault-monitor.resolver.ts), [service](../apps/fleet/src/modules/fault-monitor/fault-monitor.service.ts), [repository](../apps/fleet/src/modules/fault-monitor/fault-monitor.repository.ts)                                                                                |
+| Module                  | Files                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared                  | [common SDL](../apps/fleet/src/graphql/common.graphql), [scalars](../apps/fleet/src/graphql/scalars.ts), [validation](../apps/fleet/src/validation.ts), [search helpers](../apps/fleet/src/database/search.ts), [raw SQL helpers](../apps/fleet/src/database/sql.ts), [FleetClock](../apps/fleet/src/clock/fleet-clock.ts), [thresholds](../apps/fleet/src/fleet-thresholds.ts)                    |
+| Vehicles                | [SDL](../apps/fleet/src/modules/vehicles/vehicles.graphql), [resolver](../apps/fleet/src/modules/vehicles/vehicles.resolver.ts), [service](../apps/fleet/src/modules/vehicles/vehicles.service.ts), [repository](../apps/fleet/src/modules/vehicles/vehicles.repository.ts)                                                                                                                        |
+| Device registry         | [SDL](../apps/fleet/src/modules/devices/devices.graphql), [resolver](../apps/fleet/src/modules/devices/devices.resolver.ts), [service](../apps/fleet/src/modules/devices/devices.service.ts), [repository](../apps/fleet/src/modules/devices/devices.repository.ts)                                                                                                                                |
+| Device inspection       | [SDL](../apps/fleet/src/modules/device-inspection/device-inspection.graphql), [resolver](../apps/fleet/src/modules/device-inspection/device-inspection.resolver.ts), [service](../apps/fleet/src/modules/device-inspection/device-inspection.service.ts)                                                                                                                                           |
+| Device commands         | [SDL](../apps/fleet/src/modules/device-commands/device-commands.graphql), [resolver](../apps/fleet/src/modules/device-commands/device-commands.resolver.ts), [service](../apps/fleet/src/modules/device-commands/device-commands.service.ts)                                                                                                                                                       |
+| Device configuration    | [SDL](../apps/fleet/src/modules/device-configuration/device-configuration.graphql), [resolver](../apps/fleet/src/modules/device-configuration/device-configuration.resolver.ts), [service](../apps/fleet/src/modules/device-configuration/device-configuration.service.ts)                                                                                                                         |
+| Device telemetry import | [job](../apps/fleet/src/modules/device-telemetry/device-telemetry.jobs.ts), [repository](../apps/fleet/src/modules/device-telemetry/device-telemetry.repository.ts)                                                                                                                                                                                                                                |
+| Drivers                 | [SDL](../apps/fleet/src/modules/drivers/drivers.graphql), [resolver](../apps/fleet/src/modules/drivers/drivers.resolver.ts), [service](../apps/fleet/src/modules/drivers/drivers.service.ts), [repository](../apps/fleet/src/modules/drivers/drivers.repository.ts)                                                                                                                                |
+| Vehicle groups          | [SDL](../apps/fleet/src/modules/vehicle-groups/vehicle-groups.graphql), [resolver](../apps/fleet/src/modules/vehicle-groups/vehicle-groups.resolver.ts), [service](../apps/fleet/src/modules/vehicle-groups/vehicle-groups.service.ts), [repository](../apps/fleet/src/modules/vehicle-groups/vehicle-groups.repository.ts)                                                                        |
+| Telemetry               | [SDL](../apps/fleet/src/modules/telemetry/telemetry.graphql), [resolver](../apps/fleet/src/modules/telemetry/telemetry.resolver.ts), [service](../apps/fleet/src/modules/telemetry/telemetry.service.ts), [repository](../apps/fleet/src/modules/telemetry/telemetry.repository.ts), [state classifier](../apps/fleet/src/modules/telemetry/vehicle-state.ts)                                      |
+| Trips                   | [SDL](../apps/fleet/src/modules/trips/trips.graphql), [resolver](../apps/fleet/src/modules/trips/trips.resolver.ts), [service](../apps/fleet/src/modules/trips/trips.service.ts), [repository](../apps/fleet/src/modules/trips/trips.repository.ts)                                                                                                                                                |
+| Events                  | [SDL](../apps/fleet/src/modules/events/events.graphql), [resolver](../apps/fleet/src/modules/events/events.resolver.ts), [service](../apps/fleet/src/modules/events/events.service.ts), [repository](../apps/fleet/src/modules/events/events.repository.ts)                                                                                                                                        |
+| Service tasks           | [SDL](../apps/fleet/src/modules/service-tasks/service-tasks.graphql), [resolver](../apps/fleet/src/modules/service-tasks/service-tasks.resolver.ts), [service](../apps/fleet/src/modules/service-tasks/service-tasks.service.ts), [repository](../apps/fleet/src/modules/service-tasks/service-tasks.repository.ts), [urgency SQL](../apps/fleet/src/modules/service-tasks/service-urgency.sql.ts) |
+| Settings                | [SDL](../apps/fleet/src/modules/settings/settings.graphql), [resolver](../apps/fleet/src/modules/settings/settings.resolver.ts), [service](../apps/fleet/src/modules/settings/settings.service.ts), [repository](../apps/fleet/src/modules/settings/settings.repository.ts), [settings SQL](../apps/fleet/src/modules/settings/settings.sql.ts)                                                    |
+| Geo zones               | [SDL](../apps/fleet/src/modules/geo-zones/geo-zones.graphql), [resolver](../apps/fleet/src/modules/geo-zones/geo-zones.resolver.ts), [service](../apps/fleet/src/modules/geo-zones/geo-zones.service.ts), [repository](../apps/fleet/src/modules/geo-zones/geo-zones.repository.ts), [job](../apps/fleet/src/modules/geo-zones/geo-zones.jobs.ts)                                                  |
+| Fault monitor           | [SDL](../apps/fleet/src/modules/fault-monitor/fault-monitor.graphql), [resolver](../apps/fleet/src/modules/fault-monitor/fault-monitor.resolver.ts), [service](../apps/fleet/src/modules/fault-monitor/fault-monitor.service.ts), [repository](../apps/fleet/src/modules/fault-monitor/fault-monitor.repository.ts)                                                                                |
+
+The registry owns Device lookups and Tenant/Branch scoping. Inspection, commands and
+configuration dispatch through [`DeviceAdapters`](../apps/fleet/src/integrations/device-adapters.ts).
+The [Discocan adapter](../apps/fleet/src/integrations/discocan/) uses the
+[default device contract](../packages/device-contract/src/index.ts) served by
+[Device Server](../apps/device-server/). The [ERM integration](../apps/fleet/src/integrations/erm/)
+maps the existing ERM API into that same Fleet surface.
 
 Every Fleet list (`fleetVehicles`, `fleetDevices`, `fleetDrivers`, `fleetVehicleGroups`,
 `fleetTrips`, `fleetEvents`, `fleetServiceTasks`) follows the
@@ -69,10 +80,10 @@ stored values or explicitly labelled editor/filter units. No equivalence with Ka
 
 ### Activity rules
 
-Activity rows are discocan demo data or, when `FLEET_ERM_TELEMETRY_ENABLED=true`, ERM status samples
-and ignition trips imported per
-[ADR 0008](../../docs/architecture/decisions/0008-erm-telemetry-into-fleet-activity.md).
-The import also writes dated eData FleetEvents (413/418 codes, 419 SPN/FMI fault observations,
+Activity rows come from Discocan demo data or reports imported through a device adapter. When
+`FLEET_ERM_TELEMETRY_ENABLED=true`, ERM reports populate status samples and ignition trips as
+described in [ADR 0008](../../docs/architecture/decisions/0008-erm-telemetry-into-fleet-activity.md).
+The ERM import also writes dated eData FleetEvents (413/418 codes, 419 SPN/FMI fault observations,
 411 CAN errors and 417 CAN loss) without an alert lifecycle. Problems exposes every fault's code,
 added/deleted status, versioned system/component keys and first/last observations within the
 requested period through `diagnostics`; deletion does not establish a repair. Device and Vehicle
@@ -93,7 +104,7 @@ carry the vehicle system (`FleetFaultSystem`, including `CAN_BUS` and `POWER`), 
 episode times. The admin shows them as fault lamps and a fault scanner on the live dashboard and the
 vehicle profile; lamps reported since the check replace the check's lamp findings. With
 `FLEET_ERM_TELEMETRY_ENABLED=true`, Fleet also asks ERM every 30 minutes (on the hour and the half
-hour) to queue the fault-logger read for each Device with a vehicle; an unsent request expires after
+hour) to queue the fault-logger read for each ERM Device with a Vehicle. An unsent request expires after
 27 minutes, so an offline truck holds at most one. Codes the module reports arrive through the
 normal import. Operators can also queue the read from the scanner (Read
 faults now, expiry 15 minutes). The scanner footer shows the last read's eData verdict: no active
@@ -349,19 +360,21 @@ and General settings links.
 ## Devices admin
 
 - [API](../apps/admin/src/app/features/fleet/devices/devices-api.ts), [page](../apps/admin/src/app/features/fleet/devices/devices-list-page.ts), [editor](../apps/admin/src/app/features/fleet/devices/device-editor-page.ts), [mapping](../apps/admin/src/app/features/fleet/devices/device-mapping.ts), [diagnostics](../apps/admin/src/app/features/fleet/devices/device-diagnostics-page.ts).
+- [Device details and command queue](../apps/admin/src/app/features/control-center/),
+  [ERM console, settings, SMS, routing and evidence](../apps/admin/src/app/features/erm/).
 
 IMEI is exactly 15 digits and globally unique, retaining leading zeros; one unit belongs to one
 Branch. Assignment is optional; unassigned Devices are stock. Multiple Devices may share a scoped
-Vehicle. The editor uses the
-existing StarLink/Scout/Other catalog and nullable model, firmware, SIM, installation and notes
-fields. Vehicle choices load in bounded pages through the captured editor client. Row and selected
+Vehicle. The editor selects the hardware type on registration, defaults to `DISCOCAN` and
+shows the eData module for `ERM`. Vehicle choices load in bounded pages through the captured
+editor client. Row and selected
 delete actions use one partial-result batch. Connection status and whole-Branch KPIs come from the
 server. Each list response retains one database snapshot for status/report dates, filters, sorting
 and count. Diagnostics display available stored metadata; signal, voltage, firmware policy and Restart
 are explicitly unavailable/Demo until integrated.
-Device `routing` exposes the retained destination observation for up to 70 minutes. A newer ERM
+Device `erm.routing` exposes the retained destination observation for up to 70 minutes. A newer ERM
 receipt proves `DISCOCAN`; without a fresh observation it is null, as it is while Fleet's ERM import
-is disabled. `routingHealth` preserves the recorded backup periods and caps open-period duration
+is disabled. `erm.routingHealth` preserves the recorded backup periods and caps open-period duration
 at the retained observation. New backup transitions require an upstream
 last-data source that ERM does not currently provide.
 The installation field uses native floating date/time text in the displayed Branch time zone,
@@ -420,8 +433,8 @@ captured clients, generated operations and shared load/error/empty states:
   Tiles count the trucks with active codes, with no active codes (a clear verdict within the last
   hour), with no CAN data and offline; one row per truck shows its state, active codes with SPN/FMI
   and meaning, the last check, the last data, the CAN state and a link to the truck. The first state
-  that applies decides: active codes (fault-check codes or a `154,1` verdict), offline (no open ERM
-  connection), no CAN data (no `405` value within 15 minutes, or a `417` after the last one), no
+  that applies decides: active codes (fault-check codes or a `154,1` verdict), offline (no connected
+  Device), no CAN data (no `405` value within 15 minutes, or a `417` after the last one), no
   active codes, otherwise not checked. The fault log below is filtered by truck, event and date
   range. Alerts stay in the admin: this page, the log and the notification feed.
 
@@ -450,8 +463,8 @@ seed inserts the missing ones by name and never updates existing zones.
 ### Fault monitoring
 
 `fleetFaultMonitor` returns every vehicle with a Device, by license plate, with its fault check,
-its Devices (newest report first; their ERM fields add the connection and the fault reads with
-verdicts), the newest `405` value (`canDataAt`) and the newest `417` (`canLostAt`).
+its Devices in newest-report order, the newest `405` value (`canDataAt`) and the newest `417`
+(`canLostAt`). Device state and command history supply connection status and fault-read verdicts.
 `fleetFaultLog(offset, limit, filter)` is the newest-first log of the Branch, filtered by vehicles,
 kinds and an `occurredFrom`/`occurredTo` period (default the seven days before the request, at
 most 93 days). One scoped query unions the stored sources: fault-logger status changes from
@@ -459,8 +472,8 @@ most 93 days). One scoped query unions the stored sources: fault-logger status c
 each read is not listed again), `CAN_LOST` (the first `417` after CAN data) and `CAN_RESTORED`
 (the first `405` after the loss's last `417`), the warning-lamp notifications (`LAMP_ON`,
 `LAMP_OFF`, kept as long as the notification retention) and `415` freeze frames (`FREEZE_FRAME`).
-`FAULT_READ` entries are ERM's answered fault reads with their verdicts, read through
-`ermCommandRequests` with the caller's session; they are filtered by creation time and dated by
+Device adapters supply `FAULT_READ` entries with the caller's session. These answered reads
+include their verdicts and are filtered by creation time and dated by
 completion. Fleet merges the first `offset + limit` entries of both sources. Scheduled reads do not
 create command notifications.
 

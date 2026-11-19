@@ -5,6 +5,7 @@ import type { FilterCondition } from '@osnova/ui';
 import { uiMessages } from '@osnova/ui';
 import type { ListQuery } from '@osnova/ui';
 import { listStateParams, readListState, type ListDefinition, type ListState } from '@osnova/ui';
+import { eventDefinition } from '../control-center/device-events-query';
 import { alertRemarkError } from './alerts/alert-mapping';
 import { alertDefinition, alertQueryState, alertVariables } from './alerts/alert-query';
 import { deviceFieldErrors } from './devices/device-mapping';
@@ -326,6 +327,20 @@ describe('Fleet logic', () => {
         },
       },
       { row: 'Devices URL', actual: urlRoundTrip(devices, deviceDefinition), expected: devices },
+      {
+        row: 'Saved ERM event filter and sort map to the Fleet contract',
+        actual: readListState(
+          convertToParamMap({ category: 'EDATA', sort: 'event' }),
+          eventDefinition,
+        ),
+        expected: {
+          page: 1,
+          pageSize: 50,
+          search: '',
+          sort: { field: 'CODE', direction: 'ASC' },
+          filter: { category: 'DIAGNOSTIC' },
+        },
+      },
       {
         row: 'Drivers variables',
         actual: driverVariables(drivers),

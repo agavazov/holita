@@ -29,7 +29,7 @@ query AdminFleetOverview($from: DateTime!, $to: DateTime!, $days: Int!) {
     problems {
       asOf
       dataAsOf
-      ermAsOf
+      liveAsOf
       periodFrom
       periodTo
       total
@@ -183,9 +183,9 @@ query AdminOverviewConnectedDevices($offset: Int!, $limit: Int!) {
       vehicle {
         licensePlate
       }
-      ermState {
-        online
-        lastFrameAt
+      state {
+        connected
+        lastReportAt
       }
     }
   }
@@ -220,7 +220,7 @@ query AdminDashboardProblems(
       deviceImei
       alertId
       fleetEventId
-      ermEventId
+      sourceEventId
       commandRequestId
     }
     total
@@ -229,7 +229,7 @@ query AdminDashboardProblems(
     counts {
       asOf
       dataAsOf
-      ermAsOf
+      liveAsOf
       periodFrom
       periodTo
       total

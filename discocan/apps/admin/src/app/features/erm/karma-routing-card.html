@@ -1,0 +1,111 @@
+<h2>{{ text().title }}</h2>
+@if (routing(); as routing) {
+  <p-tag
+    [value]="text().routeStates[routing.state]"
+    [severity]="
+      toneSeverity(
+        routing.state === 'KARMA_BACKUP'
+          ? 'warn'
+          : routing.state === 'DISCOCAN'
+            ? 'success'
+            : 'neutral'
+      )
+    "
+  />
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().routeSince }}</dt>
+      <dd [title]="fmt.utc(routing.since)">
+        {{ fmt.dateTime(routing.since, true) }}
+      </dd>
+    </div>
+    <div>
+      <dt>{{ text().observedAt }}</dt>
+      <dd [title]="fmt.utc(routing.observedAt)">
+        {{ fmt.dateTime(routing.observedAt, true) }}
+      </dd>
+    </div>
+    @if (routing.state === 'KARMA_BACKUP' || routing.latestKarmaReportAt) {
+      <div>
+        <dt>{{ text().karmaReport }}</dt>
+        <dd [title]="fmt.utc(routing.latestKarmaReportAt)">
+          {{ fmt.dateTime(routing.latestKarmaReportAt, true) }}
+        </dd>
+      </div>
+      <div>
+        <dt>{{ text().parked }}</dt>
+        <dd>
+          {{
+            routing.parked === true
+              ? text().parkedYes
+              : routing.parked === false
+                ? text().parkedNo
+                : text().parkedUnknown
+          }}
+        </dd>
+      </div>
+    }
+  </dl>
+  @if (routing.latestReturnAttempt; as attempt) {
+    <h3>{{ text().returnAttempt }}</h3>
+    <p-tag
+      [value]="text().returnStates[attempt.status]"
+      [severity]="returnSeverity(attempt.status)"
+    />
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().requestedAt }}</dt>
+        <dd [title]="fmt.utc(attempt.requestedAt)">
+          {{ fmt.dateTime(attempt.requestedAt, true) }}
+        </dd>
+      </div>
+      <div>
+        <dt>{{ text().discocanConnectedAt }}</dt>
+        <dd [title]="fmt.utc(attempt.discocanConnectedAt)">
+          {{ fmt.dateTime(attempt.discocanConnectedAt, true) }}
+        </dd>
+      </div>
+    </dl>
+  }
+  @if (recovery(); as recovery) {
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().recoveryOutcome }}</dt>
+        <dd>{{ text().recoveryStates[recovery.outcome] }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().recoveryFinished }}</dt>
+        <dd [title]="fmt.utc(recovery.finishedAt)">
+          {{ fmt.dateTime(recovery.finishedAt, true) }}
+        </dd>
+      </div>
+    </dl>
+  } @else if (routing.latestReturnAttempt) {
+    <p class="app-muted">{{ text().noRecovery }}</p>
+  }
+  @if (routing.state === 'KARMA_BACKUP' || routing.latestReturnAttempt?.pending) {
+    <div class="control-center__actions">
+      <button
+        pButton
+        type="button"
+        [disabled]="!!returnDisabledReason()"
+        [attr.aria-describedby]="returnDisabledReason() ? 'erm-return-disabled' : null"
+        [attr.title]="returnDisabledReason()"
+        (click)="returnToDiscoCan()"
+      >
+        {{ text().returnButton }}
+      </button>
+    </div>
+    @if (returnDisabledReason(); as reason) {
+      <p id="erm-return-disabled" class="app-muted">{{ reason }}</p>
+    }
+  }
+  @if (returnFailure(); as failure) {
+    <p-message severity="error">{{ failure }}</p-message>
+  }
+}
+<p-confirmdialog [pt]="confirmPt()" [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }">
+  <ng-template #message
+    ><p id="erm-return-confirm-message">{{ confirmationMessage() }}</p></ng-template
+  >
+</p-confirmdialog>

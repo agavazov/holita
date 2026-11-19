@@ -2,7 +2,7 @@ import { inject, Injectable, NgZone, type OnDestroy } from '@angular/core';
 import { ApolloClient } from '@apollo/client/core';
 import { ApolloBase } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
-import { map } from 'rxjs';
+import { map, switchMap } from 'rxjs';
 import {
   AdminFaultLogDocument,
   AdminFaultMonitorDocument,
@@ -12,6 +12,7 @@ import { DemoSession } from '@osnova/ui/app';
 import { AdminConfig } from '../../../core/config/admin-config';
 import { graphqlOptions } from '@osnova/ui/app';
 import type { Language } from '../../../i18n/messages';
+import { readFaultHistories } from '../../../ui/fleet-live/fault-reads';
 
 /** One client per mounted faults page: the trucks' fault states and the fault log. */
 @Injectable()
@@ -42,13 +43,23 @@ export class FaultsApi implements OnDestroy {
   }
 
   monitor() {
-    return this.client()
-      .query({ query: AdminFaultMonitorDocument, fetchPolicy: 'network-only' })
-      .pipe(
-        map(
-          (result) => required(result.data, 'The fault states are unavailable.').fleetFaultMonitor,
+    const client = this.client();
+    return client.query({ query: AdminFaultMonitorDocument, fetchPolicy: 'network-only' }).pipe(
+      map((result) => required(result.data, 'The fault states are unavailable.').fleetFaultMonitor),
+      switchMap((rows) =>
+        readFaultHistories(
+          client,
+          rows.flatMap((row) => row.devices.map((device) => device.id)),
+        ).pipe(
+          map((histories) =>
+            rows.map((row) => ({
+              ...row,
+              faultReads: row.devices.flatMap((device) => histories.get(device.id) ?? []),
+            })),
+          ),
         ),
-      );
+      ),
+    );
   }
 
   log(variables: AdminFaultLogQueryVariables) {

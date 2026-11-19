@@ -172,7 +172,7 @@ export class TelemetryService {
     };
   }
 
-  /** The vehicle's newest eData 415 freeze frame with catalog-scaled values, or null. */
+  /** The vehicle's newest freeze frame with catalog-scaled values, or null. */
   async freezeFrame(
     context: RequestContext,
     args: QueryFleetVehicleFreezeFrameArgs,
@@ -194,7 +194,7 @@ export class TelemetryService {
     };
   }
 
-  /** The newest periodic eData 405 value per parameter with catalog-scaled values. */
+  /** The newest periodic value per parameter with catalog-scaled values. */
   async edataLatest(
     context: RequestContext,
     args: QueryFleetVehicleEdataLatestArgs,

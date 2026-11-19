@@ -1,5 +1,8 @@
 extend schema
-  @link(url: "https://specs.apollo.dev/federation/v2.3", import: ["@key", "@external", "@requires"])
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.3"
+    import: ["@key", "@external", "@requires", "@inaccessible"]
+  )
 
 scalar ErmJSON
 scalar DateTime
@@ -648,19 +651,20 @@ type FleetDevice @key(fields: "id") {
   id: ID!
   imei: String! @external
   "Null when the unit has never connected to discocan."
-  ermState: ErmUnitState @requires(fields: "imei")
-  ermEvents(input: ErmDeviceEventsInput): ErmEventsPage! @requires(fields: "imei")
-  ermCommands(input: ErmDevicePageInput): ErmCommandsPage! @requires(fields: "imei")
-  ermFrames(input: ErmDevicePageInput): ErmFramesPage! @requires(fields: "imei")
+  ermState: ErmUnitState @requires(fields: "imei") @inaccessible
+  ermEvents(input: ErmDeviceEventsInput): ErmEventsPage! @requires(fields: "imei") @inaccessible
+  ermCommands(input: ErmDevicePageInput): ErmCommandsPage! @requires(fields: "imei") @inaccessible
+  ermFrames(input: ErmDevicePageInput): ErmFramesPage! @requires(fields: "imei") @inaccessible
   "Parameter snapshot history for this Branch's Device; Viewer secrets are masked."
   ermParameterSnapshots(input: ErmDevicePageInput): ErmParameterSnapshotsPage!
     @requires(fields: "imei")
+    @inaccessible
   "Newest twenty controlled configuration runs for this Device."
-  ermConfigurationChanges: [ErmConfigurationChange!]! @requires(fields: "imei")
+  ermConfigurationChanges: [ErmConfigurationChange!]! @requires(fields: "imei") @inaccessible
   "Deployment switch for controlled configuration writes; reads remain available."
-  ermConfigurationWritesEnabled: Boolean! @requires(fields: "imei")
+  ermConfigurationWritesEnabled: Boolean! @requires(fields: "imei") @inaccessible
   "Newest fifty command requests of the verified Tenant and active Branch for this Device."
-  ermCommandRequests: [ErmCommandRequest!]! @requires(fields: "imei")
+  ermCommandRequests: [ErmCommandRequest!]! @requires(fields: "imei") @inaccessible
 }
 "Internal Fleet reads; the caller must verify Tenant/Branch ownership before supplying IMEIs."
 type ErmFleetTelemetry {
@@ -726,7 +730,7 @@ type ErmFleetProblems {
 }
 type Query {
   "Internal token only. Current sockets and expected-frame freshness, independent of Branch data clocks."
-  ermFleetTelemetry(imeis: [String!]!): ErmFleetTelemetry!
+  ermFleetTelemetry(imeis: [String!]!): ErmFleetTelemetry! @inaccessible
   "Internal token only. Recorded evidence and scoped durable failures; no current-fault assertion."
   ermFleetProblems(
     imeis: [String!]!
@@ -736,44 +740,47 @@ type Query {
     to: DateTime!
     offset: Int = 0
     limit: Int = 500
-  ): ErmFleetProblems!
+  ): ErmFleetProblems! @inaccessible
   "One durable request in the verified Tenant and active Branch, suitable for pending-state polling."
-  ermCommandRequest(id: ID!): ErmCommandRequest
+  ermCommandRequest(id: ID!): ErmCommandRequest @inaccessible
   "Newest first by default, scoped to the verified Tenant and active Branch; creation range is half-open."
   ermCommandRequests(
     offset: Int! = 0
     limit: Int! = 20
     filter: ErmCommandRequestsFilter
     sort: ErmCommandRequestsSort
-  ): ErmCommandRequestsPage!
-  ermCommandBatch(id: ID!): ErmCommandBatch
-  ermConfigurationBatch(id: ID!): ErmConfigurationBatch
+  ): ErmCommandRequestsPage! @inaccessible
+  ermCommandBatch(id: ID!): ErmCommandBatch @inaccessible
+  ermConfigurationBatch(id: ID!): ErmConfigurationBatch @inaccessible
   "Signed-in reference search of the StarLink parameter catalog."
-  ermParameterCatalog(input: ErmParameterCatalogInput): ErmParameterCatalogPage!
+  ermParameterCatalog(input: ErmParameterCatalogInput): ErmParameterCatalogPage! @inaccessible
   "Signed-in reference of the allowlisted read actions and their exact commands."
-  ermDeviceActionCommands: [ErmDeviceActionCommand!]!
+  ermDeviceActionCommands: [ErmDeviceActionCommand!]! @inaccessible
 }
 type Mutation {
   "Queues an allowlisted read for the Device's next primary connection, with expiry and no ambiguous replay."
-  sendErmDeviceCommand(input: SendErmDeviceCommandInput!): ErmCommandRequest!
+  sendErmDeviceCommand(input: SendErmDeviceCommandInput!): ErmCommandRequest! @inaccessible
   "Cancels a queued request of the verified Tenant and active Branch before submission."
-  cancelErmDeviceCommand(input: CancelErmDeviceCommandInput!): ErmCommandRequest!
+  cancelErmDeviceCommand(input: CancelErmDeviceCommandInput!): ErmCommandRequest! @inaccessible
   "Creates a new request after current Fleet ownership verification; never replays automatically."
-  retryErmDeviceCommand(input: RetryErmDeviceCommandInput!): ErmCommandRequest!
+  retryErmDeviceCommand(input: RetryErmDeviceCommandInput!): ErmCommandRequest! @inaccessible
   "Queues one allowlisted read per selected Branch Device in order (at most 100 unique Devices)."
-  startErmCommandBatch(input: StartErmCommandBatchInput!): ErmCommandBatch!
+  startErmCommandBatch(input: StartErmCommandBatchInput!): ErmCommandBatch! @inaccessible
   "Records the stopping actor and cancels only requests that are still queued."
-  stopErmCommandBatch(id: ID!): ErmCommandBatch!
+  stopErmCommandBatch(id: ID!): ErmCommandBatch! @inaccessible
   "Starts a background parameter snapshot after checking the Device's active Branch and primary connection."
   startErmParameterSnapshot(input: StartErmParameterSnapshotInput!): ErmParameterSnapshot!
+    @inaccessible
   "Starts a controlled eData read or single change after verifying the Device's Branch and primary connection."
-  startErmEdataChange(input: StartErmEdataChangeInput!): ErmConfigurationChange!
+  startErmEdataChange(input: StartErmEdataChangeInput!): ErmConfigurationChange! @inaccessible
   "Starts a single guarded 04 parameter change with snapshot, baseline and readback."
   startErmParameterChange(input: StartErmParameterChangeInput!): ErmConfigurationChange!
+    @inaccessible
   "Engineer: one guarded 46 write of an explicit set, with exact-set baseline and verification."
   startErmParametersChange(input: StartErmParametersChangeInput!): ErmConfigurationChange!
+    @inaccessible
   "Engineer: verified 46 workflows in Device order; stops at the first non-VERIFIED result."
-  startErmParameterBatch(input: StartErmParameterBatchInput!): ErmConfigurationBatch!
+  startErmParameterBatch(input: StartErmParameterBatchInput!): ErmConfigurationBatch! @inaccessible
   "Engineer: finishes the active unit and refuses the remaining batch runs."
-  stopErmConfigurationBatch(id: ID!): ErmConfigurationBatch!
+  stopErmConfigurationBatch(id: ID!): ErmConfigurationBatch! @inaccessible
 }

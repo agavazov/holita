@@ -160,7 +160,7 @@
                       ? 'imei'
                       : column.id === 'vehicle'
                         ? 'vehicle.licensePlate'
-                        : 'ermState.lastFrameAt';
+                        : 'state.lastReportAt';
                   <th scope="col" [pSortableColumn]="field">
                     {{ column.label }} <p-sort-icon [field]="field" />
                   </th>
@@ -189,8 +189,8 @@
                 <td>
                   <span
                     class="app-cell-date"
-                    [title]="units.dateTimeCell(device.ermState?.lastFrameAt).title"
-                    >{{ units.dateTimeCell(device.ermState?.lastFrameAt).text }}</span
+                    [title]="units.dateTimeCell(device.state?.lastReportAt).title"
+                    >{{ units.dateTimeCell(device.state?.lastReportAt).text }}</span
                   >
                 </td>
               </tr></ng-template

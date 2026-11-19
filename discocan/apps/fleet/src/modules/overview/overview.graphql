@@ -50,7 +50,7 @@ type FleetDashboardVehicles {
   asOf: DateTime!
   "Branch device-sample clock used for activity, independent of Live."
   dataAsOf: DateTime
-  "ERM socket/frame observation clock; earliest batch when multiple batches are needed."
+  "Earliest live observation across devices and batches."
   liveAsOf: DateTime!
   total: Int!
   connected: Int!
@@ -121,7 +121,7 @@ type FleetMapVehicle {
   vehicle: FleetVehicleRef!
   "Latest device sample with both coordinates; null explicitly means no recorded position."
   position: FleetMapPosition
-  "Activity against the Branch data clock, not the ERM frame freshness clock."
+  "Activity against the Branch data clock, independent of live device freshness."
   activity: FleetActivityStatus!
   connected: Boolean!
   reporting: Boolean!

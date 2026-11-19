@@ -6,7 +6,9 @@ import {
   type FleetFaultRead,
 } from '../../../ui/fleet-live/fault-wording';
 
-export type FaultMonitorRow = AdminFaultMonitorQuery['fleetFaultMonitor'][number];
+export type FaultMonitorRow = AdminFaultMonitorQuery['fleetFaultMonitor'][number] & {
+  readonly faultReads: readonly FleetFaultRead[];
+};
 
 /** List order: active codes, trucks that cannot be verified now, offline, then clear. */
 export const truckFaultStates = ['ACTIVE', 'NO_CAN', 'NOT_CHECKED', 'OFFLINE', 'CLEAR'] as const;
@@ -62,16 +64,13 @@ function canState(row: FaultMonitorRow, now: number): { can: CanState; canAt: st
  * CAN data, because an empty fault buffer proves nothing without it.
  */
 export function faultTruck(row: FaultMonitorRow, now: number): FaultTruck {
-  const reads = faultReadState(
-    row.devices.flatMap((device) => device.ermCommandRequests),
-    now,
-  );
+  const reads = faultReadState(row.faultReads, now);
   const verdict = reads.last?.faultReadVerdict ?? null;
   const codes = (row.faultCheck?.findings ?? []).filter(
     (finding) => finding.source === 'FAULT_LOGGER' || finding.source === 'ALERT',
   );
   const { can, canAt } = canState(row, now);
-  const online = row.devices.some((device) => device.ermState?.online === true);
+  const online = row.devices.some((device) => device.state?.connected === true);
   const state: TruckFaultState =
     codes.length > 0 || verdict?.activeCodes === true
       ? 'ACTIVE'

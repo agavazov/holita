@@ -1,4 +1,4 @@
-"A truck on the fault dashboard: Fleet's fault check and CAN evidence; its Devices add the ERM connection and fault reads."
+"A truck on the fault dashboard with Fleet's fault check, CAN evidence and device details."
 type FleetFaultMonitorVehicle {
   vehicle: FleetVehicleRef!
   "Assigned Devices, newest report first."
@@ -75,6 +75,6 @@ input FleetFaultLogFilter {
 extend type Query {
   "Vehicles with a Device in the active Branch, ordered by license plate."
   fleetFaultMonitor: [FleetFaultMonitorVehicle!]!
-  "Fault events of the active Branch, newest first. FAULT_READ entries are ERM's answered reads, filtered by creation time and dated by completion."
+  "Fault events of the active Branch, newest first. FAULT_READ entries are answered fault-logger reads, filtered by creation time and dated by completion."
   fleetFaultLog(offset: Int! = 0, limit: Int! = 20, filter: FleetFaultLogFilter): FleetFaultLogPage!
 }

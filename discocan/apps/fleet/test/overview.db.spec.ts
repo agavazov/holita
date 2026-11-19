@@ -7,7 +7,7 @@ import { AppModule } from '../src/app.module.js';
 import { issueDemoToken } from '@osnova/auth';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
-import { ErmDashboardClient } from '../src/integrations/erm/erm-dashboard.client.js';
+import { ErmStatus } from '../src/integrations/erm/erm-status.js';
 import { createTestDatabase } from './test-database.js';
 
 describe('Fleet overview and daily distance with PostgreSQL', () => {
@@ -31,6 +31,10 @@ describe('Fleet overview and daily distance with PostgreSQL', () => {
   beforeAll(async () => {
     process.env.ERM_TELEMETRY_TOKEN = testErmToken;
     ermServer = createServer((request, response) => {
+      if (request.method !== 'POST' || request.url !== '/graphql') {
+        response.writeHead(404).end();
+        return;
+      }
       let body = '';
       request.on('data', (chunk: Buffer) => {
         body += chunk.toString();
@@ -132,7 +136,9 @@ describe('Fleet overview and daily distance with PostgreSQL', () => {
       [moving, '000000000000001', asOf],
       [offline, '000000000000002', new Date(asOf.getTime() - 49 * 3600000)],
     ] as const) {
-      await client.device.create({ data: { tenantId, branchId, vehicleId: vehicle.id, imei } });
+      await client.device.create({
+        data: { tenantId, branchId, vehicleId: vehicle.id, imei, type: 'ERM' },
+      });
       await client.vehicleStatusSample.create({
         data: {
           tenantId,
@@ -340,6 +346,7 @@ describe('Fleet overview and daily distance with PostgreSQL', () => {
         branchId,
         vehicleId: vehicle.id,
         imei: `100000000000${String(index).padStart(3, '0')}`,
+        type: 'ERM',
       })),
     });
     await database.client.vehicleStatusSample.createMany({
@@ -464,7 +471,7 @@ describe('Fleet overview and daily distance with PostgreSQL', () => {
       data: { fleetMap: { total: 0, withPosition: 0, withoutPosition: 0, items: [] } },
     });
     // The client itself chunks a complete registry larger than one ERM batch without truncation.
-    const complete = await new ErmDashboardClient().telemetry(
+    const complete = await new ErmStatus().telemetry(
       Array.from({ length: 501 }, (_, index) => `200000000000${String(index).padStart(3, '0')}`),
     );
     expect(complete.units).toHaveLength(501);

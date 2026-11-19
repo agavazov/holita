@@ -16,7 +16,7 @@
       <p-select
         inputId="command-batch-units"
         formControlName="deviceIds"
-        [options]="deviceOptions()"
+        [options]="batchDeviceOptions()"
         optionLabel="label"
         optionValue="value"
         [multiple]="true"
@@ -114,7 +114,7 @@
         @for (request of batch.requests; track request.id) {
           <div>
             <dt>
-              <a [routerLink]="deviceLink(request)">{{ target(request) }} · {{ request.unitId }}</a>
+              <a [routerLink]="deviceLink(request)">{{ target(request) }} · {{ request.imei }}</a>
             </dt>
             <dd>{{ text().statuses[request.status] }}</dd>
           </div>
@@ -243,8 +243,8 @@
             >
               {{ row.purpose }}
             </button>
-            <span [title]="row.target + ' · ' + row.request.unitId"
-              >{{ row.target }} · {{ row.request.unitId }}</span
+            <span [title]="row.target + ' · ' + row.request.imei"
+              >{{ row.target }} · {{ row.request.imei }}</span
             >
           </div>
           <div class="app-table-mobile-actions">
@@ -258,7 +258,7 @@
         <td>
           <div class="app-cell-identity">
             <a [routerLink]="deviceLink(row.request)">{{ row.target }}</a
-            ><span>{{ row.request.unitId }}</span>
+            ><span>{{ row.request.imei }}</span>
           </div>
         </td>
         <td>

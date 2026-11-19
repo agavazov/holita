@@ -276,7 +276,7 @@ type FleetProblemDiagnostic {
   firstObservedAt: DateTime!
   lastObservedAt: DateTime!
   occurredAt: DateTime!
-  "Receipt time when retained by Fleet; null for evidence available only from ERM Problems."
+  "Receipt time when retained by Fleet; null for evidence available only from a device problem feed."
   receivedAt: DateTime
 }
 
@@ -300,7 +300,7 @@ type FleetProblem {
   "Only this non-null field authorizes the existing alert acknowledge/resolve workflow."
   alertId: ID
   fleetEventId: ID
-  ermEventId: ID
+  sourceEventId: ID
   commandRequestId: ID
 }
 
@@ -323,8 +323,8 @@ type FleetProblemCounts {
   asOf: DateTime!
   "Latest scoped device sample time, independent of current reporting."
   dataAsOf: DateTime
-  "ERM snapshot time; null when the Branch has no registered devices."
-  ermAsOf: DateTime
+  "Earliest device snapshot time; null when no device snapshot is available."
+  liveAsOf: DateTime
   periodFrom: DateTime!
   periodTo: DateTime!
   total: Int!

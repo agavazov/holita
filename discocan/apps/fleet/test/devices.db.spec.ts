@@ -83,15 +83,17 @@ describe('Device GraphQL with PostgreSQL', () => {
           {
             imei: '000000000000011',
             vehicleId: alpha.id,
+            type: 'ERM',
             model: 'STARLINK_TRACKER',
             serialNumber: '279037',
-            edataModule: 'eData Fms 6.56',
+            erm: { create: { edataModule: 'eData Fms 6.56' } },
             simPhoneNumber: '+359881234567',
             firmwareVersion: '1_2',
           },
           {
             imei: '000000000000012',
             vehicleId: beta.id,
+            type: 'ERM',
             model: 'STARLINK_SCOUT',
             firmwareVersion: '1X2',
           },
@@ -131,6 +133,8 @@ describe('Device GraphQL with PostgreSQL', () => {
         branchId: foreignBranch,
         vehicleId: foreignVehicle.id,
         imei: '000000000000016',
+        type: 'ERM',
+        erm: { create: { edataModule: 'Foreign eData' } },
         serialNumber: online.serialNumber,
         simPhoneNumber: online.simPhoneNumber,
       },
@@ -235,6 +239,19 @@ describe('Device GraphQL with PostgreSQL', () => {
         ],
       });
     }
+    for (const [scopeTenant, scopeBranch] of [
+      [tenantId, foreignBranch],
+      [foreignTenant, branchId],
+    ] as const) {
+      expect(
+        await query(
+          updateDevice,
+          { id: online.id, input: { erm: { edataModule: 'Foreign write' } } },
+          scopeBranch,
+          scopeTenant,
+        ),
+      ).toMatchObject({ data: null, errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    }
     const duplicateInsert = await database.client.device
       .create({ data: { tenantId: foreignTenant, branchId, imei: online.imei } })
       .catch((error: unknown) => error);
@@ -327,14 +344,21 @@ describe('Device GraphQL with PostgreSQL', () => {
     }
     expect(
       await query(
-        'query($search:String){fleetDevices(search:$search){items{id serialNumber edataModule}}}',
+        'query($search:String){fleetDevices(search:$search){items{id type serialNumber erm{edataModule}}}}',
         { search: '279037' },
         branchId,
       ),
     ).toEqual({
       data: {
         fleetDevices: {
-          items: [{ id: online.id, serialNumber: '279037', edataModule: 'eData Fms 6.56' }],
+          items: [
+            {
+              id: online.id,
+              type: 'ERM',
+              serialNumber: '279037',
+              erm: { edataModule: 'eData Fms 6.56' },
+            },
+          ],
         },
       },
     });

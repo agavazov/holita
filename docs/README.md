@@ -25,6 +25,7 @@ verified Tenant scope.
 - [ERM device server](architecture/decisions/0006-erm-device-server.md).
 - [ERM gateway and API processes](architecture/decisions/0007-erm-gateway-and-api-processes.md).
 - [ERM telemetry into Fleet activity](architecture/decisions/0008-erm-telemetry-into-fleet-activity.md).
+- [Device types and adapters](architecture/decisions/0009-device-types-and-adapters.md).
 - [Contributor rules](../AGENTS.md).
 - [Backend skill](../.agents/skills/osnova-backend-feature/SKILL.md).
 - [Angular admin skill](../.agents/skills/osnova-admin-development/SKILL.md).

@@ -34,9 +34,7 @@ export class FleetLastReport {
   protected readonly timestamp = computed(() =>
     this.kind() === 'position'
       ? this.reportedAt()
-      : (this.device()?.ermState?.lastFrameAt ??
-        this.device()?.lastReportedAt ??
-        this.reportedAt()),
+      : (this.device()?.state?.lastReportAt ?? this.device()?.lastReportedAt ?? this.reportedAt()),
   );
   protected readonly exact = computed(
     () => this.units.dateTime(this.timestamp(), true) + ' · ' + this.units.preferences().timeZone,

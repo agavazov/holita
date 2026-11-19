@@ -1,4 +1,4 @@
-import type { PrismaClient } from '../src/generated/prisma/client.js';
+import type { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
 import { seedGeoZones } from './geo-zones.js';
 
 const tenantId = '01000000-0000-4000-8000-000000000001';
@@ -25,20 +25,29 @@ export const deviceSeeds = [
     tenantId,
     branchId,
     imei: '001234567890123',
+    type: 'ERM',
     vehicleId: '20000000-0000-4000-8000-000000000001',
   },
-];
+] satisfies Prisma.DeviceCreateManyInput[];
 export async function seedFleet(client: PrismaClient) {
   return client.$transaction(async (transaction) => {
     const vehicles = await transaction.vehicle.createMany({
       data: vehicleSeeds,
       skipDuplicates: true,
     });
-    const devices = await transaction.device.createMany({
+    const devices = await transaction.device.createManyAndReturn({
       data: deviceSeeds,
       skipDuplicates: true,
+      select: { id: true, tenantId: true, branchId: true },
+    });
+    await transaction.ermDevice.createMany({
+      data: devices.map(({ id: deviceId, tenantId, branchId }) => ({
+        deviceId,
+        tenantId,
+        branchId,
+      })),
     });
     const geoZones = await seedGeoZones(transaction, { tenantId, branchId });
-    return { vehicles: vehicles.count, devices: devices.count, geoZones };
+    return { vehicles: vehicles.count, devices: devices.length, geoZones };
   });
 }

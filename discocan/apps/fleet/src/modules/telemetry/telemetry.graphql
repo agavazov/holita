@@ -3,6 +3,8 @@ enum FleetDataSource {
   MANUAL
   "Imported from discocan's ERM device server."
   ERM
+  "Imported from Discocan hardware."
+  DISCOCAN
 }
 enum FleetActivityStatus {
   MOVING

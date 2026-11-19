@@ -21,61 +21,69 @@ Seeds insert missing fixtures without overwriting edits. Tests use isolated sche
 dedicated test databases, never development connections or broad resets.
 
 Device IMEI is a 15-digit string unique across all Tenants, preserving leading zeros.
-One physical unit belongs to one Branch.
-`serialNumber` is the optional ERM serial number, unique within that Branch; `edataModule`
-records the reported module/version. A Device may be stock or assigned to a Vehicle in the
-same scope; several Devices may share a Vehicle. Activity records retain the reporting IMEI
-as a snapshot. Vehicles and Drivers with history are deactivated instead of deleted.
+One physical unit belongs to one Branch. The optional `serialNumber` is unique within that
+Branch. A Device may be stock or assigned to a Vehicle in the same scope, and several Devices
+may share a Vehicle. Activity records retain the reporting IMEI as a snapshot. Vehicles and
+Drivers with history are deactivated instead of deleted.
 See the [Device SDL](../apps/fleet/src/modules/devices/devices.graphql) for the field contract.
 
-The [Simple eData catalog](erm-resources/simple-edata-catalog/README.md) is shared versioned
-manufacturer metadata without Tenant/Branch columns. Its offline CLI preserves provenance
-and conflicts; there is no catalog editing/import API. Catalog metadata does not grant
-access to a vehicle or authorize a device write.
+## Device types and adapters
 
-### ERM device ingestion
+Fleet registers each Device as `DISCOCAN` (the default) or `ERM`. Its
+[`DeviceAdapter`](../apps/fleet/src/integrations/device-adapter.ts) seam selects the adapter by
+the registered type after Fleet resolves the Device in the caller's Tenant and Branch. The
+[Discocan adapter](../apps/fleet/src/integrations/discocan/) calls
+[`device-server`](../apps/device-server/) over loopback HTTP with a shared bearer token.
+[`@discocan/device-contract`](../packages/device-contract/src/index.ts) defines the default
+internal routes, payloads and validation for reports, live status, inspection, commands,
+configuration and notifications. Device-server validates those requests and currently serves
+empty data, empty catalogs and unsupported write outcomes.
 
-[ADR 0007](../../docs/architecture/decisions/0007-erm-gateway-and-api-processes.md) separates two
-processes in `discocan/apps/erm-server`, selected by `ERM_ROLE`:
+Fleet exposes Device state, events and messages through the
+[inspection SDL](../apps/fleet/src/modules/device-inspection/device-inspection.graphql),
+command requests, batches and the action catalog through the
+[commands SDL](../apps/fleet/src/modules/device-commands/device-commands.graphql), and snapshots,
+catalogs, measurement configuration and changes through the
+[configuration SDL](../apps/fleet/src/modules/device-configuration/device-configuration.graphql).
+`FleetDevice.state`, `events`, `messages`, `commands` and the other Fleet device fields work
+through the same GraphQL surface for either type. `events` accepts a zero-based `offset` or an
+opaque `cursor`, with `pageSize` of 25, 50 or 100. It filters and sorts before pagination.
+`messages` and `parameterSnapshots` use the same pagination and default to newest first.
 
-| Role      | Responsibility                                                                                         | Default listeners                       |
-| --------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------- |
-| `gateway` | Device sessions, Karma relay, confirmations, frame/event/command records and the loopback internal API | HTTP 127.0.0.1:11015; TCP 0.0.0.0:11500 |
-| `api`     | GraphQL subgraph, database reads, live state and command requests through the gateway                  | HTTP 127.0.0.1:11017                    |
+The [ERM adapter](../apps/fleet/src/integrations/erm/) translates StarLink and ERM API data
+and forwards the caller's `authorization` and `x-branch-id` headers for operator GraphQL
+requests. Live `erm-server` runtime code and processes run unchanged. Its gateway owns
+StarLink sessions, acknowledgements, the Karma relay and raw provider records in `discocan_erm`.
+The API uses the gateway for live sessions and command delivery. The
+[replaced ERM fields](../apps/erm-server/src/modules/telemetry/telemetry.graphql) are
+`@inaccessible` in the composed API and remain available to the adapter on `erm-api`. Karma
+routing (`FleetDevice.ermRouting`) and return (`returnErmDeviceToDiscoCan`) remain public on the
+[ERM subgraph](../apps/erm-server/src/modules/karma/karma.graphql). Recovery sessions and
+captured StarLink evidence are exposed under `erm` sub-objects. The corresponding admin
+components live in [features/erm](../apps/admin/src/app/features/erm/). See
+[ADR 0009](../../docs/architecture/decisions/0009-device-types-and-adapters.md) and
+[ERM service setup](development.md#erm-device-server).
 
-Both use `discocan_erm`. Raw provider records have no Tenant/Branch columns. Frames preserve
-exact bytes and direction; decoded events retain raw fields alongside parsed telemetry.
-Persistence/decoding failures must not interrupt forwarding or acknowledgements. Private
-JSON Lines captures are operational evidence, not a source for public documentation.
-When `FLEET_ERM_TELEMETRY_ENABLED=true`, Fleet pulls captured events into scoped status samples
-and ignition trips, following
-[ADR 0008](../../docs/architecture/decisions/0008-erm-telemetry-into-fleet-activity.md). Fleet events come
-only from eData: dated `413`/`418` codes, `419` SPN/FMI fault-logger observations, `411` CAN
-error flags and `417` CAN loss, without alert lifecycle.
+Fleet stores ERM-only metadata in `ermDevice`, scoped to the registered Device. This includes
+the eData module/version, Karma identifiers and retained routing and backup observations. The
+device-neutral `deviceCursor` table stores the last imported event ID and last receipt for
+each scoped Device. Fleet imports normalized reports through the adapters into status samples,
+ignition trips, measurements and Fleet events. For ERM, `FLEET_ERM_TELEMETRY_ENABLED=true`
+enables import as described in
+[ADR 0008](../../docs/architecture/decisions/0008-erm-telemetry-into-fleet-activity.md). Its Fleet
+events include dated eData `413`/`418` codes, `419` SPN/FMI fault-logger observations, `411` CAN
+error flags and `417` CAN loss. These reports are recorded evidence without an alert lifecycle.
 
-Fleet owns the Device registry. ERM extends `FleetDevice` with `ermState`, `ermEvents`,
-`ermCommands` and `ermFrames`, resolved by its external `imei` with `@requires`. Fleet
-resolves the Device in the caller's Tenant/Branch first. Provider-level inspection queries
-remain separate from this Branch access path. `sendErmDeviceCommand` checks the Device through
-Fleet using the caller's session and Branch, then delivers one of six allowlisted reads
-through the gateway. There is no arbitrary command input. See
-[setup and operator access](development.md#erm-device-server) and the
-[ERM SDL](../apps/erm-server/src/modules/telemetry/telemetry.graphql).
+The [Simple eData catalog](erm-resources/simple-edata-catalog/README.md) is the shared measurement
+vocabulary for both types. Its versioned reference data has no Tenant/Branch columns, and its
+offline CLI preserves provenance and conflicts. `FleetDevice.state.measurements` returns the
+latest reported value per parameter with its report time and catalog name/unit when known. ERM
+supplies these readings from `405` reports. Unknown or ambiguous IDs remain raw IDs. Values
+retain the reported hexadecimal bytes, and unit labels do not establish a physical conversion.
+StarLink `02` event names retain the raw diagnostic level/code and include its archived meaning
+when known.
 
-`ermEvents` accepts either a zero-based `offset` or an opaque `cursor`, with `pageSize` 25, 50
-or 100. Its page includes the filtered `total`, `offset` and `limit`; category/severity filters
-and stable event sorting apply before pagination in the same query snapshot. `ermFrames` and
-`ermParameterSnapshots` page the same way and return the same totals; their `direction` orders by
-time, newest first by default.
-
-`ErmUnitState.edataMeasurements` returns the latest decoded `405` value per parameter with its
-own report time and Monitor 9.56 catalog name/unit. Unknown or ambiguous catalog IDs remain raw
-IDs. Values retain their reported hexadecimal bytes; catalog units do not establish a physical
-conversion. The Device overview shows these readings and an empty state without received `405`
-measurements. Event `02` names include the archived StarLink diagnostic meaning and raw level/code;
-unknown codes retain the raw level/code.
-
-### Branch settings
+## Branch settings
 
 `fleetSettings` returns defaults without inserting. `updateFleetSettings` replaces all eight
 fields in the verified Tenant/Branch and checks the Branch through Core before upsert.
@@ -118,8 +126,8 @@ Gateway forwards context; each owning service verifies the signed session. Demo 
 anyone select any Tenant and is not production identity or membership authorization.
 
 `FleetVehicle` and `FleetDevice` are federation entities keyed by `id`, with `branch: Branch!`.
-`FleetVehicle.devices` exposes assigned Device entities through a scoped page batch, so Router
-can compose each device's live `ermState`. `FleetDevice.diagnostics.count` counts only latest RED,
+`FleetVehicle.devices` exposes assigned Device entities through a scoped page batch. Fleet
+resolves `FleetDevice.state` through its adapters. `FleetDevice.diagnostics.count` counts only latest RED,
 YELLOW or INFORMATION lamps for the current vehicle/IMEI pair; DTC and CAN observations remain
 history. `FleetDevice.warningLamps` and `FleetVehicle.warningLamps`
 return each of the three supported FMS1 telltales with its raw value and last measurement time;
@@ -127,7 +135,7 @@ missing measurements remain unknown. `stateSince` marks the first observation of
 decoded state. Device/Vehicle `currentWarnings` contains the RED, YELLOW and INFORMATION
 subset. Diagnostic history includes catalog system/description keys and first/last observations
 within the requested evidence period. These fields do not assert that a historical fault is still
-active. Live ERM values and these
+active. Live device values and these
 display-only diagnostics do not drive Fleet list filtering, sorting or whole-Branch counts.
 Other record links use stored-field reference types. Derived list facts must be computed
 before filtering, sorting, paging and counting, in the same scoped snapshot as rows/totals.

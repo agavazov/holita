@@ -22,9 +22,9 @@ export function deviceRow(
   return {
     id: device.id,
     imei: device.imei,
+    type: device.type,
     model: device.model ?? '',
     serialNumber: device.serialNumber ?? '',
-    edataModule: device.edataModule ?? '',
     simPhoneNumber: device.simPhoneNumber ?? '',
     firmware: device.firmwareVersion ?? '',
     simIccid: device.simIccid ?? '',
@@ -40,6 +40,7 @@ export function deviceRow(
 export function deviceForm(device: AdminDeviceDetailsFragment): DeviceForm {
   return {
     imei: device.imei,
+    type: device.type,
     model: device.model ?? '',
     simIccid: device.simIccid ?? '',
     vehicleId: device.vehicleId,
@@ -47,13 +48,13 @@ export function deviceForm(device: AdminDeviceDetailsFragment): DeviceForm {
     serialNumber: device.serialNumber ?? '',
     options: device.options,
     firmwareVersion: device.firmwareVersion ?? '',
-    edataModule: device.edataModule ?? '',
+    edataModule: device.erm?.edataModule ?? '',
     simPhoneNumber: device.simPhoneNumber ?? '',
     smsPassword: device.smsPassword ?? '',
     installedAt: device.installedAt ?? '',
   };
 }
-export function deviceInput(form: DeviceForm): CreateFleetDeviceInput {
+export function deviceInput(form: DeviceForm): Omit<CreateFleetDeviceInput, 'type'> {
   const model = deviceModels.find((code) => code === form.model) ?? null;
   if (form.model && model === null) {
     throw new Error('Unsupported device model.');
@@ -70,7 +71,7 @@ export function deviceInput(form: DeviceForm): CreateFleetDeviceInput {
     simIccid: form.simIccid.trim() || null,
     notes: form.notes.trim() || null,
     firmwareVersion: form.firmwareVersion?.trim() || null,
-    edataModule: form.edataModule?.trim() || null,
+    ...(form.type === 'ERM' ? { erm: { edataModule: form.edataModule?.trim() || null } } : {}),
     simPhoneNumber: form.simPhoneNumber?.trim() || null,
     smsPassword: form.smsPassword?.trim() || null,
     installedAt: form.installedAt?.trim() || null,
@@ -80,10 +81,11 @@ export function deviceFieldErrors(
   error: unknown,
   language: Language = 'en',
 ): Partial<Record<DeviceField, string>> {
-  return fleetFieldErrors(
+  const { 'erm.edataModule': edataModule, ...errors } = fleetFieldErrors(
     error,
     [
       'imei',
+      'type',
       'vehicleId',
       'model',
       'serialNumber',
@@ -91,11 +93,12 @@ export function deviceFieldErrors(
       'simIccid',
       'notes',
       'firmwareVersion',
-      'edataModule',
+      'erm.edataModule',
       'simPhoneNumber',
       'smsPassword',
       'installedAt',
     ],
     language,
   );
+  return edataModule === undefined ? errors : { ...errors, edataModule };
 }

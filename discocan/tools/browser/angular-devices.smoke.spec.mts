@@ -70,6 +70,8 @@ test.describe('Devices', () => {
     const first = await vehicle(request, app, 'CA1234AB');
     await vehicle(request, app, 'CB5678AB');
     await page.goto(app.url + path + '/new');
+    await page.getByRole('combobox', { name: 'Device type', exact: true }).click();
+    await page.getByRole('option', { name: 'ERM StarLink', exact: true }).click();
     await page.getByRole('textbox', { name: /^IMEI/ }).fill('001234567890123');
     await chooseTruck(page, 'CA1234AB');
     await page.getByRole('button', { name: 'Register', exact: true }).click();
@@ -118,13 +120,29 @@ test.describe('Devices', () => {
     );
     const persisted = await request.post(app.gatewayUrl, {
       headers: headers(app),
-      data: { query: '{ fleetDevices { items { imei installedAt } } }' },
+      data: {
+        query:
+          '{ fleetDevices { items { imei type installedAt state { connected } events { total } } } }',
+      },
     });
     expect(await persisted.json()).toMatchObject({
       data: {
         fleetDevices: {
           items: expect.arrayContaining([
-            { imei: '001234567890123', installedAt: '2026-10-18T07:00:15.125Z' },
+            {
+              imei: '001234567890123',
+              type: 'ERM',
+              installedAt: '2026-10-18T07:00:15.125Z',
+              state: null,
+              events: { total: 0 },
+            },
+            {
+              imei: '001234567890124',
+              type: 'DISCOCAN',
+              installedAt: null,
+              state: null,
+              events: { total: 0 },
+            },
           ]),
         },
       },

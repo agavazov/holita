@@ -81,7 +81,7 @@ export class VehicleCommandHistory implements OnInit {
               : null,
           );
           if (result.dataState === 'complete' && !result.error) {
-            this.requests.set(result.data.fleetDevice.ermCommandRequests);
+            this.requests.set(result.data.fleetDevice.commandRequests);
           }
         },
         error: (error: unknown) => {

@@ -1,0 +1,241 @@
+enum FleetDeviceEventCategory {
+  POSITION
+  STATUS
+  ALARM
+  DIAGNOSTIC
+  OTHER
+}
+
+enum FleetDeviceEventSortField {
+  TIME
+  CODE
+  SEVERITY
+}
+
+input FleetDeviceEventSort {
+  field: FleetDeviceEventSortField! = TIME
+  direction: FleetSortDirection! = DESC
+}
+
+input FleetDeviceEventsInput {
+  "Page size of 25, 50 or 100."
+  pageSize: Int = 50
+  "Opaque cursor from the preceding page, with the same filters and sort."
+  cursor: String
+  "Zero-based offset; omit when using a cursor."
+  offset: Int
+  categories: [FleetDeviceEventCategory!]
+  severities: [FleetEventSeverity!]
+  sort: FleetDeviceEventSort
+}
+
+input FleetDeviceMessagesInput {
+  "Page size of 25, 50 or 100."
+  pageSize: Int = 50
+  "Opaque cursor from the preceding page, with the same time order."
+  cursor: String
+  "Zero-based offset; omit when using a cursor."
+  offset: Int
+  "Time order, newest first by default."
+  direction: FleetSortDirection
+}
+
+enum FleetDeviceLanguage {
+  BG
+  EN
+}
+
+"Live connection and the latest observations for one device."
+type FleetDeviceState {
+  imei: ID!
+  connected: Boolean!
+  connectedSince: DateTime
+  lastReportAt: DateTime
+  latestPosition: FleetDeviceEvent
+  latestEvent: FleetDeviceEvent
+  alarmsLast24h: Int!
+  latestAlarm: FleetDeviceEvent
+  "Main supply voltage in volts."
+  externalVoltage: FleetDeviceReading
+  "Backup battery voltage in volts."
+  backupBatteryVoltage: FleetDeviceReading
+  signalQuality: FleetDeviceReading
+  firmwareVersion: FleetDeviceTextReading
+  "Latest reported value per parameter, with its own observation time."
+  measurements: [FleetDeviceMeasurement!]!
+  health: FleetDeviceHealth!
+  erm: FleetErmDeviceState
+}
+
+type FleetDeviceReading {
+  value: Float!
+  observedAt: DateTime!
+}
+
+type FleetDeviceTextReading {
+  value: String!
+  observedAt: DateTime!
+}
+
+"Reported bytes and catalog metadata. The unit label does not imply a physical conversion."
+type FleetDeviceMeasurement {
+  parameterId: Int!
+  parameterType: Int!
+  valueSize: Int!
+  valueHex: String!
+  freezeFrame: Boolean!
+  name: String
+  unit: String
+  observedAt: DateTime!
+}
+
+type FleetDeviceHealth {
+  lastReportAgeSeconds: Int
+  expectedIntervalSeconds: Int!
+  overdue: Boolean!
+  gapsLast24h: [FleetDeviceDataGap!]!
+  networkChangesLast24h: Int!
+  latestNetworkChange: FleetDeviceNetworkChange
+  lastCloseReason: String
+  lastClosedAt: DateTime
+}
+
+type FleetDeviceDataGap {
+  from: DateTime!
+  to: DateTime!
+  durationSeconds: Int!
+  expectedIntervalSeconds: Int!
+}
+
+type FleetDeviceNetworkChange {
+  at: DateTime!
+  networkType: String
+  operatorCode: String
+}
+
+type FleetDeviceEvent {
+  id: ID!
+  messageId: ID!
+  imei: ID!
+  code: String
+  recordedAt: DateTime
+  positionAt: DateTime
+  latitude: Float
+  longitude: Float
+  speedKph: Float
+  headingDeg: Float
+  odometerKm: Float
+  engineOn: Boolean
+  ignition: Boolean
+  externalVoltage: Float
+  backupBatteryVoltage: Float
+  category: FleetDeviceEventCategory!
+  severity: FleetEventSeverity!
+  "Provider catalog name, when known."
+  name(language: FleetDeviceLanguage! = EN): String
+  erm: FleetErmDeviceEvent
+}
+
+type FleetDeviceEventPage {
+  items: [FleetDeviceEvent!]!
+  "Matching events before pagination."
+  total: Int!
+  offset: Int!
+  limit: Int!
+  cursor: String
+  nextCursor: String
+  hasMore: Boolean!
+}
+
+enum FleetDeviceMessageDirection {
+  DEVICE
+  UPSTREAM
+  SERVER
+}
+
+type FleetDeviceMessage {
+  id: ID!
+  connectionId: ID!
+  imei: ID
+  direction: FleetDeviceMessageDirection!
+  receivedAt: DateTime!
+  partial: Boolean!
+  displayText: String!
+  "Exact captured payload as hexadecimal, subject to the provider's evidence permissions."
+  payloadHex: String!
+  acknowledgement: FleetDeviceAcknowledgement
+  erm: FleetErmDeviceMessage
+}
+
+type FleetDeviceAcknowledgement {
+  commandId: ID!
+  "Branch-scoped operator request, when linked."
+  commandRequestId: ID
+  resultCode: String!
+  receivedAt: DateTime!
+  erm: FleetErmDeviceAcknowledgement
+}
+
+type FleetDeviceMessagePage {
+  items: [FleetDeviceMessage!]!
+  "Matching messages before pagination."
+  total: Int!
+  offset: Int!
+  limit: Int!
+  cursor: String
+  nextCursor: String
+  hasMore: Boolean!
+}
+
+type FleetErmDeviceState {
+  mode: FleetErmSessionMode
+  recovery: FleetErmRecoverySession
+  upstreamClosesLast24h: Int!
+  karmaRoutingWritesLast24h: Int!
+  latestKarmaRoutingWrite: FleetDeviceMessage
+}
+
+enum FleetErmSessionMode {
+  PRIMARY
+  MIRROR
+}
+
+enum FleetErmRecoveryOutcome {
+  ALREADY_DISCOCAN
+  NEEDS_OPERATOR
+}
+
+type FleetErmRecoverySession {
+  id: ID!
+  startedAt: DateTime!
+  finishedAt: DateTime!
+  outcome: FleetErmRecoveryOutcome!
+  reason: String!
+  primaryHost: String
+  primaryPort: String
+}
+
+"Captured StarLink fields or a decoded Simple eData report."
+scalar FleetErmJSON
+
+type FleetErmDeviceEvent {
+  fields: FleetErmJSON!
+  edata: FleetErmJSON
+}
+
+enum FleetErmChecksum {
+  OK
+  MISMATCH
+  ABSENT
+}
+
+type FleetErmDeviceMessage {
+  command: String
+  reference: String
+  checksum: FleetErmChecksum!
+}
+
+type FleetErmDeviceAcknowledgement {
+  commandReference: String!
+  replyReference: String!
+}

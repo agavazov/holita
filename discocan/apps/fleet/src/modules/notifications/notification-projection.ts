@@ -1,6 +1,7 @@
 import type { FleetEvent, Prisma } from '../../generated/prisma/client.js';
-import type { ErmTelemetryEvent } from '../../integrations/erm/erm-telemetry.client.js';
-import type { ErmTelemetryDevice } from '../erm-telemetry/erm-telemetry.mapping.js';
+import type { DeviceReport } from '@discocan/device-contract';
+import { legacyFaultPrefix, storedDiagnosticStatus } from '../../database/device-diagnostics.js';
+import type { TelemetryDevice } from '../device-telemetry/device-telemetry.mapping.js';
 
 export type AlertNotificationTransition = 'OPEN' | 'ACKNOWLEDGED' | 'RESOLVED' | 'REOPENED';
 
@@ -31,59 +32,59 @@ export function alertNotification(
   };
 }
 
-/** The same diagnostic identity is used by the retained ERM export and the imported view. */
+/** The same diagnostic identity is used by the device export and the imported view. */
 export function recordedDiagnosticNotifications(
-  device: ErmTelemetryDevice,
-  events: ErmTelemetryEvent[],
+  device: TelemetryDevice,
+  reports: DeviceReport[],
   since: Date,
   createdAt: Date,
 ): Prisma.FleetNotificationCreateManyInput[] {
   const rows: Prisma.FleetNotificationCreateManyInput[] = [];
-  for (const event of events) {
+  for (const event of reports) {
     if (
-      event.eventTime === null ||
-      event.eventTime < since ||
+      event.recordedAt === null ||
+      event.recordedAt < since ||
       event.receivedAt < device.createdAt
     ) {
       continue;
     }
-    const diagnostics =
-      event.edata?.report === '419'
-        ? event.edata.faults.map((fault) => ({
-            kind: 'DIAGNOSTIC_TROUBLE_CODE',
-            troubleCode: `SPN ${String(fault.spn)} FMI ${String(fault.fmi)}`,
-            status: fault.status,
-          }))
-        : event.edata?.report === '411' && event.edata.canError
-          ? [{ kind: 'CAN_ERROR', troubleCode: null, status: null }]
-          : [];
-    for (const diagnostic of diagnostics) {
+    for (const diagnostic of event.diagnostics) {
+      if (
+        diagnostic.kind !== 'CAN_ERROR' &&
+        (diagnostic.kind !== 'DIAGNOSTIC_TROUBLE_CODE' ||
+          diagnostic.spn === undefined ||
+          diagnostic.fmi === undefined)
+      ) {
+        continue;
+      }
+      const troubleCode = diagnostic.kind === 'DIAGNOSTIC_TROUBLE_CODE' ? diagnostic.code : null;
+      const status = diagnostic.kind === 'DIAGNOSTIC_TROUBLE_CODE' ? diagnostic.status : null;
       rows.push({
         tenantId: device.tenantId,
         branchId: device.branchId,
         sourceKind: 'DIAGNOSTIC',
         sourceKey: JSON.stringify([
           device.imei,
-          event.eventTime.toISOString(),
+          event.recordedAt.toISOString(),
           diagnostic.kind,
-          diagnostic.troubleCode,
-          diagnostic.status,
+          troubleCode,
+          status,
         ]),
         category: 'DEVICE',
-        severity: diagnostic.status === 'DELETED' ? 'INFO' : 'WARNING',
-        occurredAt: event.eventTime,
+        severity: status === 'DELETED' ? 'INFO' : 'WARNING',
+        occurredAt: event.recordedAt,
         createdAt,
         wordingKey: 'notification.recordedDiagnostic',
         parameters: {
           eventKind: diagnostic.kind,
-          troubleCode: diagnostic.troubleCode,
-          diagnosticStatus: diagnostic.status,
-          alarmCode: event.eventId,
+          troubleCode,
+          diagnosticStatus: status,
+          alarmCode: event.alarmCode ?? null,
         },
         deviceId: device.id,
         vehicleId:
           event.receivedAt >= (device.installedAt ?? device.createdAt) ? device.vehicleId : null,
-        ermEventId: event.id.toString(),
+        sourceEventId: event.id.toString(),
       });
     }
   }
@@ -101,8 +102,7 @@ function parameterText(row: Prisma.FleetNotificationCreateManyInput, key: string
 
 /**
  * The rows without an "added" recorded-fault notification for a code whose previous logger
- * report on the vehicle also added it: the 419 snapshot that answers every fault read repeats
- * each active code as added. A new code and a code that returns after a removal still notify.
+ * report on the vehicle also added it. Repeated snapshots report each active code as added. A new code and a code that returns after a removal still notify.
  * The previous report is the newest earlier one in Fleet's events or in the same rows.
  */
 export async function withoutRepeatedFaults(
@@ -136,7 +136,7 @@ export async function withoutRepeatedFaults(
         kind: 'DIAGNOSTIC_TROUBLE_CODE',
         troubleCode: report.troubleCode,
         occurredAt: { lt: report.at },
-        OR: [{ diagnosticStatus: { in: [1, 2] } }, { details: { startsWith: 'eData 419:' } }],
+        OR: [{ diagnosticStatus: { in: [1, 2] } }, { details: { startsWith: legacyFaultPrefix } }],
       },
       orderBy: [{ occurredAt: 'desc' }, { diagnosticIndex: 'desc' }, { id: 'desc' }],
       select: { occurredAt: true, diagnosticStatus: true, details: true },
@@ -146,9 +146,7 @@ export async function withoutRepeatedFaults(
         ? [
             {
               at: stored.occurredAt,
-              added:
-                stored.diagnosticStatus === 1 ||
-                (stored.diagnosticStatus === null && !stored.details?.includes('logger deleted')),
+              added: storedDiagnosticStatus(stored) === 'ADDED',
             },
           ]
         : []),

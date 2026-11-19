@@ -4,6 +4,7 @@ import en from './en.json';
 import bg from './bg.json';
 import { formatRelative } from '@osnova/ui';
 import { interpolate } from '@osnova/ui';
+import { karmaCloseReason } from '../../features/erm/karma-connection';
 
 /** Null means no installed device; undefined means the live request is unavailable. */
 export type FleetLiveDevice = AdminFleetLiveDeviceFragment | null | undefined;
@@ -51,9 +52,6 @@ export function fleetCloseReason(value: string | null | undefined, language: Lan
   if (value.startsWith('device error:')) {
     return text.deviceError;
   }
-  if (value.startsWith('upstream error:')) {
-    return text.upstreamError;
-  }
   const reasons: Readonly<Record<string, string>> = text.closeReasons;
-  return reasons[value] ?? value;
+  return karmaCloseReason(value, language) ?? reasons[value] ?? value;
 }

@@ -43,9 +43,9 @@ export type DeviceActionId = 'open' | 'edit' | 'vehicle' | 'delete';
 export interface DeviceRow {
   readonly id: string;
   readonly imei: string;
+  readonly type: AdminDeviceDetailsFragment['type'];
   readonly model: string;
   readonly serialNumber: string;
-  readonly edataModule: string;
   readonly simPhoneNumber: string;
   readonly firmware: string;
   readonly simIccid: string;
@@ -268,17 +268,17 @@ export class DevicesView {
   }
 
   protected connectionStatus(row: DeviceRow): { label: string; tone: StatusTone } {
-    const state = row.live?.ermState;
+    const state = row.live?.state;
     const text = this.liveText();
     if (!row.live) {
       return { label: text.unavailable, tone: 'neutral' };
     }
-    if (state?.online) {
-      return state.lastFrameAt && !state.health.overdue
+    if (state?.connected) {
+      return state.lastReportAt && !state.health.overdue
         ? { label: text.live, tone: 'success' }
         : { label: text.connected, tone: 'info' };
     }
-    if (state?.lastFrameAt) {
+    if (state?.lastReportAt) {
       return state.health.overdue
         ? { label: this.text().status.offline, tone: 'danger' }
         : { label: this.text().status.reportingOffline, tone: 'warn' };
@@ -287,8 +287,8 @@ export class DevicesView {
   }
 
   protected lastSignal(row: DeviceRow): { at: string | null; source: string | null } {
-    const discocan = row.live?.ermState?.lastFrameAt ?? null;
-    const karma = row.live?.ermRouting.latestKarmaReportAt ?? null;
+    const discocan = row.live?.state?.lastReportAt ?? null;
+    const karma = row.live?.type === 'ERM' ? row.live.ermRouting.latestKarmaReportAt : null;
     const candidates = [
       { at: discocan, source: this.text().status.viaDiscoCan },
       { at: karma, source: this.text().status.viaKarma },
@@ -311,8 +311,7 @@ export class DevicesView {
     };
   }
 
-  protected backupSince(row: DeviceRow): { text: string; title: string } {
-    const at = row.live?.ermRouting.since;
+  protected backupSince(at: string): { text: string; title: string } {
     return {
       text: interpolate(this.text().status.since, { time: this.format.dateTime(at) }),
       title: this.format.dateTimeCell(at, true).title,

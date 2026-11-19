@@ -107,6 +107,7 @@ export const fleetDataSourceDb = {
   DEMO: 'demo',
   MANUAL: 'manual',
   ERM: 'erm',
+  DISCOCAN: 'discocan',
 } satisfies Record<FleetDataSource, string>;
 
 export const fleetEventKindDb = {

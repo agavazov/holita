@@ -16,7 +16,7 @@ const RECORDED_PROBLEM_KINDS: FleetEventKind[] = [
 export class ProblemsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Complete scoped evidence and registry from one Fleet snapshot; paging happens after merging ERM. */
+  /** Complete scoped evidence and registry from one Fleet snapshot; paging happens after merging device evidence. */
   snapshot(scope: FleetScope, period: { from: Date; to: Date }) {
     return this.prisma.client.$transaction(
       async (transaction) => {
@@ -68,6 +68,7 @@ export class ProblemsRepository {
           select: {
             id: true,
             imei: true,
+            type: true,
             vehicleId: true,
             vehicle: {
               select: {

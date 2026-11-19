@@ -17,6 +17,7 @@
       "dependsOn": [
         "db-generate",
         "graphql-generate",
+        "^build",
         {
           "projects": ["osnova-auth"],
           "target": "build"
@@ -27,6 +28,7 @@
       "dependsOn": [
         "db-generate",
         "graphql-generate",
+        "^build",
         {
           "projects": ["osnova-auth"],
           "target": "build"
@@ -37,6 +39,7 @@
       "dependsOn": [
         "db-generate",
         "graphql-generate",
+        "^build",
         {
           "projects": ["osnova-auth"],
           "target": "build"
@@ -47,6 +50,7 @@
       "dependsOn": [
         "db-generate",
         "graphql-generate",
+        "^build",
         {
           "projects": ["osnova-auth"],
           "target": "build"
@@ -72,6 +76,7 @@
       "dependsOn": [
         "db-generate",
         "graphql-generate",
+        "^build",
         {
           "projects": ["osnova-auth"],
           "target": "build"

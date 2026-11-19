@@ -8,10 +8,10 @@ import { OverviewService } from './overview.service.js';
 import { DashboardRepository } from './dashboard.repository.js';
 import { DashboardService } from './dashboard.service.js';
 import { EventsModule } from '../events/events.module.js';
-import { ErmDashboardClientModule } from '../../integrations/erm/erm-dashboard.module.js';
+import { DeviceAdaptersModule } from '../../integrations/device-adapters.module.js';
 
 @Module({
-  imports: [DatabaseModule, ClockModule, EventsModule, ErmDashboardClientModule],
+  imports: [DatabaseModule, ClockModule, EventsModule, DeviceAdaptersModule],
   providers: [
     FleetEnabledGuard,
     OverviewRepository,

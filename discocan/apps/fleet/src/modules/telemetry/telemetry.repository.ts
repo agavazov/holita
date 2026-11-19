@@ -17,7 +17,7 @@ import {
 } from '../../database/sql.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { FleetScope } from '../../validation.js';
-import { MEASUREMENT_CATALOG } from '../erm-telemetry/erm-telemetry.mapping.js';
+import { MEASUREMENT_CATALOG } from '../device-telemetry/device-telemetry.mapping.js';
 import type { VehicleFacts } from './vehicle-state.js';
 import { vehicleFactsSql } from './vehicle-facts.sql.js';
 
@@ -211,7 +211,7 @@ export class TelemetryRepository {
     });
   }
 
-  /** Values of the vehicle's newest eData 415 freeze frame, ascending by parameter ID. */
+  /** Values of the vehicle's newest freeze frame, ascending by parameter ID. */
   async latestFreezeFrame(scope: FleetScope, vehicleId: string) {
     const where = {
       tenantId: scope.tenantId,
@@ -240,7 +240,7 @@ export class TelemetryRepository {
         });
   }
 
-  /** The newest periodic (405) value of each reported parameter, ascending by parameter ID. */
+  /** The newest periodic value of each reported parameter, ascending by parameter ID. */
   async latestEdataValues(scope: FleetScope, vehicleId: string) {
     const rows: unknown = await this.prisma.client.$queryRaw(Prisma.sql`
       SELECT DISTINCT ON (m."parameterId") m."parameterId"::int AS "parameterId", m."name",

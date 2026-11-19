@@ -1,14 +1,22 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  type ServiceUnavailableException,
+} from '@nestjs/common';
 import { requireRole } from '../../auth/roles.js';
 import { runFleetActions } from '../../fleet-actions.js';
 import { FleetClock } from '../../clock/fleet-clock.js';
 import { CoreClient } from '../../integrations/core/core.client.js';
+import { DeviceAdapters } from '../../integrations/device-adapters.js';
+import type { InspectionState } from '../../integrations/device-adapter.js';
 import type {
   CreateFleetDeviceInput,
   FleetDevice,
   FleetDevicePage,
   FleetDeviceRouting,
-  FleetDeviceRoutingHealth,
+  FleetErmDevice,
   FleetDeviceSortField,
   FleetDeviceActionResult,
   FleetDeviceSummary,
@@ -17,21 +25,14 @@ import type {
   QueryFleetDevicesArgs,
   UpdateFleetDeviceInput,
 } from '../../generated/graphql/types.js';
-import { FleetDeviceModel, FleetDeviceOption } from '../../generated/prisma/enums.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import {
   enumFilter,
-  enumList,
   type FieldError,
   type FleetScope,
   idList,
   ids,
   invalid,
-  optionalDateTime,
-  optionalEnum,
-  optionalPattern,
-  optionalText,
-  optionalUuid,
   pagination,
   persistenceError,
   requireScope,
@@ -44,31 +45,44 @@ import {
 import { Prisma } from '../../generated/prisma/client.js';
 import { reportingPair, TelemetryService } from '../telemetry/telemetry.service.js';
 import {
-  type DeviceData,
   type DeviceListCriteria,
   type DeviceRow,
   DevicesRepository,
 } from './devices.repository.js';
+import {
+  DEVICE_MODELS,
+  DEVICE_OPTIONS,
+  checkOptions,
+  createDeviceData,
+  deviceType,
+  edataModule as edataModuleInput,
+  updateDeviceData,
+} from './device-input.js';
 import { deviceConditions } from './device-filter.js';
+import { loadDeviceStates } from '../device-inspection/device-state-loader.js';
 import { deviceStatus } from './device-state.js';
 import { SettingsService } from '../settings/settings.service.js';
-import { ermTelemetryEnabled } from '../erm-telemetry/erm-telemetry.jobs.js';
 import { WARNING_LAMP_PARAMETER_IDS, warningLamp, currentWarnings } from './warning-lamps.js';
 
-export type DeviceResult = Omit<FleetDevice, 'branch'>;
+export type DeviceResult = Omit<
+  FleetDevice,
+  | 'branch'
+  | 'state'
+  | 'events'
+  | 'messages'
+  | 'commandRequests'
+  | 'commands'
+  | 'parameterSnapshots'
+  | 'configurationChanges'
+  | 'configurationWritesEnabled'
+> & {
+  state?: InspectionState | ServiceUnavailableException | null;
+};
 type StoredDevice = Omit<
   DeviceResult,
-  | 'lastReportedAt'
-  | 'status'
-  | 'routing'
-  | 'routingHealth'
-  | 'diagnostics'
-  | 'warningLamps'
-  | 'currentWarnings'
+  'lastReportedAt' | 'status' | 'erm' | 'diagnostics' | 'warningLamps' | 'currentWarnings'
 >;
 
-const DEVICE_MODELS = Object.values(FleetDeviceModel);
-const DEVICE_OPTIONS = Object.values(FleetDeviceOption);
 const SORT_FIELDS: readonly FleetDeviceSortField[] = [
   'IMEI',
   'INSTALLED_AT',
@@ -77,25 +91,6 @@ const SORT_FIELDS: readonly FleetDeviceSortField[] = [
   'VEHICLE_LICENSE_PLATE',
   'LAST_REPORTED_AT',
 ];
-
-/** Options each model supports; OTHER accepts every option and no model accepts none. */
-const MODEL_OPTIONS: Record<FleetDeviceModel, readonly FleetDeviceOption[]> = {
-  STARLINK_TRACKER: [
-    'CELLULAR_4G',
-    'SAFETY_SF',
-    'IRF',
-    'CAN',
-    'DRIVER_ID',
-    'ECONNECT',
-    'RS232',
-    'EXTERNAL_ANTENNA',
-    'VOICE',
-    'WIFI',
-    'WILIOT',
-  ],
-  STARLINK_SCOUT: ['CELLULAR_4G', 'SAFETY_SF', 'TEMPERATURE_DS', 'GEOZONES_GO', 'IRF'],
-  OTHER: DEVICE_OPTIONS,
-};
 
 const DUPLICATE_IMEI: FieldError = {
   path: 'imei',
@@ -112,45 +107,18 @@ const UNIQUE_INDEXES = new Map([
   ['device_tenantId_branchId_serialNumber_key', DUPLICATE_SERIAL_NUMBER],
 ]);
 
-function imei(value: unknown): string {
-  const result = typeof value === 'string' ? value.trim() : '';
-  if (!/^[0-9]{15}$/.test(result)) {
-    invalid('imei', 'Enter an IMEI of exactly 15 digits.', 'INVALID_FORMAT');
-  }
-  return result;
-}
-
-function options(value: unknown): DeviceData['options'] {
-  return value === null || value === undefined
-    ? []
-    : enumList(value, DEVICE_OPTIONS, 'options', DEVICE_OPTIONS.length);
-}
-
-function checkOptions(model: FleetDeviceModel | null, selected: readonly FleetDeviceOption[]) {
-  const supported = model === null ? [] : MODEL_OPTIONS[model];
-  if (selected.some((option) => !supported.includes(option))) {
-    invalid(
-      'options',
-      model === null
-        ? 'Choose a device model before selecting options.'
-        : 'Choose only options that the selected model supports.',
-      model === null ? 'MODEL_REQUIRED' : 'MODEL_OPTIONS_UNSUPPORTED',
-    );
-  }
-}
-
 function toDevice(row: DeviceRow): StoredDevice {
   return {
     id: row.id,
     branchId: row.branchId,
     imei: row.imei,
+    type: row.type,
     vehicleId: row.vehicleId,
     vehicle: row.vehicle,
     model: row.model,
     serialNumber: row.serialNumber,
     options: row.options,
     firmwareVersion: row.firmwareVersion,
-    edataModule: row.edataModule,
     simPhoneNumber: row.simPhoneNumber,
     simIccid: row.simIccid,
     smsPassword: row.smsPassword,
@@ -171,83 +139,51 @@ export class DevicesService {
     private readonly clock: FleetClock,
     private readonly telemetry: TelemetryService,
     private readonly settings: SettingsService,
+    private readonly adapters: DeviceAdapters,
   ) {}
 
-  async internalErmDeviceTarget(body: unknown): Promise<{ matches: boolean }> {
-    if (
-      typeof body !== 'object' ||
-      body === null ||
-      Array.isArray(body) ||
-      Object.keys(body).length !== 4 ||
-      !('tenantId' in body) ||
-      !('branchId' in body) ||
-      !('deviceId' in body) ||
-      !('imei' in body)
-    ) {
-      throw new BadRequestException('Use tenantId, branchId, deviceId and imei.');
+  private ermDevice(row: DeviceRow, freshAfter: number | null): FleetErmDevice | null {
+    if (row.type !== 'ERM') {
+      return null;
     }
-    const scope = {
-      tenantId: uuid(body.tenantId, 'tenantId'),
-      branchId: uuid(body.branchId, 'branchId'),
-    };
-    const deviceId = uuid(body.deviceId, 'deviceId');
-    if (typeof body.imei !== 'string' || !/^\d{15}$/.test(body.imei)) {
-      throw new BadRequestException('Use an IMEI of exactly 15 digits.');
+    const edataModule = row.erm?.edataModule ?? null;
+    if (freshAfter === null) {
+      return { edataModule, routing: null, routingHealth: null };
     }
-    const device = await this.devices.find(scope, deviceId);
-    return { matches: device?.imei === body.imei };
+    const primaryReceivedAt = row.cursor?.lastReceivedAt ?? null;
+    const observation = row.erm?.routingObservedAt ?? null;
+    const primaryAfterObservation =
+      primaryReceivedAt !== null && (observation === null || primaryReceivedAt > observation);
+    const routing: FleetDeviceRouting | null = primaryAfterObservation
+      ? primaryReceivedAt.getTime() >= freshAfter
+        ? 'DISCOCAN'
+        : null
+      : observation !== null && observation.getTime() >= freshAfter
+        ? (row.erm?.routing ?? null)
+        : null;
+    const routingHealth =
+      row.erm && observation
+        ? {
+            backupSince: row.erm.backupSince,
+            lastBackupStartedAt: row.erm.lastBackupStartedAt,
+            lastBackupEndedAt: row.erm.lastBackupEndedAt,
+            backupSeconds:
+              row.erm.backupSeconds +
+              (row.erm.backupSince === null
+                ? 0
+                : Math.max(
+                    0,
+                    Math.floor((observation.getTime() - row.erm.backupSince.getTime()) / 1000),
+                  )),
+          }
+        : null;
+    return { edataModule, routing, routingHealth };
   }
 
-  private routing(rows: readonly DeviceRow[]): Map<
-    string,
-    {
-      routing: FleetDeviceRouting | null;
-      routingHealth: FleetDeviceRoutingHealth | null;
-    }
-  > {
-    if (!ermTelemetryEnabled() || !rows.length) {
-      return new Map();
-    }
-    const freshAfter = this.clock.now().getTime() - 70 * 60_000;
-    return new Map(
-      rows.map((row) => {
-        const primaryReceivedAt = row.ermCursor?.lastReceivedAt ?? null;
-        const primaryAfterObservation =
-          primaryReceivedAt !== null &&
-          (row.routingObservedAt === null || primaryReceivedAt > row.routingObservedAt);
-        const routing: FleetDeviceRouting | null = primaryAfterObservation
-          ? primaryReceivedAt.getTime() >= freshAfter
-            ? 'DISCOCAN'
-            : null
-          : row.routingObservedAt !== null && row.routingObservedAt.getTime() >= freshAfter
-            ? row.routing
-            : null;
-        return [
-          row.imei,
-          {
-            routing,
-            routingHealth:
-              row.routingObservedAt === null
-                ? null
-                : {
-                    backupSince: row.backupSince,
-                    lastBackupStartedAt: row.lastBackupStartedAt,
-                    lastBackupEndedAt: row.lastBackupEndedAt,
-                    backupSeconds:
-                      row.backupSeconds +
-                      (row.backupSince === null
-                        ? 0
-                        : Math.max(
-                            0,
-                            Math.floor(
-                              (row.routingObservedAt.getTime() - row.backupSince.getTime()) / 1000,
-                            ),
-                          )),
-                  },
-          },
-        ];
-      }),
-    );
+  private routingFreshAfter(rows: readonly DeviceRow[]): number | null {
+    return rows.some((row) => row.type === 'ERM') && this.adapters.enabled('ERM', 'reports')
+      ? this.clock.now().getTime() - 70 * 60_000
+      : null;
   }
 
   private async diagnostics(
@@ -313,9 +249,24 @@ export class DevicesService {
     return this.complete(scope, await this.devices.forVehicles(scope, vehicleIds));
   }
 
+  loadStates(context: RequestContext, devices: readonly DeviceResult[]): Promise<void> {
+    return loadDeviceStates(this.adapters, context, devices);
+  }
+
+  async references(
+    context: RequestContext,
+    ids: readonly string[],
+  ): Promise<Map<string, DeviceResult>> {
+    const scope = requireScope(context);
+    const devices = await this.complete(scope, await this.devices.forIds(scope, ids));
+    await this.loadStates(context, devices);
+    return new Map(devices.map((device) => [device.id, device]));
+  }
+
   async list(
     context: RequestContext,
     args: QueryFleetDevicesArgs,
+    includeState = false,
   ): Promise<Omit<FleetDevicePage, 'items'> & { items: DeviceResult[] }> {
     const scope = requireScope(context);
     const { offset, limit } = pagination(args);
@@ -335,32 +286,35 @@ export class DevicesService {
       direction: sortDirection(args.sort?.direction, 'DESC'),
     };
     const page = await this.devices.list(scope, { offset, limit }, criteria, sort);
-    const routing = this.routing(page.items);
+    const freshAfter = this.routingFreshAfter(page.items);
     const diagnostics = await this.diagnostics(scope, page.items);
-    return {
-      items: page.items.map((row) => ({
-        ...toDevice(row),
-        status: row.status,
-        lastReportedAt: row.lastReportedAt,
-        routing: routing.get(row.imei)?.routing ?? null,
-        routingHealth: routing.get(row.imei)?.routingHealth ?? null,
-        diagnostics: diagnostics.get(row.id)?.diagnostics ?? { count: 0, latest: null },
-        warningLamps: diagnostics.get(row.id)?.warningLamps ?? [],
-        currentWarnings: diagnostics.get(row.id)?.currentWarnings ?? [],
-      })),
-      total: page.total,
-      offset,
-      limit,
-    };
+    const items = page.items.map((row) => ({
+      ...toDevice(row),
+      status: row.status,
+      lastReportedAt: row.lastReportedAt,
+      erm: this.ermDevice(row, freshAfter),
+      diagnostics: diagnostics.get(row.id)?.diagnostics ?? { count: 0, latest: null },
+      warningLamps: diagnostics.get(row.id)?.warningLamps ?? [],
+      currentWarnings: diagnostics.get(row.id)?.currentWarnings ?? [],
+    }));
+    if (includeState) {
+      await this.loadStates(context, items);
+    }
+    return { items, total: page.total, offset, limit };
   }
 
-  async find(context: RequestContext, id: string): Promise<DeviceResult> {
+  async find(context: RequestContext, id: string, includeState = false): Promise<DeviceResult> {
+    const [scope, row] = await this.scopedDevice(context, id);
+    return this.completeOne(scope, row, includeState ? context : undefined);
+  }
+
+  async scopedDevice(context: RequestContext, id: string): Promise<[FleetScope, DeviceRow]> {
     const scope = requireScope(context);
     const row = await this.devices.find(scope, uuid(id, 'id'));
     if (!row) {
       throw new NotFoundException('Device not found');
     }
-    return this.completeOne(scope, row);
+    return [scope, row];
   }
 
   summary(context: RequestContext): Promise<FleetDeviceSummary> {
@@ -382,23 +336,16 @@ export class DevicesService {
     );
   }
 
-  async create(context: RequestContext, input: CreateFleetDeviceInput): Promise<DeviceResult> {
+  async create(
+    context: RequestContext,
+    input: CreateFleetDeviceInput,
+    includeState = false,
+  ): Promise<DeviceResult> {
     const scope = requireScope(context);
     await requireRole(context, 'OPERATOR');
-    const data: DeviceData = {
-      imei: imei(input.imei),
-      vehicleId: optionalUuid(input.vehicleId, 'vehicleId'),
-      model: optionalEnum(input.model, DEVICE_MODELS, 'model'),
-      serialNumber: this.serialNumber(input.serialNumber),
-      options: options(input.options),
-      firmwareVersion: this.firmwareVersion(input.firmwareVersion),
-      edataModule: this.edataModule(input.edataModule),
-      simPhoneNumber: this.simPhoneNumber(input.simPhoneNumber),
-      simIccid: this.simIccid(input.simIccid),
-      smsPassword: this.smsPassword(input.smsPassword),
-      installedAt: this.installedAt(input.installedAt),
-      notes: optionalText(input.notes, 'notes', 2000),
-    };
+    const type = deviceType(input);
+    const edataModule = edataModuleInput(type, input.erm) ?? null;
+    const data = createDeviceData(input, this.clock);
     checkOptions(data.model, data.options);
     if (data.vehicleId !== null) {
       await this.requireVehicle(scope, data.vehicleId);
@@ -410,64 +357,30 @@ export class DevicesService {
     await this.core.requireBranch(scope.branchId, context);
     let row: DeviceRow;
     try {
-      row = await this.devices.create(scope, data);
+      row = await this.devices.create(scope, data, type, edataModule);
     } catch (error) {
       this.writeError(error);
     }
-    return this.completeOne(scope, row);
+    return this.completeOne(scope, row, includeState ? context : undefined);
   }
 
   async update(
     context: RequestContext,
     id: string,
     input: UpdateFleetDeviceInput,
+    includeState = false,
   ): Promise<DeviceResult> {
     const scope = requireScope(context);
     await requireRole(context, 'OPERATOR');
     const recordId = uuid(id, 'id');
-    const data: Partial<DeviceData> = {};
-    if (input.imei !== undefined) {
-      data.imei = imei(input.imei);
-    }
-    if (input.vehicleId !== undefined) {
-      data.vehicleId = optionalUuid(input.vehicleId, 'vehicleId');
-    }
-    if (input.model !== undefined) {
-      data.model = optionalEnum(input.model, DEVICE_MODELS, 'model');
-    }
-    if (input.serialNumber !== undefined) {
-      data.serialNumber = this.serialNumber(input.serialNumber);
-    }
-    if (input.options !== undefined) {
-      data.options = options(input.options);
-    }
-    if (input.firmwareVersion !== undefined) {
-      data.firmwareVersion = this.firmwareVersion(input.firmwareVersion);
-    }
-    if (input.edataModule !== undefined) {
-      data.edataModule = this.edataModule(input.edataModule);
-    }
-    if (input.simPhoneNumber !== undefined) {
-      data.simPhoneNumber = this.simPhoneNumber(input.simPhoneNumber);
-    }
-    if (input.simIccid !== undefined) {
-      data.simIccid = this.simIccid(input.simIccid);
-    }
-    if (input.smsPassword !== undefined) {
-      data.smsPassword = this.smsPassword(input.smsPassword);
-    }
-    if (input.installedAt !== undefined) {
-      data.installedAt = this.installedAt(input.installedAt);
-    }
-    if (input.notes !== undefined) {
-      data.notes = optionalText(input.notes, 'notes', 2000);
-    }
-    if (!Object.keys(data).length) {
-      throw new BadRequestException('Provide at least one device field to update');
-    }
+    const data = updateDeviceData(input, this.clock);
     const stored = await this.devices.find(scope, recordId);
     if (!stored) {
       throw new NotFoundException('Device not found');
+    }
+    const edataModule = edataModuleInput(stored.type, input.erm);
+    if (!Object.keys(data).length && edataModule === undefined) {
+      throw new BadRequestException('Provide at least one device field to update');
     }
     checkOptions(
       data.model === undefined ? stored.model : data.model,
@@ -484,11 +397,11 @@ export class DevicesService {
     }
     let row: DeviceRow;
     try {
-      row = await this.devices.update(scope, recordId, data);
+      row = await this.devices.update(scope, recordId, data, edataModule);
     } catch (error) {
       this.writeError(error);
     }
-    return this.completeOne(scope, row);
+    return this.completeOne(scope, row, includeState ? context : undefined);
   }
 
   /** Telemetry keeps an IMEI snapshot when a Device is deleted. */
@@ -517,7 +430,7 @@ export class DevicesService {
     const pairs = rows.flatMap((row) =>
       row.vehicleId === null ? [] : [{ vehicleId: row.vehicleId, imei: row.imei }],
     );
-    const routing = this.routing(rows);
+    const freshAfter = this.routingFreshAfter(rows);
     const [reported, asOf, settings, diagnostics] = await Promise.all([
       this.telemetry.lastReported(scope, pairs),
       this.telemetry.asOf(scope),
@@ -531,8 +444,7 @@ export class DevicesService {
           : (reported.get(reportingPair(row.vehicleId, row.imei)) ?? null);
       return {
         ...toDevice(row),
-        routing: routing.get(row.imei)?.routing ?? null,
-        routingHealth: routing.get(row.imei)?.routingHealth ?? null,
+        erm: this.ermDevice(row, freshAfter),
         lastReportedAt,
         status: deviceStatus(row.vehicleId, lastReportedAt, asOf, settings.notReportingHours),
         diagnostics: diagnostics.get(row.id)?.diagnostics ?? { count: 0, latest: null },
@@ -542,75 +454,19 @@ export class DevicesService {
     });
   }
 
-  private async completeOne(scope: FleetScope, row: DeviceRow): Promise<DeviceResult> {
+  private async completeOne(
+    scope: FleetScope,
+    row: DeviceRow,
+    stateContext?: RequestContext,
+  ): Promise<DeviceResult> {
     const [device] = await this.complete(scope, [row]);
     if (!device) {
       throw new NotFoundException('Device not found');
     }
-    return device;
-  }
-
-  private serialNumber(value: unknown): string | null {
-    return optionalPattern(
-      value,
-      'serialNumber',
-      32,
-      /^[0-9A-Za-z-]{1,32}$/,
-      'Use 1 to 32 letters, digits and hyphens.',
-    );
-  }
-
-  private firmwareVersion(value: unknown): string | null {
-    return optionalPattern(
-      value,
-      'firmwareVersion',
-      32,
-      /^[0-9A-Za-z._-]{1,32}$/,
-      'Use letters, digits, dots, underscores and hyphens.',
-    );
-  }
-
-  private edataModule(value: unknown): string | null {
-    return optionalPattern(
-      value,
-      'edataModule',
-      64,
-      /^[ -~]{1,64}$/,
-      'Use 1 to 64 printable characters.',
-    );
-  }
-
-  private simPhoneNumber(value: unknown): string | null {
-    return optionalPattern(
-      value,
-      'simPhoneNumber',
-      20,
-      /^\+?[0-9]{6,19}$/,
-      'Enter 6 to 19 digits with an optional leading +.',
-    );
-  }
-
-  private simIccid(value: unknown): string | null {
-    return optionalPattern(value, 'simIccid', 22, /^[0-9]{18,22}$/, 'Enter 18 to 22 digits.');
-  }
-
-  private smsPassword(value: unknown): string | null {
-    return optionalPattern(
-      value,
-      'smsPassword',
-      16,
-      /^[0-9A-Za-z]{1,16}$/,
-      'Use 1 to 16 letters or digits.',
-    );
-  }
-
-  /** Installation time from 2000-01-01 up to now. */
-  private installedAt(value: unknown): Date | null {
-    const result = optionalDateTime(value, 'installedAt');
-    if (result !== null && result.getTime() > this.clock.now().getTime()) {
-      invalid('installedAt', 'Installation time cannot be in the future.', 'FUTURE_NOT_ALLOWED');
+    if (stateContext) {
+      await this.loadStates(stateContext, [device]);
     }
-    return result;
+    return device;
   }
 
   private async requireVehicle(scope: FleetScope, vehicleId: string): Promise<void> {

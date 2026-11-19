@@ -6,7 +6,7 @@ import type {
 } from '../../../../generated/graphql/operations';
 import type { Language } from '../../../i18n/messages';
 import type { SeriesPoint } from '@osnova/ui/charts';
-import type { FleetFreezeFrame } from '../../../ui/fleet-live/fault-wording';
+import type { FleetFaultRead, FleetFreezeFrame } from '../../../ui/fleet-live/fault-wording';
 import { fleetFieldErrors } from '../field-errors';
 import type { OdometerField, PreviousOdometerReading } from './odometer-drawer';
 import { vehicleRow } from './vehicle-mapping';
@@ -15,6 +15,7 @@ import type { EdataObservation, VehicleProfile } from './vehicle-profile-view';
 export function vehicleProfile(
   vehicle: AdminVehicleProfileFragment,
   freezeFrame: FleetFreezeFrame | null,
+  faultReads: readonly FleetFaultRead[],
 ): VehicleProfile {
   return {
     ...vehicleRow(vehicle),
@@ -29,7 +30,7 @@ export function vehicleProfile(
     liveDevices: vehicle.devices,
     warningLamps: vehicle.warningLamps,
     faultCheck: vehicle.faultCheck ?? null,
-    faultReads: vehicle.devices.flatMap((device) => device.ermCommandRequests),
+    faultReads,
     freezeFrame,
     createdAt: vehicle.createdAt,
   };

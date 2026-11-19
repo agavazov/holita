@@ -74,6 +74,12 @@ enum FleetVehicleStatus {
   @@map("fleetVehicleStatus")
 }
 
+enum FleetDeviceType {
+  DISCOCAN @map("discocan")
+  ERM @map("erm")
+  @@map("fleetDeviceType")
+}
+
 enum FleetDeviceModel {
   STARLINK_TRACKER @map("starlinkTracker")
   STARLINK_SCOUT @map("starlinkScout")
@@ -139,11 +145,12 @@ enum FleetGroupColor {
   @@map("fleetGroupColor")
 }
 
-// ERM rows are imported device activity; DEMO is seeded; MANUAL is operator odometer readings.
+// Device activity identifies its provider; DEMO is seeded; MANUAL is operator odometer readings.
 enum FleetDataSource {
   DEMO @map("demo")
   MANUAL @map("manual")
   ERM @map("erm")
+  DISCOCAN @map("discocan")
   @@map("fleetDataSource")
 }
 
@@ -263,33 +270,26 @@ model VehicleFaultCheck {
   @@map("vehicleFaultCheck")
 }
 
-// Hand-written CHECKs: options NOT NULL with at most 13 values, serial number, eData module, SIM and SMS password formats.
+// Hand-written CHECKs: options NOT NULL with at most 13 values, serial number, SIM and SMS password formats.
 model Device {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
   branchId String @db.Uuid
   imei String @unique @db.VarChar(15)
+  type FleetDeviceType @default(DISCOCAN)
   vehicleId String? @db.Uuid
   vehicle Vehicle? @relation(fields: [tenantId, branchId, vehicleId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
   model FleetDeviceModel?
   serialNumber String? @db.VarChar(32)
   options FleetDeviceOption[] @default([])
   firmwareVersion String? @db.VarChar(32)
-  edataModule String? @db.VarChar(64)
   simPhoneNumber String? @db.VarChar(20)
   simIccid String? @db.VarChar(22)
   smsPassword String? @db.VarChar(16)
   installedAt DateTime? @db.Timestamptz(3)
   notes String? @db.VarChar(2000)
-  karmaCarId String? @db.VarChar(32)
-  karmaDeviceId String? @db.VarChar(128)
-  routing FleetDeviceRouting?
-  routingObservedAt DateTime? @db.Timestamptz(3)
-  backupSince DateTime? @db.Timestamptz(3)
-  lastBackupStartedAt DateTime? @db.Timestamptz(3)
-  lastBackupEndedAt DateTime? @db.Timestamptz(3)
-  backupSeconds Int @default(0)
-  ermCursor FleetErmCursor?
+  erm ErmDevice?
+  cursor DeviceCursor?
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
@@ -300,8 +300,28 @@ model Device {
   @@map("device")
 }
 
+// Hand-written CHECK: eData module format.
+model ErmDevice {
+  deviceId String @id @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  edataModule String? @db.VarChar(64)
+  karmaCarId String? @db.VarChar(32)
+  karmaDeviceId String? @db.VarChar(128)
+  routing FleetDeviceRouting?
+  routingObservedAt DateTime? @db.Timestamptz(3)
+  backupSince DateTime? @db.Timestamptz(3)
+  lastBackupStartedAt DateTime? @db.Timestamptz(3)
+  lastBackupEndedAt DateTime? @db.Timestamptz(3)
+  backupSeconds Int @default(0)
+  device Device @relation(fields: [tenantId, branchId, deviceId], references: [tenantId, branchId, id], onDelete: Cascade, onUpdate: Restrict)
+
+  @@unique([tenantId, branchId, deviceId])
+  @@map("ermDevice")
+}
+
 // Hand-written CHECK: lastEventId is nonnegative.
-model FleetErmCursor {
+model DeviceCursor {
   deviceId String @id @db.Uuid
   tenantId String @db.Uuid
   branchId String @db.Uuid
@@ -311,7 +331,7 @@ model FleetErmCursor {
   device Device @relation(fields: [tenantId, branchId, deviceId], references: [tenantId, branchId, id], onDelete: Cascade, onUpdate: Restrict)
 
   @@unique([tenantId, branchId, deviceId])
-  @@map("fleetErmCursor")
+  @@map("deviceCursor")
 }
 
 // Hand-written CHECKs: licenseCategories NOT NULL with at most 10 values, phone format.
@@ -663,7 +683,7 @@ model FleetNotification {
   vehicleId String? @db.Uuid
   deviceId String? @db.Uuid
   alertId String? @db.Uuid
-  ermEventId String?
+  sourceEventId String? @map("ermEventId")
   commandRequestId String?
   receipts FleetNotificationReceipt[]
 

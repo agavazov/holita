@@ -415,7 +415,7 @@
                     [lamps]="vehicle.currentWarnings"
                     [reads]="vehicle.faultReads"
                     [freezeFrame]="vehicle.freezeFrame"
-                    [canRead]="canOperate() && !!vehicle.liveDevices?.length"
+                    [canRead]="canOperate() && !!faultReadDevice(vehicle)"
                     [readBusy]="faultReadBusy()"
                     [language]="language()"
                     [now]="now()"

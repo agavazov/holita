@@ -1,6 +1,9 @@
 import { spawn, execFile } from 'node:child_process';
 import { randomBytes, randomUUID, scryptSync } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { once } from 'node:events';
+import { createConnection } from 'node:net';
+import { createInterface } from 'node:readline';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -15,6 +18,72 @@ const execute = promisify(execFile);
 const readinessTenantId = '01000000-0000-4000-8000-000000000001';
 const readinessBranchId = '10000000-0000-4000-8000-000000000001';
 const readinessUnitId = '862129080366630';
+export const configurationFixtureImei = '999999999999991';
+export const configurationFixtureDefinition = '029680BD000100080001000100000100010000F0003C';
+export const configurationFixtureGlobals = '00'.repeat(49);
+
+async function connectConfigurationDevice(port: number) {
+  const socket = createConnection({ host: '127.0.0.1', port });
+  const lines = createInterface({ input: socket });
+  let reference = 0;
+  let snapshotValue = 'previous';
+  const receivedCommands: string[] = [];
+  function reply(command: string, fields: string[]) {
+    const body = [`SLU${configurationFixtureImei}`, command, String(++reference), ...fields].join(
+      ',',
+    );
+    const checksum = [...Buffer.from(body)].reduce((sum, byte) => (sum + byte) % 256, 0);
+    socket.write(`$${body}*${checksum.toString(16).toUpperCase().padStart(2, '0')}\r\n`);
+  }
+  const reports = new Map([
+    ['301:0702BC', ['401', `07${configurationFixtureDefinition}`]],
+    ['303:', ['410', configurationFixtureGlobals]],
+    ['301:1F', ['416', '1F0007']],
+  ]);
+  lines.on('line', (line: string) => {
+    const [header, command, requestReference, ...fields] = line.split('*')[0]?.split(',') ?? [];
+    if (header !== `$SRV${configurationFixtureImei}` || !command || !requestReference) {
+      return;
+    }
+    if (command === '02') {
+      return;
+    }
+    receivedCommands.push(command);
+    const parameter = fields[0];
+    if (command === '45' && parameter) {
+      reply('45', [parameter, snapshotValue]);
+    }
+    if (command === '30') {
+      const report = reports.get(`${fields[3] ?? ''}:${fields[7] ?? ''}`);
+      if (report?.[0] && report[1]) {
+        reply('02', [requestReference, '01']);
+        reply('06', ['261119120000', '33', '19', '0', report[0], '0', '1', '1', '1001', report[1]]);
+      }
+    }
+  });
+  try {
+    await once(socket, 'connect');
+    reply('01', []);
+  } catch (error) {
+    lines.close();
+    socket.destroy();
+    throw error;
+  }
+  return {
+    receivedCommands,
+    setSnapshotValue(value: string) {
+      snapshotValue = value;
+    },
+    async close() {
+      lines.close();
+      if (!socket.closed) {
+        const closed = once(socket, 'close');
+        socket.destroy();
+        await closed;
+      }
+    },
+  };
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -51,8 +120,8 @@ function isGatewayReady(body: unknown): boolean {
     summary.inOperation >= 0 &&
     isRecord(device) &&
     typeof device.id === 'string' &&
-    isRecord(device.ermState) &&
-    device.ermState.unitId === readinessUnitId
+    isRecord(device.state) &&
+    device.state.imei === readinessUnitId
   );
 }
 
@@ -103,7 +172,7 @@ async function waitForGatewayReadiness(url: string) {
       'x-branch-id': readinessBranchId,
     },
     body: JSON.stringify({
-      query: 'mutation($imei:String!){createFleetDevice(input:{imei:$imei}){id}}',
+      query: 'mutation($imei:String!){createFleetDevice(input:{imei:$imei,type:ERM}){id}}',
       variables: { imei: readinessUnitId },
     }),
     signal: AbortSignal.timeout(5000),
@@ -124,7 +193,7 @@ async function waitForGatewayReadiness(url: string) {
     branches { id }
     fleetVehicles(offset: 0, limit: 1) { items { id } total offset limit }
     fleetVehicleSummary { inOperation }
-    fleetDevice(id: "${ermDeviceId}") { id ermState { unitId } }
+    fleetDevice(id: "${ermDeviceId}") { id state { imei } }
   }`;
   let lastFailure = 'No signed readiness response';
   while (Date.now() < deadline) {
@@ -288,6 +357,7 @@ async function createUserSession(
   schemaName: string,
   gatewayUrl: string,
   tenantId: string,
+  role: 'administrator' | 'viewer' = 'administrator',
 ) {
   const userId = randomUUID();
   const email = `${userId}@federation.example`;
@@ -314,8 +384,8 @@ async function createUserSession(
     await connection.query(
       `INSERT INTO ${pg.escapeIdentifier(schemaName)}."user"
        ("id", "tenantId", "email", "name", "passwordHash", "role", "updatedAt")
-       VALUES ($1, $2, $3, 'Federation user', $4, 'administrator', CURRENT_TIMESTAMP)`,
-      [userId, tenantId, email, passwordHash],
+       VALUES ($1, $2, $3, 'Federation user', $4, $5, CURRENT_TIMESTAMP)`,
+      [userId, tenantId, email, passwordHash, role],
     );
   } finally {
     await connection.end();
@@ -376,8 +446,8 @@ async function insertErmRecords(databaseUrl: string, schemaName: string) {
       `INSERT INTO ${schema}."ermEvent"
        ("frameId", "unitId", "eventId", "eventTime", "positionTime", "latitude", "longitude",
         "speedKmh", "heading", "odometer", "engineOn", "mainVoltage", "backupVoltage", "fields")
-       VALUES ($1, $2, '1', $3, $3, 42.6977, 23.3219, 25, 90, 12345, true, 24.5, 4.1, $4)`,
-      [frameId, unitId, at, { '#EID#': '1', extra: ['fixture'] }],
+       VALUES ($1, $2, '01', $3, $3, 42.6977, 23.3219, 25, 90, 12345, true, 24.5, 4.1, $4)`,
+      [frameId, unitId, at, { '#EID#': '01', extra: ['fixture'] }],
     );
     await connection.query(
       `INSERT INTO ${schema}."ermFrame"
@@ -398,6 +468,12 @@ async function insertErmRecords(databaseUrl: string, schemaName: string) {
         at,
         Buffer.from('$SLU862129080366630,03,124,0774,fixture*00'),
       ],
+    );
+    await connection.query(
+      `INSERT INTO ${schema}."ermFrame"
+       ("connectionId", "receivedAt", "direction", "unitId", "command", "reference", "checksum", "raw")
+       VALUES ($1, $2, 'device', $3, '02', '125', 'mismatch', $4)`,
+      [connectionId, at, unitId, Buffer.from('$SLU862129080366630,02,125,900000001,01*00')],
     );
   } finally {
     await connection.end();
@@ -563,7 +639,7 @@ async function startApplication(service: string, env: NodeJS.ProcessEnv) {
   throw new Error(`${service} did not start:\n${logs}`);
 }
 
-async function observeRequests(target: string) {
+async function observeRequests(target?: string) {
   let injectedResponse: { status: number; body: string } | undefined;
   const requests: {
     requestId: string | string[] | undefined;
@@ -601,6 +677,9 @@ async function observeRequests(target: string) {
         headers[key] = value;
       }
     }
+    if (!target) {
+      throw new Error('The fixture upstream has not started');
+    }
     const response = await fetch(target, {
       method: 'POST',
       headers,
@@ -627,6 +706,9 @@ async function observeRequests(target: string) {
   return {
     url: `http://127.0.0.1:${String(address.port)}/graphql`,
     requests,
+    setTarget: (url: string) => {
+      target = url;
+    },
     setResponse: (response: typeof injectedResponse) => {
       injectedResponse = response;
     },
@@ -697,6 +779,8 @@ export async function createFederationFixture(options: { adminOrigin?: string } 
       CORE_AUTH_VERIFY_URL: new URL('/internal/auth/verify', core.url).toString(),
       CORE_INTERNAL_AUTH_TOKEN: internalAuthToken,
     };
+    const ermObserver = await observeRequests();
+    cleanup.push(ermObserver.close);
     const fleetEnv = {
       ...authEnv,
       ADMIN_ORIGINS: options.adminOrigin ?? 'http://127.0.0.1:11000',
@@ -705,23 +789,35 @@ export async function createFederationFixture(options: { adminOrigin?: string } 
       CORE_GRAPHQL_URL: coreObserver.url,
       // Explicit values override a developer's discocan/apps/fleet/.env.
       FLEET_ENABLED: 'true',
+      FLEET_DEVICE_SERVER_ENABLED: 'false',
+      FLEET_ERM_TELEMETRY_ENABLED: 'false',
+      ERM_TELEMETRY_TOKEN: '',
+      ERM_TELEMETRY_URL: new URL('/', ermObserver.url).toString(),
     };
     const fleet = await startApplication('fleet', fleetEnv);
     cleanup.push(fleet.stop);
     const fleetObserver = await observeRequests(fleet.url);
     cleanup.push(fleetObserver.close);
+    const ermDevicePort = await availablePort();
     const ermServer = await startApplication('erm-server', {
       ...authEnv,
       ERM_DATABASE_URL: ermDatabase.url,
+      ERM_ROLE: 'all',
       ERM_DEVICE_HOST: '127.0.0.1',
-      ERM_DEVICE_PORT: String(await availablePort()),
+      ERM_DEVICE_PORT: String(ermDevicePort),
       ERM_UPSTREAM: '127.0.0.1:1',
-      ERM_PRIMARY_UNITS: '',
+      ERM_PRIMARY_UNITS: configurationFixtureImei,
+      ERM_EVENT_STRUCTURE: '#EDT#,#EID#',
+      ERM_CONFIGURATION_WRITES_ENABLED: 'false',
       ERM_INTERNAL_TOKEN: '',
+      ERM_TELEMETRY_TOKEN: '',
       ERM_CAPTURE_DIR: captureDirectory,
       FLEET_GRAPHQL_URL: fleet.url,
+      KARMA_USER: '',
+      KARMA_PASSWORD: '',
     });
     cleanup.push(ermServer.stop);
+    ermObserver.setTarget(ermServer.url);
     const subgraphUrls = {
       core: coreObserver.url,
       fleet: fleetObserver.url,
@@ -743,8 +839,19 @@ export async function createFederationFixture(options: { adminOrigin?: string } 
       demoSession,
       /** The readiness Tenant's Fleet Device for unit 862129080366630. */
       ermDeviceId,
-      createUserSession: (tenantId: string) =>
-        createUserSession(coreDatabase.databaseUrl, coreDatabase.schema, gateway.url, tenantId),
+      connectConfigurationDevice: async () => {
+        const device = await connectConfigurationDevice(ermDevicePort);
+        cleanup.push(() => device.close());
+        return device;
+      },
+      createUserSession: (tenantId: string, role?: 'administrator' | 'viewer') =>
+        createUserSession(
+          coreDatabase.databaseUrl,
+          coreDatabase.schema,
+          gateway.url,
+          tenantId,
+          role,
+        ),
       /** A new signed-in Tenant per caller lets browser tests share one backend. */
       createTenant: async (name: string, branchNames: readonly string[]) => {
         const tenant = { id: randomUUID(), name };
@@ -762,6 +869,7 @@ export async function createFederationFixture(options: { adminOrigin?: string } 
       setCoreResponse: coreObserver.setResponse,
       fleetUrl: fleet.url,
       ermUrl: ermServer.url,
+      ermRequests: ermObserver.requests,
       fleetRequests: fleetObserver.requests,
       close,
     };

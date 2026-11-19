@@ -1,7 +1,8 @@
 # discocan
 
-discocan is a strict TypeScript npm-workspaces repository with Nx tasks and five host
-applications: Angular admin, native Apollo Router gateway and NestJS core, fleet and erm-server services.
+discocan is a strict TypeScript npm-workspaces repository with Nx tasks and six host
+applications: Angular admin, native Apollo Router gateway and the NestJS Core, Fleet,
+Device Server and ERM Server services.
 The admin uses the discocan [design system](docs/admin-design-system.md) on PrimeNG and
 Bulgarian/English catalogs.
 Its modules are Fleet management and ERM device-server inspection and controlled settings. Core provides users, sessions and Branch discovery; Gateway
@@ -94,7 +95,9 @@ themes. The startup `fleetEnabled` flag gates both business modules; Branch disc
 The [admin design system](docs/admin-design-system.md) describes the theme, shell and patterns.
 The development admin provides a design catalogue at `/en/design`.
 
-Gateway, Core and Fleet listen on loopback ports 11010, 11011 and 11013; PostgreSQL uses 11084. `dev` waits for PostgreSQL health and generates admin GraphQL artifacts once before starting the four web/API applications. Ctrl+C stops
+Gateway, Core, Fleet and Device Server listen on loopback ports 11010, 11011, 11013 and 11019.
+PostgreSQL uses 11084. `dev:discocan` waits for PostgreSQL health and generates admin GraphQL
+artifacts once before starting the five web/API applications. Ctrl+C stops
 the native Router and Node applications together. `npm run db:down` stops PostgreSQL and preserves its volume. Setup, migrations
 and seeding are explicit commands. The seed inserts RentalSofia, Discordia and Sandbox Branches, two sample Vehicles and one Device without replacing existing records.
 
@@ -108,8 +111,8 @@ remain development-only paths with no password or membership checks. See
 Router exposes `/health` on its separate loopback port 11016; the subgraphs expose `/health`
 on their normal ports. Health is independent of database/downstream availability.
 
-To start one application, use `dev:admin`, `dev:gateway`, `dev:core`, `dev:fleet`
-or `dev:erm-server`. ERM Server defaults to HTTP health on loopback 11015 and device TCP on
+To start one application, use `dev:admin`, `dev:gateway`, `dev:core`, `dev:fleet`,
+`dev:device-server` or `dev:erm-server`. ERM Server defaults to HTTP health on loopback 11015 and device TCP on
 all interfaces at 11500. It is outside `npm run dev` and `npm run kill`; run its compiled output
 as an independent service to retain device connections during web/API restarts.
 `npm run dev` starts the official Apollo Router on 11010; Angular proxies `/graphql` to it.

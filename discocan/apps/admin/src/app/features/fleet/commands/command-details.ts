@@ -3,6 +3,7 @@ import { ButtonDirective } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
 import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
+import { ErmCommandEvidence } from '../../erm/command-evidence';
 import { Timeline } from 'primeng/timeline';
 import type { Language } from '../../../i18n/messages';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
@@ -34,7 +35,7 @@ const lifecycleFields = [
 
 @Component({
   selector: 'discocan-command-details',
-  imports: [ButtonDirective, Dialog, Message, Tag, Timeline],
+  imports: [ButtonDirective, Dialog, Message, Tag, Timeline, ErmCommandEvidence],
   templateUrl: './command-details.html',
   styleUrl: './command-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -55,7 +56,6 @@ export class CommandDetails {
     if (!request) {
       return null;
     }
-    const acknowledgement = request.transportCommand?.acknowledgement;
     return {
       request,
       purpose: commandPurpose(request, this.language()),
@@ -71,12 +71,6 @@ export class CommandDetails {
       fields: request.displayParameters.requestedFields
         .map((field) => this.text().fieldLabels[field])
         .join(', '),
-      confirmation: acknowledgement
-        ? interpolate(this.text().confirmation, {
-            reference: acknowledgement.commandReference,
-            result: acknowledgement.resultCode,
-          })
-        : null,
       lifecycle: lifecycleFields
         .flatMap((field) => {
           const at = request[field];

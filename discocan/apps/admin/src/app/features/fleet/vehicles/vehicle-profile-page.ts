@@ -28,7 +28,11 @@ import {
   take,
   takeWhile,
 } from 'rxjs';
-import { faultReadState, faultsText } from '../../../ui/fleet-live/fault-wording';
+import {
+  faultReadState,
+  faultsText,
+  type FleetFaultRead,
+} from '../../../ui/fleet-live/fault-wording';
 import type {
   AdminBranchesQuery,
   AdminVehicleProfileQuery,
@@ -185,6 +189,7 @@ export class VehicleProfilePage implements OnInit {
   });
   readonly state = signal<VehicleProfileState>('loading');
   readonly record = signal<AdminVehicleProfileQuery | null>(null);
+  private readonly faultReads = signal<readonly FleetFaultRead[]>([]);
   protected readonly faultReadBusy = signal(false);
   readonly error = signal<unknown>(null);
   readonly tab = computed(() => profileTab(this.params().get('tab')));
@@ -192,7 +197,9 @@ export class VehicleProfilePage implements OnInit {
   private readonly wallClock = inject(WALL_CLOCK);
   readonly vehicle = computed(() => {
     const record = this.record();
-    return record ? vehicleProfile(record.fleetVehicle, record.fleetVehicleFreezeFrame) : null;
+    return record
+      ? vehicleProfile(record.fleetVehicle, record.fleetVehicleFreezeFrame, this.faultReads())
+      : null;
   });
   protected readonly distance = computed(() => {
     const record = this.record();
@@ -383,6 +390,25 @@ export class VehicleProfilePage implements OnInit {
           this.state.set('loading');
           this.error.set(null);
           return this.api.watchVehicle(id).valueChanges.pipe(
+            switchMap((result) => {
+              if (result.error) {
+                this.fail(result.error);
+                return EMPTY;
+              }
+              if (result.dataState !== 'complete' || result.loading) {
+                return EMPTY;
+              }
+              const record = result.data;
+              return this.api
+                .faultReads(record.fleetVehicle.devices.map((device) => device.id))
+                .pipe(
+                  map((histories) => ({ record, reads: [...histories.values()].flat() })),
+                  catchError((error: unknown) => {
+                    this.fail(error);
+                    return EMPTY;
+                  }),
+                );
+            }),
             catchError((error: unknown) => {
               this.fail(error);
               return EMPTY;
@@ -391,21 +417,18 @@ export class VehicleProfilePage implements OnInit {
         }),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe((result) => {
-        if (result.error) {
-          this.fail(result.error);
-        } else if (result.dataState === 'complete' && !result.loading) {
-          this.record.set(result.data);
-          this.state.set('ready');
-          if (!relatedStarted) {
-            relatedStarted = true;
-            this.loadTrips(id);
-            this.loadProblems(id);
-            this.loadMap(id);
-            this.loadTrack(id);
-            this.loadEdata(id);
-            this.loadService(id);
-          }
+      .subscribe(({ record, reads }) => {
+        this.record.set(record);
+        this.faultReads.set(reads);
+        this.state.set('ready');
+        if (!relatedStarted) {
+          relatedStarted = true;
+          this.loadTrips(id);
+          this.loadProblems(id);
+          this.loadMap(id);
+          this.loadTrack(id);
+          this.loadEdata(id);
+          this.loadService(id);
         }
       });
   }

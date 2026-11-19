@@ -1,0 +1,10 @@
+@if (event(); as event) {
+  <details class="app-card">
+    <summary>{{ text().detail.tabs['technical-details'] }}</summary>
+    <p>{{ text().eventId }}: {{ event.code ?? '—' }}</p>
+    <pre class="control-center__frame">{{ event.erm?.fields | json }}</pre>
+    @if (event.erm?.edata) {
+      <pre class="control-center__frame">{{ event.erm.edata | json }}</pre>
+    }
+  </details>
+}

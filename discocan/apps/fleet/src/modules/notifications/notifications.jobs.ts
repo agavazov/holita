@@ -1,8 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { FleetClock } from '../../clock/fleet-clock.js';
-import { ErmNotificationsClient } from './erm-notifications.client.js';
-import { NotificationSourcesRepository } from './notification-sources.repository.js';
+import { FleetDeviceType } from '../../generated/prisma/enums.js';
+import { DeviceAdapters } from '../../integrations/device-adapters.js';
+import {
+  NotificationSourcesRepository,
+  notificationSourceKey,
+} from './notification-sources.repository.js';
 
 @Injectable()
 export class NotificationsJobs {
@@ -10,7 +14,7 @@ export class NotificationsJobs {
 
   constructor(
     private readonly sources: NotificationSourcesRepository,
-    private readonly erm: ErmNotificationsClient,
+    private readonly adapters: DeviceAdapters,
     private readonly clock: FleetClock,
   ) {}
 
@@ -22,22 +26,33 @@ export class NotificationsJobs {
     const now = this.clock.now();
     try {
       await this.sources.projectAlerts(now);
-      if (!process.env.ERM_TELEMETRY_TOKEN) {
+      const types = Object.values(FleetDeviceType).filter((type) =>
+        this.adapters.enabled(type, 'notifications'),
+      );
+      if (types.length === 0) {
         return;
       }
-      for (const device of await this.sources.devices()) {
+      for (const device of await this.sources.devices(types)) {
         try {
           const scope = { tenantId: device.tenantId, branchId: device.branchId };
           const cutoff = await this.sources.cutoff(scope, now);
           const cursor = await this.sources.cursor(
             scope,
-            `erm:${device.id}`,
+            notificationSourceKey(device),
             device.createdAt > cutoff ? device.createdAt : cutoff,
           );
           const since = cursor.since > cutoff ? cursor.since : cutoff;
           let after = cursor.position;
+          const adapter = this.adapters.for(device.type);
           for (let count = 0; count < 10; count++) {
-            const page = await this.erm.page(device, since, after);
+            const page = await adapter.notifications({
+              ...scope,
+              deviceId: device.id,
+              imei: device.imei,
+              since,
+              after,
+              limit: 500,
+            });
             await this.sources.importPage(device, page, now);
             after = page.next;
             if (!page.hasMore) {

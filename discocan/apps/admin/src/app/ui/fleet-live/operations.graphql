@@ -1,12 +1,10 @@
 fragment AdminFleetLiveDevice on FleetDevice {
   id
   imei
+  type
   vehicleId
   status
-  routing
-  routingHealth {
-    backupSince
-  }
+  ...AdminErmLiveRouting
   lastReportedAt
   currentWarnings {
     ...AdminWarningLamp
@@ -24,21 +22,20 @@ fragment AdminFleetLiveDevice on FleetDevice {
       source
     }
   }
-  ermState {
-    online
-    mode
+  state {
+    connected
     connectedSince
-    lastFrameAt
+    lastReportAt
     latestEvent {
-      eventTime
-      speedKmh
+      recordedAt
+      speedKph
       engineOn
-      ignitionOn
+      ignition
       nameEn: name(language: EN)
       nameBg: name(language: BG)
     }
     latestAlarm {
-      eventTime
+      recordedAt
       severity
       nameEn: name(language: EN)
       nameBg: name(language: BG)
@@ -46,7 +43,7 @@ fragment AdminFleetLiveDevice on FleetDevice {
     alarmsLast24h
     health {
       overdue
-      lastFrameAgeSeconds
+      lastReportAgeSeconds
       expectedIntervalSeconds
       lastCloseReason
     }
@@ -108,7 +105,7 @@ fragment AdminFreezeFrame on FleetFreezeFrame {
   }
 }
 
-fragment AdminFaultRead on ErmCommandRequest {
+fragment AdminFaultRead on FleetDeviceCommandRequest {
   id
   action
   status
@@ -126,11 +123,19 @@ fragment AdminFaultRead on ErmCommandRequest {
   }
 }
 
+query AdminDeviceFaultReads($id: ID!) {
+  fleetDevice(id: $id) {
+    commandRequests {
+      ...AdminFaultRead
+    }
+  }
+}
+
 mutation AdminReadFaultsNow($deviceId: ID!) {
-  sendErmDeviceCommand(
+  sendDeviceCommand(
     input: {
       deviceId: $deviceId
-      action: READ_EDATA_FAULTS
+      action: READ_FAULTS
       expiresInSeconds: 900
       intent: "Fault scanner: read faults now"
     }

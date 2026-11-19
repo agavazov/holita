@@ -3,20 +3,27 @@ import { PrismaService } from '../../database/prisma.service.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { FleetScope } from '../../validation.js';
 import { alertNotification, withoutRepeatedFaults } from './notification-projection.js';
-import type { ErmNotificationPage } from './erm-notifications.client.js';
+import type { DeviceNotificationPage } from '@discocan/device-contract';
+import type { FleetDeviceType } from '../../generated/prisma/enums.js';
 
 export const notificationCutoff = (now: Date, days: number) =>
   new Date(now.getTime() - days * 86_400_000);
+
+export function notificationSourceKey(device: { type: FleetDeviceType; id: string }): string {
+  return `${device.type.toLowerCase()}:${device.id}`;
+}
 
 @Injectable()
 export class NotificationSourcesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  devices() {
+  devices(types: FleetDeviceType[]) {
     // Background registry enumeration; all source, cursor and feed operations below are scoped.
     return this.prisma.client.device.findMany({
+      where: { type: { in: types } },
       select: {
         id: true,
+        type: true,
         tenantId: true,
         branchId: true,
         imei: true,
@@ -45,7 +52,7 @@ export class NotificationSourcesRepository {
 
   async importPage(
     device: Awaited<ReturnType<NotificationSourcesRepository['devices']>>[number],
-    page: ErmNotificationPage,
+    page: DeviceNotificationPage,
     createdAt: Date,
   ): Promise<void> {
     const scope = { tenantId: device.tenantId, branchId: device.branchId };
@@ -65,19 +72,22 @@ export class NotificationSourcesRepository {
           deviceId: device.id,
           vehicleId:
             item.occurredAt >= (device.installedAt ?? device.createdAt) ? device.vehicleId : null,
-          ermEventId:
-            item.sourceKind === 'COMMAND' || item.sourceId.startsWith('karma-routing:')
-              ? null
-              : item.sourceId,
-          commandRequestId:
-            item.sourceKind === 'COMMAND' && !item.sourceId.includes(':') ? item.sourceId : null,
+          sourceEventId:
+            item.eventId === undefined
+              ? item.sourceKind === 'COMMAND'
+                ? null
+                : item.sourceId
+              : item.eventId,
+          commandRequestId: item.commandRequestId ?? null,
         })),
       );
       if (data.length) {
         await transaction.fleetNotification.createMany({ data, skipDuplicates: true });
       }
       await transaction.fleetNotificationCursor.update({
-        where: { tenantId_branchId_sourceKey: { ...scope, sourceKey: `erm:${device.id}` } },
+        where: {
+          tenantId_branchId_sourceKey: { ...scope, sourceKey: notificationSourceKey(device) },
+        },
         data: { position: page.next },
       });
     });

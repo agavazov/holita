@@ -504,7 +504,7 @@ export class ProblemsPage implements OnInit {
           ? ['commands']
           : problem.sourceKind === 'DIAGNOSTIC'
             ? ['problems']
-            : problem.ermEventId
+            : problem.sourceEventId
               ? ['technical-details', 'events']
               : ['overview']),
       ]);

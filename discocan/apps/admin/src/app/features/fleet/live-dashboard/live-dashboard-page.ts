@@ -35,7 +35,6 @@ import {
 import type {
   AdminBranchesQuery,
   AdminLiveFleetQuery,
-  AdminLiveVehicleQuery,
 } from '../../../../generated/graphql/operations';
 import { DemoSession } from '@osnova/ui/app';
 import { requestError } from '@osnova/ui/app';
@@ -49,7 +48,7 @@ import { mapCoordinates, type MapCoordinates } from '@osnova/ui';
 import { ModuleInfo } from '@osnova/ui';
 import { StreetViewPopup } from '../../../ui/street-view/street-view-popup';
 import { FleetPreferences } from '../settings/fleet-preferences';
-import { LiveDashboardApi } from './live-dashboard-api';
+import { LiveDashboardApi, type LiveVehicleDetail } from './live-dashboard-api';
 import {
   liveTrucks,
   mergeTrail,
@@ -212,7 +211,7 @@ export class LiveDashboardPage implements OnInit {
   /** A clicked route report; null while Street View follows the truck's last position. */
   protected readonly routePoint = signal<TrailPoint | null>(null);
   protected readonly streetMinimized = signal(false);
-  protected readonly detail = signal<AdminLiveVehicleQuery | null>(null);
+  protected readonly detail = signal<LiveVehicleDetail | null>(null);
   protected readonly detailError = signal<string | null>(null);
   protected readonly trail = signal<Trail | null>(null);
   protected readonly trailError = signal<string | null>(null);
@@ -362,10 +361,9 @@ export class LiveDashboardPage implements OnInit {
           .pipe(
             take(24),
             takeWhile(() => {
-              const reads = this.detail()?.fleetVehicle.devices.flatMap(
-                (device) => device.ermCommandRequests,
-              );
-              return faultReadState(reads ?? [], this.wallClock()).pending !== null;
+              const histories = this.detail()?.faultReadsByDevice;
+              const reads = histories ? [...histories.values()].flat() : [];
+              return faultReadState(reads, this.wallClock()).pending !== null;
             }),
             takeUntilDestroyed(this.destroyRef),
           )

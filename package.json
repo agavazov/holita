@@ -31,7 +31,7 @@
     }
   },
   "scripts": {
-    "dev:discocan": "npm run db:up && nx run edata-rules:build && nx run admin:graphql-generate && concurrently --kill-others --names gateway,core,fleet,admin --prefix-colors blue,green,cyan,red \"npm:dev:gateway\" \"npm:dev:core\" \"npm:dev:fleet\" \"npm run dev:admin --ignore-scripts\"",
+    "dev:discocan": "npm run db:up && nx run-many -t build -p edata-rules,device-contract && nx run admin:graphql-generate && concurrently --kill-others --names gateway,core,fleet,device-server,admin --prefix-colors blue,green,cyan,magenta,red \"npm:dev:gateway\" \"npm:dev:core\" \"npm run dev --workspace @discocan/fleet\" \"npm run dev --workspace @discocan/device-server\" \"npm run dev:admin --ignore-scripts\"",
     "dev": "concurrently --kill-others --names discocan,holita \"npm:dev:discocan\" \"npm:dev:holita\"",
     "kill": "tsx tools/kill.mts",
     "erm:relay": "tsx discocan/tools/erm-relay/relay.mts",
@@ -39,8 +39,9 @@
     "dev:gateway": "npm run dev --workspace @discocan/gateway",
     "router:install": "bash osnova/tools/router/install.sh",
     "dev:core": "DOTENV_CONFIG_PATH=../../../discocan/config/core.env npm run dev:instance --workspace @osnova/core -- --path ../../../discocan/config/core.tsconfig.json",
+    "dev:device-server": "nx run device-contract:build && npm run dev --workspace @discocan/device-server",
     "dev:erm-server": "npm run dev --workspace @discocan/erm-server",
-    "dev:admin": "nx run edata-rules:build && npm run dev --workspace @discocan/admin",
+    "dev:admin": "nx run-many -t build -p edata-rules,device-contract && npm run dev --workspace @discocan/admin",
     "build": "nx run-many -t build",
     "lint": "eslint .",
     "typecheck": "npm run typecheck:tools && nx run-many -t typecheck",
@@ -73,7 +74,7 @@
     "schema:check": "tsx tools/graphql-check.mts",
     "test:gateway:db": "nx run gateway:test-federation --output-style=static",
     "test:smoke": "npm run test:smoke:admin",
-    "dev:fleet": "nx run edata-rules:build && npm run dev --workspace @discocan/fleet",
+    "dev:fleet": "nx run-many -t build -p edata-rules,device-contract && npm run dev --workspace @discocan/fleet",
     "test:fleet": "nx run fleet:test --output-style=static",
     "test:fleet:db": "nx run fleet:test-db --skip-nx-cache --output-style=static",
     "test:smoke:admin": "nx run admin:test-smoke --output-style=static",

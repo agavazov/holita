@@ -3,6 +3,8 @@ import { FormatNumberPipe } from '@osnova/ui';
 import { KpiStrip } from '@osnova/ui';
 import { KpiTile } from '@osnova/ui';
 import { UI_LANGUAGE } from '@osnova/ui';
+import { karmaBackup } from '../../features/erm/karma-connection';
+import { ermText } from '../../features/erm/erm-text';
 import { fleetLiveText, hasFleetFaults, type FleetLiveDevice } from './fleet-live';
 
 @Component({
@@ -21,7 +23,7 @@ import { fleetLiveText, hasFleetFaults, type FleetLiveDevice } from './fleet-liv
         tone="warn"
       />
       <osnova-kpi-tile
-        [label]="text().backup"
+        [label]="backupLabel()"
         [value]="counts().backup | osnovaNumber"
         tone="warn"
       />
@@ -47,20 +49,18 @@ export class FleetLiveSummary {
   readonly groups = input<readonly (readonly FleetLiveDevice[])[] | null>(null);
   private readonly language = inject(UI_LANGUAGE);
   protected readonly text = computed(() => fleetLiveText(this.language()));
+  protected readonly backupLabel = computed(() => ermText[this.language()].connection.backup);
   protected readonly counts = computed(() => {
     const groups = this.groups() ?? this.devices().map((device) => [device]);
     const available = groups.every((group) => group.every((device) => device !== undefined));
     return {
       online: available
-        ? groups.filter((group) => group.some((device) => device?.ermState?.online)).length
+        ? groups.filter((group) => group.some((device) => device?.state?.connected)).length
         : null,
       overdue: available
-        ? groups.filter((group) => group.some((device) => device?.ermState?.health.overdue)).length
+        ? groups.filter((group) => group.some((device) => device?.state?.health.overdue)).length
         : null,
-      backup: available
-        ? groups.filter((group) => group.some((device) => device?.routing === 'KARMA_BACKUP'))
-            .length
-        : null,
+      backup: available ? groups.filter((group) => group.some(karmaBackup)).length : null,
       faults: available ? groups.filter((group) => group.some(hasFleetFaults)).length : null,
       unassigned: available
         ? groups.filter((group) =>

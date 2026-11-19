@@ -16,10 +16,10 @@ const exceptions = [
     reason: 'Responsive sign-in heading',
   },
   {
-    file: `${app}/features/control-center/device-console.ts`,
+    file: `${app}/features/erm/sms-page.ts`,
     property: 'font-family',
     value: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-    reason: 'Device console output',
+    reason: 'Device SMS command text',
   },
   {
     file: `${app}/features/fleet/live-dashboard/live-truck-list.scss`,

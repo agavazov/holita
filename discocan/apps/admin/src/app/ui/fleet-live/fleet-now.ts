@@ -37,10 +37,10 @@ export class FleetNow {
   private readonly now = injectFleetNow();
   protected readonly text = computed(() => fleetLiveText(this.language()));
   protected readonly event = computed(() => {
-    const event = this.device()?.ermState?.latestEvent;
+    const event = this.device()?.state?.latestEvent;
     return event &&
       fleetObservationIsRecent(
-        event.eventTime,
+        event.recordedAt,
         this.now(),
         this.units.preferences().notReportingHours,
       )
@@ -53,28 +53,28 @@ export class FleetNow {
     if (!event) {
       return text.unknownActivity;
     }
-    if (event.speedKmh !== null && event.speedKmh > 0) {
-      return interpolate(text.driving, { speed: this.units.speed(event.speedKmh) });
+    if (event.speedKph !== null && event.speedKph > 0) {
+      return interpolate(text.driving, { speed: this.units.speed(event.speedKph) });
     }
-    if (event.ignitionOn === false) {
+    if (event.ignition === false) {
       return text.ignitionOff;
     }
     if (event.engineOn === true) {
       return text.engineRunning;
     }
-    return event.speedKmh === 0 || event.engineOn === false ? text.parked : text.unknownActivity;
+    return event.speedKph === 0 || event.engineOn === false ? text.parked : text.unknownActivity;
   });
   protected readonly activity = computed(() =>
     this.event()
       ? fleetRecordedValue(
           this.observedActivity(),
-          this.event()?.eventTime,
+          this.event()?.recordedAt,
           this.now(),
           this.language(),
         )
       : this.text().unknownActivity,
   );
   protected readonly exact = computed(
-    () => `${this.activity()} · ${this.units.utc(this.device()?.ermState?.latestEvent?.eventTime)}`,
+    () => `${this.activity()} · ${this.units.utc(this.device()?.state?.latestEvent?.recordedAt)}`,
   );
 }

@@ -22,7 +22,7 @@ const SPNS = new Map<number, FaultMeaning>([
   [1761, { systemKey: 'AFTERTREATMENT', descriptionKey: 'faults.spn.defLevel' }],
   [3251, { systemKey: 'AFTERTREATMENT', descriptionKey: 'faults.spn.dpfPressureDifference' }],
   [4339, { systemKey: 'AFTERTREATMENT', descriptionKey: 'faults.spn.scrFeedbackControl' }],
-  // Observed on CB1147TP; the retained ERM material supplies no supported meaning.
+  // Observed on CB1147TP; the retained device material supplies no supported meaning.
   [23806, { systemKey: 'OTHER', descriptionKey: null }],
 ]);
 

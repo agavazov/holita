@@ -55,7 +55,7 @@ export class DashboardRepository {
   private devices(transaction: Prisma.TransactionClient, scope: FleetScope) {
     return transaction.device.findMany({
       where: { ...scope },
-      select: { id: true, imei: true, vehicleId: true },
+      select: { id: true, imei: true, vehicleId: true, type: true },
       orderBy: { id: 'asc' },
     });
   }
@@ -174,7 +174,7 @@ export class DashboardRepository {
         const ids = items.map((item) => item.vehicle.id);
         const devices = await transaction.device.findMany({
           where: { ...scope, vehicleId: { in: ids } },
-          select: { id: true, imei: true, vehicleId: true },
+          select: { id: true, imei: true, vehicleId: true, type: true },
           orderBy: { id: 'asc' },
         });
         return { ...summary, items, devices };

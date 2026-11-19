@@ -22,19 +22,16 @@ import {
   AdminControlCenterStartParameterBatchDocument,
   AdminControlCenterStopConfigurationBatchDocument,
   type AdminControlCenterBranchCommandRequestsQueryVariables,
-  type RetryErmDeviceCommandInput,
-  type StartErmCommandBatchInput,
-  type StartErmParametersChangeInput,
-  type StartErmParameterBatchInput,
+  type RetryDeviceCommandInput,
+  type StartDeviceCommandBatchInput,
+  type StartDeviceParametersChangeInput,
+  type StartDeviceConfigurationBatchInput,
   AdminControlCenterStartEdataChangeDocument,
   AdminControlCenterStartParameterChangeDocument,
-  type StartErmEdataChangeInput,
-  type StartErmParameterChangeInput,
-  AdminControlCenterDevicesDocument,
+  type StartDeviceMeasurementConfigurationChangeInput,
+  type StartDeviceParameterChangeInput,
   AdminControlCenterDeviceDocument,
-  AdminControlCenterReturnToDiscoCanDocument,
   AdminControlCenterEventsDocument,
-  AdminControlCenterCommandsDocument,
   AdminControlCenterFramesDocument,
   AdminControlCenterSendCommandDocument,
   AdminControlCenterCommandRequestsDocument,
@@ -42,24 +39,23 @@ import {
   AdminControlCenterDeviceProblemsDocument,
   type AdminControlCenterDeviceProblemsQueryVariables,
   AdminControlCenterCancelCommandDocument,
-  type SendErmDeviceCommandInput,
+  type SendDeviceCommandInput,
   AdminControlCenterSnapshotsDocument,
   AdminControlCenterStartSnapshotDocument,
-  AdminControlCenterSmsDevicesDocument,
   type AdminControlCenterEventsQueryVariables,
-  type AdminControlCenterCommandsQueryVariables,
   type AdminControlCenterFramesQueryVariables,
   type AdminControlCenterSnapshotsQueryVariables,
-  type ErmLanguage,
+  type FleetDeviceLanguage,
+  type FleetDeviceType,
   AdminControlCenterParameterCatalogDocument,
   AdminControlCenterEdataProfilesDocument,
   AdminControlCenterEdataParametersDocument,
   AdminControlCenterActionCommandsDocument,
-  type ErmParameterCatalogInput,
+  type FleetDeviceParameterCatalogInput,
   type FleetEdataParametersInput,
 } from '../../../generated/graphql/operations';
 
-/** Branch-scoped reads of Fleet Devices with their state on discocan's device server. */
+/** Branch-scoped reads of Fleet Devices and their provider state. */
 @Injectable()
 export class ControlCenterApi implements OnDestroy {
   private readonly httpLink = inject(HttpLink);
@@ -86,25 +82,14 @@ export class ControlCenterApi implements OnDestroy {
     );
   }
 
-  private client(): ApolloBase {
+  client(): ApolloBase {
     if (!this.apollo) {
       throw new Error('An active Control center workspace is required.');
     }
     return this.apollo;
   }
 
-  watchDevices(language: ErmLanguage) {
-    return this.client().watchQuery({
-      query: AdminControlCenterDevicesDocument,
-      variables: { language },
-      errorPolicy: 'all',
-      fetchPolicy: 'network-only',
-      pollInterval: 30_000,
-      skipPollAttempt: () => document.hidden,
-    });
-  }
-
-  watchDevice(id: string, language: ErmLanguage) {
+  watchDevice(id: string, language: FleetDeviceLanguage) {
     return this.client().watchQuery({
       query: AdminControlCenterDeviceDocument,
       variables: { id, language },
@@ -115,38 +100,9 @@ export class ControlCenterApi implements OnDestroy {
     });
   }
 
-  watchSmsDevices(deviceId: string | null = null) {
-    return this.client().watchQuery({
-      query: AdminControlCenterSmsDevicesDocument,
-      variables: { ids: deviceId ? [deviceId] : undefined },
-      fetchPolicy: 'network-only',
-    });
-  }
-
-  async returnToDiscoCan(deviceId: string) {
-    const result = await firstValueFrom(
-      this.client().mutate({
-        mutation: AdminControlCenterReturnToDiscoCanDocument,
-        variables: { deviceId },
-      }),
-    );
-    if (!result.data?.returnErmDeviceToDiscoCan) {
-      throw new Error('Missing returnErmDeviceToDiscoCan result.');
-    }
-    return result.data.returnErmDeviceToDiscoCan;
-  }
-
   watchEvents(variables: AdminControlCenterEventsQueryVariables) {
     return this.client().watchQuery({
       query: AdminControlCenterEventsDocument,
-      variables,
-      fetchPolicy: 'network-only',
-    });
-  }
-
-  watchCommands(variables: AdminControlCenterCommandsQueryVariables) {
-    return this.client().watchQuery({
-      query: AdminControlCenterCommandsDocument,
       variables,
       fetchPolicy: 'network-only',
     });
@@ -180,29 +136,29 @@ export class ControlCenterApi implements OnDestroy {
       skipPollAttempt: () => document.hidden || skipPoll(),
     });
   }
-  async startEdataChange(input: StartErmEdataChangeInput) {
+  async startEdataChange(input: StartDeviceMeasurementConfigurationChangeInput) {
     const result = await firstValueFrom(
       this.client().mutate({
         mutation: AdminControlCenterStartEdataChangeDocument,
         variables: { input },
       }),
     );
-    if (!result.data?.startErmEdataChange) {
+    if (!result.data?.startDeviceMeasurementConfigurationChange) {
       throw new Error('Missing configuration change result.');
     }
-    return result.data.startErmEdataChange;
+    return result.data.startDeviceMeasurementConfigurationChange;
   }
-  async startParameterChange(input: StartErmParameterChangeInput) {
+  async startParameterChange(input: StartDeviceParameterChangeInput) {
     const result = await firstValueFrom(
       this.client().mutate({
         mutation: AdminControlCenterStartParameterChangeDocument,
         variables: { input },
       }),
     );
-    if (!result.data?.startErmParameterChange) {
+    if (!result.data?.startDeviceParameterChange) {
       throw new Error('Missing configuration change result.');
     }
-    return result.data.startErmParameterChange;
+    return result.data.startDeviceParameterChange;
   }
 
   async startSnapshot(deviceId: string) {
@@ -212,10 +168,10 @@ export class ControlCenterApi implements OnDestroy {
         variables: { input: { deviceId } },
       }),
     );
-    if (!result.data?.startErmParameterSnapshot) {
-      throw new Error('Missing startErmParameterSnapshot result.');
+    if (!result.data?.startDeviceParameterSnapshot) {
+      throw new Error('Missing startDeviceParameterSnapshot result.');
     }
-    return result.data.startErmParameterSnapshot;
+    return result.data.startDeviceParameterSnapshot;
   }
 
   watchCommandRequests(id: string, skipPoll: () => boolean) {
@@ -253,23 +209,23 @@ export class ControlCenterApi implements OnDestroy {
         variables: { input: { deviceId, requestId } },
       }),
     );
-    if (!result.data?.cancelErmDeviceCommand) {
-      throw new Error('Missing cancelErmDeviceCommand result.');
+    if (!result.data?.cancelDeviceCommand) {
+      throw new Error('Missing cancelDeviceCommand result.');
     }
-    return result.data.cancelErmDeviceCommand;
+    return result.data.cancelDeviceCommand;
   }
 
-  async sendCommand(input: SendErmDeviceCommandInput) {
+  async sendCommand(input: SendDeviceCommandInput) {
     const result = await firstValueFrom(
       this.client().mutate({
         mutation: AdminControlCenterSendCommandDocument,
         variables: { input },
       }),
     );
-    if (!result.data?.sendErmDeviceCommand) {
-      throw new Error('Missing sendErmDeviceCommand result.');
+    if (!result.data?.sendDeviceCommand) {
+      throw new Error('Missing sendDeviceCommand result.');
     }
-    return result.data.sendErmDeviceCommand;
+    return result.data.sendDeviceCommand;
   }
 
   watchBranchCommandRequests(
@@ -333,30 +289,30 @@ export class ControlCenterApi implements OnDestroy {
     });
   }
 
-  async retryCommand(input: RetryErmDeviceCommandInput) {
+  async retryCommand(input: RetryDeviceCommandInput) {
     const result = await firstValueFrom(
       this.client().mutate({
         mutation: AdminControlCenterRetryCommandDocument,
         variables: { input },
       }),
     );
-    if (!result.data?.retryErmDeviceCommand) {
+    if (!result.data?.retryDeviceCommand) {
       throw new Error('Missing command retry result.');
     }
-    return result.data.retryErmDeviceCommand;
+    return result.data.retryDeviceCommand;
   }
 
-  async startCommandBatch(input: StartErmCommandBatchInput) {
+  async startCommandBatch(input: StartDeviceCommandBatchInput) {
     const result = await firstValueFrom(
       this.client().mutate({
         mutation: AdminControlCenterStartCommandBatchDocument,
         variables: { input },
       }),
     );
-    if (!result.data?.startErmCommandBatch) {
+    if (!result.data?.startDeviceCommandBatch) {
       throw new Error('Missing command batch result.');
     }
-    return result.data.startErmCommandBatch;
+    return result.data.startDeviceCommandBatch;
   }
 
   async stopCommandBatch(id: string) {
@@ -366,36 +322,36 @@ export class ControlCenterApi implements OnDestroy {
         variables: { id },
       }),
     );
-    if (!result.data?.stopErmCommandBatch) {
+    if (!result.data?.stopDeviceCommandBatch) {
       throw new Error('Missing command batch stop result.');
     }
-    return result.data.stopErmCommandBatch;
+    return result.data.stopDeviceCommandBatch;
   }
 
-  async startParametersChange(input: StartErmParametersChangeInput) {
+  async startParametersChange(input: StartDeviceParametersChangeInput) {
     const result = await firstValueFrom(
       this.client().mutate({
         mutation: AdminControlCenterStartParametersChangeDocument,
         variables: { input },
       }),
     );
-    if (!result.data?.startErmParametersChange) {
+    if (!result.data?.startDeviceParametersChange) {
       throw new Error('Missing parameters change result.');
     }
-    return result.data.startErmParametersChange;
+    return result.data.startDeviceParametersChange;
   }
 
-  async startParameterBatch(input: StartErmParameterBatchInput) {
+  async startParameterBatch(input: StartDeviceConfigurationBatchInput) {
     const result = await firstValueFrom(
       this.client().mutate({
         mutation: AdminControlCenterStartParameterBatchDocument,
         variables: { input },
       }),
     );
-    if (!result.data?.startErmParameterBatch) {
+    if (!result.data?.startDeviceConfigurationBatch) {
       throw new Error('Missing parameter batch result.');
     }
-    return result.data.startErmParameterBatch;
+    return result.data.startDeviceConfigurationBatch;
   }
 
   async stopConfigurationBatch(id: string) {
@@ -405,23 +361,26 @@ export class ControlCenterApi implements OnDestroy {
         variables: { id },
       }),
     );
-    if (!result.data?.stopErmConfigurationBatch) {
+    if (!result.data?.stopDeviceConfigurationBatch) {
       throw new Error('Missing configuration batch stop result.');
     }
-    return result.data.stopErmConfigurationBatch;
+    return result.data.stopDeviceConfigurationBatch;
   }
 
-  async searchParameterCatalog(input: ErmParameterCatalogInput) {
+  async searchParameterCatalog(
+    deviceType: FleetDeviceType,
+    input: FleetDeviceParameterCatalogInput,
+  ) {
     const result = await firstValueFrom(
       this.client().query({
         query: AdminControlCenterParameterCatalogDocument,
-        variables: { input },
+        variables: { deviceType, input },
       }),
     );
     if (!result.data) {
-      throw new Error('Missing ermParameterCatalog result.');
+      throw new Error('Missing fleetDeviceParameterCatalog result.');
     }
-    return result.data.ermParameterCatalog;
+    return result.data.fleetDeviceParameterCatalog;
   }
 
   async edataProfiles() {
@@ -447,14 +406,24 @@ export class ControlCenterApi implements OnDestroy {
     return result.data.fleetEdataParameters;
   }
 
-  async actionCommands() {
+  watchActionCommands(deviceType: FleetDeviceType) {
+    return this.client().watchQuery({
+      query: AdminControlCenterActionCommandsDocument,
+      variables: { deviceType },
+    });
+  }
+
+  async actionCommands(deviceType: FleetDeviceType) {
     const result = await firstValueFrom(
-      this.client().query({ query: AdminControlCenterActionCommandsDocument }),
+      this.client().query({
+        query: AdminControlCenterActionCommandsDocument,
+        variables: { deviceType },
+      }),
     );
     if (!result.data) {
-      throw new Error('Missing ermDeviceActionCommands result.');
+      throw new Error('Missing fleetDeviceActionCatalog result.');
     }
-    return result.data.ermDeviceActionCommands;
+    return result.data.fleetDeviceActionCatalog;
   }
 
   ngOnDestroy(): void {

@@ -167,6 +167,13 @@ export class VehiclesRepository {
     });
   }
 
+  forIds(scope: FleetScope, ids: readonly string[]): Promise<VehicleRow[]> {
+    return this.prisma.client.vehicle.findMany({
+      where: { ...scope, id: { in: [...ids] } },
+      include: vehicleInclude,
+    });
+  }
+
   findGroup(scope: FleetScope, id: string) {
     return this.prisma.client.vehicleGroup.findUnique({
       where: { id, tenantId: scope.tenantId, branchId: scope.branchId },

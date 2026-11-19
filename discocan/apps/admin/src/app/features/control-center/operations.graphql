@@ -1,28 +1,27 @@
-fragment AdminControlCenterEventFields on ErmEvent {
+fragment AdminControlCenterEventFields on FleetDeviceEvent {
   id
-  eventId
-  eventTime
-  positionTime
+  code
+  recordedAt
+  positionAt
   latitude
   longitude
-  speedKmh
-  heading
-  odometer
+  speedKph
+  headingDeg
+  odometerKm
   engineOn
-  mainVoltage
-  backupVoltage
+  externalVoltage
+  backupBatteryVoltage
   category
   severity
   name(language: $language)
 }
-fragment AdminControlCenterStateFields on ErmUnitState {
-  unitId
-  online
-  mode
+fragment AdminControlCenterStateFields on FleetDeviceState {
+  imei
+  connected
   connectedSince
-  lastFrameAt
+  lastReportAt
   alarmsLast24h
-  lastPosition {
+  latestPosition {
     ...AdminControlCenterEventFields
   }
   latestEvent {
@@ -32,52 +31,12 @@ fragment AdminControlCenterStateFields on ErmUnitState {
     ...AdminControlCenterEventFields
   }
   health {
-    lastFrameAgeSeconds
+    lastReportAgeSeconds
     expectedIntervalSeconds
     overdue
-    upstreamClosesLast24h
-    karmaRoutingWritesLast24h
   }
 }
-fragment AdminControlCenterDashboardDevice on FleetDevice {
-  ...AdminFleetLiveDevice
-  model
-  vehicle {
-    id
-    licensePlate
-  }
-  ermState {
-    lastPosition {
-      eventTime
-      positionTime
-      latitude
-      longitude
-      name(language: $language)
-    }
-    health {
-      karmaRoutingWritesLast24h
-    }
-  }
-}
-query AdminControlCenterDevices($language: ErmLanguage!) {
-  fleetDevices(limit: 100) {
-    total
-    items {
-      ...AdminControlCenterDashboardDevice
-    }
-  }
-  fleetVehicles(limit: 100, sort: { field: LICENSE_PLATE, direction: ASC }) {
-    total
-    items {
-      id
-      licensePlate
-      devices {
-        ...AdminControlCenterDashboardDevice
-      }
-    }
-  }
-}
-query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
+query AdminControlCenterDevice($id: ID!, $language: FleetDeviceLanguage!) {
   fleetDevice(id: $id) {
     ...AdminFleetLiveDevice
     id
@@ -85,53 +44,31 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
     model
     serialNumber
     firmwareVersion
-    edataModule
+    ...AdminErmDeviceMetadata
     simPhoneNumber
     simIccid
     installedAt
     notes
     options
-    routing
-    ermRouting {
-      state
-      since
-      observedAt
-      latestKarmaReportAt
-      parked
-      latestReturnAttempt {
-        ...AdminControlCenterReturnAttempt
-      }
-    }
+    ...AdminErmRouting
     currentWarnings {
       ...AdminWarningLamp
     }
     warningLamps {
       ...AdminWarningLamp
     }
-    routingHealth {
-      backupSince
-      lastBackupStartedAt
-      lastBackupEndedAt
-      backupSeconds
-    }
     vehicle {
       id
       licensePlate
     }
-    ermState {
+    state {
       ...AdminControlCenterStateFields
-      recovery {
-        id
-        startedAt
-        finishedAt
-        outcome
-        reason
-      }
-      mainVoltage {
+      ...AdminErmSessionEvidence
+      externalVoltage {
         value
         observedAt
       }
-      backupVoltage {
+      backupBatteryVoltage {
         value
         observedAt
       }
@@ -143,7 +80,7 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
         value
         observedAt
       }
-      edataMeasurements {
+      measurements {
         parameterId
         name
         unit
@@ -167,55 +104,18 @@ query AdminControlCenterDevice($id: ID!, $language: ErmLanguage!) {
         }
         lastCloseReason
         lastClosedAt
-        latestKarmaRoutingWrite {
-          id
-          receivedAt
-          command
-          displayText
-        }
       }
     }
   }
 }
-fragment AdminControlCenterReturnAttempt on ErmKarmaReturnAttempt {
-  id
-  requestedAt
-  status
-  pending
-  discocanConnectedAt
-  recovery {
-    id
-    startedAt
-    finishedAt
-    outcome
-    reason
-  }
-}
-mutation AdminControlCenterReturnToDiscoCan($deviceId: ID!) {
-  returnErmDeviceToDiscoCan(deviceId: $deviceId) {
-    ...AdminControlCenterReturnAttempt
-  }
-}
-query AdminControlCenterSmsDevices($ids: [ID!]) {
-  fleetDevices(ids: $ids, limit: 100, sort: { field: VEHICLE_LICENSE_PLATE, direction: ASC }) {
-    total
-    items {
-      id
-      imei
-      simPhoneNumber
-      smsPassword
-      vehicle {
-        id
-        licensePlate
-        fleetNumber
-      }
-    }
-  }
-}
-query AdminControlCenterEvents($id: ID!, $language: ErmLanguage!, $input: ErmDeviceEventsInput) {
+query AdminControlCenterEvents(
+  $id: ID!
+  $language: FleetDeviceLanguage!
+  $input: FleetDeviceEventsInput
+) {
   fleetDevice(id: $id) {
     id
-    ermEvents(input: $input) {
+    events(input: $input) {
       total
       offset
       limit
@@ -224,37 +124,15 @@ query AdminControlCenterEvents($id: ID!, $language: ErmLanguage!, $input: ErmDev
       hasMore
       items {
         ...AdminControlCenterEventFields
-        fields
-        edata
+        ...AdminErmEventEvidence
       }
     }
   }
 }
-query AdminControlCenterCommands($id: ID!, $input: ErmDevicePageInput) {
+query AdminControlCenterFrames($id: ID!, $input: FleetDeviceMessagesInput) {
   fleetDevice(id: $id) {
     id
-    ermCommands(input: $input) {
-      cursor
-      nextCursor
-      hasMore
-      items {
-        id
-        reference
-        command
-        fields
-        status
-        sentAt
-        answeredAt
-        resultCode
-        responseText
-      }
-    }
-  }
-}
-query AdminControlCenterFrames($id: ID!, $input: ErmDevicePageInput) {
-  fleetDevice(id: $id) {
-    id
-    ermFrames(input: $input) {
+    messages(input: $input) {
       total
       offset
       limit
@@ -265,17 +143,14 @@ query AdminControlCenterFrames($id: ID!, $input: ErmDevicePageInput) {
         id
         direction
         receivedAt
-        command
-        reference
-        checksum
+        ...AdminErmMessageEvidence
         partial
         displayText
-        rawHex
+        payloadHex
         acknowledgement {
           commandId
           commandRequestId
-          commandReference
-          replyReference
+          ...AdminErmAcknowledgementEvidence
           resultCode
           receivedAt
         }
@@ -283,23 +158,23 @@ query AdminControlCenterFrames($id: ID!, $input: ErmDevicePageInput) {
     }
   }
 }
-fragment AdminControlCenterSnapshotFields on ErmParameterSnapshot {
+fragment AdminControlCenterSnapshotFields on FleetDeviceParameterSnapshot {
   id
-  unitId
+  imei
   actorId
   intent
   status
   startedAt
   finishedAt
   parameterCount
-  unreadParameters
+  unreadParameterIds
   readCount
   failureReason
 }
-query AdminControlCenterSnapshots($id: ID!, $input: ErmDevicePageInput) {
+query AdminControlCenterSnapshots($id: ID!, $input: FleetDeviceParameterSnapshotsInput) {
   fleetDevice(id: $id) {
     id
-    ermParameterSnapshots(input: $input) {
+    parameterSnapshots(input: $input) {
       total
       offset
       limit
@@ -309,14 +184,14 @@ query AdminControlCenterSnapshots($id: ID!, $input: ErmDevicePageInput) {
       items {
         ...AdminControlCenterSnapshotFields
         values {
-          parameter
+          parameterId
           title
           value
           outcome
-          resultCode
+          ...AdminErmSnapshotValueEvidence
         }
         changes {
-          parameter
+          parameterId
           title
           previousValue
           value
@@ -325,59 +200,60 @@ query AdminControlCenterSnapshots($id: ID!, $input: ErmDevicePageInput) {
     }
   }
 }
-mutation AdminControlCenterStartSnapshot($input: StartErmParameterSnapshotInput!) {
-  startErmParameterSnapshot(input: $input) {
+mutation AdminControlCenterStartSnapshot($input: StartDeviceParameterSnapshotInput!) {
+  startDeviceParameterSnapshot(input: $input) {
     ...AdminControlCenterSnapshotFields
   }
 }
-mutation AdminControlCenterSendCommand($input: SendErmDeviceCommandInput!) {
-  sendErmDeviceCommand(input: $input) {
+mutation AdminControlCenterSendCommand($input: SendDeviceCommandInput!) {
+  sendDeviceCommand(input: $input) {
     ...AdminControlCenterCommandRequestFields
   }
 }
 
-fragment AdminControlCenterConfigurationChangeFields on ErmConfigurationChange {
+fragment AdminControlCenterConfigurationChangeFields on FleetDeviceConfigurationChange {
   id
-  unitId
+  imei
   actorId
   intent
-  parameter
   operation
-  parameters
+  parameterIds
+  measurementParameterId
   batchId
   batchIndex
   status
   startedAt
   finishedAt
   failureReason
-  baseline
-  intended
-  steps
+  ...AdminErmConfigurationEvidence
 }
 query AdminControlCenterConfigurationChanges($id: ID!) {
   fleetDevice(id: $id) {
     id
-    ermConfigurationWritesEnabled
-    ermConfigurationChanges {
+    configurationWritesEnabled
+    configurationChanges {
       ...AdminControlCenterConfigurationChangeFields
     }
   }
 }
-mutation AdminControlCenterStartEdataChange($input: StartErmEdataChangeInput!) {
-  startErmEdataChange(input: $input) {
+mutation AdminControlCenterStartEdataChange(
+  $input: StartDeviceMeasurementConfigurationChangeInput!
+) {
+  startDeviceMeasurementConfigurationChange(input: $input) {
     ...AdminControlCenterConfigurationChangeFields
   }
 }
-mutation AdminControlCenterStartParameterChange($input: StartErmParameterChangeInput!) {
-  startErmParameterChange(input: $input) {
+mutation AdminControlCenterStartParameterChange($input: StartDeviceParameterChangeInput!) {
+  startDeviceParameterChange(input: $input) {
     ...AdminControlCenterConfigurationChangeFields
   }
 }
 
-fragment AdminControlCenterCommandRequestFields on ErmCommandRequest {
+fragment AdminControlCenterCommandRequestFields on FleetDeviceCommandRequest {
   id
   deviceId
-  unitId
+  deviceType
+  imei
   actorId
   cancelledByActorId
   waitingReason
@@ -412,52 +288,22 @@ fragment AdminControlCenterCommandRequestFields on ErmCommandRequest {
   reasonCode
   transportCommand {
     id
-    unitId
+    imei
     connectionId
-    reference
-    command
-    fields
+    ...AdminErmTransportEvidence
     status
     sentAt
     answeredAt
     resultCode
     responseText
-    responseHex
     acknowledgement {
       commandId
-      commandReference
-      replyReference
+      ...AdminErmAcknowledgementEvidence
       resultCode
       receivedAt
     }
   }
-  configurationVerification {
-    id
-    status
-    startedAt
-    finishedAt
-    failureReason
-    stepDetails {
-      name
-      at
-      outcome
-      outcomeCode
-      commandId
-      payload
-    }
-  }
-  sentFrame {
-    id
-    direction
-    receivedAt
-    command
-    reference
-    checksum
-    partial
-    displayText
-    rawHex
-  }
-  receivedFrameHex
+  ...AdminErmRequestEvidence
   status
   createdAt
   expiresAt
@@ -471,19 +317,19 @@ fragment AdminControlCenterCommandRequestFields on ErmCommandRequest {
 query AdminControlCenterCommandRequests($id: ID!) {
   fleetDevice(id: $id) {
     id
-    ermCommandRequests {
+    commandRequests {
       ...AdminControlCenterCommandRequestFields
     }
   }
 }
-mutation AdminControlCenterCancelCommand($input: CancelErmDeviceCommandInput!) {
-  cancelErmDeviceCommand(input: $input) {
+mutation AdminControlCenterCancelCommand($input: CancelDeviceCommandInput!) {
+  cancelDeviceCommand(input: $input) {
     ...AdminControlCenterCommandRequestFields
   }
 }
 
 query AdminControlCenterCommandRequest($id: ID!) {
-  ermCommandRequest(id: $id) {
+  fleetDeviceCommandRequest(id: $id) {
     ...AdminControlCenterCommandRequestFields
   }
 }
@@ -507,7 +353,7 @@ query AdminControlCenterDeviceProblems(
     counts {
       asOf
       dataAsOf
-      ermAsOf
+      liveAsOf
       periodFrom
       periodTo
       total
@@ -531,7 +377,7 @@ query AdminControlCenterDeviceProblems(
       deviceImei
       vehicleId
       alertId
-      ermEventId
+      sourceEventId
       commandRequestId
     }
   }
@@ -540,10 +386,10 @@ query AdminControlCenterDeviceProblems(
 query AdminControlCenterBranchCommandRequests(
   $offset: Int! = 0
   $limit: Int! = 20
-  $filter: ErmCommandRequestsFilter
-  $sort: ErmCommandRequestsSort
+  $filter: FleetDeviceCommandRequestsFilter
+  $sort: FleetDeviceCommandRequestsSort
 ) {
-  ermCommandRequests(offset: $offset, limit: $limit, filter: $filter, sort: $sort) {
+  fleetDeviceCommandRequests(offset: $offset, limit: $limit, filter: $filter, sort: $sort) {
     total
     offset
     limit
@@ -552,12 +398,12 @@ query AdminControlCenterBranchCommandRequests(
     }
   }
 }
-mutation AdminControlCenterRetryCommand($input: RetryErmDeviceCommandInput!) {
-  retryErmDeviceCommand(input: $input) {
+mutation AdminControlCenterRetryCommand($input: RetryDeviceCommandInput!) {
+  retryDeviceCommand(input: $input) {
     ...AdminControlCenterCommandRequestFields
   }
 }
-fragment AdminControlCenterCommandBatchFields on ErmCommandBatch {
+fragment AdminControlCenterCommandBatchFields on FleetDeviceCommandBatch {
   id
   actorId
   action
@@ -573,31 +419,31 @@ fragment AdminControlCenterCommandBatchFields on ErmCommandBatch {
   }
 }
 query AdminControlCenterCommandBatch($id: ID!) {
-  ermCommandBatch(id: $id) {
+  fleetDeviceCommandBatch(id: $id) {
     ...AdminControlCenterCommandBatchFields
   }
 }
-mutation AdminControlCenterStartCommandBatch($input: StartErmCommandBatchInput!) {
-  startErmCommandBatch(input: $input) {
+mutation AdminControlCenterStartCommandBatch($input: StartDeviceCommandBatchInput!) {
+  startDeviceCommandBatch(input: $input) {
     ...AdminControlCenterCommandBatchFields
   }
 }
 mutation AdminControlCenterStopCommandBatch($id: ID!) {
-  stopErmCommandBatch(id: $id) {
+  stopDeviceCommandBatch(id: $id) {
     ...AdminControlCenterCommandBatchFields
   }
 }
 query AdminControlCenterParameterBaseline($id: ID!) {
   fleetDevice(id: $id) {
     id
-    ermParameterSnapshots(input: { pageSize: 25 }) {
+    parameterSnapshots(input: { pageSize: 25 }) {
       items {
         id
         startedAt
         status
-        unreadParameters
+        unreadParameterIds
         values {
-          parameter
+          parameterId
           title
           value
           outcome
@@ -618,19 +464,19 @@ query AdminControlCenterSettingsDevices($offset: Int! = 0) {
     items {
       id
       imei
+      type
       vehicle {
         id
         licensePlate
       }
-      ermConfigurationWritesEnabled
-      ermState {
-        online
-        mode
+      state {
+        connected
+        ...AdminErmSessionMode
       }
     }
   }
 }
-fragment AdminControlCenterConfigurationBatchFields on ErmConfigurationBatch {
+fragment AdminControlCenterConfigurationBatchFields on FleetDeviceConfigurationBatch {
   id
   actorId
   createdAt
@@ -642,22 +488,22 @@ fragment AdminControlCenterConfigurationBatchFields on ErmConfigurationBatch {
   }
 }
 query AdminControlCenterConfigurationBatch($id: ID!) {
-  ermConfigurationBatch(id: $id) {
+  fleetDeviceConfigurationBatch(id: $id) {
     ...AdminControlCenterConfigurationBatchFields
   }
 }
-mutation AdminControlCenterStartParametersChange($input: StartErmParametersChangeInput!) {
-  startErmParametersChange(input: $input) {
+mutation AdminControlCenterStartParametersChange($input: StartDeviceParametersChangeInput!) {
+  startDeviceParametersChange(input: $input) {
     ...AdminControlCenterConfigurationChangeFields
   }
 }
-mutation AdminControlCenterStartParameterBatch($input: StartErmParameterBatchInput!) {
-  startErmParameterBatch(input: $input) {
+mutation AdminControlCenterStartParameterBatch($input: StartDeviceConfigurationBatchInput!) {
+  startDeviceConfigurationBatch(input: $input) {
     ...AdminControlCenterConfigurationBatchFields
   }
 }
 mutation AdminControlCenterStopConfigurationBatch($id: ID!) {
-  stopErmConfigurationBatch(id: $id) {
+  stopDeviceConfigurationBatch(id: $id) {
     ...AdminControlCenterConfigurationBatchFields
   }
 }
@@ -674,19 +520,21 @@ query AdminControlCenterQueueDeviceLabels($ids: [ID!]!) {
     }
   }
 }
-query AdminControlCenterParameterCatalog($input: ErmParameterCatalogInput) {
-  ermParameterCatalog(input: $input) {
+query AdminControlCenterParameterCatalog(
+  $deviceType: FleetDeviceType!
+  $input: FleetDeviceParameterCatalogInput
+) {
+  fleetDeviceParameterCatalog(deviceType: $deviceType, input: $input) {
     total
     offset
     limit
-    features
+    ...AdminErmCatalogFeatures
     items {
-      parameter
-      code
+      parameterId
       title
       summary
       defaultValue
-      features
+      ...AdminErmParameterDefinition
       writable
       options {
         value
@@ -720,10 +568,10 @@ query AdminControlCenterEdataParameters($input: FleetEdataParametersInput!) {
     }
   }
 }
-query AdminControlCenterActionCommands {
-  ermDeviceActionCommands {
+query AdminControlCenterActionCommands($deviceType: FleetDeviceType!) {
+  fleetDeviceActionCatalog(deviceType: $deviceType) {
     action
-    command
-    fields
+    requiresParameters
+    ...AdminErmActionCommand
   }
 }

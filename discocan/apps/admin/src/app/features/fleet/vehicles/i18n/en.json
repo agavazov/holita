@@ -175,7 +175,8 @@
     "sources": {
       "DEMO": "Device data",
       "MANUAL": "Manual",
-      "ERM": "Device data (DiscoCan)"
+      "ERM": "Device data (DiscoCan)",
+      "DISCOCAN": "Discocan hardware"
     },
     "noPrevious": "No previous odometer reading.",
     "latestAllowed": "Latest allowed reading time",

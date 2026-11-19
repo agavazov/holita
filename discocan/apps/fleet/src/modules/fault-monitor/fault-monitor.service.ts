@@ -9,7 +9,7 @@ import type {
   QueryFleetFaultLogArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
-import { ErmDashboardClient } from '../../integrations/erm/erm-dashboard.client.js';
+import { FaultReadLog } from '../device-commands/fault-read-log.js';
 import {
   dateTimeRange,
   enumFilter,
@@ -51,11 +51,11 @@ export class FaultMonitorService {
     private readonly monitor: FaultMonitorRepository,
     private readonly devices: DevicesService,
     private readonly faultChecks: FaultCheckRepository,
-    private readonly erm: ErmDashboardClient,
+    private readonly faultReadLog: FaultReadLog,
     private readonly clock: FleetClock,
   ) {}
 
-  async vehicles(context: RequestContext): Promise<MonitorVehicle[]> {
+  async vehicles(context: RequestContext, includeDeviceState = false): Promise<MonitorVehicle[]> {
     const scope = requireScope(context);
     const rows = await this.monitor.vehicles(scope);
     const vehicleIds = rows.map((row) => row.vehicle.id);
@@ -63,6 +63,9 @@ export class FaultMonitorService {
       this.devices.forVehicles(scope, vehicleIds),
       this.faultChecks.forVehicles(scope, vehicleIds),
     ]);
+    if (includeDeviceState) {
+      await this.devices.loadStates(context, devices);
+    }
     return rows.map((row) => ({
       ...row,
       devices: devices
@@ -76,7 +79,7 @@ export class FaultMonitorService {
   }
 
   /**
-   * Stored entries and ERM's answered fault reads, merged newest first. Each source supplies its
+   * Stored entries and answered fault reads, merged newest first. Each source supplies its
    * first offset + limit entries, which always contain the requested page of the merged order.
    */
   async log(context: RequestContext, args: QueryFleetFaultLogArgs): Promise<FleetFaultLogPage> {
@@ -109,19 +112,9 @@ export class FaultMonitorService {
           limit: reads ? offset + limit : limit,
         })
       : { total: 0, entries: [] };
-    const devices = reads ? await this.monitor.devices(scope, vehicleIds) : [];
-    const faultReads =
-      reads && (vehicleIds === undefined || devices.length > 0)
-        ? await this.erm.faultReads(
-            context,
-            {
-              deviceIds: vehicleIds === undefined ? null : devices.map((device) => device.id),
-              from,
-              to,
-            },
-            offset + limit,
-          )
-        : { total: 0, items: [] };
+    const faultReads = reads
+      ? await this.faultReadLog.entries(context, scope, { vehicleIds, from, to }, offset + limit)
+      : { total: 0, items: [] };
 
     const entries = [
       ...stored.entries.map(
@@ -149,24 +142,7 @@ export class FaultMonitorService {
           };
         },
       ),
-      ...faultReads.items.map(
-        (read): Omit<FleetFaultLogEntry, 'vehicle'> & { vehicleId: string | null } => ({
-          id: `read:${read.id}`,
-          kind: 'FAULT_READ',
-          occurredAt: read.completedAt,
-          vehicleId: devices.find((device) => device.id === read.deviceId)?.vehicleId ?? null,
-          deviceImei: read.unitId,
-          troubleCode: null,
-          spn: null,
-          fmi: null,
-          descriptionKey: null,
-          parameterId: null,
-          lampState: null,
-          activeCodes: read.verdict?.activeCodes ?? null,
-          codeCount: read.verdict?.codeCount ?? null,
-          valueCount: null,
-        }),
-      ),
+      ...faultReads.items,
     ]
       .sort(newestFirst)
       .slice(reads ? offset : 0, (reads ? offset : 0) + limit);

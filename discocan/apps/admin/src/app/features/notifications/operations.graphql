@@ -27,7 +27,7 @@ fragment AdminNotification on FleetNotification {
   vehicleId
   deviceId
   alertId
-  ermEventId
+  sourceEventId
   commandRequestId
   readAt
 }

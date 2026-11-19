@@ -1,3 +1,8 @@
+import {
+  legacyFaultPrefix,
+  legacyFaultRemovedText,
+  legacyFaultReport,
+} from '../../database/device-diagnostics.js';
 import { Injectable } from '@nestjs/common';
 import { fleetEventKindDb } from '../../database/enums.js';
 import { PrismaService } from '../../database/prisma.service.js';
@@ -98,9 +103,8 @@ export class FaultMonitorRepository {
 
   /**
    * One page of the stored fault log, newest first, with the total. Fault codes keep only a change
-   * of logger status, so the 419 snapshot that answers every fault read does not repeat an active
-   * code. A CAN loss is the first 417 after CAN data, and its restoration the first 405 after the
-   * loss's last 417.
+   * of logger status, so repeated snapshots of active codes only appear once. A CAN loss is the
+   * first disconnect after CAN data, and restoration is the first measurement after the last disconnect.
    */
   async log(scope: FleetScope, query: FaultLogQuery) {
     const schema = this.prisma.schema;
@@ -123,10 +127,10 @@ export class FaultMonitorRepository {
           FROM (
             SELECT f."id", f."vehicleId", f."deviceImei", f."occurredAt", f."troubleCode",
               f."diagnosticSpn", f."diagnosticFmi", f."diagnosticIndex",
-              coalesce(f."diagnosticReport", 419) AS "report",
+              coalesce(f."diagnosticReport", ${legacyFaultReport}::int) AS "report",
               CASE WHEN f."diagnosticStatus" IN (1, 2) THEN f."diagnosticStatus"::int
-                WHEN f."details" LIKE 'eData 419:%'
-                  THEN CASE WHEN f."details" LIKE '%logger deleted%' THEN 2 ELSE 1 END
+                WHEN f."details" LIKE ${legacyFaultPrefix + '%'}
+                  THEN CASE WHEN f."details" LIKE ${'%' + legacyFaultRemovedText + '%'} THEN 2 ELSE 1 END
               END AS "status"
             FROM ${events} f
             WHERE ${scoped('f')} AND f."kind"::text = ${fleetEventKindDb.DIAGNOSTIC_TROUBLE_CODE}::text
@@ -227,14 +231,6 @@ export class FaultMonitorRepository {
     return this.prisma.client.vehicle.findMany({
       where: { ...scope, id: { in: [...ids] } },
       select: VEHICLE_REF,
-    });
-  }
-
-  /** Devices of the Branch, or of the given vehicles, with their current vehicle. */
-  devices(scope: FleetScope, vehicleIds: readonly string[] | undefined) {
-    return this.prisma.client.device.findMany({
-      where: { ...scope, ...(vehicleIds ? { vehicleId: { in: [...vehicleIds] } } : {}) },
-      select: { id: true, imei: true, vehicleId: true },
     });
   }
 }

@@ -1,0 +1,272 @@
+"Allowlisted device reads."
+enum FleetDeviceAction {
+  REQUEST_LOCATION
+  READ_STATUS
+  READ_VERSION
+  READ_ACCESSORIES
+  READ_DIAGNOSTICS
+  READ_FAULTS
+  READ_PARAMETERS
+}
+
+enum FleetDeviceCommandRequestStatus {
+  QUEUED
+  SUBMITTING
+  ANSWERED
+  FAILED
+  EXPIRED
+  CANCELLED
+  UNCERTAIN
+}
+
+enum FleetDeviceCommandWaitingReason {
+  GATEWAY_UNAVAILABLE
+  FLEET_VERIFICATION_UNAVAILABLE
+  UNIT_NOT_CONNECTED
+}
+
+enum FleetDeviceCommandSortField {
+  ACTION
+  STATUS
+  UNIT_ID
+  ACTOR_ID
+  REQUESTED_AT
+  COMPLETED_AT
+}
+
+input FleetDeviceCommandRequestsFilter {
+  statuses: [FleetDeviceCommandRequestStatus!]
+  actions: [FleetDeviceAction!]
+  deviceIds: [ID!]
+  imeis: [String!]
+  actorId: String
+  createdFrom: DateTime
+  createdTo: DateTime
+}
+
+input FleetDeviceCommandRequestsSort {
+  field: FleetDeviceCommandSortField! = REQUESTED_AT
+  direction: FleetSortDirection! = DESC
+}
+
+input FleetDeviceCommandsInput {
+  "Page size of 25, 50 or 100."
+  pageSize: Int = 50
+  "Opaque cursor from this Device's command history. Omit when using an offset."
+  cursor: String
+  offset: Int
+}
+
+input SendDeviceCommandInput {
+  deviceId: ID!
+  action: FleetDeviceAction!
+  "Only READ_PARAMETERS takes parameters. Supply 1–20 distinct parameter numbers."
+  parameters: [Int!]
+  "Request lifetime in seconds, from 1 to 86400."
+  expiresInSeconds: Int = 7200
+  intent: String
+}
+
+input CancelDeviceCommandInput {
+  deviceId: ID!
+  requestId: ID!
+}
+
+input RetryDeviceCommandInput {
+  requestId: ID!
+  expiresInSeconds: Int = 7200
+  intent: String
+}
+
+input StartDeviceCommandBatchInput {
+  "Between 1 and 100 unique Devices of one type in the active Branch."
+  deviceIds: [ID!]!
+  "A fixed read available for the selected Devices."
+  action: FleetDeviceAction!
+  expiresInSeconds: Int = 7200
+  intent: String
+}
+
+type FleetDeviceParameterValue {
+  parameter: Int!
+  title: String
+  value: String
+  resultCode: String
+  outcome: FleetDeviceParameterReadOutcome!
+}
+
+enum FleetDeviceParameterReadOutcome {
+  READ
+  REJECTED
+  OMITTED
+}
+
+type FleetDeviceCommandDisplayParameters {
+  expiresInSeconds: Int!
+  requestedFields: [FleetDeviceCommandDisplayField!]!
+}
+
+enum FleetDeviceCommandDisplayField {
+  IGNITION
+  ENGINE
+  VIN
+  MAIN_VOLTAGE
+  SIGNAL_QUALITY
+  JAMMING
+  FIRMWARE_VERSION
+}
+
+"Diagnostic evidence returned after a fault read."
+type FleetDeviceFaultReadVerdict {
+  activeCodes: Boolean!
+  codeCount: Int
+  receivedAt: DateTime!
+}
+
+type FleetDeviceCommandRequest {
+  id: ID!
+  deviceId: ID!
+  deviceType: FleetDeviceType!
+  imei: ID!
+  actorId: String!
+  cancelledByActorId: String
+  batchId: ID
+  batchIndex: Int
+  retryOfId: ID
+  waitingReason: FleetDeviceCommandWaitingReason
+  waitingSince: DateTime
+  intent: String!
+  action: FleetDeviceAction!
+  parameters: [Int!]!
+  parameterValues: [FleetDeviceParameterValue!]!
+  actionCode: String!
+  displayParameters: FleetDeviceCommandDisplayParameters!
+  requestedAt: DateTime!
+  queuedAt: DateTime!
+  submittingAt: DateTime
+  sentAt: DateTime
+  answeredAt: DateTime
+  failedAt: DateTime
+  expiredAt: DateTime
+  cancelledAt: DateTime
+  uncertainAt: DateTime
+  "The outcome of the request, including transport acknowledgement when available."
+  outcomeCode: String!
+  reasonCode: String
+  transportCommand: FleetDeviceCommand
+  status: FleetDeviceCommandRequestStatus!
+  createdAt: DateTime!
+  expiresAt: DateTime!
+  submittedAt: DateTime
+  completedAt: DateTime
+  commandId: ID
+  resultCode: String
+  responseText: String
+  failureReason: String
+  faultReadVerdict: FleetDeviceFaultReadVerdict
+  erm: FleetErmDeviceCommandRequest
+}
+
+type FleetErmDeviceCommandRequest {
+  sentFrame: FleetDeviceMessage
+  receivedFrameHex: String
+  configurationVerificationId: ID
+  configurationVerification: FleetDeviceConfigurationChange
+}
+
+type FleetDeviceCommandRequestsPage {
+  items: [FleetDeviceCommandRequest!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+
+type FleetDeviceCommandBatch {
+  id: ID!
+  deviceType: FleetDeviceType!
+  actorId: String!
+  action: FleetDeviceAction!
+  createdAt: DateTime!
+  stoppedAt: DateTime
+  stoppedByActorId: String
+  counts: [FleetDeviceCommandRequestCount!]!
+  requests: [FleetDeviceCommandRequest!]!
+}
+
+type FleetDeviceCommandRequestCount {
+  status: FleetDeviceCommandRequestStatus!
+  count: Int!
+}
+
+enum FleetDeviceCommandState {
+  SENT
+  ANSWERED
+  TIMEOUT
+  FAILED
+}
+
+type FleetDeviceCommand {
+  id: ID!
+  imei: ID!
+  connectionId: ID!
+  status: FleetDeviceCommandState!
+  sentAt: DateTime!
+  answeredAt: DateTime
+  resultCode: String
+  responseText: String
+  acknowledgement: FleetDeviceAcknowledgement
+  erm: FleetErmDeviceCommand
+}
+
+type FleetErmDeviceCommand {
+  reference: String!
+  command: String!
+  fields: [String!]!
+  responseHex: String
+}
+
+type FleetDeviceCommandsPage {
+  items: [FleetDeviceCommand!]!
+  cursor: String
+  nextCursor: String
+  hasMore: Boolean!
+}
+
+type FleetDeviceActionCatalogEntry {
+  action: FleetDeviceAction!
+  requiresParameters: Boolean!
+  erm: FleetErmDeviceActionCommand
+}
+
+type FleetErmDeviceActionCommand {
+  command: String!
+  fields: [String!]!
+}
+
+extend type Query {
+  "One command request in the verified Tenant and active Branch."
+  fleetDeviceCommandRequest(id: ID!): FleetDeviceCommandRequest
+  "The active Branch command queue, newest first by default. The creation period is half-open."
+  fleetDeviceCommandRequests(
+    offset: Int! = 0
+    limit: Int! = 20
+    filter: FleetDeviceCommandRequestsFilter
+    sort: FleetDeviceCommandRequestsSort
+  ): FleetDeviceCommandRequestsPage!
+  fleetDeviceCommandBatch(id: ID!): FleetDeviceCommandBatch
+  "Available read actions for the selected Device type."
+  fleetDeviceActionCatalog(deviceType: FleetDeviceType!): [FleetDeviceActionCatalogEntry!]!
+}
+
+extend type Mutation {
+  "Queues an allowlisted read for a Device of the active Branch."
+  sendDeviceCommand(input: SendDeviceCommandInput!): FleetDeviceCommandRequest!
+  "Cancels a request that is still queued."
+  cancelDeviceCommand(input: CancelDeviceCommandInput!): FleetDeviceCommandRequest!
+  "Explicitly creates a new request linked to the previous attempt."
+  retryDeviceCommand(input: RetryDeviceCommandInput!): FleetDeviceCommandRequest!
+  "Queues a fixed read for each selected Device in order."
+  startDeviceCommandBatch(input: StartDeviceCommandBatchInput!): FleetDeviceCommandBatch!
+  "Stops a batch and cancels its queued requests."
+  stopDeviceCommandBatch(id: ID!): FleetDeviceCommandBatch!
+}

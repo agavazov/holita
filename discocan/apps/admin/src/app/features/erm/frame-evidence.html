@@ -1,0 +1,34 @@
+@if (frame().acknowledgement?.commandRequestId; as requestId) {
+  <a
+    class="app-link"
+    [routerLink]="commandsLink()"
+    [queryParams]="{ request: requestId }"
+    (click)="followRequest.emit()"
+    >{{ text().detail.openRequest }}</a
+  >
+}
+<dl class="app-facts">
+  <div>
+    <dt>{{ text().direction }}</dt>
+    <dd>{{ text().directions[frame().direction] }}</dd>
+  </div>
+  <div>
+    <dt>{{ erm().checksum }}</dt>
+    <dd>
+      @if (frame().erm; as evidence) {
+        {{ erm().checksums[evidence.checksum] }}
+      } @else {
+        —
+      }
+    </dd>
+  </div>
+  <div>
+    <dt>{{ text().reference }}</dt>
+    <dd>{{ frame().erm?.reference ?? '—' }}</dd>
+  </div>
+</dl>
+<details class="app-card">
+  <summary>{{ text().detail.tabs['technical-details'] }}</summary>
+  <pre class="control-center__frame">{{ frame().displayText }}</pre>
+  <pre class="control-center__frame">{{ frame().payloadHex }}</pre>
+</details>

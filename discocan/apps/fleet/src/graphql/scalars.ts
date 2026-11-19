@@ -73,3 +73,8 @@ export const DateScalar = new GraphQLScalarType<string, string>({
   parseValue: (value) => stringInput('Date', value),
   parseLiteral: (node) => stringLiteral('Date', node),
 });
+
+export const FleetErmJSONScalar = new GraphQLScalarType({
+  name: 'FleetErmJSON',
+  serialize: (value) => value,
+});

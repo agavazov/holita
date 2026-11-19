@@ -555,8 +555,12 @@ export class VehicleProfileView {
     return this.vehicles().statuses[status];
   }
 
+  protected faultReadDevice(vehicle: VehicleProfile) {
+    return vehicle.liveDevices?.find((device) => device?.type === 'ERM');
+  }
+
   protected requestFaultRead(vehicle: VehicleProfile): void {
-    const device = vehicle.liveDevices?.[0];
+    const device = this.faultReadDevice(vehicle);
     if (device) {
       this.readFaults.emit(device.id);
     }

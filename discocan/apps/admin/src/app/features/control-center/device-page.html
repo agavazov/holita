@@ -1,7 +1,7 @@
 <section class="app-view">
   <osnova-page-header
     [title]="title()"
-    [moduleInfo]="moduleInfo().body"
+    [moduleInfo]="moduleInfo()"
     [moduleInfoTitle]="tabTitle()"
     [backLink]="link('fleet', 'devices')"
     [backLabel]="text().devices"
@@ -50,7 +50,7 @@
                       <dd>
                         {{
                           state()
-                            ? state()!.online
+                            ? state()!.connected
                               ? text().deviceStatus.connected
                               : text().deviceStatus.disconnected
                             : text().deviceStatus.unknown
@@ -61,7 +61,7 @@
                       <dt>{{ text().deviceStatus.reporting }}</dt>
                       <dd>
                         {{
-                          state()?.lastFrameAt
+                          state()?.lastReportAt
                             ? state()!.health.overdue
                               ? text().deviceStatus.reportOverdue
                               : text().deviceStatus.reportRecent
@@ -118,133 +118,39 @@
                   }
                 </section>
                 <div class="app-card-grid control-center__overview">
-                  <section class="app-card" [attr.aria-label]="text().deviceStatus.routing">
-                    <h2>{{ text().deviceStatus.routing }}</h2>
-                    @if (routing(); as routing) {
-                      <p-tag
-                        [value]="text().deviceStatus.routeStates[routing.state]"
-                        [severity]="
-                          toneSeverity(
-                            routing.state === 'KARMA_BACKUP'
-                              ? 'warn'
-                              : routing.state === 'DISCOCAN'
-                                ? 'success'
-                                : 'neutral'
-                          )
-                        "
-                      />
-                      <dl class="app-facts">
-                        <div>
-                          <dt>{{ text().deviceStatus.routeSince }}</dt>
-                          <dd [title]="fmt.utc(routing.since)">
-                            {{ fmt.dateTime(routing.since, true) }}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>{{ text().deviceStatus.observedAt }}</dt>
-                          <dd [title]="fmt.utc(routing.observedAt)">
-                            {{ fmt.dateTime(routing.observedAt, true) }}
-                          </dd>
-                        </div>
-                        @if (routing.state === 'KARMA_BACKUP' || routing.latestKarmaReportAt) {
-                          <div>
-                            <dt>{{ text().deviceStatus.karmaReport }}</dt>
-                            <dd [title]="fmt.utc(routing.latestKarmaReportAt)">
-                              {{ fmt.dateTime(routing.latestKarmaReportAt, true) }}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().deviceStatus.parked }}</dt>
-                            <dd>
-                              {{
-                                routing.parked === true
-                                  ? text().deviceStatus.parkedYes
-                                  : routing.parked === false
-                                    ? text().deviceStatus.parkedNo
-                                    : text().deviceStatus.parkedUnknown
-                              }}
-                            </dd>
-                          </div>
-                        }
-                      </dl>
-                      @if (routing.latestReturnAttempt; as attempt) {
-                        <h3>{{ text().deviceStatus.returnAttempt }}</h3>
-                        <p-tag
-                          [value]="text().deviceStatus.returnStates[attempt.status]"
-                          [severity]="returnSeverity(attempt.status)"
-                        />
-                        <dl class="app-facts">
-                          <div>
-                            <dt>{{ text().deviceStatus.requestedAt }}</dt>
-                            <dd [title]="fmt.utc(attempt.requestedAt)">
-                              {{ fmt.dateTime(attempt.requestedAt, true) }}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().deviceStatus.discocanConnectedAt }}</dt>
-                            <dd [title]="fmt.utc(attempt.discocanConnectedAt)">
-                              {{ fmt.dateTime(attempt.discocanConnectedAt, true) }}
-                            </dd>
-                          </div>
-                        </dl>
-                      }
-                      @if (recovery(); as recovery) {
-                        <dl class="app-facts">
-                          <div>
-                            <dt>{{ text().deviceStatus.recoveryOutcome }}</dt>
-                            <dd>{{ text().recoveryStates[recovery.outcome] }}</dd>
-                          </div>
-                          <div>
-                            <dt>{{ text().deviceStatus.recoveryFinished }}</dt>
-                            <dd [title]="fmt.utc(recovery.finishedAt)">
-                              {{ fmt.dateTime(recovery.finishedAt, true) }}
-                            </dd>
-                          </div>
-                        </dl>
-                      } @else if (routing.latestReturnAttempt) {
-                        <p class="app-muted">{{ text().deviceStatus.noRecovery }}</p>
-                      }
-                      @if (
-                        routing.state === 'KARMA_BACKUP' || routing.latestReturnAttempt?.pending
-                      ) {
-                        <div class="control-center__actions">
-                          <button
-                            pButton
-                            type="button"
-                            [disabled]="!!returnDisabledReason()"
-                            [attr.aria-describedby]="
-                              returnDisabledReason() ? 'erm-return-disabled' : null
-                            "
-                            [attr.title]="returnDisabledReason()"
-                            (click)="returnToDiscoCan()"
-                          >
-                            {{ text().deviceStatus.returnButton }}
-                          </button>
-                        </div>
-                        @if (returnDisabledReason(); as reason) {
-                          <p id="erm-return-disabled" class="app-muted">{{ reason }}</p>
-                        }
-                      }
-                      @if (returnFailure(); as failure) {
-                        <p-message severity="error">{{ failure }}</p-message>
-                      }
-                    }
-                  </section>
+                  @if (device.type === 'ERM') {
+                    <discocan-karma-routing-card
+                      [deviceId]="device.id"
+                      [language]="language()"
+                      [unitName]="unitName()"
+                      [canConfigure]="canConfigure()"
+                      [observedRouting]="device.ermRouting"
+                      [sessionEvidence]="device.state?.erm"
+                      (recorded)="recordReturn($event)"
+                      (refreshRequested)="refresh()"
+                    />
+                  }
                   <section class="app-card" [attr.aria-label]="text().deviceStatus.powerSignal">
                     <h2>{{ text().deviceStatus.powerSignal }}</h2>
                     <dl class="app-facts">
                       <div>
                         <dt>{{ text().mainVoltage }}</dt>
-                        <dd>{{ voltage(state()?.mainVoltage?.value) }}</dd>
-                        <dd class="app-muted" [title]="fmt.utc(state()?.mainVoltage?.observedAt)">
-                          {{ fmt.dateTime(state()?.mainVoltage?.observedAt, true) }}
+                        <dd>{{ voltage(state()?.externalVoltage?.value) }}</dd>
+                        <dd
+                          class="app-muted"
+                          [title]="fmt.utc(state()?.externalVoltage?.observedAt)"
+                        >
+                          {{ fmt.dateTime(state()?.externalVoltage?.observedAt, true) }}
                         </dd>
                       </div>
                       <div>
                         <dt>{{ text().backupVoltage }}</dt>
-                        <dd>{{ voltage(state()?.backupVoltage?.value) }}</dd>
-                        <dd class="app-muted" [title]="fmt.utc(state()?.backupVoltage?.observedAt)">
-                          {{ fmt.dateTime(state()?.backupVoltage?.observedAt, true) }}
+                        <dd>{{ voltage(state()?.backupBatteryVoltage?.value) }}</dd>
+                        <dd
+                          class="app-muted"
+                          [title]="fmt.utc(state()?.backupBatteryVoltage?.observedAt)"
+                        >
+                          {{ fmt.dateTime(state()?.backupBatteryVoltage?.observedAt, true) }}
                         </dd>
                       </div>
                       <div>
@@ -606,20 +512,27 @@
                   [target]="unitName()"
                   [requestId]="requestedCommand()"
                   (changed)="refresh()"
+                  [deviceType]="device.type"
                 />
               }
               @case ('console') {
-                <discocan-device-console
-                  [deviceId]="recordId()"
-                  [branchId]="branchId()"
-                  [imei]="device.imei"
-                  [language]="language()"
-                  [target]="unitName()"
-                  [primary]="canSend()"
-                />
+                @if (device.type === 'ERM') {
+                  <discocan-device-console
+                    [deviceId]="recordId()"
+                    [branchId]="branchId()"
+                    [imei]="device.imei"
+                    [language]="language()"
+                    [target]="unitName()"
+                    [primary]="canSend()"
+                  />
+                } @else {
+                  <osnova-empty-state [title]="text().commandsUnsupported" />
+                }
               }
               @case ('sms-commands') {
-                @if (!canOperate()) {
+                @if (device.type === 'DISCOCAN') {
+                  <osnova-empty-state [title]="text().smsUnsupported" />
+                } @else if (!canOperate()) {
                   <p-message severity="info">{{ text().branchQueue.operatorRequired }}</p-message>
                 } @else {
                   <discocan-control-center-sms
@@ -630,36 +543,42 @@
                 }
               }
               @case ('parameters') {
-                @if (!canConfigure() || !canSend()) {
+                @if (device.type === 'ERM' && (!canConfigure() || !canSend())) {
                   <p-message severity="info">{{
                     !canConfigure()
-                      ? text().settings.writeRoleRequired
-                      : text().settings.primaryRequired
+                      ? ermText().settings.writeRoleRequired
+                      : ermText().settings.primaryRequired
                   }}</p-message>
                 }
-                <discocan-device-settings
-                  [deviceId]="recordId()"
-                  [language]="language()"
-                  [target]="unitName()"
-                  [primary]="canSend()"
-                  [completedSnapshotId]="completedSnapshotId()"
-                />
-                <section class="app-card">
-                  <h2>{{ text().snapshots.title }}</h2>
-                  <div class="control-center__actions">
-                    <button
-                      pButton
-                      type="button"
-                      [disabled]="
-                        !canConfigure() || !canSend() || snapshotRunning() || startingSnapshot()
-                      "
-                      [loading]="startingSnapshot()"
-                      (click)="startSnapshot()"
-                    >
-                      {{ text().snapshots.start }}
-                    </button>
-                  </div>
-                </section>
+                @if (device.type === 'ERM') {
+                  <discocan-device-settings
+                    [deviceId]="recordId()"
+                    [language]="language()"
+                    [target]="unitName()"
+                    [primary]="canSend()"
+                    [completedSnapshotId]="completedSnapshotId()"
+                  />
+                } @else {
+                  <osnova-empty-state [title]="text().commandsUnsupported" />
+                }
+                @if (device.type === 'ERM') {
+                  <section class="app-card">
+                    <h2>{{ text().snapshots.title }}</h2>
+                    <div class="control-center__actions">
+                      <button
+                        pButton
+                        type="button"
+                        [disabled]="
+                          !canConfigure() || !canSend() || snapshotRunning() || startingSnapshot()
+                        "
+                        [loading]="startingSnapshot()"
+                        (click)="startSnapshot()"
+                      >
+                        {{ text().snapshots.start }}
+                      </button>
+                    </div>
+                  </section>
+                }
                 <osnova-table-panel
                   #snapshotsPanel
                   [heading]="text().snapshots.history"
@@ -881,34 +800,36 @@
                               </button>
                             }
                           </div>
-                          <div
-                            class="control-center__actions"
-                            role="group"
-                            [attr.aria-label]="text().checksum"
-                          >
-                            <button
-                              pButton
-                              type="button"
-                              severity="secondary"
-                              [outlined]="checksum() !== null"
-                              [attr.aria-pressed]="checksum() === null"
-                              (click)="checksum.set(null)"
+                          @if (device.type === 'ERM') {
+                            <div
+                              class="control-center__actions"
+                              role="group"
+                              [attr.aria-label]="ermText().checksum"
                             >
-                              {{ text().detail.allChecksums }}
-                            </button>
-                            @for (option of checksums; track option) {
                               <button
                                 pButton
                                 type="button"
                                 severity="secondary"
-                                [outlined]="checksum() !== option"
-                                [attr.aria-pressed]="checksum() === option"
-                                (click)="checksum.set(option)"
+                                [outlined]="checksum() !== null"
+                                [attr.aria-pressed]="checksum() === null"
+                                (click)="checksum.set(null)"
                               >
-                                {{ text().checksums[option] }}
+                                {{ text().detail.allChecksums }}
                               </button>
-                            }
-                          </div>
+                              @for (option of checksums; track option) {
+                                <button
+                                  pButton
+                                  type="button"
+                                  severity="secondary"
+                                  [outlined]="checksum() !== option"
+                                  [attr.aria-pressed]="checksum() === option"
+                                  (click)="checksum.set(option)"
+                                >
+                                  {{ ermText().checksums[option] }}
+                                </button>
+                              }
+                            </div>
+                          }
                         }
                         <osnova-table-panel
                           #technicalPanel
@@ -1028,7 +949,11 @@
                                           : frameLabel(row)
                                       }}</button
                                     ><span class="app-muted">{{
-                                      tab() === 'events' ? row.eventId : row.reference
+                                      tab() === 'events'
+                                        ? row.code
+                                        : device.type === 'ERM'
+                                          ? row.erm?.reference
+                                          : ''
                                     }}</span>
                                   </div>
                                   <div class="app-table-mobile-actions">
@@ -1056,11 +981,11 @@
                                   <span
                                     class="app-cell-date"
                                     [title]="
-                                      fmt.utc(tab() === 'events' ? row.eventTime : row.receivedAt)
+                                      fmt.utc(tab() === 'events' ? row.recordedAt : row.receivedAt)
                                     "
                                     >{{
                                       fmt.dateTime(
-                                        tab() === 'events' ? row.eventTime : row.receivedAt,
+                                        tab() === 'events' ? row.recordedAt : row.receivedAt,
                                         true
                                       )
                                     }}</span
@@ -1073,23 +998,25 @@
                                       : directionLabel(row.direction)
                                   }}</span>
                                 </td>
-                                <td>
-                                  <div class="app-cell-status">
-                                    @if (tab() === 'events') {
-                                      <p-tag
-                                        [value]="severityLabel(row.severity)"
-                                        [severity]="severityTone(row.severity)"
-                                      />
-                                    } @else {
-                                      <p-tag
-                                        [value]="checksumLabel(row.checksum)"
-                                        [severity]="
-                                          row.checksum === 'MISMATCH' ? 'warn' : 'secondary'
-                                        "
-                                      />
-                                    }
-                                  </div>
-                                </td>
+                                @if (tab() === 'events' || device.type === 'ERM') {
+                                  <td>
+                                    <div class="app-cell-status">
+                                      @if (tab() === 'events') {
+                                        <p-tag
+                                          [value]="severityLabel(row.severity)"
+                                          [severity]="severityTone(row.severity)"
+                                        />
+                                      } @else if (device.type === 'ERM') {
+                                        <p-tag
+                                          [value]="checksumLabel(row.erm?.checksum)"
+                                          [severity]="
+                                            row.erm?.checksum === 'MISMATCH' ? 'warn' : 'secondary'
+                                          "
+                                        />
+                                      }
+                                    </div>
+                                  </td>
+                                }
                                 <td class="app-col-actions" pFrozenColumn alignFrozen="right">
                                   <osnova-row-actions
                                     [actions]="actions()"
@@ -1128,14 +1055,16 @@
                               <dt>{{ text().firmware }}</dt>
                               <dd>{{ device.firmwareVersion ?? '—' }}</dd>
                             </div>
-                            <div>
-                              <dt>{{ text().edataModule }}</dt>
-                              <dd>{{ device.edataModule ?? '—' }}</dd>
-                            </div>
+                            @if (device.type === 'ERM' && device.erm; as erm) {
+                              <div>
+                                <dt>{{ ermText().edataModule }}</dt>
+                                <dd>{{ erm.edataModule ?? '—' }}</dd>
+                              </div>
+                            }
                           </dl>
                           <h3>{{ text().edataMeasurements }}</h3>
                           @for (
-                            measurement of state()?.edataMeasurements;
+                            measurement of state()?.measurements;
                             track measurement.parameterId
                           ) {
                             <dl class="app-facts">
@@ -1152,12 +1081,11 @@
                           } @empty {
                             <p>{{ text().edataMeasurementsEmpty }}</p>
                           }
-                          @if (state()?.health?.latestKarmaRoutingWrite; as write) {
-                            <h3>{{ text().latestRouteWrite }}</h3>
-                            <time [title]="fmt.utc(write.receivedAt)">{{
-                              fmt.dateTime(write.receivedAt, true)
-                            }}</time>
-                            <pre class="control-center__frame">{{ write.displayText }}</pre>
+                          @if (
+                            device.type === 'ERM' && state()?.erm?.latestKarmaRoutingWrite;
+                            as write
+                          ) {
+                            <discocan-erm-routing-write [write]="write" [language]="language()" />
                           }
                         </details>
                       </div>
@@ -1250,8 +1178,8 @@
         }
         @case ('event') {
           <h3>{{ detail.value.name ?? text().unknownEvent }}</h3>
-          <time [title]="fmt.utc(detail.value.eventTime)">{{
-            fmt.dateTime(detail.value.eventTime, true)
+          <time [title]="fmt.utc(detail.value.recordedAt)">{{
+            fmt.dateTime(detail.value.recordedAt, true)
           }}</time>
           <dl class="app-facts">
             <div>
@@ -1264,55 +1192,38 @@
             </div>
             <div>
               <dt>{{ text().speed }}</dt>
-              <dd>{{ fmt.speed(detail.value.speedKmh) }}</dd>
+              <dd>{{ fmt.speed(detail.value.speedKph) }}</dd>
             </div>
             <div>
               <dt>{{ text().odometer }}</dt>
-              <dd>{{ fmt.distance(detail.value.odometer) }}</dd>
+              <dd>{{ fmt.distance(detail.value.odometerKm) }}</dd>
             </div>
           </dl>
-          <details class="app-card">
-            <summary>{{ text().detail.tabs['technical-details'] }}</summary>
-            <p>{{ text().eventId }}: {{ detail.value.eventId ?? '—' }}</p>
-            <pre class="control-center__frame">{{ detail.value.fields | json }}</pre>
-            @if (detail.value.edata) {
-              <pre class="control-center__frame">{{ detail.value.edata | json }}</pre>
-            }
-          </details>
+          @if (device()?.type === 'ERM') {
+            <discocan-erm-event-evidence [event]="detail.value" [language]="language()" />
+          }
         }
         @case ('frame') {
           <h3>{{ frameLabel(detail.value) }}</h3>
           <time [title]="fmt.utc(detail.value.receivedAt)">{{
             fmt.dateTime(detail.value.receivedAt, true)
           }}</time>
-          @if (detail.value.acknowledgement?.commandRequestId; as requestId) {
-            <a
-              class="app-link"
-              [routerLink]="deviceLink('commands')"
-              [queryParams]="{ request: requestId }"
-              (click)="this.detail.set(null)"
-              >{{ text().detail.openRequest }}</a
-            >
-          }
-          <dl class="app-facts">
-            <div>
-              <dt>{{ text().direction }}</dt>
-              <dd>{{ text().directions[detail.value.direction] }}</dd>
-            </div>
-            <div>
-              <dt>{{ text().checksum }}</dt>
-              <dd>{{ text().checksums[detail.value.checksum] }}</dd>
-            </div>
-            <div>
-              <dt>{{ text().reference }}</dt>
-              <dd>{{ detail.value.reference ?? '—' }}</dd>
-            </div>
-          </dl>
-          <details class="app-card">
-            <summary>{{ text().detail.tabs['technical-details'] }}</summary>
+          @if (device()?.type === 'ERM') {
+            <discocan-erm-frame-evidence
+              [frame]="detail.value"
+              [language]="language()"
+              [commandsLink]="deviceLink('commands')"
+              (followRequest)="this.detail.set(null)"
+            />
+          } @else {
+            <dl class="app-facts">
+              <div>
+                <dt>{{ text().direction }}</dt>
+                <dd>{{ directionLabel(detail.value.direction) }}</dd>
+              </div>
+            </dl>
             <pre class="control-center__frame">{{ detail.value.displayText }}</pre>
-            <pre class="control-center__frame">{{ detail.value.rawHex }}</pre>
-          </details>
+          }
         }
         @case ('snapshot') {
           <h3>{{ text().snapshots.title }}</h3>
@@ -1326,12 +1237,12 @@
           @if (detail.value.failureReason) {
             <p-message severity="error">{{ detail.value.failureReason }}</p-message>
           }
-          @if (detail.value.unreadParameters.length) {
+          @if (detail.value.unreadParameterIds.length) {
             <section class="app-card" [attr.aria-label]="text().snapshots.unread">
               <h3>{{ text().snapshots.unread }}</h3>
               <ul>
-                @for (id of detail.value.unreadParameters; track id) {
-                  <li>{{ parameter(id) }}</li>
+                @for (id of detail.value.unreadParameterIds; track id) {
+                  <li>{{ id }}</li>
                 }
               </ul>
             </section>
@@ -1373,7 +1284,7 @@
                 ><tr>
                   <td class="app-col-identity">
                     <div class="app-cell-identity">
-                      <strong>{{ parameter(row.parameter) }}</strong
+                      <strong>{{ row.parameterId }}</strong
                       ><span [title]="row.title ?? ''">{{ row.title ?? '—' }}</span>
                     </div>
                   </td>
@@ -1428,16 +1339,20 @@
                 ><tr>
                   <td class="app-col-identity">
                     <div class="app-cell-identity">
-                      <strong>{{ parameter(row.parameter) }}</strong
+                      <strong>{{ row.parameterId }}</strong
                       ><span [title]="row.title ?? ''">{{ row.title ?? '—' }}</span>
                     </div>
                   </td>
                   <td>
-                    <span class="app-cell-identity" [title]="row.value ?? row.resultCode ?? ''">{{
-                      row.outcome === 'READ'
-                        ? (row.value ?? text().snapshots.noValue)
-                        : snapshotOutcome(row.outcome)
-                    }}</span>
+                    <span
+                      class="app-cell-identity"
+                      [title]="row.value ?? row.erm?.resultCode ?? ''"
+                      >{{
+                        row.outcome === 'READ'
+                          ? (row.value ?? text().snapshots.noValue)
+                          : snapshotOutcome(row.outcome)
+                      }}</span
+                    >
                   </td>
                 </tr></ng-template
               ></p-table
@@ -1455,7 +1370,7 @@
                 <dd>{{ detail.value.actorId ?? '—' }}</dd>
               </div>
             </dl>
-            <pre class="control-center__frame">{{ detail.value.values | json }}</pre>
+            <pre class="control-center__frame">{{ snapshotEvidence(detail.value) | json }}</pre>
           </details>
         }
       }

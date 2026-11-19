@@ -1,0 +1,291 @@
+enum FleetDeviceParameterSnapshotStatus {
+  RUNNING
+  COMPLETE
+  FAILED
+}
+
+input FleetDeviceParameterSnapshotsInput {
+  "Page size of 25, 50 or 100."
+  pageSize: Int = 50
+  "Opaque cursor from this Device's snapshot history. Omit when using an offset."
+  cursor: String
+  offset: Int
+  direction: FleetSortDirection = DESC
+}
+
+type FleetDeviceParameterSnapshotsPage {
+  items: [FleetDeviceParameterSnapshot!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+  cursor: String
+  nextCursor: String
+  hasMore: Boolean!
+}
+
+type FleetDeviceParameterSnapshot {
+  id: ID!
+  imei: ID!
+  actorId: String
+  intent: String
+  status: FleetDeviceParameterSnapshotStatus!
+  startedAt: DateTime!
+  finishedAt: DateTime
+  parameterCount: Int!
+  readCount: Int!
+  failureReason: String
+  "Captured values with protected values masked for Viewers."
+  values: [FleetDeviceSnapshotValue!]!
+  unreadParameterIds: [String!]!
+  "Differences among values read in both this and the previous complete snapshot."
+  changes: [FleetDeviceParameterDifference!]!
+  erm: FleetErmParameterSnapshot
+}
+
+type FleetErmParameterSnapshot {
+  unreadParameters: [Int!]!
+}
+
+type FleetDeviceSnapshotValue {
+  "Opaque parameter identifier within the Device type."
+  parameterId: String!
+  title: String
+  value: String
+  outcome: FleetDeviceParameterReadOutcome!
+  erm: FleetErmSnapshotValue
+}
+
+type FleetErmSnapshotValue {
+  parameter: Int!
+  resultCode: String
+}
+
+type FleetDeviceParameterDifference {
+  parameterId: String!
+  title: String
+  previousValue: String
+  value: String
+  erm: FleetErmParameterNumber
+}
+
+type FleetErmParameterNumber {
+  parameter: Int!
+}
+
+input FleetDeviceParameterCatalogInput {
+  "Matches the identifier, title, summary or a provider feature."
+  search: String
+  writableOnly: Boolean = false
+  offset: Int = 0
+  limit: Int = 20
+  ermFeature: String
+}
+
+type FleetDeviceParameterCatalogPage {
+  items: [FleetDeviceParameterDefinition!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+  erm: FleetErmParameterCatalog
+}
+
+type FleetDeviceParameterDefinition {
+  "Opaque parameter identifier within the Device type."
+  parameterId: String!
+  title: String!
+  summary: String
+  defaultValue: String
+  writable: Boolean!
+  options: [FleetDeviceParameterOption!]!
+  erm: FleetErmParameterDefinition
+}
+
+type FleetDeviceParameterOption {
+  value: String!
+  label: String!
+}
+
+type FleetErmParameterDefinition {
+  parameter: Int!
+  features: [String!]!
+}
+
+type FleetErmParameterCatalog {
+  features: [String!]!
+}
+
+enum FleetDeviceConfigurationOperation {
+  READ_MEASUREMENT_CONFIGURATION
+  INTERVAL
+  ADD_DEFINITION
+  GLOBALS
+  PARAMETER
+  PARAMETERS
+}
+
+enum FleetDeviceConfigurationChangeStatus {
+  RUNNING
+  READ
+  VERIFIED
+  MISMATCH
+  RESTORED
+  RESTORE_FAILED
+  UNCERTAIN
+  REFUSED
+  FAILED
+}
+
+type FleetDeviceConfigurationChange {
+  id: ID!
+  imei: ID!
+  actorId: String
+  intent: String
+  operation: FleetDeviceConfigurationOperation!
+  parameterIds: [String!]!
+  "Simple eData catalog parameter affected by an interval or definition change."
+  measurementParameterId: Int
+  batchId: ID
+  batchIndex: Int
+  status: FleetDeviceConfigurationChangeStatus!
+  startedAt: DateTime!
+  finishedAt: DateTime
+  failureReason: String
+  "Captured measurement configuration at the start of the run."
+  measurementConfiguration: FleetDeviceMeasurementConfiguration
+  erm: FleetErmConfigurationChange
+}
+
+type FleetDeviceMeasurementConfiguration {
+  configurationId: ID
+  observedAt: DateTime
+  definitions: [FleetDeviceMeasurementDefinition!]!
+  "Simple eData globals, encoded as hexadecimal bytes."
+  globalsHex: String
+  "Profile ID of the Simple eData Monitor catalog."
+  profileId: Int
+}
+
+type FleetDeviceMeasurementDefinition {
+  "Parameter ID of the Simple eData Monitor catalog."
+  parameterId: Int!
+  intervalSeconds: Int!
+  "Complete Simple eData parameter definition, encoded as hexadecimal bytes."
+  definitionHex: String!
+}
+
+type FleetErmConfigurationChange {
+  parameter: Int
+  parameters: [Int!]!
+  baseline: FleetErmJSON!
+  intended: String
+  steps: FleetErmJSON!
+  stepDetails: [FleetErmConfigurationStep!]!
+}
+
+type FleetErmConfigurationStep {
+  name: String!
+  at: DateTime!
+  outcome: String!
+  outcomeCode: String!
+  commandId: ID
+  transportCommand: FleetDeviceCommand
+  payload: String
+  configuration: FleetErmJSON
+}
+
+type FleetDeviceConfigurationBatch {
+  id: ID!
+  deviceType: FleetDeviceType!
+  actorId: String!
+  createdAt: DateTime!
+  finishedAt: DateTime
+  stoppedAt: DateTime
+  stoppedByActorId: String
+  "Runs in the original Device order. Unattempted runs are refused after a stop."
+  changes: [FleetDeviceConfigurationChange!]!
+}
+
+input StartDeviceParameterSnapshotInput {
+  deviceId: ID!
+}
+
+enum FleetDeviceMeasurementConfigurationOperation {
+  READ
+  INTERVAL
+  ADD_DEFINITION
+  GLOBALS
+}
+
+input StartDeviceMeasurementConfigurationChangeInput {
+  deviceId: ID!
+  operation: FleetDeviceMeasurementConfigurationOperation!
+  "Simple eData catalog parameter ID for INTERVAL."
+  parameterId: Int
+  "New interval for INTERVAL. The existing definition supplies all other bytes."
+  intervalSeconds: Int
+  "One complete Simple eData definition for ADD_DEFINITION."
+  definitionHex: String
+  "Simple eData globals for GLOBALS."
+  globalsHex: String
+  restoreAfter: Boolean = false
+}
+
+input FleetDeviceParameterWriteInput {
+  parameterId: String!
+  value: String!
+}
+
+input StartDeviceParameterChangeInput {
+  deviceId: ID!
+  parameterId: String!
+  value: String!
+  restoreAfter: Boolean = false
+}
+
+input StartDeviceParametersChangeInput {
+  deviceId: ID!
+  parameters: [FleetDeviceParameterWriteInput!]!
+  restoreAfter: Boolean = false
+}
+
+input StartDeviceConfigurationBatchInput {
+  "Distinct Devices of one type in the active Branch, in run order."
+  deviceIds: [ID!]!
+  parameters: [FleetDeviceParameterWriteInput!]!
+  restoreAfter: Boolean = false
+}
+
+extend type Query {
+  "Searches configuration parameters for the chosen Device type."
+  fleetDeviceParameterCatalog(
+    deviceType: FleetDeviceType!
+    input: FleetDeviceParameterCatalogInput
+  ): FleetDeviceParameterCatalogPage!
+  "Looks up a configuration batch in the active Branch."
+  fleetDeviceConfigurationBatch(id: ID!): FleetDeviceConfigurationBatch
+}
+
+extend type Mutation {
+  "Engineer: starts a background parameter snapshot."
+  startDeviceParameterSnapshot(
+    input: StartDeviceParameterSnapshotInput!
+  ): FleetDeviceParameterSnapshot!
+  "Operator for reads and Engineer for writes. Starts one controlled measurement operation."
+  startDeviceMeasurementConfigurationChange(
+    input: StartDeviceMeasurementConfigurationChangeInput!
+  ): FleetDeviceConfigurationChange!
+  "Engineer: starts one guarded write with baseline and readback."
+  startDeviceParameterChange(
+    input: StartDeviceParameterChangeInput!
+  ): FleetDeviceConfigurationChange!
+  "Engineer: starts a guarded write of an explicit set with exact-set verification."
+  startDeviceParametersChange(
+    input: StartDeviceParametersChangeInput!
+  ): FleetDeviceConfigurationChange!
+  "Engineer: runs guarded writes serially and stops on a result other than VERIFIED."
+  startDeviceConfigurationBatch(
+    input: StartDeviceConfigurationBatchInput!
+  ): FleetDeviceConfigurationBatch!
+  "Engineer: lets the active run finish and refuses the remaining runs."
+  stopDeviceConfigurationBatch(id: ID!): FleetDeviceConfigurationBatch!
+}

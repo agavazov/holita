@@ -1,9 +1,8 @@
 import { UseGuards } from '@nestjs/common';
-import { FleetEnabledGuard } from '../../fleet-enabled.guard.js';
-import { hasRole } from '../../auth/roles.js';
 import {
   Args,
   Context,
+  Info,
   Mutation,
   Parent,
   Query,
@@ -11,32 +10,50 @@ import {
   ResolveReference,
   Resolver,
 } from '@nestjs/graphql';
+import type { GraphQLResolveInfo } from 'graphql';
+import { FleetEnabledGuard } from '../../fleet-enabled.guard.js';
+import { hasRole } from '../../auth/roles.js';
 import type {
+  Branch,
+  FleetDevice,
   MutationCreateFleetDeviceArgs,
   MutationDeleteFleetDeviceArgs,
   MutationDeleteFleetDevicesArgs,
   MutationUpdateFleetDeviceArgs,
-  FleetDevice,
   QueryFleetDeviceArgs,
   QueryFleetDevicesArgs,
-  Branch,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
+import { selectedReference, selects, type ReferenceBatches } from '../../graphql/selection.js';
 import { DevicesService, type DeviceResult } from './devices.service.js';
 
 @Resolver('FleetDevice')
 @UseGuards(FleetEnabledGuard)
 export class DevicesResolver {
+  private readonly referenceBatches = new WeakMap() satisfies ReferenceBatches<DeviceResult>;
+
   constructor(private readonly devicesService: DevicesService) {}
 
   @Query('fleetDevices')
-  fleetDevices(@Args() args: QueryFleetDevicesArgs, @Context() context: RequestContext) {
-    return this.devicesService.list(context, args);
+  fleetDevices(
+    @Args() args: QueryFleetDevicesArgs,
+    @Context() context: RequestContext,
+    @Info() info: GraphQLResolveInfo,
+  ) {
+    return this.devicesService.list(
+      context,
+      args,
+      selects(info, 'FleetDevicePage', 'items', 'state'),
+    );
   }
 
   @Query('fleetDevice')
-  fleetDevice(@Args() args: QueryFleetDeviceArgs, @Context() context: RequestContext) {
-    return this.devicesService.find(context, args.id);
+  fleetDevice(
+    @Args() args: QueryFleetDeviceArgs,
+    @Context() context: RequestContext,
+    @Info() info: GraphQLResolveInfo,
+  ) {
+    return this.devicesService.find(context, args.id, selects(info, 'FleetDevice', 'state'));
   }
 
   @Query('fleetDeviceSummary')
@@ -48,16 +65,23 @@ export class DevicesResolver {
   createFleetDevice(
     @Args() args: MutationCreateFleetDeviceArgs,
     @Context() context: RequestContext,
+    @Info() info: GraphQLResolveInfo,
   ) {
-    return this.devicesService.create(context, args.input);
+    return this.devicesService.create(context, args.input, selects(info, 'FleetDevice', 'state'));
   }
 
   @Mutation('updateFleetDevice')
   updateFleetDevice(
     @Args() args: MutationUpdateFleetDeviceArgs,
     @Context() context: RequestContext,
+    @Info() info: GraphQLResolveInfo,
   ) {
-    return this.devicesService.update(context, args.id, args.input);
+    return this.devicesService.update(
+      context,
+      args.id,
+      args.input,
+      selects(info, 'FleetDevice', 'state'),
+    );
   }
 
   @Mutation('deleteFleetDevice')
@@ -77,11 +101,23 @@ export class DevicesResolver {
   }
 
   @ResolveReference()
-  resolveReference(
+  async resolveReference(
     @Parent() reference: Pick<FleetDevice, 'id'>,
     @Context() context: RequestContext,
+    @Info() info: GraphQLResolveInfo,
   ) {
-    return this.devicesService.find(context, reference.id);
+    if (!selects(info, 'FleetDevice', 'state')) {
+      return this.devicesService.find(context, reference.id);
+    }
+    return selectedReference(
+      this.referenceBatches,
+      context,
+      info,
+      'FleetDevice',
+      reference.id,
+      (ids) => this.devicesService.references(context, ids),
+      'Device not found',
+    );
   }
 
   @ResolveField('branch')

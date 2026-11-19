@@ -199,7 +199,7 @@ export class OverviewView {
     () => this.mapData()?.items.find((item) => item.vehicle.id === this.vehicleId()) ?? null,
   );
   protected readonly connectedDevices = computed(() =>
-    (this.devicesData()?.items ?? []).filter((device) => device.ermState?.online),
+    (this.devicesData()?.items ?? []).filter((device) => device.state?.connected),
   );
   protected readonly deviceColumns = computed<readonly TableColumn[]>(() => [
     { id: 'device', label: this.text().devices.device, width: '13rem', kind: 'identity' },

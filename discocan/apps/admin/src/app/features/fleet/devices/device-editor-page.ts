@@ -170,7 +170,7 @@ export class DeviceEditorPage implements OnInit {
       const input = deviceInput(form);
       const result = this.id
         ? await this.api.update({ id: this.id, input })
-        : await this.api.create({ input });
+        : await this.api.create({ input: { ...input, type: form.type } });
       if (this.destroyRef.destroyed) {
         return;
       }

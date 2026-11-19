@@ -1,0 +1,196 @@
+query AdminControlCenterSmsDevices($ids: [ID!]) {
+  fleetDevices(ids: $ids, limit: 100, sort: { field: VEHICLE_LICENSE_PLATE, direction: ASC }) {
+    total
+    items {
+      id
+      imei
+      type
+      simPhoneNumber
+      smsPassword
+      vehicle {
+        id
+        licensePlate
+        fleetNumber
+      }
+    }
+  }
+}
+
+fragment AdminErmDeviceMetadata on FleetDevice {
+  erm {
+    edataModule
+  }
+}
+
+fragment AdminErmLiveRouting on FleetDevice {
+  erm {
+    routing
+    routingHealth {
+      backupSince
+    }
+  }
+}
+
+fragment AdminErmRouting on FleetDevice {
+  ermRouting {
+    state
+    since
+    observedAt
+    latestKarmaReportAt
+    parked
+    latestReturnAttempt {
+      ...AdminControlCenterReturnAttempt
+    }
+  }
+}
+
+fragment AdminErmRoutingSummary on FleetDevice {
+  ermRouting {
+    state
+    since
+    latestKarmaReportAt
+  }
+}
+
+fragment AdminControlCenterReturnAttempt on ErmKarmaReturnAttempt {
+  id
+  requestedAt
+  status
+  pending
+  discocanConnectedAt
+  recovery {
+    id
+    startedAt
+    finishedAt
+    outcome
+    reason
+  }
+}
+mutation AdminControlCenterReturnToDiscoCan($deviceId: ID!) {
+  returnErmDeviceToDiscoCan(deviceId: $deviceId) {
+    ...AdminControlCenterReturnAttempt
+  }
+}
+fragment AdminErmSessionMode on FleetDeviceState {
+  erm {
+    mode
+  }
+}
+
+fragment AdminErmSessionEvidence on FleetDeviceState {
+  ...AdminErmSessionMode
+  erm {
+    recovery {
+      id
+      startedAt
+      finishedAt
+      outcome
+      reason
+    }
+    upstreamClosesLast24h
+    karmaRoutingWritesLast24h
+    latestKarmaRoutingWrite {
+      id
+      receivedAt
+      displayText
+    }
+  }
+}
+
+fragment AdminErmEventEvidence on FleetDeviceEvent {
+  erm {
+    fields
+    edata
+  }
+}
+
+fragment AdminErmMessageEvidence on FleetDeviceMessage {
+  erm {
+    command
+    reference
+    checksum
+  }
+}
+
+fragment AdminErmAcknowledgementEvidence on FleetDeviceAcknowledgement {
+  erm {
+    commandReference
+    replyReference
+  }
+}
+
+fragment AdminErmTransportEvidence on FleetDeviceCommand {
+  erm {
+    reference
+    command
+    fields
+    responseHex
+  }
+}
+
+fragment AdminErmSnapshotValueEvidence on FleetDeviceSnapshotValue {
+  erm {
+    parameter
+    resultCode
+  }
+}
+
+fragment AdminErmCatalogFeatures on FleetDeviceParameterCatalogPage {
+  erm {
+    features
+  }
+}
+
+fragment AdminErmParameterDefinition on FleetDeviceParameterDefinition {
+  erm {
+    parameter
+    features
+  }
+}
+
+fragment AdminErmActionCommand on FleetDeviceActionCatalogEntry {
+  erm {
+    command
+    fields
+  }
+}
+
+fragment AdminErmConfigurationEvidence on FleetDeviceConfigurationChange {
+  erm {
+    baseline
+    intended
+    steps
+  }
+}
+
+fragment AdminErmRequestEvidence on FleetDeviceCommandRequest {
+  erm {
+    configurationVerification {
+      id
+      status
+      startedAt
+      finishedAt
+      failureReason
+      erm {
+        stepDetails {
+          name
+          at
+          outcome
+          outcomeCode
+          commandId
+          payload
+        }
+      }
+    }
+    sentFrame {
+      id
+      direction
+      receivedAt
+      ...AdminErmMessageEvidence
+      partial
+      displayText
+      payloadHex
+    }
+    receivedFrameHex
+  }
+}

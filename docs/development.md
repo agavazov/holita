@@ -32,33 +32,34 @@ in environment examples, documentation, agent instructions, command arguments or
 
 ## Commands
 
-| Command                | Behavior                                                               |
-| ---------------------- | ---------------------------------------------------------------------- |
-| npm run dev            | Wait for PostgreSQL, prepare admin GraphQL, start web/API apps         |
-| npm run kill           | Stop this checkout's web/API processes and watchers on Ubuntu/WSL      |
-| npm run erm:relay      | ERM StarLink TCP relay to Karma with frame capture                     |
-| npm run dev:admin      | Angular watcher                                                        |
-| npm run dev:gateway    | Native Router after Nx supergraph generation                           |
-| npm run dev:core       | Core watcher                                                           |
-| npm run dev:fleet      | Fleet watcher                                                          |
-| npm run dev:erm-server | Independent ERM Server watcher                                         |
-| npm run projects       | List five Nx applications                                              |
-| npm run lint           | Lint source/tooling and application boundaries                         |
-| npm run check          | Build, test and lint only what the change affects, before handing over |
-| npm run typecheck      | Check tools and all applications                                       |
-| npm run build          | Build all applications                                                 |
-| npm run format:check   | Check formatting                                                       |
-| npm run codegen        | Generate application GraphQL contracts                                 |
-| npm run schema:check   | Compose SDL and validate operations offline                            |
-| npm run test:budget    | Count test cases against the repository budget of 60                   |
+| Command                   | Behavior                                                               |
+| ------------------------- | ---------------------------------------------------------------------- |
+| npm run dev               | Wait for PostgreSQL, prepare admin GraphQL, start web/API apps         |
+| npm run kill              | Stop this checkout's web/API processes and watchers on Ubuntu/WSL      |
+| npm run erm:relay         | ERM StarLink TCP relay to Karma with frame capture                     |
+| npm run dev:admin         | Angular watcher                                                        |
+| npm run dev:gateway       | Native Router after Nx supergraph generation                           |
+| npm run dev:core          | Core watcher                                                           |
+| npm run dev:fleet         | Fleet watcher                                                          |
+| npm run dev:device-server | Discocan Device Server watcher                                         |
+| npm run dev:erm-server    | Independent ERM Server watcher                                         |
+| npm run projects          | List Nx projects                                                       |
+| npm run lint              | Lint source/tooling and application boundaries                         |
+| npm run check             | Build, test and lint only what the change affects, before handing over |
+| npm run typecheck         | Check tools and all applications                                       |
+| npm run build             | Build all applications                                                 |
+| npm run format:check      | Check formatting                                                       |
+| npm run codegen           | Generate application GraphQL contracts                                 |
+| npm run schema:check      | Compose SDL and validate operations offline                            |
+| npm run test:budget       | Count test cases against the repository budget of 60                   |
 
 ESLint requires braces for every conditional and loop body (`curly: ['error', 'all']`),
 including single-statement bodies in application code, tests and tools.
 The rule is configured after `eslint-config-prettier` so that it remains enabled.
 
-Builds, checks and `start:prod` use `discocan/apps/NAME/dist`; the `npm run dev` watchers for Core and Fleet
+Builds, checks and `start:prod` use `discocan/apps/NAME/dist`; the `npm run dev` watchers for Core, Fleet and Device Server
 compile to `discocan/apps/NAME/dist-dev` (`tsconfig.dev.json`), so a check never replaces a running
-dev server's files. `npm run start:prod --workspace @osnova/core` (or fleet/erm-server)
+dev server's files. `npm run start:prod --workspace @osnova/core` (or Fleet, Device Server or ERM Server)
 runs the compiled app. Gateway `build` generates the supergraph and
 validates the installed native Router configuration. `npm run start:prod --workspace @discocan/gateway`
 starts that binary using the generated supergraph; no Node bundle or Rust compilation is involved. `dev` does not migrate or seed databases.
@@ -86,6 +87,7 @@ web/API restarts.
 | Fleet                      | 11013                 |
 | ERM gateway HTTP           | 11015, loopback       |
 | ERM api HTTP               | 11017, loopback       |
+| Device Server HTTP         | 11019, loopback       |
 | ERM read-only recovery TCP | 11510                 |
 | ERM gateway TCP            | 11500, all interfaces |
 | PostgreSQL                 | 11084                 |
@@ -111,6 +113,7 @@ runtime file, preserving existing settings:
 | Compose and provisioning | Root `.env`: `POSTGRES_PORT`, `POSTGRES_PASSWORD`; Compose also reads `POSTGRES_VOLUME`                                                                          |
 | Core and Prisma          | `discocan/config/core.env`: Core database URLs and shared demo settings                                                                                          |
 | Fleet and Prisma         | `discocan/apps/fleet/.env`: Fleet database URLs, shared demo settings, `FLEET_ENABLED`, `CORE_GRAPHQL_URL` and admin origins                                     |
+| Device Server            | `discocan/apps/device-server/.env`: `DEVICE_SERVER_TOKEN` and optional HTTP `PORT`                                                                               |
 | ERM Server and Prisma    | `discocan/apps/erm-server/.env`: ERM database URLs, shared demo settings, `ERM_ROLE`, gateway listener/capture settings, internal API connection and HTTP `PORT` |
 | Router and Angular proxy | Export Router variables in the shell that launches npm; proxy reads `ROUTER_PORT`                                                                                |
 | ERM relay                | Root `.env`: `ERM_RELAY_HOST`, `ERM_RELAY_PORT`, `ERM_RELAY_UPSTREAM` and `ERM_RELAY_CAPTURE_DIR`                                                                |
@@ -212,8 +215,8 @@ npm run dev
 The installer verifies the release archive's pinned SHA-256 before extraction and keeps
 the binary and upstream license notices in ignored `osnova/tools/router/dist/`.
 It requires no npm dependency, Rust toolchain, container, GraphOS account or API key.
-`dev` waits for PostgreSQL and starts Router, Core, Fleet and Angular using concurrently. Angular
-keeps the public `/graphql` URL and uses `proxy.conf.mjs`,
+`dev:discocan` waits for PostgreSQL and starts Router, Core, Fleet, Device Server and Angular
+using concurrently. Angular keeps the public `/graphql` URL and uses `proxy.conf.mjs`,
 targeting `ROUTER_PORT` (11010 by default). Stop any existing development group before starting
 another because the applications share ports.
 Ctrl+C stops the group; `npm run kill` also recognizes the native Router in this checkout.

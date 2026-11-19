@@ -22,6 +22,7 @@ import { DemoSession } from '@osnova/ui/app';
 import { AdminConfig } from '../../../core/config/admin-config';
 import { graphqlOptions } from '@osnova/ui/app';
 import type { Language } from '../../../i18n/messages';
+import { readFaultHistories } from '../../../ui/fleet-live/fault-reads';
 import {
   profileProblemSort,
   profileServiceSort,
@@ -66,6 +67,10 @@ export class VehicleProfileApi implements OnDestroy {
       pollInterval: 30_000,
       skipPollAttempt: () => document.hidden,
     });
+  }
+
+  faultReads(deviceIds: readonly string[]) {
+    return readFaultHistories(this.client(), deviceIds);
   }
 
   watchOdometer(id: string) {
@@ -185,10 +190,10 @@ export class VehicleProfileApi implements OnDestroy {
       const result = await firstValueFrom(
         apollo.mutate({ mutation: AdminReadFaultsNowDocument, variables: { deviceId } }),
       );
-      if (!result.data?.sendErmDeviceCommand) {
-        throw new Error('Missing sendErmDeviceCommand result.');
+      if (!result.data?.sendDeviceCommand) {
+        throw new Error('Missing sendDeviceCommand result.');
       }
-      return result.data.sendErmDeviceCommand;
+      return result.data.sendDeviceCommand;
     } finally {
       this.pendingWrites--;
       this.stopWhenIdle();

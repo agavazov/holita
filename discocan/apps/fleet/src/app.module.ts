@@ -5,8 +5,12 @@ import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nest
 import { GraphQLModule } from '@nestjs/graphql';
 import { formatGraphqlError, graphqlDiagnostics } from './graphql/errors.js';
 import { createRequestContext } from './graphql/request-context.js';
-import { DateScalar, DateTimeScalar } from './graphql/scalars.js';
+import { DateScalar, DateTimeScalar, FleetErmJSONScalar } from './graphql/scalars.js';
+import { ErmIntegrationModule } from './integrations/erm/erm-integration.module.js';
 import { DevicesModule } from './modules/devices/devices.module.js';
+import { DeviceInspectionModule } from './modules/device-inspection/device-inspection.module.js';
+import { DeviceCommandsModule } from './modules/device-commands/device-commands.module.js';
+import { DeviceConfigurationModule } from './modules/device-configuration/device-configuration.module.js';
 import { DriversModule } from './modules/drivers/drivers.module.js';
 import { EventsModule } from './modules/events/events.module.js';
 import { ServiceTasksModule } from './modules/service-tasks/service-tasks.module.js';
@@ -16,7 +20,7 @@ import { VehicleGroupsModule } from './modules/vehicle-groups/vehicle-groups.mod
 import { VehiclesModule } from './modules/vehicles/vehicles.module.js';
 import { OverviewModule } from './modules/overview/overview.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
-import { ErmTelemetryModule } from './modules/erm-telemetry/erm-telemetry.module.js';
+import { DeviceTelemetryModule } from './modules/device-telemetry/device-telemetry.module.js';
 import { EdataCatalogModule } from './modules/edata-catalog/edata-catalog.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { GeoZonesModule } from './modules/geo-zones/geo-zones.module.js';
@@ -29,6 +33,9 @@ const typeDefPaths = [
   'graphql/common',
   'modules/vehicles/vehicles',
   'modules/devices/devices',
+  'modules/device-inspection/device-inspection',
+  'modules/device-commands/device-commands',
+  'modules/device-configuration/device-configuration',
   'modules/drivers/drivers',
   'modules/vehicle-groups/vehicle-groups',
   'modules/telemetry/telemetry',
@@ -48,6 +55,10 @@ const typeDefPaths = [
     ScheduleModule.forRoot(),
     VehiclesModule,
     DevicesModule,
+    ErmIntegrationModule,
+    DeviceInspectionModule,
+    DeviceCommandsModule,
+    DeviceConfigurationModule,
     DriversModule,
     VehicleGroupsModule,
     TelemetryModule,
@@ -57,7 +68,7 @@ const typeDefPaths = [
     OverviewModule,
     SettingsModule,
     EdataCatalogModule,
-    ErmTelemetryModule,
+    DeviceTelemetryModule,
     GeoZonesModule,
     FaultMonitorModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
@@ -66,7 +77,7 @@ const typeDefPaths = [
       typeDefs: typeDefPaths.map((path) =>
         readFileSync(new URL(`./${path}.graphql`, import.meta.url), 'utf8'),
       ),
-      resolvers: { DateTime: DateTimeScalar, Date: DateScalar },
+      resolvers: { DateTime: DateTimeScalar, Date: DateScalar, FleetErmJSON: FleetErmJSONScalar },
       context: createRequestContext,
       path: '/graphql',
       includeStacktraceInErrorResponses: false,

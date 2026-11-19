@@ -6,38 +6,44 @@
   @if (error(); as error) {
     <p-message severity="warn">{{ error }}</p-message>
   }
-  <div [formGroup]="form" class="app-form-grid">
-    <osnova-form-field [label]="text().intent" controlId="erm-command-intent">
-      <input pInputText id="erm-command-intent" formControlName="intent" maxlength="200" />
-    </osnova-form-field>
-    <osnova-form-field [label]="text().expiry" controlId="erm-command-expiry">
-      <input
-        pInputText
-        id="erm-command-expiry"
-        formControlName="expiryMinutes"
-        type="number"
-        min="1"
-        max="1440"
-        step="1"
-      />
-    </osnova-form-field>
-  </div>
-  <div class="command-queue__actions">
-    @for (action of actions; track action) {
-      <button
-        pButton
-        type="button"
-        severity="secondary"
-        [outlined]="true"
-        [disabled]="!canOperate() || formStatus() !== 'VALID' || sending() !== null"
-        [title]="canOperate() ? catalog().actions[action] : operatorRequired()"
-        [loading]="sending() === action"
-        (click)="send(action)"
-      >
-        {{ catalog().actions[action] }}
-      </button>
+  @if (actions(); as actions) {
+    @if (actions.length === 0) {
+      <osnova-empty-state [title]="catalog().commandsUnsupported" />
+    } @else {
+      <div [formGroup]="form" class="app-form-grid">
+        <osnova-form-field [label]="text().intent" controlId="erm-command-intent">
+          <input pInputText id="erm-command-intent" formControlName="intent" maxlength="200" />
+        </osnova-form-field>
+        <osnova-form-field [label]="text().expiry" controlId="erm-command-expiry">
+          <input
+            pInputText
+            id="erm-command-expiry"
+            formControlName="expiryMinutes"
+            type="number"
+            min="1"
+            max="1440"
+            step="1"
+          />
+        </osnova-form-field>
+      </div>
+      <div class="command-queue__actions">
+        @for (action of actions; track action) {
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="!canOperate() || formStatus() !== 'VALID' || sending() !== null"
+            [title]="canOperate() ? catalog().actions[action] : operatorRequired()"
+            [loading]="sending() === action"
+            (click)="send(action)"
+          >
+            {{ catalog().actions[action] }}
+          </button>
+        }
+      </div>
     }
-  </div>
+  }
   <p-confirmdialog [pt]="confirmPt()">
     <ng-template #message
       ><p id="erm-queue-confirm-message">{{ confirmationMessage() }}</p></ng-template

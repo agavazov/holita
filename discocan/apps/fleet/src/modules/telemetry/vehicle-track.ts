@@ -6,7 +6,7 @@ import type {
 } from '../../generated/graphql/types.js';
 import type { SampleRow } from './telemetry.repository.js';
 
-/** Position continuity inferred from samples, using ERM's 5-minute active/1-hour rest cadence. */
+/** Position continuity inferred from samples using a 5-minute active and 1-hour rest cadence. */
 export function vehicleTrack(
   items: readonly SampleRow[],
   period: { from: Date; to: Date },

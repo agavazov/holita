@@ -32,14 +32,14 @@ import type {
   AdminControlCenterFramesQuery,
   AdminControlCenterSnapshotsQuery,
   AdminControlCenterDeviceProblemsQuery,
-  ErmEventCategory,
-  ErmFrameDirection,
-  ErmFrameChecksum,
-  ErmEventSeverity,
-  ErmParameterReadOutcome,
-  ErmParameterSnapshotStatus,
+  FleetDeviceEventCategory,
+  FleetDeviceMessageDirection,
+  FleetErmChecksum,
+  FleetEventSeverity,
+  FleetDeviceParameterReadOutcome,
+  FleetDeviceParameterSnapshotStatus,
   FleetWarningLampState,
-  ErmKarmaReturnStatus,
+  AdminControlCenterReturnAttemptFragment,
   FleetProblemSortField,
 } from '../../../generated/graphql/operations';
 import { requestError } from '@osnova/ui/app';
@@ -76,14 +76,22 @@ import { ControlCenterApi } from './control-center-api';
 import {
   controlCenterText,
   controlCenterError,
-  ermLanguage,
-  returnToDiscoCanError,
+  deviceLanguage,
   severityTone,
 } from './control-center-text';
 import { DeviceCommandQueue } from './device-command-queue';
-import { DeviceConsole } from './device-console';
-import { DeviceSettings } from './device-settings';
-import { SmsPage } from './sms-page';
+import {
+  ErmEventEvidence,
+  ErmFrameEvidence,
+  ErmRoutingWrite,
+  ermFrameConfirmation,
+} from '../erm/message-evidence';
+import { ermSnapshotEvidence } from '../erm/snapshot-evidence';
+import { ermText } from '../erm/erm-text';
+import { KarmaRoutingCard } from '../erm/karma-routing-card';
+import { DeviceConsole } from '../erm/device-console';
+import { DeviceSettings } from '../erm/device-settings';
+import { SmsPage } from '../erm/sms-page';
 import { FilterBuilder } from '@osnova/ui';
 import type { FilterCondition, FilterField } from '@osnova/ui';
 import { UrlListState } from '@osnova/ui';
@@ -111,9 +119,9 @@ export const deviceTabs: readonly DeviceTab[] = [
   'frames',
 ];
 type Device = AdminControlCenterDeviceQuery['fleetDevice'];
-type Events = AdminControlCenterEventsQuery['fleetDevice']['ermEvents'];
-type Frames = AdminControlCenterFramesQuery['fleetDevice']['ermFrames'];
-type Snapshots = AdminControlCenterSnapshotsQuery['fleetDevice']['ermParameterSnapshots'];
+type Events = AdminControlCenterEventsQuery['fleetDevice']['events'];
+type Frames = AdminControlCenterFramesQuery['fleetDevice']['messages'];
+type Snapshots = AdminControlCenterSnapshotsQuery['fleetDevice']['parameterSnapshots'];
 type Problems = AdminControlCenterDeviceProblemsQuery['fleetProblems'];
 type Detail =
   | { kind: 'event'; value: Events['items'][number] }
@@ -156,6 +164,10 @@ interface HistoryRead {
     TablePanel,
     DeviceCommandQueue,
     DeviceConsole,
+    KarmaRoutingCard,
+    ErmEventEvidence,
+    ErmFrameEvidence,
+    ErmRoutingWrite,
     DeviceSettings,
     SmsPage,
   ],
@@ -170,9 +182,16 @@ export class DevicePage implements OnInit {
   readonly recordId = input.required<string>();
   readonly tab = input.required<DeviceTab>();
   readonly text = computed(() => controlCenterText[this.language()]);
+  protected readonly ermText = computed(() => ermText[this.language()]);
   readonly moduleInfo = computed(() => {
     const tab = this.tab();
-    return this.text().moduleInfo[tab === 'sms-commands' ? 'smsCommands' : tab];
+    if (
+      this.device()?.type === 'DISCOCAN' &&
+      (tab === 'console' || tab === 'parameters' || tab === 'sms-commands' || tab === 'frames')
+    ) {
+      return null;
+    }
+    return this.text().moduleInfo[tab === 'sms-commands' ? 'smsCommands' : tab].body;
   });
   readonly tabTitle = computed(() => {
     const tab = this.tab();
@@ -201,15 +220,15 @@ export class DevicePage implements OnInit {
   readonly trackById = trackById;
   readonly toneSeverity = toneSeverity;
   readonly severityTone = severityTone;
-  readonly categories: readonly ErmEventCategory[] = [
+  readonly categories: readonly FleetDeviceEventCategory[] = [
     'POSITION',
     'STATUS',
     'ALARM',
-    'EDATA',
+    'DIAGNOSTIC',
     'OTHER',
   ];
-  readonly directions: readonly ErmFrameDirection[] = ['DEVICE', 'UPSTREAM', 'DISCOCAN'];
-  readonly checksums: readonly ErmFrameChecksum[] = ['OK', 'MISMATCH', 'ABSENT'];
+  readonly directions: readonly FleetDeviceMessageDirection[] = ['DEVICE', 'UPSTREAM', 'SERVER'];
+  readonly checksums: readonly FleetErmChecksum[] = ['OK', 'MISMATCH', 'ABSENT'];
   private readonly api = inject(ControlCenterApi);
   private readonly session = inject(DemoSession);
   readonly canOperate = computed(() => this.session.hasRole('OPERATOR'));
@@ -230,49 +249,21 @@ export class DevicePage implements OnInit {
   readonly failure = computed(() =>
     requestError(this.deviceError(), this.text().deviceUnavailable),
   );
-  readonly state = computed(() => this.device()?.ermState ?? null);
+  readonly state = computed(() => this.device()?.state ?? null);
   readonly connection = computed(() => {
     const state = this.state();
     const labels = this.text().deviceStatus.connectionStates;
-    if (state?.online) {
-      return state.lastFrameAt && !state.health.overdue
+    if (state?.connected) {
+      return state.lastReportAt && !state.health.overdue
         ? { label: labels.LIVE, severity: toneSeverity('success') }
         : { label: labels.CONNECTED, severity: toneSeverity('info') };
     }
-    if (state?.lastFrameAt) {
+    if (state?.lastReportAt) {
       return state.health.overdue
         ? { label: labels.OFFLINE, severity: toneSeverity('warn') }
         : { label: labels.REPORTING, severity: toneSeverity('warn') };
     }
     return { label: labels.UNKNOWN, severity: toneSeverity('neutral') };
-  });
-  readonly routing = computed(() => this.device()?.ermRouting ?? null);
-  readonly returning = signal(false);
-  readonly returnFailure = signal<string | null>(null);
-  readonly returnDisabledReason = computed(() => {
-    const route = this.routing();
-    const text = this.text().deviceStatus;
-    if (!this.canConfigure()) {
-      return text.returnEngineer;
-    }
-    if (this.returning()) {
-      return text.returnSubmitting;
-    }
-    if (route?.latestReturnAttempt?.pending) {
-      return text.returnPending;
-    }
-    if (route?.state !== 'KARMA_BACKUP') {
-      return text.returnBackupRequired;
-    }
-    return route.parked === true
-      ? null
-      : route.parked === false
-        ? text.returnNotParked
-        : text.returnParkingUnknown;
-  });
-  readonly recovery = computed(() => {
-    const attempt = this.routing()?.latestReturnAttempt;
-    return attempt ? attempt.recovery : (this.state()?.recovery ?? null);
   });
   readonly firmwareComparison = computed(() => {
     const observed = this.state()?.firmwareVersion?.value;
@@ -295,32 +286,35 @@ export class DevicePage implements OnInit {
   );
   readonly unitName = computed(() => `${this.title()} · IMEI ${this.device()?.imei ?? '—'}`);
   readonly canSend = computed(
-    () => this.state()?.online === true && this.state()?.mode === 'PRIMARY',
+    () =>
+      this.device()?.type === 'ERM' &&
+      this.state()?.connected === true &&
+      this.state()?.erm?.mode === 'PRIMARY',
   );
   readonly mapRecords = computed<readonly LocationMapRecord[]>(() => {
     const device = this.device();
     if (!device) {
       return [];
     }
-    const state = device.ermState;
-    const position = state?.lastPosition;
-    const live = state?.online === true && !state.health.overdue;
+    const state = device.state;
+    const position = state?.latestPosition;
+    const live = state?.connected === true && !state.health.overdue;
     return [
       {
         id: device.id,
         label: device.imei,
         plate: device.vehicle?.licensePlate ?? null,
         position: mapCoordinates(position?.latitude, position?.longitude),
-        positionAt: position?.positionTime ?? position?.eventTime ?? null,
-        heading: position?.heading ?? null,
-        speedKph: position?.speedKmh ?? null,
+        positionAt: position?.positionAt ?? position?.recordedAt ?? null,
+        heading: position?.headingDeg ?? null,
+        speedKph: position?.speedKph ?? null,
         status: {
           label: live
             ? this.text().detail.live
-            : state?.online
+            : state?.connected
               ? this.text().detail.connected
               : this.text().detail.disconnected,
-          tone: live ? 'success' : state?.online ? 'info' : 'neutral',
+          tone: live ? 'success' : state?.connected ? 'info' : 'neutral',
         },
       },
     ];
@@ -461,8 +455,8 @@ export class DevicePage implements OnInit {
   );
   readonly eventSortFields = computed<readonly ListSortField[]>(() => [
     { field: 'TIME', label: this.text().time },
-    { field: 'EVENT_TYPE', label: this.text().event },
-    { field: 'STATUS', label: this.text().severity },
+    { field: 'CODE', label: this.text().event },
+    { field: 'SEVERITY', label: this.text().severity },
   ]);
   readonly eventSort = computed<NonNullable<ListQuery['sort']>>(() => ({
     field: this.eventList.state().sort.field,
@@ -490,8 +484,8 @@ export class DevicePage implements OnInit {
       })),
     },
   ]);
-  readonly direction = signal<ErmFrameDirection | null>(null);
-  readonly checksum = signal<ErmFrameChecksum | null>(null);
+  readonly direction = signal<FleetDeviceMessageDirection | null>(null);
+  readonly checksum = signal<FleetErmChecksum | null>(null);
   readonly frameList = new UrlListState(
     frameDefinition,
     () => this.route.snapshot.paramMap.get('tab') === 'frames',
@@ -538,7 +532,7 @@ export class DevicePage implements OnInit {
       this.frames()?.items.filter(
         (row) =>
           (!this.direction() || row.direction === this.direction()) &&
-          (!this.checksum() || row.checksum === this.checksum()),
+          (!this.checksum() || row.erm?.checksum === this.checksum()),
       ) ?? [],
   );
   readonly technicalRows = computed<(Events['items'][number] | Frames['items'][number])[]>(() =>
@@ -615,7 +609,16 @@ export class DevicePage implements OnInit {
             },
             { id: 'time', label: this.text().received, width: '12rem', kind: 'date' },
             { id: 'direction', label: this.text().direction, width: '9rem', kind: 'text' },
-            { id: 'checksum', label: this.text().checksum, width: '9rem', kind: 'status' },
+            ...(this.device()?.type === 'ERM'
+              ? [
+                  {
+                    id: 'checksum',
+                    label: this.ermText().checksum,
+                    width: '9rem',
+                    kind: 'status',
+                  } as const,
+                ]
+              : []),
             {
               id: 'actions',
               label: this.text().detail.actions,
@@ -711,7 +714,7 @@ export class DevicePage implements OnInit {
       this.reload();
       this.deviceLoading.set(true);
       const sub = this.api
-        .watchDevice(this.recordId(), ermLanguage(this.language()))
+        .watchDevice(this.recordId(), deviceLanguage(this.language()))
         .valueChanges.subscribe({
           next: (result) => {
             this.deviceLoading.set(result.loading);
@@ -783,7 +786,7 @@ export class DevicePage implements OnInit {
           ? this.api
               .watchEvents({
                 id,
-                language: ermLanguage(this.language()),
+                language: deviceLanguage(this.language()),
                 input: {
                   pageSize: eventState.pageSize,
                   offset: (eventState.page - 1) * eventState.pageSize,
@@ -802,7 +805,7 @@ export class DevicePage implements OnInit {
                   error: result.error,
                   data:
                     result.dataState === 'complete' && !result.error
-                      ? { events: result.data.fleetDevice.ermEvents }
+                      ? { events: result.data.fleetDevice.events }
                       : null,
                 })),
               )
@@ -822,7 +825,7 @@ export class DevicePage implements OnInit {
                     error: result.error,
                     data:
                       result.dataState === 'complete' && !result.error
-                        ? { frames: result.data.fleetDevice.ermFrames }
+                        ? { frames: result.data.fleetDevice.messages }
                         : null,
                   })),
                 )
@@ -846,7 +849,7 @@ export class DevicePage implements OnInit {
                     error: result.error,
                     data:
                       result.dataState === 'complete' && !result.error
-                        ? { snapshots: result.data.fleetDevice.ermParameterSnapshots }
+                        ? { snapshots: result.data.fleetDevice.parameterSnapshots }
                         : null,
                   })),
                 );
@@ -939,17 +942,6 @@ export class DevicePage implements OnInit {
       ? '—'
       : interpolate(this.text().deviceStatus.gsmValue, { value: this.number(value, 1) });
   }
-  returnSeverity(value: ErmKarmaReturnStatus) {
-    return toneSeverity(
-      value === 'RETURNED'
-        ? 'success'
-        : value === 'FAILED'
-          ? 'danger'
-          : value === 'UNCERTAIN' || value === 'NEEDS_OPERATOR'
-            ? 'warn'
-            : 'info',
-    );
-  }
   lampSeverity(value: FleetWarningLampState) {
     return toneSeverity(
       value === 'RED'
@@ -966,7 +958,7 @@ export class DevicePage implements OnInit {
   record(id: string, label: string): ListRecord<'details'> {
     return { id, label, unavailable: [] };
   }
-  selectCategory(value: ErmEventCategory | null): void {
+  selectCategory(value: FleetDeviceEventCategory | null): void {
     this.eventList.patchFilter({ category: value ?? '' });
   }
   filterEvents(conditions: readonly FilterCondition[]): void {
@@ -1075,11 +1067,11 @@ export class DevicePage implements OnInit {
     }
     switch (column) {
       case 'event':
-        return 'EVENT_TYPE';
+        return 'CODE';
       case 'time':
         return 'TIME';
       case 'severity':
-        return 'STATUS';
+        return 'SEVERITY';
       default:
         return null;
     }
@@ -1108,13 +1100,10 @@ export class DevicePage implements OnInit {
     }
   }
   frameLabel(frame: Frames['items'][number]): string {
-    const ack = frame.acknowledgement;
-    return ack
-      ? interpolate(this.text().detail.confirmation, {
-          reference: ack.commandReference,
-          result: ack.resultCode,
-        })
-      : this.text().detail.protocolMessage;
+    return (
+      (this.device()?.type === 'ERM' ? ermFrameConfirmation(frame, this.language()) : null) ??
+      this.text().detail.protocolMessage
+    );
   }
   problemLabel(row: Problems['items'][number]): string {
     return this.text().detail.problemKinds[row.sourceKind];
@@ -1126,31 +1115,31 @@ export class DevicePage implements OnInit {
         ? this.deviceLink('commands')
         : null;
   }
-  parameter(value: number): string {
-    return String(value).padStart(4, '0');
+  snapshotEvidence(snapshot: Snapshots['items'][number]) {
+    return this.device()?.type === 'ERM' ? ermSnapshotEvidence(snapshot) : snapshot.values;
   }
-  snapshotOutcome(value: ErmParameterReadOutcome): string {
+  snapshotOutcome(value: FleetDeviceParameterReadOutcome): string {
     return this.text().snapshots.outcomes[value];
   }
-  snapshotTone(value: ErmParameterSnapshotStatus) {
+  snapshotTone(value: FleetDeviceParameterSnapshotStatus) {
     return toneSeverity(value === 'COMPLETE' ? 'success' : value === 'RUNNING' ? 'info' : 'danger');
   }
   problemState(value: Problems['items'][number]['state']): string {
     return this.text().detail.problemStates[value];
   }
-  snapshotStatus(value: ErmParameterSnapshotStatus): string {
+  snapshotStatus(value: FleetDeviceParameterSnapshotStatus): string {
     return this.text().snapshots.statuses[value];
   }
-  directionLabel(value: ErmFrameDirection): string {
+  directionLabel(value: FleetDeviceMessageDirection): string {
     return this.text().directions[value];
   }
-  checksumLabel(value: ErmFrameChecksum): string {
-    return this.text().checksums[value];
+  checksumLabel(value: FleetErmChecksum | null | undefined): string {
+    return value ? this.ermText().checksums[value] : '—';
   }
-  categoryLabel(value: ErmEventCategory): string {
+  categoryLabel(value: FleetDeviceEventCategory): string {
     return this.text().categories[value];
   }
-  severityLabel(value: ErmEventSeverity): string {
+  severityLabel(value: FleetEventSeverity): string {
     return this.text().severities[value];
   }
   async startSnapshot(): Promise<void> {
@@ -1196,47 +1185,11 @@ export class DevicePage implements OnInit {
     }
   }
 
-  async returnToDiscoCan(): Promise<void> {
-    if (this.returnDisabledReason()) {
-      return;
-    }
-    const text = this.text().deviceStatus;
-    const language = this.language();
-    const deviceId = this.recordId();
-    this.actionConfirmation.set(interpolate(text.returnConfirm, { unit: this.unitName() }));
-    const accepted = await confirmAction(this.confirmation, language, {
-      header: text.returnConfirmTitle,
-      acceptLabel: text.returnButton,
-      danger: false,
-    });
-    if (!accepted || !this.alive() || this.returnDisabledReason()) {
-      return;
-    }
-    this.returning.set(true);
-    this.returnFailure.set(null);
-    try {
-      const attempt = await this.api.returnToDiscoCan(deviceId);
-      if (this.alive()) {
-        this.device.update((device) =>
-          device
-            ? { ...device, ermRouting: { ...device.ermRouting, latestReturnAttempt: attempt } }
-            : device,
-        );
-        this.notifications.add({
-          severity: attempt.status === 'UNCERTAIN' || attempt.status === 'FAILED' ? 'warn' : 'info',
-          summary: text.returnRecorded,
-          detail: text.returnStates[attempt.status],
-        });
-      }
-    } catch (error: unknown) {
-      if (this.alive()) {
-        this.returnFailure.set(returnToDiscoCanError(error, language));
-      }
-    } finally {
-      if (this.alive()) {
-        this.returning.set(false);
-        this.refresh();
-      }
-    }
+  recordReturn(attempt: AdminControlCenterReturnAttemptFragment): void {
+    this.device.update((device) =>
+      device?.type === 'ERM'
+        ? { ...device, ermRouting: { ...device.ermRouting, latestReturnAttempt: attempt } }
+        : device,
+    );
   }
 }

@@ -7,12 +7,9 @@ query AdminFaultMonitor {
     devices {
       id
       lastReportedAt
-      ermState {
-        online
-        lastFrameAt
-      }
-      ermCommandRequests {
-        ...AdminFaultRead
+      state {
+        connected
+        lastReportAt
       }
     }
     faultCheck {

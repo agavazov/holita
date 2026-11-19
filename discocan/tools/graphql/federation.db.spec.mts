@@ -1,6 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
 import { setTimeout as delay } from 'node:timers/promises';
-import { createFederationFixture } from './federation-fixture.mjs';
+import {
+  configurationFixtureDefinition,
+  configurationFixtureGlobals,
+  configurationFixtureImei,
+  createFederationFixture,
+} from './federation-fixture.mjs';
 
 const discordia = '10000000-0000-4000-8000-000000000001';
 const sandbox = '10000000-0000-4000-8000-000000000002';
@@ -187,10 +192,9 @@ describe('Fleet through the actual federation boundary', () => {
     if (typeof otherToken !== 'string') {
       throw new Error('Missing second tenant session');
     }
-    const ermSource = `query($id: ID!) {
-      fleetDevice(id: $id) {
+    const ermSource = `query($refs: [_Any!]!) {
+      _entities(representations: $refs) { ... on FleetDevice {
         id
-        imei
         ermState {
           unitId online mode lastFrameAt
           latestEvent { eventId latitude longitude speedKmh engineOn mainVoltage backupVoltage }
@@ -220,96 +224,274 @@ describe('Fleet through the actual federation boundary', () => {
           items { id status values { parameter title value } }
           hasMore
         }
-      }
+      } }
     }`;
     const unitId = '862129080366630';
     const { ermDeviceId } = fixture;
+    const references = (id: string, imei: string) => ({
+      refs: [{ __typename: 'FleetDevice', id, imei }],
+    });
     const erm = await post(
       ermSource,
       { authorization: `Bearer ${token}`, 'x-branch-id': discordia },
-      { id: ermDeviceId },
+      references(ermDeviceId, unitId),
+      fixture.ermUrl,
     );
     expect(erm.body).toMatchObject({
       data: {
-        fleetDevice: {
-          id: ermDeviceId,
-          imei: unitId,
-          ermState: {
-            unitId,
-            online: false,
-            mode: null,
-            latestEvent: { latitude: 42.6977, longitude: 23.3219 },
-            mainVoltage: { value: 24.5, observedAt: '2026-11-02T12:00:00.000Z' },
-            backupVoltage: { value: 4.1, observedAt: '2026-11-02T12:00:00.000Z' },
-            signalQuality: null,
-            firmwareVersion: null,
-            health: {
-              lastFrameAgeSeconds: expect.any(Number),
-              expectedIntervalSeconds: 300,
-              overdue: true,
-              lastCloseReason: null,
-              lastClosedAt: '2026-11-02T12:00:00.000Z',
-              upstreamClosesLast24h: 0,
-              karmaRoutingWritesLast24h: 0,
-              latestKarmaRoutingWrite: null,
+        _entities: [
+          {
+            id: ermDeviceId,
+            ermState: {
+              unitId,
+              online: false,
+              mode: null,
+              latestEvent: { latitude: 42.6977, longitude: 23.3219 },
+              mainVoltage: { value: 24.5, observedAt: '2026-11-02T12:00:00.000Z' },
+              backupVoltage: { value: 4.1, observedAt: '2026-11-02T12:00:00.000Z' },
+              signalQuality: null,
+              firmwareVersion: null,
+              health: {
+                lastFrameAgeSeconds: expect.any(Number),
+                expectedIntervalSeconds: 300,
+                overdue: true,
+                lastCloseReason: null,
+                lastClosedAt: '2026-11-02T12:00:00.000Z',
+                upstreamClosesLast24h: 0,
+                karmaRoutingWritesLast24h: 0,
+                latestKarmaRoutingWrite: null,
+              },
+            },
+            ermEvents: {
+              items: [
+                {
+                  unitId,
+                  eventId: '01',
+                  eventTime: '2026-11-02T12:00:00.000Z',
+                  latitude: 42.6977,
+                  longitude: 23.3219,
+                  fields: { '#EID#': '01', extra: ['fixture'] },
+                },
+              ],
+              hasMore: false,
+            },
+            ermFrames: {
+              items: [
+                {
+                  direction: 'DEVICE',
+                  command: '02',
+                  reference: '125',
+                  checksum: 'MISMATCH',
+                  partial: false,
+                },
+                {
+                  direction: 'DISCOCAN',
+                  command: '03',
+                  reference: '900000001',
+                  checksum: 'OK',
+                  partial: false,
+                },
+                {
+                  direction: 'DEVICE',
+                  command: '06',
+                  reference: '123',
+                  checksum: 'OK',
+                  partial: false,
+                  displayText: '$SLU862129080366630,06,123,fixture\\x10',
+                },
+              ],
+              hasMore: false,
+            },
+            ermParameterSnapshots: { items: [], hasMore: false },
+            ermCommands: {
+              items: [
+                {
+                  unitId,
+                  reference: '900000001',
+                  command: '03',
+                  fields: ['0774'],
+                  status: 'ANSWERED',
+                  resultCode: '01',
+                },
+              ],
+              hasMore: false,
             },
           },
-          ermEvents: {
-            items: [
-              {
-                unitId,
-                eventId: '1',
-                eventTime: '2026-11-02T12:00:00.000Z',
-                latitude: 42.6977,
-                longitude: 23.3219,
-                fields: { '#EID#': '1', extra: ['fixture'] },
-              },
-            ],
-            hasMore: false,
-          },
-          ermFrames: {
-            items: [
-              {
-                direction: 'DISCOCAN',
-                command: '03',
-                reference: '900000001',
-                checksum: 'OK',
-                partial: false,
-              },
-              {
-                direction: 'DEVICE',
-                command: '06',
-                reference: '123',
-                checksum: 'OK',
-                partial: false,
-                displayText: '$SLU862129080366630,06,123,fixture\\x10',
-              },
-            ],
-            hasMore: false,
-          },
-          ermParameterSnapshots: { items: [], hasMore: false },
-          ermCommands: {
-            items: [
-              {
-                unitId,
-                reference: '900000001',
-                command: '03',
-                fields: ['0774'],
-                status: 'ANSWERED',
-                resultCode: '01',
-              },
-            ],
-            hasMore: false,
-          },
-        },
+        ],
       },
     });
     expect(erm.body.errors).toBeUndefined();
+
+    const pageFields = 'total offset limit cursor nextCursor hasMore';
+    const eventFields =
+      'id category severity latitude longitude en: name(language: EN) bg: name(language: BG)';
+    const readingFields = 'value observedAt';
+    const inspectionSource = `query($id: ID!) {
+      fleetDevice(id: $id) {
+        state {
+          imei connected connectedSince lastReportAt alarmsLast24h
+          latestPosition { ${eventFields} }
+          latestEvent { ${eventFields} }
+          externalVoltage { ${readingFields} }
+          backupBatteryVoltage { ${readingFields} }
+          signalQuality { ${readingFields} }
+          firmwareVersion { ${readingFields} }
+          health { expectedIntervalSeconds overdue lastCloseReason lastClosedAt }
+          erm { mode recovery { id } }
+        }
+        events(input: {pageSize: 25, severities: [INFO], sort: {field: CODE}}) {
+          ${pageFields}
+          items { ${eventFields} code recordedAt speedKph erm { fields edata } }
+        }
+        messages(input: {pageSize: 25, direction: ASC}) {
+          ${pageFields}
+          items {
+            id direction receivedAt displayText payloadHex partial erm { command reference checksum }
+            acknowledgement { commandId commandRequestId resultCode receivedAt erm { commandReference replyReference } }
+          }
+        }
+      }
+    }`;
+    const legacyInspection = `query($refs: [_Any!]!) {
+      _entities(representations: $refs) { ... on FleetDevice {
+        ermState {
+          imei: unitId connected: online connectedSince lastReportAt: lastFrameAt alarmsLast24h
+          latestPosition: lastPosition { ${eventFields} }
+          latestEvent { ${eventFields} }
+          externalVoltage: mainVoltage { ${readingFields} }
+          backupBatteryVoltage: backupVoltage { ${readingFields} }
+          signalQuality { ${readingFields} }
+          firmwareVersion { ${readingFields} }
+          health { expectedIntervalSeconds overdue lastCloseReason lastClosedAt }
+          mode recovery { id }
+        }
+        ermEvents(input: {pageSize: 25, severities: [INFO], sort: {field: EVENT_TYPE}}) {
+          ${pageFields}
+          items { ${eventFields} code: eventId recordedAt: eventTime speedKph: speedKmh fields edata }
+        }
+        ermFrames(input: {pageSize: 25, direction: ASC}) {
+          ${pageFields}
+          items {
+            id direction receivedAt displayText payloadHex: rawHex partial command reference checksum
+            acknowledgement { commandId commandRequestId resultCode receivedAt commandReference replyReference }
+          }
+        }
+      } }
+    }`;
+    const requestStart = fixture.ermRequests.length;
+    const inspection = record(await query(inspectionSource, { id: ermDeviceId }));
+    expect(inspection.errors).toBeUndefined();
+    expect(fixture.ermRequests.slice(requestStart)).toEqual(
+      Array.from({ length: 3 }, () =>
+        expect.objectContaining({ authorization: `Bearer ${token}`, branchId: discordia }),
+      ),
+    );
+    const inspected = record(record(inspection.data).fleetDevice);
+    const legacy = await post(
+      legacyInspection,
+      { authorization: `Bearer ${token}`, 'x-branch-id': discordia },
+      references(ermDeviceId, unitId),
+      fixture.ermUrl,
+    );
+    expect(legacy.body.errors).toBeUndefined();
+    const entitiesResult = record(legacy.body.data)._entities;
+    const legacyDevice = record(Array.isArray(entitiesResult) ? entitiesResult[0] : undefined);
+    const { mode, recovery, ...state } = record(legacyDevice.ermState);
+    expect(inspected.state).toEqual({ ...state, erm: { mode, recovery } });
+    expect(record(inspected.state).latestEvent).toMatchObject({
+      en: 'Location report',
+      bg: 'Отчет за местоположение',
+    });
+    const legacyEvents = record(legacyDevice.ermEvents);
+    expect(legacyEvents.items).toHaveLength(1);
+    const { fields, edata, ...event } = record(
+      (Array.isArray(legacyEvents.items) ? legacyEvents.items : [])[0],
+    );
+    expect(inspected.events).toEqual({
+      ...legacyEvents,
+      items: [{ ...event, erm: { fields, edata } }],
+    });
+    const legacyFrames = record(legacyDevice.ermFrames);
+    const frames: unknown[] = Array.isArray(legacyFrames.items) ? legacyFrames.items : [];
+    expect(frames).toHaveLength(3);
+    expect(record(frames[2]).acknowledgement).toMatchObject({
+      commandId: '30000000-0000-4000-8000-000000000001',
+      commandReference: '900000001',
+      resultCode: '01',
+    });
+    expect(inspected.messages).toEqual({
+      ...legacyFrames,
+      items: frames.map((value) => {
+        const { command, reference, checksum, acknowledgement, direction, ...frame } =
+          record(value);
+        const ack = acknowledgement === null ? null : record(acknowledgement);
+        return {
+          ...frame,
+          direction: direction === 'DISCOCAN' ? 'SERVER' : direction,
+          erm: { command, reference, checksum },
+          acknowledgement: ack && {
+            commandId: ack.commandId,
+            commandRequestId: ack.commandRequestId,
+            resultCode: ack.resultCode,
+            receivedAt: ack.receivedAt,
+            erm: { commandReference: ack.commandReference, replyReference: ack.replyReference },
+          },
+        };
+      }),
+    });
+    const beforeDenied = fixture.ermRequests.length;
+    expect(await query(inspectionSource, { id: ermDeviceId }, sandbox)).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    });
+    expect(fixture.ermRequests).toHaveLength(beforeDenied);
+
+    const added = record(
+      await query('mutation {createFleetDevice(input:{imei:"862129080366632", type:ERM}){id}}'),
+    );
+    const unreportedId = record(record(added.data).createFleetDevice).id;
+    const ids = [ermDeviceId, unreportedId];
+    const batchStart = fixture.ermRequests.length;
+    const listSource = `query($ids:[ID!]!, $show:Boolean!) {
+      fleetDevices(ids:$ids) { items { id ...Inspection @include(if:$show) } }
+    }
+    fragment Inspection on FleetDevice { current: state { imei } }`;
+    const skipped = record(await query(listSource, { ids, show: false }));
+    expect(skipped.errors).toBeUndefined();
+    expect(fixture.ermRequests).toHaveLength(batchStart);
+    expect(await query(listSource, { ids, show: true })).toEqual({
+      data: {
+        fleetDevices: {
+          items: expect.arrayContaining([
+            { id: ermDeviceId, current: { imei: unitId } },
+            { id: unreportedId, current: null },
+          ]),
+        },
+      },
+    });
+    expect(fixture.ermRequests).toHaveLength(batchStart + 1);
+    expect(fixture.ermRequests[batchStart]?.body).toContain('862129080366632');
+    expect(
+      await query(
+        'query($refs:[_Any!]!){_entities(representations:$refs){...on FleetDevice{id state{imei}}}}',
+        { refs: ids.map((id) => ({ __typename: 'FleetDevice', id })) },
+        discordia,
+        fixture.fleetUrl,
+      ),
+    ).toEqual({
+      data: {
+        _entities: [
+          { id: ermDeviceId, state: { imei: unitId } },
+          { id: unreportedId, state: null },
+        ],
+      },
+    });
+    expect(fixture.ermRequests).toHaveLength(batchStart + 2);
     for (const [headers, code] of [
       [{ authorization: `Bearer ${otherToken}` }, 'BAD_USER_INPUT'],
       [{ authorization: `Bearer ${otherToken}`, 'x-branch-id': discordia }, 'NOT_FOUND'],
     ] satisfies [Record<string, string>, string][]) {
-      const denied = await post(ermSource, headers, { id: ermDeviceId });
+      const denied = await post(inspectionSource, headers, { id: ermDeviceId });
       expect({
         data: denied.body.data,
         codes: errors(denied.body).map((error) => error.extensions.code),
@@ -317,6 +499,9 @@ describe('Fleet through the actual federation boundary', () => {
     }
     for (const source of [
       '{ermUnits{items{unitId}}}',
+      '{fleetDevice(id:"device"){ermState{unitId} ermEvents{total} ermFrames{total} ermCommands{hasMore} ermParameterSnapshots{total} ermConfigurationChanges{id} ermConfigurationWritesEnabled ermCommandRequests{id}}}',
+      '{ermCommandRequest(id:"request"){id} ermCommandRequests{total} ermCommandBatch(id:"batch"){id} ermConfigurationBatch(id:"batch"){id} ermParameterCatalog{total} ermDeviceActionCommands{action}}',
+      'mutation{sendErmDeviceCommand(input:{deviceId:"device",action:READ_STATUS}){id}}',
       `{ermEvents(input:{unitId:"${unitId}"}){items{id}}}`,
       `{ermFrames(input:{unitId:"${unitId}"}){items{id}}}`,
       `{ermCommands(input:{unitId:"${unitId}"}){items{id}}}`,
@@ -326,11 +511,9 @@ describe('Fleet through the actual federation boundary', () => {
         'x-branch-id': discordia,
       });
       expect(removed.body.data).toBeUndefined();
-      expect(errors(removed.body)).toEqual([
-        expect.objectContaining({
-          extensions: expect.objectContaining({ code: 'GRAPHQL_VALIDATION_FAILED' }),
-        }),
-      ]);
+      expect(errors(removed.body).map((error) => error.extensions.code)).toEqual(
+        expect.arrayContaining(['GRAPHQL_VALIDATION_FAILED']),
+      );
     }
     const ermEntities =
       'query($refs:[_Any!]!){_entities(representations:$refs){...on FleetDevice{ermState{unitId}}}}';
@@ -346,7 +529,7 @@ describe('Fleet through the actual federation boundary', () => {
           },
           body: JSON.stringify(
             target === fixture.url
-              ? { query: ermSource, variables: { id: ermDeviceId } }
+              ? { query: inspectionSource, variables: { id: ermDeviceId } }
               : {
                   query: ermEntities,
                   variables: {
@@ -372,6 +555,26 @@ describe('Fleet through the actual federation boundary', () => {
     if (typeof id !== 'string') {
       throw new Error('Missing tenant Vehicle ID');
     }
+    expect(
+      await query(
+        'mutation($device:ID!,$vehicle:ID!){updateFleetDevice(id:$device,input:{vehicleId:$vehicle}){state{imei}}}',
+        { device: ermDeviceId, vehicle: id },
+      ),
+    ).toEqual({ data: { updateFleetDevice: { state: { imei: unitId } } } });
+    expect(
+      await query(
+        `query($id:ID!) {
+      fleetVehicle(id:$id) { devices { state { imei } } }
+      fleetFaultMonitor { devices { state { imei } } }
+    }`,
+        { id },
+      ),
+    ).toMatchObject({
+      data: {
+        fleetVehicle: { devices: [{ state: { imei: unitId } }] },
+        fleetFaultMonitor: expect.arrayContaining([{ devices: [{ state: { imei: unitId } }] }]),
+      },
+    });
     for (const source of [
       'query($id:ID!){fleetVehicle(id:$id){id}}',
       'mutation($id:ID!){updateFleetVehicle(id:$id,input:{notes:"Spoofed"}){id}}',
@@ -441,7 +644,7 @@ describe('Fleet through the actual federation boundary', () => {
     expect(
       (
         await post(
-          'query($id:ID!,$deviceId:ID!){fleetVehicle(id:$id){id branch{id}} fleetDevice(id:$deviceId){id ermState{unitId}}}',
+          'query($id:ID!,$deviceId:ID!){fleetVehicle(id:$id){id branch{id}} fleetDevice(id:$deviceId){id state{imei}}}',
           sessionHeaders,
           { id, deviceId: ermDeviceId },
         )
@@ -449,7 +652,7 @@ describe('Fleet through the actual federation boundary', () => {
     ).toEqual({
       data: {
         fleetVehicle: { id, branch: { id: discordia } },
-        fleetDevice: { id: ermDeviceId, ermState: { unitId } },
+        fleetDevice: { id: ermDeviceId, state: { imei: unitId } },
       },
     });
     const foreignHeaders = {
@@ -493,7 +696,7 @@ describe('Fleet through the actual federation boundary', () => {
     }
     for (const [target, source, variables] of [
       [fixture.url, 'query($id:ID!){fleetVehicle(id:$id){id}}', { id }],
-      [fixture.url, ermSource, { id: ermDeviceId }],
+      [fixture.url, inspectionSource, { id: ermDeviceId }],
       [fixture.fleetUrl, entities, { refs: [{ __typename: 'FleetVehicle', id, tenantId }] }],
     ] satisfies [string, string, Record<string, unknown>][]) {
       const denied = await post(source, foreignHeaders, variables, target);
@@ -502,20 +705,20 @@ describe('Fleet through the actual federation boundary', () => {
       });
     }
     const queued = await post(
-      'mutation($deviceId:ID!){sendErmDeviceCommand(input:{deviceId:$deviceId,action:READ_STATUS,intent:"Session audit fixture"}){id actorId status}}',
+      'mutation($deviceId:ID!){sendDeviceCommand(input:{deviceId:$deviceId,action:READ_STATUS,intent:"Session audit fixture"}){id actorId status}}',
       sessionHeaders,
       { deviceId: ermDeviceId },
     );
     expect(queued.body).toEqual({
       data: {
-        sendErmDeviceCommand: {
+        sendDeviceCommand: {
           id: expect.any(String),
           actorId: session.userId,
           status: 'QUEUED',
         },
       },
     });
-    const requestId = record(record(queued.body.data).sendErmDeviceCommand).id;
+    const requestId = record(record(queued.body.data).sendDeviceCommand).id;
     for (const [headers, expected] of [
       [sessionHeaders, { id: requestId, actorId: session.userId }],
       [foreignHeaders, null],
@@ -529,13 +732,362 @@ describe('Fleet through the actual federation boundary', () => {
       expect(persisted.body).toEqual({ data: { ermCommandRequest: expected } });
     }
     const cancelled = await post(
-      'mutation($deviceId:ID!,$requestId:ID!){cancelErmDeviceCommand(input:{deviceId:$deviceId,requestId:$requestId}){actorId status}}',
+      'mutation($deviceId:ID!,$requestId:ID!){cancelDeviceCommand(input:{deviceId:$deviceId,requestId:$requestId}){actorId status}}',
       sessionHeaders,
       { deviceId: ermDeviceId, requestId },
     );
     expect(cancelled.body).toEqual({
-      data: { cancelErmDeviceCommand: { actorId: session.userId, status: 'CANCELLED' } },
+      data: { cancelDeviceCommand: { actorId: session.userId, status: 'CANCELLED' } },
     });
+    const sendCommand = `mutation($deviceId: ID!) {
+      sendDeviceCommand(input: {deviceId: $deviceId, action: READ_FAULTS, intent: "Generic fault fixture"}) {
+        id deviceId deviceType imei action status actorId intent displayParameters { expiresInSeconds }
+      }
+    }`;
+    const generic = await post(sendCommand, sessionHeaders, { deviceId: ermDeviceId });
+    expect(generic.body).toEqual({
+      data: {
+        sendDeviceCommand: {
+          id: expect.any(String),
+          deviceId: ermDeviceId,
+          deviceType: 'ERM',
+          imei: unitId,
+          action: 'READ_FAULTS',
+          status: 'QUEUED',
+          actorId: session.userId,
+          intent: 'Generic fault fixture',
+          displayParameters: { expiresInSeconds: 7200 },
+        },
+      },
+    });
+    const genericId = record(record(generic.body.data).sendDeviceCommand).id;
+    expect(
+      (
+        await post(
+          'query($id:ID!){ermCommandRequest(id:$id){deviceId action actorId intent status}}',
+          sessionHeaders,
+          { id: genericId },
+          fixture.ermUrl,
+        )
+      ).body,
+    ).toEqual({
+      data: {
+        ermCommandRequest: {
+          deviceId: ermDeviceId,
+          action: 'READ_EDATA_FAULTS',
+          actorId: session.userId,
+          intent: 'Generic fault fixture',
+          status: 'QUEUED',
+        },
+      },
+    });
+    expect(
+      (
+        await post(
+          `query($id:ID!, $deviceId:ID!) {
+      fleetDeviceCommandRequest(id:$id) { id action }
+      fleetDeviceCommandRequests(filter:{actions:[READ_FAULTS],deviceIds:[$deviceId]}) {
+        total items { id action }
+      }
+      fleetDevice(id:$deviceId) { commandRequests { id action } commands { items { id erm { command reference } } hasMore } }
+      fleetDeviceActionCatalog(deviceType:ERM) { action requiresParameters }
+    }`,
+          sessionHeaders,
+          { id: genericId, deviceId: ermDeviceId },
+        )
+      ).body,
+    ).toMatchObject({
+      data: {
+        fleetDeviceCommandRequest: { id: genericId, action: 'READ_FAULTS' },
+        fleetDeviceCommandRequests: { total: 1, items: [{ id: genericId, action: 'READ_FAULTS' }] },
+        fleetDevice: {
+          commandRequests: expect.arrayContaining([{ id: genericId, action: 'READ_FAULTS' }]),
+          commands: {
+            items: [
+              {
+                id: '30000000-0000-4000-8000-000000000001',
+                erm: { command: '03', reference: '900000001' },
+              },
+            ],
+            hasMore: false,
+          },
+        },
+        fleetDeviceActionCatalog: expect.arrayContaining([
+          { action: 'READ_FAULTS', requiresParameters: false },
+          { action: 'READ_PARAMETERS', requiresParameters: true },
+        ]),
+      },
+    });
+    expect(
+      (
+        await post(
+          'mutation($deviceId:ID!,$id:ID!){cancelDeviceCommand(input:{deviceId:$deviceId,requestId:$id}){id status cancelledByActorId}}',
+          sessionHeaders,
+          { deviceId: ermDeviceId, id: genericId },
+        )
+      ).body,
+    ).toEqual({
+      data: {
+        cancelDeviceCommand: {
+          id: genericId,
+          status: 'CANCELLED',
+          cancelledByActorId: session.userId,
+        },
+      },
+    });
+    const viewer = await fixture.createUserSession(tenantId, 'viewer');
+    const commandCalls = fixture.ermRequests.length;
+    for (const [headers, code] of [
+      [{ ...sessionHeaders, 'x-branch-id': sandbox }, 'NOT_FOUND'],
+      [{ ...sessionHeaders, authorization: `Bearer ${viewer.token}` }, 'FORBIDDEN'],
+    ] as const) {
+      expect((await post(sendCommand, headers, { deviceId: ermDeviceId })).body).toMatchObject({
+        errors: [{ extensions: { code } }],
+      });
+    }
+    expect(fixture.ermRequests).toHaveLength(commandCalls);
+    const configurationDevice = await post(
+      'mutation($imei:String!){createFleetDevice(input:{imei:$imei,type:ERM}){id}}',
+      sessionHeaders,
+      { imei: configurationFixtureImei },
+    );
+    expect(configurationDevice.body.errors).toBeUndefined();
+    const configurationId = record(record(configurationDevice.body.data).createFleetDevice).id;
+    if (typeof configurationId !== 'string') {
+      throw new Error('Missing configuration Device ID');
+    }
+    const configurationTarget = { id: configurationId };
+    const startSnapshot = `mutation($id:ID!){
+      startDeviceParameterSnapshot(input:{deviceId:$id}){id actorId imei intent}
+    }`;
+    const readMeasurement = `mutation($id:ID!){
+      startDeviceMeasurementConfigurationChange(input:{deviceId:$id,operation:READ}){
+        id actorId imei operation
+      }
+    }`;
+    const writeSources = [
+      'startDeviceParameterChange(input:{deviceId:$id,parameterId:"0774",value:"30"})',
+      'startDeviceParametersChange(input:{deviceId:$id,parameters:[{parameterId:"0774",value:"30"}]})',
+      'startDeviceConfigurationBatch(input:{deviceIds:[$id],parameters:[{parameterId:"0774",value:"30"}]})',
+      'startDeviceMeasurementConfigurationChange(input:{deviceId:$id,operation:INTERVAL,parameterId:662,intervalSeconds:120})',
+    ].map((field) => `mutation($id:ID!){${field}{id}}`);
+    const beforeConfigurationCalls = fixture.ermRequests.length;
+    for (const source of [startSnapshot, readMeasurement, ...writeSources]) {
+      for (const [headers, code] of [
+        [{ ...sessionHeaders, 'x-branch-id': sandbox }, 'NOT_FOUND'],
+        [{ ...sessionHeaders, authorization: `Bearer ${viewer.token}` }, 'FORBIDDEN'],
+      ] as const) {
+        expect((await post(source, headers, configurationTarget)).body).toMatchObject({
+          errors: [{ extensions: { code } }],
+        });
+      }
+    }
+    expect(fixture.ermRequests).toHaveLength(beforeConfigurationCalls);
+
+    const tracker = await fixture.connectConfigurationDevice();
+    try {
+      async function waitForDevice(
+        selection: string,
+        ready: (device: Record<string, unknown>) => boolean,
+      ) {
+        const deadline = Date.now() + 15_000;
+        let device: Record<string, unknown>;
+        do {
+          const response = await post(
+            `query($id:ID!){fleetDevice(id:$id){${selection}}}`,
+            sessionHeaders,
+            configurationTarget,
+          );
+          expect(response.body.errors).toBeUndefined();
+          device = record(record(response.body.data).fleetDevice);
+          if (ready(device)) {
+            return device;
+          }
+          await delay(50);
+        } while (Date.now() < deadline);
+        throw new Error(`Timed out waiting for configuration fixture: ${JSON.stringify(device)}`);
+      }
+
+      async function readErmDevice(selection: string) {
+        const response = await post(
+          `query($refs:[_Any!]!){_entities(representations:$refs){...on FleetDevice{ ${selection} }}}`,
+          sessionHeaders,
+          references(configurationTarget.id, configurationFixtureImei),
+          fixture.ermUrl,
+        );
+        expect(response.body.errors).toBeUndefined();
+        const entities = record(response.body.data)._entities;
+        return record(Array.isArray(entities) ? entities[0] : undefined);
+      }
+
+      await waitForDevice(
+        'state{connected}',
+        (device) => isRecord(device.state) && device.state.connected === true,
+      );
+      const legacyStart = await post(
+        'mutation($id:ID!){startErmParameterSnapshot(input:{deviceId:$id}){id actorId}}',
+        sessionHeaders,
+        configurationTarget,
+        fixture.ermUrl,
+      );
+      expect(legacyStart.body).toMatchObject({
+        data: { startErmParameterSnapshot: { id: expect.any(String), actorId: session.userId } },
+      });
+      const snapshotFields = 'id actorId intent status parameterCount readCount';
+      const snapshotHistory = await waitForDevice('parameterSnapshots{items{status}}', (device) => {
+        const items = record(device.parameterSnapshots).items;
+        return (
+          Array.isArray(items) && items.some((item: unknown) => record(item).status === 'COMPLETE')
+        );
+      });
+      expect(record(snapshotHistory.parameterSnapshots).items).toEqual([{ status: 'COMPLETE' }]);
+      tracker.setSnapshotValue('current');
+      const snapshot = await post(startSnapshot, sessionHeaders, configurationTarget);
+      expect(snapshot.body).toEqual({
+        data: {
+          startDeviceParameterSnapshot: {
+            id: expect.any(String),
+            actorId: session.userId,
+            imei: configurationFixtureImei,
+            intent: 'Read parameter snapshot',
+          },
+        },
+      });
+      const snapshotId = record(record(snapshot.body.data).startDeviceParameterSnapshot).id;
+      const histories = await waitForDevice(
+        `parameterSnapshots(input:{pageSize:25}) {
+          total items { ${snapshotFields} changes { parameterId previousValue value erm { parameter } } }
+        }`,
+        (device) => {
+          const items = record(device.parameterSnapshots).items;
+          return (
+            Array.isArray(items) &&
+            items.some(
+              (item: unknown) =>
+                record(item).id === snapshotId && record(item).status === 'COMPLETE',
+            )
+          );
+        },
+      );
+      const genericHistory = record(histories.parameterSnapshots);
+      const legacySnapshots = await readErmDevice(`ermParameterSnapshots(input:{pageSize:25}) {
+        total items { ${snapshotFields} changes { parameter previousValue value } }
+      }`);
+      const legacyHistory = record(legacySnapshots.ermParameterSnapshots);
+      const genericItems = Array.isArray(genericHistory.items) ? genericHistory.items : [];
+      const legacyItems = Array.isArray(legacyHistory.items) ? legacyHistory.items : [];
+      expect(genericHistory.total).toBe(2);
+      expect(genericHistory.total).toBe(legacyHistory.total);
+      const { changes, ...snapshotAudit } = record(genericItems[0]);
+      const { changes: legacyChanges, ...legacySnapshotAudit } = record(legacyItems[0]);
+      expect(snapshotAudit).toMatchObject({ id: snapshotId, status: 'COMPLETE' });
+      expect(snapshotAudit).toEqual(legacySnapshotAudit);
+      expect(changes).toEqual(
+        expect.arrayContaining([
+          {
+            parameterId: '0001',
+            previousValue: 'previous',
+            value: 'current',
+            erm: { parameter: 1 },
+          },
+        ]),
+      );
+      expect(legacyChanges).toEqual(
+        expect.arrayContaining([{ parameter: 1, previousValue: 'previous', value: 'current' }]),
+      );
+
+      const measurement = await post(readMeasurement, sessionHeaders, configurationTarget);
+      expect(measurement.body).toEqual({
+        data: {
+          startDeviceMeasurementConfigurationChange: {
+            id: expect.any(String),
+            actorId: session.userId,
+            imei: configurationFixtureImei,
+            operation: 'READ_MEASUREMENT_CONFIGURATION',
+          },
+        },
+      });
+      const changeId = record(
+        record(measurement.body.data).startDeviceMeasurementConfigurationChange,
+      ).id;
+      const configuration = await waitForDevice(
+        `configurationWritesEnabled
+        configurationChanges {
+          id actorId status intent
+          measurementConfiguration { configurationId definitions { parameterId intervalSeconds definitionHex } globalsHex profileId }
+          erm { baseline steps stepDetails { name commandId transportCommand { id } } }
+        }`,
+        (device) => {
+          const changes = device.configurationChanges;
+          return (
+            Array.isArray(changes) &&
+            changes.some(
+              (item: unknown) => record(item).id === changeId && record(item).status === 'READ',
+            )
+          );
+        },
+      );
+      expect(configuration).toMatchObject({
+        configurationWritesEnabled: false,
+        configurationChanges: [
+          {
+            id: changeId,
+            actorId: session.userId,
+            status: 'READ',
+            measurementConfiguration: {
+              configurationId: '1001',
+              definitions: [
+                {
+                  parameterId: 662,
+                  intervalSeconds: 60,
+                  definitionHex: configurationFixtureDefinition,
+                },
+              ],
+              globalsHex: configurationFixtureGlobals,
+              profileId: 7,
+            },
+          },
+        ],
+      });
+      const currentChanges = Array.isArray(configuration.configurationChanges)
+        ? configuration.configurationChanges
+        : [];
+      const {
+        measurementConfiguration: measured,
+        erm: evidence,
+        ...audit
+      } = record(currentChanges[0]);
+      expect(measured).toBeDefined();
+      const legacyConfiguration = await readErmDevice(`ermConfigurationWritesEnabled
+        ermConfigurationChanges {
+          id actorId status intent baseline steps stepDetails { name commandId transportCommand { id } }
+        }`);
+      expect(legacyConfiguration).toEqual({
+        ermConfigurationWritesEnabled: false,
+        ermConfigurationChanges: [{ ...audit, ...record(evidence) }],
+      });
+      expect(record(evidence).stepDetails).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'baseline',
+            commandId: expect.any(String),
+            transportCommand: { id: expect.any(String) },
+          }),
+        ]),
+      );
+      for (const source of writeSources) {
+        const result = await post(source, sessionHeaders, configurationTarget);
+        expect(result.body).toMatchObject({
+          errors: [
+            { message: 'ERM configuration writes are disabled', extensions: { code: 'FORBIDDEN' } },
+          ],
+        });
+      }
+      expect(new Set(tracker.receivedCommands)).toEqual(new Set(['45', '30']));
+    } finally {
+      await tracker.close();
+    }
+
     expect((await post('mutation{signOut}', sessionHeaders)).body).toEqual({
       data: { signOut: true },
     });

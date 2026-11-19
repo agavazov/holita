@@ -1,12 +1,13 @@
 # Discocan: fleet telemetry
 
-Discocan is discocan's fleet telemetry domain. Fleet owns Vehicles, Devices, Drivers, Vehicle
+Discocan is the fleet telemetry product. Fleet owns Vehicles, Devices, Drivers, Vehicle
 groups, samples/data clock, trips, alerts, service tasks, Dashboard, notifications and Branch settings.
-The Angular admin uses generated GraphQL operations through Router. ERM Server receives
-StarLink traffic and records connections, exact frames, decoded events and commands; its gateway
-keeps device sessions while its api process serves Fleet Device inspection and controlled commands.
-Configured ERM ingestion projects device reports into Fleet activity; availability and reporting
-freshness remain distinct from the age of a recorded GPS position.
+The Angular admin uses generated GraphQL operations through Router. Fleet registers Devices as
+`DISCOCAN` (the default) or `ERM` and uses adapters to serve device inspection, commands and
+configuration through the same GraphQL API. Device Server implements the default internal HTTP
+contract for `DISCOCAN` Devices with empty reads and unsupported writes. ERM Server keeps StarLink
+sessions and records connections, frames, events and commands. Fleet imports ERM reports through
+the adapter when configured. Connection, reporting freshness and GPS age are separate facts.
 
 The admin opens Dashboard, the single-screen truck map, after email/password sign-in and fleet
 selection. Dashboard (old), kept for now, has Overview,
@@ -17,15 +18,16 @@ installed Device. Profile and Tenant-wide Users use Core accounts. The bell open
 Branch notification feed with per-user read state. See the
 [operator workflows](development.md#fleet-operator-workflows).
 
-Device inspection, reads and controlled settings use ERM Server. Protocol and hardware references
-are in [ERM resources](erm-resources/README.md); active replacement work is tracked in the
-[ERM roadmap](../../docs/todo/erm-roadmap.md).
+For ERM Devices, the admin shows Karma routing and StarLink evidence and prepares StarLink SMS texts.
+See [device types and adapters](architecture.md#device-types-and-adapters), the protocol and hardware
+references in [ERM resources](erm-resources/README.md), the [ERM roadmap](../../docs/todo/erm-roadmap.md)
+and the [Discocan hardware backlog](../../docs/todo/discocan-hardware.md).
 
 - [Contributor instructions](instructions.md).
 - [Implemented requirements](requirements.md).
 - [Architecture](architecture.md): persistence, scope and public GraphQL contracts.
-- [Development](development.md): setup, configuration, operator workflows and
-  [ERM service/routing procedures](development.md#erm-device-server).
+- [Development](development.md): setup, configuration and operator workflows, including
+  [Device Server](development.md#device-server) and [ERM service and routing](development.md#erm-device-server).
 - [Fleet implementation index](fleet.md): source entry points, clocks, thresholds and activity rules.
 - [ERM resources](erm-resources/README.md): retained StarLink/eData protocols, catalogs,
   Monitor configuration and device hardware/brochures.

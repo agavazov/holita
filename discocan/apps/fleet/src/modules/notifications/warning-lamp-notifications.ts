@@ -1,6 +1,6 @@
 import type { Prisma, VehicleEdataMeasurement } from '../../generated/prisma/client.js';
 import { WARNING_LAMP_PARAMETER_IDS, warningLamp } from '../devices/warning-lamps.js';
-import type { ErmTelemetryDevice } from '../erm-telemetry/erm-telemetry.mapping.js';
+import type { TelemetryDevice } from '../device-telemetry/device-telemetry.mapping.js';
 
 type LampMeasurement = Pick<
   VehicleEdataMeasurement,
@@ -29,7 +29,7 @@ function compare(left: LampMeasurement, right: LampMeasurement): number {
 
 /** Only newly inserted, forward observations can change the retained current state. */
 export function warningLampNotifications(
-  device: ErmTelemetryDevice,
+  device: TelemetryDevice,
   previous: readonly LampMeasurement[],
   inserted: readonly LampMeasurement[],
   since: Date,
@@ -74,7 +74,7 @@ export function warningLampNotifications(
       },
       deviceId: device.id,
       vehicleId: device.vehicleId,
-      ermEventId: measurement.sourceEventId.toString(),
+      sourceEventId: measurement.sourceEventId.toString(),
     });
   }
   return rows;

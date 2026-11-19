@@ -84,7 +84,7 @@ function notification(row: NotificationRow): FleetNotification {
     vehicleId: row.vehicleId,
     deviceId: row.deviceId,
     alertId: row.alertId,
-    ermEventId: row.ermEventId,
+    sourceEventId: row.sourceEventId,
     commandRequestId: row.commandRequestId,
     readAt: row.receipts[0]?.readAt ?? null,
   };

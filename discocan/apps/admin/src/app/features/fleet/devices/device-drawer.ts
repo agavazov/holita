@@ -22,6 +22,7 @@ import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
 import { RouteDrawer, type RouteDrawerState } from '@osnova/ui';
 import { selectMultiplePt } from '@osnova/ui';
+import type { FleetDeviceType } from '../../../../generated/graphql/operations';
 import { deviceOptions } from './device-query';
 import { FormField } from '@osnova/ui';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
@@ -38,6 +39,7 @@ import { deviceModelLabel, devicesText } from './i18n/messages';
 /** The editable device fields, as the register and update mutations take them. */
 export interface DeviceForm {
   readonly imei: string;
+  readonly type: FleetDeviceType;
   readonly model: string;
   readonly simIccid: string;
   readonly vehicleId: string | null;
@@ -55,6 +57,7 @@ export type DeviceField = keyof DeviceForm;
 
 const fieldOrder: readonly DeviceField[] = [
   'imei',
+  'type',
   'serialNumber',
   'model',
   'options',
@@ -124,6 +127,10 @@ export class DeviceDrawer {
     deviceOptions.map((value) => ({ value, label: this.catalog().optionLabels[value] })),
   );
   protected readonly text = computed(() => this.catalog().drawer);
+  protected readonly deviceTypes = computed(() => [
+    { value: 'DISCOCAN', label: this.text().discocanType },
+    { value: 'ERM', label: this.text().ermType },
+  ]);
   protected readonly modelSubtitle = computed(
     () => deviceModelLabel(this.language(), this.device()?.model) || null,
   );
@@ -134,6 +141,7 @@ export class DeviceDrawer {
   );
 
   protected readonly form = new FormGroup({
+    type: new FormControl<FleetDeviceType>('DISCOCAN', { nonNullable: true }),
     imei: new FormControl('', {
       nonNullable: true,
       validators: [textValidator(15, { required: true }), patternValidator(/^\d{15}$/)],
@@ -178,6 +186,9 @@ export class DeviceDrawer {
     notes: new FormControl('', { nonNullable: true, validators: textValidator(2000) }),
   });
   private readonly events = toSignal(this.form.events);
+  protected readonly type = toSignal(this.form.controls.type.valueChanges, {
+    initialValue: this.form.controls.type.value,
+  });
   private submitted = false;
   protected readonly installedAtPt = computed(() =>
     datePickerInputPt('device-installedAt', !!this.errorOf('installedAt')),
@@ -218,6 +229,7 @@ export class DeviceDrawer {
         this.submitted = false;
         this.form.reset({
           imei: device?.imei ?? '',
+          type: device?.type ?? 'DISCOCAN',
           model: device?.model ?? null,
           simIccid: device?.simIccid ?? '',
           vehicleId: device?.vehicleId ?? null,
@@ -250,6 +262,12 @@ export class DeviceDrawer {
         this.focusInvalid();
       },
     );
+  }
+
+  protected clearHiddenEdataModule(): void {
+    if (this.form.controls.type.value !== 'ERM') {
+      this.form.controls.edataModule.reset();
+    }
   }
 
   protected errorOf(name: DeviceField): string | null {
@@ -287,6 +305,7 @@ export class DeviceDrawer {
     }
     this.save.emit({
       imei: value.imei.trim(),
+      type: value.type,
       model: value.model ?? '',
       simIccid: value.simIccid.trim(),
       vehicleId: value.vehicleId,

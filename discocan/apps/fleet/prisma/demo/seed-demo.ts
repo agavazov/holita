@@ -246,9 +246,17 @@ export async function seedFleetDemo(
         data: data.vehicles,
         skipDuplicates: true,
       });
-      const devices = await transaction.device.createMany({
+      const devices = await transaction.device.createManyAndReturn({
         data: data.devices,
         skipDuplicates: true,
+        select: { id: true, tenantId: true, branchId: true },
+      });
+      await transaction.ermDevice.createMany({
+        data: devices.map(({ id: deviceId, tenantId, branchId }) => ({
+          deviceId,
+          tenantId,
+          branchId,
+        })),
       });
       const serviceTasks = await transaction.serviceTask.createMany({
         data: data.serviceTasks,
@@ -263,7 +271,7 @@ export async function seedFleetDemo(
         groups: groups.count,
         drivers: drivers.count,
         vehicles: vehicles.count,
-        devices: devices.count,
+        devices: devices.length,
         serviceTasks: serviceTasks.count,
         samples: samples.count,
         trips: 0,

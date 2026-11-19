@@ -1,11 +1,12 @@
 # Shared workspace architecture
 
-The repository uses npm workspaces and Nx, with five applications and the shared `@discocan/edata-rules` package.
+The repository uses npm workspaces and Nx, with six Discocan applications and their libraries.
 Applications never import another application's implementation, Prisma models or generated client.
 
 `discocan/packages/edata-rules` provides the rule expression parser and binary record codec for device
 configuration. It preserves opaque rule data for inspection and does not simulate device evaluation. Application startup and Nx dependency
 targets build the package before its consumers.
+`discocan/packages/device-contract` defines the internal HTTP API served by Device Server.
 
 ## Source organization
 
@@ -44,13 +45,14 @@ views and drawers in `features/fleet/*` (`*-view.ts`, `*-drawer.ts`) serve live 
 pages. `core/` contains only admin-local authentication,
 configuration and GraphQL transport. Feature clients and caches retain their mounted view lifetime; neither route grouping nor shared login makes business clients global.
 
-| Application | Responsibility                                                                                                         | Local port                                                   |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| admin       | Standalone Angular, PrimeNG with the discocan design system, Branch discovery, Fleet management and ERM device control | 11000                                                        |
-| gateway     | Native Apollo Router federation, `/graphql`; `/health` on 11016                                                        | 11010                                                        |
-| core        | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                          | 11011                                                        |
-| fleet       | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database      | 11013                                                        |
-| erm-server  | StarLink gateway, owning database, separate GraphQL API/control and read-only recovery processes                       | 11015 gateway HTTP; 11500 TCP; 11017 API; 11510 recovery TCP |
+| Application   | Responsibility                                                                                                         | Local port                                                   |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| admin         | Standalone Angular, PrimeNG with the discocan design system, Branch discovery, Fleet management and ERM device control | 11000                                                        |
+| gateway       | Native Apollo Router federation, `/graphql`; `/health` on 11016                                                        | 11010                                                        |
+| core          | Tenant demo login, scoped Branch discovery/lookup and selected Branch rename, owning database                          | 11011                                                        |
+| fleet         | Tenant/Branch-scoped Fleet master data, telemetry, trips, alerts, service, Overview and settings, owning database      | 11013                                                        |
+| device-server | Discocan hardware server with the internal device HTTP contract                                                        | 11019                                                        |
+| erm-server    | StarLink gateway, owning database, separate GraphQL API/control and read-only recovery processes                       | 11015 gateway HTTP; 11500 TCP; 11017 API; 11510 recovery TCP |
 
 `@osnova/ui` is the shared Angular source library for operator screens. Applications compile it directly and supply their navigation, identity and display preferences; the package has no independent build.
 
@@ -63,6 +65,8 @@ flowchart LR
   Core --> CoreDB[(Core database)]
   Fleet --> FleetDB[(Fleet database)]
   Fleet -->|Branch existence on create and settings upsert| Core
+  Fleet -->|Default device contract| DeviceServer[Device Server]
+  Fleet -->|ERM adapter| ERMServer
   Devices[StarLink devices] -->|TCP| ERMGateway[ERM gateway]
   ERMServer[ERM API] -->|Internal HTTP: sessions and commands| ERMGateway
   ERMGateway -->|TCP mirror| KarmaIngestion[Karma device ingestion]
@@ -81,12 +85,16 @@ Health endpoints prove application availability without opening database connect
 ERM Server uses one codebase with gateway/api processes selected by `ERM_ROLE`. The gateway
 keeps long-lived device sessions, Karma relay, confirmations and frame/event/command records;
 the api process reads the database and uses its loopback internal API for live state and delivery.
-Raw records remain provider-level. Branch-visible state/history is resolved by IMEI through
-Fleet-authorized `FleetDevice` fields; the command mutation checks Fleet with the caller's session
-and active Branch before sending one of six allowlisted reads. See
-[ADR 0007](decisions/0007-erm-gateway-and-api-processes.md) and
-[service setup](../../discocan/docs/development.md#erm-device-server). Both stay outside the web/API
-development group; API deployments must not restart the gateway.
+Raw records remain provider-level. Both processes stay outside the web/API development group,
+and API deployments preserve the running gateway. See [ADR 0007](decisions/0007-erm-gateway-and-api-processes.md)
+and [service setup](../../discocan/docs/development.md#erm-device-server).
+
+Fleet resolves Devices in the verified Tenant and active Branch before calling their adapter.
+The default `DISCOCAN` type uses the internal HTTP API on Device Server. The `ERM` adapter
+uses the existing ERM API and forwards caller authorization and Branch headers for GraphQL
+operations. Fleet owns the device-neutral GraphQL surface. The composed schema hides the
+replaced ERM fields with `@inaccessible` and retains the public Karma routing and return
+operations. See [ADR 0009](decisions/0009-device-types-and-adapters.md).
 
 Fleet also owns the [shared Simple eData vendor catalog](../../discocan/docs/erm-resources/simple-edata-catalog/README.md).
 Its offline extractor and local import CLI preserve versioned reference data independently
@@ -97,7 +105,7 @@ It consumes the same generated static supergraph and routes directly to Core, Fl
 and ERM Server on the public GraphQL port, 11010. Its health listener uses port 11016.
 Authorization, Branch scope and business behavior remain in the owning subgraphs.
 Only `authorization`, `x-branch-id` and `x-request-id` are propagated from client requests.
-`dev` starts Router, Core, Fleet and Angular through concurrently. Angular's development
+`dev:discocan` starts Router, Core, Fleet, Device Server and Angular through concurrently. Angular's development
 proxy follows `ROUTER_PORT`, defaulting to 11010. `kill` stops the native Router and the web/API Node
 application processes. Gateway has no Node implementation, Nest bootstrap or npm runtime
 dependencies. Development, federation/browser fixtures and CI all use the official binary.

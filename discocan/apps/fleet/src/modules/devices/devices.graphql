@@ -1,3 +1,8 @@
+enum FleetDeviceType {
+  DISCOCAN
+  ERM
+}
+
 enum FleetDeviceModel {
   STARLINK_TRACKER
   STARLINK_SCOUT
@@ -41,36 +46,58 @@ type FleetDevice @key(fields: "id") {
   branch: Branch!
   "15 digits, unique across all Tenants: one physical unit belongs to one Branch."
   imei: String!
+  type: FleetDeviceType!
   vehicleId: ID
   vehicle: FleetVehicleRef
   "Unassigned means IN_STOCK; assigned devices are ONLINE when their current pair reported within the configured not-reporting hours of the Branch data clock."
   status: FleetDeviceStatus!
-  "A fresh ERM receipt after the retained observation establishes DISCOCAN. Otherwise the retained observation expires after 70 minutes; null means unknown or ERM import disabled."
-  routing: FleetDeviceRouting
-  "Retained backup history at the last stored routing observation; null without one."
-  routingHealth: FleetDeviceRoutingHealth
+  "StarLink metadata for ERM devices."
+  erm: FleetErmDevice
+  "Current provider state for this Branch's device; null when disabled or without state."
+  state: FleetDeviceState
+  "Decoded event history for this Branch's device."
+  events(input: FleetDeviceEventsInput): FleetDeviceEventPage!
+  "Captured transport messages for this Branch's device."
+  messages(input: FleetDeviceMessagesInput): FleetDeviceMessagePage!
+  "Newest fifty requests for this Device in the active Branch. Select on a single Device."
+  commandRequests: [FleetDeviceCommandRequest!]!
+  "Transport command history for this Device. Select on a single Device."
+  commands(input: FleetDeviceCommandsInput): FleetDeviceCommandsPage!
+  "Stored parameter snapshots with differences from the previous complete snapshot. Select on a single Device."
+  parameterSnapshots(input: FleetDeviceParameterSnapshotsInput): FleetDeviceParameterSnapshotsPage!
+  "Newest twenty controlled configuration runs. Select on a single Device."
+  configurationChanges: [FleetDeviceConfigurationChange!]!
+  "Whether this caller can start configuration writes for this Device. Select on a single Device."
+  configurationWritesEnabled: Boolean!
   model: FleetDeviceModel
-  "ERM serial number from the unit's label; unique within the Branch."
+  "Serial number from the unit's label; unique within the Branch."
   serialNumber: String
   options: [FleetDeviceOption!]!
   firmwareVersion: String
-  "eData module and version reported by the unit, for example eData Fms 6.56."
-  edataModule: String
   simPhoneNumber: String
   simIccid: String
-  "StarLink Simple SMS password (parameter 0593), plain text by the owner's decision."
+  "Device SMS password, stored as plain text."
   smsPassword: String
   installedAt: DateTime
   notes: String
   "Latest sample recorded for this device on its current vehicle; null if never." # B2
   lastReportedAt: DateTime # B2
   diagnostics: FleetDeviceDiagnosticSummary!
-  "Latest stored 405 observation for each supported telltale on the current vehicle/IMEI pair; missing observations are UNKNOWN."
+  "Latest stored periodic measurement for each supported telltale on the current vehicle/IMEI pair; missing observations are UNKNOWN."
   warningLamps: [FleetWarningLamp!]!
   "Latest RED, YELLOW or INFORMATION lamps for the current vehicle/IMEI pair."
   currentWarnings: [FleetWarningLamp!]!
   createdAt: DateTime!
   updatedAt: DateTime!
+}
+
+type FleetErmDevice {
+  "eData module and version reported by the unit, for example eData Fms 6.56."
+  edataModule: String
+  "A fresh ERM receipt after the retained observation establishes DISCOCAN. Otherwise the retained observation expires after 70 minutes; null means unknown or ERM import disabled."
+  routing: FleetDeviceRouting
+  "Retained backup history at the last stored routing observation; null without one."
+  routingHealth: FleetDeviceRoutingHealth
 }
 
 type FleetDeviceRoutingHealth {
@@ -163,14 +190,19 @@ input FleetDeviceSort {
   direction: FleetSortDirection! = DESC
 }
 
+input FleetErmDeviceInput {
+  edataModule: String
+}
+
 input CreateFleetDeviceInput {
   imei: String!
+  type: FleetDeviceType = DISCOCAN
   vehicleId: ID
   model: FleetDeviceModel
   serialNumber: String
   options: [FleetDeviceOption!]
   firmwareVersion: String
-  edataModule: String
+  erm: FleetErmDeviceInput
   simPhoneNumber: String
   simIccid: String
   smsPassword: String
@@ -186,7 +218,7 @@ input UpdateFleetDeviceInput {
   serialNumber: String
   options: [FleetDeviceOption!]
   firmwareVersion: String
-  edataModule: String
+  erm: FleetErmDeviceInput
   simPhoneNumber: String
   simIccid: String
   smsPassword: String

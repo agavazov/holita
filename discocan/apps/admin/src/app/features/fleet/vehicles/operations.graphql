@@ -222,42 +222,10 @@ fragment AdminVehicleProfileTripDetails on FleetTrip {
     details
   }
 }
-fragment AdminVehicleProfileAlertDetails on FleetEvent {
-  id
-  branchId
-  vehicleId
-  vehicle {
-    id
-    licensePlate
-  }
-  driverId
-  driver {
-    id
-    firstName
-    lastName
-  }
-  tripId
-  occurredAt
-  kind
-  severity
-  alertStatus
-  details
-  remark
-  acknowledgedAt
-  resolvedAt
-  address
-  measuredValue
-  thresholdValue
-  measurementUnit
-  troubleCode
-}
 fragment AdminVehicleProfile on FleetVehicle {
   ...AdminVehicleDetails
   devices {
     ...AdminFleetLiveDevice
-    ermCommandRequests {
-      ...AdminFaultRead
-    }
   }
   warningLamps {
     ...AdminWarningLamp
@@ -306,21 +274,6 @@ query AdminVehicleProfileTrips($vehicleId: ID!, $offset: Int!, $limit: Int!, $so
     totalDistanceKm
   }
 }
-query AdminVehicleProfileAlerts($vehicleId: ID!, $offset: Int!, $limit: Int!) {
-  fleetEvents(
-    offset: $offset
-    limit: $limit
-    filter: { vehicleIds: [$vehicleId], actionable: true }
-    sort: { field: OCCURRED_AT, direction: DESC }
-  ) {
-    items {
-      ...AdminVehicleProfileAlertDetails
-    }
-    total
-    offset
-    limit
-  }
-}
 query AdminVehicleProfileService(
   $vehicleId: ID!
   $offset: Int!
@@ -358,27 +311,6 @@ mutation AdminRecordOdometer($input: RecordFleetOdometerReadingInput!) {
     source
     recordedAt
     odometerKm
-  }
-}
-query AdminVehicleDeviceEvents($vehicleId: ID!) {
-  fleetEvents(
-    limit: 50
-    filter: {
-      vehicleIds: [$vehicleId]
-      kinds: [DIAGNOSTIC_TROUBLE_CODE, CAN_ERROR, UNIT_ON_BACKUP]
-      actionable: false
-    }
-    sort: { field: OCCURRED_AT, direction: DESC }
-  ) {
-    total
-    items {
-      id
-      occurredAt
-      kind
-      severity
-      troubleCode
-      source
-    }
   }
 }
 
@@ -435,13 +367,13 @@ fragment AdminVehicleProblemDetails on FleetProblem {
   deviceImei
   alertId
   fleetEventId
-  ermEventId
+  sourceEventId
   commandRequestId
 }
 fragment AdminVehicleProblemCounts on FleetProblemCounts {
   asOf
   dataAsOf
-  ermAsOf
+  liveAsOf
   periodFrom
   periodTo
   total
@@ -461,19 +393,6 @@ query AdminVehicleProfileProblems(
   $sort: FleetProblemSort
 ) {
   fleetProblems(offset: $offset, limit: $limit, filter: { vehicleIds: [$vehicleId] }, sort: $sort) {
-    items {
-      ...AdminVehicleProblemDetails
-    }
-    total
-    offset
-    limit
-    counts {
-      ...AdminVehicleProblemCounts
-    }
-  }
-}
-query AdminVehiclesProblems($ids: [ID!]!, $offset: Int!, $limit: Int!) {
-  fleetProblems(offset: $offset, limit: $limit, filter: { vehicleIds: $ids }) {
     items {
       ...AdminVehicleProblemDetails
     }

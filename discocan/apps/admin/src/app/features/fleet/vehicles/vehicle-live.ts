@@ -30,17 +30,17 @@ export function vehicleLiveStatus(
   if (!devices.length) {
     return { label: text.noDevice, tone: 'neutral' };
   }
-  const states = devices.flatMap((device) => (device?.ermState ? [device.ermState] : []));
-  if (states.some((state) => state.online && state.lastFrameAt && !state.health.overdue)) {
+  const states = devices.flatMap((device) => (device?.state ? [device.state] : []));
+  if (states.some((state) => state.connected && state.lastReportAt && !state.health.overdue)) {
     return { label: text.live, tone: 'success' };
   }
-  if (states.some((state) => state.online)) {
+  if (states.some((state) => state.connected)) {
     return { label: text.connected, tone: 'info' };
   }
-  if (states.some((state) => state.lastFrameAt && !state.health.overdue)) {
+  if (states.some((state) => state.lastReportAt && !state.health.overdue)) {
     return { label: text.reporting, tone: 'info' };
   }
-  if (states.some((state) => state.lastFrameAt && state.health.overdue)) {
+  if (states.some((state) => state.lastReportAt && state.health.overdue)) {
     return { label: text.overdue, tone: 'warn' };
   }
   return devices.some((device) => device !== undefined)
@@ -50,7 +50,7 @@ export function vehicleLiveStatus(
 
 export function vehicleLastReport(devices: readonly FleetLiveDevice[]): string | null {
   const reports = devices
-    .map((device) => device?.ermState?.lastFrameAt ?? device?.lastReportedAt)
+    .map((device) => device?.state?.lastReportAt ?? device?.lastReportedAt)
     .filter((value): value is string => !!value);
   return reports.sort().at(-1) ?? null;
 }
@@ -58,8 +58,8 @@ export function vehicleLastReport(devices: readonly FleetLiveDevice[]): string |
 /** Latest recorded activity among installed devices, independent of their socket traffic. */
 export function vehicleLiveDevice(devices: readonly FleetLiveDevice[]): FleetLiveDevice {
   return [...devices].sort((left, right) =>
-    (right?.ermState?.latestEvent?.eventTime ?? '').localeCompare(
-      left?.ermState?.latestEvent?.eventTime ?? '',
+    (right?.state?.latestEvent?.recordedAt ?? '').localeCompare(
+      left?.state?.latestEvent?.recordedAt ?? '',
     ),
   )[0];
 }

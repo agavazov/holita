@@ -185,13 +185,14 @@
             <p-skeleton width="7rem" height="1.5rem" />
           } @else {
             <span class="app-cell-stack">
-              @switch (row.live?.ermRouting?.state) {
+              @let routing = row.live?.type === 'ERM' ? row.live.ermRouting : null;
+              @switch (routing?.state) {
                 @case ('KARMA_BACKUP') {
                   <span
                     ><p-tag [value]="text().status.karmaBackup" [severity]="toneSeverity('warn')"
                   /></span>
-                  @if (row.live?.ermRouting?.since; as since) {
-                    @let backup = backupSince(row);
+                  @if (routing?.since; as since) {
+                    @let backup = backupSince(since);
                     <time
                       class="app-cell-date"
                       [attr.datetime]="since"

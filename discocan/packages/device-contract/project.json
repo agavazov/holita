@@ -1,0 +1,10 @@
+{
+  "name": "device-contract",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "discocan/packages/device-contract/src",
+  "tags": ["product:discocan", "type:lib", "scope:discocan"],
+  "targets": {
+    "build": { "outputs": ["{projectRoot}/dist"] }
+  }
+}

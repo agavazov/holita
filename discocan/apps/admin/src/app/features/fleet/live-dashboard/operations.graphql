@@ -83,10 +83,11 @@ query AdminLiveVehicle($id: ID!) {
     devices {
       id
       imei
+      type
       lastReportedAt
-      ermState {
+      state {
         connectedSince
-        lastFrameAt
+        lastReportAt
         alarmsLast24h
         latestEvent {
           engineOn
@@ -96,9 +97,6 @@ query AdminLiveVehicle($id: ID!) {
         health {
           overdue
         }
-      }
-      ermCommandRequests {
-        ...AdminFaultRead
       }
     }
   }

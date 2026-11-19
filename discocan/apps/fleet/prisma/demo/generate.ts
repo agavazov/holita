@@ -213,6 +213,7 @@ function masterData(data: FleetDemoDataset, anchor: Date): DemoVehicle[] {
       }
       primary = {
         id: masterId('device', ordinal),
+        type: 'ERM',
         ...DEMO_SCOPE,
         vehicleId: row.id,
         imei: [2, 13, 21, 43].includes(number)
@@ -270,6 +271,7 @@ function masterData(data: FleetDemoDataset, anchor: Date): DemoVehicle[] {
   for (let ordinal = 43; ordinal <= 48; ordinal++) {
     data.devices.push({
       id: masterId('device', ordinal),
+      type: 'ERM',
       ...DEMO_SCOPE,
       vehicleId:
         ordinal === 43 ? masterId('vehicle', 1) : ordinal === 44 ? masterId('vehicle', 27) : null,

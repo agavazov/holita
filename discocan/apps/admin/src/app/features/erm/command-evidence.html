@@ -1,0 +1,81 @@
+@if (section() === 'verification') {
+  @if (request().erm?.configurationVerification; as verification) {
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().verification }}</dt>
+        <dd>{{ text().verificationStates[verification.status] }}</dd>
+      </div>
+    </dl>
+  }
+} @else {
+  <details class="app-card command-details__technical">
+    <summary>{{ text().technical }}</summary>
+    <div class="app-view">
+      <p class="app-muted">{{ text().technicalHint }}</p>
+      @if (confirmation()) {
+        <p>{{ confirmation() }}</p>
+      }
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().requestId }}</dt>
+          <dd class="app-mono">{{ request().id }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().commandId }}</dt>
+          <dd class="app-mono">{{ request().commandId ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().reference }}</dt>
+          <dd class="app-mono">{{ request().transportCommand?.erm?.reference ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().replyReference }}</dt>
+          <dd class="app-mono">
+            {{ request().transportCommand?.acknowledgement?.erm?.replyReference ?? '—' }}
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().actor }}</dt>
+          <dd>{{ request().actorId }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().intent }}</dt>
+          <dd>{{ request().intent || '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().actionCode }}</dt>
+          <dd>{{ actionCode() }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().outcomeCode }}</dt>
+          <dd>{{ request().outcomeCode }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().reasonCode }}</dt>
+          <dd>{{ request().reasonCode ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().resultCode }}</dt>
+          <dd>{{ request().resultCode ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().transportStatus }}</dt>
+          <dd>{{ request().transportCommand?.status ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().failureReason }}</dt>
+          <dd>{{ request().failureReason ?? '—' }}</dd>
+        </div>
+      </dl>
+      <p class="app-muted">{{ text().auditHint }}</p>
+      <h4>{{ text().sentFrame }}</h4>
+      <pre>{{ request().erm?.sentFrame?.displayText ?? text().noEvidence }}</pre>
+      <h4>{{ text().receivedFrame }}</h4>
+      <pre>{{ request().responseText ?? text().noEvidence }}</pre>
+      @if (request().erm?.receivedFrameHex) {
+        <h4>{{ text().receivedHex }}</h4>
+        <pre>{{ request().erm?.receivedFrameHex }}</pre>
+      }
+    </div>
+  </details>
+}

@@ -1,4 +1,5 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import type { DeviceLiveSnapshot } from '@discocan/device-contract';
 import { FleetClock } from '../../clock/fleet-clock.js';
 import type {
   FleetDashboard,
@@ -8,30 +9,30 @@ import type {
   QueryFleetMapArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
-import {
-  ErmDashboardClient,
-  type ErmDashboardTelemetry,
-} from '../../integrations/erm/erm-dashboard.client.js';
+import { DeviceAdapters } from '../../integrations/device-adapters.js';
 import { dateTime, invalid, pagination, requireScope } from '../../validation.js';
 import { ProblemsService } from '../events/problems.service.js';
 import { DashboardRepository } from './dashboard.repository.js';
 
 function deviceStatuses(
   devices: { id: string; imei: string; vehicleId: string | null }[],
-  telemetry: ErmDashboardTelemetry,
+  telemetry: DeviceLiveSnapshot | null,
 ) {
-  const byImei = new Map(telemetry.units.map((unit) => [unit.imei, unit]));
-  return devices.map((device) => {
+  const byImei = new Map(telemetry?.devices.map((unit) => [unit.imei, unit]));
+  return devices.flatMap((device) => {
     const state = byImei.get(device.imei);
     if (!state) {
-      throw new ServiceUnavailableException('Incomplete ERM dashboard snapshot');
+      return [];
     }
-    return {
-      ...state,
-      deviceId: device.id,
-      vehicleId: device.vehicleId,
-      live: state.connected && state.reporting,
-    };
+    return [
+      {
+        ...state,
+        lastFrameAt: state.lastReportAt,
+        deviceId: device.id,
+        vehicleId: device.vehicleId,
+        live: state.connected && state.reporting,
+      },
+    ];
   });
 }
 
@@ -39,7 +40,7 @@ function deviceStatuses(
 export class DashboardService {
   constructor(
     private readonly repository: DashboardRepository,
-    private readonly erm: ErmDashboardClient,
+    private readonly adapters: DeviceAdapters,
     private readonly problems: ProblemsService,
     private readonly clock: FleetClock,
   ) {}
@@ -53,7 +54,7 @@ export class DashboardService {
     }
     const asOf = this.clock.now();
     const snapshot = await this.repository.dashboard(scope, { from, to });
-    const telemetry = await this.erm.telemetry(snapshot.devices.map((device) => device.imei));
+    const telemetry = await this.adapters.liveStates(snapshot.devices);
     const states = deviceStatuses(snapshot.devices, telemetry);
     const vehicles = (field: 'connected' | 'reporting' | 'live') =>
       new Set(
@@ -65,7 +66,7 @@ export class DashboardService {
       vehicles: {
         asOf,
         dataAsOf: snapshot.dataAsOf,
-        liveAsOf: telemetry.asOf,
+        liveAsOf: telemetry?.asOf ?? asOf,
         total: snapshot.total,
         connected: vehicles('connected'),
         reporting: vehicles('reporting'),
@@ -79,8 +80,8 @@ export class DashboardService {
       },
       devices: {
         asOf,
-        liveAsOf: telemetry.asOf,
-        total: states.length,
+        liveAsOf: telemetry?.asOf ?? asOf,
+        total: snapshot.devices.length,
         connected: states.filter((state) => state.connected).length,
         reporting: states.filter((state) => state.reporting).length,
         live: states.filter((state) => state.live).length,
@@ -103,7 +104,7 @@ export class DashboardService {
       page = pagination(args),
       asOf = this.clock.now();
     const snapshot = await this.repository.map(scope, page, asOf);
-    const telemetry = await this.erm.telemetry(snapshot.devices.map((device) => device.imei));
+    const telemetry = await this.adapters.liveStates(snapshot.devices);
     const states = deviceStatuses(snapshot.devices, telemetry);
     const byVehicle = new Map<string, FleetMapDeviceStatus[]>();
     for (const state of states) {
@@ -117,7 +118,7 @@ export class DashboardService {
     return {
       ...page,
       asOf,
-      liveAsOf: telemetry.asOf,
+      liveAsOf: telemetry?.asOf ?? asOf,
       dataAsOf: snapshot.dataAsOf,
       total: snapshot.total,
       withPosition: snapshot.withPosition,

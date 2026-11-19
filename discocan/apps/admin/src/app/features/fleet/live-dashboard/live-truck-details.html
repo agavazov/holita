@@ -49,9 +49,9 @@
 <discocan-fault-scanner
   [check]="current.faultCheck"
   [lamps]="current.lamps"
-  [reads]="unit?.ermCommandRequests ?? []"
+  [reads]="faultReads()"
   [freezeFrame]="detail()?.fleetVehicleFreezeFrame ?? null"
-  [canRead]="canReadFaults() && !!unit"
+  [canRead]="canReadFaults() && unit?.type === 'ERM'"
   [readBusy]="readingFaults()"
   [language]="language()"
   [now]="now()"
@@ -65,11 +65,11 @@
       <dl class="app-facts">
         <div>
           <dt>{{ text().connectedSince }}</dt>
-          <dd>{{ format.dateTime(unit?.ermState?.connectedSince) }}</dd>
+          <dd>{{ format.dateTime(unit?.state?.connectedSince) }}</dd>
         </div>
         <div>
           <dt>{{ text().lastFrame }}</dt>
-          <dd>{{ relative(unit?.ermState?.lastFrameAt ?? unit?.lastReportedAt) }}</dd>
+          <dd>{{ relative(unit?.state?.lastReportAt ?? unit?.lastReportedAt) }}</dd>
         </div>
         <div>
           <dt>{{ text().latestEvent }}</dt>
@@ -78,16 +78,16 @@
         <div>
           <dt>{{ text().engine }}</dt>
           <dd>
-            @let engine = unit?.ermState?.latestEvent?.engineOn;
+            @let engine = unit?.state?.latestEvent?.engineOn;
             {{ engine === null || engine === undefined ? '—' : engine ? text().on : text().off }}
           </dd>
         </div>
         <div>
           <dt>{{ text().alarms }}</dt>
-          <dd>{{ number(unit?.ermState?.alarmsLast24h) }}</dd>
+          <dd>{{ number(unit?.state?.alarmsLast24h) }}</dd>
         </div>
       </dl>
-      @if (unit?.ermState?.health?.overdue) {
+      @if (unit?.state?.health?.overdue) {
         <p-message severity="warn" size="small">{{ text().overdue }}</p-message>
       }
     </p-accordion-content>
@@ -303,7 +303,7 @@
           </div>
           <div>
             <dt>{{ text().lastFrame }}</dt>
-            <dd>{{ format.dateTime(unit.ermState?.lastFrameAt ?? unit.lastReportedAt, true) }}</dd>
+            <dd>{{ format.dateTime(unit.state?.lastReportAt ?? unit.lastReportedAt, true) }}</dd>
           </div>
         </dl>
         <a [routerLink]="[...fleet(), 'devices', unit.id, 'overview']">{{ text().openDevice }}</a>

@@ -14,11 +14,12 @@ fragment AdminDevice on FleetDevice {
 fragment AdminDeviceDetails on FleetDevice {
   ...AdminDevice
   status
+  type
   model
   serialNumber
   options
   firmwareVersion
-  edataModule
+  ...AdminErmDeviceMetadata
   simPhoneNumber
   simIccid
   smsPassword
@@ -65,11 +66,7 @@ query AdminDevicesLive($ids: [ID!]!) {
         state
         recordedAt
       }
-      ermRouting {
-        state
-        since
-        latestKarmaReportAt
-      }
+      ...AdminErmRoutingSummary
     }
   }
 }

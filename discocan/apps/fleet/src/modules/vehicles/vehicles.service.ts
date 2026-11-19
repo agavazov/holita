@@ -197,6 +197,7 @@ export class VehiclesService {
   async list(
     context: RequestContext,
     args: QueryFleetVehiclesArgs,
+    includeDeviceState = false,
   ): Promise<Omit<FleetVehiclePage, 'items'> & { items: VehicleResult[] }> {
     const scope = requireScope(context);
     const { offset, limit } = pagination(args);
@@ -222,7 +223,14 @@ export class VehiclesService {
       direction: sortDirection(args.sort?.direction, 'DESC'),
     };
     const page = await this.vehicles.list(scope, { offset, limit }, criteria, sort);
-    return { items: await this.completeList(scope, page.items), total: page.total, offset, limit };
+    const items = await this.completeList(scope, page.items);
+    if (includeDeviceState) {
+      await this.devices.loadStates(
+        context,
+        items.flatMap((vehicle) => vehicle.devices),
+      );
+    }
+    return { items, total: page.total, offset, limit };
   }
 
   summary(context: RequestContext): Promise<FleetVehicleSummary> {
@@ -259,16 +267,37 @@ export class VehiclesService {
     );
   }
 
-  async find(context: RequestContext, id: string): Promise<VehicleResult> {
+  async find(
+    context: RequestContext,
+    id: string,
+    includeDeviceState = false,
+  ): Promise<VehicleResult> {
     const scope = requireScope(context);
     const row = await this.vehicles.find(scope, uuid(id, 'id'));
     if (!row) {
       throw new NotFoundException('Vehicle not found');
     }
-    return this.completeOne(scope, row);
+    return this.completeOne(scope, row, includeDeviceState ? context : undefined);
   }
 
-  async create(context: RequestContext, input: CreateFleetVehicleInput): Promise<VehicleResult> {
+  async references(
+    context: RequestContext,
+    ids: readonly string[],
+  ): Promise<Map<string, VehicleResult>> {
+    const scope = requireScope(context);
+    const vehicles = await this.complete(scope, await this.vehicles.forIds(scope, ids));
+    await this.devices.loadStates(
+      context,
+      vehicles.flatMap((vehicle) => vehicle.devices),
+    );
+    return new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
+  }
+
+  async create(
+    context: RequestContext,
+    input: CreateFleetVehicleInput,
+    includeDeviceState = false,
+  ): Promise<VehicleResult> {
     const scope = requireScope(context);
     await requireRole(context, 'OPERATOR');
     const data: VehicleData = {
@@ -298,13 +327,14 @@ export class VehiclesService {
     if (row === null) {
       invalidFields([UNAVAILABLE_DRIVER]);
     }
-    return this.completeOne(scope, row);
+    return this.completeOne(scope, row, includeDeviceState ? context : undefined);
   }
 
   async update(
     context: RequestContext,
     id: string,
     input: UpdateFleetVehicleInput,
+    includeDeviceState = false,
   ): Promise<VehicleResult> {
     const scope = requireScope(context);
     await requireRole(context, 'OPERATOR');
@@ -347,14 +377,18 @@ export class VehiclesService {
     if (row === null) {
       invalidFields([UNAVAILABLE_DRIVER]);
     }
-    return this.completeOne(scope, row);
+    return this.completeOne(scope, row, includeDeviceState ? context : undefined);
   }
 
-  async deactivate(context: RequestContext, id: string): Promise<VehicleResult> {
+  async deactivate(
+    context: RequestContext,
+    id: string,
+    includeDeviceState = false,
+  ): Promise<VehicleResult> {
     const scope = requireScope(context);
     await requireRole(context, 'OPERATOR');
     const row = await this.deactivateStored(scope, uuid(id, 'id'));
-    return this.completeOne(scope, row);
+    return this.completeOne(scope, row, includeDeviceState ? context : undefined);
   }
 
   private async deactivateStored(scope: FleetScope, recordId: string): Promise<VehicleRow> {
@@ -450,10 +484,17 @@ export class VehiclesService {
     });
   }
 
-  private async completeOne(scope: FleetScope, row: VehicleRow): Promise<VehicleResult> {
+  private async completeOne(
+    scope: FleetScope,
+    row: VehicleRow,
+    stateContext?: RequestContext,
+  ): Promise<VehicleResult> {
     const [vehicle] = await this.complete(scope, [row]);
     if (!vehicle) {
       throw new NotFoundException('Vehicle not found');
+    }
+    if (stateContext) {
+      await this.devices.loadStates(stateContext, vehicle.devices);
     }
     return vehicle;
   }

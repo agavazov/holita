@@ -32,9 +32,9 @@ import type {
   AdminControlCenterCommandBatchFieldsFragment,
   AdminControlCenterSettingsDevicesQuery,
   AdminControlCenterQueueDeviceLabelsQuery,
-  ErmCommandRequestStatus,
-  ErmCommandRequestsSortField,
-  ErmDeviceAction,
+  FleetDeviceCommandRequestStatus,
+  FleetDeviceCommandSortField,
+  FleetDeviceAction,
 } from '../../../generated/graphql/operations';
 import { DemoSession } from '@osnova/ui/app';
 import { AdminConfig } from '../../core/config/admin-config';
@@ -74,7 +74,7 @@ import { GeneralSettingsApi } from '../fleet/settings/general-settings-api';
 import { ControlCenterApi } from './control-center-api';
 import { commandError, controlCenterText } from './control-center-text';
 
-const statuses: readonly ErmCommandRequestStatus[] = [
+const statuses: readonly FleetDeviceCommandRequestStatus[] = [
   'QUEUED',
   'SUBMITTING',
   'ANSWERED',
@@ -83,19 +83,19 @@ const statuses: readonly ErmCommandRequestStatus[] = [
   'CANCELLED',
   'UNCERTAIN',
 ];
-const readActions: readonly ErmDeviceAction[] = [
+const readActions: readonly FleetDeviceAction[] = [
   'REQUEST_LOCATION',
   'READ_STATUS',
   'READ_VERSION',
   'READ_ACCESSORIES',
-  'READ_EDATA_DIAGNOSTICS',
-  'READ_EDATA_FAULTS',
+  'READ_DIAGNOSTICS',
+  'READ_FAULTS',
 ];
 interface QueueFilters {
-  readonly statuses: readonly ErmCommandRequestStatus[];
+  readonly statuses: readonly FleetDeviceCommandRequestStatus[];
   readonly devices: readonly string[];
 }
-const queueDefinition: ListDefinition<QueueFilters, ErmCommandRequestsSortField> = {
+const queueDefinition: ListDefinition<QueueFilters, FleetDeviceCommandSortField> = {
   pageSizes: [10, 20, 50, 100],
   defaultPageSize: 20,
   sorts: [
@@ -173,7 +173,7 @@ export class BranchCommandQueue implements OnInit {
   protected readonly loadError = signal<string | null>(null);
   protected readonly actionError = signal<string | null>(null);
   protected readonly page = signal<
-    AdminControlCenterBranchCommandRequestsQuery['ermCommandRequests'] | null
+    AdminControlCenterBranchCommandRequestsQuery['fleetDeviceCommandRequests'] | null
   >(null);
   protected readonly busy = signal<string | null>(null);
   protected readonly devices = signal<readonly QueueDevice[]>([]);
@@ -200,7 +200,7 @@ export class BranchCommandQueue implements OnInit {
       nonNullable: true,
       validators: [(control) => Validators.required(control), Validators.maxLength(100)],
     }),
-    action: new FormControl<ErmDeviceAction>('READ_STATUS', {
+    action: new FormControl<FleetDeviceAction>('READ_STATUS', {
       nonNullable: true,
       validators: [(control) => Validators.required(control)],
     }),
@@ -224,8 +224,12 @@ export class BranchCommandQueue implements OnInit {
   protected readonly deviceOptions = computed(() =>
     this.devices().map((device) => ({
       value: device.id,
+      type: device.type,
       label: device.vehicle ? `${device.vehicle.licensePlate} · ${device.imei}` : device.imei,
     })),
+  );
+  protected readonly batchDeviceOptions = computed(() =>
+    this.deviceOptions().filter((option) => option.type === 'ERM'),
   );
   protected readonly actionOptions = computed(() =>
     readActions.map((value) => ({ value, label: this.catalog().actions[value] })),
@@ -294,7 +298,7 @@ export class BranchCommandQueue implements OnInit {
         this.actions(),
         request,
         request.id,
-        `${commandPurpose(request, this.language())} · ${request.unitId}`,
+        `${commandPurpose(request, this.language())} · ${request.imei}`,
       ),
     })),
   );
@@ -369,9 +373,9 @@ export class BranchCommandQueue implements OnInit {
           this.loading.set(result.loading);
           this.loadError.set(result.error ? commandError(result.error, this.language()) : null);
           if (result.dataState === 'complete' && !result.error) {
-            this.page.set(result.data.ermCommandRequests);
+            this.page.set(result.data.fleetDeviceCommandRequests);
             this.url.correctPage(
-              Math.max(1, Math.ceil(result.data.ermCommandRequests.total / state.pageSize)),
+              Math.max(1, Math.ceil(result.data.fleetDeviceCommandRequests.total / state.pageSize)),
             );
           }
         },
@@ -406,7 +410,7 @@ export class BranchCommandQueue implements OnInit {
           if (result.error) {
             this.actionError.set(commandError(result.error, this.language()));
           } else if (result.dataState === 'complete') {
-            this.selected.set(result.data.ermCommandRequest);
+            this.selected.set(result.data.fleetDeviceCommandRequest);
           }
         },
         error: (error: unknown) => {
@@ -484,8 +488,8 @@ export class BranchCommandQueue implements OnInit {
         next: (result) => {
           if (result.error) {
             this.actionError.set(commandError(result.error, this.language()));
-          } else if (result.dataState === 'complete' && result.data.ermCommandBatch) {
-            this.batch.set(result.data.ermCommandBatch);
+          } else if (result.dataState === 'complete' && result.data.fleetDeviceCommandBatch) {
+            this.batch.set(result.data.fleetDeviceCommandBatch);
           }
         },
         error: (error: unknown) => {
@@ -515,7 +519,7 @@ export class BranchCommandQueue implements OnInit {
     return (
       this.rowLabels().find((device) => device.id === request.deviceId)?.vehicle?.licensePlate ??
       this.devices().find((device) => device.id === request.deviceId)?.vehicle?.licensePlate ??
-      request.unitId
+      request.imei
     );
   }
   protected deviceLink(request: CommandRequest): string[] {

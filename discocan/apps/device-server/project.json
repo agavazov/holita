@@ -1,0 +1,22 @@
+{
+  "name": "device-server",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "discocan/apps/device-server/src",
+  "tags": ["product:discocan", "type:app", "scope:device-server"],
+  "targets": {
+    "build": { "dependsOn": ["^build"] },
+    "typecheck": { "dependsOn": ["^build"] },
+    "lint": { "dependsOn": ["^build"] },
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["^build"],
+      "inputs": ["default"],
+      "options": {
+        "command": "npm run test --",
+        "cwd": "discocan/apps/device-server",
+        "forwardAllArgs": true
+      }
+    }
+  }
+}

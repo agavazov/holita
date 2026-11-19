@@ -110,19 +110,19 @@ Drawers retain lists and return context; failed saves retain drafts. Dirty forms
 leaving; submitted forms lock until settlement. Only successful batch IDs leave selection.
 Server-derived facts and clocks remain unknown when data is absent.
 
-| Destination                 | Operator workflow                                                                                                                                                                                                                                                                                            |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `/fleet/dashboard/overview` | Whole-Branch KPIs, complete paged fleet map, attention links, charts and filtered drill-downs                                                                                                                                                                                                                |
-| `/fleet/dashboard/problems` | Alerts, recorded device evidence, reporting gaps and failed/uncertain commands; only alerts allow acknowledge/resolve/reopen                                                                                                                                                                                 |
-| `/fleet/dashboard/trips`    | Scoped trip detail and complete maneuver timeline; filtered distance and whole-Branch summary remain separate                                                                                                                                                                                                |
-| `/fleet/vehicles`           | Create/edit master data, delete/deactivate; detail tabs `overview`, `trips`, `problems`, `maintenance`, `commands`; Overview includes the last 24 hours of recorded track with coverage/truncation; Commands selects an installed Device                                                                     |
-| `/fleet/devices`            | Register/edit globally unique IMEI, ERM serial, module, model/options, SIM and assignment; clear assignment to stock; open `/:id/overview`, `problems`, `commands`, `sms-commands`, `parameters` or `technical-details/events` and `technical-details/frames`; Trips links to the currently assigned Vehicle |
-| `/fleet/drivers`            | Contact/identification/documents; 7/30/90-day scorecard; assigned drivers cannot be deactivated/deleted                                                                                                                                                                                                      |
-| `/fleet/maintenance`        | Planned-only edits; completion can atomically schedule the next task; DONE/CANCELLED history is read-only                                                                                                                                                                                                    |
-| `/fleet/settings/groups`    | Manage groups and counts; groups containing Vehicles cannot be deleted                                                                                                                                                                                                                                       |
-| `/fleet/settings/general`   | Branch name, zone, date format, display units, Fleet thresholds and notification retention                                                                                                                                                                                                                   |
-| `/fleet/faults`             | Tiles and one row per truck with its fault state, active codes, last check, last data and CAN state, refreshed every minute; the fault log filtered by truck, event and date range                                                                                                                           |
-| `/fleet/notifications`      | Filter Branch notifications by read state/category, open related records and mark individual/all items read                                                                                                                                                                                                  |
+| Destination                 | Operator workflow                                                                                                                                                                                                                                                                 |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/fleet/dashboard/overview` | Whole-Branch KPIs, complete paged fleet map, attention links, charts and filtered drill-downs                                                                                                                                                                                     |
+| `/fleet/dashboard/problems` | Alerts, recorded device evidence, reporting gaps and failed/uncertain commands; only alerts allow acknowledge/resolve/reopen                                                                                                                                                      |
+| `/fleet/dashboard/trips`    | Scoped trip detail and complete maneuver timeline; filtered distance and whole-Branch summary remain separate                                                                                                                                                                     |
+| `/fleet/vehicles`           | Create/edit master data, delete/deactivate; detail tabs `overview`, `trips`, `problems`, `maintenance`, `commands`; Overview includes the last 24 hours of recorded track with coverage/truncation; Commands selects an installed Device                                          |
+| `/fleet/devices`            | Register a globally unique IMEI and select the device type; edit serial, model/options, SIM or assignment, with an eData module for ERM; clear assignment to stock; open device overview, problems, commands and technical history; Trips links to the currently assigned Vehicle |
+| `/fleet/drivers`            | Contact/identification/documents; 7/30/90-day scorecard; assigned drivers cannot be deactivated/deleted                                                                                                                                                                           |
+| `/fleet/maintenance`        | Planned-only edits; completion can atomically schedule the next task; DONE/CANCELLED history is read-only                                                                                                                                                                         |
+| `/fleet/settings/groups`    | Manage groups and counts; groups containing Vehicles cannot be deleted                                                                                                                                                                                                            |
+| `/fleet/settings/general`   | Branch name, zone, date format, display units, Fleet thresholds and notification retention                                                                                                                                                                                        |
+| `/fleet/faults`             | Tiles and one row per truck with its fault state, active codes, last check, last data and CAN state, refreshed every minute; the fault log filtered by truck, event and date range                                                                                                |
+| `/fleet/notifications`      | Filter Branch notifications by read state/category, open related records and mark individual/all items read                                                                                                                                                                       |
 
 `/:language/profile` and `/:language/settings/users` are account routes without a Branch prefix.
 The sidebar lists Dashboard, Vehicles, Devices, Drivers and Maintenance, followed by Settings
@@ -216,6 +216,27 @@ so application restarts do not drop device connections. Configure it from the ro
   that does not start with `$`; the relay rejects it without contacting Karma.
 - If the relay is unavailable, point the public forward directly at the upstream so routed
   devices keep reporting to Karma without a device write.
+
+## Device server
+
+`npm run dev:device-server` starts the Discocan device server on loopback port 11019.
+`npm run dev:discocan` starts it with the other development applications. To override the port,
+set `PORT` in `discocan/apps/device-server/.env` and update Fleet's `DEVICE_SERVER_URL` to match.
+Set the same private `DEVICE_SERVER_TOKEN` in the ignored `.env` files for Device Server and
+Fleet. The server exposes `GET /health` without authentication and requires
+`Authorization: Bearer <DEVICE_SERVER_TOKEN>` for its internal routes.
+
+Set `FLEET_DEVICE_SERVER_ENABLED=true` in Fleet's `.env` to enable the Discocan adapter. The flag
+defaults to `false`, and `DEVICE_SERVER_URL` defaults to `http://127.0.0.1:11019`. The adapter
+serves `DISCOCAN` Devices using the [default device contract](../packages/device-contract/src/index.ts).
+Device Server validates internal requests and returns empty data and catalogs, with unsupported
+outcomes for command and configuration submissions. Registration defaults to Discocan. Select
+ERM when registering a StarLink unit to enter its eData module and use the ERM adapter. The
+hardware type is fixed after registration. See the [environment reference](../../.env.example).
+
+The [Simple eData catalog](erm-resources/simple-edata-catalog/README.md) defines the measurement
+vocabulary for every device type, including the brake system, engine and ABS warning lamps
+(parameters 1896, 1906 and 1910).
 
 ## ERM device server
 
@@ -322,35 +343,37 @@ it must not open the device TCP listener. Configure Core verification for user s
 same demo-session settings as Core/Fleet when explicitly using development demo login.
 Keep the gateway's loopback internal API and machine token private.
 
-The admin **Devices** section opens one Device page with Overview, Problems, Commands,
-Command console, SMS commands, Parameters and Technical details (events/frames). Trips opens the currently
-assigned Vehicle's trips. Vehicle Commands selects a particular installed Device and uses the
+The admin **Devices** section opens one Device page with Overview, Problems, Commands and
+Technical details. The StarLink Command console, SMS texts, settings controls and frame evidence
+are available for ERM Devices. Trips opens the currently assigned Vehicle's trips.
+Vehicle Commands selects a particular installed Device and uses the
 same readable history and details modal. Legacy Control center and diagnostics URLs redirect
 to these pages. Fleet diagnostic counts include only the latest red, yellow or information
 warning lamps for the current vehicle/IMEI pair. Recorded DTC and CAN evidence remains history and never increases
 a danger badge. The count does not establish active ECU faults;
 the Problems rows expose every recorded fault in `diagnostics`, including deleted observations
-whose status does not prove a repair. Fleet owns the ten registered truck identities,
-including `serialNumber` and `edataModule`; ERM state is joined by IMEI. Use Branch-scoped
-Device fields for operator journeys:
+whose status does not prove a repair. Fleet owns Device registration and routes each scoped
+request by Device type. Use Branch-scoped Device fields for operator journeys.
 
 ```graphql
 query DeviceControlCenter($id: ID!) {
   fleetDevice(id: $id) {
     id
     imei
+    type
     serialNumber
-    edataModule
-    ermState {
-      online
-      mode
-      lastFrameAt
+    erm {
+      edataModule
+    }
+    state {
+      connected
+      lastReportAt
       alarmsLast24h
-      mainVoltage {
+      externalVoltage {
         value
         observedAt
       }
-      backupVoltage {
+      backupBatteryVoltage {
         value
         observedAt
       }
@@ -363,45 +386,54 @@ query DeviceControlCenter($id: ID!) {
         observedAt
       }
       health {
-        lastFrameAgeSeconds
+        lastReportAgeSeconds
         expectedIntervalSeconds
         overdue
         lastCloseReason
         lastClosedAt
+      }
+      erm {
+        mode
         upstreamClosesLast24h
         karmaRoutingWritesLast24h
         latestKarmaRoutingWrite {
           receivedAt
-          command
           displayText
+          erm {
+            command
+          }
         }
       }
     }
-    ermEvents(input: { pageSize: 25, categories: [ALARM, EDATA] }) {
+    events(input: { pageSize: 25, categories: [ALARM, DIAGNOSTIC] }) {
       items {
         id
-        eventId
+        code
         category
         severity
         name(language: EN)
-        eventTime
-        fields
+        recordedAt
+        erm {
+          fields
+        }
       }
       nextCursor
       hasMore
     }
-    ermCommands(input: { pageSize: 25 }) {
+    commands(input: { pageSize: 25 }) {
       items {
         id
-        command
         status
         resultCode
         sentAt
+        erm {
+          command
+        }
       }
       nextCursor
       hasMore
     }
-    ermFrames(input: { pageSize: 25 }) {
+    messages(input: { pageSize: 25 }) {
       items {
         id
         direction
@@ -415,14 +447,13 @@ query DeviceControlCenter($id: ID!) {
 }
 ```
 
-`ermState` is null when the unit has neither an ordinary connection nor a recorded recovery
-session. Categories are POSITION, STATUS,
-ALARM, EDATA and OTHER; severities are INFO, WARNING and CRITICAL. Names accept BG/EN and
-are null for unknown event IDs. History uses 25/50/100-item newest-first cursor pages; pass
-`nextCursor` for the same device/filter. Raw fields remain evidence, not inferred meanings.
-ERM data is available only through these Fleet Device fields with the caller's verified Tenant
-and active Branch. The provider queries `ermUnits`, `ermEvents`, `ermFrames` and `ermCommands`
-are no longer exposed.
+For an ERM Device, `state` is null when the unit has neither an ordinary connection nor a
+recorded recovery session. Categories are POSITION, STATUS, ALARM, DIAGNOSTIC and OTHER. Severities
+are INFO, WARNING and CRITICAL. Names accept BG/EN and are null for unknown event IDs. History
+uses 25/50/100-item cursor pages, newest first by default. Pass `nextCursor` for the same Device
+and filter. Raw StarLink fields under `erm` preserve the provider evidence. Fleet reads the
+replaced `@inaccessible` ERM fields on `erm-api` on behalf of the caller's verified Tenant and
+active Branch.
 
 The Device health line shows receipt-time gaps in the last 24 hours (more than twice the
 estimated reporting interval), mobile-network changes and the last close reason. Expected
@@ -430,44 +461,42 @@ intervals are estimates: five minutes driving and one hour parked. Network chang
 and changes in decoded network/operator fields; missing fields are not changes. Shared lists
 explain parked, overdue and backup states without additional Karma polling. Fleet retains the
 current observed backup start, the last completed period and cumulative backup time. An open
-period includes silence until discocan is observed again; it does not prove continuous traffic.
-Backup-history collection requires `FLEET_ERM_HEALTH_ENABLED=true` in Fleet; its default is off
-so the development watcher cannot start the new collector before deployment. When off,
-`routingHealth` is unavailable and existing routing detection continues.
+period includes silence until Discocan is observed again. `FleetDevice.erm.routingHealth`
+shows retained backup history when ERM telemetry is enabled and a stored observation is available.
 
-`sendErmDeviceCommand(input: { deviceId, action, expiresInSeconds, intent })` accepts only
-REQUEST_LOCATION, READ_STATUS, READ_VERSION, READ_ACCESSORIES, READ_EDATA_DIAGNOSTICS and
-READ_EDATA_FAULTS. It verifies the Device through Fleet with the caller's session and active
+`sendDeviceCommand(input: { deviceId, action, expiresInSeconds, intent })` accepts the selected
+Device type's allowlisted reads. The ERM catalog includes REQUEST_LOCATION, READ_STATUS,
+READ_VERSION, READ_ACCESSORIES, READ_DIAGNOSTICS, READ_FAULTS and READ_PARAMETERS.
+Fleet verifies the Device with the caller's session and active
 Branch and returns a durable request. The Device's **Commands** tab can queue these reads while
 offline, choose expiry (default two hours, maximum 24 hours), and cancel a QUEUED request through
-`cancelErmDeviceCommand(input: {deviceId, requestId})`. Settings and snapshots still require a
-primary connection. For READ_EDATA_FAULTS (GET DTC), `faultReadVerdict` is the unit's first eData
+`cancelDeviceCommand(input: {deviceId, requestId})`. ERM settings and snapshots still require a
+primary connection. For READ_FAULTS (GET DTC), `faultReadVerdict` is the unit's first eData
 event-33 report `154` from sending until 120 s after the answer: `154,0` (`activeCodes: false`)
 is an empty fault buffer; `154,1` is followed by a `419` that repeats every current code as added,
 and `codeCount` counts its distinct codes within 30 s. Earlier `154` replies acknowledged other
 eData commands.
 
 The command queue API also provides Branch-wide history through
-`ermCommandRequests(offset: 0, limit: 20, filter: ..., sort: ...)`, returning `items`, `total`,
+`fleetDeviceCommandRequests(offset: 0, limit: 20, filter: ..., sort: ...)`, returning `items`, `total`,
 `offset` and `limit`. The maximum limit is 100. Sort fields are `ACTION`, `STATUS`, `UNIT_ID`,
 `ACTOR_ID`, `REQUESTED_AT` and `COMPLETED_AT`, with `ASC`/`DESC` direction; completed times keep
 nulls last and ties use ID in the same direction. The default is `REQUESTED_AT DESC`, equivalent
 to `createdAt DESC, id DESC`. Filters are `statuses`,
 `actions`, `deviceIds`, `imeis`, `actorId`, `createdFrom` (inclusive) and `createdTo` (exclusive).
-List filters accept 1–100 unique values. Every row retains its Device ID and IMEI (`unitId`),
+List filters accept 1–100 unique values. Every row retains its Device ID, type and `imei`,
 issuer, outcome, lifecycle times, expiry, `retryOfId`, `batchId` and `batchIndex`.
-`retryErmDeviceCommand(input: {requestId, expiresInSeconds, intent})` explicitly creates a new
+`retryDeviceCommand(input: {requestId, expiresInSeconds, intent})` explicitly creates a new
 linked request from FAILED, EXPIRED, UNCERTAIN or CANCELLED, rechecking the Device's current Fleet
 ownership and IMEI. The original remains unchanged; default retry expiry is two hours.
 
-`startErmCommandBatch(input: {deviceIds, action, expiresInSeconds, intent})` verifies 1–100 unique
-Devices in the active Branch and atomically queues one permitted read per Device in the supplied
-order. `ermCommandBatch(id)` returns issuer, operation, creation and stop audit, counts for every
+`startDeviceCommandBatch(input: {deviceIds, action, expiresInSeconds, intent})` verifies 1–100 unique
+Devices of one type in the active Branch. For ERM, it atomically queues one permitted read per
+Device in the supplied order. `fleetDeviceCommandBatch(id)` returns issuer, operation, creation and stop audit, counts for every
 request status and the ordered requests. Each batch waits for its preceding request to settle
 before advancing; an offline first Device holds later requests. Reads use the existing primary-mode,
-Fleet-target and per-unit workflow checks. `stopErmCommandBatch(id)` records `stoppedAt` and
+Fleet-target and per-unit workflow checks. `stopDeviceCommandBatch(id)` records `stoppedAt` and
 `stoppedByActorId` and cancels only requests still QUEUED; submitted requests retain their outcome.
-These APIs are available for the command workspace; the current admin operations remain compatible.
 
 The API worker waits for primary mode and rechecks the stored Tenant/Branch/Device/IMEI through
 Fleet before sending once. Configure the same `ERM_TELEMETRY_TOKEN` in Fleet and ERM API; the
@@ -497,7 +526,7 @@ and the issuer/stopping actor on batches. Demo sessions identify the Tenant only
 snapshot diffs use the stored Tenant/Branch/Device scope, so
 unattributed legacy tool runs are not included in this operator history.
 
-The current Device's **SMS commands** tab uses its stored SIM number and SMS password; it
+An ERM Device's **SMS commands** tab uses its stored SIM number and SMS password. It
 never asks the operator to choose a different target. Cards explain each purpose, message text,
 expected reply and timeout meaning. Copy prepares text; **Open SMS app** fills the phone's
 message composer and never sends from discocan. Missing credentials link to the Device editor,
@@ -505,12 +534,13 @@ and unavailable/overlength messages cannot be opened for sending. A timeout leav
 unknown. Routing messages retain their explicit warning and require the operator to confirm
 the resulting device connection independently.
 
-The Device's **Parameters → Device settings** editor starts background controlled workflows
-through `startErmEdataChange` (read, one interval, one definition or globals `302`) and
-`startErmParameterChange` (one catalog parameter through `04`) and
-`startErmParametersChange(input: {deviceId, parameters: [{parameter, value}], restoreAfter})`
+An ERM Device's **Parameters → Device settings** editor starts background controlled workflows
+through `startDeviceMeasurementConfigurationChange` (read, one interval, one definition or
+globals `302`), `startDeviceParameterChange` (one catalog parameter through `04`) and
+`startDeviceParametersChange(input: {deviceId, parameters: [{parameterId, value}], restoreAfter})`
 (one `46` containing only that explicit parameter set). Each run exposes the structured
-`operation` (`READ_EDATA`, `INTERVAL`, `ADD_DEFINITION`, `GLOBALS`, `PARAMETER` or `PARAMETERS`)
+`operation` (`READ_MEASUREMENT_CONFIGURATION`, `INTERVAL`, `ADD_DEFINITION`, `GLOBALS`,
+`PARAMETER` or `PARAMETERS`)
 for translated labels while retaining `intent` as audit text. Writes require
 `ERM_CONFIGURATION_WRITES_ENABLED=true` in the API process; reads remain available when off.
 Every write workflow captures a fresh parameter snapshot, then reads its exact target baseline,
@@ -524,22 +554,23 @@ read; an uncertain `04` or `46` blocks writes of the same parameters until fresh
 read those parameters successfully. An eData read cannot clear parameter uncertainty. The run list
 shows the latest 20 runs.
 
-The Device's **Command console** (`/<lang>/<branch>/fleet/devices/<id>/console`, also a row
+An ERM Device's **Command console** (`/<lang>/<branch>/fleet/devices/<id>/console`, also a row
 action of the Branch command queue) composes the same workflows from catalogs instead of free
-input: allowlisted reads, a queued `READ_PARAMETERS` read, `READ_EDATA`, a full snapshot, one `04`
-tracker parameter, one eData
+input. It offers allowlisted reads, a queued `READ_PARAMETERS` read, a measurement configuration
+read, a full snapshot, one `04` Tracker parameter, one eData
 interval (an absent ID is added with the Monitor 9.56 generic definition; interval `0` keeps the
 definition but marks it not in use) and globals `302`. Before sending it shows every raw command
-of the workflow as `SRV<IMEI>,<command>,‹ref›,<fields>`; the device server adds the reference,
-frame and checksum, and the result shows the exact sent frame or the run's steps. Its searches
-are reference reads for any signed-in role:
+of the workflow as `SRV<IMEI>,<command>,‹ref›,<fields>`. The ERM gateway adds the reference,
+frame and checksum, and the result shows the exact sent frame or the run's steps. Any signed-in
+role can use the reference searches.
 
-- `ermParameterCatalog(input: {search, feature, writableOnly, offset, limit})` searches the
-  StarLink parameters by number, title, summary or portal feature. `writable` applies the `04`
-  guard. Regenerate `discocan/apps/erm-server/src/starlink/parameter-reference.ts` from the archived
-  pages with `node --import tsx discocan/tools/erm-protocol/parameter-reference.mts`.
-- `ermDeviceActionCommands` returns the exact command of each allowlisted read.
-- `sendErmDeviceCommand(input: {deviceId, action: READ_PARAMETERS, parameters: [4, 22]})` queues
+- `fleetDeviceParameterCatalog(deviceType: ERM, input: {search, ermFeature, writableOnly, offset, limit})`
+  searches StarLink parameters by number, title, summary or portal feature. `writable` applies the
+  `04` guard. Regenerate `discocan/apps/erm-server/src/starlink/parameter-reference.ts` from the
+  archived pages with `node --import tsx discocan/tools/erm-protocol/parameter-reference.mts`.
+- `fleetDeviceActionCatalog(deviceType: ERM)` includes each allowlisted read's exact command
+  under `erm`.
+- `sendDeviceCommand(input: {deviceId, action: READ_PARAMETERS, parameters: [4, 22]})` queues
   one `03` (one parameter) or `45` (2–20) read. Routing 0049–0054 and protected parameters are
   refused. The request keeps `parameters` and exposes the answered `parameterValues`.
 - Fleet `fleetEdataProfiles` and `fleetEdataParameters(input: {profileId, search, ids, offset,
@@ -549,17 +580,17 @@ limit})` read the newest imported [Simple eData catalog](erm-resources/simple-ed
 
 Reads require the Operator role; snapshots and writes require the Engineer role, as above.
 
-`startErmParameterBatch(input: {deviceIds, parameters: [{parameter, value}], restoreAfter})`
-starts the same verified `46` workflow for 1–100 unique Branch Devices in the supplied order.
+`startDeviceConfigurationBatch(input: {deviceIds, parameters: [{parameterId, value}], restoreAfter})`
+starts the same verified `46` workflow for 1–100 unique ERM Devices in the Branch, in the supplied order.
 Only one unit runs at a time; any result other than `VERIFIED` stops the batch and refuses its
 remaining runs. Each unit rechecks current Fleet ownership, primary mode and the write switch.
-`ermConfigurationBatch(id)` reads the scoped progress, ordered changes and stop/completion audit.
-`stopErmConfigurationBatch(id)` lets the current unit finish safely and refuses remaining runs.
+`fleetDeviceConfigurationBatch(id)` reads the scoped progress, ordered changes and stop/completion audit.
+`stopDeviceConfigurationBatch(id)` lets the current unit finish safely and refuses remaining runs.
 An interrupted batch is retained and never replayed automatically.
 
 Engineers and Administrators signed in to a Fleet Device's active Branch can call
-`startErmParameterSnapshot(input: { deviceId })` while the unit is connected in primary mode,
-then read `ermParameterSnapshots` on that Device. The api reads catalog parameters 0001–9999
+`startDeviceParameterSnapshot(input: { deviceId })` while an ERM unit is connected in primary mode,
+then read `parameterSnapshots` on that Device. The API reads catalog parameters 0001–9999
 except routing 0049–0054 in about 70 sequential commands, with individual retries for rejected
 batches; completion time depends on the unit's replies. Tracker replies also reach Karma inside
 `$SLC`. Snapshots record each parameter as `READ`, `REJECTED` or `OMITTED`. `COMPLETE` means the sweep
@@ -675,14 +706,15 @@ excluded. Each event also has `ignitionOn` (binary Tracker flags or an `#IGN#` t
 - `419`: `{ report, faults: [{ spn, fmi, status: ADDED | DELETED }] }`.
 
 `POST /internal/telemetry/units/:imei/fault-reads` with `{ tenantId, branchId, deviceId }` and the
-same bearer queues Fleet's scheduled READ_EDATA_FAULTS as actor `system:fault-scan`. It answers
+same bearer queues Fleet's scheduled fault read as actor `system:fault-scan`. It answers
 `{ queued }`: false when the unit is not in `ERM_PRIMARY_UNITS` or the Device already has an
 unexpired queued or submitting fault read. The request expires after 27 minutes, and dispatch
 verifies the Fleet target as for operator requests.
 
-Reports retain event and receipt times. `ErmEvent.edata` shows every
-decoded eData report of an External device (33) event with its raw payload. See [ADR 0008](../../docs/architecture/decisions/0008-erm-telemetry-into-fleet-activity.md) for
-Fleet's telemetry job.
+Reports retain event and receipt times. `FleetDevice.events.items.erm.edata` exposes each decoded
+eData report of an External device (33) event with its raw payload. See
+[ADR 0008](../../docs/architecture/decisions/0008-erm-telemetry-into-fleet-activity.md) for Fleet's
+telemetry job.
 
 `FleetDevice.warningLamps` and `FleetVehicle.warningLamps` expose the latest stored `405`
 measurements for eData 1896 (brake system malfunction), 1906 (engine/MIL) and 1910 (ABS failure),
