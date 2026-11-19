@@ -1,102 +1,145 @@
-<div class="login-layout">
-  <aside class="login-hero" aria-labelledby="hero-title">
-    <div class="login-brand" aria-label="DiscoCan">
-      <span class="discocan-mark" aria-hidden="true">D</span><span>DiscoCan</span>
-    </div>
-    <div class="login-hero__message">
-      <span class="login-eyebrow">DiscoCan</span>
-      <h2 id="hero-title">{{ text().heroTitle }}</h2>
-      <p>{{ text().heroDescription }}</p>
-    </div>
-  </aside>
-  <div class="login-main">
-    <div class="login-actions">
-      <a
+<osnova-sign-in
+  productName="DiscoCan"
+  productMark="D"
+  fieldIdPrefix="login"
+  [language]="language()"
+  [heroTitle]="text().heroTitle"
+  [heroDescription]="text().heroDescription"
+  [customToolbar]="true"
+  [credentialsForm]="form"
+  [showCredentials]="!prepared()"
+  [busy]="busy() || session.signingOut()"
+  [textOverrides]="signInText()"
+  (submitCredentials)="login()"
+>
+  <ng-container signInToolbar>
+    <a
+      pButton
+      severity="secondary"
+      [text]="true"
+      [routerLink]="languageUrl()"
+      [attr.lang]="language() === 'bg' ? 'en' : 'bg'"
+      >{{ language() === 'bg' ? 'English' : 'Български' }}</a
+    >
+    <osnova-theme-menu />
+  </ng-container>
+  <ng-container signInBefore>
+    @if (session.notice(); as notice) {
+      <p-message [severity]="notice === 'passwordChanged' ? 'success' : 'warn'">{{
+        text()[notice]
+      }}</p-message>
+      @if (notice === 'signOutFailed') {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [disabled]="session.signingOut()"
+          (click)="session.retrySignOut()"
+        >
+          {{ text().retrySignOut }}
+        </button>
+      }
+    }
+    @if (session.signingOut()) {
+      <p role="status">{{ text().signingOut }}</p>
+    }
+    @if (failure(); as error) {
+      <p-message severity="error">{{ text()[error] }}</p-message>
+    }
+    @if (prepared(); as account) {
+      <div class="app-stack">
+        <strong>{{ account.tenant.name }}</strong>
+        <p class="app-muted">{{ text().branchHint }}</p>
+      </div>
+      @if (branchesLoading()) {
+        <p role="status">{{ text().loadingBranches }}</p>
+      } @else if (!branches().length && !failure()) {
+        <p>{{ text().emptyBranches }}</p>
+        <button pButton type="button" [disabled]="submitted()" (click)="openProfile()">
+          {{ text().continueAccount }}
+        </button>
+      }
+      @if (branches().length) {
+        <osnova-form-field controlId="login-branch" [label]="text().chooseBranch" [required]="true">
+          <p-select
+            inputId="login-branch"
+            [options]="branches()"
+            optionLabel="name"
+            optionValue="id"
+            [formControl]="branchControl"
+            [placeholder]="text().chooseBranch"
+            [ariaLabel]="text().chooseBranch"
+            [disabled]="branchesLoading() || submitted()"
+            appendTo="body"
+          />
+        </osnova-form-field>
+        <button
+          pButton
+          type="button"
+          [disabled]="!branchControl.value || branchesLoading() || submitted() || !!failure()"
+          (click)="enter()"
+        >
+          {{ text().continue }}
+        </button>
+      }
+      @if (failure() || (!branchesLoading() && !branches().length)) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [disabled]="branchesLoading()"
+          (click)="retry()"
+        >
+          {{ text().retry }}
+        </button>
+      }
+      <button
         pButton
+        type="button"
         severity="secondary"
         [text]="true"
-        [routerLink]="languageUrl()"
-        [attr.lang]="language() === 'bg' ? 'en' : 'bg'"
-        >{{ language() === 'bg' ? 'English' : 'Български' }}</a
+        [disabled]="submitted()"
+        (click)="back()"
       >
-      <osnova-theme-menu />
-    </div>
-    <main class="login-container">
-      <section class="login-card app-card" aria-labelledby="login-title">
-        <h1 id="login-title" tabindex="-1">
-          {{ prepared() ? text().chooseBranch : text().title }}
-        </h1>
-        <p class="app-muted">{{ text().hint }}</p>
-        @if (session.notice(); as notice) {
-          <p-message [severity]="notice === 'passwordChanged' ? 'success' : 'warn'">{{
-            text()[notice]
-          }}</p-message>
-          @if (notice === 'signOutFailed') {
-            <button
-              pButton
-              type="button"
-              severity="secondary"
-              [disabled]="session.signingOut()"
-              (click)="session.retrySignOut()"
-            >
-              {{ text().retrySignOut }}
-            </button>
+        {{ text().back }}
+      </button>
+    }
+  </ng-container>
+  @if (!prepared()) {
+    @if (demoAvailable) {
+      @if (!demoOpen()) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          [disabled]="busy()"
+          (click)="openDemo()"
+        >
+          {{ text().demo }}
+        </button>
+      } @else {
+        <section class="app-form-section" aria-labelledby="demo-title">
+          <h2 id="demo-title">{{ text().demo }}</h2>
+          <p class="app-muted">{{ text().demoHint }}</p>
+          <osnova-form-field controlId="login-tenant" [label]="text().tenant">
+            <p-select
+              inputId="login-tenant"
+              [options]="tenants()"
+              optionLabel="name"
+              optionValue="id"
+              [formControl]="tenantControl"
+              [placeholder]="text().chooseTenant"
+              [ariaLabel]="text().tenant"
+              [loading]="tenantsLoading()"
+              appendTo="body"
+            />
+          </osnova-form-field>
+          @if (!tenantsLoading() && !tenants().length && !failure()) {
+            <p>{{ text().emptyTenants }}</p>
           }
-        }
-        @if (session.signingOut()) {
-          <p role="status">{{ text().signingOut }}</p>
-        }
-        @if (failure(); as error) {
-          <p-message severity="error">{{ text()[error] }}</p-message>
-        }
-        @if (prepared(); as account) {
-          <div class="app-stack">
-            <strong>{{ account.tenant.name }}</strong>
-            <p class="app-muted">{{ text().branchHint }}</p>
-          </div>
-          @if (branchesLoading()) {
-            <p role="status">{{ text().loadingBranches }}</p>
-          } @else if (!branches().length && !failure()) {
-            <p>{{ text().emptyBranches }}</p>
-            <button pButton type="button" [disabled]="submitted()" (click)="openProfile()">
-              {{ text().continueAccount }}
-            </button>
-          }
-          @if (branches().length) {
-            <osnova-form-field
-              controlId="login-branch"
-              [label]="text().chooseBranch"
-              [required]="true"
-            >
-              <p-select
-                inputId="login-branch"
-                [options]="branches()"
-                optionLabel="name"
-                optionValue="id"
-                [formControl]="branchControl"
-                [placeholder]="text().chooseBranch"
-                [ariaLabel]="text().chooseBranch"
-                [disabled]="branchesLoading() || submitted()"
-                appendTo="body"
-              />
-            </osnova-form-field>
-            <button
-              pButton
-              type="button"
-              [disabled]="!branchControl.value || branchesLoading() || submitted() || !!failure()"
-              (click)="enter()"
-            >
-              {{ text().continue }}
-            </button>
-          }
-          @if (failure() || (!branchesLoading() && !branches().length)) {
-            <button
-              pButton
-              type="button"
-              severity="secondary"
-              [disabled]="branchesLoading()"
-              (click)="retry()"
-            >
+          @if (failure() === 'tenants') {
+            <button pButton type="button" severity="secondary" (click)="retry()">
               {{ text().retry }}
             </button>
           }
@@ -104,113 +147,17 @@
             pButton
             type="button"
             severity="secondary"
-            [text]="true"
-            [disabled]="submitted()"
-            (click)="back()"
+            [disabled]="!tenantControl.value || busy() || tenantsLoading()"
+            data-testid="demo-login"
+            (click)="demoLogin()"
           >
-            {{ text().back }}
+            {{ text().demoSignIn }}
           </button>
-        } @else {
-          <form
-            class="app-form-section"
-            [formGroup]="form"
-            (ngSubmit)="login()"
-            [attr.aria-busy]="busy()"
-          >
-            <osnova-form-field
-              controlId="login-email"
-              [label]="text().email"
-              [error]="fieldError('email')"
-              [required]="true"
-            >
-              <input
-                pInputText
-                id="login-email"
-                type="email"
-                formControlName="email"
-                autocomplete="username"
-                maxlength="254"
-                [invalid]="!!fieldError('email')"
-                [attr.aria-invalid]="!!fieldError('email')"
-                [attr.aria-describedby]="fieldError('email') ? 'login-email-error' : null"
-              />
-            </osnova-form-field>
-            <osnova-form-field
-              controlId="login-password"
-              [label]="text().password"
-              [error]="fieldError('password')"
-              [required]="true"
-            >
-              <input
-                pInputText
-                id="login-password"
-                type="password"
-                formControlName="password"
-                autocomplete="current-password"
-                [invalid]="!!fieldError('password')"
-                [attr.aria-invalid]="!!fieldError('password')"
-                [attr.aria-describedby]="fieldError('password') ? 'login-password-error' : null"
-              />
-            </osnova-form-field>
-            <button pButton type="submit" [disabled]="busy() || session.signingOut()">
-              {{ busy() ? text().signingIn : text().signIn }}
-            </button>
-          </form>
-          @if (demoAvailable) {
-            @if (!demoOpen()) {
-              <button
-                pButton
-                type="button"
-                severity="secondary"
-                [text]="true"
-                [disabled]="busy()"
-                (click)="openDemo()"
-              >
-                {{ text().demo }}
-              </button>
-            } @else {
-              <section class="app-form-section" aria-labelledby="demo-title">
-                <h2 id="demo-title">{{ text().demo }}</h2>
-                <p class="app-muted">{{ text().demoHint }}</p>
-                <osnova-form-field controlId="login-tenant" [label]="text().tenant">
-                  <p-select
-                    inputId="login-tenant"
-                    [options]="tenants()"
-                    optionLabel="name"
-                    optionValue="id"
-                    [formControl]="tenantControl"
-                    [placeholder]="text().chooseTenant"
-                    [ariaLabel]="text().tenant"
-                    [loading]="tenantsLoading()"
-                    appendTo="body"
-                  />
-                </osnova-form-field>
-                @if (!tenantsLoading() && !tenants().length && !failure()) {
-                  <p>{{ text().emptyTenants }}</p>
-                }
-                @if (failure() === 'tenants') {
-                  <button pButton type="button" severity="secondary" (click)="retry()">
-                    {{ text().retry }}
-                  </button>
-                }
-                <button
-                  pButton
-                  type="button"
-                  severity="secondary"
-                  [disabled]="!tenantControl.value || busy() || tenantsLoading()"
-                  data-testid="demo-login"
-                  (click)="demoLogin()"
-                >
-                  {{ text().demoSignIn }}
-                </button>
-              </section>
-            }
-          }
-        }
-        @if (appearance.persistenceFailed()) {
-          <p-message severity="warn">{{ text().themePersistenceError }}</p-message>
-        }
-      </section>
-    </main>
-  </div>
-</div>
+        </section>
+      }
+    }
+  }
+  @if (appearance.persistenceFailed()) {
+    <p-message severity="warn">{{ text().themePersistenceError }}</p-message>
+  }
+</osnova-sign-in>

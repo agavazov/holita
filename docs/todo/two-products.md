@@ -19,11 +19,6 @@ architecture with a thin Holita slice, not a port of the old platform.
   ([Holita rules](../../holita/AGENTS.md)).
 - Listings are shared presentational patterns with override points, not a generic CRUD framework.
 
-## Steps
-
-1. **Discocan shared sign-in.** Adopt the shared sign-in page in the Discocan admin, preserving
-   its demo Tenant/Branch selection and existing appearance.
-
 ## Open items
 
 - Before the next ERM deploy, repoint the `discocan-erm-*` user units to `discocan/apps/erm-server`

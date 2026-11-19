@@ -15,7 +15,6 @@ import {
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink, type UrlTree } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
-import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import type { AdminBranchesQuery, AdminTenantsQuery } from '../../../generated/graphql/operations';
@@ -24,7 +23,7 @@ import { DemoSession, isUnauthenticated, type AccountSession } from '@osnova/ui/
 import type { Language } from '../../i18n/messages';
 import { ThemeMenu } from '@osnova/ui';
 import { Appearance } from '@osnova/ui/theme';
-import { FormField } from '@osnova/ui';
+import { FormField, SignIn } from '@osnova/ui';
 import { BranchesApi } from '@osnova/ui/app';
 import bg from './login.bg.json';
 import en from './login.en.json';
@@ -36,10 +35,10 @@ import en from './login.en.json';
     ReactiveFormsModule,
     Select,
     ButtonDirective,
-    InputText,
     Message,
     ThemeMenu,
     FormField,
+    SignIn,
   ],
   templateUrl: './login.html',
   styleUrl: './login.scss',
@@ -50,6 +49,15 @@ export class Login {
   readonly languageUrl = input.required<UrlTree>();
   readonly signedIn = output<{ session: AccountSession; branchId: string }>();
   readonly text = computed(() => (this.language() === 'bg' ? bg : en));
+  readonly signInText = computed(() => ({
+    title: this.prepared() ? this.text().chooseBranch : this.text().title,
+    intro: this.text().hint,
+    email: this.text().email,
+    password: this.text().password,
+    emailError: this.text().emailError,
+    passwordError: this.text().passwordError,
+    submit: this.busy() ? this.text().signingIn : this.text().signIn,
+  }));
   readonly appearance = inject(Appearance);
   readonly session = inject(DemoSession);
   readonly demoAvailable = isDevMode();
@@ -136,13 +144,6 @@ export class Login {
       this.closeBranches?.();
       this.closeTenants?.();
     });
-  }
-
-  fieldError(field: 'email' | 'password'): string | null {
-    const control = this.form.controls[field];
-    return control.touched && control.invalid
-      ? this.text()[field === 'email' ? 'emailError' : 'passwordError']
-      : null;
   }
 
   async login(): Promise<void> {
