@@ -204,9 +204,9 @@ Sources: [SDL](../../../../apps/karma-client/src/modules/history/history.graphql
 
 Sources: [SDL](../../../../apps/karma-client/src/modules/references/references.graphql), [runtime mapping](../../../../apps/karma-client/src/modules/references/references-response.ts).
 
-| Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                             |
-| -------------- | ------------- | ------------ | ------------------------------------------------------------------------------ |
-| `project_id`   | `id`          | `ID!`        | Positive safe integer as text; duplicate IDs reject the complete list.         |
+| Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                               |
+| -------------- | ------------- | ------------ | -------------------------------------------------------------------------------- |
+| `project_id`   | `id`          | `ID!`        | Positive safe integer as text; duplicate IDs reject the complete list.           |
 | `name`         | `name`        | `String!`    | Required source string; no relation to discocan Tenant/Branch names is inferred. |
 
 ## Time zones (`KarmaTimeZone`)
@@ -233,7 +233,7 @@ Sources: [SDL](../../../../apps/karma-client/src/modules/accounts/accounts.graph
 | Upstream field | GraphQL field | GraphQL type | Meaning / handling                                                                                            |
 | -------------- | ------------- | ------------ | ------------------------------------------------------------------------------------------------------------- |
 | `user_id`      | `id`          | `ID!`        | Positive safe integer as text; duplicate user IDs reject the complete list.                                   |
-| `user_name`    | `userName`    | `String!`    | Required string, including empty text. Not a discocan login identity.                                           |
+| `user_name`    | `userName`    | `String!`    | Required string, including empty text. Not a discocan login identity.                                         |
 | `active`       | `active`      | `Float!`     | Required finite numeric flag; 0 preserved, no enabled/disabled interpretation.                                |
 | `expire_date`  | `expireDate`  | `String`     | Null or string. Missing property is rejected; no timestamp-format or expiry-timezone interpretation.          |
 | `role_id`      | `roleId`      | `ID!`        | Positive safe integer as text. Role lookup does not grant admin permissions.                                  |

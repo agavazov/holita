@@ -10,7 +10,7 @@ The integration consumes thirteen GET method/path pairs, internal `POST /login` 
 `POST /commands` for fixed parameter/profile/rule/logger/diagnostic reads and single-parameter/rule writes. The other seventeen
 declared operations are absent from discocan:
 
-| Area                            | Declared operations absent from discocan                    |
+| Area                            | Declared operations absent from discocan                  |
 | ------------------------------- | --------------------------------------------------------- |
 | Cars                            | POST `/cars`, PUT and DELETE `/cars/{id}`                 |
 | Drivers                         | GET/POST `/drivers`, PUT/DELETE `/drivers/{id}`           |

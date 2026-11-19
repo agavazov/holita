@@ -22,7 +22,7 @@ and installation-specific evidence limits.
 | [Observed eData parameters](observed-parameters.md)             | Thirteen encountered parameter IDs and original descriptions, with evidence and interpretation limits                                       |
 | [Web functionality research](web-functionality-research.md)     | 36 classic menu functions, safe action coverage, NC2 technical console, public/internal API links, calculations and reproduction conditions |
 | [Transport and authentication](transport-and-authentication.md) | Sessions, wire encoding, time semantics, errors, deadlines and cursor mechanics                                                             |
-| [DiscoCan integration](discocan-integration.md)                     | Concrete modules, 15 public queries, routes, frontend lifecycle and test ownership                                                          |
+| [DiscoCan integration](discocan-integration.md)                 | Concrete modules, 15 public queries, routes, frontend lifecycle and test ownership                                                          |
 | [Limitations](limitations.md)                                   | Current endpoint/field gaps, adapter assumptions and evidence limits                                                                        |
 | [Reconstructed OpenAPI 3.1](openapi.reconstructed.json)         | Machine-readable reference for 20 paths and 32 declared HTTP operations                                                                     |
 | [Original source assets](source/README.md)                      | Downloaded vendor help, checksums and structural response evidence                                                                          |

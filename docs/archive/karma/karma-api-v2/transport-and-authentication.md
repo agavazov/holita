@@ -84,7 +84,7 @@ specification. No arbitrary upstream path or field selection is exposed by Graph
 
 ## Dates, coordinates and metrics
 
-| Context            | DiscoCan input                                  | Upstream encoding                          | Interpretation                                        |
+| Context            | DiscoCan input                                | Upstream encoding                          | Interpretation                                        |
 | ------------------ | --------------------------------------------- | ------------------------------------------ | ----------------------------------------------------- |
 | eData              | Paired optional `YYYY-MM-DDTHH:MM:SSZ`        | Space-separated dates plus `date_type=utc` | UTC filtering against `edt`                           |
 | Events             | Paired optional `YYYY-MM-DDTHH:MM:SSZ`        | Space-separated dates plus `date_type=utc` | UTC filtering against `edt`                           |

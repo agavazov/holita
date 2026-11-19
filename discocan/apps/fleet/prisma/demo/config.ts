@@ -41,7 +41,8 @@ export function demoOptions(args: readonly string[], environment: DemoEnvironmen
   } catch {
     throw new Error('Fleet demo seed requires valid local database and Core URLs.');
   }
-  const development = database.pathname === '/discocan_fleet' && database.username === 'discocan_fleet';
+  const development =
+    database.pathname === '/discocan_fleet' && database.username === 'discocan_fleet';
   const test =
     database.pathname === '/discocan_fleet_test' && database.username === 'discocan_fleet_test';
   const schema = database.searchParams.get('schema') ?? 'public';

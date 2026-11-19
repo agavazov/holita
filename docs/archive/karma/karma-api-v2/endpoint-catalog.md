@@ -22,31 +22,31 @@ Source: [original endpoint definitions](source/endpoints.js.txt), [request helpe
 | POST   | `/login`           | Internal server authentication                                                                 |
 | GET    | `/cars`            | `karmaCars` (see parameter limitations below)                                                  |
 | GET    | `/cars/{id}`       | `karmaCar` (see parameter limitations below)                                                   |
-| POST   | `/cars`            | Not implemented in discocan                                                                      |
-| PUT    | `/cars/{id}`       | Not implemented in discocan                                                                      |
-| DELETE | `/cars/{id}`       | Not implemented in discocan                                                                      |
-| GET    | `/drivers`         | Not implemented in discocan                                                                      |
-| POST   | `/drivers`         | Not implemented in discocan                                                                      |
-| PUT    | `/drivers/{id}`    | Not implemented in discocan                                                                      |
-| DELETE | `/drivers/{id}`    | Not implemented in discocan                                                                      |
+| POST   | `/cars`            | Not implemented in discocan                                                                    |
+| PUT    | `/cars/{id}`       | Not implemented in discocan                                                                    |
+| DELETE | `/cars/{id}`       | Not implemented in discocan                                                                    |
+| GET    | `/drivers`         | Not implemented in discocan                                                                    |
+| POST   | `/drivers`         | Not implemented in discocan                                                                    |
+| PUT    | `/drivers/{id}`    | Not implemented in discocan                                                                    |
+| DELETE | `/drivers/{id}`    | Not implemented in discocan                                                                    |
 | GET    | `/projects`        | `karmaProjects` (see parameter limitations below)                                              |
-| POST   | `/projects`        | Not implemented in discocan                                                                      |
+| POST   | `/projects`        | Not implemented in discocan                                                                    |
 | GET    | `/users`           | `karmaUsers` (see parameter limitations below)                                                 |
 | GET    | `/location`        | `karmaLocation` (see parameter limitations below)                                              |
-| POST   | `/location`        | Not implemented in discocan                                                                      |
+| POST   | `/location`        | Not implemented in discocan                                                                    |
 | GET    | `/trips`           | `karmaTrips` (see parameter limitations below)                                                 |
-| POST   | `/trips`           | Not implemented in discocan                                                                      |
+| POST   | `/trips`           | Not implemented in discocan                                                                    |
 | GET    | `/events`          | `karmaEvents`, bounded `karmaDiagnosticHistory` (see parameter limitations below)              |
-| POST   | `/events`          | Not implemented in discocan                                                                      |
-| GET    | `/sensors`         | Not implemented in discocan                                                                      |
-| POST   | `/sensors`         | Not implemented in discocan                                                                      |
+| POST   | `/events`          | Not implemented in discocan                                                                    |
+| GET    | `/sensors`         | Not implemented in discocan                                                                    |
+| POST   | `/sensors`         | Not implemented in discocan                                                                    |
 | GET    | `/driving-profile` | `karmaDrivingProfile` (see parameter limitations below)                                        |
-| POST   | `/driving-profile` | Not implemented in discocan                                                                      |
-| GET    | `/parameters`      | Not implemented in discocan                                                                      |
-| PUT    | `/parameters`      | Not implemented in discocan                                                                      |
+| POST   | `/driving-profile` | Not implemented in discocan                                                                    |
+| GET    | `/parameters`      | Not implemented in discocan                                                                    |
+| PUT    | `/parameters`      | Not implemented in discocan                                                                    |
 | POST   | `/commands`        | Fixed internal parameter/profile/rule/logger/diagnostic reads and single-parameter/rule writes |
 | GET    | `/edata`           | `karmaEdata` (see parameter limitations below)                                                 |
-| GET    | `/black_box/{id}`  | Not implemented in discocan                                                                      |
+| GET    | `/black_box/{id}`  | Not implemented in discocan                                                                    |
 | GET    | `/queue/{id}`      | Fixed internal diagnostic-operation reconciliation                                             |
 | GET    | `/time-zones`      | `karmaTimeZones` (see parameter limitations below)                                             |
 | GET    | `/roles`           | `karmaRoles` (see parameter limitations below)                                                 |
