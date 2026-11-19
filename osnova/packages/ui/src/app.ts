@@ -1,8 +1,10 @@
 export {
   OPERATOR_RUNTIME_CONFIG,
   OperatorConfig,
+  loadLocalConfig,
   loadRuntimeConfig,
   readGraphqlUrl,
+  readPrimeUiLicense,
   type OperatorRuntimeConfig,
 } from './app/config/operator-config';
 export { graphqlOptions } from './app/graphql/graphql-options';

@@ -36,6 +36,38 @@ export function readGraphqlUrl(value: unknown): string {
   return endpoint;
 }
 
+/**
+ * The optional, Git-ignored `config.local.json` holds developer browser keys. A 404, or a
+ * server's HTML fallback page instead of JSON, means there is none.
+ */
+export async function loadLocalConfig<T>(parse: (value: unknown) => T, empty: T): Promise<T> {
+  const response = await fetch('/config.local.json', { signal: AbortSignal.timeout(10_000) });
+  if (response.status === 404) {
+    return empty;
+  }
+  if (!response.ok) {
+    throw new Error('Could not load local configuration.');
+  }
+  if (!response.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return empty;
+  }
+  const value: unknown = await response.json();
+  return parse(value);
+}
+
+export function readPrimeUiLicense(value: unknown): string | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('config.local.json must be an object.');
+  }
+  if (!('primeUiLicense' in value)) {
+    return undefined;
+  }
+  if (typeof value.primeUiLicense !== 'string') {
+    throw new Error('primeUiLicense must be a string.');
+  }
+  return value.primeUiLicense.trim() || undefined;
+}
+
 export async function loadRuntimeConfig<T>(parse: (value: unknown) => T): Promise<T> {
   const response = await fetch('/config.json', { signal: AbortSignal.timeout(10_000) });
   if (!response.ok) {

@@ -7,6 +7,7 @@ import { ApolloLink, InMemoryCache } from '@apollo/client/core';
 import { Apollo, provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import { firstValueFrom } from 'rxjs';
+import { loadLocalConfig, readPrimeUiLicense } from '@osnova/ui/app';
 import { appTheme, provideOsnovaTheme } from '@osnova/ui/theme';
 import {
   CatalogueDocument,
@@ -362,24 +363,31 @@ const pages = [
   { path: 's/:shopId/sign-in', component: StorefrontPage, data: { page: 'sign-in' } },
   { path: 's/:shopId/account', component: StorefrontPage, data: { page: 'account' } },
 ];
-void bootstrapApplication(StorefrontApp, {
-  providers: [
-    provideHttpClient(),
-    provideRouter(pages),
-    provideOsnovaTheme(appTheme),
-    provideApollo(() => {
-      const headers = new ApolloLink((operation, forward) => {
-        const id = /^\/s\/([^/]+)/.exec(window.location.pathname)?.[1] ?? '';
-        const token = sessionStorage.getItem(`holita.shopper.${id}`);
-        operation.setContext({
-          headers: { 'x-branch-id': id, ...(token ? { authorization: `Bearer ${token}` } : {}) },
+// PrimeNG requires its license in the bootstrap providers, before its initializer runs.
+async function start(): Promise<void> {
+  const license = await loadLocalConfig(readPrimeUiLicense, undefined);
+  await bootstrapApplication(StorefrontApp, {
+    providers: [
+      provideHttpClient(),
+      provideRouter(pages),
+      provideOsnovaTheme(appTheme, license),
+      provideApollo(() => {
+        const headers = new ApolloLink((operation, forward) => {
+          const id = /^\/s\/([^/]+)/.exec(window.location.pathname)?.[1] ?? '';
+          const token = sessionStorage.getItem(`holita.shopper.${id}`);
+          operation.setContext({
+            headers: { 'x-branch-id': id, ...(token ? { authorization: `Bearer ${token}` } : {}) },
+          });
+          return forward(operation);
         });
-        return forward(operation);
-      });
-      return {
-        link: ApolloLink.from([headers, inject(HttpLink).create({ uri: '/graphql' })]),
-        cache: new InMemoryCache(),
-      };
-    }),
-  ],
+        return {
+          link: ApolloLink.from([headers, inject(HttpLink).create({ uri: '/graphql' })]),
+          cache: new InMemoryCache(),
+        };
+      }),
+    ],
+  });
+}
+void start().catch((error: unknown) => {
+  console.error(error);
 });

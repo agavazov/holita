@@ -23,7 +23,9 @@ import {
   OperatorConfig,
   SESSION_OPTIONS,
   graphqlOptions,
+  loadLocalConfig,
   loadRuntimeConfig,
+  readPrimeUiLicense,
   readGraphqlUrl,
   requestError,
   sessionExpiryInterceptor,
@@ -196,6 +198,7 @@ export class OperatorApplication {
 
 export async function startOperator(options: OperatorOptions): Promise<void> {
   const config = await loadRuntimeConfig((value) => ({ graphqlUrl: readGraphqlUrl(value) }));
+  const license = await loadLocalConfig(readPrimeUiLicense, undefined);
   const { defaultPage } = options;
   const routes: Routes = [
     { path: '', pathMatch: 'full', redirectTo: `bg/${defaultPage}` },
@@ -235,7 +238,7 @@ export async function startOperator(options: OperatorOptions): Promise<void> {
       { provide: SHELL_STORAGE_KEY, useValue: `holita.${options.name}.sidebar` },
       { provide: UI_LANGUAGE, useFactory: () => inject(OperatorLanguage).value.asReadonly() },
       provideHttpClient(withInterceptors([sessionExpiryInterceptor])),
-      provideOsnovaTheme(appTheme),
+      provideOsnovaTheme(appTheme, license),
       provideApollo(() => graphqlOptions(inject(HttpLink), inject(OperatorConfig).graphqlUrl)),
       provideRouter(routes),
     ],
