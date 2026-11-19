@@ -31,14 +31,21 @@ import {
 } from '@osnova/ui/app';
 import { appTheme, provideOsnovaTheme, THEME_STORAGE_KEY } from '@osnova/ui/theme';
 import { SHELL_STORAGE_KEY } from '@osnova/ui/layout';
-import { CustomersPage, MerchantDetailPage, MerchantsPage, ProductsPage } from './pages';
-import bg from './i18n/bg.json';
-import en from './i18n/en.json';
+import { operatorStrings as strings } from './strings';
 
-const strings = { bg, en };
-
-export type OperatorMode = 'admin' | 'backoffice' | 'sales';
-export const OPERATOR_MODE = new InjectionToken<OperatorMode>('operator application');
+interface OperatorOptions {
+  name: string;
+  defaultPage: string;
+  routes: Routes;
+  navigation: readonly {
+    id: string;
+    label: keyof typeof strings.bg;
+    icon: NavGroup['items'][number]['icon'];
+    path: string;
+  }[];
+  selectBranch: boolean;
+}
+const OPERATOR_OPTIONS = new InjectionToken<OperatorOptions>('operator application');
 
 @Injectable({ providedIn: 'root' })
 export class OperatorLanguage {
@@ -88,7 +95,7 @@ export class OperatorLanguage {
 export class OperatorApplication {
   readonly session = inject(DemoSession);
   readonly language = inject(OperatorLanguage);
-  readonly mode = inject(OPERATOR_MODE);
+  private readonly options = inject(OPERATOR_OPTIONS);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly branches = signal<readonly { id: string; name: string }[]>([]);
@@ -100,40 +107,18 @@ export class OperatorApplication {
     const user = this.session.user();
     return user ? { name: user.name, detail: user.email } : null;
   });
-  readonly homeLink = computed(() => [
-    '/',
-    this.language.value(),
-    this.mode === 'admin' ? 'products' : 'merchants',
-  ]);
+  readonly homeLink = computed(() => ['/', this.language.value(), this.options.defaultPage]);
   readonly navigation = computed<readonly NavGroup[]>(() => [
     {
       id: 'workspace',
       label: '',
       headingHidden: true,
-      items:
-        this.mode === 'admin'
-          ? [
-              {
-                id: 'products',
-                label: strings[this.language.value()].products,
-                icon: 'tags',
-                link: ['/', this.language.value(), 'products'],
-              },
-              {
-                id: 'customers',
-                label: strings[this.language.value()].customers,
-                icon: 'users',
-                link: ['/', this.language.value(), 'customers'],
-              },
-            ]
-          : [
-              {
-                id: 'merchants',
-                label: strings[this.language.value()].merchants,
-                icon: 'users',
-                link: ['/', this.language.value(), 'merchants'],
-              },
-            ],
+      items: this.options.navigation.map((item) => ({
+        id: item.id,
+        label: strings[this.language.value()][item.label],
+        icon: item.icon,
+        link: ['/', this.language.value(), item.path],
+      })),
     },
   ]);
   private readonly auth = inject(AuthApi);
@@ -144,7 +129,7 @@ export class OperatorApplication {
     effect((cleanup) => {
       const current = this.session.current();
       const language = this.language.value();
-      if (!current || this.mode !== 'admin') {
+      if (!current || !this.options.selectBranch) {
         this.branches.set([]);
         return;
       }
@@ -194,7 +179,9 @@ export class OperatorApplication {
   }
   changeLanguage(language: Language): void {
     this.language.set(language);
-    void this.router.navigate(this.session.current() ? this.homeLink() : ['/', language, 'sign-in']);
+    void this.router.navigate(
+      this.session.current() ? this.homeLink() : ['/', language, 'sign-in'],
+    );
   }
   changeLanguageValue(value: string): void {
     if (value === 'bg' || value === 'en') {
@@ -207,19 +194,9 @@ export class OperatorApplication {
   }
 }
 
-export async function startOperator(mode: OperatorMode): Promise<void> {
+export async function startOperator(options: OperatorOptions): Promise<void> {
   const config = await loadRuntimeConfig((value) => ({ graphqlUrl: readGraphqlUrl(value) }));
-  const defaultPage = mode === 'admin' ? 'products' : 'merchants';
-  const children: Routes =
-    mode === 'admin'
-      ? [
-          { path: 'products', component: ProductsPage },
-          { path: 'customers', component: CustomersPage },
-        ]
-      : [
-          { path: 'merchants', component: MerchantsPage },
-          { path: 'merchants/:id', component: MerchantDetailPage },
-        ];
+  const { defaultPage } = options;
   const routes: Routes = [
     { path: '', pathMatch: 'full', redirectTo: `bg/${defaultPage}` },
     {
@@ -236,25 +213,26 @@ export async function startOperator(mode: OperatorMode): Promise<void> {
       ],
       children: [
         { path: 'sign-in', redirectTo: defaultPage },
-        ...children,
+        ...options.routes,
         { path: '', pathMatch: 'full', redirectTo: defaultPage },
+        { path: '**', redirectTo: '' },
       ],
     },
   ];
   await bootstrapApplication(OperatorApplication, {
     providers: [
-      { provide: OPERATOR_MODE, useValue: mode },
+      { provide: OPERATOR_OPTIONS, useValue: options },
       { provide: OPERATOR_RUNTIME_CONFIG, useValue: config },
       {
         provide: SESSION_OPTIONS,
         useValue: {
-          storageKey: `holita.${mode}.session`,
-          legacyStorageKey: `holita.${mode}.demo-session`,
+          storageKey: `holita.${options.name}.session`,
+          legacyStorageKey: `holita.${options.name}.demo-session`,
           tokenPrefix: 'holita',
         },
       },
-      { provide: THEME_STORAGE_KEY, useValue: `holita.${mode}.theme` },
-      { provide: SHELL_STORAGE_KEY, useValue: `holita.${mode}.sidebar` },
+      { provide: THEME_STORAGE_KEY, useValue: `holita.${options.name}.theme` },
+      { provide: SHELL_STORAGE_KEY, useValue: `holita.${options.name}.sidebar` },
       { provide: UI_LANGUAGE, useFactory: () => inject(OperatorLanguage).value.asReadonly() },
       provideHttpClient(withInterceptors([sessionExpiryInterceptor])),
       provideOsnovaTheme(appTheme),
