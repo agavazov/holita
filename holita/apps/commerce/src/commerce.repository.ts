@@ -19,22 +19,6 @@ export class CommerceRepository {
     const conditions: Prisma.ProductWhereInput[] = search.map((word) => ({
       name: { contains: word, mode: 'insensitive' },
     }));
-    for (const condition of filter?.allOf ?? []) {
-      conditions.push({
-        ...(condition.nameContains
-          ? { name: { contains: condition.nameContains, mode: 'insensitive' } }
-          : {}),
-        ...(condition.statuses ? { status: { in: condition.statuses } } : {}),
-        ...(condition.minimumPrice || condition.maximumPrice
-          ? {
-              price: {
-                ...(condition.minimumPrice ? { gte: condition.minimumPrice } : {}),
-                ...(condition.maximumPrice ? { lte: condition.maximumPrice } : {}),
-              },
-            }
-          : {}),
-      });
-    }
     const where: Prisma.ProductWhereInput = {
       ...scope,
       ...(conditions.length ? { AND: conditions } : {}),
@@ -64,8 +48,10 @@ export class CommerceRepository {
     return { items, total, offset, limit };
   }
 
-  product(scope: Scope, id: string) {
-    return this.database.client.product.findUnique({ where: { id, ...scope } });
+  product(scope: Scope, id: string, status?: 'ACTIVE') {
+    return this.database.client.product.findUnique({
+      where: { id, ...scope, ...(status ? { status } : {}) },
+    });
   }
 
   create(scope: Scope, input: ProductInput) {

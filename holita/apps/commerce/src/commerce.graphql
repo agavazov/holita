@@ -17,15 +17,8 @@ input ProductSort {
   field: ProductSortField! = NAME
   direction: SortDirection! = ASC
 }
-input ProductCondition {
-  nameContains: String
-  statuses: [ProductStatus!]
-  minimumPrice: String
-  maximumPrice: String
-}
 input ProductFilter {
   statuses: [ProductStatus!]
-  allOf: [ProductCondition!]
 }
 input ProductInput {
   name: String!

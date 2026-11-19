@@ -8,7 +8,8 @@ import {
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { isEmail, isUUID } from 'class-validator';
 import { Prisma } from './generated/prisma/client.js';
-import { DatabaseService } from './database.service.js';
+import { CommerceRepository } from './commerce.repository.js';
+import { ShopperRepository } from './shopper.repository.js';
 
 export interface StorefrontContext {
   branchId: string | undefined;
@@ -78,7 +79,10 @@ function credentials(name: string, email: string, password: string) {
 }
 @Injectable()
 export class StorefrontService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly products: CommerceRepository,
+    private readonly shoppers: ShopperRepository,
+  ) {}
   async shop(context: StorefrontContext): Promise<ShopScope | null> {
     if (!context.branchId || !isUUID(context.branchId)) {
       return null;
@@ -136,16 +140,14 @@ export class StorefrontService {
     if (offset < 0 || limit < 1 || limit > 100) {
       throw new BadRequestException('Invalid page');
     }
-    const where = { tenantId: shop.tenantId, branchId: shop.id, status: 'ACTIVE' as const };
-    const [items, total] = await this.database.client.$transaction([
-      this.database.client.product.findMany({
-        where,
-        skip: offset,
-        take: limit,
-        orderBy: [{ name: 'asc' }, { id: 'asc' }],
-      }),
-      this.database.client.product.count({ where }),
-    ]);
+    const { items, total } = await this.products.products(
+      { tenantId: shop.tenantId, branchId: shop.id },
+      offset,
+      limit,
+      [],
+      { statuses: ['ACTIVE'] },
+      null,
+    );
     return {
       items: items.map((item) => ({ id: item.id, name: item.name, price: item.price.toFixed(2) })),
       total,
@@ -158,9 +160,11 @@ export class StorefrontService {
     if (!isUUID(id)) {
       return null;
     }
-    const item = await this.database.client.product.findFirst({
-      where: { id: id.toLowerCase(), tenantId: shop.tenantId, branchId: shop.id, status: 'ACTIVE' },
-    });
+    const item = await this.products.product(
+      { tenantId: shop.tenantId, branchId: shop.id },
+      id.toLowerCase(),
+      'ACTIVE',
+    );
     return item ? { id: item.id, name: item.name, price: item.price.toFixed(2) } : null;
   }
   private async createSession(
@@ -169,29 +173,22 @@ export class StorefrontService {
   ) {
     const token = `holita-shopper.${randomBytes(32).toString('base64url')}`;
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await this.database.client.shopperSession.create({
-      data: {
-        tenantId: shop.tenantId,
-        branchId: shop.id,
-        customerId: shopper.id,
-        tokenHash: tokenHash(token),
-        expiresAt,
-      },
-    });
+    await this.shoppers.createSession(
+      { tenantId: shop.tenantId, branchId: shop.id },
+      shopper.id,
+      tokenHash(token),
+      expiresAt,
+    );
     return { token, shopper, expiresAt: expiresAt.toISOString() };
   }
   async register(context: StorefrontContext, name: string, email: string, password: string) {
     const shop = await this.requireShop(context);
     const input = credentials(name, email, password);
     try {
-      const shopper = await this.database.client.customer.create({
-        data: {
-          tenantId: shop.tenantId,
-          branchId: shop.id,
-          ...input,
-          passwordHash: await hashPassword(password),
-        },
-      });
+      const shopper = await this.shoppers.create(
+        { tenantId: shop.tenantId, branchId: shop.id },
+        { ...input, passwordHash: await hashPassword(password) },
+      );
       return await this.createSession(shop, shopper);
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -203,13 +200,10 @@ export class StorefrontService {
   async signIn(context: StorefrontContext, email: string, password: string) {
     const shop = await this.requireShop(context);
     const address = email.trim().toLowerCase();
-    const shopper = await this.database.client.customer.findFirst({
-      where: {
-        tenantId: shop.tenantId,
-        branchId: shop.id,
-        email: { equals: address, mode: 'insensitive' },
-      },
-    });
+    const shopper = await this.shoppers.findByEmail(
+      { tenantId: shop.tenantId, branchId: shop.id },
+      address,
+    );
     if (!shopper?.passwordHash || !(await validPassword(password, shopper.passwordHash))) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -221,25 +215,20 @@ export class StorefrontService {
     if (!token) {
       return null;
     }
-    const session = await this.database.client.shopperSession.findFirst({
-      where: {
-        tokenHash: tokenHash(token),
-        tenantId: shop.tenantId,
-        branchId: shop.id,
-        expiresAt: { gt: new Date() },
-        customer: { tenantId: shop.tenantId, branchId: shop.id },
-      },
-      include: { customer: true },
-    });
+    const session = await this.shoppers.findSession(
+      { tenantId: shop.tenantId, branchId: shop.id },
+      tokenHash(token),
+    );
     return session?.customer ?? null;
   }
   async signOut(context: StorefrontContext) {
     const shop = await this.requireShop(context);
     const token = bearer(context);
     if (token) {
-      await this.database.client.shopperSession.deleteMany({
-        where: { tenantId: shop.tenantId, branchId: shop.id, tokenHash: tokenHash(token) },
-      });
+      await this.shoppers.deleteSessions(
+        { tenantId: shop.tenantId, branchId: shop.id },
+        tokenHash(token),
+      );
     }
     return true;
   }

@@ -9,6 +9,8 @@ import { CommerceService } from './commerce.service.js';
 import { DatabaseService } from './database.service.js';
 import { StorefrontResolver } from './storefront.resolver.js';
 import { StorefrontService } from './storefront.service.js';
+import { ShopperRepository } from './shopper.repository.js';
+import { HealthController } from './health.controller.js';
 
 @Module({ providers: [DatabaseService], exports: [DatabaseService] })
 class DatabaseModule {}
@@ -17,13 +19,17 @@ class DatabaseModule {}
   providers: [CommerceRepository, CommerceResolver, CommerceService],
 })
 class OperatorModule {}
-@Module({ imports: [DatabaseModule], providers: [StorefrontResolver, StorefrontService] })
+@Module({
+  imports: [DatabaseModule],
+  providers: [CommerceRepository, ShopperRepository, StorefrontResolver, StorefrontService],
+})
 class StorefrontModule {}
 const context = ({ req }: { req: IncomingMessage }) => ({
   authorization: req.headers.authorization,
   branchId: req.headers['x-branch-id'],
 });
 @Module({
+  controllers: [HealthController],
   imports: [
     OperatorModule,
     StorefrontModule,

@@ -56,27 +56,6 @@ export class CommerceService {
     ) {
       throw new BadRequestException('Invalid product status filter');
     }
-    if ((args.filter?.allOf?.length ?? 0) > 50) {
-      throw new BadRequestException('Too many product filter conditions');
-    }
-    for (const condition of args.filter?.allOf ?? []) {
-      if (
-        (condition.nameContains !== null &&
-          condition.nameContains !== undefined &&
-          (!condition.nameContains.trim() ||
-            Array.from(condition.nameContains).length > 200 ||
-            condition.nameContains.includes('\u0000'))) ||
-        (condition.statuses !== null &&
-          condition.statuses !== undefined &&
-          (condition.statuses.length === 0 || condition.statuses.length > 100)) ||
-        [condition.minimumPrice, condition.maximumPrice].some(
-          (price) =>
-            price !== null && price !== undefined && !/^\d{1,10}(?:\.\d{1,2})?$/.test(price),
-        )
-      ) {
-        throw new BadRequestException('Invalid product filter');
-      }
-    }
     const result = await this.repository.products(
       scope,
       offset,
