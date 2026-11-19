@@ -5,8 +5,15 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
-import { isEmail, isUUID } from 'class-validator';
+import { createHash, randomBytes } from 'node:crypto';
+import { isUUID } from 'class-validator';
+import {
+  hashPassword,
+  normalizedEmail,
+  userName,
+  validatePassword,
+  verifyPassword,
+} from '@osnova/auth';
 import { Prisma } from './generated/prisma/client.js';
 import { CommerceRepository } from './commerce.repository.js';
 import { ShopperRepository } from './shopper.repository.js';
@@ -21,39 +28,6 @@ export interface ShopScope {
   name: string;
 }
 const shopCache = new Map<string, { expires: number; shop: ShopScope | null }>();
-function derive(password: string, salt: Buffer): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    scrypt(
-      password,
-      salt,
-      64,
-      { N: 131072, r: 8, p: 1, maxmem: 256 * 1024 * 1024 },
-      (error, key) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(key);
-        }
-      },
-    );
-  });
-}
-async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16);
-  return `${salt.toString('base64url')}.${(await derive(password, salt)).toString('base64url')}`;
-}
-async function validPassword(password: string, hash: string): Promise<boolean> {
-  const parts = hash.split('.');
-  if (parts.length !== 2 || !parts[0] || !parts[1]) {
-    return false;
-  }
-  const salt = Buffer.from(parts[0], 'base64url');
-  const expected = Buffer.from(parts[1], 'base64url');
-  if (salt.length !== 16 || expected.length !== 64) {
-    return false;
-  }
-  return timingSafeEqual(expected, await derive(password, salt));
-}
 function tokenHash(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
@@ -62,20 +36,15 @@ function bearer(context: StorefrontContext): string | undefined {
   return value?.[1];
 }
 function credentials(name: string, email: string, password: string) {
-  const trimmed = name.trim();
-  const address = email.trim().toLowerCase();
-  if (
-    !trimmed ||
-    trimmed.length > 200 ||
-    trimmed.includes('\u0000') ||
-    address.length > 254 ||
-    !isEmail(address) ||
-    password.length < 12 ||
-    password.length > 128
-  ) {
-    throw new BadRequestException('Invalid shopper details');
+  try {
+    validatePassword(password);
+    return { name: userName(name), email: normalizedEmail(email) };
+  } catch (error) {
+    if (error instanceof BadRequestException) {
+      throw new BadRequestException('Invalid shopper details');
+    }
+    throw error;
   }
-  return { name: trimmed, email: address };
 }
 @Injectable()
 export class StorefrontService {
@@ -204,7 +173,7 @@ export class StorefrontService {
       { tenantId: shop.tenantId, branchId: shop.id },
       address,
     );
-    if (!shopper?.passwordHash || !(await validPassword(password, shopper.passwordHash))) {
+    if (!shopper?.passwordHash || !(await verifyPassword(password, shopper.passwordHash))) {
       throw new UnauthorizedException('Invalid email or password');
     }
     return this.createSession(shop, shopper);

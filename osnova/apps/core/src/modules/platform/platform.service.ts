@@ -5,8 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
-import { normalizedEmail, userName, validatePassword } from '../../auth/account-input.js';
-import { hashPassword } from '../../auth/password.js';
+import { hashPassword, normalizedEmail, userName, validatePassword } from '@osnova/auth';
 import { requireSession } from '../../auth/session.js';
 import type { AccountStatus, Merchant, MerchantBranch } from '../../generated/graphql/types.js';
 import { Prisma } from '../../generated/prisma/client.js';

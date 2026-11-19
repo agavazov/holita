@@ -1,5 +1,4 @@
-import { normalizedEmail, userName, validatePassword } from '../src/auth/account-input.js';
-import { hashPassword } from '../src/auth/password.js';
+import { hashPassword, normalizedEmail, userName, validatePassword } from '@osnova/auth';
 import type { PrismaClient } from '../src/generated/prisma/client.js';
 
 export interface CoreSeedData {

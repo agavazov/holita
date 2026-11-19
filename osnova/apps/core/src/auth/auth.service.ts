@@ -2,9 +2,8 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { createHash, randomBytes } from 'node:crypto';
 import type { SignInPayload } from '../generated/graphql/types.js';
 import type { RequestContext } from '../graphql/request-context.js';
-import { normalizedEmail, validatePassword } from './account-input.js';
 import { AuthRepository } from './auth.repository.js';
-import { hashPassword, verifyPassword } from './password.js';
+import { hashPassword, normalizedEmail, validatePassword, verifyPassword } from '@osnova/auth';
 import { requireSession, type SessionIdentity } from './session.js';
 import { tokenPrefix } from './token-prefix.js';
 

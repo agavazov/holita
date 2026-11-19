@@ -1,14 +1,8 @@
 import { Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { print } from 'graphql';
-import {
-  BranchForFleetCreationDocument,
-  type BranchForFleetCreationQueryVariables,
-} from '../../generated/graphql/core-operations.js';
+import { verifyBranch } from '@osnova/auth';
+import { BranchForFleetCreationDocument } from '../../generated/graphql/core-operations.js';
 import type { RequestContext } from '../../graphql/request-context.js';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 @Injectable()
 export class CoreClient {
@@ -27,33 +21,19 @@ export class CoreClient {
 
   private async lookupBranch(branchId: string, context: RequestContext): Promise<void> {
     const { requestId } = context;
-    const variables: BranchForFleetCreationQueryVariables = { id: branchId };
     try {
-      const response = await fetch(this.url, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-request-id': requestId,
-          ...(context.authorization ? { authorization: context.authorization } : {}),
-        },
-        body: JSON.stringify({ query: print(BranchForFleetCreationDocument), variables }),
-        signal: AbortSignal.timeout(3000),
+      const result = await verifyBranch(this.url, branchId, {
+        authorization: context.authorization,
+        requestId,
+        query: print(BranchForFleetCreationDocument),
       });
-      if (!response.ok) {
-        throw new Error('Core returned an HTTP error');
-      }
-      const body: unknown = await response.json();
-      if (
-        !isRecord(body) ||
-        (body.errors !== undefined && (!Array.isArray(body.errors) || body.errors.length > 0)) ||
-        !isRecord(body.data)
-      ) {
+      if (!result.validResponse) {
         throw new Error('Core returned an invalid GraphQL response');
       }
-      if (body.data.branch === null) {
+      if (result.missing) {
         throw new NotFoundException('Branch not found');
       }
-      if (!isRecord(body.data.branch) || body.data.branch.id !== branchId) {
+      if (!result.found) {
         throw new Error('Core returned an invalid branch');
       }
     } catch (error) {

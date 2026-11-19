@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { issueDemoToken } from '../src/auth/demo-auth.js';
-import { hashPassword } from '../src/auth/password.js';
+import { hashPassword } from '@osnova/auth';
 import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import type { UserRole } from '../src/generated/graphql/types.js';

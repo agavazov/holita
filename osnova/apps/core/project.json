@@ -12,16 +12,44 @@
         "cwd": "osnova/apps/core",
         "forwardAllArgs": true
       },
-      "dependsOn": ["db-generate", "graphql-generate"]
+      "dependsOn": [
+        "db-generate",
+        "graphql-generate",
+        {
+          "projects": ["osnova-auth"],
+          "target": "build"
+        }
+      ]
     },
     "lint": {
-      "dependsOn": ["db-generate", "graphql-generate"]
+      "dependsOn": [
+        "db-generate",
+        "graphql-generate",
+        {
+          "projects": ["osnova-auth"],
+          "target": "build"
+        }
+      ]
     },
     "typecheck": {
-      "dependsOn": ["db-generate", "graphql-generate"]
+      "dependsOn": [
+        "db-generate",
+        "graphql-generate",
+        {
+          "projects": ["osnova-auth"],
+          "target": "build"
+        }
+      ]
     },
     "build": {
-      "dependsOn": ["db-generate", "graphql-generate"]
+      "dependsOn": [
+        "db-generate",
+        "graphql-generate",
+        {
+          "projects": ["osnova-auth"],
+          "target": "build"
+        }
+      ]
     },
     "db-generate": {
       "executor": "nx:run-commands",
@@ -39,7 +67,14 @@
     },
     "test-db": {
       "executor": "nx:run-commands",
-      "dependsOn": ["db-generate", "graphql-generate"],
+      "dependsOn": [
+        "db-generate",
+        "graphql-generate",
+        {
+          "projects": ["osnova-auth"],
+          "target": "build"
+        }
+      ],
       "cache": true,
       "inputs": ["default"],
       "options": {
