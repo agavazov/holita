@@ -32,6 +32,10 @@ import {
 import { appTheme, provideOsnovaTheme, THEME_STORAGE_KEY } from '@osnova/ui/theme';
 import { SHELL_STORAGE_KEY } from '@osnova/ui/layout';
 import { CustomersPage, MerchantDetailPage, MerchantsPage, ProductsPage } from './pages';
+import bg from './i18n/bg.json';
+import en from './i18n/en.json';
+
+const strings = { bg, en };
 
 export type OperatorMode = 'admin' | 'backoffice' | 'sales';
 export const OPERATOR_MODE = new InjectionToken<OperatorMode>('operator application');
@@ -111,13 +115,13 @@ export class OperatorApplication {
           ? [
               {
                 id: 'products',
-                label: this.language.value() === 'bg' ? 'Продукти' : 'Products',
+                label: strings[this.language.value()].products,
                 icon: 'tags',
                 link: ['/', this.language.value(), 'products'],
               },
               {
                 id: 'customers',
-                label: this.language.value() === 'bg' ? 'Клиенти' : 'Customers',
+                label: strings[this.language.value()].customers,
                 icon: 'users',
                 link: ['/', this.language.value(), 'customers'],
               },
@@ -125,7 +129,7 @@ export class OperatorApplication {
           : [
               {
                 id: 'merchants',
-                label: this.language.value() === 'bg' ? 'Търговци' : 'Merchants',
+                label: strings[this.language.value()].merchants,
                 icon: 'users',
                 link: ['/', this.language.value(), 'merchants'],
               },
@@ -190,9 +194,7 @@ export class OperatorApplication {
   }
   changeLanguage(language: Language): void {
     this.language.set(language);
-    if (this.session.current()) {
-      void this.router.navigate(this.homeLink());
-    }
+    void this.router.navigate(this.session.current() ? this.homeLink() : ['/', language, 'sign-in']);
   }
   changeLanguageValue(value: string): void {
     if (value === 'bg' || value === 'en') {
@@ -222,8 +224,18 @@ export async function startOperator(mode: OperatorMode): Promise<void> {
     { path: '', pathMatch: 'full', redirectTo: `bg/${defaultPage}` },
     {
       path: ':language',
+      canActivate: [
+        (route) => {
+          const language = route.paramMap.get('language');
+          if (language !== 'bg' && language !== 'en') {
+            return inject(Router).createUrlTree(['/bg']);
+          }
+          inject(OperatorLanguage).set(language);
+          return true;
+        },
+      ],
       children: [
-        { path: 'sign-in', component: ProductsPage },
+        { path: 'sign-in', redirectTo: defaultPage },
         ...children,
         { path: '', pathMatch: 'full', redirectTo: defaultPage },
       ],
