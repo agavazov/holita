@@ -76,9 +76,9 @@
         }
       ],
       "cache": true,
-      "inputs": ["default"],
+      "inputs": ["default", "{workspaceRoot}/discocan/tools/core-test.mts"],
       "options": {
-        "command": "tsx tools/core-test.mts",
+        "command": "tsx discocan/tools/core-test.mts",
         "cwd": ".",
         "forwardAllArgs": true
       }

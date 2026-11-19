@@ -11,7 +11,7 @@
       "inputs": ["graphqlGeneration"],
       "outputs": ["{projectRoot}/src/app/generated"],
       "options": {
-        "command": "tsx tools/graphql-operator.mts",
+        "command": "tsx osnova/tools/graphql/graphql-operator.mts",
         "cwd": "."
       }
     }

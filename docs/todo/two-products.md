@@ -23,9 +23,6 @@ architecture with a thin Holita slice, not a port of the old platform.
 
 1. **Discocan shared sign-in.** Adopt the shared sign-in page in the Discocan admin, preserving
    its demo Tenant/Branch selection and existing appearance.
-2. **Tooling placement.** Move the root `tools/` scripts (`kill.mts`, `holita-database.mts`,
-   `holita-seed.mts`) into `osnova/tools/` or `holita/tools/`, and let Discocan's database setup
-   use the shared Osnova setup like Holita.
 
 ## Open items
 

@@ -16,6 +16,7 @@
       "cache": true,
       "inputs": [
         "{workspaceRoot}/holita/tools/graphql/**/*",
+        "{workspaceRoot}/holita/tools/holita-graphql.mts",
         "{workspaceRoot}/holita/apps/commerce/src/**/*.graphql",
         "{workspaceRoot}/holita/packages/operator/src/**/*.graphql",
         "{workspaceRoot}/osnova/apps/core/src/**/*.graphql",
@@ -30,7 +31,7 @@
         "{workspaceRoot}/holita/apps/storefront/src/generated"
       ],
       "options": {
-        "command": "tsx tools/holita-graphql.mts",
+        "command": "tsx holita/tools/holita-graphql.mts",
         "cwd": "."
       }
     }

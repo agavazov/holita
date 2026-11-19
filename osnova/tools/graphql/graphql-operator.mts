@@ -1,4 +1,4 @@
-import { generate } from '../osnova/tools/graphql/generate.mjs';
+import { generate } from './generate.mjs';
 
 const subgraphs = [
   {

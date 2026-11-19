@@ -1,5 +1,5 @@
 import { config } from 'dotenv';
-import { setupDatabase } from '../osnova/tools/database/setup.mjs';
+import { setupDatabase } from '../../osnova/tools/database/setup.mjs';
 
 const args = process.argv.slice(2);
 if (args.length > 1 || (args.length === 1 && args[0] !== '--test')) {
