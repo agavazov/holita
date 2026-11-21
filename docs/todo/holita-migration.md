@@ -20,9 +20,8 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 
 | Ticket                                                                           | Wave | Status | Depends on         |
 | -------------------------------------------------------------------------------- | ---- | ------ | ------------------ |
-| [102 Demo shop data](102-holita-demo-shop.md)                                    | 0    | Ready  |                    |
-| [103 Category tree](103-holita-categories.md)                                    | 1    | Ready  | 102                |
-| [104 Product options](104-holita-options.md)                                     | 1    | Ready  | 102                |
+| [103 Category tree](103-holita-categories.md)                                    | 1    | Ready  |                    |
+| [104 Product options](104-holita-options.md)                                     | 1    | Ready  |                    |
 | [105 Product variants](105-holita-variants.md)                                   | 1    | Ready  | 104                |
 | [106 Product editor and descriptions](106-holita-product-editor.md)              | 1    | Ready  | 103, 105           |
 | [107 Product image gallery](107-holita-product-images.md)                        | 1    | Ready  | 106                |
@@ -43,8 +42,8 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 | [120 Admin customer detail](120-holita-customer-detail.md)                       | 3    | Ready  | 118                |
 | [121 Discounts and promo codes](121-holita-discounts.md)                         | 3    | Ready  | 118                |
 | [122 Admin manual payment and shipping methods](122-holita-manual-methods.md)    | 3    | Ready  | 115, 118           |
-| [123 Shop content pages](123-holita-pages.md)                                    | 3    | Ready  | 102                |
-| [124 Shop blog](124-holita-blog.md)                                              | 3    | Ready  | 102                |
+| [123 Shop content pages](123-holita-pages.md)                                    | 3    | Ready  |                    |
+| [124 Shop blog](124-holita-blog.md)                                              | 3    | Ready  |                    |
 | [125 Shop navigation menus](125-holita-navigation.md)                            | 3    | Ready  | 112, 123, 124      |
-| [126 General shop settings](126-holita-general-settings.md)                      | 3    | Ready  | 102                |
+| [126 General shop settings](126-holita-general-settings.md)                      | 3    | Ready  |                    |
 | [127 Admin shop dashboard](127-holita-dashboard.md)                              | 3    | Ready  | 111, 118, 120      |

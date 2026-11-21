@@ -4,30 +4,43 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   resource,
   signal,
-  untracked,
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonDirective } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
-import { TableModule } from 'primeng/table';
+import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
+import { Tag } from 'primeng/tag';
 import {
   FilterBuilder,
   ListSortMenu,
   FormField,
   PageHeader,
   RouteDrawer,
+  RowActions,
   TablePanel,
+  UrlListState,
+  codecs,
   fieldErrors,
+  injectSortReady,
+  listQuery,
+  listRecord,
   lockWhileSaving,
   tableView,
+  toneSeverity,
+  trackById,
   uiMessages,
   type FilterCondition,
   type FilterField,
+  type ListAction,
+  type ListActionRequest,
+  type ListDefinition,
   type ListQuery,
+  type TableColumn,
   type PageHeaderAction,
 } from '@osnova/ui';
 import { DemoSession, requestError } from '@osnova/ui/app';
@@ -40,7 +53,23 @@ import {
 } from '@holita/operator';
 import { BrandsApi } from './brands/brands-api';
 
-type Product = OperatorProductsQuery['products']['items'][number];
+type ProductPage = OperatorProductsQuery['products'];
+type Product = ProductPage['items'][number];
+type ProductSort = 'NAME' | 'PRICE' | 'STATUS';
+const statuses = ['DRAFT', 'ACTIVE', 'ARCHIVED'] as const;
+const statusCodec = codecs.enumList(statuses);
+const definition: ListDefinition<{ statuses: readonly ProductStatus[] | undefined }, ProductSort> =
+  {
+    pageSizes: [10, 20, 50, 100],
+    defaultPageSize: 20,
+    sorts: [
+      { param: 'name', field: 'NAME' },
+      { param: 'price', field: 'PRICE' },
+      { param: 'status', field: 'STATUS' },
+    ],
+    defaultSort: { field: 'NAME', direction: 'ASC' },
+    filters: { statuses: statusCodec },
+  };
 
 @Component({
   selector: 'holita-products-page',
@@ -52,69 +81,159 @@ type Product = OperatorProductsQuery['products']['items'][number];
     TableModule,
     ButtonDirective,
     RouteDrawer,
+    RowActions,
+    Tag,
     ReactiveFormsModule,
     InputText,
     Select,
     FormField,
     Message,
   ],
+  host: { class: 'app-view' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <osnova-page-header [title]="text().products" [actions]="actions()" (action)="open()" />
-    @if (!session.branchId()) {
+    <osnova-page-header
+      [title]="text().products"
+      [moduleInfo]="text().productsInfo"
+      [actions]="actions()"
+      (action)="open()"
+    />
+    @if (scope()) {
+      <osnova-table-panel
+        #panel
+        [heading]="text().shopProducts"
+        [columns]="columns()"
+        [tableMinWidth]="'25rem'"
+        [view]="view()"
+        [total]="page()?.total ?? null"
+        [busy]="list.isLoading()"
+        [errorText]="error()"
+        [emptyTitle]="text().emptyProducts"
+        [page]="pagination()"
+        [actionContext]="params()"
+        [actions]="rowActions()"
+        (action)="run($event)"
+        (pageChange)="url.setPage($event)"
+        (retry)="list.reload()"
+        (clearFilters)="url.clearFilters()"
+      >
+        <osnova-filter-builder
+          panelActions
+          [searchLabel]="text().searchProducts"
+          [search]="url.searchDraft()"
+          [searchError]="url.searchError() ? shared().searchTooManyWords : null"
+          [fields]="filterFields()"
+          [conditions]="conditions()"
+          [maxConditions]="1"
+          (searchChange)="url.editSearch($event)"
+          (conditionsChange)="changeConditions($event)"
+        >
+          <osnova-list-sort-menu
+            filterActions
+            [fields]="sortFields()"
+            [sort]="sort()"
+            (sortChange)="changeSort($event)"
+          />
+        </osnova-filter-builder>
+        <p-table
+          class="app-responsive-table app-table-fixed"
+          [value]="page()?.items ?? []"
+          [rowTrackBy]="trackById"
+          [lazy]="true"
+          [lazyLoadOnInit]="false"
+          [scrollable]="true"
+          [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+          [sortField]="sort().field"
+          [sortOrder]="sort().direction === 'asc' ? 1 : -1"
+          (onLazyLoad)="tableSort($event)"
+          dataKey="id"
+        >
+          <ng-template #colgroup>
+            <colgroup>
+              @for (column of columns(); track column.id) {
+                <col
+                  [class]="column.className ?? ''"
+                  [style.width]="
+                    column.kind === 'identity'
+                      ? 'var(--app-table-identity-width, ' + column.width + ')'
+                      : column.width
+                  "
+                />
+              }
+            </colgroup>
+          </ng-template>
+          <ng-template #header>
+            <tr>
+              <th scope="col" class="app-col-identity" pSortableColumn="NAME">
+                {{ text().name }} <p-sort-icon field="NAME" />
+              </th>
+              <th scope="col" class="app-cell-number" pSortableColumn="PRICE">
+                {{ text().price }} <p-sort-icon field="PRICE" />
+              </th>
+              <th scope="col" pSortableColumn="STATUS">
+                {{ text().status }} <p-sort-icon field="STATUS" />
+              </th>
+              @if (canWrite()) {
+                <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+                  <span class="app-visually-hidden">{{ shared().pageHeader.actions }}</span>
+                </th>
+              }
+            </tr>
+          </ng-template>
+          <ng-template #body let-product>
+            @let row = record(product);
+            @let amount = formatPrice(product.price);
+            <tr>
+              <td class="app-col-identity">
+                <div class="app-cell-identity">
+                  @if (canWrite()) {
+                    <button
+                      type="button"
+                      class="app-link"
+                      [title]="product.name"
+                      (click)="panel.run('edit', [row], $event.currentTarget)"
+                    >
+                      {{ product.name }}
+                    </button>
+                  } @else {
+                    <span [title]="product.name">{{ product.name }}</span>
+                  }
+                </div>
+                @if (canWrite()) {
+                  <div class="app-table-mobile-actions">
+                    <osnova-row-actions
+                      [actions]="rowActions()"
+                      [record]="row"
+                      (choose)="panel.run($event.action, [row], $event.origin)"
+                    />
+                  </div>
+                }
+              </td>
+              <td class="app-cell-number" [title]="amount">{{ amount }}</td>
+              <td>
+                <div class="app-cell-status">
+                  <p-tag
+                    [severity]="statusTone(product.status)"
+                    [value]="statusLabel(product.status)"
+                  />
+                </div>
+              </td>
+              @if (canWrite()) {
+                <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+                  <osnova-row-actions
+                    [actions]="rowActions()"
+                    [record]="row"
+                    (choose)="panel.run($event.action, [row], $event.origin)"
+                  />
+                </td>
+              }
+            </tr>
+          </ng-template>
+        </p-table>
+      </osnova-table-panel>
+    } @else {
       <p-message severity="info">{{ text().noShop }}</p-message>
     }
-    <osnova-table-panel
-      [heading]="text().products"
-      [view]="view()"
-      [total]="page()?.total ?? null"
-      [errorText]="error()"
-      [page]="pagination()"
-      (pageChange)="changePage($event)"
-      (retry)="load()"
-    >
-      <osnova-filter-builder
-        panelActions
-        [searchLabel]="text().search"
-        [search]="appliedSearch()"
-        [fields]="filterFields()"
-        [conditions]="conditions()"
-        [maxConditions]="1"
-        (searchChange)="changeSearch($event)"
-        (conditionsChange)="changeConditions($event)"
-      >
-        <osnova-list-sort-menu
-          filterActions
-          [fields]="sortFields()"
-          [sort]="sort()"
-          (sortChange)="changeSort($event)"
-        />
-      </osnova-filter-builder>
-      <p-table [value]="page()?.items ?? []"
-        ><ng-template #header
-          ><tr>
-            <th>{{ text().name }}</th>
-            <th>{{ text().price }}</th>
-            <th>{{ text().status }}</th>
-            @if (canWrite()) {
-              <th></th>
-            }</tr></ng-template
-        ><ng-template #body let-row
-          ><tr>
-            <td>{{ row.name }}</td>
-            <td>{{ row.price }}</td>
-            <td>{{ statusLabel(row.status) }}</td>
-            @if (canWrite()) {
-              <td>
-                <button pButton type="button" severity="secondary" (click)="open(row)">
-                  {{ text().edit }}
-                </button>
-              </td>
-            }
-          </tr></ng-template
-        ></p-table
-      >
-    </osnova-table-panel>
     @if (drawer()) {
       <osnova-route-drawer
         #productDrawer
@@ -218,21 +337,61 @@ export class ProductsPage {
   readonly session = inject(DemoSession);
   private readonly api = inject(OperatorApi);
   private readonly brands = inject(BrandsApi);
-  readonly page = signal<OperatorProductsQuery['products'] | null>(null);
-  readonly loading = signal(true);
-  readonly error = signal<string | null>(null);
+  readonly scope = this.brands.scope;
+  readonly url = new UrlListState(definition, () => !!this.scope());
+  readonly trackById = trackById;
+  private readonly sortReady = injectSortReady();
   readonly drawer = signal(false);
   readonly editing = signal<Product | null>(null);
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
   readonly brandError = signal<string | null>(null);
-  readonly currentPage = signal(1);
-  readonly pageSize = signal(20);
-  readonly appliedSearch = signal('');
-  readonly conditions = signal<readonly FilterCondition[]>([]);
-  readonly sort = signal<NonNullable<ListQuery['sort']>>({ field: 'NAME', direction: 'asc' });
   readonly text = computed(() => strings[this.language.value()]);
   readonly shared = computed(() => uiMessages[this.language.value()]);
+  private readonly price = computed(
+    () => new Intl.NumberFormat(this.language.value(), { style: 'currency', currency: 'BGN' }),
+  );
+  readonly params = computed(() => {
+    const scope = this.scope();
+    const { page, pageSize, search, sort, filter } = this.url.state();
+    return scope ? { scope, page, pageSize, search, sort, filter } : undefined;
+  });
+  readonly list = resource({
+    params: this.params,
+    loader: ({ params: { scope, page, pageSize, search, sort, filter } }) =>
+      this.api.products(
+        scope.language,
+        scope.branchId,
+        (page - 1) * pageSize,
+        pageSize,
+        search,
+        sort,
+        filter.statuses ? { statuses: [...filter.statuses] } : null,
+      ),
+  });
+  readonly page = linkedSignal<
+    { scope: ReturnType<BrandsApi['scope']>; data: ProductPage | undefined },
+    ProductPage | null
+  >({
+    source: () => ({
+      scope: this.scope(),
+      data: this.list.hasValue() ? this.list.value() : undefined,
+    }),
+    computation: (current, previous) =>
+      current.data ?? (previous?.source.scope === current.scope ? previous.value : null),
+  });
+  readonly error = computed(() => {
+    const error = this.list.error();
+    return error ? requestError(error, this.text().unavailable) : null;
+  });
+  readonly conditions = computed<readonly FilterCondition[]>(() => {
+    const active = this.url.state().filter.statuses;
+    return active ? [{ id: 'status', field: 'status', operator: 'isAnyOf', values: active }] : [];
+  });
+  readonly sort = computed<NonNullable<ListQuery['sort']>>(() => ({
+    field: this.url.state().sort.field,
+    direction: this.url.state().sort.direction === 'ASC' ? 'asc' : 'desc',
+  }));
   readonly brandOptions = resource({
     params: () => (this.drawer() ? (this.brands.scope() ?? undefined) : undefined),
     loader: ({ params, abortSignal }) => this.brands.options(params, abortSignal),
@@ -241,21 +400,46 @@ export class ProductsPage {
     { id: null, name: this.text().noBrand },
     ...(this.brandOptions.hasValue() ? this.brandOptions.value() : []),
   ]);
-  readonly canWrite = computed(() => this.session.hasRole('OPERATOR') && !!this.session.branchId());
+  readonly canWrite = computed(() => this.session.hasRole('OPERATOR') && !!this.scope());
   readonly actions = computed<readonly PageHeaderAction[]>(() =>
     this.canWrite() ? [{ id: 'create', label: this.text().createProduct, primary: true }] : [],
   );
+  readonly rowActions = computed<readonly ListAction<'edit', Product>[]>(() =>
+    this.canWrite() ? [{ id: 'edit', label: this.text().edit }] : [],
+  );
+  readonly columns = computed<readonly TableColumn[]>(() => [
+    {
+      id: 'NAME',
+      label: this.text().name,
+      width: 'auto',
+      kind: 'identity',
+      className: 'app-col-identity',
+    },
+    { id: 'PRICE', label: this.text().price, width: 'clamp(6.75rem, 13vw, 7rem)', kind: 'number' },
+    { id: 'STATUS', label: this.text().status, width: 'clamp(6rem, 13vw, 7.5rem)', kind: 'status' },
+    ...(this.canWrite()
+      ? [
+          {
+            id: 'actions',
+            label: this.shared().pageHeader.actions,
+            width: '3.25rem',
+            kind: 'actions' as const,
+            className: 'app-col-actions',
+          },
+        ]
+      : []),
+  ]);
   readonly view = computed(() =>
     tableView({
-      loading: this.loading(),
+      loading: this.list.isLoading(),
       error: this.error(),
       rows: this.page()?.items.length ?? null,
-      filtered: this.appliedSearch().length > 0 || this.conditions().length > 0,
+      filtered: !!this.url.state().search || this.conditions().length > 0,
     }),
   );
   readonly pagination = computed(() => ({
-    page: this.currentPage(),
-    pageSize: this.pageSize(),
+    page: this.url.state().page,
+    pageSize: this.url.state().pageSize,
     total: this.page()?.total ?? 0,
   }));
   readonly statusOptions = computed(() => [
@@ -280,6 +464,12 @@ export class ProductsPage {
   statusLabel(value: ProductStatus): string {
     return this.statusOptions().find((option) => option.value === value)?.label ?? value;
   }
+  statusTone(value: ProductStatus) {
+    return toneSeverity(value === 'ACTIVE' ? 'success' : value === 'DRAFT' ? 'warn' : 'neutral');
+  }
+  formatPrice(value: string): string {
+    return this.price().format(Number(value));
+  }
   readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
@@ -302,86 +492,45 @@ export class ProductsPage {
       () => {},
     );
     effect(() => {
-      this.brands.scope();
+      this.scope();
       this.drawer.set(false);
     });
     effect(() => {
-      this.language.value();
-      this.session.branchId();
-      this.currentPage();
-      this.pageSize();
-      this.appliedSearch();
-      this.conditions();
-      this.sort();
-      untracked(() => {
-        void this.load();
-      });
+      const data = this.list.hasValue() && !this.list.isLoading() ? this.list.value() : null;
+      if (data) {
+        this.url.correctPage(Math.ceil(data.total / this.url.state().pageSize));
+      }
     });
   }
-  async load(): Promise<void> {
-    const branch = this.session.branchId();
-    if (!branch) {
-      this.page.set(null);
-      this.loading.set(false);
-      return;
-    }
-    const token = this.session.current()?.token;
-    this.loading.set(true);
-    try {
-      const result = await this.api.products(
-        this.language.value(),
-        branch,
-        (this.currentPage() - 1) * this.pageSize(),
-        this.pageSize(),
-        this.appliedSearch(),
-        {
-          field:
-            this.sort().field === 'PRICE'
-              ? 'PRICE'
-              : this.sort().field === 'STATUS'
-                ? 'STATUS'
-                : 'NAME',
-          direction: this.sort().direction === 'desc' ? 'DESC' : 'ASC',
-        },
-        this.conditions().length
-          ? {
-              statuses:
-                this.conditions()[0]?.values.filter(
-                  (value): value is ProductStatus =>
-                    value === 'DRAFT' || value === 'ACTIVE' || value === 'ARCHIVED',
-                ) ?? [],
-            }
-          : null,
-      );
-      if (this.session.branchId() === branch && this.session.current()?.token === token) {
-        this.page.set(result);
-        this.error.set(null);
-      }
-    } catch (error: unknown) {
-      if (this.session.branchId() === branch) {
-        this.error.set(requestError(error, this.text().unavailable));
-      }
-    } finally {
-      if (this.session.branchId() === branch) {
-        this.loading.set(false);
-      }
-    }
+  record(product: Product) {
+    return listRecord(this.rowActions(), product, product.id, product.name);
   }
-  changeSearch(value: string): void {
-    this.currentPage.set(1);
-    this.appliedSearch.set(value);
+  run(request: ListActionRequest<'edit'>): void {
+    const row = this.page()?.items.find((item) => item.id === request.ids[0]);
+    if (row && this.canWrite()) {
+      this.open(row);
+    }
   }
   changeConditions(value: readonly FilterCondition[]): void {
-    this.currentPage.set(1);
-    this.conditions.set(value);
+    this.url.patchFilter({ statuses: statusCodec.read(value[0]?.values ?? []) });
   }
-  changeSort(value: NonNullable<ListQuery['sort']>): void {
-    this.currentPage.set(1);
-    this.sort.set(value);
+  changeSort(sort: NonNullable<ListQuery['sort']>): void {
+    const field = definition.sorts.find((candidate) => candidate.field === sort.field)?.field;
+    if (field) {
+      this.url.setSort(field, sort.direction === 'asc' ? 'ASC' : 'DESC');
+    }
   }
-  changePage(value: { page: number; pageSize: number }): void {
-    this.pageSize.set(value.pageSize);
-    this.currentPage.set(value.page);
+  tableSort(event: TableLazyLoadEvent): void {
+    if (!this.sortReady()) {
+      return;
+    }
+    const sort = listQuery.sorted(
+      { ...this.url.state(), sort: this.sort(), conditions: this.conditions() },
+      event,
+    )?.sort;
+    if (sort) {
+      this.changeSort(sort);
+    }
   }
   open(row?: Product): void {
     this.editing.set(row ?? null);
@@ -419,7 +568,7 @@ export class ProductsPage {
       );
       if (this.brands.scope() === scope) {
         this.drawer.set(false);
-        await this.load();
+        this.list.reload();
       }
     } catch (error: unknown) {
       if (this.brands.scope() === scope) {

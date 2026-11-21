@@ -42,9 +42,13 @@ Use the ticket to choose which layers the feature changes.
 
 ## Demo shop and validation
 
-- Extend the [demo shop seed](../../../holita/tools/holita-seed.mts) with the ticket's fixtures.
-  Insert only. Use existing fixtures as references or insert new rows when adding fields to a
-  fixture would require an update. A second run should leave existing data unchanged.
+- **Demo shop seed.** Extend the Bulgarian homewares
+  [catalogue fixtures](../../../holita/tools/demo-catalogue.mts) and the
+  [seed that loads them](../../../holita/tools/holita-seed.mts). Keep fixture IDs stable.
+  Insert only. Reuse existing fixtures as references or give new examples their own IDs when
+  adding fields would require an update. Generate artwork locally and keep the source PNGs in
+  `holita/config/demo/` for the seed to copy into the configured image directory.
+  A second run should insert nothing and leave existing rows and files unchanged.
 - Follow the [validation skill](../osnova-focused-validation/SKILL.md) and workspace test budget.
   Add or extend tests only for cases the delivery policy permits.
 - For Holita login, routing, transport or main journey changes, run one relevant smoke file
@@ -55,7 +59,7 @@ Use the ticket to choose which layers the feature changes.
 Commerce writes and serves brand logos from the Git-ignored local
 `.volumes/holita/images/` directory. Define `HOLITA_COMMERCE_IMAGE_DIR` in
 `holita/config/commerce.env` and document it in the root [environment example](../../../.env.example).
-Use an absolute path. The demo seed writes its generated logo to the same directory.
+Use an absolute path. The demo seed writes its generated logos to the same directory.
 
 Authorized operators send a base64 logo with the brand mutation for the selected shop. Commerce
 checks the file signature and accepts JPEG, PNG and WebP up to 5 MiB. Omit the logo to keep its

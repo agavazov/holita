@@ -1,6 +1,13 @@
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
-import { Component, Injectable, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  Injectable,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet, provideRouter } from '@angular/router';
@@ -27,6 +34,9 @@ const messages = {
   bg: {
     products: 'Продукти',
     account: 'Моят профил',
+    navigation: 'Навигация в магазина',
+    pagination: 'Страници с продукти',
+    count: (total: number) => (total === 1 ? '1 продукт' : `${String(total)} продукта`),
     signIn: 'Вход',
     register: 'Регистрация',
     signOut: 'Изход',
@@ -46,6 +56,9 @@ const messages = {
   en: {
     products: 'Products',
     account: 'My account',
+    navigation: 'Shop navigation',
+    pagination: 'Product pages',
+    count: (total: number) => (total === 1 ? '1 product' : `${String(total)} products`),
     signIn: 'Sign in',
     register: 'Register',
     signOut: 'Sign out',
@@ -64,6 +77,7 @@ const messages = {
   },
 };
 type Language = keyof typeof messages;
+const cataloguePageSize = 20;
 @Injectable({ providedIn: 'root' })
 class StorefrontApi {
   private readonly apollo = inject(Apollo);
@@ -76,7 +90,7 @@ class StorefrontApi {
     return firstValueFrom(
       this.apollo.query({
         query: CatalogueDocument,
-        variables: { offset, limit: 20 },
+        variables: { offset, limit: cataloguePageSize },
         fetchPolicy: 'no-cache',
       }),
     );
@@ -109,94 +123,132 @@ class StorefrontApi {
 }
 @Component({
   selector: 'holita-storefront-page',
-  imports: [RouterLink, ReactiveFormsModule],
+  imports: [RouterLink, ReactiveFormsModule, NgTemplateOutlet],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header>
-      <a [routerLink]="base">{{ shop()?.name ?? 'Holita' }}</a>
-      <nav>
-        <a [routerLink]="base">{{ t().products }}</a
-        ><a [routerLink]="[...base, 'account']">{{ t().account }}</a
-        ><button type="button" (click)="toggleLanguage()">
+    <header class="shop-header">
+      <a class="shop-name" [routerLink]="base">{{ shop()?.name ?? 'Holita' }}</a>
+      <nav [attr.aria-label]="t().navigation">
+        <a [routerLink]="base" [attr.aria-current]="page === 'catalogue' ? 'page' : null">
+          {{ t().products }}
+        </a>
+        <a
+          [routerLink]="[...base, 'account']"
+          [attr.aria-current]="page === 'account' ? 'page' : null"
+        >
+          {{ t().account }}
+        </a>
+        <button class="language" type="button" (click)="toggleLanguage()">
           {{ language() === 'bg' ? 'EN' : 'BG' }}
         </button>
       </nav>
     </header>
     <main>
       @if (missing()) {
-        <p role="alert">{{ t().shopMissing }}</p>
+        <p class="shop-state" role="alert">{{ t().shopMissing }}</p>
       } @else {
-        @if (error()) {
-          <p role="alert">{{ t().error }}</p>
-          @if (page === 'catalogue' || page === 'product') {
-            <button type="button" (click)="load()">{{ t().retry }}</button>
-          }
-        }
         @if (page === 'catalogue') {
-          <h1>{{ t().products }}</h1>
+          <div class="catalogue-heading">
+            <h1>{{ t().products }}</h1>
+            @if (catalogue(); as result) {
+              <span>{{ t().count(result.total) }}</span>
+            }
+          </div>
+          @if (error()) {
+            <ng-container [ngTemplateOutlet]="requestError" />
+          }
           @if (catalogue(); as result) {
-            @if (!result.items.length) {
-              <p>{{ t().empty }}</p>
-            }
-            <ul class="catalogue-grid" [attr.aria-busy]="catalogueLoading() || null">
-              @for (item of result.items; track item.id) {
-                <li class="app-card catalogue-card">
-                  <a class="app-link product-link" [routerLink]="[...base, 'product', item.id]">{{
-                    item.name
-                  }}</a>
-                  @if (item.brand; as brand) {
-                    <span class="product-brand">
-                      @if (brand.logoUrl) {
-                        <img [src]="brand.logoUrl" alt="" width="24" height="24" loading="lazy" />
+            @if (result.items.length) {
+              <ul class="catalogue-grid" [attr.aria-busy]="catalogueLoading() || null">
+                @for (item of result.items; track item.id) {
+                  <li class="catalogue-card">
+                    <a
+                      class="product-link"
+                      [routerLink]="[...base, 'product', item.id]"
+                      [attr.aria-labelledby]="'product-' + item.id"
+                    >
+                      @if (item.brand; as brand) {
+                        <span class="product-brand">
+                          @if (brand.logoUrl) {
+                            <img
+                              [src]="brand.logoUrl"
+                              alt=""
+                              width="36"
+                              height="36"
+                              loading="lazy"
+                            />
+                          }
+                          {{ brand.name }}
+                        </span>
                       }
-                      {{ brand.name }}
-                    </span>
-                  }
-                  <span class="app-num">{{ item.price }}</span>
-                </li>
+                      <h2 [id]="'product-' + item.id">{{ item.name }}</h2>
+                      <span class="catalogue-card-bottom">
+                        <span class="app-num">{{ formatPrice(item.price) }}</span>
+                        <span class="product-arrow" aria-hidden="true">↗</span>
+                      </span>
+                    </a>
+                  </li>
+                }
+              </ul>
+              @if (result.total > pageSize) {
+                <nav class="catalogue-pagination" [attr.aria-label]="t().pagination">
+                  <button
+                    type="button"
+                    [disabled]="catalogueLoading() || offset() === 0"
+                    (click)="loadCatalogue(offset() - pageSize)"
+                  >
+                    {{ t().previous }}
+                  </button>
+                  <span class="app-num" aria-live="polite">
+                    {{ offset() + 1 }}–{{ offset() + result.items.length }} / {{ result.total }}
+                  </span>
+                  <button
+                    type="button"
+                    [disabled]="catalogueLoading() || offset() + pageSize >= result.total"
+                    (click)="loadCatalogue(offset() + pageSize)"
+                  >
+                    {{ t().next }}
+                  </button>
+                </nav>
               }
-            </ul>
-            @if (result.total > 20) {
-              <div class="catalogue-pagination">
-                <button
-                  type="button"
-                  [disabled]="catalogueLoading() || offset() === 0"
-                  (click)="loadCatalogue(offset() - 20)"
-                >
-                  {{ t().previous }}
-                </button>
-                <button
-                  type="button"
-                  [disabled]="catalogueLoading() || offset() + 20 >= result.total"
-                  (click)="loadCatalogue(offset() + 20)"
-                >
-                  {{ t().next }}
-                </button>
-              </div>
+            } @else {
+              <p class="shop-state">{{ t().empty }}</p>
             }
-          } @else if (loading()) {
-            <p role="status">{{ t().loading }}</p>
+          } @else if ((loading() || catalogueLoading()) && !error()) {
+            <p class="shop-state" role="status">{{ t().loading }}</p>
           }
         }
         @if (page === 'product') {
-          <a class="app-link product-back" [routerLink]="base">{{ t().back }}</a>
-          @if (product(); as item) {
-            <article class="app-card product-detail">
-              @if (item.brand; as brand) {
-                <p class="product-brand">
-                  @if (brand.logoUrl) {
-                    <img [src]="brand.logoUrl" alt="" width="32" height="32" />
-                  }
-                  {{ brand.name }}
-                </p>
+          <div class="product-navigation">
+            <a class="product-back" [routerLink]="base">
+              <span aria-hidden="true">←</span> {{ t().back }}
+            </a>
+          </div>
+          @if (error()) {
+            <ng-container [ngTemplateOutlet]="requestError" />
+          } @else if (product(); as item) {
+            <article class="product-detail" [class.with-brand]="item.brand?.logoUrl">
+              <div class="product-summary">
+                @if (item.brand; as brand) {
+                  <p class="product-brand">{{ brand.name }}</p>
+                }
+                <h1>{{ item.name }}</h1>
+                <p class="app-num product-price">{{ formatPrice(item.price) }}</p>
+              </div>
+              @if (item.brand?.logoUrl; as logo) {
+                <div class="product-brand brand-art">
+                  <img [src]="logo" alt="" width="144" height="144" />
+                </div>
               }
-              <h1>{{ item.name }}</h1>
-              <p class="app-num product-price">{{ item.price }}</p>
             </article>
           } @else if (loading()) {
-            <p role="status">{{ t().loading }}</p>
-          } @else if (!error()) {
-            <h1>{{ t().productMissing }}</h1>
+            <p class="shop-state" role="status">{{ t().loading }}</p>
+          } @else {
+            <h1 class="shop-state">{{ t().productMissing }}</h1>
           }
+        }
+        @if (error() && page !== 'catalogue' && page !== 'product') {
+          <p role="alert">{{ t().error }}</p>
         }
         @if (page === 'register' || page === 'sign-in') {
           <h1>{{ page === 'register' ? t().register : t().signIn }}</h1>
@@ -235,95 +287,14 @@ class StorefrontApi {
         }
       }
     </main>
+    <ng-template #requestError>
+      <div class="shop-state">
+        <p role="alert">{{ t().error }}</p>
+        <button type="button" (click)="retry()">{{ t().retry }}</button>
+      </div>
+    </ng-template>
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-        max-width: 72rem;
-        margin: auto;
-        padding: var(--p-app-space-6);
-      }
-      header,
-      nav {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--p-app-space-4);
-      }
-      header {
-        border-bottom: 1px solid var(--p-content-border-color);
-        padding-bottom: var(--p-app-space-4);
-      }
-      main {
-        padding-block: var(--p-app-space-6);
-      }
-      .catalogue-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
-        gap: var(--p-app-stack-gap);
-        list-style: none;
-        padding: 0;
-        margin-block: var(--p-app-space-4);
-      }
-      .catalogue-pagination {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--p-app-space-2);
-      }
-      .catalogue-card,
-      .product-detail {
-        display: grid;
-        align-content: start;
-        gap: var(--p-app-space-3);
-        min-inline-size: 0;
-        overflow-wrap: anywhere;
-      }
-      .product-link {
-        font-weight: 700;
-      }
-      .product-back {
-        display: inline-block;
-        margin-block-end: var(--p-app-space-4);
-      }
-      .product-detail {
-        max-inline-size: 42rem;
-        padding: var(--p-app-space-6);
-      }
-      .product-detail :is(h1, p) {
-        margin: 0;
-      }
-      .product-brand {
-        display: flex;
-        align-items: center;
-        gap: var(--p-app-space-2);
-        color: var(--p-text-muted-color);
-      }
-      .product-brand img {
-        flex: none;
-        border-radius: var(--p-app-radius-control);
-        object-fit: contain;
-      }
-      .product-price {
-        font-size: var(--p-app-text-lg);
-        font-weight: 700;
-      }
-      form {
-        display: grid;
-        gap: var(--p-app-space-2);
-        max-width: 28rem;
-        margin-block: var(--p-app-space-4);
-      }
-      input,
-      button {
-        font: inherit;
-        padding: var(--p-app-space-2);
-      }
-      button {
-        cursor: pointer;
-      }
-    `,
-  ],
+  styleUrl: './storefront-page.scss',
 })
 class StorefrontPage {
   private readonly route = inject(ActivatedRoute);
@@ -347,6 +318,11 @@ class StorefrontPage {
   readonly product = signal<CatalogueProductQuery['catalogueProduct']>(null);
   readonly shopper = signal<ShopperMeQuery['shopperMe']>(null);
   readonly offset = signal(0);
+  readonly pageSize = cataloguePageSize;
+  private readonly price = computed(
+    () => new Intl.NumberFormat(this.language(), { style: 'currency', currency: 'BGN' }),
+  );
+  private requestedOffset = 0;
   readonly form = new FormGroup({
     name: new FormControl('', { nonNullable: true }),
     email: new FormControl('', {
@@ -362,6 +338,9 @@ class StorefrontPage {
     inject(Appearance);
     this.document.documentElement.lang = this.language();
     void this.load();
+  }
+  formatPrice(value: string): string {
+    return this.price().format(Number(value));
   }
   toggleLanguage() {
     const language = this.language() === 'bg' ? 'en' : 'bg';
@@ -397,7 +376,15 @@ class StorefrontPage {
       this.loading.set(false);
     }
   }
+  retry() {
+    if (this.page === 'catalogue' && this.shop()) {
+      void this.loadCatalogue(this.requestedOffset);
+    } else {
+      void this.load();
+    }
+  }
   async loadCatalogue(offset: number) {
+    this.requestedOffset = offset;
     this.catalogueLoading.set(true);
     this.error.set(false);
     try {

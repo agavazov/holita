@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 import { config } from 'dotenv';
 import pg from 'pg';
+import { demoCatalogue } from './demo-catalogue.mjs';
 
 config({
   path: ['holita/config/commerce.env', 'holita/config/core.env', 'holita/config/seed-accounts.env'],
@@ -50,50 +51,53 @@ async function seedCatalogue(): Promise<void> {
   }
   const tenantId = '02000000-0000-4000-8000-000000000002';
   const branchId = '12000000-0000-4000-8000-000000000001';
-  const demoBrand = '32000000-0000-4000-8000-000000000001';
-  const logoKey = '42000000-0000-4000-8000-000000000001.png';
+  const directory = join(imageRoot, tenantId, branchId);
   const client = new pg.Client({ connectionString: database });
+  let brandsInserted = 0;
+  let productsInserted = 0;
   await client.connect();
   try {
     await client.query('BEGIN');
-    for (const [id, name, slug, status, logo] of [
-      [demoBrand, 'Northline Studio', 'northline-studio', 'active', logoKey],
-      [
-        '32000000-0000-4000-8000-000000000002',
-        'Fieldwork Goods',
-        'fieldwork-goods',
-        'active',
-        null,
-      ],
-      ['32000000-0000-4000-8000-000000000003', 'Quiet Hours', 'quiet-hours', 'hidden', null],
-    ]) {
+    for (const brand of demoCatalogue) {
+      const brandId = fixtureId('32', brand.id);
+      const logoKey = `${fixtureId('42', brand.id)}.png`;
       const { rowCount } = await client.query(
         `INSERT INTO "brand" ("id", "tenantId", "branchId", "name", "slug", "status", "logoKey", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
-        [id, tenantId, branchId, name, slug, status, logo],
+         VALUES ($1, $2, $3, $4, $5, 'active', $6, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
+        [brandId, tenantId, branchId, brand.name, brand.slug, logoKey],
       );
-      if (rowCount && logo === logoKey) {
-        const directory = join(imageRoot, tenantId, branchId);
+      if (rowCount) {
         await mkdir(directory, { recursive: true });
-        const image = await readFile(new URL('../config/demo/northline.png', import.meta.url));
+        const image = await readFile(new URL(`../config/demo/${brand.slug}.png`, import.meta.url));
         try {
-          await writeFile(join(directory, logo), image, { flag: 'wx' });
+          await writeFile(join(directory, logoKey), image, { flag: 'wx' });
         } catch (error: unknown) {
           if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) {
             throw error;
           }
         }
+        brandsInserted += rowCount;
+      }
+      for (const [id, name, price, status = 'active'] of brand.products) {
+        const product = await client.query(
+          `INSERT INTO "product" ("id", "tenantId", "branchId", "brandId", "name", "price", "status", "updatedAt")
+           SELECT $1, "tenantId", "branchId", "id", $5, $6, $7, CURRENT_TIMESTAMP
+           FROM "brand" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $4
+           ON CONFLICT DO NOTHING`,
+          [fixtureId('52', id), tenantId, branchId, brandId, name, price, status],
+        );
+        productsInserted += product.rowCount ?? 0;
       }
     }
-    await client.query(
-      `INSERT INTO "product" ("id", "tenantId", "branchId", "brandId", "name", "price", "status", "updatedAt")
-       SELECT $1, "tenantId", "branchId", "id", 'Everyday canvas tote', 24.00, 'active', CURRENT_TIMESTAMP
-       FROM "brand" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $4
-       ON CONFLICT DO NOTHING`,
-      ['52000000-0000-4000-8000-000000000001', tenantId, branchId, demoBrand],
-    );
     await client.query('COMMIT');
+    console.log(
+      `Demo catalogue inserted ${String(brandsInserted)} brands and ${String(productsInserted)} products.`,
+    );
   } finally {
     await client.end();
   }
+}
+
+function fixtureId(prefix: string, id: number): string {
+  return `${prefix}000000-0000-4000-8000-${String(id).padStart(12, '0')}`;
 }

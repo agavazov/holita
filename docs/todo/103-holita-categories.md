@@ -1,6 +1,6 @@
 # 103 Category tree
 
-**Status:** Ready after [102](102-holita-demo-shop.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

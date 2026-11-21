@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -60,9 +61,11 @@ const OPERATOR_OPTIONS = new InjectionToken<OperatorOptions>('operator applicati
 
 @Injectable({ providedIn: 'root' })
 export class OperatorLanguage {
+  private readonly document = inject(DOCUMENT);
   readonly value = signal<Language>('bg');
   set(language: Language): void {
     this.value.set(language);
+    this.document.documentElement.lang = language;
   }
 }
 
