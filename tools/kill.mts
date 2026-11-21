@@ -1,9 +1,14 @@
 import { execFileSync } from 'node:child_process';
 import { killDevelopment } from '../osnova/tools/development/kill.mjs';
 
-execFileSync('node_modules/.bin/tsx', ['discocan/tools/development/kill.mts'], {
-  stdio: 'inherit',
-});
+// `npm run kill:holita` stops only Holita. Both products run Core from `osnova/apps/core`, so the
+// Holita-only stop leaves that directory out and finds Holita's Core through its process group.
+const holitaOnly = process.argv[2] === 'holita';
+if (!holitaOnly) {
+  execFileSync('node_modules/.bin/tsx', ['discocan/tools/development/kill.mts'], {
+    stdio: 'inherit',
+  });
+}
 await killDevelopment({
   name: 'holita',
   appDirectories: [
@@ -13,7 +18,7 @@ await killDevelopment({
     'holita/apps/storefront',
     'holita/apps/gateway',
     'holita/apps/commerce',
-    'osnova/apps/core',
+    ...(holitaOnly ? [] : ['osnova/apps/core']),
   ],
   backendEntries: [
     'holita/apps/commerce/dist/main.js',

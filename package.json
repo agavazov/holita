@@ -34,6 +34,7 @@
     "dev:discocan": "npm run db:up && nx run-many -t build -p edata-rules,device-contract && nx run admin:graphql-generate && concurrently --kill-others --names gateway,core,fleet,device-server,admin --prefix-colors blue,green,cyan,magenta,red \"npm:dev:gateway\" \"npm:dev:core\" \"npm run dev --workspace @discocan/fleet\" \"npm run dev --workspace @discocan/device-server\" \"npm run dev:admin --ignore-scripts\"",
     "dev": "concurrently --kill-others --names discocan,holita \"npm:dev:discocan\" \"npm:dev:holita\"",
     "kill": "tsx tools/kill.mts",
+    "kill:holita": "tsx tools/kill.mts holita",
     "erm:relay": "tsx discocan/tools/erm-relay/relay.mts",
     "erm:route-unit": "tsx discocan/tools/erm-relay/route-unit.mts",
     "dev:gateway": "npm run dev --workspace @discocan/gateway",
