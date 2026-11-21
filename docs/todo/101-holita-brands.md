@@ -1,11 +1,11 @@
 # 101 Brands, the reference feature
 
-**Status:** Ready after 100. **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-Brands are the first feature that goes through the Holita feature skill
-(`.agents/skills/holita-feature/SKILL.md`, written by ticket 100) end to end. Later catalogue
+Brands are the first feature that goes through the
+[Holita feature skill](../../.agents/skills/holita-feature/SKILL.md) end to end. Later catalogue
 tickets copy its shape, so it must be clean and look excellent. red.bg keeps brands in its API
 catalogue models and Admin catalogue screens (see
 [holita/docs/red-bg/services/api.md](../../holita/docs/red-bg/services/api.md) and
