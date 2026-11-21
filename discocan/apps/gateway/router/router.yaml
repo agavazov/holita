@@ -25,6 +25,9 @@ traffic_shaping:
   all:
     timeout: 5s
   subgraphs:
+    # Fleet resolves device state through its ERM adapter, which waits up to 10 s for erm-api.
+    fleet:
+      timeout: 15s
     erm-server:
       timeout: 45s
 
