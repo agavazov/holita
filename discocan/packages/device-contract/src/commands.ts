@@ -248,7 +248,7 @@ export interface DeviceFaultReadRequest extends DeviceCommandActor, DeviceComman
 }
 
 export interface DeviceAnsweredFaultReadsQuery extends DeviceCommandScope {
-  deviceIds: readonly string[];
+  deviceIds: readonly string[] | null;
   from: Date;
   to: Date;
   count: number;
@@ -488,9 +488,11 @@ export function parseDeviceAnsweredFaultReadsQuery(value: unknown): DeviceAnswer
   const row = object(value, 'answered fault reads', [...SCOPE, 'deviceIds', 'from', 'to', 'count']);
   const from = date(row.from, 'from');
   const to = date(row.to, 'to');
-  const deviceIds = unique(
-    array(row.deviceIds, 'deviceIds', (item) => uuid(item, 'deviceId')),
-    'deviceIds',
+  const deviceIds = nullable(row.deviceIds, 'deviceIds', (value, field) =>
+    unique(
+      array(value, field, (item) => uuid(item, 'deviceId')),
+      field,
+    ),
   );
   if (from >= to) {
     return malformed('fault read interval');

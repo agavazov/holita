@@ -22,6 +22,7 @@ import type {
   QueryFleetDeviceCommandBatchArgs,
   QueryFleetDeviceCommandRequestArgs,
   QueryFleetDeviceCommandRequestsArgs,
+  QueryFleetDeviceFaultReadsArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { singleDeviceDetail } from '../../graphql/selection.js';
@@ -47,6 +48,14 @@ export class DeviceCommandsResolver {
     @Context() context: RequestContext,
   ) {
     return this.deviceCommands.list(context, args);
+  }
+
+  @Query('fleetDeviceFaultReads')
+  faultReadHistory(
+    @Args() args: QueryFleetDeviceFaultReadsArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.deviceCommands.faultReadHistory(context, args.deviceIds);
   }
 
   @Query('fleetDeviceCommandBatch')

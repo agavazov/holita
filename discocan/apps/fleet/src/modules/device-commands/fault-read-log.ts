@@ -22,23 +22,19 @@ export class FaultReadLog {
     items: (Omit<FleetFaultLogEntry, 'vehicle'> & { vehicleId: string | null })[];
   }> {
     const { vehicleIds, from, to } = filter;
-    const devices = await this.devices.forAnsweredFaultReads(
-      scope,
-      this.adapters.enabledTypes('answeredFaultReads'),
-      vehicleIds,
-    );
-    if (devices.length === 0) {
-      return { total: 0, items: [] };
-    }
+    const types = this.adapters.enabledTypes('answeredFaultReads');
+    const devices = await this.devices.forAnsweredFaultReads(scope, types, vehicleIds);
     const byDevice = new Map(devices.map((device) => [device.id, device.vehicleId]));
+    const targets = vehicleIds
+      ? [...this.adapters.group(devices, 'answeredFaultReads')].map(
+          ([type, group]) => [type, group.map(({ id }) => id)] as const,
+        )
+      : types.map((type) => [type, null] as const);
     const pages = await Promise.all(
-      [...this.adapters.group(devices, 'answeredFaultReads')].map(([type, group]) =>
+      targets.map(([type, deviceIds]) =>
         this.adapters
           .for(type)
-          .answeredFaultReads(
-            { ...scope, deviceIds: group.map(({ id }) => id), from, to, count },
-            context,
-          ),
+          .answeredFaultReads({ ...scope, deviceIds, from, to, count }, context),
       ),
     );
     return {

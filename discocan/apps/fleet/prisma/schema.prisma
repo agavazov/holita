@@ -456,7 +456,7 @@ model Trip {
 // The trip relation includes vehicleId, so an event's vehicle always equals its trip's vehicle.
 // Hand-written CHECKs: never MANUAL, IMEI format, coordinates, intensity only on maneuvers,
 // the alert state machine with its timestamps, and no alert status on INFO events.
-// Hand-written partial unique index: fleetEventErmKey (ERM activity, NULLS NOT DISTINCT).
+// Hand-written partial unique indexes: fleetEventDeviceKey and fleetEventDeviceReportKey.
 model FleetEvent {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
@@ -647,7 +647,7 @@ model VehicleEdataMeasurement {
   freezeFrame Boolean @default(false)
   vehicle Vehicle @relation(fields: [tenantId, branchId, vehicleId], references: [tenantId, branchId, id], onDelete: Restrict, onUpdate: Restrict)
 
-  @@unique([tenantId, branchId, deviceImei, sourceEventId, parameterId], map: "vehicleEdataMeasurementErmKey")
+  @@unique([tenantId, branchId, deviceImei, source, sourceEventId, parameterId], map: "vehicleEdataMeasurementDeviceKey")
   @@index([tenantId, branchId, vehicleId, recordedAt(sort: Desc)], map: "vehicleEdataMeasurementVehicleTimeIdx")
   @@map("vehicleEdataMeasurement")
 }

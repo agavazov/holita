@@ -204,6 +204,18 @@ export class DeviceCommandsService {
       : [];
   }
 
+  async faultReadHistory(context: RequestContext, deviceIds: readonly string[]) {
+    const scope = requireScope(context);
+    const ids = [...new Set(deviceIds.map((id) => uuid(id, 'deviceIds')))];
+    const devices = await this.devices.forIds(scope, ids);
+    const histories = await Promise.all(
+      [...this.adapters.group(devices, 'faultReadHistory')].map(([type, group]) =>
+        this.adapters.for(type).faultReadHistory(group.map(target), context),
+      ),
+    );
+    return histories.flat();
+  }
+
   commands(
     context: RequestContext,
     device: { type: FleetDeviceType; id: string; imei: string },

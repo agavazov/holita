@@ -122,13 +122,19 @@ export const discocanCommands = {
   answeredFaultReads: async (
     body: DeviceAnsweredFaultReadsQuery,
   ): Promise<DeviceAnsweredFaultReads> => {
-    const items: DeviceAnsweredFaultReads['items'] = [];
-    let total = 0;
-    for (let offset = 0; offset < body.deviceIds.length; offset += 100) {
-      const page = await requestDeviceServer(DEVICE_SERVER_ROUTES.answeredFaultReads, {
-        body: { ...body, deviceIds: body.deviceIds.slice(offset, offset + 100) },
+    const read = (request: DeviceAnsweredFaultReadsQuery) =>
+      requestDeviceServer(DEVICE_SERVER_ROUTES.answeredFaultReads, {
+        body: request,
         parse: parseDeviceAnsweredFaultReads,
       });
+    const { deviceIds } = body;
+    if (deviceIds === null) {
+      return read(body);
+    }
+    const items: DeviceAnsweredFaultReads['items'] = [];
+    let total = 0;
+    for (let offset = 0; offset < deviceIds.length; offset += 100) {
+      const page = await read({ ...body, deviceIds: deviceIds.slice(offset, offset + 100) });
       total += page.total;
       items.push(...page.items);
     }

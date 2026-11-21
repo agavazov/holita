@@ -486,6 +486,8 @@ to `createdAt DESC, id DESC`. Filters are `statuses`,
 `actions`, `deviceIds`, `imeis`, `actorId`, `createdFrom` (inclusive) and `createdTo` (exclusive).
 List filters accept 1–100 unique values. Every row retains its Device ID, type and `imei`,
 issuer, outcome, lifecycle times, expiry, `retryOfId`, `batchId` and `batchIndex`.
+`fleetDeviceFaultReads(deviceIds: [...])` returns fault reads from each matching Device's recent
+command history in the active Branch. Devices outside that scope contribute no rows.
 `retryDeviceCommand(input: {requestId, expiresInSeconds, intent})` explicitly creates a new
 linked request from FAILED, EXPIRED, UNCERTAIN or CANCELLED, rechecking the Device's current Fleet
 ownership and IMEI. The original remains unchanged; default retry expiry is two hours.

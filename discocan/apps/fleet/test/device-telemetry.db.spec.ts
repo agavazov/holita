@@ -7,6 +7,7 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../src/app.module.js';
 import { issueDemoToken } from '@osnova/auth';
+import type { DeviceReport } from '@discocan/device-contract';
 import { FleetClock } from '../src/clock/fleet-clock.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { CoreClient } from '../src/integrations/core/core.client.js';
@@ -53,7 +54,7 @@ function event(id: string, seconds: number, engineOn: boolean | null): FeedEvent
   };
 }
 
-describe('ERM telemetry import with PostgreSQL', () => {
+describe('Device telemetry import with PostgreSQL', () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;
   let closeDatabase: (() => Promise<void>) | undefined;
   let app: INestApplication | undefined;
@@ -63,6 +64,7 @@ describe('ERM telemetry import with PostgreSQL', () => {
   let url = '';
   const token = randomBytes(24).toString('hex');
   const events = new Map<string, ReturnType<typeof event>[]>();
+  const discocanReports = new Map<string, (Omit<DeviceReport, 'id'> & { id: string })[]>();
   const failures = new Map<string, 'invalid' | 500>();
   const notifications = new Map<string, { items: ExportNotification[]; next: string }>();
   const notificationFailures = new Map<string, 'invalid' | 500>();
@@ -74,6 +76,9 @@ describe('ERM telemetry import with PostgreSQL', () => {
       'FLEET_ERM_EDATA_MEASUREMENTS_ENABLED',
       'ERM_TELEMETRY_URL',
       'ERM_TELEMETRY_TOKEN',
+      'FLEET_DEVICE_SERVER_ENABLED',
+      'DEVICE_SERVER_URL',
+      'DEVICE_SERVER_TOKEN',
     ].map((key) => [key, process.env[key]]),
   );
 
@@ -106,7 +111,10 @@ describe('ERM telemetry import with PostgreSQL', () => {
         }
         return;
       }
-      const imei = /^\/internal\/telemetry\/units\/(\d{15})\/events$/.exec(requested.pathname)?.[1];
+      const discocanImei = /^\/internal\/devices\/(\d{15})\/reports$/.exec(requested.pathname)?.[1];
+      const imei =
+        discocanImei ??
+        /^\/internal\/telemetry\/units\/(\d{15})\/events$/.exec(requested.pathname)?.[1];
       const after = requested.searchParams.get('after') ?? '';
       const limit = Number(requested.searchParams.get('limit'));
       if (
@@ -118,6 +126,13 @@ describe('ERM telemetry import with PostgreSQL', () => {
         limit > 500
       ) {
         response.writeHead(400).end('{}');
+        return;
+      }
+      if (discocanImei) {
+        const reports = (discocanReports.get(discocanImei) ?? [])
+          .filter((entry) => BigInt(entry.id) > BigInt(after))
+          .slice(0, limit);
+        response.end(JSON.stringify({ reports, next: reports.at(-1)?.id ?? after }));
         return;
       }
       const failure = failures.get(imei);
@@ -144,6 +159,9 @@ describe('ERM telemetry import with PostgreSQL', () => {
     process.env.FLEET_ERM_EDATA_MEASUREMENTS_ENABLED = 'true';
     process.env.ERM_TELEMETRY_URL = `http://127.0.0.1:${String(address.port)}`;
     process.env.ERM_TELEMETRY_TOKEN = token;
+    process.env.FLEET_DEVICE_SERVER_ENABLED = 'false';
+    process.env.DEVICE_SERVER_URL = `http://127.0.0.1:${String(address.port)}`;
+    process.env.DEVICE_SERVER_TOKEN = token;
     database = await createTestDatabase();
     closeDatabase = database.close;
     const module = await Test.createTestingModule({ imports: [AppModule] })
@@ -1434,5 +1452,90 @@ describe('ERM telemetry import with PostgreSQL', () => {
     await notificationJobs.tick();
     expect(notificationRequests.get(lampDevice.imei)?.searchParams.get('limit')).toBe('500');
     expect(await faultNotifications()).toEqual(notified);
+
+    // The same IMEI can be registered again with a different provider and overlapping report IDs.
+    await database.client.device.delete({ where: { ...scopeA, id: deviceA.id } });
+    const discocan = await database.client.device.create({
+      data: {
+        ...scopeA,
+        type: 'DISCOCAN',
+        imei: deviceA.imei,
+        vehicleId: vehicleA.id,
+        installedAt,
+      },
+    });
+    const report = {
+      recordedAt: at(450),
+      receivedAt: at(460),
+      latitude: null,
+      longitude: null,
+      speedKph: null,
+      headingDeg: null,
+      ignition: null,
+      engineOn: null,
+      odometerKm: null,
+      externalVoltage: null,
+      backupBatteryVoltage: null,
+      diagnostics: [],
+      measurements: [],
+    };
+    discocanReports.set(discocan.imei, [
+      {
+        ...report,
+        id: '3',
+        diagnostics: [
+          {
+            kind: 'DIAGNOSTIC_TROUBLE_CODE',
+            report: 419,
+            index: 0,
+            code: 'SPN 4339 FMI 7',
+            spn: 4339,
+            fmi: 7,
+            status: 'ADDED',
+          },
+        ],
+      },
+      {
+        ...report,
+        id: '6',
+        measurements: [
+          { parameterId: 1, parameterType: 0, valueSize: 2, valueHex: '1234', freezeFrame: false },
+        ],
+      },
+    ]);
+    process.env.FLEET_DEVICE_SERVER_ENABLED = 'true';
+    const importedDevice = { ...scopeA, vehicleId: vehicleA.id, deviceImei: discocan.imei };
+    const cursor = { ...scopeA, deviceId: discocan.id };
+    for (const replay of [false, true]) {
+      if (replay) {
+        await database.client.deviceCursor.update({ where: cursor, data: { lastEventId: 0n } });
+      }
+      await jobs.tick();
+      expect(await database.client.deviceCursor.findUniqueOrThrow({ where: cursor })).toMatchObject(
+        {
+          lastEventId: 6n,
+        },
+      );
+      expect(
+        await database.client.vehicleEdataMeasurement.findMany({
+          where: { ...importedDevice, sourceEventId: 6n, parameterId: 1 },
+          select: { source: true, valueHex: true },
+          orderBy: { source: 'asc' },
+        }),
+      ).toEqual([
+        { source: 'ERM', valueHex: '0aBc' },
+        { source: 'DISCOCAN', valueHex: '1234' },
+      ]);
+      expect(
+        await database.client.fleetEvent.findMany({
+          where: { ...importedDevice, sourceEventId: 3n, diagnosticIndex: 0 },
+          select: { source: true, troubleCode: true },
+          orderBy: { source: 'asc' },
+        }),
+      ).toEqual([
+        { source: 'ERM', troubleCode: 'SPN 4339 FMI 7' },
+        { source: 'DISCOCAN', troubleCode: 'SPN 4339 FMI 7' },
+      ]);
+    }
   });
 });

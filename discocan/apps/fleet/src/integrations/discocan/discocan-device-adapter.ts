@@ -25,6 +25,8 @@ export class DiscocanDeviceAdapter implements DeviceAdapter {
   readonly commandHistory = discocanCommands.commandHistory;
   readonly actionCatalog = discocanCommands.actionCatalog;
   readonly requestFaultRead = discocanCommands.requestFaultRead;
+  // Device Server does not support fault-read commands yet.
+  readonly faultReadHistory = () => Promise.resolve([]);
   readonly answeredFaultReads = discocanCommands.answeredFaultReads;
 
   readonly startParameterSnapshot = discocanConfiguration.startParameterSnapshot;

@@ -49,16 +49,20 @@ export class ErmFaultReads {
    */
   async faultReads(
     context: InspectionCaller,
-    filter: { deviceIds: readonly string[]; from: Date; to: Date },
+    filter: { deviceIds: readonly string[] | null; from: Date; to: Date },
     count: number,
   ): Promise<DeviceAnsweredFaultReads> {
+    const { deviceIds } = filter;
+    if (deviceIds === null) {
+      return this.faultReadsForDevices(context, filter, count);
+    }
     const items: DeviceAnsweredFaultRead[] = [];
     let total = 0;
     // ERM accepts at most 100 device IDs per filter.
-    for (let start = 0; start < filter.deviceIds.length; start += 100) {
+    for (let start = 0; start < deviceIds.length; start += 100) {
       const batch = await this.faultReadsForDevices(
         context,
-        { ...filter, deviceIds: filter.deviceIds.slice(start, start + 100) },
+        { ...filter, deviceIds: deviceIds.slice(start, start + 100) },
         count,
       );
       total += batch.total;
@@ -69,7 +73,7 @@ export class ErmFaultReads {
 
   private async faultReadsForDevices(
     context: InspectionCaller,
-    filter: { deviceIds: readonly string[]; from: Date; to: Date },
+    filter: { deviceIds: readonly string[] | null; from: Date; to: Date },
     count: number,
   ): Promise<DeviceAnsweredFaultReads> {
     const { authorization, branchId } = context;
@@ -88,7 +92,7 @@ export class ErmFaultReads {
           filter: {
             actions: ['READ_EDATA_FAULTS'],
             statuses: ['ANSWERED'],
-            deviceIds: filter.deviceIds,
+            ...(filter.deviceIds === null ? {} : { deviceIds: filter.deviceIds }),
             createdFrom: filter.from.toISOString(),
             createdTo: filter.to.toISOString(),
           },

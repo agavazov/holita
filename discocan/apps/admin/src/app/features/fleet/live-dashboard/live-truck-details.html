@@ -51,7 +51,7 @@
   [lamps]="current.lamps"
   [reads]="faultReads()"
   [freezeFrame]="detail()?.fleetVehicleFreezeFrame ?? null"
-  [canRead]="canReadFaults() && unit?.type === 'ERM'"
+  [canRead]="canReadFaults() && !!faultDevice()"
   [readBusy]="readingFaults()"
   [language]="language()"
   [now]="now()"

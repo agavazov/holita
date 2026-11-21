@@ -23,6 +23,7 @@ import { ColumnSeries, type SeriesPoint } from '@osnova/ui/charts';
 import { EmptyState } from '@osnova/ui';
 import { FleetNow } from '../../../ui/fleet-live/fleet-now';
 import { FaultCluster } from '../../../ui/fleet-live/fault-cluster';
+import { faultReadDevice } from '../../../ui/fleet-live/fault-reads';
 import { FaultScanner } from '../../../ui/fleet-live/fault-scanner';
 import { FleetFaultCoverage } from '../../../ui/fleet-live/fleet-fault-coverage';
 import {
@@ -556,7 +557,7 @@ export class VehicleProfileView {
   }
 
   protected faultReadDevice(vehicle: VehicleProfile) {
-    return vehicle.liveDevices?.find((device) => device?.type === 'ERM');
+    return faultReadDevice(vehicle.liveDevices ?? []);
   }
 
   protected requestFaultRead(vehicle: VehicleProfile): void {

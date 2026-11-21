@@ -33,6 +33,6 @@ export class InternalErmDeviceTargetController {
       throw new BadRequestException('Use an IMEI of exactly 15 digits.');
     }
     const device = await this.devices.find(scope, deviceId);
-    return { matches: device?.imei === body.imei };
+    return { matches: device?.type === 'ERM' && device.imei === body.imei };
   }
 }

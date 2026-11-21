@@ -8,6 +8,7 @@ import { SelectButton } from 'primeng/selectbutton';
 import { Tag } from 'primeng/tag';
 import type { LiveVehicleDetail } from './live-dashboard-api';
 import type { Language } from '../../../i18n/messages';
+import { faultReadDevice } from '../../../ui/fleet-live/fault-reads';
 import { FaultScanner } from '../../../ui/fleet-live/fault-scanner';
 import { injectFleetFormat } from '../../../ui/format/fleet-format';
 import { formatDuration, formatNumber, formatRelative } from '@osnova/ui';
@@ -73,8 +74,9 @@ export class LiveTruckDetails {
   );
   protected readonly vehicle = computed(() => this.detail()?.fleetVehicle ?? null);
   protected readonly device = computed(() => this.vehicle()?.devices[0] ?? null);
+  protected readonly faultDevice = computed(() => faultReadDevice(this.vehicle()?.devices ?? []));
   protected readonly faultReads = computed(() => {
-    const device = this.device();
+    const device = this.faultDevice();
     return device ? (this.detail()?.faultReadsByDevice.get(device.id) ?? []) : [];
   });
   protected readonly problems = computed(() =>
@@ -125,8 +127,8 @@ export class LiveTruckDetails {
   }
 
   protected requestFaultRead(): void {
-    const device = this.device();
-    if (device?.type === 'ERM') {
+    const device = this.faultDevice();
+    if (device) {
       this.readFaults.emit(device.id);
     }
   }

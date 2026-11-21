@@ -123,11 +123,10 @@ fragment AdminFaultRead on FleetDeviceCommandRequest {
   }
 }
 
-query AdminDeviceFaultReads($id: ID!) {
-  fleetDevice(id: $id) {
-    commandRequests {
-      ...AdminFaultRead
-    }
+query AdminDeviceFaultReads($deviceIds: [ID!]!) {
+  fleetDeviceFaultReads(deviceIds: $deviceIds) {
+    deviceId
+    ...AdminFaultRead
   }
 }
 

@@ -110,7 +110,7 @@ export function edataModule(
   }
   return optionalPattern(
     erm.edataModule,
-    'erm.edataModule',
+    'edataModule',
     64,
     /^[ -~]{1,64}$/,
     'Use 1 to 64 printable characters.',

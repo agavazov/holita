@@ -130,6 +130,10 @@ export interface DeviceAdapter {
     request: DeviceCommandRequestHistory,
     caller: InspectionCaller,
   ): Promise<FleetDeviceCommandRequest[]>;
+  faultReadHistory(
+    devices: readonly InspectionDevice[],
+    caller: InspectionCaller,
+  ): Promise<FleetDeviceCommandRequest[]>;
   commandHistory(
     request: DeviceCommandHistoryRequest,
     caller: InspectionCaller,

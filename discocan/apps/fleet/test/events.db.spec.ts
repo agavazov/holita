@@ -40,7 +40,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
   const faultReads: DeviceAnsweredFaultRead[] = [];
   const discocanFaultCalls: DeviceAnsweredFaultReadsQuery[] = [];
   const discocanFaultReads: DeviceAnsweredFaultRead[] = [];
-  const faultReadCalls: { deviceIds: readonly string[]; count: number }[] = [];
+  const faultReadCalls: Pick<DeviceAnsweredFaultReadsQuery, 'deviceIds' | 'count'>[] = [];
   let van: string, truck: string, driver: string, tripId: string, foreignAlert: string;
   function event(key: EventKey): string {
     const id = events.get(key);
@@ -63,8 +63,8 @@ describe('Events and alert workflow with PostgreSQL', () => {
       .useValue({
         answeredFaultReads: (input: DeviceAnsweredFaultReadsQuery) => {
           discocanFaultCalls.push(input);
-          const rows = discocanFaultReads.filter(({ deviceId }) =>
-            input.deviceIds.includes(deviceId),
+          const rows = discocanFaultReads.filter(
+            ({ deviceId }) => input.deviceIds === null || input.deviceIds.includes(deviceId),
           );
           return Promise.resolve({ total: rows.length, items: rows.slice(0, input.count) });
         },
@@ -111,12 +111,14 @@ describe('Events and alert workflow with PostgreSQL', () => {
         // ERM scopes reads by the forwarded session; this fake answers for the main Branch only.
         faultReads: (
           context: Pick<RequestContext, 'branchId'>,
-          filter: { deviceIds: readonly string[]; from: Date; to: Date },
+          filter: Pick<DeviceAnsweredFaultReadsQuery, 'deviceIds' | 'from' | 'to'>,
           count: number,
         ) => {
           faultReadCalls.push({ deviceIds: filter.deviceIds, count });
           const rows = faultReads.filter(
-            (read) => context.branchId === branchId && filter.deviceIds.includes(read.deviceId),
+            (read) =>
+              context.branchId === branchId &&
+              (filter.deviceIds === null || filter.deviceIds.includes(read.deviceId)),
           );
           return Promise.resolve({ total: rows.length, items: rows.slice(0, count) });
         },
@@ -996,7 +998,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
     );
     const faultLog = `query($offset:Int!,$limit:Int!,$filter:FleetFaultLogFilter){
       fleetFaultLog(offset:$offset,limit:$limit,filter:$filter){
-        total items{id kind occurredAt vehicle{id} troubleCode spn fmi descriptionKey parameterId
+        total items{id kind occurredAt vehicle{id} deviceImei troubleCode spn fmi descriptionKey parameterId
           lampState activeCodes codeCount valueCount}
       }
     }`;
@@ -1121,6 +1123,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
       verdict: { activeCodes: true, codeCount: 1, receivedAt: hours(-0.019) },
     };
     discocanFaultReads.push(discocanRead);
+    await database.client.device.delete({ where: { tenantId, branchId, id: discocan.id } });
     const previous = process.env.FLEET_DEVICE_SERVER_ENABLED;
     process.env.FLEET_DEVICE_SERVER_ENABLED = 'true';
     try {
@@ -1133,6 +1136,8 @@ describe('Events and alert workflow with PostgreSQL', () => {
             items: [
               {
                 id: `read:${discocanRead.id}`,
+                vehicle: null,
+                deviceImei: discocan.imei,
                 activeCodes: true,
                 codeCount: 1,
               },
@@ -1144,7 +1149,7 @@ describe('Events and alert workflow with PostgreSQL', () => {
         expect.objectContaining({
           tenantId,
           branchId,
-          deviceIds: [discocan.id],
+          deviceIds: null,
           count: 1,
         }),
       ]);

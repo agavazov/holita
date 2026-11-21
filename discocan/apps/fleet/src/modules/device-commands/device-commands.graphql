@@ -253,6 +253,8 @@ extend type Query {
     filter: FleetDeviceCommandRequestsFilter
     sort: FleetDeviceCommandRequestsSort
   ): FleetDeviceCommandRequestsPage!
+  "Fault reads from the latest command requests of each matching Device in the active Branch."
+  fleetDeviceFaultReads(deviceIds: [ID!]!): [FleetDeviceCommandRequest!]!
   fleetDeviceCommandBatch(id: ID!): FleetDeviceCommandBatch
   "Available read actions for the selected Device type."
   fleetDeviceActionCatalog(deviceType: FleetDeviceType!): [FleetDeviceActionCatalogEntry!]!

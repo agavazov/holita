@@ -23,7 +23,7 @@ import type {
   FleetDeviceCommandBatch,
   FleetDeviceCommandRequest,
 } from '../../generated/graphql/types.js';
-import type { InspectionCaller } from '../device-adapter.js';
+import type { InspectionCaller, InspectionDevice } from '../device-adapter.js';
 import { ermCommand, ermCommandFields, stringList } from './erm-command-evidence.js';
 import { ermConfigurationChange, ermConfigurationChangeFields } from './erm-configuration.js';
 import { ermEntity, ermMutate, ermOperation } from './erm-api.js';
@@ -241,6 +241,29 @@ export class ErmCommands {
   commandRequestHistory({ device }: DeviceCommandRequestHistory, caller: InspectionCaller) {
     return ermEntity(requestHistoryQuery, device, {}, 'ermCommandRequests', caller, (value) =>
       rowsOf(value, commandRequest),
+    );
+  }
+
+  faultReadHistory(devices: readonly InspectionDevice[], caller: InspectionCaller) {
+    return ermOperation(
+      requestHistoryQuery,
+      { devices: devices.map((device) => ({ __typename: 'FleetDevice', ...device })) },
+      '_entities',
+      caller,
+      (value) => {
+        if (!Array.isArray(value)) {
+          throw new TypeError('Invalid ERM Device references');
+        }
+        return value.flatMap((entity: unknown) => {
+          // ERM returns null for a Device that left the registry since Fleet selected it.
+          if (entity === null) {
+            return [];
+          }
+          return rowsOf(recordOf(entity).ermCommandRequests, commandRequest).filter(
+            ({ action }) => action === 'READ_FAULTS',
+          );
+        });
+      },
     );
   }
 

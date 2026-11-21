@@ -101,6 +101,10 @@ export class ErmDeviceAdapter implements DeviceAdapter {
     return this.commands.commandRequestHistory(request, caller);
   }
 
+  faultReadHistory(devices: readonly InspectionDevice[], caller: InspectionCaller) {
+    return this.commands.faultReadHistory(devices, caller);
+  }
+
   commandHistory(request: DeviceCommandHistoryRequest, caller: InspectionCaller) {
     return this.commands.commandHistory(request, caller);
   }

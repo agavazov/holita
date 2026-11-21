@@ -81,7 +81,7 @@ export function deviceFieldErrors(
   error: unknown,
   language: Language = 'en',
 ): Partial<Record<DeviceField, string>> {
-  const { 'erm.edataModule': edataModule, ...errors } = fleetFieldErrors(
+  return fleetFieldErrors(
     error,
     [
       'imei',
@@ -93,12 +93,11 @@ export function deviceFieldErrors(
       'simIccid',
       'notes',
       'firmwareVersion',
-      'erm.edataModule',
+      'edataModule',
       'simPhoneNumber',
       'smsPassword',
       'installedAt',
     ],
     language,
   );
-  return edataModule === undefined ? errors : { ...errors, edataModule };
 }
