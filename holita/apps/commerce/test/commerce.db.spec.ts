@@ -78,6 +78,12 @@ beforeAll(async () => {
       'utf8',
     ),
   );
+  await connection.query(
+    await readFile(
+      new URL('../prisma/migrations/20261121000000_brands/migration.sql', import.meta.url),
+      'utf8',
+    ),
+  );
   database = new PrismaClient({
     adapter: new PrismaPg({ connectionString: configured }, { schema }),
   });
@@ -295,6 +301,57 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       { id: rows[2].id },
     ),
   ).toMatchObject({ data: null, errors: expect.any(Array) });
+  const client = database;
+  const [local, otherShop, otherTenant] = await Promise.all(
+    [
+      { tenantId: tenantA, branchId: branchA },
+      { tenantId: tenantA, branchId: branchB },
+      { tenantId: tenantB, branchId: branchForeign },
+    ].map((scope) =>
+      client.brand.create({ data: { ...scope, name: 'Scoped Brand', slug: 'scoped-brand' } }),
+    ),
+  );
+  if (!local || !otherShop || !otherTenant) {
+    throw new Error('Missing scoped brands');
+  }
+  expect(await query(tokens.viewer, branchA, '{brands(search:"Scoped"){total items{id}}}')).toEqual(
+    {
+      data: { brands: { total: 1, items: [{ id: local.id }] } },
+    },
+  );
+  const assign =
+    'mutation($product:ID!,$brand:ID!){updateProduct(id:$product,input:{name:"Local",price:"19.95",status:ACTIVE,brandId:$brand}){brandId}}';
+  for (const brand of [otherShop, otherTenant, local]) {
+    const result = await query(tokens.operator, branchA, assign, {
+      product: rows[0].id,
+      brand: brand.id,
+    });
+    expect(result).toMatchObject(
+      brand === local
+        ? { data: { updateProduct: { brandId: local.id } } }
+        : {
+            data: null,
+            errors: [
+              { extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'brandId' }] } },
+            ],
+          },
+    );
+  }
+  const remove = 'mutation($id:ID!){deleteBrand(id:$id)}';
+  for (const [token, id] of [
+    [tokens.viewer, local.id],
+    [tokens.operator, otherShop.id],
+    [tokens.operator, otherTenant.id],
+  ]) {
+    expect(await query(token, branchA, remove, { id })).toHaveProperty('errors');
+  }
+  expect(await query(tokens.operator, branchA, remove, { id: local.id })).toEqual({
+    data: { deleteBrand: true },
+  });
+  expect(await database.product.findUnique({ where: { id: rows[0].id } })).toHaveProperty(
+    'brandId',
+    null,
+  );
 });
 
 async function storefront(
@@ -335,13 +392,32 @@ it('isolates shoppers and active catalogue by shop and hides suspended shops', a
   if (!database) {
     throw new Error('Missing database');
   }
+  const visible = await database.brand.create({
+    data: { tenantId: tenantA, branchId: publicA, name: 'Visible Brand', slug: 'visible' },
+  });
+  await database.brand.create({
+    data: {
+      tenantId: tenantA,
+      branchId: publicA,
+      name: 'Hidden Brand',
+      slug: 'hidden',
+      status: 'HIDDEN',
+    },
+  });
   for (const [name, status] of [
     ['Visible', 'ACTIVE'],
     ['Draft', 'DRAFT'],
     ['Archived', 'ARCHIVED'],
   ] as const) {
     await database.product.create({
-      data: { tenantId: tenantA, branchId: publicA, name, price: '1.00', status },
+      data: {
+        tenantId: tenantA,
+        branchId: publicA,
+        name,
+        price: '1.00',
+        status,
+        brandId: visible.id,
+      },
     });
   }
   const mutation =
@@ -361,8 +437,20 @@ it('isolates shoppers and active catalogue by shop and hides suspended shops', a
       data: { shopperMe: expected },
     });
   }
-  expect(await storefront(publicA, '{catalogue{total items{name}}}')).toMatchObject({
-    data: { catalogue: { total: 1, items: [{ name: 'Visible' }] } },
+  expect(
+    await storefront(publicA, '{catalogue{total items{name brand{id}}} catalogueBrands{id}}'),
+  ).toEqual({
+    data: {
+      catalogue: { total: 1, items: [{ name: 'Visible', brand: { id: visible.id } }] },
+      catalogueBrands: [{ id: visible.id }],
+    },
+  });
+  expect(await storefront(publicB, '{catalogueBrands{id}}')).toEqual({
+    data: { catalogueBrands: [] },
+  });
+  await database.brand.update({ where: { id: visible.id }, data: { status: 'HIDDEN' } });
+  expect(await storefront(publicA, '{catalogue{items{brand{id}}}}')).toEqual({
+    data: { catalogue: { items: [{ brand: null }] } },
   });
   expect(await storefront(suspended, '{shop{id}}')).toEqual({ data: { shop: null } });
   expect(await storefront(suspended, '{catalogue{total}}')).toMatchObject({

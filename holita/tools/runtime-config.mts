@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const directory = fileURLToPath(new URL('../config/', import.meta.url));
 const files = ['core.env', 'commerce.env', 'seed-accounts.env'].map((name) =>
@@ -43,6 +43,7 @@ const content = [
     `CORE_INTERNAL_AUTH_TOKEN=${internalToken}`,
     'CORE_AUTH_VERIFY_URL=http://127.0.0.1:12011/internal/auth/verify',
     'CORE_GRAPHQL_URL=http://127.0.0.1:12011/graphql',
+    `HOLITA_COMMERCE_IMAGE_DIR="${resolve(directory, '../../.volumes/holita/images')}"`,
   ].join('\n') + '\n',
   [
     'HOLITA_STAFF_EMAIL=staff@holita.test',

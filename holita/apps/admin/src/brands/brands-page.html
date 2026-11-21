@@ -1,0 +1,140 @@
+<osnova-page-header [title]="text().brands" [actions]="headerActions()" (action)="open('new')" />
+@if (scope()) {
+<osnova-table-panel
+  #panel
+  [heading]="text().shopBrands"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
+  [view]="view()"
+  [total]="page()?.total ?? null"
+  [busy]="list.isLoading()"
+  [errorText]="text().brandsUnavailable"
+  [emptyTitle]="text().emptyBrands"
+  [emptyDescription]="text().emptyBrandsDescription"
+  [page]="pagination()"
+  [actionContext]="params()"
+  [actions]="actions()"
+  (action)="run($event)"
+  (pageChange)="url.setPage($event)"
+  (retry)="list.reload()"
+  (clearFilters)="url.clearFilters()"
+>
+  <osnova-filter-builder
+    panelActions
+    [searchLabel]="text().searchBrands"
+    [search]="url.searchDraft()"
+    [searchError]="url.searchError() ? shared().searchTooManyWords : null"
+    (searchChange)="url.editSearch($event)"
+  />
+  <osnova-list-sort-menu
+    panelActions
+    [fields]="sortFields()"
+    [sort]="sort()"
+    (sortChange)="changeSort($event)"
+  />
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="page()?.items ?? []"
+    [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    [sortField]="sort().field"
+    [sortOrder]="sort().direction === 'asc' ? 1 : -1"
+    (onLazyLoad)="tableSort($event)"
+    dataKey="id"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="column.kind === 'identity' ? 'var(--app-table-identity-width, ' + column.width + ')' : column.width"
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity" pSortableColumn="NAME">
+          {{ text().name }} <p-sort-icon field="NAME" />
+        </th>
+        <th scope="col" pSortableColumn="STATUS">
+          {{ text().status }} <p-sort-icon field="STATUS" />
+        </th>
+        @if (canWrite()) {
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ shared().pageHeader.actions }}</span>
+        </th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-brand>
+      @let row = record(brand);
+      <tr>
+        <td class="app-col-identity">
+          <div class="brand-identity">
+            @if (brand.status === 'ACTIVE' && brand.logoUrl) {
+            <img
+              class="brand-mark"
+              [src]="brand.logoUrl"
+              alt=""
+              loading="lazy"
+              width="32"
+              height="32"
+            />
+            } @else {
+            <span class="brand-mark" aria-hidden="true">{{ brand.name.slice(0, 1) }}</span>
+            }
+            <div class="app-cell-identity">
+              @if (canWrite()) {
+              <button
+                type="button"
+                class="app-link"
+                [title]="brand.name"
+                (click)="panel.run('edit', [row], $event.currentTarget)"
+              >
+                {{ brand.name }}
+              </button>
+              } @else {
+              <span [title]="brand.name">{{ brand.name }}</span>
+              }
+              <span [title]="brand.slug">{{ brand.slug }}</span>
+            </div>
+          </div>
+          @if (canWrite()) {
+          <div class="app-table-mobile-actions">
+            <osnova-row-actions
+              [actions]="actions()"
+              [record]="row"
+              (choose)="panel.run($event.action, [row], $event.origin)"
+            />
+          </div>
+          }
+        </td>
+        <td>
+          <div class="app-cell-status">
+            <p-tag
+              [severity]="tone(brand.status === 'ACTIVE' ? 'success' : 'neutral')"
+              [value]="brand.status === 'ACTIVE' ? text().brandActive : text().hidden"
+            />
+          </div>
+        </td>
+        @if (canWrite()) {
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <osnova-row-actions
+            [actions]="actions()"
+            [record]="row"
+            (choose)="panel.run($event.action, [row], $event.origin)"
+          />
+        </td>
+        }
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+} @else {
+<p-message severity="info">{{ text().noShop }}</p-message>
+}
+<router-outlet [routerOutletData]="drawerHost" />

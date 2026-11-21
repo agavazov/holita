@@ -24,12 +24,14 @@ input ProductInput {
   name: String!
   price: String!
   status: ProductStatus!
+  brandId: ID
 }
 type Product {
   id: ID!
   name: String!
   price: String!
   status: ProductStatus!
+  brandId: ID
   createdAt: String!
   updatedAt: String!
 }
@@ -46,6 +48,41 @@ type Customer {
   createdAt: String!
   updatedAt: String!
 }
+enum BrandStatus {
+  ACTIVE
+  HIDDEN
+}
+enum BrandSortField {
+  NAME
+  SLUG
+  STATUS
+}
+input BrandSort {
+  field: BrandSortField! = NAME
+  direction: SortDirection! = ASC
+}
+input BrandInput {
+  name: String!
+  slug: String!
+  status: BrandStatus!
+  "Base64-encoded raster file. Omit to keep the logo or pass null to remove it."
+  logo: String
+}
+type Brand {
+  id: ID!
+  name: String!
+  slug: String!
+  status: BrandStatus!
+  logoUrl: String
+  createdAt: String!
+  updatedAt: String!
+}
+type BrandPage {
+  items: [Brand!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
 type Query {
   products(
     offset: Int! = 0
@@ -56,8 +93,13 @@ type Query {
   ): ProductPage!
   product(id: ID!): Product
   customers: [Customer!]!
+  brands(offset: Int! = 0, limit: Int! = 20, search: String, sort: BrandSort): BrandPage!
+  brand(id: ID!): Brand
 }
 type Mutation {
   createProduct(input: ProductInput!): Product!
   updateProduct(id: ID!, input: ProductInput!): Product!
+  createBrand(input: BrandInput!): Brand!
+  updateBrand(id: ID!, input: BrandInput!): Brand!
+  deleteBrand(id: ID!): Boolean!
 }

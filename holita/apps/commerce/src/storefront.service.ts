@@ -14,7 +14,10 @@ import {
   validatePassword,
   verifyPassword,
 } from '@osnova/auth';
-import { Prisma } from './generated/prisma/client.js';
+import { Prisma, type Brand, type Product } from './generated/prisma/client.js';
+import { brandLogoUrl } from './brands/brand-images.js';
+import { BrandsRepository } from './brands/brands.repository.js';
+import type { Scope } from './scope.js';
 import { CommerceRepository } from './commerce.repository.js';
 import { ShopperRepository } from './shopper.repository.js';
 
@@ -46,11 +49,26 @@ function credentials(name: string, email: string, password: string) {
     throw error;
   }
 }
+
+function catalogueBrand(brand: Brand) {
+  return { id: brand.id, name: brand.name, slug: brand.slug, logoUrl: brandLogoUrl(brand) };
+}
+
+function catalogueProduct(item: Product & { brand: Brand | null }) {
+  return {
+    id: item.id,
+    name: item.name,
+    price: item.price.toFixed(2),
+    brand: item.brand?.status === 'ACTIVE' ? catalogueBrand(item.brand) : null,
+  };
+}
+
 @Injectable()
 export class StorefrontService {
   constructor(
     private readonly products: CommerceRepository,
     private readonly shoppers: ShopperRepository,
+    private readonly brands: BrandsRepository,
   ) {}
   async shop(context: StorefrontContext): Promise<ShopScope | null> {
     if (!context.branchId || !isUUID(context.branchId)) {
@@ -105,12 +123,12 @@ export class StorefrontService {
     return shop;
   }
   async catalogue(context: StorefrontContext, offset: number, limit: number) {
-    const shop = await this.requireShop(context);
+    const scope = await this.publicScope(context);
     if (offset < 0 || limit < 1 || limit > 100) {
       throw new BadRequestException('Invalid page');
     }
     const { items, total } = await this.products.products(
-      { tenantId: shop.tenantId, branchId: shop.id },
+      scope,
       offset,
       limit,
       [],
@@ -118,23 +136,30 @@ export class StorefrontService {
       null,
     );
     return {
-      items: items.map((item) => ({ id: item.id, name: item.name, price: item.price.toFixed(2) })),
+      items: items.map(catalogueProduct),
       total,
       offset,
       limit,
     };
   }
   async product(context: StorefrontContext, id: string) {
-    const shop = await this.requireShop(context);
+    const scope = await this.publicScope(context);
     if (!isUUID(id)) {
       return null;
     }
-    const item = await this.products.product(
-      { tenantId: shop.tenantId, branchId: shop.id },
-      id.toLowerCase(),
-      'ACTIVE',
-    );
-    return item ? { id: item.id, name: item.name, price: item.price.toFixed(2) } : null;
+    const item = await this.products.product(scope, id.toLowerCase(), 'ACTIVE');
+    return item ? catalogueProduct(item) : null;
+  }
+  async publicScope(context: StorefrontContext): Promise<Scope> {
+    const shop = await this.requireShop(context);
+    return { tenantId: shop.tenantId, branchId: shop.id };
+  }
+  async catalogueBrands(context: StorefrontContext, offset: number, limit: number) {
+    const scope = await this.publicScope(context);
+    if (offset < 0 || limit < 1 || limit > 100) {
+      throw new BadRequestException('Invalid page');
+    }
+    return (await this.brands.active(scope, offset, limit)).map(catalogueBrand);
   }
   private async createSession(
     shop: ShopScope,

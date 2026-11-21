@@ -1,0 +1,26 @@
+:host {
+  display: grid;
+  gap: var(--p-app-stack-gap);
+  min-inline-size: 0;
+}
+
+.brand-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--p-app-space-2);
+  min-inline-size: 0;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--p-app-space-8);
+  block-size: var(--p-app-space-8);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-app-radius-control);
+  background: var(--p-app-panel-header-background);
+  color: var(--p-text-muted-color);
+  font-weight: 700;
+  object-fit: contain;
+}

@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
 import { Component, Injectable, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -8,7 +9,7 @@ import { Apollo, provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import { firstValueFrom } from 'rxjs';
 import { loadLocalConfig, readPrimeUiLicense } from '@osnova/ui/app';
-import { appTheme, provideOsnovaTheme } from '@osnova/ui/theme';
+import { Appearance, appTheme, provideOsnovaTheme } from '@osnova/ui/theme';
 import {
   CatalogueDocument,
   CatalogueProductDocument,
@@ -18,6 +19,7 @@ import {
   SignInShopperDocument,
   SignOutShopperDocument,
   type CatalogueQuery,
+  type CatalogueProductQuery,
   type ShopperMeQuery,
 } from './generated/operations';
 
@@ -37,6 +39,9 @@ const messages = {
     previous: 'Предишна',
     next: 'Следваща',
     back: 'Към продуктите',
+    loading: 'Зареждане…',
+    productMissing: 'Продуктът не е намерен.',
+    retry: 'Опитай отново',
   },
   en: {
     products: 'Products',
@@ -53,6 +58,9 @@ const messages = {
     previous: 'Previous',
     next: 'Next',
     back: 'Back to products',
+    loading: 'Loading…',
+    productMissing: 'Product not found.',
+    retry: 'Retry',
   },
 };
 type Language = keyof typeof messages;
@@ -119,6 +127,9 @@ class StorefrontApi {
       } @else {
         @if (error()) {
           <p role="alert">{{ t().error }}</p>
+          @if (page === 'catalogue' || page === 'product') {
+            <button type="button" (click)="load()">{{ t().retry }}</button>
+          }
         }
         @if (page === 'catalogue') {
           <h1>{{ t().products }}</h1>
@@ -126,37 +137,66 @@ class StorefrontApi {
             @if (!result.items.length) {
               <p>{{ t().empty }}</p>
             }
-            <ul>
+            <ul class="catalogue-grid" [attr.aria-busy]="catalogueLoading() || null">
               @for (item of result.items; track item.id) {
-                <li>
-                  <a [routerLink]="[...base, 'product', item.id]">{{ item.name }}</a>
-                  <span>{{ item.price }}</span>
+                <li class="app-card catalogue-card">
+                  <a class="app-link product-link" [routerLink]="[...base, 'product', item.id]">{{
+                    item.name
+                  }}</a>
+                  @if (item.brand; as brand) {
+                    <span class="product-brand">
+                      @if (brand.logoUrl) {
+                        <img [src]="brand.logoUrl" alt="" width="24" height="24" loading="lazy" />
+                      }
+                      {{ brand.name }}
+                    </span>
+                  }
+                  <span class="app-num">{{ item.price }}</span>
                 </li>
               }
             </ul>
-            <nav>
-              <button
-                type="button"
-                [disabled]="offset() === 0"
-                (click)="loadCatalogue(offset() - 20)"
-              >
-                {{ t().previous }}</button
-              ><button
-                type="button"
-                [disabled]="offset() + 20 >= result.total"
-                (click)="loadCatalogue(offset() + 20)"
-              >
-                {{ t().next }}
-              </button>
-            </nav>
+            @if (result.total > 20) {
+              <div class="catalogue-pagination">
+                <button
+                  type="button"
+                  [disabled]="catalogueLoading() || offset() === 0"
+                  (click)="loadCatalogue(offset() - 20)"
+                >
+                  {{ t().previous }}
+                </button>
+                <button
+                  type="button"
+                  [disabled]="catalogueLoading() || offset() + 20 >= result.total"
+                  (click)="loadCatalogue(offset() + 20)"
+                >
+                  {{ t().next }}
+                </button>
+              </div>
+            }
+          } @else if (loading()) {
+            <p role="status">{{ t().loading }}</p>
           }
         }
         @if (page === 'product') {
+          <a class="app-link product-back" [routerLink]="base">{{ t().back }}</a>
           @if (product(); as item) {
-            <h1>{{ item.name }}</h1>
-            <p>{{ item.price }}</p>
+            <article class="app-card product-detail">
+              @if (item.brand; as brand) {
+                <p class="product-brand">
+                  @if (brand.logoUrl) {
+                    <img [src]="brand.logoUrl" alt="" width="32" height="32" />
+                  }
+                  {{ brand.name }}
+                </p>
+              }
+              <h1>{{ item.name }}</h1>
+              <p class="app-num product-price">{{ item.price }}</p>
+            </article>
+          } @else if (loading()) {
+            <p role="status">{{ t().loading }}</p>
+          } @else if (!error()) {
+            <h1>{{ t().productMissing }}</h1>
           }
-          <a [routerLink]="base">{{ t().back }}</a>
         }
         @if (page === 'register' || page === 'sign-in') {
           <h1>{{ page === 'register' ? t().register : t().signIn }}</h1>
@@ -218,15 +258,55 @@ class StorefrontApi {
       main {
         padding-block: var(--p-app-space-6);
       }
-      ul {
+      .catalogue-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+        gap: var(--p-app-stack-gap);
         list-style: none;
         padding: 0;
+        margin-block: var(--p-app-space-4);
       }
-      li {
+      .catalogue-pagination {
         display: flex;
-        justify-content: space-between;
-        padding-block: var(--p-app-space-4);
-        border-bottom: 1px solid var(--p-content-border-color);
+        justify-content: flex-end;
+        gap: var(--p-app-space-2);
+      }
+      .catalogue-card,
+      .product-detail {
+        display: grid;
+        align-content: start;
+        gap: var(--p-app-space-3);
+        min-inline-size: 0;
+        overflow-wrap: anywhere;
+      }
+      .product-link {
+        font-weight: 700;
+      }
+      .product-back {
+        display: inline-block;
+        margin-block-end: var(--p-app-space-4);
+      }
+      .product-detail {
+        max-inline-size: 42rem;
+        padding: var(--p-app-space-6);
+      }
+      .product-detail :is(h1, p) {
+        margin: 0;
+      }
+      .product-brand {
+        display: flex;
+        align-items: center;
+        gap: var(--p-app-space-2);
+        color: var(--p-text-muted-color);
+      }
+      .product-brand img {
+        flex: none;
+        border-radius: var(--p-app-radius-control);
+        object-fit: contain;
+      }
+      .product-price {
+        font-size: var(--p-app-text-lg);
+        font-weight: 700;
       }
       form {
         display: grid;
@@ -249,6 +329,7 @@ class StorefrontPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(StorefrontApi);
+  private readonly document = inject(DOCUMENT);
   readonly shopId = this.route.snapshot.paramMap.get('shopId') ?? '';
   readonly base = ['/s', this.shopId];
   readonly page = this.route.snapshot.routeConfig?.path?.split('/').at(2) ?? 'catalogue';
@@ -259,9 +340,11 @@ class StorefrontPage {
   readonly shop = signal<{ id: string; name: string } | null>(null);
   readonly missing = signal(false);
   readonly error = signal(false);
+  readonly loading = signal(true);
+  readonly catalogueLoading = signal(false);
   readonly busy = signal(false);
   readonly catalogue = signal<CatalogueQuery['catalogue'] | null>(null);
-  readonly product = signal<{ id: string; name: string; price: string } | null>(null);
+  readonly product = signal<CatalogueProductQuery['catalogueProduct']>(null);
   readonly shopper = signal<ShopperMeQuery['shopperMe']>(null);
   readonly offset = signal(0);
   readonly form = new FormGroup({
@@ -276,14 +359,19 @@ class StorefrontPage {
     }),
   });
   constructor() {
+    inject(Appearance);
+    this.document.documentElement.lang = this.language();
     void this.load();
   }
   toggleLanguage() {
     const language = this.language() === 'bg' ? 'en' : 'bg';
     this.language.set(language);
+    this.document.documentElement.lang = language;
     sessionStorage.setItem('holita.storefront.language', language);
   }
   async load() {
+    this.loading.set(true);
+    this.error.set(false);
     try {
       const shop = await this.api.shop();
       this.shop.set(shop.data?.shop ?? null);
@@ -305,14 +393,20 @@ class StorefrontPage {
       }
     } catch {
       this.error.set(true);
+    } finally {
+      this.loading.set(false);
     }
   }
   async loadCatalogue(offset: number) {
+    this.catalogueLoading.set(true);
+    this.error.set(false);
     try {
       this.catalogue.set((await this.api.catalogue(offset)).data?.catalogue ?? null);
       this.offset.set(offset);
     } catch {
       this.error.set(true);
+    } finally {
+      this.catalogueLoading.set(false);
     }
   }
   async submit() {

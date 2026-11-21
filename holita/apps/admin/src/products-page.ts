@@ -4,6 +4,7 @@ import {
   computed,
   effect,
   inject,
+  resource,
   signal,
   untracked,
 } from '@angular/core';
@@ -20,7 +21,10 @@ import {
   PageHeader,
   RouteDrawer,
   TablePanel,
+  fieldErrors,
+  lockWhileSaving,
   tableView,
+  uiMessages,
   type FilterCondition,
   type FilterField,
   type ListQuery,
@@ -34,6 +38,7 @@ import {
   type OperatorProductsQuery,
   type ProductStatus,
 } from '@holita/operator';
+import { BrandsApi } from './brands/brands-api';
 
 type Product = OperatorProductsQuery['products']['items'][number];
 
@@ -112,13 +117,20 @@ type Product = OperatorProductsQuery['products']['items'][number];
     </osnova-table-panel>
     @if (drawer()) {
       <osnova-route-drawer
-        [title]="editing() ? text().edit : text().createProduct"
+        #productDrawer
+        [title]="editing() ? text().editProduct : text().createProduct"
+        [subtitle]="editing()?.name ?? null"
         [closeLink]="null"
         [saving]="saving()"
         [dirty]="form.dirty"
-        (closeRequest)="drawer.set(false)"
+        (closeRequest)="closeDrawer(productDrawer)"
       >
-        <form [formGroup]="form" (ngSubmit)="save()" class="app-form-section">
+        <form
+          id="product-editor-form"
+          [formGroup]="form"
+          (ngSubmit)="save()"
+          class="app-form-section"
+        >
           <osnova-form-field controlId="product-name" [label]="text().name" [required]="true"
             ><input pInputText id="product-name" formControlName="name"
           /></osnova-form-field>
@@ -128,16 +140,75 @@ type Product = OperatorProductsQuery['products']['items'][number];
           <osnova-form-field controlId="product-status" [label]="text().status" [required]="true"
             ><p-select
               inputId="product-status"
+              ariaLabelledBy="product-status-label"
               formControlName="status"
               [options]="statusOptions()"
               optionLabel="label"
               optionValue="value"
           /></osnova-form-field>
-          @if (error(); as message) {
+          <osnova-form-field
+            controlId="product-brand"
+            [label]="text().brand"
+            [error]="brandError()"
+          >
+            <p-select
+              inputId="product-brand"
+              ariaLabelledBy="product-brand-label"
+              formControlName="brandId"
+              [options]="options()"
+              optionLabel="name"
+              optionValue="id"
+              [placeholder]="text().noBrand"
+              [filter]="true"
+              [ariaFilterLabel]="text().searchBrands"
+              [filterPlaceholder]="text().searchBrands"
+              [emptyFilterMessage]="shared().table.noResultsTitle"
+              [loading]="brandOptions.isLoading()"
+              [readonly]="!brandOptions.hasValue()"
+              [invalid]="!!brandError()"
+              [pt]="{
+                label: {
+                  'aria-describedby': 'product-brand-error',
+                  'aria-invalid': brandError() ? 'true' : undefined,
+                },
+              }"
+              (onChange)="brandError.set(null)"
+            />
+            @if (brandOptions.error()) {
+              <p-message severity="warn" variant="simple" size="small">{{
+                text().brandsUnavailable
+              }}</p-message>
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [text]="true"
+                [disabled]="saving()"
+                (click)="brandOptions.reload()"
+              >
+                {{ shared().retry }}
+              </button>
+            }
+          </osnova-form-field>
+          @if (saveError(); as message) {
             <p-message severity="error">{{ message }}</p-message>
           }
-          <button pButton type="submit" [disabled]="saving()">{{ text().save }}</button>
         </form>
+        <div drawerFooter class="app-drawer-actions">
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="saving()"
+            (click)="productDrawer.close()"
+          >
+            {{ shared().cancel }}
+          </button>
+          <button pButton type="submit" form="product-editor-form" [disabled]="saving()">
+            {{ text().save }}
+          </button>
+        </div>
       </osnova-route-drawer>
     }
   `,
@@ -146,18 +217,30 @@ export class ProductsPage {
   readonly language = inject(OperatorLanguage);
   readonly session = inject(DemoSession);
   private readonly api = inject(OperatorApi);
+  private readonly brands = inject(BrandsApi);
   readonly page = signal<OperatorProductsQuery['products'] | null>(null);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly drawer = signal(false);
   readonly editing = signal<Product | null>(null);
   readonly saving = signal(false);
+  readonly saveError = signal<string | null>(null);
+  readonly brandError = signal<string | null>(null);
   readonly currentPage = signal(1);
   readonly pageSize = signal(20);
   readonly appliedSearch = signal('');
   readonly conditions = signal<readonly FilterCondition[]>([]);
   readonly sort = signal<NonNullable<ListQuery['sort']>>({ field: 'NAME', direction: 'asc' });
   readonly text = computed(() => strings[this.language.value()]);
+  readonly shared = computed(() => uiMessages[this.language.value()]);
+  readonly brandOptions = resource({
+    params: () => (this.drawer() ? (this.brands.scope() ?? undefined) : undefined),
+    loader: ({ params, abortSignal }) => this.brands.options(params, abortSignal),
+  });
+  readonly options = computed(() => [
+    { id: null, name: this.text().noBrand },
+    ...(this.brandOptions.hasValue() ? this.brandOptions.value() : []),
+  ]);
   readonly canWrite = computed(() => this.session.hasRole('OPERATOR') && !!this.session.branchId());
   readonly actions = computed<readonly PageHeaderAction[]>(() =>
     this.canWrite() ? [{ id: 'create', label: this.text().createProduct, primary: true }] : [],
@@ -210,8 +293,18 @@ export class ProductsPage {
       ],
     }),
     status: new FormControl<ProductStatus>('DRAFT', { nonNullable: true }),
+    brandId: new FormControl<string | null>(null),
   });
   constructor() {
+    lockWhileSaving(
+      this.form,
+      () => this.saving(),
+      () => {},
+    );
+    effect(() => {
+      this.brands.scope();
+      this.drawer.set(false);
+    });
     effect(() => {
       this.language.value();
       this.session.branchId();
@@ -296,17 +389,27 @@ export class ProductsPage {
       name: row?.name ?? '',
       price: row?.price ?? '',
       status: row?.status ?? 'DRAFT',
+      brandId: row?.brandId ?? null,
     });
-    this.error.set(null);
+    this.saveError.set(null);
+    this.brandError.set(null);
     this.drawer.set(true);
+  }
+  async closeDrawer(editor: RouteDrawer): Promise<void> {
+    if (!this.saving() && (await editor.confirmLeave(this.form.dirty))) {
+      this.drawer.set(false);
+    }
   }
   async save(): Promise<void> {
     this.form.markAllAsTouched();
     const branch = this.session.branchId();
-    if (this.form.invalid || !branch) {
+    const scope = this.brands.scope();
+    if (this.form.invalid || !branch || this.saving() || !scope) {
       return;
     }
     this.saving.set(true);
+    this.saveError.set(null);
+    this.brandError.set(null);
     try {
       await this.api.saveProduct(
         this.language.value(),
@@ -314,10 +417,16 @@ export class ProductsPage {
         this.form.getRawValue(),
         this.editing()?.id,
       );
-      this.drawer.set(false);
-      await this.load();
+      if (this.brands.scope() === scope) {
+        this.drawer.set(false);
+        await this.load();
+      }
     } catch (error: unknown) {
-      this.error.set(requestError(error, this.text().unavailable));
+      if (this.brands.scope() === scope) {
+        const errors = fieldErrors(error, ['brandId'], this.language.value());
+        this.brandError.set(errors.brandId ?? null);
+        this.saveError.set(errors.brandId ? null : this.text().unavailable);
+      }
     } finally {
       this.saving.set(false);
     }

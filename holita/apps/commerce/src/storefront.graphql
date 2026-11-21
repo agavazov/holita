@@ -6,6 +6,13 @@ type CatalogueProduct {
   id: ID!
   name: String!
   price: String!
+  brand: CatalogueBrand
+}
+type CatalogueBrand {
+  id: ID!
+  name: String!
+  slug: String!
+  logoUrl: String
 }
 type CataloguePage {
   items: [CatalogueProduct!]!
@@ -27,6 +34,7 @@ type Query {
   shop: Shop
   catalogue(offset: Int! = 0, limit: Int! = 20): CataloguePage!
   catalogueProduct(id: ID!): CatalogueProduct
+  catalogueBrands(offset: Int! = 0, limit: Int! = 20): [CatalogueBrand!]!
   shopperMe: Shopper
 }
 type Mutation {

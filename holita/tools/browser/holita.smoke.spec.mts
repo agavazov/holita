@@ -2,7 +2,8 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
-import { readFile, readdir } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { resolve, extname, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { config } from 'dotenv';
@@ -162,7 +163,11 @@ async function runSeed(env: NodeJS.ProcessEnv): Promise<void> {
   }
 }
 
-async function serve(app: 'admin' | 'backoffice' | 'storefront', routerUrl: string) {
+async function serve(
+  app: 'admin' | 'backoffice' | 'storefront',
+  routerUrl: string,
+  commerceOrigin?: string,
+) {
   const directory = join(root, `holita/apps/${app}/dist/browser`);
   const server = createServer((request, response) => {
     void (async () => {
@@ -198,6 +203,17 @@ async function serve(app: 'admin' | 'backoffice' | 'storefront', routerUrl: stri
         response.end(Buffer.from(await upstream.arrayBuffer()));
         return;
       }
+      if (commerceOrigin && request.url?.startsWith('/media/brands/')) {
+        const authorization = request.headers.authorization;
+        const upstream = await fetch(new URL(request.url, commerceOrigin), {
+          headers: authorization ? { authorization } : {},
+        });
+        response.writeHead(upstream.status, {
+          'content-type': upstream.headers.get('content-type') ?? 'application/octet-stream',
+        });
+        response.end(Buffer.from(await upstream.arrayBuffer()));
+        return;
+      }
       const pathname = decodeURIComponent(new URL(request.url ?? '/', 'http://localhost').pathname);
       const candidate = resolve(directory, `.${pathname}`);
       if (candidate !== directory && !candidate.startsWith(`${directory}/`)) {
@@ -206,10 +222,12 @@ async function serve(app: 'admin' | 'backoffice' | 'storefront', routerUrl: stri
         return;
       }
       let data: Buffer;
+      let servedPath = candidate;
       try {
         data = await readFile(candidate);
       } catch {
-        data = await readFile(join(directory, 'index.html'));
+        servedPath = join(directory, 'index.html');
+        data = await readFile(servedPath);
       }
       const mime: Record<string, string> = {
         '.js': 'text/javascript',
@@ -218,7 +236,7 @@ async function serve(app: 'admin' | 'backoffice' | 'storefront', routerUrl: stri
         '.woff': 'font/woff',
         '.html': 'text/html',
       };
-      response.writeHead(200, { 'content-type': mime[extname(candidate)] ?? 'text/html' });
+      response.writeHead(200, { 'content-type': mime[extname(servedPath)] ?? 'text/html' });
       response.end(data);
     })().catch(() => {
       response.writeHead(503);
@@ -275,6 +293,8 @@ test('staff creates a merchant and its administrator creates a product', async (
   const cleanup: (() => Promise<void>)[] = [];
   const errors: unknown[] = [];
   try {
+    const images = await mkdtemp(join(tmpdir(), 'holita-smoke-images-'));
+    cleanup.push(() => rm(images, { recursive: true, force: true }));
     const coreDb = await database('core');
     cleanup.push(coreDb.close);
     const commerceDb = await database('commerce');
@@ -306,6 +326,7 @@ test('staff creates a merchant and its administrator creates a product', async (
       env: {
         ...process.env,
         COMMERCE_DATABASE_URL: commerceDb.url,
+        HOLITA_COMMERCE_IMAGE_DIR: images,
         CORE_INTERNAL_AUTH_TOKEN: internal,
         CORE_AUTH_VERIFY_URL: `http://127.0.0.1:${String(corePort)}/internal/auth/verify`,
         CORE_GRAPHQL_URL: `http://127.0.0.1:${String(corePort)}/graphql`,
@@ -314,14 +335,15 @@ test('staff creates a merchant and its administrator creates a product', async (
       stdio: 'ignore',
     });
     cleanup.push(() => stopChild(commerce));
-    await waitReady(`http://127.0.0.1:${String(commercePort)}/graphql`, commerce, 'graphql');
+    const commerceOrigin = `http://127.0.0.1:${String(commercePort)}`;
+    await waitReady(`${commerceOrigin}/graphql`, commerce, 'graphql');
     const routerUrl = `http://127.0.0.1:${String(routerPort)}/graphql`;
-    const admin = await serve('admin', routerUrl);
+    const admin = await serve('admin', routerUrl, commerceOrigin);
     cleanup.push(admin.close);
     const backoffice = await serve('backoffice', routerUrl);
     cleanup.push(backoffice.close);
     const publicUrl = `http://127.0.0.1:${String(publicRouterPort)}/graphql`;
-    const shopApp = await serve('storefront', publicUrl);
+    const shopApp = await serve('storefront', publicUrl, commerceOrigin);
     cleanup.push(shopApp.close);
     const router = spawn(
       join(root, 'osnova/tools/router/dist/router'),
@@ -414,12 +436,23 @@ test('staff creates a merchant and its administrator creates a product', async (
     const merchant = await merchantContext.newPage();
     await merchant.goto(admin.origin);
     await signIn(merchant, merchantEmail, merchantPassword);
+    await merchant.getByRole('link', { name: 'Brands', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Add brand', exact: true }).click();
+    await merchant.locator('#brand-name').fill('Smoke Brand');
+    await merchant
+      .locator('input[type=file]')
+      .setInputFiles(join(root, 'holita/config/demo/northline.png'));
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(merchant.getByRole('button', { name: 'Smoke Brand', exact: true })).toBeVisible();
+    await merchant.getByRole('link', { name: 'Products', exact: true }).click();
     await merchant.getByRole('button', { name: 'Create product', exact: true }).click();
     const productName = `Product ${randomUUID()}`;
     await merchant.locator('#product-name').fill(productName);
     await merchant.locator('#product-price').fill('25.50');
     await merchant.locator('p-select[formcontrolname="status"]').click();
     await merchant.getByRole('option', { name: 'Active', exact: true }).click();
+    await merchant.locator('#product-brand').click();
+    await merchant.getByRole('option', { name: 'Smoke Brand', exact: true }).click();
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(merchant.getByText(productName, { exact: true })).toBeVisible();
     const shopperContext = await browser.newContext();
@@ -428,6 +461,45 @@ test('staff creates a merchant and its administrator creates a product', async (
     await shopper.goto(`${shopApp.origin}/s/${shopId}`);
     await shopper.getByRole('button', { name: 'EN', exact: true }).click();
     await expect(shopper.getByRole('link', { name: productName })).toBeVisible();
+    await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
+    await shopper.getByRole('link', { name: productName }).click();
+    await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
+    const logo = await shopper.locator('.product-brand img').getAttribute('src');
+    if (!logo) {
+      throw new Error('Missing storefront brand logo');
+    }
+    const image = await shopper.request.get(new URL(logo, shopApp.origin).href);
+    expect(image.status()).toBe(200);
+    expect(await image.body()).toEqual(
+      await readFile(join(root, 'holita/config/demo/northline.png')),
+    );
+    const foreignImage = logo.replace(shopId, randomUUID());
+    expect((await shopper.request.get(new URL(foreignImage, shopApp.origin).href)).status()).toBe(
+      404,
+    );
+    await merchant.getByRole('link', { name: 'Brands', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Smoke Brand', exact: true }).click();
+    await expect(merchant.getByRole('img', { name: 'Logo', exact: true })).toBeVisible();
+    await merchant.locator('#brand-name').fill('Smoke Brand revised');
+    await merchant
+      .locator('input[type=file]')
+      .setInputFiles(join(root, 'holita/config/demo/northline.png'));
+    await merchant.locator('#brand-status').click();
+    await merchant.getByRole('option', { name: 'Hidden', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(
+      merchant.getByRole('button', { name: 'Smoke Brand revised', exact: true }),
+    ).toBeVisible();
+    expect((await shopper.request.get(new URL(logo, shopApp.origin).href)).status()).toBe(404);
+    await shopper.reload();
+    await expect(shopper.getByRole('heading', { name: productName })).toBeVisible();
+    await expect(shopper.locator('.product-brand')).toHaveCount(0);
+    await merchant
+      .getByRole('button', { name: 'Actions for Smoke Brand revised', exact: true })
+      .click();
+    await merchant.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(merchant.getByText('No brands yet', { exact: true })).toBeVisible();
     await shopper.getByRole('link', { name: 'My account' }).click();
     await shopper.getByRole('link', { name: 'Register', exact: true }).click();
     await shopper.locator('#name').fill('Shopper');

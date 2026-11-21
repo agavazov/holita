@@ -4,12 +4,19 @@ query PublicShop {
     name
   }
 }
+fragment CatalogueBrandFields on CatalogueBrand {
+  name
+  logoUrl
+}
 query Catalogue($offset: Int!, $limit: Int!) {
   catalogue(offset: $offset, limit: $limit) {
     items {
       id
       name
       price
+      brand {
+        ...CatalogueBrandFields
+      }
     }
     total
     offset
@@ -21,6 +28,9 @@ query CatalogueProduct($id: ID!) {
     id
     name
     price
+    brand {
+      ...CatalogueBrandFields
+    }
   }
 }
 query ShopperMe {

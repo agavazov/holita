@@ -11,16 +11,25 @@ import { StorefrontResolver } from './storefront.resolver.js';
 import { StorefrontService } from './storefront.service.js';
 import { ShopperRepository } from './shopper.repository.js';
 import { HealthController } from './health.controller.js';
+import { BrandImages } from './brands/brand-images.js';
+import { BrandImagesController } from './brands/brand-images.controller.js';
+import { BrandsRepository } from './brands/brands.repository.js';
+import { BrandsResolver } from './brands/brands.resolver.js';
+import { BrandsService } from './brands/brands.service.js';
 
-@Module({ providers: [DatabaseService], exports: [DatabaseService] })
+@Module({
+  providers: [DatabaseService, BrandsRepository, BrandImages],
+  exports: [DatabaseService, BrandsRepository, BrandImages],
+})
 class DatabaseModule {}
 @Module({
   imports: [DatabaseModule],
-  providers: [CommerceRepository, CommerceResolver, CommerceService],
+  providers: [CommerceRepository, CommerceResolver, CommerceService, BrandsResolver, BrandsService],
 })
 class OperatorModule {}
 @Module({
   imports: [DatabaseModule],
+  controllers: [BrandImagesController],
   providers: [CommerceRepository, ShopperRepository, StorefrontResolver, StorefrontService],
 })
 class StorefrontModule {}

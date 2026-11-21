@@ -19,6 +19,7 @@
         "{workspaceRoot}/holita/tools/holita-graphql.mts",
         "{workspaceRoot}/holita/apps/commerce/src/**/*.graphql",
         "{workspaceRoot}/holita/packages/operator/src/**/*.graphql",
+        "{workspaceRoot}/holita/apps/admin/src/**/*.graphql",
         "{workspaceRoot}/osnova/apps/core/src/**/*.graphql",
         "{workspaceRoot}/osnova/packages/ui/src/app/**/*.graphql",
         "{workspaceRoot}/package-lock.json",
@@ -27,6 +28,7 @@
       "outputs": [
         "{projectRoot}/src/generated/graphql",
         "{workspaceRoot}/holita/packages/operator/src/generated",
+        "{workspaceRoot}/holita/apps/admin/src/generated",
         "{projectRoot}/src/generated/storefront",
         "{workspaceRoot}/holita/apps/storefront/src/generated"
       ],

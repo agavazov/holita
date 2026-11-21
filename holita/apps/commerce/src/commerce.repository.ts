@@ -40,6 +40,7 @@ export class CommerceRepository {
           skip: offset,
           take: limit,
           orderBy: [order, { id: 'desc' }],
+          include: { brand: true },
         }),
         this.database.client.product.count({ where }),
       ],
@@ -51,6 +52,7 @@ export class CommerceRepository {
   product(scope: Scope, id: string, status?: 'ACTIVE') {
     return this.database.client.product.findUnique({
       where: { id, ...scope, ...(status ? { status } : {}) },
+      include: { brand: true },
     });
   }
 

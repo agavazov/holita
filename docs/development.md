@@ -468,6 +468,11 @@ npm run db:seed:holita
 npm run dev:holita
 ```
 
+Existing Holita checkouts need `HOLITA_COMMERCE_IMAGE_DIR` in `holita/config/commerce.env`.
+Set it to the absolute path of `.volumes/holita/images` in the checkout before seeding.
+Admin uploads brand logos through the operator graph. Serve `/media/brands/` from Commerce on
+the Admin and storefront origins, alongside their existing `/graphql` routes.
+
 `npm run dev` starts both products. `npm run kill` stops their development applications while
 leaving PostgreSQL and the ERM units running. Discocan Core reads `discocan/config/core.env`;
 Holita Core reads `holita/config/core.env`. Their watch outputs are `dist-discocan` and

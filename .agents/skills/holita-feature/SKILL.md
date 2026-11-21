@@ -22,6 +22,8 @@ Use the ticket to choose which layers the feature changes.
 - Define operator operations in operator SDL and shopper-facing operations in storefront SDL,
   over the same Commerce services. Keep operator fields out of the storefront graph. Regenerate
   contracts and run schema checks when SDL or operations change.
+- Copy the Brands pilot for catalogue references: a composite Tenant/Branch foreign key protects
+  assignments, and the storefront maps related records only when they are public.
 
 ## Admin and storefront
 
@@ -30,6 +32,9 @@ Use the ticket to choose which layers the feature changes.
   [design system skill](../osnova-admin-design-system/SKILL.md) for shared patterns and loading,
   empty and error states. Use routed drawers for entity editors and the shared full-page view
   for General Settings.
+- Keep named operations beside the Admin feature, register them in the operator graph generator,
+  and capture shop, session and language in its concrete Apollo service. Use `UrlListState` and
+  explicit `TablePanel` columns. Let the drawer notify its retained list through `DrawerHost`.
 - Add BG/EN strings for changed Admin and storefront surfaces. Capture screenshots of every new
   or changed screen at 1440×900 and 390×844, in light and dark.
 
@@ -52,6 +57,9 @@ Use an absolute directory path. The demo seed writes generated images to the sam
 
 Only authorized operators can upload, replace or remove images in the selected shop. Accept JPEG,
 PNG and WebP up to 5 MiB and validate the content type from the file. Keep media references
-shop-scoped. Scope every file fetch, including direct reads by generated ID, to the verified
-Tenant and Branch. Anonymous reads require a currently visible storefront attachment in that
-shop. Publish URLs only for images with such an attachment.
+shop-scoped. Brands accepts the logo with the operator mutation, so a rejected write cannot
+publish a file. Preserve an omitted logo and remove it on explicit null. Operator previews fetch
+bytes with authorization and release their object URLs when the draft changes or closes.
+Scope every file fetch to the verified Tenant and Branch. Anonymous reads require a currently
+visible storefront attachment in that shop. Serve media from Commerce on the Admin and
+storefront origins, including in the browser smoke harness.

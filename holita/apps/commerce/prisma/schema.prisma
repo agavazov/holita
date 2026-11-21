@@ -16,10 +16,36 @@ enum ProductStatus {
   @@map("productStatus")
 }
 
+enum BrandStatus {
+  ACTIVE @map("active")
+  HIDDEN @map("hidden")
+  @@map("brandStatus")
+}
+
+model Brand {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  name String @db.VarChar(200)
+  slug String @db.VarChar(200)
+  logoKey String? @db.VarChar(41)
+  status BrandStatus @default(ACTIVE)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  products Product[]
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, slug])
+  @@unique([tenantId, branchId, logoKey])
+  @@index([tenantId, branchId, name, id])
+  @@map("brand")
+}
+
 model Product {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
   branchId String @db.Uuid
+  brandId String? @db.Uuid
+  brand Brand? @relation(fields: [tenantId, branchId, brandId], references: [tenantId, branchId, id], onDelete: NoAction)
   name String @db.VarChar(200)
   price Decimal @db.Decimal(12, 2)
   status ProductStatus @default(DRAFT)
@@ -27,6 +53,7 @@ model Product {
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
   @@unique([tenantId, branchId, id])
   @@index([tenantId, branchId, name, id])
+  @@index([tenantId, branchId, brandId])
   @@map("product")
 }
 

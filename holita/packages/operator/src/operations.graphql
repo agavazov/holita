@@ -59,6 +59,7 @@ query OperatorProducts(
       name
       price
       status
+      brandId
       createdAt
       updatedAt
     }

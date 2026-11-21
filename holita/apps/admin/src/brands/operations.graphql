@@ -1,0 +1,38 @@
+fragment OperatorBrandFields on Brand {
+  id
+  name
+  slug
+  status
+  logoUrl
+}
+
+query OperatorBrands($offset: Int!, $limit: Int!, $search: String, $sort: BrandSort) {
+  brands(offset: $offset, limit: $limit, search: $search, sort: $sort) {
+    items {
+      ...OperatorBrandFields
+    }
+    total
+  }
+}
+
+query OperatorBrand($id: ID!) {
+  brand(id: $id) {
+    ...OperatorBrandFields
+  }
+}
+
+mutation OperatorCreateBrand($input: BrandInput!) {
+  createBrand(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateBrand($id: ID!, $input: BrandInput!) {
+  updateBrand(id: $id, input: $input) {
+    id
+  }
+}
+
+mutation OperatorDeleteBrand($id: ID!) {
+  deleteBrand(id: $id)
+}

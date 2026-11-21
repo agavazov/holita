@@ -1,0 +1,16 @@
+.brand-logo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-app-space-2);
+}
+
+.brand-preview {
+  flex: none;
+  inline-size: calc(var(--p-app-space-10) + var(--p-app-space-4));
+  block-size: calc(var(--p-app-space-10) + var(--p-app-space-4));
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-app-radius-control);
+  background: var(--p-app-panel-header-background);
+  object-fit: contain;
+}

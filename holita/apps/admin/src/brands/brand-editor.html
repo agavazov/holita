@@ -1,0 +1,140 @@
+<osnova-route-drawer
+  [title]="editing ? text().editBrand : text().newBrand"
+  [subtitle]="subtitle()"
+  [state]="state()"
+  [errorText]="text().brandsUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  <form
+    id="brand-editor-form"
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="app-form-section"
+  >
+    <osnova-form-field
+      controlId="brand-name"
+      [label]="text().name"
+      [required]="true"
+      [error]="error('name')"
+    >
+      <input
+        #name
+        pInputText
+        id="brand-name"
+        formControlName="name"
+        autocomplete="off"
+        [invalid]="!!error('name')"
+        [attr.aria-invalid]="!!error('name')"
+        aria-describedby="brand-name-error"
+        (input)="changeName(name.value)"
+      />
+    </osnova-form-field>
+    <osnova-form-field
+      controlId="brand-slug"
+      [label]="text().slug"
+      [hint]="text().slugHint"
+      [required]="true"
+      [error]="error('slug')"
+    >
+      <input
+        pInputText
+        id="brand-slug"
+        formControlName="slug"
+        autocomplete="off"
+        spellcheck="false"
+        [invalid]="!!error('slug')"
+        [attr.aria-invalid]="!!error('slug')"
+        aria-describedby="brand-slug-hint brand-slug-error"
+        (input)="clearError('slug')"
+      />
+    </osnova-form-field>
+    <osnova-form-field
+      controlId="brand-status"
+      [label]="text().status"
+      [required]="true"
+      [error]="error('status')"
+    >
+      <p-select
+        inputId="brand-status"
+        ariaLabelledBy="brand-status-label"
+        formControlName="status"
+        [options]="statusOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [invalid]="!!error('status')"
+        [pt]="{ label: { 'aria-invalid': error('status') ? 'true' : undefined, 'aria-describedby': 'brand-status-error' } }"
+        (onChange)="clearError('status')"
+      />
+    </osnova-form-field>
+    <osnova-form-field
+      controlId="brand-logo"
+      [label]="text().logo"
+      [hint]="text().logoHint"
+      [error]="error('logo')"
+    >
+      <input
+        #file
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        hidden
+        (change)="chooseLogo(file)"
+      />
+      <div class="brand-logo-controls">
+        @if (preview(); as source) {
+        <img class="brand-preview" [src]="source" [alt]="text().logo" width="56" height="56" />
+        }
+        <button
+          pButton
+          id="brand-logo"
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving()"
+          aria-describedby="brand-logo-hint brand-logo-error"
+          [attr.aria-invalid]="!!error('logo')"
+          (click)="file.click()"
+        >
+          {{ hasLogo() ? text().replaceLogo : text().chooseLogo }}
+        </button>
+        @if (hasLogo() || error('logo')) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          [disabled]="saving()"
+          (click)="setLogo(null)"
+        >
+          {{ text().removeLogo }}
+        </button>
+        }
+      </div>
+      @if (logo() === undefined && existingLogo.error()) {
+      <p-message severity="warn" variant="simple" size="small"
+        >{{ text().logoUnavailable }}</p-message
+      >
+      }
+    </osnova-form-field>
+    @if (saveError()) {
+    <p-message severity="error">{{ text().brandSaveFailed }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="brand-editor-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+  </div>
+</osnova-route-drawer>

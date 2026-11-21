@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
+import { GraphQLError } from 'graphql';
 import type { Product, ProductInput, QueryProductsArgs } from './generated/graphql/types.js';
 import { Prisma, type Product as StoredProduct } from './generated/prisma/client.js';
 import { CommerceRepository } from './commerce.repository.js';
@@ -11,6 +12,7 @@ function product(row: StoredProduct): Product {
     name: row.name,
     price: row.price.toFixed(2),
     status: row.status,
+    brandId: row.brandId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -25,7 +27,22 @@ function productInput(input: ProductInput): ProductInput {
       'Price must be a non-negative decimal with at most two fractional digits',
     );
   }
+  if (typeof input.brandId === 'string') {
+    if (!isUUID(input.brandId)) {
+      throw invalidBrand();
+    }
+    return { ...input, name, brandId: input.brandId.toLowerCase() };
+  }
   return { ...input, name };
+}
+function invalidBrand(): GraphQLError {
+  const message = 'Choose a brand from this shop';
+  return new GraphQLError(message, {
+    extensions: {
+      code: 'BAD_USER_INPUT',
+      fieldErrors: [{ path: 'brandId', code: 'INVALID_VALUE', message }],
+    },
+  });
 }
 function recordId(id: string): string {
   if (!isUUID(id)) {
@@ -73,9 +90,15 @@ export class CommerceService {
   }
 
   async create(context: RequestContext, input: ProductInput) {
-    return product(
-      await this.repository.create(await requireScope(context, true), productInput(input)),
-    );
+    const scope = await requireScope(context, true);
+    try {
+      return product(await this.repository.create(scope, productInput(input)));
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw invalidBrand();
+      }
+      throw error;
+    }
   }
 
   async update(context: RequestContext, id: string, input: ProductInput) {
@@ -85,6 +108,9 @@ export class CommerceService {
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
         throw new NotFoundException('Product not found');
+      }
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw invalidBrand();
       }
       throw error;
     }

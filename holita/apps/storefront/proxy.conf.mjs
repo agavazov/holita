@@ -1,1 +1,4 @@
-export default { '/graphql': { target: 'http://127.0.0.1:12030', secure: false } };
+export default {
+  '/graphql': { target: 'http://127.0.0.1:12030', secure: false },
+  '/media/**': { target: 'http://127.0.0.1:12013', secure: false },
+};

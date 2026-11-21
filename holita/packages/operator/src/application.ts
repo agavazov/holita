@@ -14,7 +14,8 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { provideRouter, Router, RouterOutlet, type Routes } from '@angular/router';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
-import { AdminShell, SignIn, UI_LANGUAGE, type NavGroup } from '@osnova/ui';
+import { AdminShell, OperationToast, SignIn, UI_LANGUAGE, type NavGroup } from '@osnova/ui';
+import { MessageService } from 'primeng/api';
 import {
   AuthApi,
   BranchesApi,
@@ -59,7 +60,8 @@ export class OperatorLanguage {
 
 @Component({
   selector: 'holita-operator',
-  imports: [AdminShell, SignIn, RouterOutlet],
+  imports: [AdminShell, OperationToast, SignIn, RouterOutlet],
+  providers: [MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (!session.current()) {
@@ -85,11 +87,12 @@ export class OperatorLanguage {
         [branchId]="session.branchId()"
         [tenantName]="session.current()?.tenant?.name ?? null"
         [account]="account()"
-        (branchSelected)="session.selectBranch($event)"
+        (branchSelected)="selectBranch($event)"
         (languageChange)="changeLanguageValue($event)"
         (signOut)="signOut()"
       >
         <router-outlet />
+        <osnova-operation-toast />
       </osnova-admin-shell>
     }
   `,
@@ -126,8 +129,14 @@ export class OperatorApplication {
   private readonly auth = inject(AuthApi);
   private readonly branchApi = inject(BranchesApi);
   private readonly router = inject(Router);
+  private readonly messages = inject(MessageService);
 
   constructor() {
+    effect(() => {
+      this.session.branchId();
+      this.language.value();
+      this.messages.clear();
+    });
     effect((cleanup) => {
       const current = this.session.current();
       const language = this.language.value();
@@ -156,6 +165,22 @@ export class OperatorApplication {
         close();
       });
     });
+  }
+  async selectBranch(branchId: string): Promise<void> {
+    if (branchId === this.session.branchId()) {
+      return;
+    }
+    let active = this.router.routerState.root;
+    while (active.firstChild) {
+      active = active.firstChild;
+    }
+    if (active.snapshot.data['drawer'] === true) {
+      const left = await this.router.navigate(['..'], { relativeTo: active });
+      if (!left) {
+        return;
+      }
+    }
+    this.session.selectBranch(branchId);
   }
   async signIn(credentials: { email: string; password: string }): Promise<void> {
     this.busy.set(true);
