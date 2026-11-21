@@ -31,6 +31,7 @@ before the work starts; ask once, in plain words, and wait. `Blocked` names what
 | [017 Measurement vocabulary for the hardware](017-measurement-vocabulary.md)      | Blocked     | Discocan  |
 | [018 Track gaps per device type](018-track-gap-thresholds.md)                     | Blocked     | Discocan  |
 | [019 ERM adapter inside erm-server](019-erm-adapter-into-erm-server.md)           | Blocked     | Discocan  |
+| [Holita migration queue, tickets 100+](holita-migration.md)                       | Ready       | Holita    |
 
 ## Rules for every ticket
 
