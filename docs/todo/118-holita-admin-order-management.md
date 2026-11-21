@@ -13,7 +13,8 @@ Merchants can see and fulfill orders placed in their shop.
 ## Steps
 
 1. Add Admin Orders list and detail, searchable by order number or contact and filterable by
-   status. Display the stored items, contact, address, method and totals.
+   status. Display the stored items, contact, address, method labels, payment instructions,
+   charged shipping fee and totals.
 2. Add the order status flow placed, confirmed, processing, shipped, completed and cancelled.
    Allow manual marking as paid, and restore tracked stock once when an eligible order is
    cancelled.
@@ -27,7 +28,9 @@ status and cancelling again leaves stock unchanged.
 
 ## Limits
 
-Maintain order history through status changes. Manual creation and edits land in 119.
+Maintain order history through status changes. See [119](119-holita-admin-manual-orders.md) for
+manual creation and edits, [128](128-holita-order-invoices.md) for invoices and
+[129](129-holita-manual-refunds.md) for refunds.
 
 ## References
 

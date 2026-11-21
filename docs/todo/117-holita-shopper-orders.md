@@ -13,7 +13,8 @@ Shoppers can find and review orders linked to their shop account.
 ## Steps
 
 1. Expose a paged public-graph query for the verified customer’s orders and a scoped detail
-   lookup. Show number, date, status, line snapshots, delivery summary and totals.
+   lookup. Show number, date, status, line snapshots, delivery summary, payment instructions,
+   charged shipping fee and totals from the order snapshots.
 2. Add Storefront Account Orders and Order Detail. Keep Admin screens for 118.
 3. Seed a completed order for the demo shopper alongside the placed order.
 

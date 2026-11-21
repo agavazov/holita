@@ -14,8 +14,9 @@ Merchants manage the manual options already used by checkout.
 
 1. Add Admin Payment Methods and Shipping Methods lists and drawers over the existing models. Edit
    label, active status, order, payment instructions and the fixed shipping fee.
-2. Let merchants add, edit and deactivate methods. Have checkout show the current enabled options
-   and preserve historical settings in order snapshots.
+2. Let merchants add, edit and deactivate methods. Have checkout show the current enabled options.
+   Display the payment instructions and charged shipping fee from the
+   [order snapshot](116-holita-place-order.md) on historical orders.
 3. Seed a second enabled payment method and an inactive delivery option.
 
 ## Done when

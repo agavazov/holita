@@ -14,8 +14,9 @@ A guest or signed-in shopper can review a manual-payment checkout total.
 
 1. Add shop-scoped payment methods with label, instructions, enabled status and order, plus
    shipping methods with label, fixed fee, enabled status and order.
-2. Quote the cart in Commerce using the chosen active methods and current line prices. Build the
-   storefront checkout form for name, email, phone, shipping address and method choice.
+2. Authorize the cart as in [114](114-holita-cart.md). Quote it in Commerce using the chosen
+   active methods and current line prices. Build the storefront checkout form for name, email,
+   phone, shipping address and method choice.
 3. Keep payment and shipping configuration seed-backed until the Admin screens in 122. Seed Cash
    on Delivery and fixed-rate Home Delivery.
 

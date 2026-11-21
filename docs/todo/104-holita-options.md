@@ -20,12 +20,12 @@ Merchants define the options that variants will use.
 
 ## Done when
 
-The merchant can create and edit a reusable option with ordered values. The storefront starts
-using those options in 113.
+The merchant can create and edit a reusable option with ordered values.
 
 ## Limits
 
-Text labels only. Variant assignments land in 105.
+Text labels only. Variant assignments land in 105. The storefront first uses options for filters
+in 112, then for variant selection in 113.
 
 ## References
 

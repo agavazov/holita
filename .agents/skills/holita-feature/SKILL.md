@@ -13,9 +13,12 @@ Use the ticket to choose which layers the feature changes.
 
 - Follow the [backend skill](../osnova-backend-feature/SKILL.md) for persistence, validation and
   lists. Add Commerce Prisma models and additive migrations for new persisted data.
-- Use a concrete repository and service. Require verified Tenant and Branch scope for operator
-  operations. Resolve the storefront Branch and verify the shop customer's own session for
-  private shopper operations.
+- Use a concrete repository and service. Require verified `tenantId` and `branchId` on every
+  Commerce read and write. Resolve the storefront Branch from the request and derive its Tenant
+  from the verified Branch. Limit unauthenticated storefront queries to public records in that
+  Branch.
+- Authorize guest cart, checkout and order confirmation with the shop-scoped cart credential.
+  Require the shop customer's verified session for account orders.
 - Define operator operations in operator SDL and shopper-facing operations in storefront SDL,
   over the same Commerce services. Keep operator fields out of the storefront graph. Regenerate
   contracts and run schema checks when SDL or operations change.
@@ -24,8 +27,9 @@ Use the ticket to choose which layers the feature changes.
 
 - Use the [Admin skill](../osnova-admin-development/SKILL.md) for named operations, generated
   TypedDocumentNodes, scope and typed Reactive Forms. Follow the
-  [design system skill](../osnova-admin-design-system/SKILL.md) for shared patterns, including
-  the routed drawer editor and loading, empty and error states.
+  [design system skill](../osnova-admin-design-system/SKILL.md) for shared patterns and loading,
+  empty and error states. Use routed drawers for entity editors and the shared full-page view
+  for General Settings.
 - Add BG/EN strings for changed Admin and storefront surfaces. Capture screenshots of every new
   or changed screen at 1440×900 and 390×844, in light and dark.
 
@@ -36,6 +40,8 @@ Use the ticket to choose which layers the feature changes.
   fixture would require an update. A second run should leave existing data unchanged.
 - Follow the [validation skill](../osnova-focused-validation/SKILL.md) and workspace test budget.
   Add or extend tests only for cases the delivery policy permits.
+- For Holita login, routing, transport or main journey changes, run one relevant smoke file
+  with `npm run test:smoke:holita -- <file>`.
 
 ## Development image storage
 
@@ -46,5 +52,6 @@ Use an absolute directory path. The demo seed writes generated images to the sam
 
 Only authorized operators can upload, replace or remove images in the selected shop. Accept JPEG,
 PNG and WebP up to 5 MiB and validate the content type from the file. Keep media references
-shop-scoped, serve files by generated ID and expose public URLs for images attached to visible
-storefront records.
+shop-scoped. Scope every file fetch, including direct reads by generated ID, to the verified
+Tenant and Branch. Anonymous reads require a currently visible storefront attachment in that
+shop. Publish URLs only for images with such an attachment.

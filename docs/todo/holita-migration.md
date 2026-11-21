@@ -38,6 +38,8 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 | [116 Checkout order placement](116-holita-place-order.md)                        | 2    | Ready  | 115                |
 | [117 Shopper order history](117-holita-shopper-orders.md)                        | 2    | Ready  | 116                |
 | [118 Admin order management](118-holita-admin-order-management.md)               | 3    | Ready  | 117                |
+| [128 Order invoices](128-holita-order-invoices.md)                               | 3    | Ready  | 118                |
+| [129 Manual order refunds](129-holita-manual-refunds.md)                         | 3    | Ready  | 118                |
 | [119 Manual orders in Admin](119-holita-admin-manual-orders.md)                  | 3    | Ready  | 118                |
 | [120 Admin customer detail](120-holita-customer-detail.md)                       | 3    | Ready  | 118                |
 | [121 Discounts and promo codes](121-holita-discounts.md)                         | 3    | Ready  | 118                |
