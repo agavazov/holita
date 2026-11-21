@@ -26,6 +26,7 @@
   "required": "This field is required.",
   "noShop": "Select a shop.",
   "brands": "Brands",
+  "brandsInfo": "Add brands and assign them to products in this shop. Shoppers see active brands in the catalogue.",
   "brand": "Brand",
   "brandsUnavailable": "Unable to load brands.",
   "noBrand": "No brand",

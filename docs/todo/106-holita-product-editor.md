@@ -14,6 +14,7 @@ Merchants edit the full set of basic product details from the Product drawer.
 
 1. Group name, status, brand, category, variants and BG/EN descriptions in the existing Product
    drawer. Preserve existing product links and fields.
+   Make the product editor a routed child drawer with the shared `leaveDrawer` guard.
 2. Return the two optional descriptions through the storefront graph and show the requested locale
    with a fallback to the other description.
 3. Seed a new cookware product with Bulgarian and English descriptions and a matched brand and

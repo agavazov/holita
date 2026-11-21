@@ -210,6 +210,7 @@ async function serve(
         });
         response.writeHead(upstream.status, {
           'content-type': upstream.headers.get('content-type') ?? 'application/octet-stream',
+          'cache-control': upstream.headers.get('cache-control') ?? 'no-store',
         });
         response.end(Buffer.from(await upstream.arrayBuffer()));
         return;
@@ -281,6 +282,32 @@ async function signIn(page: Page, email: string, password: string): Promise<void
   await page.locator('#sign-in-email').fill(email);
   await secretFill(page.locator('#sign-in-password'), password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+}
+
+async function createShop(page: Page, name: string): Promise<string> {
+  await page.getByRole('button', { name: 'Create shop', exact: true }).click();
+  await page.locator('#shop-name').fill(name);
+  const branchResponse = page.waitForResponse(
+    (response) => response.request().postData()?.includes('OperatorCreateBranch') === true,
+  );
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  const branchValue: unknown = await (await branchResponse).json();
+  if (
+    typeof branchValue !== 'object' ||
+    branchValue === null ||
+    !('data' in branchValue) ||
+    typeof branchValue.data !== 'object' ||
+    branchValue.data === null ||
+    !('createMerchantBranch' in branchValue.data) ||
+    typeof branchValue.data.createMerchantBranch !== 'object' ||
+    branchValue.data.createMerchantBranch === null ||
+    !('id' in branchValue.data.createMerchantBranch) ||
+    typeof branchValue.data.createMerchantBranch.id !== 'string'
+  ) {
+    throw new Error('Shop creation did not return an ID');
+  }
+  await expect(page.getByText(name, { exact: true })).toBeVisible();
+  return branchValue.data.createMerchantBranch.id;
 }
 
 test('staff creates a merchant and its administrator creates a product', async ({ browser }) => {
@@ -408,29 +435,7 @@ test('staff creates a merchant and its administrator creates a product', async (
     await secretFill(staff.locator('#merchant-password'), merchantPassword);
     await staff.getByRole('button', { name: 'Save', exact: true }).click();
     await staff.getByRole('link', { name: merchantName }).click();
-    await staff.getByRole('button', { name: 'Create shop', exact: true }).click();
-    await staff.locator('#shop-name').fill('First shop');
-    const branchResponse = staff.waitForResponse(
-      (response) => response.request().postData()?.includes('OperatorCreateBranch') === true,
-    );
-    await staff.getByRole('button', { name: 'Save', exact: true }).click();
-    const branchValue: unknown = await (await branchResponse).json();
-    if (
-      typeof branchValue !== 'object' ||
-      branchValue === null ||
-      !('data' in branchValue) ||
-      typeof branchValue.data !== 'object' ||
-      branchValue.data === null ||
-      !('createMerchantBranch' in branchValue.data) ||
-      typeof branchValue.data.createMerchantBranch !== 'object' ||
-      branchValue.data.createMerchantBranch === null ||
-      !('id' in branchValue.data.createMerchantBranch) ||
-      typeof branchValue.data.createMerchantBranch.id !== 'string'
-    ) {
-      throw new Error('Shop creation did not return an ID');
-    }
-    const shopId = branchValue.data.createMerchantBranch.id;
-    await expect(staff.getByText('First shop', { exact: true })).toBeVisible();
+    const shopId = await createShop(staff, 'First shop');
     const merchantContext = await browser.newContext();
     cleanup.push(() => merchantContext.close());
     const merchant = await merchantContext.newPage();
@@ -470,10 +475,13 @@ test('staff creates a merchant and its administrator creates a product', async (
     }
     const image = await shopper.request.get(new URL(logo, shopApp.origin).href);
     expect(image.status()).toBe(200);
-    expect(await image.body()).toEqual(
-      await readFile(join(root, 'holita/config/demo/northline.png')),
-    );
-    const foreignImage = logo.replace(shopId, randomUUID());
+    const logoBytes = await readFile(join(root, 'holita/config/demo/northline.png'));
+    expect(await image.body()).toEqual(logoBytes);
+    const productUrl = shopper.url();
+    const secondShopId = await createShop(staff, 'Second shop');
+    await shopper.goto(`${shopApp.origin}/s/${secondShopId}`);
+    await expect(shopper.getByRole('link', { name: 'Second shop', exact: true })).toBeVisible();
+    const foreignImage = logo.replace(shopId, secondShopId);
     expect((await shopper.request.get(new URL(foreignImage, shopApp.origin).href)).status()).toBe(
       404,
     );
@@ -481,9 +489,6 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.getByRole('button', { name: 'Smoke Brand', exact: true }).click();
     await expect(merchant.getByRole('img', { name: 'Logo', exact: true })).toBeVisible();
     await merchant.locator('#brand-name').fill('Smoke Brand revised');
-    await merchant
-      .locator('input[type=file]')
-      .setInputFiles(join(root, 'holita/config/demo/northline.png'));
     await merchant.locator('#brand-status').click();
     await merchant.getByRole('option', { name: 'Hidden', exact: true }).click();
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
@@ -491,7 +496,19 @@ test('staff creates a merchant and its administrator creates a product', async (
       merchant.getByRole('button', { name: 'Smoke Brand revised', exact: true }),
     ).toBeVisible();
     expect((await shopper.request.get(new URL(logo, shopApp.origin).href)).status()).toBe(404);
-    await shopper.reload();
+    const preview = merchant.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === logo && response.request().method() === 'GET',
+    );
+    await merchant.getByRole('button', { name: 'Smoke Brand revised', exact: true }).click();
+    const hiddenImage = await preview;
+    expect(hiddenImage.status()).toBe(200);
+    expect(await hiddenImage.body()).toEqual(logoBytes);
+    await merchant
+      .getByRole('dialog', { name: 'Edit brand' })
+      .getByRole('button', { name: 'Close', exact: true })
+      .click();
+    await shopper.goto(productUrl);
     await expect(shopper.getByRole('heading', { name: productName })).toBeVisible();
     await expect(shopper.locator('.product-brand')).toHaveCount(0);
     await merchant

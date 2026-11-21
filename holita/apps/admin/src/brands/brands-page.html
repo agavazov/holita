@@ -1,4 +1,9 @@
-<osnova-page-header [title]="text().brands" [actions]="headerActions()" (action)="open('new')" />
+<osnova-page-header
+  [title]="text().brands"
+  [moduleInfo]="text().brandsInfo"
+  [actions]="headerActions()"
+  (action)="open('new')"
+/>
 @if (scope()) {
 <osnova-table-panel
   #panel

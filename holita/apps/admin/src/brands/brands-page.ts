@@ -70,6 +70,7 @@ const definition: ListDefinition<Record<string, never>, BrandSortField> = {
   ],
   templateUrl: './brands-page.html',
   styleUrl: './brands-page.scss',
+  host: { class: 'app-view' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BrandsPage {

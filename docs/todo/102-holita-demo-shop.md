@@ -1,6 +1,6 @@
 # 102 Demo shop data
 
-**Status:** Ready after 101. **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
@@ -39,4 +39,4 @@ The demo shop looks like a real Bulgarian online shop in Admin and in the storef
 
 ## References
 
-- [Queue](holita-migration.md), [Brands ticket](101-holita-brands.md)
+- [Queue](holita-migration.md)

@@ -14,7 +14,15 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { provideRouter, Router, RouterOutlet, type Routes } from '@angular/router';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
-import { AdminShell, OperationToast, SignIn, UI_LANGUAGE, type NavGroup } from '@osnova/ui';
+import {
+  AdminShell,
+  ModuleInfo,
+  OperationToast,
+  SignIn,
+  UI_LANGUAGE,
+  navigationContext,
+  type NavGroup,
+} from '@osnova/ui';
 import { MessageService } from 'primeng/api';
 import {
   AuthApi,
@@ -83,6 +91,7 @@ export class OperatorLanguage {
         [homeLink]="homeLink()"
         [profileLink]="homeLink()"
         [navigation]="navigation()"
+        [context]="context()"
         [branches]="branches()"
         [branchId]="session.branchId()"
         [tenantName]="session.current()?.tenant?.name ?? null"
@@ -129,6 +138,15 @@ export class OperatorApplication {
   private readonly auth = inject(AuthApi);
   private readonly branchApi = inject(BranchesApi);
   private readonly router = inject(Router);
+  private readonly moduleInfo = inject(ModuleInfo);
+  readonly context = computed(() =>
+    this.moduleInfo.info()
+      ? navigationContext(
+          this.navigation(),
+          this.router.lastSuccessfulNavigation()?.finalUrl?.toString() ?? this.router.url,
+        )
+      : null,
+  );
   private readonly messages = inject(MessageService);
 
   constructor() {

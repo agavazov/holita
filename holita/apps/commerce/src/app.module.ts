@@ -6,29 +6,22 @@ import type { IncomingMessage } from 'node:http';
 import { CommerceRepository } from './commerce.repository.js';
 import { CommerceResolver } from './commerce.resolver.js';
 import { CommerceService } from './commerce.service.js';
-import { DatabaseService } from './database.service.js';
+import { DatabaseModule } from './database.module.js';
 import { StorefrontResolver } from './storefront.resolver.js';
 import { StorefrontService } from './storefront.service.js';
 import { ShopperRepository } from './shopper.repository.js';
 import { HealthController } from './health.controller.js';
-import { BrandImages } from './brands/brand-images.js';
 import { BrandImagesController } from './brands/brand-images.controller.js';
-import { BrandsRepository } from './brands/brands.repository.js';
+import { BrandsModule } from './brands/brands.module.js';
 import { BrandsResolver } from './brands/brands.resolver.js';
-import { BrandsService } from './brands/brands.service.js';
 
 @Module({
-  providers: [DatabaseService, BrandsRepository, BrandImages],
-  exports: [DatabaseService, BrandsRepository, BrandImages],
-})
-class DatabaseModule {}
-@Module({
-  imports: [DatabaseModule],
-  providers: [CommerceRepository, CommerceResolver, CommerceService, BrandsResolver, BrandsService],
+  imports: [DatabaseModule, BrandsModule],
+  providers: [CommerceRepository, CommerceResolver, CommerceService, BrandsResolver],
 })
 class OperatorModule {}
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, BrandsModule],
   controllers: [BrandImagesController],
   providers: [CommerceRepository, ShopperRepository, StorefrontResolver, StorefrontService],
 })

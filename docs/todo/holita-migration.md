@@ -20,8 +20,7 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 
 | Ticket                                                                           | Wave | Status | Depends on         |
 | -------------------------------------------------------------------------------- | ---- | ------ | ------------------ |
-| 101 Brands, the reference feature                                                | 0    | Done   |                    |
-| [102 Demo shop data](102-holita-demo-shop.md)                                    | 0    | Ready  | 101                |
+| [102 Demo shop data](102-holita-demo-shop.md)                                    | 0    | Ready  |                    |
 | [103 Category tree](103-holita-categories.md)                                    | 1    | Ready  | 102                |
 | [104 Product options](104-holita-options.md)                                     | 1    | Ready  | 102                |
 | [105 Product variants](105-holita-variants.md)                                   | 1    | Ready  | 104                |

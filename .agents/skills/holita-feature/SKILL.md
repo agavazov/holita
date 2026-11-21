@@ -13,10 +13,11 @@ Use the ticket to choose which layers the feature changes.
 
 - Follow the [backend skill](../osnova-backend-feature/SKILL.md) for persistence, validation and
   lists. Add Commerce Prisma models and additive migrations for new persisted data.
-- Use a concrete repository and service. Require verified `tenantId` and `branchId` on every
-  Commerce read and write. Resolve the storefront Branch from the request and derive its Tenant
-  from the verified Branch. Limit unauthenticated storefront queries to public records in that
-  Branch.
+- Give each Commerce feature a Nest module with its concrete repository, service and storage
+  providers. Import it in the graphs that use it. Keep `DatabaseModule` for `DatabaseService`.
+- Require verified `tenantId` and `branchId` on every Commerce read and write. Resolve the
+  storefront Branch from the request and derive its Tenant from the verified Branch. Limit
+  unauthenticated storefront queries to public records in that Branch.
 - Authorize guest cart, checkout and order confirmation with the shop-scoped cart credential.
   Require the shop customer's verified session for account orders.
 - Define operator operations in operator SDL and shopper-facing operations in storefront SDL,
@@ -34,7 +35,8 @@ Use the ticket to choose which layers the feature changes.
   for General Settings.
 - Keep named operations beside the Admin feature, register them in the operator graph generator,
   and capture shop, session and language in its concrete Apollo service. Use `UrlListState` and
-  explicit `TablePanel` columns. Let the drawer notify its retained list through `DrawerHost`.
+  explicit `TablePanel` columns inside `.app-view`. Supply localized `moduleInfo` through the
+  shared page header. Let the drawer notify its retained list through `DrawerHost`.
 - Add BG/EN strings for changed Admin and storefront surfaces. Capture screenshots of every new
   or changed screen at 1440×900 and 390×844, in light and dark.
 
@@ -48,18 +50,18 @@ Use the ticket to choose which layers the feature changes.
 - For Holita login, routing, transport or main journey changes, run one relevant smoke file
   with `npm run test:smoke:holita -- <file>`.
 
-## Development image storage
+## Brand logo pattern
 
-Commerce writes and serves brand and product images from the Git-ignored local
+Commerce writes and serves brand logos from the Git-ignored local
 `.volumes/holita/images/` directory. Define `HOLITA_COMMERCE_IMAGE_DIR` in
 `holita/config/commerce.env` and document it in the root [environment example](../../../.env.example).
-Use an absolute directory path. The demo seed writes generated images to the same directory.
+Use an absolute path. The demo seed writes its generated logo to the same directory.
 
-Only authorized operators can upload, replace or remove images in the selected shop. Accept JPEG,
-PNG and WebP up to 5 MiB and validate the content type from the file. Keep media references
-shop-scoped. Brands accepts the logo with the operator mutation, so a rejected write cannot
-publish a file. Preserve an omitted logo and remove it on explicit null. Operator previews fetch
-bytes with authorization and release their object URLs when the draft changes or closes.
-Scope every file fetch to the verified Tenant and Branch. Anonymous reads require a currently
-visible storefront attachment in that shop. Serve media from Commerce on the Admin and
-storefront origins, including in the browser smoke harness.
+Authorized operators send a base64 logo with the brand mutation for the selected shop. Commerce
+checks the file signature and accepts JPEG, PNG and WebP up to 5 MiB. Omit the logo to keep its
+key, or send null to remove it. Persist the shop-scoped key on a successful write.
+Admin previews fetch bytes with authorization and release their object URLs when the draft
+changes or closes. Commerce scopes every read to the verified Tenant and Branch, and serves an
+anonymous request only for a logo attached to an active brand in that shop. Proxy `/media/brands/`
+through the Admin and storefront origins, including in browser smoke. Product media is tracked
+in [ticket 107](../../../docs/todo/107-holita-product-images.md).
