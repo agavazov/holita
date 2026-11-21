@@ -36,54 +36,13 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import type { BrandStatus } from '../generated/brands-operations';
+import { slugFromName } from '../catalogue-slug';
 import { BrandsApi } from './brands-api';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const fields = ['name', 'slug', 'status', 'logo'] as const;
 type Field = (typeof fields)[number];
-const transliteration: Readonly<Record<string, string>> = {
-  а: 'a',
-  б: 'b',
-  в: 'v',
-  г: 'g',
-  д: 'd',
-  е: 'e',
-  ж: 'zh',
-  з: 'z',
-  и: 'i',
-  й: 'y',
-  к: 'k',
-  л: 'l',
-  м: 'm',
-  н: 'n',
-  о: 'o',
-  п: 'p',
-  р: 'r',
-  с: 's',
-  т: 't',
-  у: 'u',
-  ф: 'f',
-  х: 'h',
-  ц: 'ts',
-  ч: 'ch',
-  ш: 'sh',
-  щ: 'sht',
-  ъ: 'a',
-  ь: 'y',
-  ю: 'yu',
-  я: 'ya',
-};
-
-function slugFromName(name: string): string {
-  return Array.from(name.toLowerCase(), (character) => transliteration[character] ?? character)
-    .join('')
-    .normalize('NFKD')
-    .replace(/\p{M}/gu, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .slice(0, 200)
-    .replace(/^-|-$/g, '');
-}
 
 function encode(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

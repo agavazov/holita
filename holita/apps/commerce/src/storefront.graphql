@@ -7,12 +7,22 @@ type CatalogueProduct {
   name: String!
   price: String!
   brand: CatalogueBrand
+  category: CatalogueCategory
+  "The visible categories from the root through the product's category."
+  categoryPath: [CatalogueCategory!]!
 }
 type CatalogueBrand {
   id: ID!
   name: String!
   slug: String!
   logoUrl: String
+}
+type CatalogueCategory {
+  id: ID!
+  name: String!
+  slug: String!
+  parentId: ID
+  sortOrder: Int!
 }
 type CataloguePage {
   items: [CatalogueProduct!]!
@@ -35,6 +45,8 @@ type Query {
   catalogue(offset: Int! = 0, limit: Int! = 20): CataloguePage!
   catalogueProduct(id: ID!): CatalogueProduct
   catalogueBrands(offset: Int! = 0, limit: Int! = 20): [CatalogueBrand!]!
+  "Visible shop categories in tree order. A null parentId denotes a root."
+  catalogueCategories: [CatalogueCategory!]!
   shopperMe: Shopper
 }
 type Mutation {

@@ -52,6 +52,8 @@ import {
   type ProductStatus,
 } from '@holita/operator';
 import { BrandsApi } from './brands/brands-api';
+import { CategoriesApi } from './categories/categories-api';
+import { categoryOptions } from './categories/category-tree';
 
 type ProductPage = OperatorProductsQuery['products'];
 type Product = ProductPage['items'][number];
@@ -309,6 +311,52 @@ const definition: ListDefinition<{ statuses: readonly ProductStatus[] | undefine
               </button>
             }
           </osnova-form-field>
+          <osnova-form-field
+            controlId="product-category"
+            [label]="text().category"
+            [error]="categoryError()"
+          >
+            <p-select
+              inputId="product-category"
+              ariaLabelledBy="product-category-label"
+              formControlName="categoryId"
+              [options]="availableCategories()"
+              optionLabel="name"
+              optionValue="id"
+              [placeholder]="text().noCategory"
+              [filter]="true"
+              [ariaFilterLabel]="text().searchCategories"
+              [filterPlaceholder]="text().searchCategories"
+              [emptyFilterMessage]="shared().table.noResultsTitle"
+              [loading]="categories.isLoading()"
+              [readonly]="!categories.hasValue()"
+              [invalid]="!!categoryError()"
+              [overlayOptions]="{ style: { width: '100%' } }"
+              [pt]="{
+                label: {
+                  'aria-describedby': 'product-category-error',
+                  'aria-invalid': categoryError() ? 'true' : undefined,
+                },
+                option: { style: { whiteSpace: 'normal', overflowWrap: 'anywhere' } },
+              }"
+              (onChange)="categoryError.set(null)"
+            />
+            @if (categories.error()) {
+              <p-message severity="warn" variant="simple" size="small">{{
+                text().categoriesUnavailable
+              }}</p-message>
+              <button
+                pButton
+                type="button"
+                severity="secondary"
+                [text]="true"
+                [disabled]="saving()"
+                (click)="categories.reload()"
+              >
+                {{ shared().retry }}
+              </button>
+            }
+          </osnova-form-field>
           @if (saveError(); as message) {
             <p-message severity="error">{{ message }}</p-message>
           }
@@ -337,6 +385,7 @@ export class ProductsPage {
   readonly session = inject(DemoSession);
   private readonly api = inject(OperatorApi);
   private readonly brands = inject(BrandsApi);
+  private readonly categoryApi = inject(CategoriesApi);
   readonly scope = this.brands.scope;
   readonly url = new UrlListState(definition, () => !!this.scope());
   readonly trackById = trackById;
@@ -346,6 +395,7 @@ export class ProductsPage {
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
   readonly brandError = signal<string | null>(null);
+  readonly categoryError = signal<string | null>(null);
   readonly text = computed(() => strings[this.language.value()]);
   readonly shared = computed(() => uiMessages[this.language.value()]);
   private readonly price = computed(
@@ -400,6 +450,16 @@ export class ProductsPage {
     { id: null, name: this.text().noBrand },
     ...(this.brandOptions.hasValue() ? this.brandOptions.value() : []),
   ]);
+  readonly categories = resource({
+    params: () => (this.drawer() ? (this.categoryApi.scope() ?? undefined) : undefined),
+    loader: ({ params }) => this.categoryApi.list(params),
+  });
+  readonly availableCategories = computed(() =>
+    categoryOptions(
+      this.categories.hasValue() ? this.categories.value() : [],
+      this.text().noCategory,
+    ),
+  );
   readonly canWrite = computed(() => this.session.hasRole('OPERATOR') && !!this.scope());
   readonly actions = computed<readonly PageHeaderAction[]>(() =>
     this.canWrite() ? [{ id: 'create', label: this.text().createProduct, primary: true }] : [],
@@ -484,6 +544,7 @@ export class ProductsPage {
     }),
     status: new FormControl<ProductStatus>('DRAFT', { nonNullable: true }),
     brandId: new FormControl<string | null>(null),
+    categoryId: new FormControl<string | null>(null),
   });
   constructor() {
     lockWhileSaving(
@@ -539,9 +600,11 @@ export class ProductsPage {
       price: row?.price ?? '',
       status: row?.status ?? 'DRAFT',
       brandId: row?.brandId ?? null,
+      categoryId: row?.categoryId ?? null,
     });
     this.saveError.set(null);
     this.brandError.set(null);
+    this.categoryError.set(null);
     this.drawer.set(true);
   }
   async closeDrawer(editor: RouteDrawer): Promise<void> {
@@ -559,6 +622,7 @@ export class ProductsPage {
     this.saving.set(true);
     this.saveError.set(null);
     this.brandError.set(null);
+    this.categoryError.set(null);
     try {
       await this.api.saveProduct(
         this.language.value(),
@@ -572,9 +636,18 @@ export class ProductsPage {
       }
     } catch (error: unknown) {
       if (this.brands.scope() === scope) {
-        const errors = fieldErrors(error, ['brandId'], this.language.value());
+        const errors = fieldErrors(
+          error,
+          ['brandId', 'categoryId'],
+          scope.language,
+          (code, field) =>
+            field === 'categoryId' && code === 'INVALID_VALUE'
+              ? this.text().categoryUnavailable
+              : undefined,
+        );
         this.brandError.set(errors.brandId ?? null);
-        this.saveError.set(errors.brandId ? null : this.text().unavailable);
+        this.categoryError.set(errors.categoryId ?? null);
+        this.saveError.set(Object.keys(errors).length ? null : this.text().unavailable);
       }
     } finally {
       this.saving.set(false);

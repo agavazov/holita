@@ -473,6 +473,12 @@ Set it to the absolute path of `.volumes/holita/images` in the checkout before s
 Admin uploads brand logos through the operator graph. Serve `/media/brands/` from Commerce on
 the Admin and storefront origins, alongside their existing `/graphql` routes.
 
+In Admin, use Categories to create, move and reorder shop categories. The Product drawer assigns
+one category per product. The public `catalogueCategories` query returns the active tree, and the
+storefront shows each product's active category path in its breadcrumbs. A hidden ancestor
+suppresses the whole subtree. The Sofia demo shop includes Kitchen and Home trees with products in
+their child categories.
+
 `npm run dev` starts both products. `npm run kill` stops their development applications while
 leaving PostgreSQL and the ERM units running. Discocan Core reads `discocan/config/core.env`;
 Holita Core reads `holita/config/core.env`. Their watch outputs are `dist-discocan` and

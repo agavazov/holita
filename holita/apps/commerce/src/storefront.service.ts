@@ -17,6 +17,8 @@ import {
 import { Prisma, type Brand, type Product } from './generated/prisma/client.js';
 import { brandLogoUrl } from './brands/brand-images.js';
 import { BrandsRepository } from './brands/brands.repository.js';
+import { CategoriesService } from './categories/categories.service.js';
+import type { CatalogueCategory, CatalogueProduct } from './generated/graphql/storefront-types.js';
 import type { Scope } from './scope.js';
 import { CommerceRepository } from './commerce.repository.js';
 import { ShopperRepository } from './shopper.repository.js';
@@ -54,12 +56,24 @@ function catalogueBrand(brand: Brand) {
   return { id: brand.id, name: brand.name, slug: brand.slug, logoUrl: brandLogoUrl(brand) };
 }
 
-function catalogueProduct(item: Product & { brand: Brand | null }) {
+function catalogueProduct(
+  item: Product & { brand: Brand | null },
+  categories: ReadonlyMap<string, CatalogueCategory>,
+): CatalogueProduct {
+  const category = item.categoryId ? categories.get(item.categoryId) : undefined;
+  const categoryPath: CatalogueCategory[] = [];
+  let current = category;
+  while (current) {
+    categoryPath.push(current);
+    current = current.parentId ? categories.get(current.parentId) : undefined;
+  }
   return {
     id: item.id,
     name: item.name,
     price: item.price.toFixed(2),
     brand: item.brand?.status === 'ACTIVE' ? catalogueBrand(item.brand) : null,
+    category: category ?? null,
+    categoryPath: categoryPath.reverse(),
   };
 }
 
@@ -69,6 +83,7 @@ export class StorefrontService {
     private readonly products: CommerceRepository,
     private readonly shoppers: ShopperRepository,
     private readonly brands: BrandsRepository,
+    private readonly categories: CategoriesService,
   ) {}
   async shop(context: StorefrontContext): Promise<ShopScope | null> {
     if (!context.branchId || !isUUID(context.branchId)) {
@@ -135,8 +150,9 @@ export class StorefrontService {
       { statuses: ['ACTIVE'] },
       null,
     );
+    const categories = await this.productCategories(scope, items);
     return {
-      items: items.map(catalogueProduct),
+      items: items.map((item) => catalogueProduct(item, categories)),
       total,
       offset,
       limit,
@@ -148,7 +164,13 @@ export class StorefrontService {
       return null;
     }
     const item = await this.products.product(scope, id.toLowerCase(), 'ACTIVE');
-    return item ? catalogueProduct(item) : null;
+    return item ? catalogueProduct(item, await this.productCategories(scope, [item])) : null;
+  }
+  private async productCategories(scope: Scope, products: readonly Product[]) {
+    const tree = products.some((product) => product.categoryId)
+      ? await this.categories.publicTree(scope)
+      : [];
+    return new Map(tree.map((category) => [category.id, category]));
   }
   async publicScope(context: StorefrontContext): Promise<Scope> {
     const shop = await this.requireShop(context);
@@ -160,6 +182,9 @@ export class StorefrontService {
       throw new BadRequestException('Invalid page');
     }
     return (await this.brands.active(scope, offset, limit)).map(catalogueBrand);
+  }
+  async catalogueCategories(context: StorefrontContext) {
+    return this.categories.publicTree(await this.publicScope(context));
   }
   private async createSession(
     shop: ShopScope,

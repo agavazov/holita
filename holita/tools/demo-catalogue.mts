@@ -2,7 +2,26 @@ type DemoProduct = readonly [
   id: number,
   name: string,
   price: string,
-  status?: 'draft' | 'archived',
+  status?: 'active' | 'draft' | 'archived',
+  category?: number,
+];
+
+type DemoCategory = readonly [
+  id: number,
+  name: string,
+  slug: string,
+  parent: number | null,
+  sortOrder: number,
+];
+
+// Parents precede their children so the seed can insert the tree in one pass.
+export const demoCategories: readonly DemoCategory[] = [
+  [1, 'Кухня', 'kitchen', null, 10],
+  [3, 'Съдове за готвене', 'cookware', 1, 10],
+  [4, 'Сервиране', 'serving', 1, 20],
+  [2, 'Дом', 'home', null, 20],
+  [5, 'Свещи и аромати', 'candles-and-scents', 2, 10],
+  [6, 'Домашен текстил', 'home-textiles', 2, 20],
 ];
 
 interface DemoBrand {
@@ -24,6 +43,7 @@ export const demoCatalogue: readonly DemoBrand[] = [
       [13, 'Плитка керамична чиния „Маслина“, 26 см', '28.50'],
       [14, 'Керамична кана за вода „Жарава“, 1 л', '58.00'],
       [15, 'Сервиз за закуска „Първа светлина“, 6 части', '119.00', 'draft'],
+      [51, 'Керамична тава за печене „Горска глина“, 30 см', '64.90', 'active', 3],
     ],
   },
   {
@@ -36,6 +56,7 @@ export const demoCatalogue: readonly DemoBrand[] = [
       [18, 'Кръгла дъска за сирена от ясен, 28 см', '42.90'],
       [19, 'Мелничка за пипер от дъб, 21 см', '49.00'],
       [20, 'Орехова табла за кафе, 36 × 24 см', '76.00'],
+      [52, 'Дъбова купа за сервиране „Горски плодове“, 24 см', '62.00', 'active', 4],
     ],
   },
   {
@@ -84,6 +105,7 @@ export const demoCatalogue: readonly DemoBrand[] = [
       [38, 'Соева свещ „Кедър и портокал“, 240 г', '38.00'],
       [39, 'Керамичен свещник „Полумесец“, 9 см', '22.00'],
       [40, 'Подаръчен комплект „Зимна вечер“', '59.00', 'archived'],
+      [53, 'Ароматна свещ „Топла ванилия“, 210 г', '35.90', 'active', 5],
     ],
   },
   {
@@ -96,6 +118,7 @@ export const demoCatalogue: readonly DemoBrand[] = [
       [43, 'Памучна постелка „Каменна пътека“, 60 × 90 см', '57.90'],
       [44, 'Две тъкани подложки „Кантарион“, 35 × 45 см', '26.00'],
       [45, 'Ръчно тъкан килим „Янтра“, 80 × 150 см', '189.00', 'draft'],
+      [54, 'Вълнено одеяло „Тиха вечер“, 140 × 180 см', '149.00', 'active', 6],
     ],
   },
   {

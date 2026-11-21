@@ -1,0 +1,20 @@
+.category-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--p-app-space-2);
+  min-inline-size: 0;
+  padding-inline-start: min(
+    calc(var(--p-app-space-3) * var(--category-depth)),
+    var(--p-app-space-8)
+  );
+}
+
+.category-branch {
+  align-self: flex-start;
+  flex: none;
+  inline-size: var(--p-app-space-3);
+  block-size: var(--p-app-space-3);
+  margin-block-start: var(--p-app-space-1);
+  border-inline-start: 1px solid var(--p-text-muted-color);
+  border-block-end: 1px solid var(--p-text-muted-color);
+}

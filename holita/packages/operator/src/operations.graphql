@@ -60,6 +60,7 @@ query OperatorProducts(
       price
       status
       brandId
+      categoryId
       createdAt
       updatedAt
     }

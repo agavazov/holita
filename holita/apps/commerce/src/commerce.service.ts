@@ -13,6 +13,7 @@ function product(row: StoredProduct): Product {
     price: row.price.toFixed(2),
     status: row.status,
     brandId: row.brandId,
+    categoryId: row.categoryId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -27,22 +28,33 @@ function productInput(input: ProductInput): ProductInput {
       'Price must be a non-negative decimal with at most two fractional digits',
     );
   }
-  if (typeof input.brandId === 'string') {
-    if (!isUUID(input.brandId)) {
-      throw invalidBrand();
-    }
-    return { ...input, name, brandId: input.brandId.toLowerCase() };
+  if (typeof input.brandId === 'string' && !isUUID(input.brandId)) {
+    throw invalidReference('brandId');
   }
-  return { ...input, name };
+  if (typeof input.categoryId === 'string' && !isUUID(input.categoryId)) {
+    throw invalidReference('categoryId');
+  }
+  return {
+    ...input,
+    name,
+    ...(typeof input.brandId === 'string' ? { brandId: input.brandId.toLowerCase() } : {}),
+    ...(typeof input.categoryId === 'string' ? { categoryId: input.categoryId.toLowerCase() } : {}),
+  };
 }
-function invalidBrand(): GraphQLError {
-  const message = 'Choose a brand from this shop';
+function invalidReference(path: 'brandId' | 'categoryId'): GraphQLError {
+  const message =
+    path === 'brandId' ? 'Choose a brand from this shop' : 'Choose a category from this shop';
   return new GraphQLError(message, {
     extensions: {
       code: 'BAD_USER_INPUT',
-      fieldErrors: [{ path: 'brandId', code: 'INVALID_VALUE', message }],
+      fieldErrors: [{ path, code: 'INVALID_VALUE', message }],
     },
   });
+}
+function invalidAssignment(error: Prisma.PrismaClientKnownRequestError): GraphQLError {
+  return invalidReference(
+    error.message.includes('product_tenantId_branchId_categoryId_fkey') ? 'categoryId' : 'brandId',
+  );
 }
 function recordId(id: string): string {
   if (!isUUID(id)) {
@@ -95,7 +107,7 @@ export class CommerceService {
       return product(await this.repository.create(scope, productInput(input)));
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-        throw invalidBrand();
+        throw invalidAssignment(error);
       }
       throw error;
     }
@@ -110,7 +122,7 @@ export class CommerceService {
         throw new NotFoundException('Product not found');
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-        throw invalidBrand();
+        throw invalidAssignment(error);
       }
       throw error;
     }

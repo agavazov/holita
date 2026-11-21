@@ -1,6 +1,6 @@
 # 108 Product collections
 
-**Status:** Ready after [103](103-holita-categories.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

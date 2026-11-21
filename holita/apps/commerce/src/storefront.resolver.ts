@@ -32,6 +32,9 @@ export class StorefrontResolver {
   ) {
     return this.service.catalogueBrands(context, args.offset ?? 0, args.limit ?? 20);
   }
+  @Query('catalogueCategories') categories(@Context() context: StorefrontContext) {
+    return this.service.catalogueCategories(context);
+  }
   @Query('shopperMe') me(@Context() context: StorefrontContext) {
     return this.service.me(context);
   }

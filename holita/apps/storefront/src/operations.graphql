@@ -31,6 +31,10 @@ query CatalogueProduct($id: ID!) {
     brand {
       ...CatalogueBrandFields
     }
+    categoryPath {
+      id
+      name
+    }
   }
 }
 query ShopperMe {

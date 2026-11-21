@@ -14,14 +14,22 @@ import { HealthController } from './health.controller.js';
 import { BrandImagesController } from './brands/brand-images.controller.js';
 import { BrandsModule } from './brands/brands.module.js';
 import { BrandsResolver } from './brands/brands.resolver.js';
+import { CategoriesModule } from './categories/categories.module.js';
+import { CategoriesResolver } from './categories/categories.resolver.js';
 
 @Module({
-  imports: [DatabaseModule, BrandsModule],
-  providers: [CommerceRepository, CommerceResolver, CommerceService, BrandsResolver],
+  imports: [DatabaseModule, BrandsModule, CategoriesModule],
+  providers: [
+    CommerceRepository,
+    CommerceResolver,
+    CommerceService,
+    BrandsResolver,
+    CategoriesResolver,
+  ],
 })
 class OperatorModule {}
 @Module({
-  imports: [DatabaseModule, BrandsModule],
+  imports: [DatabaseModule, BrandsModule, CategoriesModule],
   controllers: [BrandImagesController],
   providers: [CommerceRepository, ShopperRepository, StorefrontResolver, StorefrontService],
 })

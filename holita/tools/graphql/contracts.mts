@@ -17,6 +17,7 @@ export const operationPaths = [
   'osnova/packages/ui/src/app/branches/operations.graphql',
   'holita/packages/operator/src/operations.graphql',
   'holita/apps/admin/src/brands/operations.graphql',
+  'holita/apps/admin/src/categories/operations.graphql',
 ];
 export const targets = {
   gateway: {
@@ -36,6 +37,10 @@ export const targets = {
       {
         path: 'holita/apps/admin/src/generated/brands-operations.ts',
         operations: ['holita/apps/admin/src/brands/operations.graphql'],
+      },
+      {
+        path: 'holita/apps/admin/src/generated/categories-operations.ts',
+        operations: ['holita/apps/admin/src/categories/operations.graphql'],
       },
     ],
   },

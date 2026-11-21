@@ -1,0 +1,152 @@
+<osnova-route-drawer
+  [title]="editing ? text().editCategory : text().newCategory"
+  [subtitle]="subtitle()"
+  [state]="state()"
+  [errorText]="text().categoriesUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  <form
+    id="category-editor-form"
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="app-form-section"
+  >
+    <osnova-form-field
+      controlId="category-name"
+      [label]="text().name"
+      [required]="true"
+      [error]="error('name')"
+    >
+      <input
+        #name
+        pInputText
+        id="category-name"
+        formControlName="name"
+        autocomplete="off"
+        aria-required="true"
+        aria-describedby="category-name-error"
+        [invalid]="!!error('name')"
+        [attr.aria-invalid]="!!error('name')"
+        (input)="changeName(name.value)"
+      />
+    </osnova-form-field>
+    <osnova-form-field
+      controlId="category-slug"
+      [label]="text().slug"
+      [hint]="text().slugHint"
+      [required]="true"
+      [error]="error('slug')"
+    >
+      <input
+        pInputText
+        id="category-slug"
+        formControlName="slug"
+        autocomplete="off"
+        spellcheck="false"
+        aria-required="true"
+        aria-describedby="category-slug-hint category-slug-error"
+        [invalid]="!!error('slug')"
+        [attr.aria-invalid]="!!error('slug')"
+        (input)="clearError('slug')"
+      />
+    </osnova-form-field>
+    <osnova-form-field
+      controlId="category-parent"
+      [label]="text().parentCategory"
+      [error]="error('parentId')"
+    >
+      <p-select
+        inputId="category-parent"
+        ariaLabelledBy="category-parent-label"
+        formControlName="parentId"
+        [options]="parentOptions()"
+        optionLabel="name"
+        optionValue="id"
+        [placeholder]="text().topLevelCategory"
+        [filter]="true"
+        [ariaFilterLabel]="text().searchCategories"
+        [filterPlaceholder]="text().searchCategories"
+        [emptyFilterMessage]="shared().table.noResultsTitle"
+        [invalid]="!!error('parentId')"
+        [overlayOptions]="{ style: { width: '100%' } }"
+        [pt]="{
+          label: {
+            'aria-describedby': 'category-parent-error',
+            'aria-invalid': error('parentId') ? 'true' : undefined,
+          },
+          option: { style: { whiteSpace: 'normal', overflowWrap: 'anywhere' } },
+        }"
+        (onChange)="clearError('parentId')"
+      />
+    </osnova-form-field>
+    <div class="app-form-grid">
+      <osnova-form-field
+        controlId="category-sort-order"
+        [label]="text().categorySortOrder"
+        [hint]="text().categorySortHint"
+        [required]="true"
+        [error]="error('sortOrder')"
+      >
+        <input
+          pInputText
+          id="category-sort-order"
+          type="number"
+          min="0"
+          max="2147483647"
+          step="1"
+          formControlName="sortOrder"
+          aria-required="true"
+          aria-describedby="category-sort-order-hint category-sort-order-error"
+          [invalid]="!!error('sortOrder')"
+          [attr.aria-invalid]="!!error('sortOrder')"
+          (input)="clearError('sortOrder')"
+        />
+      </osnova-form-field>
+      <osnova-form-field
+        controlId="category-active"
+        [label]="text().status"
+        [required]="true"
+        [error]="error('active')"
+      >
+        <p-select
+          inputId="category-active"
+          ariaLabelledBy="category-active-label"
+          formControlName="active"
+          [options]="statusOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [invalid]="!!error('active')"
+          [pt]="{
+            label: {
+              'aria-required': 'true',
+              'aria-describedby': 'category-active-error',
+              'aria-invalid': error('active') ? 'true' : undefined,
+            },
+          }"
+          (onChange)="clearError('active')"
+        />
+      </osnova-form-field>
+    </div>
+    @if (saveError()) {
+      <p-message severity="error">{{ text().categorySaveFailed }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="category-editor-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+  </div>
+</osnova-route-drawer>

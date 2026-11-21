@@ -310,6 +310,18 @@ async function createShop(page: Page, name: string): Promise<string> {
   return branchValue.data.createMerchantBranch.id;
 }
 
+async function addCategory(page: Page, name: string, parent?: string): Promise<void> {
+  await page.getByRole('button', { name: 'Add category', exact: true }).click();
+  await page.locator('#category-name').fill(name);
+  await page.locator('#category-slug').fill(name.toLowerCase());
+  if (parent) {
+    await page.locator('#category-parent').click();
+    await page.getByRole('option', { name: parent, exact: true }).click();
+  }
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
+}
+
 test('staff creates a merchant and its administrator creates a product', async ({ browser }) => {
   const staffEmail = process.env.HOLITA_STAFF_EMAIL;
   const staffPassword = process.env.HOLITA_STAFF_PASSWORD;
@@ -449,6 +461,10 @@ test('staff creates a merchant and its administrator creates a product', async (
       .setInputFiles(join(root, 'holita/config/demo/northline.png'));
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(merchant.getByRole('button', { name: 'Smoke Brand', exact: true })).toBeVisible();
+    await merchant.getByRole('link', { name: 'Categories', exact: true }).click();
+    await addCategory(merchant, 'Kitchen');
+    await addCategory(merchant, 'Home');
+    await addCategory(merchant, 'Cookware', 'Kitchen');
     await merchant.getByRole('link', { name: 'Products', exact: true }).click();
     await merchant.getByRole('button', { name: 'Create product', exact: true }).click();
     const productName = `Product ${randomUUID()}`;
@@ -458,6 +474,8 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.getByRole('option', { name: 'Active', exact: true }).click();
     await merchant.locator('#product-brand').click();
     await merchant.getByRole('option', { name: 'Smoke Brand', exact: true }).click();
+    await merchant.locator('#product-category').click();
+    await merchant.getByRole('option', { name: 'Kitchen / Cookware', exact: true }).click();
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(merchant.getByText(productName, { exact: true })).toBeVisible();
     const shopperContext = await browser.newContext();
@@ -469,6 +487,13 @@ test('staff creates a merchant and its administrator creates a product', async (
     await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
     await shopper.getByRole('link', { name: productName }).click();
     await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
+    const breadcrumbs = shopper.getByRole('navigation', { name: 'Product breadcrumbs' });
+    await expect(breadcrumbs.locator('li > :last-child')).toHaveText([
+      'Products',
+      'Kitchen',
+      'Cookware',
+      productName,
+    ]);
     const logo = await shopper.locator('.product-brand img').getAttribute('src');
     if (!logo) {
       throw new Error('Missing storefront brand logo');
@@ -478,6 +503,40 @@ test('staff creates a merchant and its administrator creates a product', async (
     const logoBytes = await readFile(join(root, 'holita/config/demo/northline.png'));
     expect(await image.body()).toEqual(logoBytes);
     const productUrl = shopper.url();
+    await merchant.getByRole('link', { name: 'Categories', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Cookware', exact: true }).click();
+    await merchant.locator('#category-parent').click();
+    await merchant.getByRole('option', { name: 'Home', exact: true }).click();
+    await merchant.locator('#category-sort-order').fill('15');
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(merchant.getByRole('dialog', { name: 'Edit category' })).toBeHidden();
+    await expect(
+      merchant.getByRole('row').filter({
+        has: merchant.getByRole('button', { name: 'Cookware', exact: true }),
+      }),
+    ).toContainText('15');
+    await shopper.reload();
+    await expect(breadcrumbs.locator('li > :last-child')).toHaveText([
+      'Products',
+      'Home',
+      'Cookware',
+      productName,
+    ]);
+    await merchant.getByRole('button', { name: 'Home', exact: true }).click();
+    await merchant.locator('#category-active').click();
+    await merchant.getByRole('option', { name: 'Hidden', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(merchant.getByRole('dialog', { name: 'Edit category' })).toBeHidden();
+    await shopper.reload();
+    await expect(shopper.getByRole('heading', { name: productName })).toBeVisible();
+    await expect(breadcrumbs).toHaveCount(0);
+    const activeCategories = await shopper.request.post(`${shopApp.origin}/graphql`, {
+      headers: { 'x-branch-id': shopId },
+      data: { query: '{ catalogueCategories { name } }' },
+    });
+    expect(await activeCategories.json()).toEqual({
+      data: { catalogueCategories: [{ name: 'Kitchen' }] },
+    });
     const secondShopId = await createShop(staff, 'Second shop');
     await shopper.goto(`${shopApp.origin}/s/${secondShopId}`);
     await expect(shopper.getByRole('link', { name: 'Second shop', exact: true })).toBeVisible();

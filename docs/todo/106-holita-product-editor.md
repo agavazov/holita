@@ -1,6 +1,6 @@
 # 106 Product editor and descriptions
 
-**Status:** Ready after [103](103-holita-categories.md), [105](105-holita-variants.md). **Product:** Holita.
+**Status:** Ready after [105](105-holita-variants.md). **Product:** Holita.
 
 ## Background
 

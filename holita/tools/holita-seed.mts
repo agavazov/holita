@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 import { config } from 'dotenv';
 import pg from 'pg';
-import { demoCatalogue } from './demo-catalogue.mjs';
+import { demoCatalogue, demoCategories } from './demo-catalogue.mjs';
 
 config({
   path: ['holita/config/commerce.env', 'holita/config/core.env', 'holita/config/seed-accounts.env'],
@@ -54,10 +54,31 @@ async function seedCatalogue(): Promise<void> {
   const directory = join(imageRoot, tenantId, branchId);
   const client = new pg.Client({ connectionString: database });
   let brandsInserted = 0;
+  let categoriesInserted = 0;
   let productsInserted = 0;
   await client.connect();
   try {
     await client.query('BEGIN');
+    for (const [id, name, slug, parent, sortOrder] of demoCategories) {
+      const category = await client.query(
+        `INSERT INTO "category" ("id", "tenantId", "branchId", "name", "slug", "parentId", "sortOrder")
+         SELECT $1, $2, $3, $4, $5, $6, $7
+         WHERE $6::uuid IS NULL OR EXISTS (
+           SELECT 1 FROM "category" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $6
+         )
+         ON CONFLICT DO NOTHING`,
+        [
+          fixtureId('62', id),
+          tenantId,
+          branchId,
+          name,
+          slug,
+          parent === null ? null : fixtureId('62', parent),
+          sortOrder,
+        ],
+      );
+      categoriesInserted += category.rowCount ?? 0;
+    }
     for (const brand of demoCatalogue) {
       const brandId = fixtureId('32', brand.id);
       const logoKey = `${fixtureId('42', brand.id)}.png`;
@@ -78,20 +99,32 @@ async function seedCatalogue(): Promise<void> {
         }
         brandsInserted += rowCount;
       }
-      for (const [id, name, price, status = 'active'] of brand.products) {
+      for (const [id, name, price, status = 'active', category] of brand.products) {
         const product = await client.query(
-          `INSERT INTO "product" ("id", "tenantId", "branchId", "brandId", "name", "price", "status", "updatedAt")
-           SELECT $1, "tenantId", "branchId", "id", $5, $6, $7, CURRENT_TIMESTAMP
+          `INSERT INTO "product" ("id", "tenantId", "branchId", "brandId", "name", "price", "status", "categoryId", "updatedAt")
+           SELECT $1, "tenantId", "branchId", "id", $5, $6, $7, $8, CURRENT_TIMESTAMP
            FROM "brand" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $4
+           AND ($8::uuid IS NULL OR EXISTS (
+             SELECT 1 FROM "category" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $8
+           ))
            ON CONFLICT DO NOTHING`,
-          [fixtureId('52', id), tenantId, branchId, brandId, name, price, status],
+          [
+            fixtureId('52', id),
+            tenantId,
+            branchId,
+            brandId,
+            name,
+            price,
+            status,
+            category === undefined ? null : fixtureId('62', category),
+          ],
         );
         productsInserted += product.rowCount ?? 0;
       }
     }
     await client.query('COMMIT');
     console.log(
-      `Demo catalogue inserted ${String(brandsInserted)} brands and ${String(productsInserted)} products.`,
+      `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories and ${String(productsInserted)} products.`,
     );
   } finally {
     await client.end();

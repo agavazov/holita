@@ -1,0 +1,36 @@
+fragment OperatorCategoryFields on Category {
+  id
+  name
+  slug
+  parentId
+  sortOrder
+  active
+}
+
+query OperatorCategories {
+  categories {
+    ...OperatorCategoryFields
+  }
+}
+
+query OperatorCategory($id: ID!) {
+  category(id: $id) {
+    ...OperatorCategoryFields
+  }
+}
+
+mutation OperatorCreateCategory($input: CategoryInput!) {
+  createCategory(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateCategory($id: ID!, $input: CategoryInput!) {
+  updateCategory(id: $id, input: $input) {
+    id
+  }
+}
+
+mutation OperatorDeleteCategory($id: ID!) {
+  deleteCategory(id: $id)
+}

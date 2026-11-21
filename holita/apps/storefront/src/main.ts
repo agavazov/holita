@@ -49,6 +49,7 @@ const messages = {
     previous: 'Предишна',
     next: 'Следваща',
     back: 'Към продуктите',
+    productPath: 'Път до продукта',
     loading: 'Зареждане…',
     productMissing: 'Продуктът не е намерен.',
     retry: 'Опитай отново',
@@ -71,6 +72,7 @@ const messages = {
     previous: 'Previous',
     next: 'Next',
     back: 'Back to products',
+    productPath: 'Product breadcrumbs',
     loading: 'Loading…',
     productMissing: 'Product not found.',
     retry: 'Retry',
@@ -219,14 +221,34 @@ class StorefrontApi {
           }
         }
         @if (page === 'product') {
+          @let item = product();
           <div class="product-navigation">
-            <a class="product-back" [routerLink]="base">
-              <span aria-hidden="true">←</span> {{ t().back }}
-            </a>
+            @if (item && item.categoryPath.length) {
+              <nav class="product-breadcrumbs" [attr.aria-label]="t().productPath">
+                <ol role="list">
+                  <li>
+                    <a class="product-back" [routerLink]="base">{{ t().products }}</a>
+                  </li>
+                  @for (category of item.categoryPath; track category.id) {
+                    <li>
+                      <span aria-hidden="true">›</span> <span>{{ category.name }}</span>
+                    </li>
+                  }
+                  <li>
+                    <span aria-hidden="true">›</span>
+                    <span aria-current="page">{{ item.name }}</span>
+                  </li>
+                </ol>
+              </nav>
+            } @else {
+              <a class="product-back" [routerLink]="base">
+                <span aria-hidden="true">←</span> {{ t().back }}
+              </a>
+            }
           </div>
           @if (error()) {
             <ng-container [ngTemplateOutlet]="requestError" />
-          } @else if (product(); as item) {
+          } @else if (item) {
             <article class="product-detail" [class.with-brand]="item.brand?.logoUrl">
               <div class="product-summary">
                 @if (item.brand; as brand) {

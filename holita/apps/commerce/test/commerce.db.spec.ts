@@ -84,6 +84,12 @@ beforeAll(async () => {
       'utf8',
     ),
   );
+  await connection.query(
+    await readFile(
+      new URL('../prisma/migrations/20261122000000_categories/migration.sql', import.meta.url),
+      'utf8',
+    ),
+  );
   database = new PrismaClient({
     adapter: new PrismaPg({ connectionString: configured }, { schema }),
   });
@@ -352,6 +358,98 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     'brandId',
     null,
   );
+
+  const categories = await Promise.all(
+    [
+      { tenantId: tenantA, branchId: branchA },
+      { tenantId: tenantA, branchId: branchB },
+      { tenantId: tenantB, branchId: branchForeign },
+    ].map((scope) =>
+      client.category.create({
+        data: { ...scope, name: 'Scoped Category', slug: 'scoped-category' },
+      }),
+    ),
+  );
+  const category = categories[0];
+  if (!category) {
+    throw new Error('Missing local category');
+  }
+  expect(await query(tokens.viewer, branchA, '{categories{id}}')).toEqual({
+    data: { categories: [{ id: category.id }] },
+  });
+  const assignCategory =
+    'mutation($product:ID!,$category:ID){updateProduct(id:$product,input:{name:"Local",price:"19.95",status:ACTIVE,categoryId:$category}){categoryId}}';
+  const createSubcategory =
+    'mutation($parent:ID!,$slug:String!){createCategory(input:{name:"Child",slug:$slug,parentId:$parent,sortOrder:0,active:true}){parentId}}';
+  for (const candidate of categories) {
+    expect(
+      await query(tokens.operator, branchA, assignCategory, {
+        product: rows[0].id,
+        category: candidate.id,
+      }),
+    ).toMatchObject(
+      candidate === category
+        ? { data: { updateProduct: { categoryId: category.id } } }
+        : {
+            data: null,
+            errors: [
+              { extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'categoryId' }] } },
+            ],
+          },
+    );
+    expect(
+      await query(tokens.operator, branchA, createSubcategory, {
+        parent: candidate.id,
+        slug: candidate === category ? 'child' : `child-${candidate.id}`,
+      }),
+    ).toMatchObject(
+      candidate === category
+        ? { data: { createCategory: { parentId: category.id } } }
+        : {
+            data: null,
+            errors: [
+              { extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'parentId' }] } },
+            ],
+          },
+    );
+  }
+  const child = await client.category.findUniqueOrThrow({
+    where: { tenantId_branchId_slug: { tenantId: tenantA, branchId: branchA, slug: 'child' } },
+  });
+  const moveCategory =
+    'mutation($id:ID!,$parent:ID!){updateCategory(id:$id,input:{name:"Scoped Category",slug:"scoped-category",parentId:$parent,sortOrder:0,active:true}){id}}';
+  expect(
+    await query(tokens.operator, branchA, moveCategory, { id: category.id, parent: child.id }),
+  ).toMatchObject({
+    data: null,
+    errors: [
+      {
+        extensions: {
+          code: 'BAD_USER_INPUT',
+          fieldErrors: [{ path: 'parentId', code: 'CATEGORY_CYCLE' }],
+        },
+      },
+    ],
+  });
+  expect(
+    await query(tokens.operator, branchA, assignCategory, {
+      product: rows[0].id,
+      category: child.id,
+    }),
+  ).toEqual({ data: { updateProduct: { categoryId: child.id } } });
+  const deleteCategory = 'mutation($id:ID!){deleteCategory(id:$id)}';
+  for (const id of [category.id, child.id]) {
+    expect(await query(tokens.operator, branchA, deleteCategory, { id })).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'CONFLICT' } }],
+    });
+  }
+  expect(
+    await query(tokens.operator, branchA, assignCategory, { product: rows[0].id, category: null }),
+  ).toEqual({ data: { updateProduct: { categoryId: null } } });
+  expect(await query(tokens.operator, branchA, deleteCategory, { id: child.id })).toEqual({
+    data: { deleteCategory: true },
+  });
 });
 
 async function storefront(
@@ -404,6 +502,13 @@ it('isolates shoppers and active catalogue by shop and hides suspended shops', a
       status: 'HIDDEN',
     },
   });
+  const categoryScope = { tenantId: tenantA, branchId: publicA };
+  const parent = await database.category.create({
+    data: { ...categoryScope, name: 'Parent', slug: 'parent' },
+  });
+  const category = await database.category.create({
+    data: { ...categoryScope, name: 'Child', slug: 'child', parentId: parent.id },
+  });
   for (const [name, status] of [
     ['Visible', 'ACTIVE'],
     ['Draft', 'DRAFT'],
@@ -417,6 +522,7 @@ it('isolates shoppers and active catalogue by shop and hides suspended shops', a
         price: '1.00',
         status,
         brandId: visible.id,
+        categoryId: category.id,
       },
     });
   }
@@ -438,19 +544,45 @@ it('isolates shoppers and active catalogue by shop and hides suspended shops', a
     });
   }
   expect(
-    await storefront(publicA, '{catalogue{total items{name brand{id}}} catalogueBrands{id}}'),
+    await storefront(
+      publicA,
+      '{catalogue{total items{name brand{id} category{id} categoryPath{id}}} catalogueBrands{id} catalogueCategories{id parentId}}',
+    ),
   ).toEqual({
     data: {
-      catalogue: { total: 1, items: [{ name: 'Visible', brand: { id: visible.id } }] },
+      catalogue: {
+        total: 1,
+        items: [
+          {
+            name: 'Visible',
+            brand: { id: visible.id },
+            category: { id: category.id },
+            categoryPath: [{ id: parent.id }, { id: category.id }],
+          },
+        ],
+      },
       catalogueBrands: [{ id: visible.id }],
+      catalogueCategories: [
+        { id: parent.id, parentId: null },
+        { id: category.id, parentId: parent.id },
+      ],
     },
   });
-  expect(await storefront(publicB, '{catalogueBrands{id}}')).toEqual({
-    data: { catalogueBrands: [] },
+  expect(await storefront(publicB, '{catalogueBrands{id} catalogueCategories{id}}')).toEqual({
+    data: { catalogueBrands: [], catalogueCategories: [] },
   });
   await database.brand.update({ where: { id: visible.id }, data: { status: 'HIDDEN' } });
-  expect(await storefront(publicA, '{catalogue{items{brand{id}}}}')).toEqual({
-    data: { catalogue: { items: [{ brand: null }] } },
+  await database.category.update({ where: { id: parent.id }, data: { active: false } });
+  expect(
+    await storefront(
+      publicA,
+      '{catalogue{items{brand{id} category{id} categoryPath{id}}} catalogueCategories{id}}',
+    ),
+  ).toEqual({
+    data: {
+      catalogue: { items: [{ brand: null, category: null, categoryPath: [] }] },
+      catalogueCategories: [],
+    },
   });
   expect(await storefront(suspended, '{shop{id}}')).toEqual({ data: { shop: null } });
   expect(await storefront(suspended, '{catalogue{total}}')).toMatchObject({
