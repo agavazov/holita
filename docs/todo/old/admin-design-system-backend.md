@@ -2,9 +2,9 @@
 
 Pending backend/product work only. Current entities, SDL, list conditions, derived facts,
 aggregates, batch actions and demo-data rules belong to the
-[Fleet implementation index](../../discocan/docs/fleet.md) and
-[Discocan architecture](../../discocan/docs/architecture.md#standard-list-contract). Demo seed usage is
-documented in [Fleet demo data](../../discocan/docs/development.md#fleet-demo-data). Extend those actual
+[Fleet implementation index](../../../discocan/docs/fleet.md) and
+[Discocan architecture](../../../discocan/docs/architecture.md#standard-list-contract). Demo seed usage is
+documented in [Fleet demo data](../../../discocan/docs/development.md#fleet-demo-data). Extend those actual
 contracts rather than restoring the former backend slice plan or copying its obsolete SDL.
 
 The [main backlog](admin-design-system.md) owns frontend work and product/release decisions.
@@ -38,5 +38,5 @@ The following requires separate product scope:
   date; do not update existing seed rows to refresh it. Any refresh proposal must define a new
   dataset version/IDs and preserve insert-only/idempotent behavior and local safety guards.
 
-Choose checks with [testing](../testing.md). Keep validation results in the task response, not
+Choose checks with [testing](../../testing.md). Keep validation results in the task response, not
 a backend implementation journal.

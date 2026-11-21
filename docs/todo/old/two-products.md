@@ -8,7 +8,7 @@ architecture with a thin Holita slice, not a port of the old platform.
 ## Decisions
 
 - Top-level `discocan/`, `holita/` and `osnova/` in one npm/Nx workspace
-  ([boundaries](../../AGENTS.md#products-and-boundaries)).
+  ([boundaries](../../../AGENTS.md#products-and-boundaries)).
 - `osnova/` is extracted from Discocan, never copied. Products use it only through `@osnova/*`
   package names, so that it can become its own repository later without changing product code.
 - Each product runs its own Core instance, databases, gateway and ports. Holita uses ports from
@@ -16,7 +16,7 @@ architecture with a thin Holita slice, not a port of the old platform.
 - Sign-in stays the opaque Core session for now. Subgraphs verify it through one `@osnova/auth`
   implementation, which is the seam that OAuth/OpenID Connect replaces later.
 - Holita has an operator graph and a separate public storefront graph
-  ([Holita rules](../../holita/AGENTS.md)).
+  ([Holita rules](../../../holita/AGENTS.md)).
 - Listings are shared presentational patterns with override points, not a generic CRUD framework.
 
 ## Open items

@@ -25,7 +25,7 @@ not active work or approval to send commands. Read only the reference needed for
 | [2026-10-24 device-management handoff](2026-10-24-karma-device-management.md) | Dated UI state and validation evidence, not current verification                                                                                         |
 
 Open ERM engineering and vendor questions are consolidated in the
-[ERM roadmap](../../todo/erm-roadmap.md). Current StarLink/eData protocols, device hardware,
+[ERM roadmap](../../todo/old/erm-roadmap.md). Current StarLink/eData protocols, device hardware,
 Monitor/catalog material and correspondence remain in
 [ERM resources](../../discocan/erm-resources/README.md). The original vendor source bytes and
 provenance records are retained; archival descriptions may reflect superseded behavior.

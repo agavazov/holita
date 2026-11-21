@@ -2,7 +2,7 @@
 
 Archived, deprecated reference only. The tasks and approvals below are historical; do not
 treat them as active work. Open ERM engineering and vendor questions belong in the
-[ERM roadmap](../../todo/erm-roadmap.md).
+[ERM roadmap](../../todo/old/erm-roadmap.md).
 
 The [functional research report](karma-api-v2/web-functionality-research.md)
 owns the 36-function classic inventory, NC2 console findings, internal web-method

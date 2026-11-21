@@ -73,4 +73,4 @@ header alone grants no access. Device read requests still send real commands and
 recorded outcomes. Queue acceptance or a reply is not configuration/measurement verification.
 
 Named-person authentication, standalone operation without Karma and production deployment
-remain in the [ERM roadmap](../../todo/erm-roadmap.md).
+remain in the [ERM roadmap](../../todo/old/erm-roadmap.md).

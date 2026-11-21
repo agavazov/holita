@@ -20,7 +20,7 @@ Monitor checkbox and actual fault record establish different things.
 [All 29 supplied commands and three-command procedure](command-reference-2026-10-29.md) ·
 [Current live evidence](live-verification-2026-10-29.md) ·
 [1 November R&D reply](reply-2026-11-01.md) ·
-[Open work](../../../../docs/todo/erm-roadmap.md#questions-for-erm).
+[Open work](../../../../docs/todo/old/erm-roadmap.md#questions-for-erm).
 
 **1 November R&D reply:** it confirms the four-byte SPN `419` layout and describes the lifecycle:
 added when a code first appears on the CAN bus, removed after more than one minute without it.
@@ -106,5 +106,5 @@ if one is actually established. Distinguish automatic, requested and historicall
 replayed events when the contract permits it; otherwise record the uncertainty.
 
 Keep the original source assets unchanged. Mark changed conclusions explicitly,
-link current evidence and keep pending actions in the [existing backlog](../../../../docs/todo/erm-roadmap.md#questions-for-erm).
+link current evidence and keep pending actions in the [existing backlog](../../../../docs/todo/old/erm-roadmap.md#questions-for-erm).
 Do not store credentials or unsanitized private transcripts in this reference.

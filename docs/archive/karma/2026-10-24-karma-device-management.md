@@ -142,7 +142,7 @@ Authoritative references and pending work:
 - [Open review/cleanup backlog](review-corrections-and-karma-management.md).
 - [Remaining rule implementation](karma-device-management-design.md).
 - [Current identity/scope boundary](architecture.md#background-device-configuration-reads).
-- [Parameter configuration backlog](../../todo/erm-roadmap.md) and
+- [Parameter configuration backlog](../../todo/old/erm-roadmap.md) and
   [Karma API backlog](karma-api-v2.md).
 - [Karma API references](karma-api-v2/endpoint-catalog.md) and
   [parameter protocol evidence](../../discocan/erm-resources/edata-simple-protocol-v4.04/parameter-reporting.md).

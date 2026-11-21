@@ -38,7 +38,7 @@ fault buffer is empty and `154,1` plus a `419` snapshot of the active codes othe
 2026-11-11, see the [fleet evidence](edata-simple-protocol-v4.04/diagnostics-and-fault-reporting.md#fleet-evidence-2026-11-11)). The [1 November R&D reply](erm-support-diagnostics-protocol-test-server/reply-2026-11-01.md)
 confirms the `419` layout, the added/removed lifecycle and every globals byte. `418` examples,
 compatibility and the buffer at ignition off remain open.
-Open questions and engineering tasks belong in the [ERM roadmap](../../../docs/todo/erm-roadmap.md).
+Open questions and engineering tasks belong in the [ERM roadmap](../../../docs/todo/old/erm-roadmap.md).
 
 ## Hardware
 

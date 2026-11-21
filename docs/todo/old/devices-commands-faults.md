@@ -34,7 +34,7 @@ Karma backup detection with the return to discocan, and the structured fault pip
 lamps. Delivered on 2026-11-08: ERM role enforcement with controlled `46` writes and configuration
 batches, the Device status workspace, the admin command queue with the `46` form and role-aware
 controls, fault meanings with current warnings and lamp notifications, and the truck faults view
-(see [Discocan development](../../discocan/docs/development.md)), then Karma routing that keeps its last
+(see [Discocan development](../../../discocan/docs/development.md)), then Karma routing that keeps its last
 observation through slow or failed reads, and Fleet editing offered only to the roles the server
 permits. Remaining:
 

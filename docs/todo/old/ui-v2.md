@@ -2,8 +2,8 @@
 
 Pending acceptance and deployment work only. The implemented navigation, sign-in, notifications,
 command/SMS workflows and shared presentation belong to
-[Discocan development](../../discocan/docs/development.md) and the
-[admin design system](../admin-design-system.md).
+[Discocan development](../../../discocan/docs/development.md) and the
+[admin design system](../../admin-design-system.md).
 
 - The owner's acceptance of the 2026-11-07 feedback changes: Settings and Users navigation, the
   vehicle and device detail layouts, taller and full-width maps, loading indicators, SMS and

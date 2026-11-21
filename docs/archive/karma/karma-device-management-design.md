@@ -2,7 +2,7 @@
 
 Archived, deprecated reference only. The tasks and approvals below are historical; do not
 treat them as active work. Open ERM engineering and vendor questions belong in the
-[ERM roadmap](../../todo/erm-roadmap.md).
+[ERM roadmap](../../todo/old/erm-roadmap.md).
 
 The settings, rule authoring and measurements interface is accepted. Implemented targeting,
 operation and authoring contracts belong in
@@ -46,14 +46,14 @@ estimates. Broader performance work remains in [review corrections](review-corre
 ## Separately scoped follow-up
 
 - Firmware evaluation/reset semantics for TimeOf, Count, Sum, arithmetic and debounce remain in
-  [measurement verification](../../todo/erm-roadmap.md#open-engineering-work).
+  [measurement verification](../../todo/old/erm-roadmap.md#open-engineering-work).
 - Verify edited Monitor INI round trips, including canonical ID expressions and unknown fields.
   Downloading original source is not proof of edited-file compatibility.
 - Extend unsupported/n-ary expression editing only with evidence that meaning and bytes survive.
 - Device deletion, whole-set replacement, global/profile changes, multi-rule deployment and
-  restoration remain in [restoration planning](../../todo/erm-roadmap.md#open-engineering-work).
+  restoration remain in [restoration planning](../../todo/old/erm-roadmap.md#open-engineering-work).
 - Provider queue behavior and permissions remain in [the Karma backlog](karma-api-v2.md);
-  named-operator accountability remains in [production access](../../todo/erm-roadmap.md#open-engineering-work).
+  named-operator accountability remains in [production access](../../todo/old/erm-roadmap.md#open-engineering-work).
 
 Follow [focused validation](../../../.agents/skills/discocan-focused-validation/SKILL.md) and the test
 budget. Preserve the production forms, generated contracts, scoped clients and original imports.

@@ -11,4 +11,4 @@ repeating old device commands, tests or account actions.
 
 Current protocol, hardware and ERM correspondence references remain in
 [Discocan ERM resources](../discocan/erm-resources/README.md). Active engineering work belongs to
-the [ERM roadmap](../todo/erm-roadmap.md).
+the [ERM roadmap](../todo/old/erm-roadmap.md).

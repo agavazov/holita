@@ -3,7 +3,7 @@
 **Historical source assessment (27 October).** The [29 October follow-up](reply-2026-10-29.md) and [current live evidence](live-verification-2026-10-29.md) supersede missing portal credentials, absence of positive 419 reports and any use of 154,0 as successful empty-fault evidence. Original material below is preserved with its original date and scope.
 
 [Reference and verification status](README.md) · [Full correspondence](correspondence.md) ·
-[Pending tests and ERM questions](../../../../docs/todo/erm-roadmap.md#questions-for-erm)
+[Pending tests and ERM questions](../../../../docs/todo/old/erm-roadmap.md#questions-for-erm)
 
 Analysis date: **2026-10-27**, Europe/Sofia. This is an interpretation of supplied
 source material. A vendor statement, a screenshot and a sample payload are not live
@@ -213,7 +213,7 @@ The mail's support confirmation does not prove that a vehicle currently has a fa
 
 Current API/editor contracts remain in the existing [Discocan documentation](../../README.md).
 Conditional implementation ideas, the bounded test allocation and unsent questions
-for ERM are tracked in the [existing backlog](../../../../docs/todo/erm-roadmap.md#questions-for-erm).
+for ERM are tracked in the [existing backlog](../../../../docs/todo/old/erm-roadmap.md#questions-for-erm).
 No new fault decoder, global-setting operation or receiver is implemented by this reference.
 
 ## ERM-TEST-01 complementary source findings

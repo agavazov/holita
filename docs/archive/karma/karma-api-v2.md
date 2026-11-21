@@ -2,7 +2,7 @@
 
 Archived, deprecated reference only. The tasks and approvals below are historical; do not
 treat them as active work. Open ERM engineering and vendor questions belong in the
-[ERM roadmap](../../todo/erm-roadmap.md).
+[ERM roadmap](../../todo/old/erm-roadmap.md).
 
 This backlog contains pending work only. Implemented contracts belong in the
 [Karma API reference](karma-api-v2/README.md), vendor
@@ -43,17 +43,17 @@ product constraints.
 
 ### Questions requiring ERM clarification
 
-Transferred to the active [ERM roadmap](../../todo/erm-roadmap.md#questions-for-erm).
+Transferred to the active [ERM roadmap](../../todo/old/erm-roadmap.md#questions-for-erm).
 
 ## Device recovery
 
-- [Restore eData reporting for CB6721TE](../../todo/erm-roadmap.md) after the
+- [Restore eData reporting for CB6721TE](../../todo/old/erm-roadmap.md) after the
   reported remote configuration changes; attempt verified remote recovery first,
   then arrange on-site work if necessary.
 
 ## eData reporting verification and restoration
 
-- Follow up the [implemented eData configuration interface](../../todo/erm-roadmap.md)
+- Follow up the [implemented eData configuration interface](../../todo/old/erm-roadmap.md)
   with measurement reporting verification, scoped restoration and production authorization.
   Provider questions below remain shared investigation items.
 
@@ -71,7 +71,7 @@ Transferred to the active [ERM roadmap](../../todo/erm-roadmap.md#questions-for-
 
 ## Direct ERM telemetry
 
-- [Route test trucks to the ERM device server and replace Karma](../../todo/erm-roadmap.md):
+- [Route test trucks to the ERM device server and replace Karma](../../todo/old/erm-roadmap.md):
   route one truck through the server, verify mirror and primary modes on its real traffic,
   then replace Karma step by step.
   The task distinguishes concurrent delivery from failover and provider forwarding.
@@ -149,7 +149,7 @@ Transferred to the active [ERM roadmap](../../todo/erm-roadmap.md#questions-for-
 
 ## Uncovered resources and fields
 
-- Hardware identification questions moved to the [ERM roadmap](../../todo/erm-roadmap.md#device-sessions-hardware-and-recovery).
+- Hardware identification questions moved to the [ERM roadmap](../../todo/old/erm-roadmap.md#device-sessions-hardware-and-recovery).
 - **CAR-01:** Establish non-null schemas and meanings for `sim_imsi`, `sim_phone`,
   `karma_video_data` and `vehicle_type`; assess the need to expose each field.
 - **DRIVER-01:** Obtain a nonempty driver response model and define driver identity,
@@ -175,7 +175,7 @@ Transferred to the active [ERM roadmap](../../todo/erm-roadmap.md#questions-for-
 - **ACCIDENT-01:** Obtain accident-ID discovery, report schema/encoding, sampling,
   coordinate axes, time/unit definitions, retention and permissions for
   `/black_box/{id}`. Determine how reports link to events, cars and devices.
-- Protocol and Test Server questions moved to the [ERM roadmap](../../todo/erm-roadmap.md#device-sessions-hardware-and-recovery).
+- Protocol and Test Server questions moved to the [ERM roadmap](../../todo/old/erm-roadmap.md#device-sessions-hardware-and-recovery).
 
 ## Adapter and verification follow-up
 

@@ -151,11 +151,11 @@ Workspace and Osnova documentation lives in `docs/`; product documentation lives
 ## Project backlog
 
 - Use [docs/todo/](docs/todo/README.md) only for pending work and planned tasks.
-- Put short, one-line tasks in `docs/todo/_instant-tsks.md` and larger plans in a descriptive
-  Markdown file under `docs/todo/`. Link to an existing component backlog instead of
-  duplicating it.
-- Write entries in English, and keep proposals distinct from implemented behavior.
-- When work is complete, remove its entry. Remove or replace cancelled or superseded entries.
+- Write each task as a ticket: one Markdown file under `docs/todo/`, following the format in
+  [the backlog index](docs/todo/README.md), so that a session without this history can do it.
+  `docs/todo/old/` holds the earlier backlog as reference; it is not a place for new tasks.
+- Write tickets in English, and keep proposals distinct from implemented behavior.
+- When work is complete, delete its ticket and its index row. Do the same for cancelled tickets.
 
 ## NestJS
 

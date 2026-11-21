@@ -39,9 +39,8 @@ cover implemented behavior.
 
 ## Pending work
 
-The [project backlog](todo/README.md) holds open tasks and plans separately from product
-documentation. Use [instant tasks](todo/_instant-tsks.md) for short entries and a descriptive
-file under `docs/todo/` for larger plans.
+The [project backlog](todo/README.md) holds open tasks as tickets, one file per task, separately
+from product documentation. Its `old/` folder keeps the earlier backlog as reference.
 
 ## Reference archive
 

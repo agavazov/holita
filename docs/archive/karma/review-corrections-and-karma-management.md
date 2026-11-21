@@ -2,14 +2,14 @@
 
 Archived, deprecated reference only. The tasks and approvals below are historical; do not
 treat them as active work. Open ERM engineering and vendor questions belong in the
-[ERM roadmap](../../todo/erm-roadmap.md).
+[ERM roadmap](../../todo/old/erm-roadmap.md).
 
 Pending work for the current Fleet/Karma implementation. This backlog supersedes the temporary
 review scratchpad; retain only open work here. Implemented contracts belong in
 [Discocan architecture](../../discocan/architecture.md), [Fleet](../../discocan/fleet.md) and the
 [admin design system](../../admin-design-system.md). Existing provider questions remain in
 [the Karma backlog](karma-api-v2.md), and reporting/restoration work remains in
-[the eData backlog](../../todo/erm-roadmap.md).
+[the eData backlog](../../todo/old/erm-roadmap.md).
 
 ## Performance
 

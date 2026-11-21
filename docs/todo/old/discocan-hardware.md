@@ -14,4 +14,4 @@ Pending proposals for Discocan's own hardware.
 - Set vehicle-track gap thresholds from each device type's reporting cadence. The current
   thresholds use ERM's five-minute driving and one-hour parked cadence.
 - Consider moving the ERM adapter into `erm-server` at the next ERM deployment, as recorded in
-  [ADR 0009](../architecture/decisions/0009-device-types-and-adapters.md).
+  [ADR 0009](../../architecture/decisions/0009-device-types-and-adapters.md).

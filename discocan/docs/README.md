@@ -20,8 +20,8 @@ Branch notification feed with per-user read state. See the
 
 For ERM Devices, the admin shows Karma routing and StarLink evidence and prepares StarLink SMS texts.
 See [device types and adapters](architecture.md#device-types-and-adapters), the protocol and hardware
-references in [ERM resources](erm-resources/README.md), the [ERM roadmap](../../docs/todo/erm-roadmap.md)
-and the [Discocan hardware backlog](../../docs/todo/discocan-hardware.md).
+references in [ERM resources](erm-resources/README.md), the [ERM roadmap](../../docs/todo/old/erm-roadmap.md)
+and the [project backlog](../../docs/todo/README.md).
 
 - [Contributor instructions](instructions.md).
 - [Implemented requirements](requirements.md).

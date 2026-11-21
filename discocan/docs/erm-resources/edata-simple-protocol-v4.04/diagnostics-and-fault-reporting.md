@@ -128,7 +128,7 @@ profile/global write. See the [command-file analysis](../erm-support-diagnostics
 The 2018 [Karma appendix](../../../../docs/archive/karma/karma-guide-appendix-v1.4.2/content.md#pdf-page-9)
 mentions StarLink parameters 2069/2070 for its DTC application. Their necessity
 for the present eData/profile/firmware combination has not been established.
-Current remaining work is in the [ERM roadmap](../../../../docs/todo/erm-roadmap.md#questions-for-erm).
+Current remaining work is in the [ERM roadmap](../../../../docs/todo/old/erm-roadmap.md#questions-for-erm).
 
 ## Fleet evidence (2026-11-10)
 
