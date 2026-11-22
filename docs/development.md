@@ -482,7 +482,14 @@ their child categories.
 In Admin, use Options to define reusable options for the selected shop. The drawer lets you set
 the option's status and filter visibility, edit its text values and move them into order. The Sofia
 demo shop includes Colour and Size. The operator graph exposes `options`, `option`, `createOption`
-and `updateOption`.
+and `updateOption`. To delete a value used by a product variant, first remove it from the variant.
+
+In Admin, open a product and edit its Variants section. Leave option values empty for the
+default variant of a simple product. For a configurable product, add one row per combination
+and choose one value from each of the same options in every row. Each variant has a shop-unique
+SKU, price, quantity, inventory tracking and status. The storefront lists active products with
+an active variant and uses the lowest active variant price on cards and detail pages. The Sofia
+demo shop has a tracked ceramic casserole and a two-colour cast-iron pan.
 
 `npm run dev` starts both products. `npm run kill` stops their development applications while
 leaving PostgreSQL and the ERM units running. Discocan Core reads `discocan/config/core.env`;

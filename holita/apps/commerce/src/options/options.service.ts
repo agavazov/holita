@@ -94,6 +94,10 @@ export class OptionsService {
     return { ...result, items: result.items.map(present) };
   }
 
+  async productOptions(context: RequestContext) {
+    return (await this.repository.productOptions(await requireScope(context, false))).map(present);
+  }
+
   async find(context: RequestContext, id: string) {
     const row = await this.repository.find(await requireScope(context, false), recordId(id));
     return row ? present(row) : null;
@@ -118,6 +122,11 @@ export class OptionsService {
         }
         if (error.code === 'P2025') {
           throw new NotFoundException('Option not found');
+        }
+        if (error.code === 'P2003') {
+          throw new GraphQLError('An option value is used by a product variant', {
+            extensions: { code: 'CONFLICT' },
+          });
         }
         if (error.code === 'P2034') {
           throw new ConflictException('Option changed while saving');

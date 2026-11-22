@@ -1,6 +1,6 @@
 # 111 Inventory list and adjustments
 
-**Status:** Ready after [105](105-holita-variants.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

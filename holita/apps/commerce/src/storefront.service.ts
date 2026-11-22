@@ -57,9 +57,13 @@ function catalogueBrand(brand: Brand) {
 }
 
 function catalogueProduct(
-  item: Product & { brand: Brand | null },
+  item: Product & { brand: Brand | null; variants: { price: Prisma.Decimal }[] },
   categories: ReadonlyMap<string, CatalogueCategory>,
 ): CatalogueProduct {
+  const variant = item.variants[0];
+  if (!variant) {
+    throw new Error('Public catalogue product is missing an active variant');
+  }
   const category = item.categoryId ? categories.get(item.categoryId) : undefined;
   const categoryPath: CatalogueCategory[] = [];
   let current = category;
@@ -70,7 +74,7 @@ function catalogueProduct(
   return {
     id: item.id,
     name: item.name,
-    price: item.price.toFixed(2),
+    price: variant.price.toFixed(2),
     brand: item.brand?.status === 'ACTIVE' ? catalogueBrand(item.brand) : null,
     category: category ?? null,
     categoryPath: categoryPath.reverse(),
@@ -149,6 +153,7 @@ export class StorefrontService {
       [],
       { statuses: ['ACTIVE'] },
       null,
+      true,
     );
     const categories = await this.productCategories(scope, items);
     return {
@@ -163,7 +168,7 @@ export class StorefrontService {
     if (!isUUID(id)) {
       return null;
     }
-    const item = await this.products.product(scope, id.toLowerCase(), 'ACTIVE');
+    const item = await this.products.publicProduct(scope, id.toLowerCase());
     return item ? catalogueProduct(item, await this.productCategories(scope, [item])) : null;
   }
   private async productCategories(scope: Scope, products: readonly Product[]) {

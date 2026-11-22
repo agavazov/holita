@@ -1,9 +1,12 @@
+type DemoVariant = readonly [sku: string, price: string, quantity: number, colour?: number];
+
 type DemoProduct = readonly [
   id: number,
   name: string,
   price: string,
   status?: 'active' | 'draft' | 'archived',
   category?: number,
+  variants?: readonly DemoVariant[],
 ];
 
 type DemoCategory = readonly [
@@ -69,6 +72,18 @@ export const demoCatalogue: readonly DemoBrand[] = [
       [14, 'Керамична кана за вода „Жарава“, 1 л', '58.00'],
       [15, 'Сервиз за закуска „Първа светлина“, 6 части', '119.00', 'draft'],
       [51, 'Керамична тава за печене „Горска глина“, 30 см', '64.90', 'active', 3],
+      [55, 'Керамичен гювеч „Бавен огън“, 2 л', '48.90', 'active', 3, [['GUV-2L', '48.90', 12]]],
+      [
+        56,
+        'Чугунен тиган „Две дръжки“, 28 см',
+        '79.90',
+        'active',
+        3,
+        [
+          ['PAN-28-SAND', '79.90', 7, 1],
+          ['PAN-28-GRAPHITE', '84.90', 4, 2],
+        ],
+      ],
     ],
   },
   {

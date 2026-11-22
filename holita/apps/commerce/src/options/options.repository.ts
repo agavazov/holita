@@ -52,6 +52,14 @@ export class OptionsRepository {
     return { items, total, offset, limit };
   }
 
+  productOptions(scope: Scope) {
+    return this.database.client.option.findMany({
+      where: scope,
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      include: { values: orderedValues(scope) },
+    });
+  }
+
   find(scope: Scope, id: string) {
     return this.database.client.option.findUnique({
       where: { ...scope, id },

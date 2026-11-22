@@ -1,0 +1,17 @@
+.variant-card {
+  gap: var(--p-app-space-4);
+}
+
+.variant-card-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p-app-space-2);
+}
+
+.variant-card-heading h4 {
+  margin: 0;
+  font-size: var(--p-app-text-base);
+  font-weight: 600;
+}

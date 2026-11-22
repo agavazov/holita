@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 import { config } from 'dotenv';
@@ -118,27 +119,82 @@ async function seedCatalogue(): Promise<void> {
         }
         brandsInserted += rowCount;
       }
-      for (const [id, name, price, status = 'active', category] of brand.products) {
+      for (const [
+        id,
+        name,
+        price,
+        status = 'active',
+        category,
+        configuredVariants,
+      ] of brand.products) {
+        const productId = fixtureId('52', id);
+        const variants = configuredVariants ?? [
+          [`DEMO-${String(id)}`, price, 0, undefined] as const,
+        ];
+        const valueIds = [
+          ...new Set(
+            variants.flatMap(([, , , colour]) =>
+              colour === undefined ? [] : [fixtureId('82', colour)],
+            ),
+          ),
+        ];
         const product = await client.query(
-          `INSERT INTO "product" ("id", "tenantId", "branchId", "brandId", "name", "price", "status", "categoryId", "updatedAt")
-           SELECT $1, "tenantId", "branchId", "id", $5, $6, $7, $8, CURRENT_TIMESTAMP
+          `INSERT INTO "product" ("id", "tenantId", "branchId", "brandId", "name", "status", "categoryId", "updatedAt")
+           SELECT $1, "tenantId", "branchId", "id", $5, $6, $7, CURRENT_TIMESTAMP
            FROM "brand" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $4
-           AND ($8::uuid IS NULL OR EXISTS (
-             SELECT 1 FROM "category" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $8
+           AND ($7::uuid IS NULL OR EXISTS (
+             SELECT 1 FROM "category" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $7
            ))
+           AND (SELECT COUNT(*) FROM "optionValue"
+             WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = ANY($8::uuid[])
+           ) = cardinality($8::uuid[])
            ON CONFLICT DO NOTHING`,
           [
-            fixtureId('52', id),
+            productId,
             tenantId,
             branchId,
             brandId,
             name,
-            price,
             status,
             category === undefined ? null : fixtureId('62', category),
+            valueIds,
           ],
         );
-        productsInserted += product.rowCount ?? 0;
+        if (!product.rowCount) {
+          continue;
+        }
+        productsInserted += product.rowCount;
+        for (const [sortOrder, [sku, variantPrice, quantity, colour]] of variants.entries()) {
+          const variantId = fixtureId('92', id * 10 + sortOrder);
+          const optionValueId = colour === undefined ? null : fixtureId('82', colour);
+          const key = createHash('sha256')
+            .update(optionValueId ?? '')
+            .digest('hex');
+          await client.query(
+            `INSERT INTO "productVariant" ("id", "tenantId", "branchId", "productId", "sku", "price",
+                "quantity", "inventoryTracked", "combinationKey", "sortOrder")
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            [
+              variantId,
+              tenantId,
+              branchId,
+              productId,
+              sku,
+              variantPrice,
+              quantity,
+              !!configuredVariants,
+              key,
+              sortOrder,
+            ],
+          );
+          if (optionValueId) {
+            await client.query(
+              `INSERT INTO "productVariantValue" ("tenantId", "branchId", "variantId", "optionValueId")
+               VALUES ($1, $2, $3, $4)`,
+              [tenantId, branchId, variantId, optionValueId],
+            );
+          }
+        }
       }
     }
     await client.query('COMMIT');

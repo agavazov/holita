@@ -7,14 +7,32 @@ import { CategoryEditor } from './categories/category-editor';
 import { CustomersPage } from './customers-page';
 import { OptionEditor } from './options/option-editor';
 import { OptionsPage } from './options/options-page';
-import { ProductsPage } from './products-page';
+import { ProductEditor } from './products/product-editor';
+import { ProductsPage } from './products/products-page';
 
 void startOperator({
   name: 'admin',
   defaultPage: 'products',
   selectBranch: true,
   routes: [
-    { path: 'products', component: ProductsPage },
+    {
+      path: 'products',
+      component: ProductsPage,
+      children: [
+        {
+          path: 'new',
+          component: ProductEditor,
+          data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: ':recordId',
+          component: ProductEditor,
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
     {
       path: 'categories',
       component: CategoriesPage,

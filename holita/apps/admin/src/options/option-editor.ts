@@ -20,6 +20,7 @@ import {
   FormField,
   RouteDrawer,
   drawerRouteData,
+  errorCode,
   fieldErrors,
   focusFirstInvalid,
   formatNumber,
@@ -123,7 +124,7 @@ export class OptionEditor {
     { value: false, label: this.text().optionFilterHidden },
   ]);
   protected readonly saving = signal(false);
-  protected readonly saveError = signal(false);
+  protected readonly saveError = signal<string | null>(null);
   protected readonly errors = signal<Partial<Record<string, string>>>({});
   protected readonly values = new FormArray<ValueForm>([]);
   protected readonly form = new FormGroup({
@@ -156,7 +157,7 @@ export class OptionEditor {
         { emitEvent: false },
       );
       this.errors.set({});
-      this.saveError.set(false);
+      this.saveError.set(null);
     });
     lockWhileSaving(
       this.form,
@@ -217,7 +218,7 @@ export class OptionEditor {
       return;
     }
     this.form.markAllAsTouched();
-    this.saveError.set(false);
+    this.saveError.set(null);
     if (this.form.invalid) {
       afterNextRender(
         () => {
@@ -258,7 +259,13 @@ export class OptionEditor {
         path.endsWith('.id') ? this.text().optionValueUnavailable : undefined,
       );
       this.errors.set(errors);
-      this.saveError.set(!Object.keys(errors).length);
+      this.saveError.set(
+        Object.keys(errors).length
+          ? null
+          : errorCode(error) === 'CONFLICT'
+            ? this.text().optionValueInUse
+            : this.text().optionSaveFailed,
+      );
     } finally {
       this.saving.set(false);
     }

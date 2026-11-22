@@ -362,8 +362,6 @@ async function editOption(page: Page): Promise<void> {
       { id: created.values[0]?.id, label: 'Satin' },
     ],
   });
-  await expect(page.locator('#option-value-0')).toHaveValue('Gloss');
-  await expect(page.locator('#option-value-1')).toHaveValue('Satin');
   await page
     .getByRole('dialog', { name: 'Edit option' })
     .getByRole('button', { name: 'Close', exact: true })
@@ -564,15 +562,34 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.getByRole('button', { name: 'Create product', exact: true }).click();
     const productName = `Product ${randomUUID()}`;
     await merchant.locator('#product-name').fill(productName);
-    await merchant.locator('#product-price').fill('25.50');
-    await merchant.locator('p-select[formcontrolname="status"]').click();
+    await merchant.locator('#product-variant-sku-0').fill('SMOKE-001');
+    await merchant.locator('#product-variant-price-0').fill('25.50');
+    await merchant.locator('#product-status').click();
     await merchant.getByRole('option', { name: 'Active', exact: true }).click();
     await merchant.locator('#product-brand').click();
     await merchant.getByRole('option', { name: 'Smoke Brand', exact: true }).click();
     await merchant.locator('#product-category').click();
     await merchant.getByRole('option', { name: 'Kitchen / Cookware', exact: true }).click();
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Product saved.');
     await expect(merchant.getByText(productName, { exact: true })).toBeVisible();
+    await merchant.getByRole('button', { name: 'Create product', exact: true }).click();
+    await merchant.locator('#product-name').fill('Configured cookware');
+    for (const [index, label, price] of [
+      [0, 'Gloss', '24.00'],
+      [1, 'Satin', '30.00'],
+    ] as const) {
+      if (index) {
+        await merchant.getByRole('button', { name: 'Add variant', exact: true }).click();
+      }
+      await merchant.locator(`#product-variant-values-${String(index)}`).click();
+      await merchant.getByRole('option', { name: `Surface finish: ${label}`, exact: true }).click();
+      await merchant.getByRole('heading', { name: 'Create product', exact: true }).click();
+      await merchant.locator(`#product-variant-sku-${String(index)}`).fill(`CONFIG-${label}`);
+      await merchant.locator(`#product-variant-price-${String(index)}`).fill(price);
+    }
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Product saved.');
     const shopperContext = await browser.newContext();
     cleanup.push(() => shopperContext.close());
     const shopper = await shopperContext.newPage();

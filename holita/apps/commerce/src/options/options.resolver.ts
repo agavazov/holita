@@ -22,6 +22,11 @@ export class OptionsResolver {
     return this.service.find(context, args.id);
   }
 
+  @Query('productOptions')
+  productOptions(@Context() context: RequestContext) {
+    return this.service.productOptions(context);
+  }
+
   @Mutation('createOption')
   create(@Args() args: MutationCreateOptionArgs, @Context() context: RequestContext) {
     return this.service.save(context, args.input);

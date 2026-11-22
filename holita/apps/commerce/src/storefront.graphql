@@ -5,6 +5,7 @@ type Shop {
 type CatalogueProduct {
   id: ID!
   name: String!
+  "Lowest active variant price."
   price: String!
   brand: CatalogueBrand
   category: CatalogueCategory

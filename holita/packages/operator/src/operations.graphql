@@ -46,50 +46,11 @@ mutation OperatorSetBranchStatus($tenantId: ID!, $branchId: ID!, $status: Accoun
     status
   }
 }
-query OperatorProducts(
-  $offset: Int!
-  $limit: Int!
-  $search: String
-  $filter: ProductFilter
-  $sort: ProductSort
-) {
-  products(offset: $offset, limit: $limit, search: $search, filter: $filter, sort: $sort) {
-    items {
-      id
-      name
-      price
-      status
-      brandId
-      categoryId
-      createdAt
-      updatedAt
-    }
-    total
-    offset
-    limit
-  }
-}
 query OperatorCustomers {
   customers {
     id
     name
     email
     createdAt
-  }
-}
-mutation OperatorCreateProduct($input: ProductInput!) {
-  createProduct(input: $input) {
-    id
-    name
-    price
-    status
-  }
-}
-mutation OperatorUpdateProduct($id: ID!, $input: ProductInput!) {
-  updateProduct(id: $id, input: $input) {
-    id
-    name
-    price
-    status
   }
 }

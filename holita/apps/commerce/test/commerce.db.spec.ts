@@ -2,15 +2,15 @@ import 'dotenv/config';
 import { afterAll, beforeAll, expect, it } from '@jest/globals';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import pg from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client.js';
+import type { PrismaClient } from '../src/generated/prisma/client.js';
 import { AppModule } from '../src/app.module.js';
 import { DatabaseService } from '../src/database.service.js';
 
+const legacyProductId = randomUUID();
 const tenantA = randomUUID();
 const tenantB = randomUUID();
 const branchA = randomUUID();
@@ -34,6 +34,7 @@ const identities = new Map([
   [tokens.platform, { tenantId: tenantB, role: 'ADMINISTRATOR', platform: true }],
 ]);
 const previous = {
+  databaseUrl: process.env.COMMERCE_DATABASE_URL,
   token: process.env.CORE_INTERNAL_AUTH_TOKEN,
   verify: process.env.CORE_AUTH_VERIFY_URL,
   graphql: process.env.CORE_GRAPHQL_URL,
@@ -96,9 +97,22 @@ beforeAll(async () => {
       'utf8',
     ),
   );
-  database = new PrismaClient({
-    adapter: new PrismaPg({ connectionString: configured }, { schema }),
-  });
+  await connection.query(
+    `INSERT INTO "product" ("id", "tenantId", "branchId", "name", "price", "status", "updatedAt")
+     VALUES ($1, $2, $3, 'Local', 19.95, 'active', CURRENT_TIMESTAMP)`,
+    [legacyProductId, tenantA, branchA],
+  );
+  await connection.query(
+    await readFile(
+      new URL(
+        '../prisma/migrations/20261122020000_product_variants/migration.sql',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
+  url.searchParams.set('schema', schema);
+  process.env.COMMERCE_DATABASE_URL = url.toString();
   const coreServer = createServer((request, response) => {
     const token = request.headers.authorization?.replace(/^Bearer /, '') ?? '';
     const identity = identities.get(token);
@@ -157,10 +171,8 @@ beforeAll(async () => {
   process.env.CORE_INTERNAL_AUTH_TOKEN = 'commerce-test-internal-token-at-least-32-characters';
   process.env.CORE_AUTH_VERIFY_URL = `http://127.0.0.1:${String(address.port)}/internal/auth/verify`;
   process.env.CORE_GRAPHQL_URL = `http://127.0.0.1:${String(address.port)}/graphql`;
-  const module = await Test.createTestingModule({ imports: [AppModule] })
-    .overrideProvider(DatabaseService)
-    .useValue({ client: database })
-    .compile();
+  const module = await Test.createTestingModule({ imports: [AppModule] }).compile();
+  database = module.get(DatabaseService).client;
   app = module.createNestApplication({ logger: false });
   await app.listen(0, '127.0.0.1');
   endpoint = `${await app.getUrl()}/graphql`;
@@ -169,7 +181,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app?.close();
-  await database?.$disconnect();
   if (connection) {
     await connection.query(`DROP SCHEMA ${pg.escapeIdentifier(schema)} CASCADE`);
     await connection.end();
@@ -185,6 +196,11 @@ afterAll(async () => {
         }
       });
     });
+  }
+  if (previous.databaseUrl === undefined) {
+    delete process.env.COMMERCE_DATABASE_URL;
+  } else {
+    process.env.COMMERCE_DATABASE_URL = previous.databaseUrl;
   }
   if (previous.token === undefined) {
     delete process.env.CORE_INTERNAL_AUTH_TOKEN;
@@ -226,22 +242,32 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     throw new Error('Missing test database');
   }
   const rows = await Promise.all([
+    database.product.findUniqueOrThrow({ where: { id: legacyProductId } }),
     database.product.create({
       data: {
         tenantId: tenantA,
-        branchId: branchA,
-        name: 'Local',
-        price: '19.95',
-        status: 'ACTIVE',
+        branchId: branchB,
+        name: 'Other shop',
+        variants: { create: storedVariant('OTHER-SHOP', '4.00') },
       },
     }),
     database.product.create({
-      data: { tenantId: tenantA, branchId: branchB, name: 'Other shop', price: '4.00' },
-    }),
-    database.product.create({
-      data: { tenantId: tenantB, branchId: branchForeign, name: 'Other merchant', price: '2.00' },
+      data: {
+        tenantId: tenantB,
+        branchId: branchForeign,
+        name: 'Other merchant',
+        variants: { create: storedVariant('OTHER-MERCHANT', '2.00') },
+      },
     }),
   ]);
+  expect(
+    await database.productVariant.findUnique({ where: { id: legacyProductId } }),
+  ).toMatchObject({
+    sku: `LEGACY-${legacyProductId}`,
+    active: true,
+    quantity: 0,
+    inventoryTracked: false,
+  });
   await database.customer.create({
     data: { tenantId: tenantA, branchId: branchA, name: 'Customer', email: 'Person@example.test' },
   });
@@ -283,7 +309,7 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     const write = await query(
       bearer,
       branch,
-      'mutation{createProduct(input:{name:"Added",price:"1.25",status:ACTIVE}){name price}}',
+      'mutation{createProduct(input:{name:"Added",status:ACTIVE,variants:[{sku:"ADDED",price:"1.25",quantity:0,inventoryTracked:false,active:true,optionValueIds:[]}]}){name price}}',
     );
     expect({ role, write }).toMatchObject({
       role,
@@ -309,7 +335,7 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     await query(
       tokens.operator,
       branchA,
-      'mutation($id:ID!){updateProduct(id:$id,input:{name:"No",price:"1.00",status:DRAFT}){id}}',
+      'mutation($id:ID!){updateProduct(id:$id,input:{name:"No",status:DRAFT,variants:[{sku:"NO",price:"1.00",quantity:0,inventoryTracked:false,active:true,optionValueIds:[]}]}){id}}',
       { id: rows[2].id },
     ),
   ).toMatchObject({ data: null, errors: expect.any(Array) });
@@ -332,7 +358,7 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     },
   );
   const assign =
-    'mutation($product:ID!,$brand:ID!){updateProduct(id:$product,input:{name:"Local",price:"19.95",status:ACTIVE,brandId:$brand}){brandId}}';
+    'mutation($product:ID!,$brand:ID!){updateProduct(id:$product,input:{name:"Local",status:ACTIVE,variants:[{sku:"LOCAL",price:"19.95",quantity:0,inventoryTracked:false,active:true,optionValueIds:[]}],brandId:$brand}){brandId}}';
   for (const brand of [otherShop, otherTenant, local]) {
     const result = await query(tokens.operator, branchA, assign, {
       product: rows[0].id,
@@ -384,7 +410,7 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     data: { categories: [{ id: category.id }] },
   });
   const assignCategory =
-    'mutation($product:ID!,$category:ID){updateProduct(id:$product,input:{name:"Local",price:"19.95",status:ACTIVE,categoryId:$category}){categoryId}}';
+    'mutation($product:ID!,$category:ID){updateProduct(id:$product,input:{name:"Local",status:ACTIVE,variants:[{sku:"LOCAL",price:"19.95",quantity:0,inventoryTracked:false,active:true,optionValueIds:[]}],categoryId:$category}){categoryId}}';
   const createSubcategory =
     'mutation($parent:ID!,$slug:String!){createCategory(input:{name:"Child",slug:$slug,parentId:$parent,sortOrder:0,active:true}){parentId}}';
   for (const candidate of categories) {
@@ -475,6 +501,24 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
   if (!first || !second) {
     throw new Error('Missing scoped option values');
   }
+  const saveProduct =
+    'mutation($input:ProductInput!){createProduct(input:$input){id name price variants{id sku price quantity inventoryTracked active optionValueIds}}}';
+  const variant = {
+    sku: 'COMBO-1',
+    price: '8.95',
+    quantity: 5,
+    inventoryTracked: true,
+    active: true,
+    optionValueIds: [first.id],
+  };
+  const configured = {
+    name: 'Configured',
+    status: 'ACTIVE',
+    variants: [
+      variant,
+      { ...variant, sku: 'COMBO-2', price: '7.95', active: false, optionValueIds: [second.id] },
+    ],
+  };
   const updateOption =
     'mutation($id:ID!,$values:[OptionValueInput!]!){updateOption(id:$id,input:{name:"Renamed",active:false,showInFilters:true,values:$values}){id name active showInFilters values{id label}}}';
   for (const scope of [
@@ -489,6 +533,20 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     ).rejects.toMatchObject({ code: 'P2003' });
     const outsideValue = await client.optionValue.create({
       data: { ...scope, optionId: outside.id, label: 'Outside', sortOrder: 0 },
+    });
+    expect(
+      await query(tokens.operator, branchA, saveProduct, {
+        input: { ...configured, variants: [{ ...variant, optionValueIds: [outsideValue.id] }] },
+      }),
+    ).toMatchObject({
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'variants.0.optionValueIds' }],
+          },
+        },
+      ],
     });
     expect(
       await query(tokens.viewer, branchA, 'query($id:ID!){option(id:$id){id}}', { id: outside.id }),
@@ -511,6 +569,63 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
   ).toEqual({
     data: { options: { total: 1, items: [{ id: scopedOption.id }] } },
   });
+  for (const [variants, field, code] of [
+    [[variant, { ...variant, optionValueIds: [second.id] }], 'variants.1.sku', 'DUPLICATE_SKU'],
+    [
+      [variant, { ...variant, sku: 'COMBO-2' }],
+      'variants.1.optionValueIds',
+      'DUPLICATE_COMBINATION',
+    ],
+    [[{ ...variant, sku: 'ADDED' }], 'variants.0.sku', 'DUPLICATE_SKU'],
+  ] as const) {
+    expect(
+      await query(tokens.operator, branchA, saveProduct, { input: { ...configured, variants } }),
+    ).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: field, code }] } }],
+    });
+  }
+  expect(await query(tokens.operator, branchA, saveProduct, { input: configured })).toMatchObject({
+    data: { createProduct: { price: '8.95', variants: configured.variants } },
+  });
+  expect(
+    await query(
+      tokens.viewer,
+      branchA,
+      '{products(search:"Configured",sort:{field:PRICE,direction:DESC},filter:{statuses:[ACTIVE]}){total items{name price}}}',
+    ),
+  ).toEqual({ data: { products: { total: 1, items: [{ name: 'Configured', price: '8.95' }] } } });
+  expect(
+    await query(
+      tokens.viewer,
+      branchA,
+      '{products(sort:{field:PRICE,direction:ASC},filter:{statuses:[ACTIVE]},offset:1,limit:2){total items{name price}}}',
+    ),
+  ).toEqual({
+    data: {
+      products: {
+        total: 3,
+        items: [
+          { name: 'Configured', price: '8.95' },
+          { name: 'Local', price: '19.95' },
+        ],
+      },
+    },
+  });
+  expect(
+    await query(tokens.operator, branchA, updateOption, { id: scopedOption.id, values: [] }),
+  ).toMatchObject({ data: null, errors: [{ extensions: { code: 'CONFLICT' } }] });
+  const configuredVariant = await client.productVariant.findFirstOrThrow({
+    where: { ...optionScope, sku: 'COMBO-1' },
+  });
+  const foreignValue = await client.optionValue.findFirstOrThrow({
+    where: { tenantId: tenantA, branchId: branchB },
+  });
+  await expect(
+    client.productVariantValue.create({
+      data: { ...optionScope, variantId: configuredVariant.id, optionValueId: foreignValue.id },
+    }),
+  ).rejects.toMatchObject({ code: 'P2003' });
   const values = [
     { id: second.id, label: 'Second renamed' },
     { id: first.id, label: 'First' },
@@ -528,7 +643,17 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       },
     },
   });
-});
+}, 15_000);
+
+function storedVariant(sku: string, price: string, active = true) {
+  return {
+    sku,
+    price,
+    active,
+    combinationKey: createHash('sha256').update('').digest('hex'),
+    sortOrder: 0,
+  };
+}
 
 async function storefront(
   branch: string,
@@ -591,13 +716,14 @@ it('isolates shoppers and active catalogue by shop and hides suspended shops', a
     ['Visible', 'ACTIVE'],
     ['Draft', 'DRAFT'],
     ['Archived', 'ARCHIVED'],
+    ['No active variant', 'ACTIVE'],
   ] as const) {
     await database.product.create({
       data: {
         tenantId: tenantA,
         branchId: publicA,
         name,
-        price: '1.00',
+        variants: { create: storedVariant(name, '1.00', name !== 'No active variant') },
         status,
         brandId: visible.id,
         categoryId: category.id,
@@ -624,7 +750,7 @@ it('isolates shoppers and active catalogue by shop and hides suspended shops', a
   expect(
     await storefront(
       publicA,
-      '{catalogue{total items{name brand{id} category{id} categoryPath{id}}} catalogueBrands{id} catalogueCategories{id parentId}}',
+      '{catalogue{total items{name price brand{id} category{id} categoryPath{id}}} catalogueBrands{id} catalogueCategories{id parentId}}',
     ),
   ).toEqual({
     data: {
@@ -633,6 +759,7 @@ it('isolates shoppers and active catalogue by shop and hides suspended shops', a
         items: [
           {
             name: 'Visible',
+            price: '1.00',
             brand: { id: visible.id },
             category: { id: category.id },
             categoryPath: [{ id: parent.id }, { id: category.id }],

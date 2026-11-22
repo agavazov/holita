@@ -1,0 +1,268 @@
+<osnova-route-drawer
+  [title]="editing ? text().editProduct : text().createProduct"
+  [subtitle]="subtitle()"
+  [state]="state()"
+  [errorText]="text().productUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  <form id="product-editor-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
+    <section class="app-form-section">
+      @let nameError = controlError(form.controls.name, 'name');
+      <osnova-form-field
+        controlId="product-name"
+        [label]="text().name"
+        [required]="true"
+        [error]="nameError"
+      >
+        <input
+          pInputText
+          id="product-name"
+          formControlName="name"
+          autocomplete="off"
+          aria-required="true"
+          aria-describedby="product-name-error"
+          [invalid]="!!nameError"
+          [attr.aria-invalid]="!!nameError"
+          (input)="clearError('name')"
+        />
+      </osnova-form-field>
+      <osnova-form-field controlId="product-status" [label]="text().status">
+        <p-select
+          inputId="product-status"
+          ariaLabelledBy="product-status-label"
+          formControlName="status"
+          [options]="statusOptions()"
+          optionLabel="label"
+          optionValue="value"
+        />
+      </osnova-form-field>
+      <div class="app-form-grid">
+        @let brandError = errors()['brandId'] ?? null;
+        <osnova-form-field controlId="product-brand" [label]="text().brand" [error]="brandError">
+          <p-select
+            inputId="product-brand"
+            ariaLabelledBy="product-brand-label"
+            formControlName="brandId"
+            [options]="brandOptions()"
+            optionLabel="name"
+            optionValue="id"
+            [placeholder]="text().noBrand"
+            [filter]="true"
+            [ariaFilterLabel]="text().searchBrands"
+            [emptyFilterMessage]="shared().table.noResultsTitle"
+            [invalid]="!!brandError"
+            [overlayOptions]="{ style: { width: '100%' } }"
+            [pt]="selectPt(brandError, 'product-brand')"
+            (onChange)="clearError('brandId')"
+          />
+        </osnova-form-field>
+        @let categoryError = errors()['categoryId'] ?? null;
+        <osnova-form-field
+          controlId="product-category"
+          [label]="text().category"
+          [error]="categoryError"
+        >
+          <p-select
+            inputId="product-category"
+            ariaLabelledBy="product-category-label"
+            formControlName="categoryId"
+            [options]="categoryOptions()"
+            optionLabel="name"
+            optionValue="id"
+            [placeholder]="text().noCategory"
+            [filter]="true"
+            [ariaFilterLabel]="text().searchCategories"
+            [emptyFilterMessage]="shared().table.noResultsTitle"
+            [invalid]="!!categoryError"
+            [overlayOptions]="{ style: { width: '100%' } }"
+            [pt]="selectPt(categoryError, 'product-category')"
+            (onChange)="clearError('categoryId')"
+          />
+        </osnova-form-field>
+      </div>
+    </section>
+    <section class="app-form-section" aria-labelledby="product-variants-title">
+      <h3 id="product-variants-title">{{ text().variants }}</h3>
+      <p>{{ optionGroups().length ? text().variantOptionsHint : text().variantNoOptions }}</p>
+      @if (errors()['variants']; as message) {
+      <p-message severity="error">{{ message }}</p-message>
+      } @for (variant of variants.controls; track variant; let index = $index) { @let valuesId =
+      'product-variant-values-' + index; @let skuId = 'product-variant-sku-' + index; @let priceId =
+      'product-variant-price-' + index; @let quantityId = 'product-variant-quantity-' + index; @let
+      trackingId = 'product-variant-tracking-' + index; @let activeId = 'product-variant-active-' +
+      index; @let valuesError = variantError(index, 'optionValueIds'); @let skuError =
+      variantError(index, 'sku'); @let priceError = variantError(index, 'price'); @let quantityError
+      = variantError(index, 'quantity');
+      <div
+        class="app-card variant-card"
+        role="group"
+        [attr.aria-labelledby]="'product-variant-title-' + index"
+        [formGroup]="variant"
+      >
+        <div class="variant-card-heading">
+          <h4 [id]="'product-variant-title-' + index">
+            {{ variants.length === 1 && !variant.controls.optionValueIds.value.length ?
+            text().defaultVariant : indexedLabel(text().variantNumber, index) }}
+          </h4>
+          @if (variants.length > 1) {
+          <button
+            pButton
+            type="button"
+            severity="danger"
+            [text]="true"
+            [attr.aria-label]="indexedLabel(text().variantRemoveLabel, index)"
+            [disabled]="saving()"
+            (click)="removeVariant(index)"
+          >
+            {{ text().variantRemove }}
+          </button>
+          }
+        </div>
+        @if (errors()[path(index, 'id')]; as message) {
+        <p-message severity="error">{{ message }}</p-message>
+        } @if (optionGroups().length) {
+        <osnova-form-field
+          [controlId]="valuesId"
+          [label]="text().variantValues"
+          [error]="valuesError"
+        >
+          <p-select
+            #valuesPicker
+            [inputId]="valuesId"
+            [ariaLabelledBy]="valuesId + '-label'"
+            formControlName="optionValueIds"
+            [options]="optionGroups()"
+            optionLabel="displayLabel"
+            optionValue="id"
+            [group]="true"
+            [multiple]="true"
+            [filter]="true"
+            [ariaFilterLabel]="text().variantSearchValues"
+            [emptyFilterMessage]="shared().table.noResultsTitle"
+            [placeholder]="text().variantChooseValues"
+            [invalid]="!!valuesError"
+            [overlayOptions]="{ style: { width: '100%' } }"
+            [pt]="selectPt(valuesError, valuesId, true)"
+            (onChange)="changeOptionValues(index, valuesPicker, $event.originalEvent)"
+          >
+            <ng-template #item let-value>{{ value.label }}</ng-template>
+          </p-select>
+        </osnova-form-field>
+        }
+        <div class="app-form-grid">
+          <osnova-form-field
+            [controlId]="skuId"
+            [label]="text().variantSku"
+            [required]="true"
+            [error]="skuError"
+          >
+            <input
+              pInputText
+              [id]="skuId"
+              formControlName="sku"
+              autocomplete="off"
+              aria-required="true"
+              [attr.aria-describedby]="skuId + '-error'"
+              [invalid]="!!skuError"
+              [attr.aria-invalid]="!!skuError"
+              (input)="clearError(path(index, 'sku'))"
+            />
+          </osnova-form-field>
+          <osnova-form-field
+            [controlId]="priceId"
+            [label]="text().price"
+            [required]="true"
+            [error]="priceError"
+          >
+            <input
+              pInputText
+              [id]="priceId"
+              formControlName="price"
+              inputmode="decimal"
+              aria-required="true"
+              [attr.aria-describedby]="priceId + '-error'"
+              [invalid]="!!priceError"
+              [attr.aria-invalid]="!!priceError"
+              (input)="clearError(path(index, 'price'))"
+            />
+          </osnova-form-field>
+          <osnova-form-field
+            [controlId]="quantityId"
+            [label]="text().variantQuantity"
+            [required]="true"
+            [error]="quantityError"
+          >
+            <input
+              pInputText
+              [id]="quantityId"
+              formControlName="quantity"
+              type="number"
+              min="0"
+              step="1"
+              inputmode="numeric"
+              aria-required="true"
+              [attr.aria-describedby]="quantityId + '-error'"
+              [invalid]="!!quantityError"
+              [attr.aria-invalid]="!!quantityError"
+              (input)="clearError(path(index, 'quantity'))"
+            />
+          </osnova-form-field>
+          <osnova-form-field [controlId]="trackingId" [label]="text().variantInventory">
+            <p-select
+              [inputId]="trackingId"
+              [ariaLabelledBy]="trackingId + '-label'"
+              formControlName="inventoryTracked"
+              [options]="trackingOptions()"
+              optionLabel="label"
+              optionValue="value"
+            />
+          </osnova-form-field>
+          <osnova-form-field [controlId]="activeId" [label]="text().variantStatus">
+            <p-select
+              [inputId]="activeId"
+              [ariaLabelledBy]="activeId + '-label'"
+              formControlName="active"
+              [options]="variantStatuses()"
+              optionLabel="label"
+              optionValue="value"
+            />
+          </osnova-form-field>
+        </div>
+      </div>
+      } @if (optionGroups().length) {
+      <div>
+        <button
+          pButton
+          id="product-add-variant"
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving()"
+          (click)="addVariant()"
+        >
+          {{ text().variantAdd }}
+        </button>
+      </div>
+      } @if (saveError()) {
+      <p-message severity="error">{{ text().productSaveFailed }}</p-message>
+      }
+    </section>
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="product-editor-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+  </div>
+</osnova-route-drawer>

@@ -127,8 +127,8 @@
           {{ text().optionAddValue }}
         </button>
       </div>
-      @if (saveError()) {
-      <p-message severity="error">{{ text().optionSaveFailed }}</p-message>
+      @if (saveError(); as message) {
+      <p-message severity="error">{{ message }}</p-message>
       }
     </section>
   </form>

@@ -20,9 +20,30 @@ input ProductSort {
 input ProductFilter {
   statuses: [ProductStatus!]
 }
+input ProductVariantInput {
+  "Keep the ID when editing an existing variant."
+  id: ID
+  sku: String!
+  price: String!
+  quantity: Int!
+  inventoryTracked: Boolean!
+  active: Boolean!
+  "One value from each option used by this product. Leave empty for a simple product."
+  optionValueIds: [ID!]!
+}
+type ProductVariant {
+  id: ID!
+  sku: String!
+  price: String!
+  quantity: Int!
+  inventoryTracked: Boolean!
+  active: Boolean!
+  optionValueIds: [ID!]!
+}
 input ProductInput {
   name: String!
-  price: String!
+  "The complete set of variants in display order. Omitted variants are removed."
+  variants: [ProductVariantInput!]!
   status: ProductStatus!
   brandId: ID
   categoryId: ID
@@ -30,7 +51,9 @@ input ProductInput {
 type Product {
   id: ID!
   name: String!
-  price: String!
+  "Lowest active variant price, or null when there are no active variants."
+  price: String
+  variants: [ProductVariant!]!
   status: ProductStatus!
   brandId: ID
   categoryId: ID
@@ -155,6 +178,8 @@ type Query {
   category(id: ID!): Category
   options(offset: Int! = 0, limit: Int! = 20, search: String, sort: OptionSort): OptionPage!
   option(id: ID!): Option
+  "Shop options and their values for the product editor."
+  productOptions: [Option!]!
 }
 type Mutation {
   createProduct(input: ProductInput!): Product!
