@@ -1,0 +1,67 @@
+<osnova-route-drawer
+  [title]="editing ? text().editCustomerAddress : text().newCustomerAddress"
+  [subtitle]="customer()?.name ?? null"
+  [state]="state()"
+  [errorText]="text().customerAddressUnavailable"
+  [closeLink]="closeLink"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="record.reload()"
+>
+  @if (!canWrite()) {
+  <p-message severity="info"
+    >{{ scope() ? text().customerEditUnavailable : text().noShop }}</p-message
+  >
+  } @else if (state() === 'ready') {
+  <form id="customer-address-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
+    <section class="app-form-section">
+      <div class="app-form-grid">
+        @for (field of fields; track field.name) { @let controlId = 'customer-address-' +
+        field.name; @let error = fieldError(field.name); @let hint = field.name === 'countryCode' ?
+        text().customerAddressCountryHint : null;
+        <osnova-form-field
+          [class.app-form-grid--wide]="field.wide"
+          [controlId]="controlId"
+          [label]="text()[field.label]"
+          [required]="true"
+          [hint]="hint"
+          [error]="error"
+        >
+          <input
+            pInputText
+            [id]="controlId"
+            [formControlName]="field.name"
+            [autocomplete]="field.autocomplete"
+            aria-required="true"
+            [attr.aria-describedby]="(hint ? controlId + '-hint ' : '') + (error ? controlId + '-error' : '')"
+            [invalid]="!!error"
+            [attr.aria-invalid]="!!error"
+            (input)="clearError(field.name)"
+          />
+        </osnova-form-field>
+        }
+      </div>
+      @if (saveError()) {
+      <p-message severity="error">{{ text().customerAddressSaveFailed }}</p-message>
+      }
+    </section>
+  </form>
+  }
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ canWrite() ? shared().cancel : shared().close }}
+    </button>
+    @if (canWrite()) {
+    <button pButton type="submit" form="customer-address-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+    }
+  </div>
+</osnova-route-drawer>

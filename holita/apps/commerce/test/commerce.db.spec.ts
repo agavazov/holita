@@ -148,6 +148,7 @@ beforeAll(async () => {
     '20261122150000_manual_order_refunds',
     '20261122160000_manual_orders',
     '20261122170000_order_line_stock_deductions',
+    '20261122180000_customer_detail',
   ]) {
     await connection.query(
       await readFile(
@@ -317,8 +318,9 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     quantity: 0,
     inventoryTracked: false,
   });
-  await database.customer.create({
-    data: { tenantId: tenantA, branchId: branchA, name: 'Customer', email: 'Person@example.test' },
+  const customerScope = { tenantId: tenantA, branchId: branchA };
+  const customer = await database.customer.create({
+    data: { ...customerScope, name: 'Customer', email: 'Person@example.test' },
   });
   await expect(
     database.customer.create({
@@ -340,6 +342,93 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       },
     }),
   ).resolves.toBeDefined();
+  const otherCustomer = await database.customer.create({
+    data: { ...customerScope, name: 'Other customer', email: 'other@example.test' },
+  });
+  const contact = { name: 'Updated customer', phone: '+359 200 000' };
+  const address = {
+    recipient: 'Customer',
+    line1: 'Street',
+    city: 'Sofia',
+    postalCode: '0100',
+    countryCode: 'BG',
+  };
+  const customerDetail = `query($id:ID!){customer(id:$id){customer{id name phone} addresses{id}}}`;
+  const updateContact = `mutation($id:ID!,$input:CustomerContactInput!){
+    updateCustomerContact(id:$id,input:$input){id}
+  }`;
+  const createAddress = `mutation($customerId:ID!,$input:CustomerAddressInput!){
+    createCustomerAddress(customerId:$customerId,input:$input){id}
+  }`;
+  const updateAddress = `mutation($customerId:ID!,$addressId:ID!,$input:CustomerAddressInput!){
+    updateCustomerAddress(customerId:$customerId,addressId:$addressId,input:$input){id}
+  }`;
+  const target = { customerId: customer.id, input: address };
+  expect(
+    await query(tokens.operator, branchA, updateContact, {
+      id: customer.id,
+      input: contact,
+    }),
+  ).toEqual({ data: { updateCustomerContact: { id: customer.id } } });
+  expect(await query(tokens.operator, branchA, createAddress, target)).toMatchObject({
+    data: { createCustomerAddress: { id: expect.any(String) } },
+  });
+  const savedAddress = await database.customerAddress.findFirstOrThrow({
+    where: { ...customerScope, customerId: customer.id },
+  });
+  const edits = [
+    [updateContact, { id: customer.id, input: { name: 'Denied' } }],
+    [createAddress, target],
+    [
+      updateAddress,
+      { ...target, addressId: savedAddress.id, input: { ...address, city: 'Denied' } },
+    ],
+  ] as const;
+  for (const [bearer, branch] of [
+    [tokens.operator, branchB],
+    [tokens.foreign, branchForeign],
+  ] as const) {
+    expect(await query(bearer, branch, customerDetail, { id: customer.id })).toEqual({
+      data: { customer: null },
+    });
+    for (const [operation, variables] of edits) {
+      expect(await query(bearer, branch, operation, variables)).toMatchObject({
+        data: null,
+        errors: [{ extensions: { code: 'NOT_FOUND' } }],
+      });
+    }
+  }
+  for (const [operation, variables] of edits) {
+    expect(await query(tokens.viewer, branchA, operation, variables)).toMatchObject({
+      data: null,
+      errors: expect.any(Array),
+    });
+  }
+  expect(
+    await query(tokens.operator, branchA, updateAddress, {
+      ...target,
+      customerId: otherCustomer.id,
+      addressId: savedAddress.id,
+    }),
+  ).toMatchObject({
+    data: null,
+    errors: [{ extensions: { code: 'NOT_FOUND' } }],
+  });
+  expect(
+    await database.customerAddress.findMany({
+      where: { ...customerScope, customerId: customer.id },
+    }),
+  ).toEqual([savedAddress]);
+  expect(await query(tokens.viewer, branchA, customerDetail, { id: customer.id })).toEqual({
+    data: {
+      customer: { customer: { id: customer.id, ...contact }, addresses: [{ id: savedAddress.id }] },
+    },
+  });
+  await expect(
+    database.customerAddress.create({
+      data: { ...address, tenantId: tenantA, branchId: branchB, customerId: customer.id },
+    }),
+  ).rejects.toMatchObject({ code: 'P2003' });
   for (const [role, bearer, branch, expectedId, canWrite] of [
     ['viewer', tokens.viewer, branchA, rows[0].id, false],
     ['operator', tokens.operator, branchA, rows[0].id, true],
@@ -1360,8 +1449,10 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     where: { ...categoryScope, cartId: guestReview.cartId, customerId: null },
   });
 
-  const adminOrders = `query($search:String,$status:OrderStatus){
-    orders(search:$search,status:$status,limit:1){items{id number status} total offset limit}
+  const adminOrders = `query($search:String,$status:OrderStatus,$customerId:ID){
+    orders(search:$search,status:$status,customerId:$customerId,limit:1){
+      items{id number status} total offset limit
+    }
   }`;
   const adminDetail = `query($id:ID!){order(id:$id){id status paymentStatus}}`;
   const updateOrder = `mutation($id:ID!,$status:OrderStatus!){
@@ -1380,11 +1471,26 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       },
     },
   });
+  expect(guestOrder.contactEmail).toBe(order.contactEmail);
+  expect(
+    await query(tokens.viewer, publicA, adminOrders, { customerId: order.customerId }),
+  ).toEqual({
+    data: {
+      orders: {
+        items: [{ id: order.id, number: order.orderNumber, status: 'PLACED' }],
+        total: 1,
+        offset: 0,
+        limit: 1,
+      },
+    },
+  });
   for (const [credential, branch] of [
     [tokens.operator, branchB],
     [tokens.foreign, branchForeign],
   ] as const) {
-    expect(await query(credential, branch, adminOrders, { search })).toMatchObject({
+    expect(
+      await query(credential, branch, adminOrders, { customerId: order.customerId }),
+    ).toMatchObject({
       data: { orders: { items: [], total: 0 } },
     });
     expect(await query(credential, branch, adminDetail, operatorTarget)).toEqual({

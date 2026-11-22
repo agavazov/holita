@@ -193,7 +193,7 @@ export class OrdersService {
 
   async operatorOrders(
     context: RequestContext,
-    { offset = 0, limit = 20, search: rawSearch, status }: QueryOrdersArgs,
+    { offset = 0, limit = 20, search: rawSearch, status, customerId }: QueryOrdersArgs,
   ): Promise<OrderPage> {
     const scope = await requireScope(context, false);
     if (offset < 0 || limit < 1 || limit > 100) {
@@ -204,7 +204,17 @@ export class OrdersService {
     if (Array.from(search).length > 200 || words.length > 5 || search.includes('\u0000')) {
       throw new BadRequestException('Invalid search');
     }
-    const page = await this.orders.operatorOrders(scope, offset, limit, words, status);
+    if (customerId != null && !isUUID(customerId)) {
+      throw invalidValue('customerId');
+    }
+    const page = await this.orders.operatorOrders(
+      scope,
+      offset,
+      limit,
+      words,
+      status,
+      customerId?.toLowerCase(),
+    );
     return {
       ...page,
       items: page.items.map((order) => ({ ...summary(order), contactName: order.contactName })),

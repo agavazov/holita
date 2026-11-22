@@ -34,11 +34,13 @@ export class OrdersRepository {
     offset: number,
     limit: number,
     words: string[],
-    status?: OrderStatus | null,
+    status: OrderStatus | null | undefined,
+    customerId: string | undefined,
   ) {
     const where: Prisma.OrderWhereInput = {
       ...scope,
       ...(status ? { status } : {}),
+      ...(customerId ? { customerId } : {}),
       AND: words.map((word) => {
         const match = { contains: word.replace(/[\\%_]/gu, '\\$&'), mode: 'insensitive' } as const;
         return {

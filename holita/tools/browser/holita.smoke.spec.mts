@@ -1489,7 +1489,24 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     });
     const detail = waitForCart(shopper, 'ShopperOrder');
     await shopper.getByRole('link', { name: orderNumber, exact: true }).click();
-    await detail;
+    const accountOrderSnapshot = {
+      id: accountOrderId,
+      contact: { name: 'Shopper', email: shopperEmail, phone: '+359 2 555 0100' },
+      shippingAddress: {
+        line1: '12 Demo Street',
+        city: 'Sofia',
+        postalCode: '1000',
+        countryCode: 'BG',
+      },
+      currency: 'BGN',
+      subtotal: '30.00',
+      shippingFee: '6.50',
+      total: '36.50',
+    };
+    expect(await (await detail).json()).toMatchObject({
+      data: { shopperOrder: accountOrderSnapshot },
+    });
+    const accountReceiptUrl = shopper.url();
 
     await merchant.getByRole('link', { name: 'Orders', exact: true }).click();
     await merchant.getByRole('link', { name: `Open order · ${orderNumber}` }).click();
@@ -1720,8 +1737,84 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       data: { inventoryVariant: { ...trackedVariant, quantity: 3 } },
     });
 
+    const originalReceipt = waitForCart(shopper, 'ShopperOrder');
+    await shopper.goto(accountReceiptUrl);
+    await originalReceipt;
+
     await merchant.getByRole('link', { name: 'Customers', exact: true }).click();
-    await expect(merchant.getByText('Shopper', { exact: true })).toBeVisible();
+    await merchant
+      .getByRole('row')
+      .filter({ hasText: shopperEmail })
+      .getByRole('link', { name: 'Shopper', exact: true })
+      .click();
+    await merchant.waitForURL(/\/customers\/[0-9a-f-]+$/u);
+    const customerUrl = merchant.url();
+    const customerDialog = merchant.getByRole('dialog');
+    const saveCustomer = async () => {
+      await customerDialog.getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(merchant).toHaveURL(customerUrl);
+    };
+
+    const customerName = 'Updated Shopper';
+    const customerPhone = '+359 2 555 0199';
+    await merchant.getByRole('button', { name: 'Edit contact', exact: true }).click();
+    await customerDialog.getByRole('textbox', { name: /^Name\b/u }).fill(customerName);
+    await customerDialog.getByRole('textbox', { name: 'Phone', exact: true }).fill(customerPhone);
+    await saveCustomer();
+
+    const addressRecipient = 'Parcel Recipient';
+    const newStreet = '28 Customer Street';
+    const addressCity = 'Sofia';
+    const addressPostalCode = '0123';
+    await merchant.getByRole('link', { name: 'Add address', exact: true }).click();
+    await customerDialog.getByRole('textbox', { name: /^Recipient\b/u }).fill(addressRecipient);
+    await customerDialog.getByRole('textbox', { name: /^Street\b/u }).fill(newStreet);
+    await customerDialog.getByRole('textbox', { name: /^City\b/u }).fill(addressCity);
+    await customerDialog.getByRole('textbox', { name: /^Postal code\b/u }).fill(addressPostalCode);
+    await customerDialog.getByRole('textbox', { name: /^Country code\b/u }).fill('bg');
+    await saveCustomer();
+
+    const editedStreet = '30 Customer Street';
+    await merchant
+      .getByRole('link', { name: `Edit address · ${addressRecipient}`, exact: true })
+      .click();
+    await customerDialog.getByRole('textbox', { name: /^Street\b/u }).fill(editedStreet);
+    await saveCustomer();
+    await expect(merchant.getByRole('cell', { name: editedStreet, exact: true })).toBeVisible();
+
+    const [persistedCustomer, linkedOrders] = await Promise.all([
+      waitForCart(merchant, 'OperatorCustomer').then<unknown>((response) => response.json()),
+      waitForCart(merchant, 'OperatorCustomerOrders').then<unknown>((response) => response.json()),
+      merchant.reload(),
+    ]);
+    expect(persistedCustomer).toMatchObject({
+      data: {
+        customer: {
+          customer: { name: customerName, email: shopperEmail, phone: customerPhone },
+          addresses: [
+            {
+              recipient: addressRecipient,
+              line1: editedStreet,
+              city: addressCity,
+              postalCode: addressPostalCode,
+              countryCode: 'BG',
+            },
+          ],
+        },
+      },
+    });
+    expect(linkedOrders).toMatchObject({
+      data: { orders: { items: [{ id: manualId }, { id: accountOrderId }], total: 2 } },
+    });
+    await merchant.getByRole('link', { name: orderNumber, exact: true }).click();
+    await merchant.waitForURL((url) => url.pathname.endsWith(`/orders/${accountOrderId}`));
+
+    const persistedReceipt = waitForCart(shopper, 'ShopperOrder');
+    await shopper.reload();
+    expect(await (await persistedReceipt).json()).toMatchObject({
+      data: { shopperOrder: accountOrderSnapshot },
+    });
+
     await merchant.getByRole('link', { name: 'Products', exact: true }).click();
     await merchant.getByRole('button', { name: productName, exact: true }).click();
     await merchant.locator('#product-variant-active-0').click();

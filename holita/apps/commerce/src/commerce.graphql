@@ -136,10 +136,35 @@ type Customer {
   id: ID!
   name: String!
   email: String!
+  phone: String
   "Contact phone from the most recent linked order when its email matches this account."
   orderPhone: String
   createdAt: String!
   updatedAt: String!
+}
+type CustomerDetail {
+  customer: Customer!
+  addresses: [CustomerAddress!]!
+}
+type CustomerAddress {
+  id: ID!
+  recipient: String!
+  line1: String!
+  city: String!
+  postalCode: String!
+  countryCode: String!
+}
+input CustomerContactInput {
+  name: String!
+  "Omit to keep the current phone, or pass null or blank to clear it."
+  phone: String
+}
+input CustomerAddressInput {
+  recipient: String!
+  line1: String!
+  city: String!
+  postalCode: String!
+  countryCode: String!
 }
 enum BrandStatus {
   ACTIVE
@@ -610,6 +635,7 @@ type Query {
   ): InventoryPage!
   inventoryVariant(id: ID!): InventoryVariant
   customers: [Customer!]!
+  customer(id: ID!): CustomerDetail
   brands(offset: Int! = 0, limit: Int! = 20, search: String, sort: BrandSort): BrandPage!
   brand(id: ID!): Brand
   "Shop categories in tree order. A null parentId denotes a root."
@@ -644,7 +670,13 @@ type Query {
   "Shop badges for the product editor, including inactive badges."
   productBadgeChoices: [ProductBadge!]!
   productTags(search: String, limit: Int! = 20): [ProductTag!]!
-  orders(offset: Int! = 0, limit: Int! = 20, search: String, status: OrderStatus): OrderPage!
+  orders(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    status: OrderStatus
+    customerId: ID
+  ): OrderPage!
   order(id: ID!): Order
   manualOrderMethods: ManualOrderMethods!
   orderInvoice(orderId: ID!): Invoice
@@ -654,6 +686,13 @@ type Mutation {
   createProduct(input: ProductInput!): Product!
   updateProduct(id: ID!, input: ProductInput!): Product!
   updateInventoryQuantity(id: ID!, quantity: Int!): InventoryVariant!
+  updateCustomerContact(id: ID!, input: CustomerContactInput!): Customer!
+  createCustomerAddress(customerId: ID!, input: CustomerAddressInput!): CustomerAddress!
+  updateCustomerAddress(
+    customerId: ID!
+    addressId: ID!
+    input: CustomerAddressInput!
+  ): CustomerAddress!
   createBrand(input: BrandInput!): Brand!
   updateBrand(id: ID!, input: BrandInput!): Brand!
   deleteBrand(id: ID!): Boolean!

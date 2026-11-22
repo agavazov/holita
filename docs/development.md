@@ -567,6 +567,13 @@ to return to the same list page. The Sofia demo shopper has placed, confirmed, s
 completed orders. The shipped example is marked paid. The storefront graph exposes `shopperOrders`
 and `shopperOrder` for this history.
 
+In Admin, open Customers and select a customer in the current shop. Use Edit contact to change
+the name or optional phone. The sign-in email is read-only. Add or edit saved addresses from the
+same page, and open any linked order from Order history. Existing orders keep the contact and
+address details recorded on the order. The Sofia demo shop includes a customer with a phone,
+saved address and linked order. The operator graph exposes `customer`, `updateCustomerContact`,
+`createCustomerAddress`, `updateCustomerAddress` and the `customerId` filter on `orders`.
+
 In Admin, open Orders in the selected shop. Search by order number, contact name, email or phone,
 or filter by fulfillment status. The list URL stores search and filter values. Open an order to
 see its saved contact, delivery and payment details, charged fee, items, totals and dated

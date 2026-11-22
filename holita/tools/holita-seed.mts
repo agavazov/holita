@@ -10,6 +10,7 @@ import {
   demoCategories,
   demoCharacteristicGroups,
   demoCollections,
+  demoCustomerDetail,
   demoInvoice,
   demoManualOrder,
   demoOptions,
@@ -21,6 +22,7 @@ import {
   demoShippingMethod,
   demoShopper,
   demoTags,
+  type DemoShopperOrder,
 } from './demo-catalogue.mjs';
 
 config({
@@ -401,10 +403,11 @@ async function seedCatalogue(): Promise<void> {
       ],
     );
     for (const order of demoOrders) {
-      await seedShopperOrder(client, tenantId, branchId, order);
+      await seedShopperOrder(client, tenantId, branchId, demoShopper, order);
     }
     await seedManualOrder(client, tenantId, branchId);
     await seedOrderInvoice(client, tenantId, branchId);
+    await seedCustomerDetail(client, tenantId, branchId);
     await client.query('COMMIT');
     console.log(
       `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options, ${String(productsInserted)} products, ${String(collectionsInserted)} collections, ${String(characteristicGroupsInserted)} characteristic groups and ${String(imagesInserted)} product images.`,
@@ -469,11 +472,48 @@ async function seedShopperCart(client: pg.Client, tenantId: string, branchId: st
   }
 }
 
+async function seedCustomerDetail(client: pg.Client, tenantId: string, branchId: string) {
+  const fixture = demoCustomerDetail;
+  const customerId = fixtureId('d2', fixture.id);
+  const inserted = await client.query(
+    `INSERT INTO "customer" ("id", "tenantId", "branchId", "name", "email", "phone", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
+    [customerId, tenantId, branchId, fixture.name, fixture.email, fixture.phone],
+  );
+  const { id, recipient, line1, city, postalCode, countryCode } = fixture.address;
+  if (inserted.rowCount) {
+    await client.query(
+      `INSERT INTO "customerAddress" ("id", "tenantId", "branchId", "customerId", "recipient", "line1",
+        "city", "postalCode", "countryCode", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
+      [
+        fixtureId('da', id),
+        tenantId,
+        branchId,
+        customerId,
+        recipient,
+        line1,
+        city,
+        postalCode,
+        countryCode,
+      ],
+    );
+  }
+  await seedShopperOrder(
+    client,
+    tenantId,
+    branchId,
+    { name: fixture.name, email: fixture.email, customerId },
+    { ...fixture.order, phone: fixture.phone, city, postalCode, address: line1 },
+  );
+}
+
 async function seedShopperOrder(
   client: pg.Client,
   tenantId: string,
   branchId: string,
-  fixture: (typeof demoOrders)[number],
+  contact: { readonly name: string; readonly email: string; readonly customerId?: string },
+  fixture: DemoShopperOrder,
 ) {
   const {
     id,
@@ -498,12 +538,13 @@ async function seedShopperOrder(
     `INSERT INTO "cart" ("id", "tenantId", "branchId", "customerId", "createdAt", "updatedAt", "consumedAt")
      SELECT $1, "tenantId", "branchId", "id", $5, $5, $5 FROM "customer"
      WHERE "tenantId" = $2 AND "branchId" = $3 AND lower("email") = $4
+       AND ($7::uuid IS NULL OR "id" = $7)
        AND (SELECT COUNT(*) FROM "productVariant"
          WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = ANY($6::uuid[])
            AND NOT "inventoryTracked"
        ) = cardinality($6::uuid[])
      ON CONFLICT DO NOTHING RETURNING "customerId"`,
-    [cartId, tenantId, branchId, demoShopper.email, placedAt, variantIds],
+    [cartId, tenantId, branchId, contact.email, placedAt, variantIds, contact.customerId ?? null],
   );
   if (!cart) {
     return;
@@ -526,8 +567,8 @@ async function seedShopperOrder(
       paidAt ? 'paid' : 'unpaid',
       placedAt,
       paidAt,
-      demoShopper.name,
-      demoShopper.email,
+      contact.name,
+      contact.email,
       phone,
       city,
       postalCode,

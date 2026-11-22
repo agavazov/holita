@@ -46,11 +46,3 @@ mutation OperatorSetBranchStatus($tenantId: ID!, $branchId: ID!, $status: Accoun
     status
   }
 }
-query OperatorCustomers {
-  customers {
-    id
-    name
-    email
-    createdAt
-  }
-}

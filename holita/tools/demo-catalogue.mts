@@ -118,6 +118,62 @@ export const demoShopper = {
   cartSkus: ['GUV-2L', 'PAN-28-SAND'],
 };
 
+export interface DemoShopperOrder {
+  readonly id: number;
+  readonly status: string;
+  readonly placedAt: string;
+  readonly paidAt: string | null;
+  readonly statusChanges: readonly (readonly [from: string, to: string, occurredAt: string])[];
+  readonly phone: string;
+  readonly city: string;
+  readonly postalCode: string;
+  readonly address: string;
+  readonly subtotal: string;
+  readonly total: string;
+  readonly lines: readonly {
+    readonly id: number;
+    readonly variant: number;
+    readonly sku: string;
+    readonly label: string;
+    readonly quantity: number;
+    readonly unitPrice: string;
+  }[];
+}
+
+export const demoCustomerDetail = {
+  id: 2,
+  name: 'Диана Стоянова',
+  email: 'diana-120@example.test',
+  phone: '+359 2 555 0106',
+  address: {
+    id: 1,
+    recipient: 'Диана Стоянова',
+    line1: 'ул. „Георги Бенковски“ 24, вход Б',
+    city: 'София',
+    postalCode: '1000',
+    countryCode: 'BG',
+  },
+  order: {
+    id: 7,
+    status: 'placed',
+    placedAt: '2026-11-22T12:00:00Z',
+    paidAt: null,
+    statusChanges: [],
+    subtotal: '109.80',
+    total: '115.80',
+    lines: [
+      {
+        id: 9,
+        variant: 580,
+        sku: 'DEMO-58',
+        label: 'Глинен съд за печене „Орех“, 2 л',
+        quantity: 2,
+        unitPrice: '54.90',
+      },
+    ],
+  },
+};
+
 export const demoPaymentMethod = {
   label: 'Наложен платеж',
   instructions: 'Платете при получаване.',
@@ -144,7 +200,7 @@ export const demoManualOrder = {
   },
 };
 
-export const demoOrders = [
+export const demoOrders: readonly DemoShopperOrder[] = [
   {
     id: 1,
     status: 'placed',
@@ -280,7 +336,7 @@ export const demoOrders = [
       },
     ],
   },
-] as const;
+];
 
 export const demoInvoice = {
   order: 4,

@@ -1,6 +1,6 @@
 # 127 Admin shop dashboard
 
-**Status:** Ready after [120](120-holita-customer-detail.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

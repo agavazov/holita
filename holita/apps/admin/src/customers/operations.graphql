@@ -1,0 +1,67 @@
+fragment OperatorCustomerAddress on CustomerAddress {
+  id
+  recipient
+  line1
+  city
+  postalCode
+  countryCode
+}
+
+query OperatorCustomers {
+  customers {
+    id
+    name
+    email
+  }
+}
+
+query OperatorCustomer($id: ID!) {
+  customer(id: $id) {
+    customer {
+      id
+      name
+      email
+      phone
+    }
+    addresses {
+      ...OperatorCustomerAddress
+    }
+  }
+}
+
+query OperatorCustomerOrders($customerId: ID!, $offset: Int!, $limit: Int!) {
+  orders(customerId: $customerId, offset: $offset, limit: $limit) {
+    items {
+      id
+      number
+      placedAt
+      status
+      paymentStatus
+      total
+      currency
+    }
+    total
+  }
+}
+
+mutation OperatorUpdateCustomerContact($id: ID!, $input: CustomerContactInput!) {
+  updateCustomerContact(id: $id, input: $input) {
+    id
+  }
+}
+
+mutation OperatorCreateCustomerAddress($customerId: ID!, $input: CustomerAddressInput!) {
+  createCustomerAddress(customerId: $customerId, input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateCustomerAddress(
+  $customerId: ID!
+  $addressId: ID!
+  $input: CustomerAddressInput!
+) {
+  updateCustomerAddress(customerId: $customerId, addressId: $addressId, input: $input) {
+    id
+  }
+}

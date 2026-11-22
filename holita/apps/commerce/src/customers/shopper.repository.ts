@@ -3,6 +3,37 @@ import { DatabaseService } from '../database.service.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import type { Scope } from '../scope.js';
 
+function customerFields(scope: Scope) {
+  return {
+    id: true,
+    name: true,
+    email: true,
+    phone: true,
+    createdAt: true,
+    updatedAt: true,
+    orders: {
+      where: scope,
+      orderBy: [{ placedAt: 'desc' }, { id: 'desc' }],
+      take: 1,
+      select: { contactEmail: true, contactPhone: true },
+    },
+  } satisfies Prisma.CustomerSelect;
+}
+
+const addressFields = {
+  id: true,
+  recipient: true,
+  line1: true,
+  city: true,
+  postalCode: true,
+  countryCode: true,
+} satisfies Prisma.CustomerAddressSelect;
+
+type AddressData = Pick<
+  Prisma.CustomerAddressCreateInput,
+  'recipient' | 'line1' | 'city' | 'postalCode' | 'countryCode'
+>;
+
 @Injectable()
 export class ShopperRepository {
   constructor(private readonly database: DatabaseService) {}
@@ -11,19 +42,47 @@ export class ShopperRepository {
     return this.database.client.customer.findMany({
       where: scope,
       orderBy: [{ name: 'asc' }, { id: 'desc' }],
+      select: customerFields(scope),
+    });
+  }
+
+  customer(scope: Scope, id: string) {
+    return this.database.client.customer.findUnique({
+      where: { ...scope, id },
       select: {
-        id: true,
-        name: true,
-        email: true,
-        createdAt: true,
-        updatedAt: true,
-        orders: {
+        ...customerFields(scope),
+        addresses: {
           where: scope,
-          orderBy: [{ placedAt: 'desc' }, { id: 'desc' }],
-          take: 1,
-          select: { contactEmail: true, contactPhone: true },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          select: addressFields,
         },
       },
+    });
+  }
+
+  updateContact(scope: Scope, id: string, data: { name: string; phone?: string | null }) {
+    return this.database.client.customer.update({
+      where: { ...scope, id },
+      data,
+      select: customerFields(scope),
+    });
+  }
+
+  createAddress(scope: Scope, customerId: string, data: AddressData) {
+    return this.database.client.customerAddress.create({
+      data: {
+        ...data,
+        customer: { connect: { tenantId_branchId_id: { ...scope, id: customerId } } },
+      },
+      select: addressFields,
+    });
+  }
+
+  updateAddress(scope: Scope, customerId: string, id: string, data: AddressData) {
+    return this.database.client.customerAddress.update({
+      where: { ...scope, customerId, id },
+      data,
+      select: addressFields,
     });
   }
 

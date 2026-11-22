@@ -1,0 +1,279 @@
+<osnova-page-header
+  [title]="profile()?.customer.name ?? text().customer"
+  [moduleInfo]="text().customerDetailInfo"
+  [moduleInfoTitle]="text().customer"
+  [backLink]="backLink()"
+  [backLabel]="text().backToCustomers"
+  [actions]="headerActions()"
+  (action)="runHeaderAction($event)"
+/>
+@if (!scope()) {
+<p-message severity="info">{{ text().noShop }}</p-message>
+} @else if (profile(); as item) {
+<section class="app-card" aria-labelledby="customer-contact">
+  <h2 id="customer-contact" class="app-card__title">{{ text().customerContact }}</h2>
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().name }}</dt>
+      <dd>{{ item.customer.name }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().email }}</dt>
+      <dd>{{ item.customer.email }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().orderPhone }}</dt>
+      <dd>{{ item.customer.phone ?? '—' }}</dd>
+    </div>
+  </dl>
+</section>
+<osnova-table-panel
+  #addresses
+  mode="local"
+  mobileIdentityLayout="trailing"
+  [heading]="text().customerAddresses"
+  [columns]="addressColumns()"
+  tableMinWidth="42rem"
+  [view]="addressView()"
+  [busy]="record.isLoading()"
+  [total]="item.addresses.length"
+  [emptyTitle]="text().noCustomerAddresses"
+  [errorText]="text().customerUnavailable"
+  [actionContext]="drawerHost()"
+  [actions]="addressActions()"
+  (retry)="record.reload()"
+  (action)="runAddressAction($event)"
+>
+  @if (canWrite()) {
+  <a
+    pButton
+    panelActions
+    routerLink="new-address"
+    queryParamsHandling="preserve"
+    [preserveFragment]="true"
+    severity="secondary"
+    [outlined]="true"
+    >{{ text().newCustomerAddress }}</a
+  >
+  }
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="item.addresses"
+    [rowTrackBy]="trackById"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    dataKey="id"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of addressColumns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="column.kind === 'identity'
+                ? 'var(--app-table-identity-width, ' + column.width + ')'
+                : column.width
+              "
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity">{{ text().addressRecipient }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().addressStreet }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().orderCity }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().orderPostalCode }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().orderCountryCode }}</th>
+        @if (canWrite()) {
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ shared().pageHeader.actions }}</span>
+        </th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-address>
+      @let row = addressRecord(address); @let locality = address.postalCode + ' ' + address.city + '
+      · ' + address.countryCode;
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-table-identity-layout">
+            <div class="app-cell-identity">
+              @if (canWrite()) {
+              <a
+                class="app-link app-table-identity-wrap"
+                [attr.aria-label]="text().editCustomerAddress + ' · ' + address.recipient"
+                [routerLink]="[address.id]"
+                queryParamsHandling="preserve"
+                [preserveFragment]="true"
+                [title]="address.recipient"
+                >{{ address.recipient }}</a
+              >
+              } @else {
+              <span class="app-table-identity-wrap" [title]="address.recipient"
+                >{{ address.recipient }}</span
+              >
+              }
+              <span class="app-table-mobile-meta app-table-tag-wrap" [title]="address.line1">
+                {{ address.line1 }}
+              </span>
+              <span class="app-table-mobile-meta app-table-tag-wrap" [title]="locality">
+                {{ locality }}
+              </span>
+            </div>
+            @if (canWrite()) {
+            <div class="app-table-mobile-actions">
+              <osnova-row-actions
+                [actions]="addressActions()"
+                [record]="row"
+                (choose)="addresses.run($event.action, [row], $event.origin)"
+              />
+            </div>
+            }
+          </div>
+        </td>
+        <td class="app-table-merged-column">
+          <span class="app-cell-truncate" [title]="address.line1">{{ address.line1 }}</span>
+        </td>
+        <td class="app-table-merged-column">
+          <span class="app-cell-truncate" [title]="address.city">{{ address.city }}</span>
+        </td>
+        <td class="app-table-merged-column">
+          <span class="app-cell-truncate" [title]="address.postalCode"
+            >{{ address.postalCode }}</span
+          >
+        </td>
+        <td class="app-table-merged-column">{{ address.countryCode }}</td>
+        @if (canWrite()) {
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <osnova-row-actions
+            [actions]="addressActions()"
+            [record]="row"
+            (choose)="addresses.run($event.action, [row], $event.origin)"
+          />
+        </td>
+        }
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+<osnova-table-panel
+  mobileIdentityLayout="trailing"
+  [heading]="text().customerOrders"
+  [columns]="orderColumns()"
+  tableMinWidth="38rem"
+  [view]="orderView()"
+  [busy]="orders.isLoading()"
+  [total]="orderPage()?.total ?? null"
+  [page]="pagination()"
+  [emptyTitle]="text().noCustomerOrders"
+  [errorText]="text().ordersUnavailable"
+  (pageChange)="url.setPage($event)"
+  (retry)="orders.reload()"
+>
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="orderPage()?.items ?? []"
+    [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    dataKey="id"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of orderColumns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="column.kind === 'identity'
+                ? 'var(--app-table-identity-width, ' + column.width + ')'
+                : column.width
+              "
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity">{{ text().order }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().orderDate }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().orderStatus }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().orderPayment }}</th>
+        <th scope="col" class="app-cell-number">{{ text().orderTotal }}</th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-order>
+      @let status = statusText(order.status, language()); @let severity =
+      statusSeverity(order.status); @let payment = paymentText(order.paymentStatus, language());
+      @let paymentTone = paymentSeverity(order.paymentStatus); @let placedAt =
+      format.dateTime(order.placedAt); @let total = amount(order.total, order.currency, language());
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-table-identity-layout">
+            <div class="app-cell-identity">
+              <a
+                class="app-link app-table-identity-wrap"
+                [routerLink]="['/', language(), 'orders', order.id]"
+                [title]="order.number"
+                >{{ order.number }}</a
+              >
+              <time
+                class="app-table-mobile-meta"
+                [dateTime]="order.placedAt"
+                [title]="format.utc(order.placedAt)"
+                >{{ placedAt }}</time
+              >
+              <div class="app-table-mobile-meta">
+                <div class="app-cell-status app-table-tag-wrap">
+                  <p-tag [severity]="severity" [value]="status" />
+                  <p-tag [severity]="paymentTone" [value]="payment" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+        <td class="app-table-merged-column">
+          <time
+            class="app-cell-date"
+            [dateTime]="order.placedAt"
+            [title]="format.utc(order.placedAt)"
+          >
+            {{ placedAt }}
+          </time>
+        </td>
+        <td class="app-table-merged-column">
+          <span class="app-cell-status"><p-tag [severity]="severity" [value]="status" /></span>
+        </td>
+        <td class="app-table-merged-column">
+          <span class="app-cell-status">
+            <p-tag [severity]="paymentTone" [value]="payment" />
+          </span>
+        </td>
+        <td class="app-cell-number" [title]="total">{{ total }}</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+} @else if (record.isLoading()) {
+<div class="app-card" role="status" [attr.aria-label]="shared().loading">
+  <p-skeleton width="40%" />
+  <p-skeleton height="var(--p-app-control-height)" />
+</div>
+} @else if (record.error()) {
+<section class="app-card">
+  <osnova-empty-state kind="error" [title]="text().customerUnavailable">
+    <button pButton emptyActions type="button" (click)="record.reload()">
+      {{ shared().retry }}
+    </button>
+  </osnova-empty-state>
+</section>
+} @else {
+<section class="app-card">
+  <osnova-empty-state
+    kind="not-found"
+    [title]="validId() ? shared().drawer.notFoundTitle : shared().drawer.invalidIdTitle"
+    [description]="validId() ? shared().drawer.notFoundDescription : shared().drawer.invalidIdDescription"
+  />
+</section>
+}
+<router-outlet [routerOutletData]="drawerHost()" />

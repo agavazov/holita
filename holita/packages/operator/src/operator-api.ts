@@ -5,7 +5,6 @@ import { DemoSession, OperatorConfig, graphqlOptions, type Language } from '@osn
 import {
   OperatorCreateBranchDocument,
   OperatorCreateMerchantDocument,
-  OperatorCustomersDocument,
   OperatorMerchantsDocument,
   OperatorSetBranchStatusDocument,
   OperatorSetMerchantStatusDocument,
@@ -95,22 +94,6 @@ export class OperatorApi {
         mutation: OperatorSetBranchStatusDocument,
         variables: { tenantId, branchId, status },
       });
-    } finally {
-      client.stop();
-    }
-  }
-
-  async customers(language: Language, branchId: string) {
-    const client = this.client(language, branchId);
-    try {
-      const response = await client.query({
-        query: OperatorCustomersDocument,
-        fetchPolicy: 'network-only',
-      });
-      if (!response.data) {
-        throw new Error('Missing customers');
-      }
-      return response.data.customers;
     } finally {
       client.stop();
     }

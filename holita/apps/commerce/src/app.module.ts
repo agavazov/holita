@@ -125,10 +125,10 @@ const formatOperatorError: NonNullable<ApolloFederationDriverConfig['formatError
   formatted,
   error,
 ) => {
-  if (!(unwrapResolverError(error) instanceof UnprocessableEntityException)) {
+  const result = formatFieldErrors(formatted, error);
+  if (result === formatted) {
     return formatted;
   }
-  const result = formatFieldErrors(formatted, error);
   const fields: unknown = result.extensions?.['fieldErrors'];
   if (!Array.isArray(fields)) {
     return result;

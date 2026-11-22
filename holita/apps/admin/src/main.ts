@@ -10,7 +10,10 @@ import { CharacteristicGroupEditor } from './characteristics/characteristic-grou
 import { CharacteristicGroupsPage } from './characteristics/characteristic-groups-page';
 import { CollectionEditor } from './collections/collection-editor';
 import { CollectionsPage } from './collections/collections-page';
-import { CustomersPage } from './customers-page';
+import { CustomerAddressEditor } from './customers/customer-address-editor';
+import { CustomerContactEditor } from './customers/customer-contact-editor';
+import { CustomerDetail } from './customers/customer-detail';
+import { CustomersPage } from './customers/customers-page';
 import { InventoryEditor } from './inventory/inventory-editor';
 import { InventoryPage } from './inventory/inventory-page';
 import { OptionEditor } from './options/option-editor';
@@ -212,6 +215,30 @@ void startOperator({
       ],
     },
     { path: 'customers', component: CustomersPage },
+    {
+      path: 'customers/:recordId',
+      component: CustomerDetail,
+      children: [
+        {
+          path: 'contact',
+          component: CustomerContactEditor,
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: 'new-address',
+          component: CustomerAddressEditor,
+          data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: ':recordId',
+          component: CustomerAddressEditor,
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
   ],
   navigation: [
     { id: 'products', label: 'products', icon: 'box', path: 'products' },

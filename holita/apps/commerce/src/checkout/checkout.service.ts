@@ -53,14 +53,19 @@ function methodId(path: 'paymentMethodId' | 'shippingMethodId', id: string) {
   return id.toLowerCase();
 }
 
+export function normalizedCountryCode(path: string, value: string) {
+  const countryCode = value.trim();
+  if (!/^[a-z]{2}$/i.test(countryCode)) {
+    throw invalidValue(path);
+  }
+  return countryCode.toUpperCase();
+}
+
 export function validateOrderContact(
   input: Pick<CheckoutQuoteInput, 'contact' | 'shippingAddress'>,
 ) {
   const address = input.shippingAddress;
-  const countryCode = address.countryCode.trim();
-  if (!/^[a-z]{2}$/i.test(countryCode)) {
-    throw invalidValue('shippingAddress.countryCode');
-  }
+  const countryCode = normalizedCountryCode('shippingAddress.countryCode', address.countryCode);
   return {
     contact: {
       name: contactField('contact.name', input.contact.name, userName),
@@ -68,7 +73,7 @@ export function validateOrderContact(
       phone: trimmedField('contact.phone', input.contact.phone),
     },
     shippingAddress: {
-      countryCode: countryCode.toUpperCase(),
+      countryCode,
       city: trimmedField('shippingAddress.city', address.city),
       postalCode: trimmedField('shippingAddress.postalCode', address.postalCode),
       line1: trimmedField('shippingAddress.line1', address.line1),

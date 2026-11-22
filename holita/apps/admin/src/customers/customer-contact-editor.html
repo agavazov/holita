@@ -1,0 +1,92 @@
+<osnova-route-drawer
+  [title]="text().editCustomerContact"
+  [subtitle]="customer()?.name ?? null"
+  [state]="state()"
+  [errorText]="text().customerUnavailable"
+  [closeLink]="closeLink"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="record.reload()"
+>
+  @if (!canWrite()) {
+  <p-message severity="info"
+    >{{ scope() ? text().customerEditUnavailable : text().noShop }}</p-message
+  >
+  } @else if (customer(); as item) {
+  <form id="customer-contact-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
+    <section class="app-form-section">
+      <div class="app-form-grid">
+        @let nameError = fieldError('name'); @let phoneError = fieldError('phone');
+        <osnova-form-field
+          controlId="customer-contact-name"
+          [label]="text().name"
+          [required]="true"
+          [error]="nameError"
+        >
+          <input
+            pInputText
+            id="customer-contact-name"
+            formControlName="name"
+            autocomplete="name"
+            aria-required="true"
+            [attr.aria-describedby]="nameError ? 'customer-contact-name-error' : null"
+            [invalid]="!!nameError"
+            [attr.aria-invalid]="!!nameError"
+            (input)="clearError('name')"
+          />
+        </osnova-form-field>
+        <osnova-form-field
+          controlId="customer-contact-phone"
+          [label]="text().orderPhone"
+          [error]="phoneError"
+        >
+          <input
+            pInputText
+            id="customer-contact-phone"
+            type="tel"
+            formControlName="phone"
+            autocomplete="tel"
+            [attr.aria-describedby]="phoneError ? 'customer-contact-phone-error' : null"
+            [invalid]="!!phoneError"
+            [attr.aria-invalid]="!!phoneError"
+            (input)="clearError('phone')"
+          />
+        </osnova-form-field>
+        <osnova-form-field
+          class="app-form-grid--wide"
+          controlId="customer-contact-email"
+          [label]="text().email"
+        >
+          <input
+            pInputText
+            id="customer-contact-email"
+            type="email"
+            [value]="item.email"
+            readonly
+          />
+        </osnova-form-field>
+      </div>
+      @if (saveError()) {
+      <p-message severity="error">{{ text().customerContactSaveFailed }}</p-message>
+      }
+    </section>
+  </form>
+  }
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ canWrite() ? shared().cancel : shared().close }}
+    </button>
+    @if (canWrite()) {
+    <button pButton type="submit" form="customer-contact-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+    }
+  </div>
+</osnova-route-drawer>
