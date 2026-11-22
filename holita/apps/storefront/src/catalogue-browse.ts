@@ -12,7 +12,6 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Tag } from 'primeng/tag';
 import {
   cataloguePageSize,
   catalogueParams,
@@ -24,13 +23,13 @@ import {
   validCatalogueFilters,
   type BrowseSection,
 } from './catalogue-url';
-import { availabilitySeverity, badgeSeverity } from './product-display';
+import { hasLongBadge } from './product-display';
 import { StorefrontApi } from './storefront-api';
 import { messages, type Language } from './storefront-messages';
 
 @Component({
   selector: 'holita-catalogue-browse',
-  imports: [NgTemplateOutlet, RouterLink, Tag],
+  imports: [NgTemplateOutlet, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './catalogue-browse.html',
   styleUrl: './catalogue-browse.scss',
@@ -54,8 +53,7 @@ export class CatalogueBrowse {
   protected readonly filtersOpen = signal(false);
   protected readonly sortChoices = sortChoices;
   protected readonly t = computed(() => messages[this.language()]);
-  protected readonly badgeSeverity = badgeSeverity;
-  protected readonly availabilitySeverity = availabilitySeverity;
+  protected readonly hasLongBadge = hasLongBadge;
   protected readonly format = computed(
     () => new Intl.NumberFormat(this.language(), { style: 'currency', currency: 'BGN' }),
   );

@@ -86,13 +86,15 @@ listing.categoryPath.length > 1) {
         (input)="update('q', search.value)"
       />
       <label for="catalogue-sort">{{ t().sort }}</label>
-      <select #sort id="catalogue-sort" (change)="update('sort', sort.value)">
-        @for (choice of sortChoices; track choice.value) {
-        <option [value]="choice.value" [selected]="draft().sort === choice.value">
-          {{ t()[choice.label] }}
-        </option>
-        }
-      </select>
+      <div class="filter-select">
+        <select #sort id="catalogue-sort" (change)="update('sort', sort.value)">
+          @for (choice of sortChoices; track choice.value) {
+          <option [value]="choice.value" [selected]="draft().sort === choice.value">
+            {{ t()[choice.label] }}
+          </option>
+          }
+        </select>
+      </div>
       <div class="price-fields">
         <div>
           <label for="catalogue-min">{{ t().minPrice }}</label>
@@ -134,18 +136,20 @@ listing.categoryPath.length > 1) {
       </fieldset>
       } @for (option of result()?.facets?.options; track option.id) {
       <label [for]="'catalogue-option-' + option.id">{{ option.name }}</label>
-      <select
-        #value
-        [id]="'catalogue-option-' + option.id"
-        (change)="changeOption(value.value, option.values)"
-      >
-        <option value="" [selected]="!isSelected(option.values)">{{ t().any }}</option>
-        @for (choice of option.values; track choice.id) {
-        <option [value]="choice.id" [selected]="draft().option.includes(choice.id)">
-          {{ choice.label }}
-        </option>
-        }
-      </select>
+      <div class="filter-select">
+        <select
+          #value
+          [id]="'catalogue-option-' + option.id"
+          (change)="changeOption(value.value, option.values)"
+        >
+          <option value="" [selected]="!isSelected(option.values)">{{ t().any }}</option>
+          @for (choice of option.values; track choice.id) {
+          <option [value]="choice.id" [selected]="draft().option.includes(choice.id)">
+            {{ choice.label }}
+          </option>
+          }
+        </select>
+      </div>
       }
       <label class="check">
         <input
@@ -178,7 +182,7 @@ listing.categoryPath.length > 1) {
     } @if (result(); as page) { @if (page.items.length) {
     <ul class="catalogue-grid" role="list">
       @for (item of page.items; track item.id) {
-      <li class="catalogue-card">
+      <li class="catalogue-card" [class.catalogue-card--wide]="hasLongBadge(item.badges)">
         <a
           class="product-link"
           [routerLink]="[...base(), 'product', item.id]"
@@ -207,7 +211,7 @@ listing.categoryPath.length > 1) {
             @if (item.badges.length) {
             <span class="catalogue-badges" [id]="'badges-' + item.id">
               @for (badge of item.badges; track badge.id) {
-              <p-tag [value]="badge.name" [severity]="badgeSeverity(badge.color)" />
+              <span class="shop-chip" [attr.data-tone]="badge.color">{{ badge.name }}</span>
               }
             </span>
             }
@@ -215,12 +219,13 @@ listing.categoryPath.length > 1) {
               <span class="app-num">{{ format().format(+item.price) }}</span>
               <span class="product-arrow" aria-hidden="true">↗</span>
             </span>
-            <p-tag
-              class="product-availability"
+            <span
+              class="shop-chip product-availability"
               [id]="'availability-' + item.id"
-              [value]="item.available ? t().inStock : t().outOfStock"
-              [severity]="availabilitySeverity(item.available)"
-            />
+              [attr.data-tone]="item.available ? 'in-stock' : 'out-of-stock'"
+            >
+              {{ item.available ? t().inStock : t().outOfStock }}
+            </span>
           </span>
         </a>
       </li>

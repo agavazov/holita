@@ -16,14 +16,12 @@ import { ActivatedRoute, Router, RouterLink, RouterOutlet, provideRouter } from 
 import { ApolloLink, InMemoryCache } from '@apollo/client/core';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
-import { Tag } from 'primeng/tag';
 import { loadLocalConfig, readPrimeUiLicense } from '@osnova/ui/app';
 import { Appearance, appTheme, provideOsnovaTheme } from '@osnova/ui/theme';
 import { messages, type Language } from './storefront-messages';
 import { StorefrontApi } from './storefront-api';
 import { CatalogueBrowse } from './catalogue-browse';
 import { browseSections } from './catalogue-url';
-import { availabilitySeverity } from './product-display';
 import type { CatalogueProductQuery } from './generated/operations';
 
 type VariantSelection = NonNullable<CatalogueProductQuery['catalogueProduct']>['variantSelection'];
@@ -35,7 +33,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
 
 @Component({
   selector: 'holita-storefront-page',
-  imports: [RouterLink, ReactiveFormsModule, NgTemplateOutlet, Tag, CatalogueBrowse],
+  imports: [RouterLink, ReactiveFormsModule, NgTemplateOutlet, CatalogueBrowse],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="shop-header">
@@ -102,7 +100,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                       </a>
                     </li>
                   }
-                  <li>
+                  <li class="product-current-crumb">
                     <span aria-hidden="true">›</span>
                     <span aria-current="page">{{ item.name }}</span>
                   </li>
@@ -166,11 +164,12 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                   @let available = sellableVariantId() !== null;
                   <div class="product-offer" role="status" aria-atomic="true">
                     <p class="app-num product-price">{{ formatPrice(variant.price) }}</p>
-                    <p-tag
-                      class="product-availability"
-                      [value]="available ? t().inStock : t().outOfStock"
-                      [severity]="availabilitySeverity(available)"
-                    />
+                    <span
+                      class="shop-chip product-availability"
+                      [attr.data-tone]="available ? 'in-stock' : 'out-of-stock'"
+                    >
+                      {{ available ? t().inStock : t().outOfStock }}
+                    </span>
                   </div>
                   @if (variantOptions().length || variantChoices().length) {
                     <div class="product-variants">
@@ -256,43 +255,72 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             <h1 class="shop-state">{{ t().productMissing }}</h1>
           }
         }
-        @if (error() && !browse && page !== 'product') {
-          <p role="alert">{{ t().error }}</p>
-        }
         @if (page === 'register' || page === 'sign-in') {
-          <h1>{{ page === 'register' ? t().register : t().signIn }}</h1>
-          <form [formGroup]="form" (ngSubmit)="submit()">
-            @if (page === 'register') {
-              <label for="name">{{ t().name }}</label
-              ><input id="name" formControlName="name" autocomplete="name" />
-            }
-            <label for="email">{{ t().email }}</label
-            ><input id="email" type="email" formControlName="email" autocomplete="email" />
-            <label for="password">{{ t().password }}</label
-            ><input
-              id="password"
-              type="password"
-              formControlName="password"
-              [attr.autocomplete]="page === 'register' ? 'new-password' : 'current-password'"
-            />
-            <button type="submit" [disabled]="busy()">
-              {{ page === 'register' ? t().register : t().signIn }}
-            </button>
-          </form>
-          <a [routerLink]="[...base(), page === 'register' ? 'sign-in' : 'register']">{{
-            page === 'register' ? t().signIn : t().register
-          }}</a>
+          @let registering = page === 'register';
+          <section class="account-view" aria-labelledby="account-title">
+            <h1 id="account-title">{{ registering ? t().register : t().signIn }}</h1>
+            <div class="account-panel">
+              <form [formGroup]="form" (ngSubmit)="submit()">
+                @if (registering) {
+                  <label class="account-field" for="name">
+                    {{ t().name }}
+                    <input id="name" formControlName="name" autocomplete="name" />
+                  </label>
+                }
+                <label class="account-field" for="email">
+                  {{ t().email }}
+                  <input id="email" type="email" formControlName="email" autocomplete="email" />
+                </label>
+                <label class="account-field" for="password">
+                  {{ t().password }}
+                  <input
+                    id="password"
+                    type="password"
+                    formControlName="password"
+                    [attr.autocomplete]="registering ? 'new-password' : 'current-password'"
+                  />
+                </label>
+                @if (error()) {
+                  <p class="account-error" role="alert">{{ t().error }}</p>
+                }
+                <button class="shop-primary" type="submit" [disabled]="busy()">
+                  {{ registering ? t().register : t().signIn }}
+                </button>
+              </form>
+              <a
+                class="account-link"
+                [routerLink]="[...base(), registering ? 'sign-in' : 'register']"
+              >
+                {{ registering ? t().signIn : t().register }}
+              </a>
+            </div>
+          </section>
         }
         @if (page === 'account') {
-          <h1>{{ t().account }}</h1>
-          @if (shopper(); as person) {
-            <p>{{ person.name }}</p>
-            <p>{{ person.email }}</p>
-            <button type="button" (click)="signOut()">{{ t().signOut }}</button>
-          } @else {
-            <a [routerLink]="[...base(), 'sign-in']">{{ t().signIn }}</a>
-            <a [routerLink]="[...base(), 'register']">{{ t().register }}</a>
-          }
+          <section class="account-view" aria-labelledby="account-title">
+            <h1 id="account-title">{{ t().account }}</h1>
+            <div class="account-panel">
+              @if (error()) {
+                <p class="account-error" role="alert">{{ t().error }}</p>
+              }
+              @if (loading()) {
+                <p role="status">{{ t().loading }}</p>
+              } @else if (shopper(); as person) {
+                <div class="account-identity">
+                  <p>{{ person.name }}</p>
+                  <p>{{ person.email }}</p>
+                </div>
+                <button type="button" (click)="signOut()">{{ t().signOut }}</button>
+              } @else {
+                <div class="account-actions">
+                  <a class="shop-primary" [routerLink]="[...base(), 'sign-in']">{{ t().signIn }}</a>
+                  <a class="account-link" [routerLink]="[...base(), 'register']">{{
+                    t().register
+                  }}</a>
+                </div>
+              }
+            </div>
+          </section>
         }
       }
     </main>
@@ -414,7 +442,6 @@ class StorefrontPage {
   formatPrice(value: string): string {
     return this.price().format(Number(value));
   }
-  protected readonly availabilitySeverity = availabilitySeverity;
   protected matchingVariants(optionIndex: number, valueId: string) {
     const preceding = this.selectedVariant()?.optionValueIds.slice(0, optionIndex) ?? [];
     return (this.variantSelection()?.variants ?? []).filter(

@@ -10,6 +10,33 @@
   --shop-link: var(--shop-muted);
   --shop-accent: light-dark(#e7ebdf, #303f33);
   --shop-serif: Georgia, 'Times New Roman', serif;
+  --shop-title: 400 clamp(2.125rem, 4.5vw, 3.875rem) / 1.04 var(--shop-serif);
+  --shop-title-tracking: -0.04em;
+  --shop-action: light-dark(#38533d, #bfd3ae);
+  --shop-action-hover: light-dark(#293e2e, #d2e1c6);
+  --shop-action-ink: light-dark(#fffdf7, #202d22);
+  --shop-focus: light-dark(#3d6747, #b7d4ab);
+  --shop-chip-padding-block: var(--p-app-space-1);
+  --shop-chip-padding-inline: var(--p-app-space-2);
+  --shop-chip-gap: var(--p-app-space-1);
+  --shop-chip-radius: var(--p-app-radius-tag);
+  --shop-chip-size: var(--p-app-text-sm);
+  --shop-chip-accent-fill: light-dark(#e7ebd4, #3b462d);
+  --shop-chip-accent-ink: light-dark(#414d26, #dfe9bc);
+  --shop-chip-neutral-fill: light-dark(#edeae0, #3c3d33);
+  --shop-chip-neutral-ink: light-dark(#514d40, #e2dfce);
+  --shop-chip-info-fill: light-dark(#e0ece6, #30463f);
+  --shop-chip-info-ink: light-dark(#2c5148, #c4e3d6);
+  --shop-chip-success-fill: light-dark(#deebd7, #30462e);
+  --shop-chip-success-ink: light-dark(#2f512a, #cce6c2);
+  --shop-chip-warn-fill: light-dark(#f2e6cd, #52412a);
+  --shop-chip-warn-ink: light-dark(#67451d, #f2d9a6);
+  --shop-chip-danger-fill: light-dark(#f3e2dc, #563935);
+  --shop-chip-danger-ink: light-dark(#783a33, #f7c9bd);
+  --shop-chip-in-stock-fill: light-dark(#dce9dc, #314639);
+  --shop-chip-in-stock-ink: light-dark(#30543b, #cce8d2);
+  --shop-chip-out-of-stock-fill: light-dark(#eee6dc, #493e34);
+  --shop-chip-out-of-stock-ink: light-dark(#5c4939, #e9d7c5);
 
   display: block;
   min-block-size: 100dvh;
@@ -72,8 +99,7 @@ main {
 }
 
 .shop-header :is(nav, .shop-actions) :is(a:hover, [aria-current]),
-.product-back:hover,
-main > a:is(:hover, :focus-visible) {
+.product-back:hover {
   color: var(--shop-ink);
   text-decoration: underline;
   text-underline-offset: 0.32em;
@@ -107,20 +133,6 @@ button:disabled {
 
 main {
   padding-block: 0 3.5rem;
-}
-
-main > a {
-  color: var(--shop-link);
-  text-decoration: underline;
-  text-underline-offset: 0.32em;
-}
-
-main > a + a {
-  margin-inline-start: 1rem;
-}
-
-main > a:focus-visible {
-  outline-color: var(--shop-link);
 }
 
 .product-back {
@@ -309,11 +321,18 @@ main > a:focus-visible {
 .product-tags ul {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--p-app-space-2);
+  gap: var(--shop-chip-gap);
   overflow-wrap: anywhere;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.product-tags li,
+.product-tags a {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
 }
 
 .product-summary a:is(:hover, :focus-visible) {
@@ -324,10 +343,9 @@ main > a:focus-visible {
 
 .product-tags a {
   display: block;
-  min-inline-size: 0;
-  padding: var(--p-app-space-1) var(--p-app-space-2);
+  padding: var(--shop-chip-padding-block) var(--shop-chip-padding-inline);
   border: 1px solid var(--shop-border);
-  border-radius: var(--p-app-radius-tag);
+  border-radius: var(--shop-chip-radius);
   color: var(--shop-muted);
   font-size: 0.875rem;
 }
@@ -386,11 +404,107 @@ main > a:focus-visible {
   object-fit: contain;
 }
 
-form {
-  display: grid;
-  gap: 0.5rem;
+.account-view {
   max-inline-size: 28rem;
-  margin-block: 1rem;
+  margin-inline: auto;
+  padding-block-start: clamp(1rem, 3vw, 2rem);
+  border-block-start: 1px solid var(--shop-border);
+  overflow-wrap: anywhere;
+}
+
+.account-view h1 {
+  margin: 0 0 var(--p-app-space-5);
+  color: inherit;
+  font: var(--shop-title);
+  letter-spacing: var(--shop-title-tracking);
+}
+
+.account-panel,
+.account-panel form {
+  display: grid;
+  justify-items: start;
+  gap: var(--p-app-space-4);
+}
+
+.account-panel {
+  padding: clamp(1rem, 4vw, 1.75rem);
+  border: 1px solid var(--shop-border);
+  border-radius: var(--p-app-radius-panel);
+  background: var(--shop-paper);
+}
+
+.account-panel form,
+.account-field {
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.account-field {
+  display: grid;
+  gap: var(--p-app-space-1);
+  font-size: var(--p-app-text-sm);
+  font-weight: 700;
+}
+
+.account-field input {
+  min-inline-size: 0;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.account-panel p {
+  margin: 0;
+}
+
+.account-error {
+  color: var(--shop-chip-danger-ink);
+}
+
+.account-identity p:first-child {
+  font-weight: 700;
+}
+
+.account-identity p + p {
+  margin-block-start: var(--p-app-space-1);
+  color: var(--shop-muted);
+}
+
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-app-space-3) var(--p-app-space-4);
+}
+
+.shop-primary {
+  display: inline-block;
+  padding: var(--p-app-space-2) var(--p-app-space-4);
+  border: 1px solid transparent;
+  border-radius: var(--p-app-radius-control);
+  background: var(--shop-action);
+  color: var(--shop-action-ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.shop-primary:is(a, :enabled):hover {
+  border-color: transparent;
+  background: var(--shop-action-hover);
+}
+
+.account-link {
+  color: var(--shop-link);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.account-link:hover {
+  color: var(--shop-ink);
+}
+
+.account-panel :is(a, button, input):focus-visible {
+  outline: 2px solid var(--shop-focus);
+  outline-offset: 2px;
 }
 
 @include bp.below(lg) {
@@ -415,6 +529,15 @@ form {
 
   .language {
     padding-inline: var(--p-app-space-2);
+  }
+
+  .product-breadcrumbs .product-current-crumb {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    clip-path: inset(50%);
+    overflow: hidden;
+    white-space: nowrap;
   }
 
   .product-detail.with-brand {

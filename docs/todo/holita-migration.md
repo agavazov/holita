@@ -23,7 +23,6 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 
 | Ticket                                                                                           | Wave | Status | Depends on           |
 | ------------------------------------------------------------------------------------------------ | ---- | ------ | -------------------- |
-| [148 Holita storefront polish](148-holita-storefront-polish.md)                                  | 2    | Ready  | 112                  |
 | [114 Shopper cart](114-holita-cart.md)                                                           | 2    | Ready  |                      |
 | [115 Checkout form and manual quote](115-holita-checkout-quote.md)                               | 2    | Ready  | 114                  |
 | [116 Checkout order placement](116-holita-place-order.md)                                        | 2    | Ready  | 115                  |

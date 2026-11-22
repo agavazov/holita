@@ -1,5 +1,59 @@
 @use '@osnova/ui/styles';
 
+holita-storefront-page .shop-chip {
+  display: inline-block;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  padding: var(--shop-chip-padding-block) var(--shop-chip-padding-inline);
+  border-radius: var(--shop-chip-radius);
+  background: var(--chip-fill);
+  color: var(--chip-ink);
+  font-size: var(--shop-chip-size);
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+
+  &[data-tone='ACCENT'] {
+    --chip-fill: var(--shop-chip-accent-fill);
+    --chip-ink: var(--shop-chip-accent-ink);
+  }
+
+  &[data-tone='NEUTRAL'] {
+    --chip-fill: var(--shop-chip-neutral-fill);
+    --chip-ink: var(--shop-chip-neutral-ink);
+  }
+
+  &[data-tone='INFO'] {
+    --chip-fill: var(--shop-chip-info-fill);
+    --chip-ink: var(--shop-chip-info-ink);
+  }
+
+  &[data-tone='SUCCESS'] {
+    --chip-fill: var(--shop-chip-success-fill);
+    --chip-ink: var(--shop-chip-success-ink);
+  }
+
+  &[data-tone='WARN'] {
+    --chip-fill: var(--shop-chip-warn-fill);
+    --chip-ink: var(--shop-chip-warn-ink);
+  }
+
+  &[data-tone='DANGER'] {
+    --chip-fill: var(--shop-chip-danger-fill);
+    --chip-ink: var(--shop-chip-danger-ink);
+  }
+
+  &[data-tone='in-stock'] {
+    --chip-fill: var(--shop-chip-in-stock-fill);
+    --chip-ink: var(--shop-chip-in-stock-ink);
+  }
+
+  &[data-tone='out-of-stock'] {
+    --chip-fill: var(--shop-chip-out-of-stock-fill);
+    --chip-ink: var(--shop-chip-out-of-stock-ink);
+  }
+}
+
 .shop-state {
   margin: 0;
   padding: var(--p-app-space-4);

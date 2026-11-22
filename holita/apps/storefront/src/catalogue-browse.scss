@@ -53,8 +53,8 @@ button:hover,
 .catalogue-heading h1 {
   margin: 0;
   color: inherit;
-  font: 400 clamp(2.125rem, 4.5vw, 3.875rem) / 1.04 var(--shop-serif);
-  letter-spacing: -0.04em;
+  font: var(--shop-title);
+  letter-spacing: var(--shop-title-tracking);
   overflow-wrap: anywhere;
 }
 
@@ -118,6 +118,46 @@ button:hover,
 .browse-sidebar :is(select, input:not([type='checkbox'])) {
   inline-size: 100%;
   min-inline-size: 0;
+}
+
+.filter-select {
+  position: relative;
+  min-inline-size: 0;
+}
+
+.filter-select select {
+  background: var(--shop-ground);
+  color: var(--shop-ink);
+  cursor: pointer;
+}
+
+.filter-select select:hover {
+  border-color: var(--shop-muted);
+}
+
+.filter-select select:focus-visible {
+  outline: 2px solid var(--shop-focus);
+  outline-offset: 2px;
+}
+
+@media (forced-colors: none) {
+  .filter-select select {
+    appearance: none;
+    padding-inline-end: var(--p-app-space-8);
+  }
+
+  .filter-select::after {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: var(--p-app-space-4);
+    inline-size: 0.45rem;
+    block-size: 0.45rem;
+    border: solid var(--shop-muted);
+    border-width: 0 1px 1px 0;
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+    content: '';
+  }
 }
 
 .browse-sidebar :is(label, legend),
@@ -264,11 +304,7 @@ legend {
 .catalogue-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--p-app-space-1);
-}
-
-.catalogue-badges p-tag {
-  max-inline-size: 100%;
+  gap: var(--shop-chip-gap);
 }
 
 .catalogue-offer {
@@ -374,6 +410,14 @@ legend {
 }
 
 @include bp.below(sm) {
+  .catalogue-grid:has(> .catalogue-card--wide) {
+    grid-auto-rows: auto;
+  }
+
+  .catalogue-card--wide {
+    grid-column: 1 / -1;
+  }
+
   .directory-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--p-app-space-2);
