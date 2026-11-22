@@ -1,8 +1,10 @@
+import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable } from '@angular/core';
 import { ApolloClient } from '@apollo/client/core';
 import { OperatorLanguage } from '@holita/operator';
 import { DemoSession, OperatorConfig, graphqlOptions, type Language } from '@osnova/ui/app';
 import { HttpLink } from 'apollo-angular/http';
+import { firstValueFrom } from 'rxjs';
 import {
   OperatorCreateProductDocument,
   OperatorProductDocument,
@@ -25,6 +27,7 @@ export class ProductsApi {
   private readonly session = inject(DemoSession);
   private readonly language = inject(OperatorLanguage);
   private readonly link = inject(HttpLink);
+  private readonly http = inject(HttpClient);
   private readonly config = inject(OperatorConfig);
   private readonly token = computed(() => this.session.current()?.token);
   private readonly tenantId = computed(() => this.session.current()?.tenant.id);
@@ -88,6 +91,15 @@ export class ProductsApi {
     } finally {
       client.stop();
     }
+  }
+
+  image(scope: ProductScope, url: string): Promise<Blob> {
+    return firstValueFrom(
+      this.http.get(url, {
+        headers: { Authorization: `Bearer ${scope.token}` },
+        responseType: 'blob',
+      }),
+    );
   }
 
   async save(scope: ProductScope, input: ProductInput, id: string | null): Promise<string> {

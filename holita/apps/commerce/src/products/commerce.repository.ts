@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
-import { Prisma } from './generated/prisma/client.js';
-import type { ProductInput, ProductSort, ProductFilter } from './generated/graphql/types.js';
-import type { Scope } from './scope.js';
-import { DatabaseService } from './database.service.js';
+import { Prisma } from '../generated/prisma/client.js';
+import type { ProductInput, ProductSort, ProductFilter } from '../generated/graphql/types.js';
+import type { Scope } from '../scope.js';
+import { DatabaseService } from '../database.service.js';
+import type { ProductImageWrite } from './product-images.js';
 
-type ProductFields = Omit<ProductInput, 'variants'>;
+type ProductFields = Omit<ProductInput, 'variants' | 'images'>;
 interface VariantWrite {
   id?: string;
   sku: string;
@@ -21,10 +22,12 @@ interface VariantWrite {
 const available = { some: { active: true } } satisfies Prisma.ProductVariantListRelationFilter;
 
 function listRelations(scope: Scope, publicOnly: boolean) {
+  const relations = productRelations(scope);
   return {
+    ...relations,
     brand: true,
     variants: {
-      ...withVariants(scope).variants,
+      ...relations.variants,
       ...(publicOnly
         ? { where: { ...scope, active: true }, orderBy: { price: 'asc' }, take: 1 }
         : {}),
@@ -32,8 +35,9 @@ function listRelations(scope: Scope, publicOnly: boolean) {
   } satisfies Prisma.ProductInclude;
 }
 
-function withVariants(scope: Scope) {
+function productRelations(scope: Scope) {
   return {
+    images: { where: scope, orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] },
     variants: {
       where: scope,
       orderBy: { sortOrder: 'asc' },
@@ -143,7 +147,7 @@ export class CommerceRepository {
   product(scope: Scope, id: string) {
     return this.database.client.product.findUnique({
       where: { id, ...scope },
-      include: withVariants(scope),
+      include: productRelations(scope),
     });
   }
 
@@ -158,6 +162,17 @@ export class CommerceRepository {
     );
   }
 
+  image(scope: Scope, storageKey: string, publicOnly: boolean) {
+    return this.database.client.productImage.findFirst({
+      where: {
+        ...scope,
+        storageKey,
+        ...(publicOnly ? { product: { ...scope, status: 'ACTIVE', variants: available } } : {}),
+      },
+      select: { id: true },
+    });
+  }
+
   optionValues(scope: Scope, ids: string[]) {
     return this.database.client.optionValue.findMany({
       where: { ...scope, id: { in: ids } },
@@ -165,7 +180,13 @@ export class CommerceRepository {
     });
   }
 
-  save(scope: Scope, id: string | undefined, input: ProductFields, variants: VariantWrite[]) {
+  save(
+    scope: Scope,
+    id: string | undefined,
+    input: ProductFields,
+    variants: VariantWrite[],
+    images: ProductImageWrite[] | undefined,
+  ) {
     return this.database.client.$transaction(async (tx) => {
       const product = id
         ? await tx.product.update({ where: { id, ...scope }, data: input })
@@ -206,18 +227,42 @@ export class CommerceRepository {
           },
         });
       }
-      return tx.product.findUniqueOrThrow({
+      const retiredKeys = images ? await this.replaceImages(tx, productScope, images) : [];
+      const row = await tx.product.findUniqueOrThrow({
         where: { ...scope, id: product.id },
-        include: withVariants(scope),
+        include: productRelations(scope),
       });
+      return { row, retiredKeys };
     });
   }
 
-  customers(scope: Scope) {
-    return this.database.client.customer.findMany({
-      where: scope,
-      orderBy: [{ name: 'asc' }, { id: 'desc' }],
+  private async replaceImages(
+    tx: Prisma.TransactionClient,
+    where: Scope & { productId: string },
+    images: ProductImageWrite[],
+  ) {
+    const current = await tx.productImage.findMany({
+      where,
+      select: { id: true, storageKey: true },
     });
+    const retained = new Map(current.map(({ id, storageKey }) => [id, storageKey]));
+    for (const image of images) {
+      if ('id' in image && !retained.delete(image.id)) {
+        throw new InvalidImageIdError(image.sortOrder);
+      }
+    }
+    if (retained.size) {
+      await tx.productImage.deleteMany({ where: { ...where, id: { in: [...retained.keys()] } } });
+    }
+    for (const image of images) {
+      if ('id' in image) {
+        const { id, ...data } = image;
+        await tx.productImage.update({ where: { ...where, id }, data });
+      } else {
+        await tx.productImage.create({ data: { ...where, ...image } });
+      }
+    }
+    return [...retained.values()];
   }
 }
 
@@ -230,5 +275,11 @@ export class DuplicateSkuError extends Error {
 export class InvalidVariantIdError extends Error {
   constructor(readonly index: number) {
     super('Choose a variant from this product');
+  }
+}
+
+export class InvalidImageIdError extends Error {
+  constructor(readonly index: number) {
+    super('Choose an image from this product');
   }
 }

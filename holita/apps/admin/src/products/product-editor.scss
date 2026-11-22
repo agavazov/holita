@@ -11,3 +11,60 @@
   font-size: var(--p-app-text-base);
   font-weight: 600;
 }
+
+.product-gallery {
+  display: grid;
+  gap: var(--p-app-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.product-image-card {
+  --image-preview-size: calc(var(--p-app-space-10) + var(--p-app-space-5));
+
+  display: grid;
+  gap: var(--p-app-space-3);
+}
+
+.product-image-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--p-app-space-2);
+}
+
+.product-image-label {
+  font-size: var(--p-app-text-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.product-image-preview {
+  display: grid;
+  place-items: center;
+  inline-size: var(--image-preview-size);
+  block-size: var(--image-preview-size);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-app-radius-control);
+  overflow: hidden;
+  background: var(--p-app-panel-header-background);
+  color: var(--p-text-muted-color);
+}
+
+.product-image-preview img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.product-image-actions {
+  display: flex;
+}
+
+.product-image-feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--p-app-space-2);
+}

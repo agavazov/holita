@@ -10,6 +10,7 @@ import {
   resource,
   signal,
   viewChild,
+  untracked,
   type ElementRef,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -42,6 +43,11 @@ import {
 } from '@osnova/ui';
 import { DemoSession } from '@osnova/ui/app';
 import { ButtonDirective } from 'primeng/button';
+import { ArrowDownIcon } from 'primeng/icons/arrowdown';
+import { ArrowUpIcon } from 'primeng/icons/arrowup';
+import { ExclamationTriangleIcon } from 'primeng/icons/exclamationtriangle';
+import { SpinnerIcon } from 'primeng/icons/spinner';
+import { TrashIcon } from 'primeng/icons/trash';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
@@ -51,9 +57,11 @@ import { CategoriesApi } from '../categories/categories-api';
 import { categoryOptions } from '../categories/category-tree';
 import type {
   OperatorProductQuery,
+  ProductImageInput,
   ProductStatus,
   ProductVariantInput,
 } from '../generated/products-operations';
+import { encodeImage } from '../image-upload';
 import { ProductsApi } from './products-api';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -62,6 +70,20 @@ const productFields = ['name', 'brandId', 'categoryId', 'descriptionBg', 'descri
 const variantFields = ['optionValueIds', 'sku', 'price', 'quantity'] as const;
 type VariantField = (typeof variantFields)[number];
 type Variant = NonNullable<OperatorProductQuery['product']>['variants'][number];
+
+type ProductImage = NonNullable<OperatorProductQuery['product']>['images'][number];
+const maxImageBytes = 5 * 1024 * 1024;
+
+function imageForm(image: ProductImage | null, file: File | null = null) {
+  return new FormGroup({
+    id: new FormControl(image?.id ?? null),
+    url: new FormControl(image?.url ?? null),
+    file: new FormControl(file),
+    altText: new FormControl(image?.altText ?? '', { nonNullable: true }),
+  });
+}
+
+type ImageForm = ReturnType<typeof imageForm>;
 
 function variantForm(variant?: Variant) {
   return new FormGroup({
@@ -86,14 +108,19 @@ function variantForm(variant?: Variant) {
 @Component({
   selector: 'holita-product-editor',
   imports: [
+    ArrowDownIcon,
+    ArrowUpIcon,
     ButtonDirective,
+    ExclamationTriangleIcon,
     FormField,
     InputText,
     Message,
     ReactiveFormsModule,
     RouteDrawer,
     Select,
+    SpinnerIcon,
     Textarea,
+    TrashIcon,
   ],
   templateUrl: './product-editor.html',
   styleUrl: './product-editor.scss',
@@ -190,6 +217,11 @@ export class ProductEditor {
   protected readonly saveError = signal(false);
   protected readonly errors = signal<Partial<Record<string, string>>>({});
   protected readonly variants = new FormArray([variantForm()]);
+  protected readonly images = new FormArray<ImageForm>([]);
+  protected readonly previews = signal(new Map<ImageForm, string | null>());
+  protected readonly uploadError = signal<
+    'productImageInvalid' | 'productImageBatchTooLarge' | null
+  >(null);
   protected readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
@@ -201,12 +233,25 @@ export class ProductEditor {
     descriptionBg: new FormControl('', { nonNullable: true }),
     descriptionEn: new FormControl('', { nonNullable: true }),
     variants: this.variants,
+    images: this.images,
   });
 
   constructor() {
     effect(() => {
-      this.api.scope();
+      const scope = this.api.scope();
       const product = this.record.hasValue() ? this.record.value() : null;
+      untracked(() => {
+        this.releasePreviews();
+        this.uploadError.set(null);
+        this.images.clear({ emitEvent: false });
+        for (const image of product?.images ?? []) {
+          const row = imageForm(image);
+          this.images.push(row, { emitEvent: false });
+          if (scope) {
+            void this.loadPreview(row);
+          }
+        }
+      });
       this.variants.clear({ emitEvent: false });
       this.variants.push(product?.variants.map(variantForm) ?? [variantForm()], {
         emitEvent: false,
@@ -220,11 +265,15 @@ export class ProductEditor {
           descriptionBg: product?.descriptionBg ?? '',
           descriptionEn: product?.descriptionEn ?? '',
           variants: this.variants.getRawValue(),
+          images: this.images.getRawValue(),
         },
         { emitEvent: false },
       );
       this.errors.set({});
       this.saveError.set(false);
+    });
+    this.destroyRef.onDestroy(() => {
+      this.releasePreviews();
     });
     lockWhileSaving(
       this.form,
@@ -279,7 +328,11 @@ export class ProductEditor {
   }
 
   protected clearError(path: string): void {
-    this.errors.update((errors) => ({ ...errors, [path]: undefined, variants: undefined }));
+    this.errors.update((errors) => ({
+      ...errors,
+      [path]: undefined,
+      ...(path.startsWith('variants.') ? { variants: undefined } : {}),
+    }));
   }
 
   protected changeOptionValues(index: number, picker: Select, event: Event | undefined): void {
@@ -287,6 +340,137 @@ export class ProductEditor {
     if (event?.type === 'click') {
       picker.focus();
     }
+  }
+
+  protected chooseImages(input: HTMLInputElement): void {
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+    if (!files.length) {
+      return;
+    }
+    if (
+      files.some(
+        (file) =>
+          !file.size ||
+          file.size > maxImageBytes ||
+          (file.type && !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)),
+      )
+    ) {
+      this.uploadError.set('productImageInvalid');
+      return;
+    }
+    const bytes = this.images.controls.reduce(
+      (total, row) => total + (row.controls.file.value?.size ?? 0),
+      0,
+    );
+    if (files.reduce((total, file) => total + file.size, bytes) > maxImageBytes) {
+      this.uploadError.set('productImageBatchTooLarge');
+      return;
+    }
+    this.uploadError.set(null);
+    for (const file of files) {
+      const row = imageForm(null, file);
+      this.images.push(row);
+      this.setPreview(row, URL.createObjectURL(file));
+    }
+    this.images.markAsDirty();
+    this.clearError('images');
+  }
+
+  protected async loadPreview(row: ImageForm): Promise<void> {
+    const scope = this.api.scope();
+    const url = row.controls.url.value;
+    if (!scope || !url) {
+      return;
+    }
+    this.releasePreview(row);
+    try {
+      const blob = await this.api.image(scope, url);
+      if (
+        this.api.scope() === scope &&
+        this.images.controls.includes(row) &&
+        !this.destroyRef.destroyed
+      ) {
+        this.setPreview(row, URL.createObjectURL(blob));
+      }
+    } catch {
+      if (
+        this.api.scope() === scope &&
+        this.images.controls.includes(row) &&
+        !this.destroyRef.destroyed
+      ) {
+        this.setPreview(row, null);
+      }
+    }
+  }
+
+  protected previewFailed(row: ImageForm): void {
+    this.releasePreview(row);
+    this.setPreview(row, null);
+  }
+
+  private setPreview(row: ImageForm, url: string | null): void {
+    this.previews.update((current) => new Map(current).set(row, url));
+  }
+
+  private releasePreview(row: ImageForm): void {
+    const url = this.previews().get(row);
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+    this.previews.update((current) => {
+      const remaining = new Map(current);
+      remaining.delete(row);
+      return remaining;
+    });
+  }
+
+  private releasePreviews(): void {
+    for (const url of this.previews().values()) {
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+    }
+    this.previews.set(new Map());
+  }
+
+  protected imageError(index: number): string | null {
+    const errors = this.errors();
+    return (
+      errors[`images.${String(index)}.altText`] ??
+      errors[`images.${String(index)}.upload`] ??
+      errors[`images.${String(index)}.id`] ??
+      null
+    );
+  }
+
+  protected moveImage(index: number, direction: -1 | 1): void {
+    const target = index + direction;
+    const row = this.images.at(index);
+    this.images.removeAt(index);
+    this.images.insert(target, row);
+    this.imagesChanged();
+    const canContinue = target + direction >= 0 && target + direction < this.images.length;
+    this.focusControl(
+      `product-image-${String(target)}-${(canContinue ? direction : -direction) < 0 ? 'up' : 'down'}`,
+    );
+  }
+
+  protected removeImage(index: number): void {
+    this.releasePreview(this.images.at(index));
+    this.images.removeAt(index);
+    this.imagesChanged();
+    this.focusControl('product-image-add');
+  }
+
+  private imagesChanged(): void {
+    this.images.markAsDirty();
+    this.uploadError.set(null);
+    this.errors.update((errors) =>
+      Object.fromEntries(
+        Object.entries(errors).filter(([path]) => path !== 'images' && !path.startsWith('images.')),
+      ),
+    );
   }
 
   protected addVariant(): void {
@@ -302,8 +486,16 @@ export class ProductEditor {
   private variantsChanged(focusId: string): void {
     this.variants.markAsDirty();
     this.errors.update((errors) =>
-      Object.fromEntries(productFields.map((field) => [field, errors[field]] as const)),
+      Object.fromEntries(
+        Object.entries(errors).filter(
+          ([path]) => path !== 'variants' && !path.startsWith('variants.'),
+        ),
+      ),
     );
+    this.focusControl(focusId);
+  }
+
+  private focusControl(focusId: string): void {
     afterNextRender(
       () => {
         this.formElement()
@@ -331,7 +523,9 @@ export class ProductEditor {
       );
       return;
     }
-    const { variants, ...draft } = this.form.getRawValue();
+    const { variants, images, ...draft } = this.form.getRawValue();
+    const recordId = this.id();
+    const galleryChanged = this.images.dirty;
     const input: ProductVariantInput[] = variants.map(({ id, quantity, price, ...variant }) => ({
       ...variant,
       ...(id ? { id } : {}),
@@ -340,7 +534,19 @@ export class ProductEditor {
     }));
     this.saving.set(true);
     try {
-      const id = await this.api.save(scope, { ...draft, variants: input }, this.id());
+      const gallery: ProductImageInput[] = [];
+      if (galleryChanged) {
+        for (const { id, file, altText } of images) {
+          gallery.push(
+            id ? { id, altText } : { upload: file ? await encodeImage(file) : null, altText },
+          );
+        }
+      }
+      const id = await this.api.save(
+        scope,
+        { ...draft, variants: input, ...(galleryChanged ? { images: gallery } : {}) },
+        recordId,
+      );
       if (this.destroyRef.destroyed || this.api.scope() !== scope) {
         return;
       }
@@ -354,6 +560,10 @@ export class ProductEditor {
       }
       const fields = [
         ...productFields,
+        'images',
+        ...images.flatMap((_, index) =>
+          ['id', 'upload', 'altText'].map((field) => `images.${String(index)}.${field}`),
+        ),
         'variants',
         ...variants.flatMap((_, index) =>
           [...variantFields, 'id'].map((field) => this.path(index, field)),
@@ -364,6 +574,11 @@ export class ProductEditor {
         DUPLICATE_COMBINATION: this.text().variantDuplicateCombination,
         INVALID_OPTION_VALUES: this.text().variantInvalidValues,
         MISMATCHED_OPTIONS: this.text().variantMismatchedOptions,
+        INVALID_GALLERY: this.text().productImageInvalid,
+        INVALID_IMAGE: this.text().productImageInvalid,
+        IMAGE_BATCH_TOO_LARGE: this.text().productImageBatchTooLarge,
+        INVALID_ALT_TEXT: this.text().productImageAltInvalid,
+        INVALID_IMAGE_ID: this.text().productImageIdInvalid,
       };
       const errors = fieldErrors(error, fields, scope.language, (code, path) => {
         if (path === 'brandId') {
@@ -375,7 +590,7 @@ export class ProductEditor {
         if (path === 'descriptionBg' || path === 'descriptionEn') {
           return this.text().productDescriptionInvalid;
         }
-        if (path.endsWith('.id')) {
+        if (path.startsWith('variants.') && path.endsWith('.id')) {
           return this.text().variantUnavailable;
         }
         return messages[code];
@@ -395,11 +610,17 @@ export class ProductEditor {
       'category',
       'description-bg',
       'description-en',
+      'image-add',
+      ...this.images.controls.map((_, index) => `image-alt-${String(index)}`),
       ...this.variants.controls.flatMap((_, index) =>
         ['values', 'sku', 'price', 'quantity'].map((field) => `variant-${field}-${String(index)}`),
       ),
     ];
-    if (!form || !focusFirstInvalid(form, order, 'product-')) {
+    if (form && focusFirstInvalid(form, order, 'product-')) {
+      form.ownerDocument.activeElement
+        ?.closest('.product-image-card')
+        ?.scrollIntoView({ block: 'nearest' });
+    } else {
       this.drawer().focusTitle();
     }
   }

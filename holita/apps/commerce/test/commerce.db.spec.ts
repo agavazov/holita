@@ -120,6 +120,12 @@ beforeAll(async () => {
       'utf8',
     ),
   );
+  await connection.query(
+    await readFile(
+      new URL('../prisma/migrations/20261122040000_product_images/migration.sql', import.meta.url),
+      'utf8',
+    ),
+  );
   url.searchParams.set('schema', schema);
   process.env.COMMERCE_DATABASE_URL = url.toString();
   const coreServer = createServer((request, response) => {
@@ -348,6 +354,37 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       { id: rows[2].id },
     ),
   ).toMatchObject({ data: null, errors: expect.any(Array) });
+  const imageScope = { tenantId: tenantA, branchId: branchA };
+  await expect(
+    database.productImage.create({
+      data: {
+        ...imageScope,
+        productId: rows[1].id,
+        storageKey: `${randomUUID()}.png`,
+        sortOrder: 0,
+      },
+    }),
+  ).rejects.toMatchObject({ code: 'P2003' });
+  const outsideImage = await database.productImage.create({
+    data: {
+      tenantId: tenantA,
+      branchId: branchB,
+      productId: rows[1].id,
+      storageKey: `${randomUUID()}.png`,
+      sortOrder: 0,
+    },
+  });
+  expect(
+    await query(
+      tokens.operator,
+      branchA,
+      'mutation($product:ID!,$image:ID!){updateProduct(id:$product,input:{name:"Local",status:ACTIVE,variants:[{sku:"LOCAL",price:"19.95",quantity:0,inventoryTracked:false,active:true,optionValueIds:[]}],images:[{id:$image}]}){id}}',
+      { product: rows[0].id, image: outsideImage.id },
+    ),
+  ).toMatchObject({
+    data: null,
+    errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'images.0.id' }] } }],
+  });
   const client = database;
   const [local, otherShop, otherTenant] = await Promise.all(
     [

@@ -1,6 +1,6 @@
 # 113 Storefront product variant choice
 
-**Status:** Ready after [107](107-holita-product-images.md), [109](109-holita-characteristics.md), [111](111-holita-inventory.md). **Product:** Holita.
+**Status:** Ready after [109](109-holita-characteristics.md), [111](111-holita-inventory.md). **Product:** Holita.
 
 ## Background
 

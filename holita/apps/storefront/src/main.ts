@@ -50,6 +50,8 @@ const messages = {
     next: 'Следваща',
     back: 'Към продуктите',
     productPath: 'Път до продукта',
+    productGallery: 'Снимки на продукта',
+    productImageNumber: (number: number) => `Снимка ${String(number)}`,
     loading: 'Зареждане…',
     productMissing: 'Продуктът не е намерен.',
     retry: 'Опитай отново',
@@ -73,6 +75,8 @@ const messages = {
     next: 'Next',
     back: 'Back to products',
     productPath: 'Product breadcrumbs',
+    productGallery: 'Product photos',
+    productImageNumber: (number: number) => `Photo ${String(number)}`,
     loading: 'Loading…',
     productMissing: 'Product not found.',
     retry: 'Retry',
@@ -169,6 +173,14 @@ class StorefrontApi {
                       [routerLink]="[...base, 'product', item.id]"
                       [attr.aria-labelledby]="'product-' + item.id"
                     >
+                      @if (item.coverImage; as cover) {
+                        <img
+                          class="catalogue-cover"
+                          [src]="cover.url"
+                          [alt]="cover.altText ?? t().productImageNumber(1)"
+                          loading="lazy"
+                        />
+                      }
                       @if (item.brand; as brand) {
                         <span class="product-brand">
                           @if (brand.logoUrl) {
@@ -249,10 +261,45 @@ class StorefrontApi {
           @if (error()) {
             <ng-container [ngTemplateOutlet]="requestError" />
           } @else if (item) {
-            <article class="product-detail" [class.with-brand]="item.brand?.logoUrl">
+            @let photo = item.images[photoIndex()];
+            <article
+              class="product-detail"
+              [class.with-brand]="!photo && item.brand?.logoUrl"
+              [class.with-gallery]="!!photo"
+            >
+              @if (photo) {
+                <section class="detail-gallery" [attr.aria-label]="t().productGallery">
+                  <img
+                    class="detail-photo"
+                    [src]="photo.url"
+                    [alt]="photo.altText ?? t().productImageNumber(photoIndex() + 1)"
+                  />
+                  @if (item.images.length > 1) {
+                    <ul class="detail-thumbnails">
+                      @for (image of item.images; track image.url; let index = $index) {
+                        <li>
+                          <button
+                            type="button"
+                            [attr.aria-pressed]="photoIndex() === index"
+                            [attr.aria-label]="t().productImageNumber(index + 1)"
+                            (click)="photoIndex.set(index)"
+                          >
+                            <img [src]="image.url" alt="" />
+                          </button>
+                        </li>
+                      }
+                    </ul>
+                  }
+                </section>
+              }
               <div class="product-summary">
                 @if (item.brand; as brand) {
-                  <p class="product-brand">{{ brand.name }}</p>
+                  <p class="product-brand">
+                    @if (photo && brand.logoUrl) {
+                      <img [src]="brand.logoUrl" alt="" width="36" height="36" />
+                    }
+                    {{ brand.name }}
+                  </p>
                 }
                 <h1>{{ item.name }}</h1>
                 <p class="app-num product-price">{{ formatPrice(item.price) }}</p>
@@ -260,7 +307,7 @@ class StorefrontApi {
                   <p class="product-description" [attr.lang]="detail.language">{{ detail.text }}</p>
                 }
               </div>
-              @if (item.brand?.logoUrl; as logo) {
+              @if (!photo && item.brand?.logoUrl; as logo) {
                 <div class="product-brand brand-art">
                   <img [src]="logo" alt="" width="144" height="144" />
                 </div>
@@ -341,6 +388,7 @@ class StorefrontPage {
   readonly busy = signal(false);
   readonly catalogue = signal<CatalogueQuery['catalogue'] | null>(null);
   readonly product = signal<CatalogueProductQuery['catalogueProduct']>(null);
+  readonly photoIndex = signal(0);
   readonly description = computed(() => {
     const item = this.product();
     const bg = item?.descriptionBg;

@@ -67,5 +67,9 @@ key, or send null to remove it. Persist the shop-scoped key on a successful writ
 Admin previews fetch bytes with authorization and release their object URLs when the draft
 changes or closes. Commerce scopes every read to the verified Tenant and Branch, and serves an
 anonymous request only for a logo attached to an active brand in that shop. Proxy `/media/brands/`
-through the Admin and storefront origins, including in browser smoke. Product media is tracked
-in [ticket 107](../../../docs/todo/107-holita-product-images.md).
+through the Admin and storefront origins, including in browser smoke.
+
+Product photos reuse the same raster validation and storage root. Their files live in the shop's
+`products/` subdirectory, served through `/media/products/`. Galleries save in order with the
+product. The first photo is the cover, and new photos total at most 5 MiB per save. Anonymous
+media reads require an active product with an active variant.

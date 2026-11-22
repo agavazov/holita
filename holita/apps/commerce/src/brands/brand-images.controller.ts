@@ -9,7 +9,8 @@ import {
 } from '@nestjs/common';
 import { requireScope } from '../scope.js';
 import { StorefrontService } from '../storefront.service.js';
-import { BrandImages, brandImageType } from './brand-images.js';
+import { imageType } from '../media/image-files.js';
+import { BrandImages } from './brand-images.js';
 import { BrandsRepository } from './brands.repository.js';
 
 @Controller('media/brands')
@@ -28,7 +29,7 @@ export class BrandImagesController {
     @Param('key') key: string,
     @Headers('authorization') authorization: string | undefined,
   ): Promise<StreamableFile> {
-    const type = brandImageType(key);
+    const type = imageType(key);
     if (!type) {
       throw new NotFoundException();
     }

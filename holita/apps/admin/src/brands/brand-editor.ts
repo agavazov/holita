@@ -37,30 +37,13 @@ import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import type { BrandStatus } from '../generated/brands-operations';
 import { slugFromName } from '../catalogue-slug';
+import { encodeImage } from '../image-upload';
 import { BrandsApi } from './brands-api';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const fields = ['name', 'slug', 'status', 'logo'] as const;
 type Field = (typeof fields)[number];
-
-function encode(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const encoded = typeof reader.result === 'string' ? reader.result.split(',')[1] : undefined;
-      if (encoded) {
-        resolve(encoded);
-      } else {
-        reject(new Error('Image could not be read'));
-      }
-    };
-    reader.onerror = () => {
-      reject(reader.error ?? new Error('Image could not be read'));
-    };
-    reader.readAsDataURL(file);
-  });
-}
 
 @Component({
   selector: 'holita-brand-editor',
@@ -263,7 +246,7 @@ export class BrandEditor {
     const file = this.logo();
     this.saving.set(true);
     try {
-      const logo = file instanceof File ? await encode(file) : file;
+      const logo = file instanceof File ? await encodeImage(file) : file;
       const id = await this.api.save(
         scope,
         { ...draft, ...(logo === undefined ? {} : { logo }) },

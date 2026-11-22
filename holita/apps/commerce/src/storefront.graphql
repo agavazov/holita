@@ -2,7 +2,13 @@ type Shop {
   id: ID!
   name: String!
 }
+type CatalogueProductImage {
+  url: String!
+  altText: String
+}
 type CatalogueProduct {
+  coverImage: CatalogueProductImage
+  images: [CatalogueProductImage!]!
   id: ID!
   name: String!
   descriptionBg: String

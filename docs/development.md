@@ -269,8 +269,8 @@ applies after GraphQL parsing/schema validation, at the supergraph boundary:
 - Known public error codes/messages survive. Unexpected errors become `INTERNAL_SERVER_ERROR`
   with `Internal server error`. Extensions contain only `code`, `requestId` and, for
   `BAD_USER_INPUT`, sanitized `fieldErrors`. Only the first 30 entries are considered;
-  paths start with an ASCII letter and contain ASCII letters/digits, and messages are
-  at most 300 UTF-16 code units. Invalid variable values use HTTP 400 and `BAD_USER_INPUT`;
+  paths use ASCII letters and digits, with names starting with a letter. Indexed fields use
+  `name.index.field` with a numeric index. Messages are at most 300 UTF-16 code units. Invalid variable values use HTTP 400 and `BAD_USER_INPUT`;
   compiler diagnostic wording and locations remain native to Router.
 - Subgraph requests have a five-second timeout. Transport failures, malformed upstream
   responses and subgraph timeouts become `SERVICE_UNAVAILABLE` with
@@ -470,8 +470,14 @@ npm run dev:holita
 
 Existing Holita checkouts need `HOLITA_COMMERCE_IMAGE_DIR` in `holita/config/commerce.env`.
 Set it to the absolute path of `.volumes/holita/images` in the checkout before seeding.
-Admin uploads brand logos through the operator graph. Serve `/media/brands/` from Commerce on
-the Admin and storefront origins, alongside their existing `/graphql` routes.
+Admin uploads brand logos and product photos through the operator graph. Serve
+`/media/brands/` and `/media/products/` from Commerce on both the Admin and storefront origins.
+Direct public product image URLs work only while the product is active and has an active variant.
+
+Use Gallery in the Product drawer to add JPEG, PNG or WebP photos, enter alt text, reorder or
+remove photos, then save the product. The first photo is the storefront cover. Add up to 5 MiB
+of new photos per save. The demo catalogue includes covers and a three-photo gallery for the
+„Орех“ baking pot.
 
 In Admin, use Categories to create, move and reorder shop categories. The Product drawer assigns
 one category per product. The public `catalogueCategories` query returns the active tree, and the

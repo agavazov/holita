@@ -8,13 +8,26 @@ fn valid_request_id(value) {
     true
 }
 
-fn valid_field_path(value) {
-    if type_of(value) != "string" || value.len() == 0 { return false; }
+fn valid_field_name(value) {
+    if value.len() == 0 { return false; }
     if !"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".contains(value[0]) { return false; }
     for character in value.chars() {
         if !"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".contains(character) {
             return false;
         }
+    }
+    true
+}
+
+fn valid_field_path(value) {
+    if type_of(value) != "string" { return false; }
+    let parts = value.split(".");
+    if parts.len() == 1 { return valid_field_name(parts[0]); }
+    if parts.len() != 3 || !valid_field_name(parts[0]) || !valid_field_name(parts[2]) || parts[1].len() == 0 {
+        return false;
+    }
+    for character in parts[1].chars() {
+        if !"0123456789".contains(character) { return false; }
     }
     true
 }

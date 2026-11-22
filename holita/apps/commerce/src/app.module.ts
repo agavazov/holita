@@ -3,11 +3,12 @@ import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nest
 import { GraphQLModule } from '@nestjs/graphql';
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage } from 'node:http';
-import { CommerceResolver } from './commerce.resolver.js';
-import { DatabaseModule } from './database.module.js';
+import { CommerceResolver } from './products/commerce.resolver.js';
 import { StorefrontResolver } from './storefront.resolver.js';
 import { StorefrontService } from './storefront.service.js';
-import { ShopperRepository } from './shopper.repository.js';
+import { CustomersModule } from './customers/customers.module.js';
+import { CustomersResolver } from './customers/customers.resolver.js';
+import { ProductImagesController } from './products/product-images.controller.js';
 import { HealthController } from './health.controller.js';
 import { BrandImagesController } from './brands/brand-images.controller.js';
 import { BrandsModule } from './brands/brands.module.js';
@@ -19,14 +20,20 @@ import { OptionsResolver } from './options/options.resolver.js';
 import { ProductsModule } from './products/products.module.js';
 
 @Module({
-  imports: [ProductsModule, BrandsModule, CategoriesModule, OptionsModule],
-  providers: [CommerceResolver, BrandsResolver, CategoriesResolver, OptionsResolver],
+  imports: [ProductsModule, BrandsModule, CategoriesModule, OptionsModule, CustomersModule],
+  providers: [
+    CommerceResolver,
+    BrandsResolver,
+    CategoriesResolver,
+    OptionsResolver,
+    CustomersResolver,
+  ],
 })
 class OperatorModule {}
 @Module({
-  imports: [DatabaseModule, ProductsModule, BrandsModule, CategoriesModule],
-  controllers: [BrandImagesController],
-  providers: [ShopperRepository, StorefrontResolver, StorefrontService],
+  imports: [ProductsModule, BrandsModule, CategoriesModule, CustomersModule],
+  controllers: [BrandImagesController, ProductImagesController],
+  providers: [StorefrontResolver, StorefrontService],
 })
 class StorefrontModule {}
 const context = ({ req }: { req: IncomingMessage }) => ({

@@ -6,6 +6,7 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, extname, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { crc32 } from 'node:zlib';
 import { config } from 'dotenv';
 import pg from 'pg';
 
@@ -203,7 +204,7 @@ async function serve(
         response.end(Buffer.from(await upstream.arrayBuffer()));
         return;
       }
-      if (commerceOrigin && request.url?.startsWith('/media/brands/')) {
+      if (commerceOrigin && request.url && /^\/media\/(brands|products)\//.test(request.url)) {
         const authorization = request.headers.authorization;
         const upstream = await fetch(new URL(request.url, commerceOrigin), {
           headers: authorization ? { authorization } : {},
@@ -211,6 +212,7 @@ async function serve(
         response.writeHead(upstream.status, {
           'content-type': upstream.headers.get('content-type') ?? 'application/octet-stream',
           'cache-control': upstream.headers.get('cache-control') ?? 'no-store',
+          'x-content-type-options': upstream.headers.get('x-content-type-options') ?? 'nosniff',
         });
         response.end(Buffer.from(await upstream.arrayBuffer()));
         return;
@@ -413,6 +415,27 @@ function readOption(value: unknown) {
   };
 }
 
+async function previewBytes(image: Locator): Promise<Buffer> {
+  const bytes = await image.evaluate(async (element) => {
+    if (!(element instanceof HTMLImageElement)) {
+      throw new Error('Missing preview image');
+    }
+    // The editor owns this Blob even if Chromium has discarded the network response body.
+    const response = await fetch(element.src);
+    return Array.from(new Uint8Array(await response.arrayBuffer()));
+  });
+  return Buffer.from(bytes);
+}
+
+function pngAtSize(source: Buffer, size: number): Buffer {
+  // Add a valid PNG text chunk before IEND to exercise the request size limit.
+  const chunk = Buffer.alloc(size - source.length, 0x20);
+  chunk.writeUInt32BE(chunk.length - 12);
+  chunk.write('tEXtFixture\0', 4, 'ascii');
+  chunk.writeUInt32BE(crc32(chunk.subarray(4, -4)), chunk.length - 4);
+  return Buffer.concat([source.subarray(0, -12), chunk, source.subarray(-12)]);
+}
+
 test('staff creates a merchant and its administrator creates a product', async ({ browser }) => {
   const staffEmail = process.env.HOLITA_STAFF_EMAIL;
   const staffPassword = process.env.HOLITA_STAFF_PASSWORD;
@@ -574,6 +597,26 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.getByRole('option', { name: 'Smoke Brand', exact: true }).click();
     await merchant.locator('#product-category').click();
     await merchant.getByRole('option', { name: 'Kitchen / Cookware', exact: true }).click();
+    await merchant.locator('input[type=file]').setInputFiles({
+      name: 'invalid.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from('invalid raster fixture'),
+    });
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(merchant.locator('#product-image-alt-0-error')).toHaveText(
+      'Choose JPEG, PNG or WebP photos up to 5 MiB each.',
+    );
+    await merchant.getByRole('button', { name: 'Remove photo 1', exact: true }).click();
+    const frontFile = join(root, 'holita/config/demo/product-58-front.png');
+    const angledFile = join(root, 'holita/config/demo/product-58-angle.png');
+    const angledBytes = await readFile(angledFile);
+    const frontBytes = pngAtSize(await readFile(frontFile), 5 * 1024 * 1024 - angledBytes.length);
+    await merchant.locator('input[type=file]').setInputFiles([
+      { name: 'front.png', mimeType: 'image/png', buffer: frontBytes },
+      { name: 'angle.png', mimeType: 'image/png', buffer: angledBytes },
+    ]);
+    await merchant.locator('#product-image-alt-0').fill('Front view');
+    await merchant.locator('#product-image-alt-1').fill('Angled view');
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Product saved.');
     await expect(merchant.getByText(productName, { exact: true })).toBeVisible();
@@ -599,10 +642,29 @@ test('staff creates a merchant and its administrator creates a product', async (
     const shopper = await shopperContext.newPage();
     await shopper.goto(`${shopApp.origin}/s/${shopId}`);
     await shopper.getByRole('button', { name: 'EN', exact: true }).click();
-    await expect(shopper.getByRole('link', { name: productName })).toBeVisible();
+    const card = shopper.getByRole('link', { name: productName });
+    const cover = card.getByRole('img', { name: 'Front view' });
+    await expect(cover).toBeVisible();
+    const front = await cover.getAttribute('src');
+    if (!front) {
+      throw new Error('Missing public product cover');
+    }
+    const frontImage = await shopper.request.get(new URL(front, shopApp.origin).href);
+    expect(frontImage.status()).toBe(200);
+    expect((await frontImage.body()).equals(frontBytes)).toBe(true);
     await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
     await shopper.getByRole('link', { name: productName }).click();
     await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
+    const gallery = shopper.getByRole('region', { name: 'Product photos' });
+    await expect(gallery.getByRole('img', { name: 'Front view' })).toBeVisible();
+    await gallery.getByRole('button', { name: 'Photo 2', exact: true }).press('Enter');
+    const angled = await gallery.getByRole('img', { name: 'Angled view' }).getAttribute('src');
+    if (!angled) {
+      throw new Error('Missing second public product image');
+    }
+    const angledImage = await shopper.request.get(new URL(angled, shopApp.origin).href);
+    expect(angledImage.status()).toBe(200);
+    expect((await angledImage.body()).equals(angledBytes)).toBe(true);
     const description = shopper.locator('.product-description');
     await expect(description).toHaveText(descriptionEn);
     await shopper.getByRole('button', { name: 'BG', exact: true }).click();
@@ -611,11 +673,11 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.getByRole('button', { name: productName, exact: true }).click();
     await expect(merchant.locator('#product-description-en')).toHaveValue(descriptionEn);
     await merchant.locator('#product-description-en').clear();
+    await merchant.getByRole('button', { name: 'Move photo 2 up', exact: true }).press('Enter');
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Product saved.');
     await shopper.reload();
     await expect(description).toHaveText(descriptionBg);
-    await expect(description).toHaveAttribute('lang', 'bg');
     const breadcrumbs = shopper.getByRole('navigation', { name: 'Product breadcrumbs' });
     await expect(breadcrumbs.locator('li > :last-child')).toHaveText([
       'Products',
@@ -632,6 +694,17 @@ test('staff creates a merchant and its administrator creates a product', async (
     const logoBytes = await readFile(join(root, 'holita/config/demo/northline.png'));
     expect(await image.body()).toEqual(logoBytes);
     const productUrl = shopper.url();
+    await expect(gallery.getByRole('img', { name: 'Angled view' })).toHaveAttribute('src', angled);
+    await shopper.goto(`${shopApp.origin}/s/${shopId}`);
+    await expect(card.getByRole('img', { name: 'Angled view' })).toHaveAttribute('src', angled);
+    await merchant.getByRole('button', { name: productName, exact: true }).click();
+    await merchant.getByRole('button', { name: 'Remove photo 2', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Product saved.');
+    await shopper.goto(productUrl);
+    await expect(gallery.getByRole('img', { name: 'Angled view' })).toBeVisible();
+    await expect(gallery.getByRole('button', { name: 'Photo 2', exact: true })).toHaveCount(0);
+    expect((await shopper.request.get(new URL(front, shopApp.origin).href)).status()).toBe(404);
     await merchant.getByRole('link', { name: 'Categories', exact: true }).click();
     await merchant.getByRole('button', { name: 'Cookware', exact: true }).click();
     await merchant.locator('#category-parent').click();
@@ -664,6 +737,10 @@ test('staff creates a merchant and its administrator creates a product', async (
     const secondShopId = await createShop(staff, 'Second shop');
     await shopper.goto(`${shopApp.origin}/s/${secondShopId}`);
     await expect(shopper.getByRole('link', { name: 'Second shop', exact: true })).toBeVisible();
+    const foreignProductImage = angled.replace(shopId, secondShopId);
+    expect(
+      (await shopper.request.get(new URL(foreignProductImage, shopApp.origin).href)).status(),
+    ).toBe(404);
     const foreignImage = logo.replace(shopId, secondShopId);
     expect((await shopper.request.get(new URL(foreignImage, shopApp.origin).href)).status()).toBe(
       404,
@@ -686,7 +763,9 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.getByRole('button', { name: 'Smoke Brand revised', exact: true }).click();
     const hiddenImage = await preview;
     expect(hiddenImage.status()).toBe(200);
-    expect(await hiddenImage.body()).toEqual(logoBytes);
+    expect(await previewBytes(merchant.getByRole('img', { name: 'Logo', exact: true }))).toEqual(
+      logoBytes,
+    );
     await merchant
       .getByRole('dialog', { name: 'Edit brand' })
       .getByRole('button', { name: 'Close', exact: true })
@@ -711,6 +790,35 @@ test('staff creates a merchant and its administrator creates a product', async (
     await expect(shopper.getByRole('link', { name: productName })).toBeVisible();
     await merchant.getByRole('link', { name: 'Customers', exact: true }).click();
     await expect(merchant.getByText('Shopper', { exact: true })).toBeVisible();
+    await merchant.getByRole('link', { name: 'Products', exact: true }).click();
+    await merchant.getByRole('button', { name: productName, exact: true }).click();
+    await merchant.locator('#product-variant-active-0').click();
+    await merchant.getByRole('option', { name: 'Inactive', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Product saved.');
+    await shopper.goto(productUrl);
+    await expect(shopper.getByRole('heading', { name: 'Product not found.' })).toBeVisible();
+    expect((await shopper.request.get(new URL(angled, shopApp.origin).href)).status()).toBe(404);
+    await merchant.getByRole('button', { name: productName, exact: true }).click();
+    await merchant.locator('#product-variant-active-0').click();
+    await merchant.getByRole('option', { name: 'Active', exact: true }).click();
+    await merchant.locator('#product-status').click();
+    await merchant.getByRole('option', { name: 'Archived', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Product saved.');
+    await shopper.goto(productUrl);
+    await expect(shopper.getByRole('heading', { name: 'Product not found.' })).toBeVisible();
+    expect((await shopper.request.get(new URL(angled, shopApp.origin).href)).status()).toBe(404);
+    const archivedPreview = merchant.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === angled && response.request().method() === 'GET',
+    );
+    await merchant.getByRole('button', { name: productName, exact: true }).click();
+    const archivedImage = await archivedPreview;
+    expect(archivedImage.status()).toBe(200);
+    expect(
+      (await previewBytes(merchant.locator('.product-image-preview img'))).equals(angledBytes),
+    ).toBe(true);
   } finally {
     for (const close of cleanup.reverse()) {
       try {

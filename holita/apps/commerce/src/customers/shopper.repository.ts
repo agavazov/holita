@@ -1,10 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from './database.service.js';
-import type { Scope } from './scope.js';
+import { DatabaseService } from '../database.service.js';
+import type { Scope } from '../scope.js';
 
 @Injectable()
 export class ShopperRepository {
   constructor(private readonly database: DatabaseService) {}
+
+  customers(scope: Scope) {
+    return this.database.client.customer.findMany({
+      where: scope,
+      orderBy: [{ name: 'asc' }, { id: 'desc' }],
+    });
+  }
 
   create(scope: Scope, input: { name: string; email: string; passwordHash: string }) {
     return this.database.client.customer.create({ data: { ...scope, ...input } });

@@ -161,6 +161,133 @@
         </osnova-form-field>
       </div>
     </section>
+    <section class="app-form-section" aria-labelledby="product-gallery-title">
+      <h3 id="product-gallery-title">{{ text().productGallery }}</h3>
+      <p id="product-gallery-hint">{{ text().productImageHint }}</p>
+      @let pickerError = uploadError(); @let galleryError = pickerError ? text()[pickerError] :
+      errors()['images'];
+      <div>
+        <input
+          #imageFiles
+          type="file"
+          multiple
+          accept="image/jpeg,image/png,image/webp"
+          hidden
+          [disabled]="saving()"
+          (change)="chooseImages(imageFiles)"
+        />
+        <button
+          pButton
+          type="button"
+          id="product-image-add"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving()"
+          aria-describedby="product-gallery-hint product-gallery-error"
+          [attr.aria-invalid]="!!galleryError"
+          (click)="imageFiles.click()"
+        >
+          {{ text().productImageAdd }}
+        </button>
+      </div>
+      @if (galleryError) {
+      <p-message id="product-gallery-error" severity="error">{{ galleryError }}</p-message>
+      } @if (images.length) {
+      <ol class="product-gallery">
+        @for (image of images.controls; track image; let index = $index) { @let preview =
+        previews().get(image); @let altId = 'product-image-alt-' + index; @let error =
+        imageError(index);
+        <li class="app-card product-image-card" [formGroup]="image">
+          <div class="product-image-heading">
+            <div class="product-image-preview">
+              @if (preview) {
+              <img [src]="preview" alt="" (error)="previewFailed(image)" />
+              } @else if (preview === null) {
+              <svg data-p-icon="exclamation-triangle" aria-hidden="true"></svg>
+              } @else {
+              <svg data-p-icon="spinner" class="p-icon-spin" aria-hidden="true"></svg>
+              <span class="app-visually-hidden" role="status"
+                >{{ text().productImageLoading }}</span
+              >
+              }
+            </div>
+            <div class="product-image-label">
+              @if (index === 0) {
+              <span>{{ text().productImageCover }}</span>
+              } @else {
+              <span>{{ indexedLabel(text().productImageNumber, index) }}</span>
+              }
+            </div>
+            <div class="product-image-actions">
+              <button
+                type="button"
+                class="app-icon-button"
+                [id]="'product-image-' + index + '-up'"
+                [attr.aria-label]="indexedLabel(text().productImageMoveUp, index)"
+                [title]="indexedLabel(text().productImageMoveUp, index)"
+                [disabled]="saving() || index === 0"
+                (click)="moveImage(index, -1)"
+              >
+                <svg data-p-icon="arrow-up" aria-hidden="true"></svg>
+              </button>
+              <button
+                type="button"
+                class="app-icon-button"
+                [id]="'product-image-' + index + '-down'"
+                [attr.aria-label]="indexedLabel(text().productImageMoveDown, index)"
+                [title]="indexedLabel(text().productImageMoveDown, index)"
+                [disabled]="saving() || index === images.length - 1"
+                (click)="moveImage(index, 1)"
+              >
+                <svg data-p-icon="arrow-down" aria-hidden="true"></svg>
+              </button>
+              <button
+                type="button"
+                class="app-icon-button"
+                [attr.aria-label]="indexedLabel(text().productImageRemove, index)"
+                [title]="indexedLabel(text().productImageRemove, index)"
+                [disabled]="saving()"
+                (click)="removeImage(index)"
+              >
+                <svg data-p-icon="trash" aria-hidden="true"></svg>
+              </button>
+            </div>
+          </div>
+          @if (preview === null) {
+          <div class="product-image-feedback">
+            <p-message severity="warn" variant="simple" size="small">
+              {{ text().productImageUnavailable }}
+            </p-message>
+            @if (image.controls.url.value) {
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [text]="true"
+              [disabled]="saving()"
+              (click)="loadPreview(image)"
+            >
+              {{ shared().retry }}
+            </button>
+            }
+          </div>
+          }
+          <osnova-form-field [controlId]="altId" [label]="text().productImageAlt" [error]="error">
+            <input
+              pInputText
+              [id]="altId"
+              formControlName="altText"
+              [attr.aria-describedby]="altId + '-error'"
+              [invalid]="!!error"
+              [attr.aria-invalid]="!!error"
+              (input)="clearError('images.' + index + '.altText')"
+            />
+          </osnova-form-field>
+        </li>
+        }
+      </ol>
+      }
+    </section>
     <section class="app-form-section" aria-labelledby="product-variants-title">
       <h3 id="product-variants-title">{{ text().variants }}</h3>
       <p>{{ optionGroups().length ? text().variantOptionsHint : text().variantNoOptions }}</p>

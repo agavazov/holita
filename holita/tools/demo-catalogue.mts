@@ -97,6 +97,18 @@ export const demoCatalogue: readonly DemoBrand[] = [
           en: 'A lidded ceramic casserole for slow cooking and baking.',
         },
       ],
+      [
+        58,
+        'Глинен съд за печене „Орех“, 2 л',
+        '54.90',
+        'active',
+        3,
+        undefined,
+        {
+          bg: 'Глазиран глинен съд с капак и две дръжки за бавно печене.',
+          en: 'A glazed earthenware pot with a lid and two handles for slow baking.',
+        },
+      ],
     ],
   },
   {
@@ -187,3 +199,27 @@ export const demoCatalogue: readonly DemoBrand[] = [
     ],
   },
 ];
+
+type DemoImage = readonly [id: number, file: string, altText: string];
+
+export const demoProductImages: Readonly<Record<number, readonly DemoImage[]>> = {
+  1: [[10, 'product-1.png', 'Natural canvas tote with two shoulder straps']],
+  11: [[110, 'product-11.png', 'Глинена купа с медена глазура']],
+  12: [[120, 'product-12.png', 'Каменинова чаша в пясъчен цвят']],
+  13: [[130, 'product-13.png', 'Плитка чиния с маслиненозелена глазура']],
+  14: [[140, 'product-14.png', 'Керамична кана с дръжка и чучур']],
+  22: [[220, 'product-22.png', 'Две сгънати ленени салфетки в цвят салвия']],
+  31: [[310, 'product-31.png', 'Прозрачна бутилка с релефни линии и стъклена запушалка']],
+  35: [[350, 'product-35.png', 'Зелена стъклена ваза с релефна повърхност']],
+  36: [[360, 'product-36.png', 'Свещ в тъмнозелен буркан със смокинов лист до нея']],
+  41: [[410, 'product-41.png', 'Сгънато синьо-сиво вълнено одеяло с ресни']],
+  44: [[440, 'product-44.png', 'Две квадратни тъкани подложки в сламен цвят']],
+  46: [[460, 'product-46.png', 'Отворена брезова кутия с шест отделения за чай']],
+  53: [[530, 'product-53.png', 'Ванилова свещ в кехлибарен стъклен буркан']],
+  54: [[540, 'product-54.png', 'Сгънато бежово вълнено одеяло с кафяви ивици']],
+  58: [
+    [580, 'product-58-front.png', 'Глинен съд „Орех“ с капак, изглед отпред'],
+    [581, 'product-58-angle.png', 'Глинен съд „Орех“ с капак, изглед под ъгъл'],
+    [582, 'product-58-inside.png', 'Глазираната вътрешност на съда „Орех“ и капакът отстрани'],
+  ],
+};

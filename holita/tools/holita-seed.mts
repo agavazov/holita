@@ -4,7 +4,12 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 import { config } from 'dotenv';
 import pg from 'pg';
-import { demoCatalogue, demoCategories, demoOptions } from './demo-catalogue.mjs';
+import {
+  demoCatalogue,
+  demoCategories,
+  demoOptions,
+  demoProductImages,
+} from './demo-catalogue.mjs';
 
 config({
   path: ['holita/config/commerce.env', 'holita/config/core.env', 'holita/config/seed-accounts.env'],
@@ -58,6 +63,7 @@ async function seedCatalogue(): Promise<void> {
   let categoriesInserted = 0;
   let optionsInserted = 0;
   let productsInserted = 0;
+  let imagesInserted = 0;
   await client.connect();
   try {
     await client.query('BEGIN');
@@ -201,9 +207,46 @@ async function seedCatalogue(): Promise<void> {
         }
       }
     }
+    for (const [id, photos] of Object.entries(demoProductImages)) {
+      const productId = fixtureId('52', Number(id));
+      // Backfill untouched demo products without restoring a merchant's cleared gallery.
+      const available = await client.query(
+        `SELECT 1 FROM "product" p
+         WHERE p."tenantId" = $1 AND p."branchId" = $2 AND p."id" = $3
+           AND p."createdAt" = p."updatedAt"
+           AND NOT EXISTS (
+             SELECT 1 FROM "productImage" i
+             WHERE i."tenantId" = $1 AND i."branchId" = $2 AND i."productId" = $3
+           )
+         FOR UPDATE OF p`,
+        [tenantId, branchId, productId],
+      );
+      if (available.rowCount) {
+        const productDirectory = join(directory, 'products');
+        await mkdir(productDirectory, { recursive: true });
+        for (const [sortOrder, [number, file, altText]] of photos.entries()) {
+          const imageId = fixtureId('93', number);
+          const key = `${imageId}.png`;
+          await client.query(
+            `INSERT INTO "productImage" ("id", "tenantId", "branchId", "productId", "storageKey", "altText", "sortOrder")
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [imageId, tenantId, branchId, productId, key, altText, sortOrder],
+          );
+          const bytes = await readFile(new URL(`../config/demo/${file}`, import.meta.url));
+          try {
+            await writeFile(join(productDirectory, key), bytes, { flag: 'wx' });
+          } catch (error: unknown) {
+            if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) {
+              throw error;
+            }
+          }
+          imagesInserted++;
+        }
+      }
+    }
     await client.query('COMMIT');
     console.log(
-      `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options and ${String(productsInserted)} products.`,
+      `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options, ${String(productsInserted)} products and ${String(imagesInserted)} product images.`,
     );
   } finally {
     await client.end();

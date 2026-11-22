@@ -4,8 +4,8 @@ import type {
   MutationUpdateProductArgs,
   QueryProductArgs,
   QueryProductsArgs,
-} from './generated/graphql/types.js';
-import type { RequestContext } from './scope.js';
+} from '../generated/graphql/types.js';
+import type { RequestContext } from '../scope.js';
 import { CommerceService } from './commerce.service.js';
 
 @Resolver()
@@ -20,11 +20,6 @@ export class CommerceResolver {
   @Query('product')
   product(@Args() args: QueryProductArgs, @Context() context: RequestContext) {
     return this.service.product(context, args.id);
-  }
-
-  @Query('customers')
-  customers(@Context() context: RequestContext) {
-    return this.service.customers(context);
   }
 
   @Mutation('createProduct')

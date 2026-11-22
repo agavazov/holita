@@ -2,16 +2,23 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { isUUID } from 'class-validator';
 import { GraphQLError } from 'graphql';
 import { createHash } from 'node:crypto';
-import type { Product, ProductInput, QueryProductsArgs } from './generated/graphql/types.js';
-import { Prisma } from './generated/prisma/client.js';
+import type { Product, ProductInput, QueryProductsArgs } from '../generated/graphql/types.js';
+import { Prisma } from '../generated/prisma/client.js';
 import {
   CommerceRepository,
   DuplicateSkuError,
+  InvalidImageIdError,
   InvalidVariantIdError,
 } from './commerce.repository.js';
-import { requireScope, type RequestContext, type Scope } from './scope.js';
+import { requireScope, type RequestContext, type Scope } from '../scope.js';
+import {
+  ProductImages,
+  productImageUrl,
+  validateProductImages,
+  type ProductImageWrite,
+} from './product-images.js';
 
-type ProductRow = Awaited<ReturnType<CommerceRepository['save']>>;
+type ProductRow = Awaited<ReturnType<CommerceRepository['save']>>['row'];
 
 function product(row: ProductRow): Product {
   let price: Prisma.Decimal | undefined;
@@ -31,6 +38,11 @@ function product(row: ProductRow): Product {
     categoryId: row.categoryId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    images: row.images.map((image) => ({
+      id: image.id,
+      url: productImageUrl(image),
+      altText: image.altText,
+    })),
     variants: row.variants.map(
       ({ id, sku, price, quantity, inventoryTracked, active, values }) => ({
         id,
@@ -62,7 +74,11 @@ function description(value: string | null, path: 'descriptionBg' | 'descriptionE
   return value?.trim() || null;
 }
 
-function productFields({ descriptionBg, descriptionEn, ...input }: Omit<ProductInput, 'variants'>) {
+function productFields({
+  descriptionBg,
+  descriptionEn,
+  ...input
+}: Omit<ProductInput, 'variants' | 'images'>) {
   const name = input.name.trim();
   if (!name || Array.from(name).length > 200 || name.includes('\u0000')) {
     throw fieldError('name', 'INVALID_VALUE', 'Product name must contain 1 to 200 characters');
@@ -104,7 +120,10 @@ function recordId(id: string): string {
 
 @Injectable()
 export class CommerceService {
-  constructor(private readonly repository: CommerceRepository) {}
+  constructor(
+    private readonly repository: CommerceRepository,
+    private readonly imageFiles: ProductImages,
+  ) {}
 
   async products(context: RequestContext, args: QueryProductsArgs) {
     const scope = await requireScope(context, false);
@@ -151,12 +170,30 @@ export class CommerceService {
   private async save(context: RequestContext, input: ProductInput, rawId?: string) {
     const scope = await requireScope(context, true);
     const id = rawId === undefined ? undefined : recordId(rawId);
-    const { variants: requested, ...fields } = input;
+    const { variants: requested, images: requestedImages, ...fields } = input;
     const data = productFields(fields);
     const variants = await this.variants(scope, requested, id !== undefined);
+    const drafts = validateProductImages(requestedImages, id !== undefined);
+    const newKeys: string[] = [];
+    let saved: Awaited<ReturnType<CommerceRepository['save']>>;
     try {
-      return product(await this.repository.save(scope, id, data, variants));
+      const images: ProductImageWrite[] = [];
+      for (const draft of drafts ?? []) {
+        if ('upload' in draft) {
+          const { upload, ...fields } = draft;
+          const storageKey = await this.imageFiles.write(scope, upload);
+          newKeys.push(storageKey);
+          images.push({ ...fields, storageKey });
+        } else {
+          images.push(draft);
+        }
+      }
+      saved = await this.repository.save(scope, id, data, variants, drafts ? images : undefined);
     } catch (error: unknown) {
+      await this.imageFiles.remove(scope, newKeys);
+      if (error instanceof InvalidImageIdError) {
+        throw fieldError(`images.${String(error.index)}.id`, 'INVALID_IMAGE_ID', error.message);
+      }
       if (error instanceof InvalidVariantIdError) {
         throw variantError(error.index, 'id', 'INVALID_VALUE', error.message);
       }
@@ -184,6 +221,8 @@ export class CommerceService {
       }
       throw error;
     }
+    await this.imageFiles.remove(scope, saved.retiredKeys);
+    return product(saved.row);
   }
 
   private async variants(scope: Scope, input: ProductInput['variants'], updating: boolean) {
@@ -298,16 +337,5 @@ export class CommerceService {
       }
     }
     return variants;
-  }
-
-  async customers(context: RequestContext) {
-    const rows = await this.repository.customers(await requireScope(context, false));
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      email: row.email,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
-    }));
   }
 }

@@ -40,6 +40,16 @@ type ProductVariant {
   active: Boolean!
   optionValueIds: [ID!]!
 }
+input ProductImageInput {
+  id: ID
+  upload: String
+  altText: String
+}
+type ProductImage {
+  id: ID!
+  url: String!
+  altText: String
+}
 input ProductInput {
   name: String!
   "Bulgarian plain text. Omit to keep on update or leave unset on create. Null or blank clears it."
@@ -48,6 +58,10 @@ input ProductInput {
   descriptionEn: String
   "The complete set of variants in display order. Omitted variants are removed."
   variants: [ProductVariantInput!]!
+  """
+  Ordered replacement. Omit to keep existing images, or pass an empty list to remove them.
+  """
+  images: [ProductImageInput!]
   status: ProductStatus!
   brandId: ID
   categoryId: ID
@@ -60,6 +74,7 @@ type Product {
   "Lowest active variant price, or null when there are no active variants."
   price: String
   variants: [ProductVariant!]!
+  images: [ProductImage!]!
   status: ProductStatus!
   brandId: ID
   categoryId: ID

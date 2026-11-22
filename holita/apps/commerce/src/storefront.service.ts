@@ -14,14 +14,15 @@ import {
   validatePassword,
   verifyPassword,
 } from '@osnova/auth';
-import { Prisma, type Brand, type Product } from './generated/prisma/client.js';
+import { Prisma, type Brand, type Product, type ProductImage } from './generated/prisma/client.js';
 import { brandLogoUrl } from './brands/brand-images.js';
 import { BrandsRepository } from './brands/brands.repository.js';
 import { CategoriesService } from './categories/categories.service.js';
 import type { CatalogueCategory, CatalogueProduct } from './generated/graphql/storefront-types.js';
 import type { Scope } from './scope.js';
-import { CommerceRepository } from './commerce.repository.js';
-import { ShopperRepository } from './shopper.repository.js';
+import { CommerceRepository } from './products/commerce.repository.js';
+import { productImageUrl } from './products/product-images.js';
+import { ShopperRepository } from './customers/shopper.repository.js';
 
 export interface StorefrontContext {
   branchId: string | undefined;
@@ -57,7 +58,11 @@ function catalogueBrand(brand: Brand) {
 }
 
 function catalogueProduct(
-  item: Product & { brand: Brand | null; variants: { price: Prisma.Decimal }[] },
+  item: Product & {
+    brand: Brand | null;
+    variants: { price: Prisma.Decimal }[];
+    images: ProductImage[];
+  },
   categories: ReadonlyMap<string, CatalogueCategory>,
 ): CatalogueProduct {
   const variant = item.variants[0];
@@ -71,8 +76,14 @@ function catalogueProduct(
     categoryPath.push(current);
     current = current.parentId ? categories.get(current.parentId) : undefined;
   }
+  const images = item.images.map((image) => ({
+    url: productImageUrl(image),
+    altText: image.altText,
+  }));
   return {
     id: item.id,
+    coverImage: images[0] ?? null,
+    images,
     name: item.name,
     descriptionBg: item.descriptionBg,
     descriptionEn: item.descriptionEn,
