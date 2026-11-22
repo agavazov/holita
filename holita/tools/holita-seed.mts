@@ -11,8 +11,10 @@ import {
   demoCharacteristicGroups,
   demoCollections,
   demoOptions,
+  demoPaymentMethod,
   demoProductCovers,
   demoProductImages,
+  demoShippingMethod,
   demoShopper,
   demoTags,
 } from './demo-catalogue.mjs';
@@ -372,6 +374,28 @@ async function seedCatalogue(): Promise<void> {
       }
     }
     await seedShopperCart(client, tenantId, branchId);
+    await client.query(
+      `INSERT INTO "paymentMethod" ("id", "tenantId", "branchId", "label", "instructions", "enabled", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, true, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
+      [
+        fixtureId('d3', 1),
+        tenantId,
+        branchId,
+        demoPaymentMethod.label,
+        demoPaymentMethod.instructions,
+      ],
+    );
+    await client.query(
+      `INSERT INTO "shippingMethod" ("id", "tenantId", "branchId", "label", "fixedFee", "enabled", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, true, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
+      [
+        fixtureId('d4', 1),
+        tenantId,
+        branchId,
+        demoShippingMethod.label,
+        demoShippingMethod.fixedFee,
+      ],
+    );
     await client.query('COMMIT');
     console.log(
       `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options, ${String(productsInserted)} products, ${String(collectionsInserted)} collections, ${String(characteristicGroupsInserted)} characteristic groups and ${String(imagesInserted)} product images.`,

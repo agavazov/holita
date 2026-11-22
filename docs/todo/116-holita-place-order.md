@@ -1,6 +1,6 @@
 # 116 Checkout order placement
 
-**Status:** Ready after [115](115-holita-checkout-quote.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

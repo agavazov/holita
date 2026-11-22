@@ -541,10 +541,16 @@ inventory tracking. The Sofia demo shop includes a configurable product with two
 priced combinations, one in stock and one sold out.
 
 Select an available variant and quantity on the product page, then add it to the cart. The cart
-shows current prices and stock, supports quantity changes and removal, and excludes blocked lines
+shows product thumbnails, current prices and availability, supports quantity changes and removal, and excludes blocked lines
 from the subtotal. Signing in merges eligible guest quantities and shows any skipped items.
 The storefront graph exposes `cart`, `addCartLine`, `updateCartLine` and `removeCartLine`.
 Send the guest credential in `x-cart-token` or use the same-shop shopper bearer after signing in.
+
+Open Checkout from a cart with available items, enter contact and delivery details, and choose
+delivery and payment. Review total shows current item prices and the fixed delivery fee from
+Commerce. The Sofia seed enables Наложен платеж and Доставка до адрес with a fee of 6.00 BGN.
+The storefront graph exposes the checkout options with `checkout` and prices the selected options
+with `quoteCheckout`, using the cart's existing authorization.
 
 The Product drawer's Descriptions section accepts optional Bulgarian and English plain text.
 The storefront product page shows the selected language when available and falls back to the

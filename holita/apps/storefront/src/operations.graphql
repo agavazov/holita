@@ -257,20 +257,25 @@ mutation SignInShopper($email: String!, $password: String!) {
 mutation SignOutShopper {
   signOutShopper
 }
+fragment PublicCartLineFields on CartLine {
+  id
+  variantId
+  productId
+  name
+  optionLabels
+  quantity
+  unitPrice
+  lineTotal
+  issue
+  coverImage {
+    url
+  }
+}
 fragment PublicCartFields on Cart {
   itemCount
   subtotal
   lines {
-    id
-    variantId
-    productId
-    name
-    optionLabels
-    quantity
-    unitPrice
-    lineTotal
-    availableQuantity
-    issue
+    ...PublicCartLineFields
   }
 }
 query PublicCart {
@@ -294,5 +299,46 @@ mutation UpdateCartLine($lineId: ID!, $quantity: Int!) {
 mutation RemoveCartLine($lineId: ID!) {
   removeCartLine(lineId: $lineId) {
     ...PublicCartFields
+  }
+}
+fragment CheckoutPaymentFields on CheckoutPaymentMethod {
+  id
+  label
+  instructions
+}
+fragment CheckoutShippingFields on CheckoutShippingMethod {
+  id
+  label
+  fixedFee
+}
+query Checkout {
+  checkout {
+    cart {
+      ...PublicCartFields
+    }
+    currency
+    paymentMethods {
+      ...CheckoutPaymentFields
+    }
+    shippingMethods {
+      ...CheckoutShippingFields
+    }
+  }
+}
+mutation QuoteCheckout($input: CheckoutQuoteInput!) {
+  quoteCheckout(input: $input) {
+    lines {
+      ...PublicCartLineFields
+    }
+    paymentMethod {
+      ...CheckoutPaymentFields
+    }
+    shippingMethod {
+      ...CheckoutShippingFields
+    }
+    currency
+    subtotal
+    shippingFee
+    total
   }
 }

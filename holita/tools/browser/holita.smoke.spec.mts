@@ -67,6 +67,7 @@ async function database(service: 'core' | 'commerce') {
     }
     url.searchParams.set('schema', schema);
     return {
+      client,
       url: url.toString(),
       close: async () => {
         await client.query(`DROP SCHEMA ${pg.escapeIdentifier(schema)} CASCADE`);
@@ -1296,6 +1297,50 @@ test('staff provisions a shop, its merchant publishes a product and a shopper me
     expect(await (await tabCart).json()).toMatchObject({ data: { cart: singleSatin } });
     await guestTab.close();
 
+    const {
+      rows: [shopScope],
+    } = await coreDb.client.query<{ tenantId: string }>(
+      'SELECT "tenantId" FROM "branch" WHERE "id" = $1',
+      [shopId],
+    );
+    if (!shopScope) {
+      throw new Error('Missing scope for the checkout fixture');
+    }
+    const paymentLabel = 'Cash on delivery';
+    const shippingLabel = 'Home delivery';
+    const paymentId = randomUUID();
+    const shippingId = randomUUID();
+    await commerceDb.client.query(
+      `INSERT INTO "paymentMethod" ("id", "tenantId", "branchId", "label", "instructions", "enabled", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, true, CURRENT_TIMESTAMP)`,
+      [paymentId, shopScope.tenantId, shopId, paymentLabel, 'Pay when the parcel arrives.'],
+    );
+    await commerceDb.client.query(
+      `INSERT INTO "shippingMethod" ("id", "tenantId", "branchId", "label", "fixedFee", "enabled", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, true, CURRENT_TIMESTAMP)`,
+      [shippingId, shopScope.tenantId, shopId, shippingLabel, '6.50'],
+    );
+    const reviewCheckout = async (subtotal: string, total: string) => {
+      await shopper.getByRole('link', { name: 'Checkout', exact: true }).click();
+      await shopper.getByRole('textbox', { name: 'Name', exact: true }).fill('Shopper');
+      await shopper.getByRole('textbox', { name: 'Email', exact: true }).fill(shopperEmail);
+      await shopper.getByRole('textbox', { name: 'Phone', exact: true }).fill('+359 2 555 0100');
+      await shopper.locator('#countryCode').fill('BG');
+      await shopper.getByRole('textbox', { name: 'City', exact: true }).fill('Sofia');
+      await shopper.getByRole('textbox', { name: 'Postal code', exact: true }).fill('1000');
+      await shopper
+        .getByRole('textbox', { name: 'Address line 1', exact: true })
+        .fill('12 Demo Street');
+      await shopper.getByLabel('Delivery method', { exact: true }).selectOption(shippingId);
+      await shopper.getByLabel('Payment method', { exact: true }).selectOption(paymentId);
+      const quoted = waitForCart(shopper, 'QuoteCheckout');
+      await shopper.getByRole('button', { name: 'Review total', exact: true }).click();
+      expect(await (await quoted).json()).toMatchObject({
+        data: { quoteCheckout: { subtotal, shippingFee: '6.50', total, currency: 'BGN' } },
+      });
+    };
+    await reviewCheckout('30.00', '36.50');
+
     const readWithGuestToken = async (branchId: string): Promise<unknown> => {
       const response = await shopper.request.post(`${shopApp.origin}/graphql`, {
         headers: { 'x-branch-id': branchId, 'x-cart-token': guestToken },
@@ -1326,6 +1371,8 @@ test('staff provisions a shop, its merchant publishes a product and a shopper me
       },
     });
     expect(await readWithGuestToken(shopId)).toMatchObject(missingCart);
+    await reviewCheckout('60.00', '66.50');
+    await shopper.getByRole('link', { name: 'Back to cart', exact: true }).click();
 
     await shopper.getByRole('spinbutton', { name: 'Quantity', exact: true }).fill('3');
     const updated = waitForCart(shopper, 'UpdateCartLine');

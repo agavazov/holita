@@ -156,12 +156,13 @@ type CartLine {
   variantId: ID
   productId: ID
   name: String
+  coverImage: CatalogueProductImage
   optionLabels: [String!]!
   quantity: Int!
   unitPrice: String
   lineTotal: String
-  "The current stock for a tracked variant, or null for untracked or unavailable variants."
-  availableQuantity: Int
+  "Whether the requested quantity can be fulfilled."
+  available: Boolean!
   issue: CartIssue
 }
 type Cart {
@@ -180,6 +181,49 @@ type CartMergeIssue {
   name: String
   quantity: Int!
   reason: CartIssue!
+}
+type CheckoutPaymentMethod {
+  id: ID!
+  label: String!
+  instructions: String!
+}
+type CheckoutShippingMethod {
+  id: ID!
+  label: String!
+  fixedFee: String!
+}
+type CheckoutState {
+  cart: Cart!
+  currency: String!
+  paymentMethods: [CheckoutPaymentMethod!]!
+  shippingMethods: [CheckoutShippingMethod!]!
+}
+input CheckoutContactInput {
+  name: String!
+  email: String!
+  phone: String!
+}
+input CheckoutAddressInput {
+  countryCode: String!
+  city: String!
+  postalCode: String!
+  line1: String!
+  line2: String
+}
+input CheckoutQuoteInput {
+  contact: CheckoutContactInput!
+  shippingAddress: CheckoutAddressInput!
+  paymentMethodId: ID!
+  shippingMethodId: ID!
+}
+type CheckoutQuote {
+  lines: [CartLine!]!
+  paymentMethod: CheckoutPaymentMethod!
+  shippingMethod: CheckoutShippingMethod!
+  currency: String!
+  subtotal: String!
+  shippingFee: String!
+  total: String!
 }
 type CatalogueSpecificationGroup {
   name: String!
@@ -236,6 +280,7 @@ type Query {
   ): CataloguePage
   shopperMe: Shopper
   cart: Cart!
+  checkout: CheckoutState
 }
 type Mutation {
   registerShopper(name: String!, email: String!, password: String!): ShopperSession!
@@ -244,4 +289,5 @@ type Mutation {
   addCartLine(variantId: ID!, quantity: Int!): CartAddResult!
   updateCartLine(lineId: ID!, quantity: Int!): Cart!
   removeCartLine(lineId: ID!): Cart!
+  quoteCheckout(input: CheckoutQuoteInput!): CheckoutQuote!
 }

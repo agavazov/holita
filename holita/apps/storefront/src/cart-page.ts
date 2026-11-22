@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   input,
   linkedSignal,
@@ -12,14 +13,11 @@ import { ReactiveFormsModule, type FormControl } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CartState, maxCartQuantity, quantityControl, type CartWriteError } from './cart-state';
 import { messages, type Language } from './storefront-messages';
+import { formatStorefrontMoney } from './storefront-money';
 import type { PublicCartFieldsFragment, SignInShopperMutation } from './generated/operations';
 
 type CartLine = PublicCartFieldsFragment['lines'][number];
 type MergeIssues = SignInShopperMutation['signInShopper']['cartMergeIssues'];
-
-function isMoneyAmount(value: string): value is `${number}` {
-  return /^\d+\.\d{2}$/.test(value);
-}
 
 export class CartMergeNotice {
   constructor(
@@ -44,6 +42,10 @@ export class CartPage {
   protected readonly base = () => ['/s', this.state.shopId()];
   protected readonly t = () => messages[this.language()];
   protected readonly maxCartQuantity = maxCartQuantity;
+  protected readonly canCheckout = computed(() => {
+    const lines = this.state.cart()?.lines;
+    return !!lines?.length && !this.state.locked() && lines.every(({ issue }) => issue === null);
+  });
   protected readonly lineError = signal<{ lineId: string; message: CartWriteError } | null>(null);
   protected readonly updated = signal(false);
   protected readonly quantities = linkedSignal<
@@ -61,7 +63,7 @@ export class CartPage {
   });
 
   protected formatPrice(value: string) {
-    return isMoneyAmount(value) ? this.priceFormat().format(value) : value;
+    return formatStorefrontMoney(value, this.priceFormat());
   }
 
   protected async update(line: CartLine) {

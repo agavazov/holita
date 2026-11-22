@@ -41,22 +41,26 @@
       @for (line of cart.lines; track line.id) { @let error = lineError(); @let control =
       quantities().get(line.id);
       <li class="cart-line" [attr.aria-labelledby]="'cart-line-' + line.id">
-        <div class="cart-line-name">
-          <h2 [id]="'cart-line-' + line.id">
-            @if (line.productId && line.name) {
-            <a [routerLink]="[...base(), 'product', line.productId]">{{ line.name }}</a>
-            } @else { {{ line.name ?? t().unavailableItem }} }
-          </h2>
-          @if (line.optionLabels.length) {
-          <p>{{ line.optionLabels.join(' · ') }}</p>
-          } @if (line.issue === 'UNAVAILABLE') {
-          <span class="shop-chip" data-tone="out-of-stock">{{ t().cartUnavailable }}</span>
-          } @else if (line.issue === 'INSUFFICIENT_STOCK') {
-          <span class="shop-chip" data-tone="WARN">
-            {{ line.availableQuantity === null ? t().cartInsufficientStock :
-            t().cartAvailableQuantity(line.availableQuantity) }}
-          </span>
+        <div class="cart-line-identity">
+          @if (line.coverImage; as photo) {
+          <img class="shop-line-thumbnail" [src]="photo.url" alt="" />
+          } @else {
+          <span class="shop-line-thumbnail" aria-hidden="true">{{ t().noPhoto }}</span>
           }
+          <div class="cart-line-name">
+            <h2 [id]="'cart-line-' + line.id">
+              @if (line.productId && line.name) {
+              <a [routerLink]="[...base(), 'product', line.productId]">{{ line.name }}</a>
+              } @else { {{ line.name ?? t().unavailableItem }} }
+            </h2>
+            @if (line.optionLabels.length) {
+            <p>{{ line.optionLabels.join(' · ') }}</p>
+            } @if (line.issue === 'UNAVAILABLE') {
+            <span class="shop-chip" data-tone="out-of-stock">{{ t().cartUnavailable }}</span>
+            } @else if (line.issue === 'INSUFFICIENT_STOCK') {
+            <span class="shop-chip" data-tone="WARN">{{ t().cartInsufficientStock }}</span>
+            }
+          </div>
         </div>
         <dl class="cart-line-prices">
           @if (line.unitPrice !== null) {
@@ -71,9 +75,9 @@
           </div>
           }
         </dl>
-        <div class="cart-line-actions">
+        <div class="shop-control-row">
           @if (control && line.issue !== 'UNAVAILABLE') {
-          <form class="cart-quantity-form" (submit)="$event.preventDefault(); update(line)">
+          <form class="shop-control-row" (submit)="$event.preventDefault(); update(line)">
             <label class="shop-quantity-field" [for]="'cart-quantity-' + line.id">
               {{ t().quantity }}
               <input
@@ -124,6 +128,9 @@
           <dd class="app-num">{{ formatPrice(cart.subtotal) }}</dd>
         </div>
       </dl>
+      @if (canCheckout()) {
+      <a class="shop-primary" [routerLink]="[...base(), 'checkout']">{{ t().checkout }}</a>
+      }
       <a class="shop-text-link" [routerLink]="base()">{{ t().continueShopping }}</a>
     </aside>
   </div>

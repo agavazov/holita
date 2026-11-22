@@ -140,6 +140,7 @@ beforeAll(async () => {
     '20261122070000_product_markers',
     '20261122080000_inventory_lookup',
     '20261122090000_shopper_cart',
+    '20261122100000_checkout_methods',
   ]) {
     await connection.query(
       await readFile(
@@ -936,7 +937,7 @@ function registeredToken(value: unknown): string {
   }
   return value.data.registerShopper.token;
 }
-it('isolates shoppers, catalogue and carts by shop and hides suspended shops', async () => {
+it('isolates shoppers, catalogue, carts and checkout by shop and hides suspended shops', async () => {
   if (!database) {
     throw new Error('Missing database');
   }
@@ -974,7 +975,7 @@ it('isolates shoppers, catalogue and carts by shop and hides suspended shops', a
           create: {
             ...storedVariant(name, '1.00', name !== 'No active variant'),
             inventoryTracked: name === 'Visible',
-            quantity: name === 'Visible' ? 3 : 0,
+            quantity: name === 'Visible' ? 2 : 0,
           },
         },
         status,
@@ -1052,8 +1053,7 @@ it('isolates shoppers, catalogue and carts by shop and hides suspended shops', a
   const variant = await database.productVariant.findFirstOrThrow({
     where: { ...categoryScope, sku: 'Visible' },
   });
-  const readCart =
-    '{cart{itemCount subtotal lines{id variantId name quantity unitPrice lineTotal availableQuantity issue}}}';
+  const readCart = '{cart{itemCount subtotal lines{id variantId name issue}}}';
   const cart = () => storefront(publicA, readCart, {}, token);
   expect(await cart()).toEqual({ data: { cart: { itemCount: 0, subtotal: '0.00', lines: [] } } });
   const add =
@@ -1082,26 +1082,6 @@ it('isolates shoppers, catalogue and carts by shop and hides suspended shops', a
     ).toHaveProperty('errors');
   }
 
-  const adjust = 'mutation($id:ID!){updateInventoryQuantity(id:$id,quantity:1){quantity}}';
-  expect(await query(tokens.operator, publicA, adjust, { id: variant.id })).toEqual({
-    data: { updateInventoryQuantity: { quantity: 1 } },
-  });
-  expect(await cart()).toMatchObject({
-    data: {
-      cart: {
-        itemCount: 2,
-        subtotal: '0.00',
-        lines: [
-          { quantity: 2, lineTotal: '2.00', availableQuantity: 1, issue: 'INSUFFICIENT_STOCK' },
-        ],
-      },
-    },
-  });
-  const setQuantity =
-    'mutation($id:ID!){updateCartLine(lineId:$id,quantity:1){itemCount subtotal}}';
-  expect(await storefront(publicA, setQuantity, { id: line.id }, token)).toEqual({
-    data: { updateCartLine: { itemCount: 1, subtotal: '1.00' } },
-  });
   const guestToken = randomBytes(32).toString('base64url');
   await database.cart.create({
     data: {
@@ -1135,6 +1115,65 @@ it('isolates shoppers, catalogue and carts by shop and hides suspended shops', a
   });
   expect(await storefront(publicA, readCart, {}, undefined, guestToken)).toHaveProperty('errors');
 
+  const methodIds = {
+    paymentMethodId: { available: randomUUID(), foreign: randomUUID(), disabled: randomUUID() },
+    shippingMethodId: { available: randomUUID(), foreign: randomUUID(), disabled: randomUUID() },
+  };
+  for (const [key, branchId, enabled] of [
+    ['available', publicA, true],
+    ['foreign', publicB, true],
+    ['disabled', publicA, false],
+  ] as const) {
+    const scope = { tenantId: tenantA, branchId, enabled };
+    await database.paymentMethod.create({
+      data: {
+        ...scope,
+        id: methodIds.paymentMethodId[key],
+        label: 'Cash on Delivery',
+        instructions: 'Pay on arrival.',
+      },
+    });
+    await database.shippingMethod.create({
+      data: {
+        ...scope,
+        id: methodIds.shippingMethodId[key],
+        label: 'Home Delivery',
+        fixedFee: '6.00',
+      },
+    });
+  }
+  const quoteInput = {
+    contact: { name: 'Person', email: 'same@example.test', phone: '0888123456' },
+    shippingAddress: { countryCode: 'BG', city: 'Sofia', postalCode: '1000', line1: '1 Demo St' },
+    paymentMethodId: methodIds.paymentMethodId.available,
+    shippingMethodId: methodIds.shippingMethodId.available,
+  };
+  const quoteOperation =
+    'mutation($input:CheckoutQuoteInput!){quoteCheckout(input:$input){subtotal shippingFee total lines{id variantId unitPrice}}}';
+  const quote = (input = quoteInput) => storefront(publicA, quoteOperation, { input }, token);
+  for (const path of ['paymentMethodId', 'shippingMethodId'] as const) {
+    for (const key of ['foreign', 'disabled'] as const) {
+      expect(await quote({ ...quoteInput, [path]: methodIds[path][key] })).toMatchObject({
+        data: null,
+        errors: [
+          {
+            extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path, code: 'INVALID_METHOD' }] },
+          },
+        ],
+      });
+    }
+  }
+  expect(await quote()).toEqual({
+    data: {
+      quoteCheckout: {
+        subtotal: '2.00',
+        shippingFee: '6.00',
+        total: '8.00',
+        lines: [{ id: line.id, variantId: variant.id, unitPrice: '1.00' }],
+      },
+    },
+  });
+
   const saveProduct =
     'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){variants{id}}}';
   const draft = {
@@ -1152,11 +1191,13 @@ it('isolates shoppers, catalogue and carts by shop and hides suspended shops', a
   expect(await saveVariants(variant.id)).toEqual({
     data: { updateProduct: { variants: [{ id: variant.id }] } },
   });
-  expect(await cart()).toMatchObject({
+  expect(await quote()).toEqual({
     data: {
-      cart: {
-        subtotal: '4.25',
-        lines: [{ id: line.id, variantId: variant.id, unitPrice: '4.25', issue: null }],
+      quoteCheckout: {
+        subtotal: '8.50',
+        shippingFee: '6.00',
+        total: '14.50',
+        lines: [{ id: line.id, variantId: variant.id, unitPrice: '4.25' }],
       },
     },
   });

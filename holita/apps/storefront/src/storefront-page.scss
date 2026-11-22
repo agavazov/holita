@@ -255,18 +255,6 @@ main {
   gap: var(--p-app-space-2);
 }
 
-.product-cart-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: var(--p-app-space-2) var(--p-app-space-3);
-}
-
-.product-cart :is(input, button):focus-visible {
-  outline: 2px solid var(--shop-focus);
-  outline-offset: 2px;
-}
-
 .product-cart-added,
 .product-cart-error {
   margin: 0;

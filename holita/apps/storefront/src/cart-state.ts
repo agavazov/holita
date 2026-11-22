@@ -124,12 +124,12 @@ export class CartState {
     }));
   }
 
-  private credentials(shopId: string): StorefrontCredentials {
+  credentials(shopId: string): StorefrontCredentials {
     const shopperToken = sessionStorage.getItem(shopperStorageKey(shopId));
     return shopperToken ? { shopperToken } : { guestCartToken: guestCartToken(shopId) };
   }
 
-  private expireSession(shopId: string, credentials: StorefrontCredentials, error: unknown) {
+  expireSession(shopId: string, credentials: StorefrontCredentials, error: unknown) {
     const key = shopperStorageKey(shopId);
     if (
       credentials.shopperToken &&

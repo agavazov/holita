@@ -23,8 +23,7 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 
 | Ticket                                                                                           | Wave | Status | Depends on           |
 | ------------------------------------------------------------------------------------------------ | ---- | ------ | -------------------- |
-| [115 Checkout form and manual quote](115-holita-checkout-quote.md)                               | 2    | Ready  |                      |
-| [116 Checkout order placement](116-holita-place-order.md)                                        | 2    | Ready  | 115                  |
+| [116 Checkout order placement](116-holita-place-order.md)                                        | 2    | Ready  |                      |
 | [117 Shopper order history](117-holita-shopper-orders.md)                                        | 2    | Ready  | 116                  |
 | [149 Osnova listing override points](149-osnova-listing-mobile.md)                               | 3    | Ready  |                      |
 | [147 Holita Admin polish](147-holita-admin-polish.md)                                            | 3    | Ready  | 149                  |
@@ -34,7 +33,7 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 | [119 Manual orders in Admin](119-holita-admin-manual-orders.md)                                  | 3    | Ready  | 118                  |
 | [120 Admin customer detail](120-holita-customer-detail.md)                                       | 3    | Ready  | 118                  |
 | [121 Discounts and promo codes](121-holita-discounts.md)                                         | 3    | Ready  | 118                  |
-| [122 Admin manual payment and shipping methods](122-holita-manual-methods.md)                    | 3    | Ready  | 115, 118             |
+| [122 Admin manual payment and shipping methods](122-holita-manual-methods.md)                    | 3    | Ready  | 118                  |
 | [123 Shop content pages](123-holita-pages.md)                                                    | 3    | Ready  |                      |
 | [124 Shop blog](124-holita-blog.md)                                                              | 3    | Ready  |                      |
 | [125 Shop navigation menus](125-holita-navigation.md)                                            | 3    | Ready  | 123, 124             |

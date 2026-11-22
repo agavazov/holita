@@ -6,6 +6,8 @@ import { readFileSync } from 'node:fs';
 import type { IncomingMessage } from 'node:http';
 import { CartModule } from './cart/cart.module.js';
 import { CartResolver } from './cart/cart.resolver.js';
+import { CheckoutModule } from './checkout/checkout.module.js';
+import { CheckoutResolver } from './checkout/checkout.resolver.js';
 import { CommerceResolver } from './products/commerce.resolver.js';
 import { CatalogueProductResolver, StorefrontResolver } from './storefront.resolver.js';
 import { StorefrontService } from './storefront.service.js';
@@ -68,9 +70,16 @@ class OperatorModule {}
     CharacteristicsModule,
     CustomersModule,
     CartModule,
+    CheckoutModule,
   ],
   controllers: [BrandImagesController, ProductImagesController],
-  providers: [StorefrontResolver, CatalogueProductResolver, CartResolver, StorefrontService],
+  providers: [
+    StorefrontResolver,
+    CatalogueProductResolver,
+    CartResolver,
+    CheckoutResolver,
+    StorefrontService,
+  ],
 })
 class StorefrontModule {}
 const context = ({ req }: { req: IncomingMessage }) => ({

@@ -33,6 +33,7 @@ import {
   type CartWriteError,
 } from './cart-state';
 import { CartMergeNotice, CartPage } from './cart-page';
+import { CheckoutPage } from './checkout-page';
 import type { CatalogueProductQuery } from './generated/operations';
 
 type VariantSelection = NonNullable<CatalogueProductQuery['catalogueProduct']>['variantSelection'];
@@ -44,7 +45,14 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
 
 @Component({
   selector: 'holita-storefront-page',
-  imports: [RouterLink, ReactiveFormsModule, NgTemplateOutlet, CatalogueBrowse, CartPage],
+  imports: [
+    RouterLink,
+    ReactiveFormsModule,
+    NgTemplateOutlet,
+    CatalogueBrowse,
+    CartPage,
+    CheckoutPage,
+  ],
   providers: [CartState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -94,7 +102,11 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         <p class="shop-state" role="alert">{{ t().shopMissing }}</p>
       } @else {
         @if (
-          cartState.sessionExpired() && page !== 'cart' && page !== 'sign-in' && page !== 'register'
+          cartState.sessionExpired() &&
+          page !== 'cart' &&
+          page !== 'checkout' &&
+          page !== 'sign-in' &&
+          page !== 'register'
         ) {
           <div class="shop-state">
             <p role="alert">{{ t().cartSessionExpired }}</p>
@@ -256,7 +268,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                   }
                   @let quantity = addQuantity();
                   <div class="product-cart">
-                    <form class="product-cart-form" (submit)="$event.preventDefault(); addToCart()">
+                    <form class="shop-control-row" (submit)="$event.preventDefault(); addToCart()">
                       <label class="shop-quantity-field" for="product-quantity">
                         {{ t().quantity }}
                         <input
@@ -335,6 +347,15 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             [priceFormat]="price()"
             [mergeNotice]="mergeNotice()"
           />
+        }
+        @if (page === 'checkout') {
+          @if (shop()) {
+            <holita-checkout [language]="language()" />
+          } @else if (error()) {
+            <ng-container [ngTemplateOutlet]="requestError" />
+          } @else {
+            <p class="shop-state" role="status">{{ t().loading }}</p>
+          }
         }
         @if (page === 'register' || page === 'sign-in') {
           @let registering = page === 'register';
@@ -674,6 +695,7 @@ const pages = [
   { path: 's/:shopId/sign-in', component: StorefrontPage },
   { path: 's/:shopId/account', component: StorefrontPage },
   { path: 's/:shopId/cart', component: StorefrontPage },
+  { path: 's/:shopId/checkout', component: StorefrontPage },
 ];
 // PrimeNG requires its license in the bootstrap providers, before its initializer runs.
 async function start(): Promise<void> {

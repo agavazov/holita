@@ -14,8 +14,10 @@ import {
   CatalogueProductDocument,
   CatalogueTagProductsDocument,
   CatalogueTagsDocument,
+  CheckoutDocument,
   PublicCartDocument,
   PublicShopDocument,
+  QuoteCheckoutDocument,
   RegisterShopperDocument,
   RemoveCartLineDocument,
   ShopperMeDocument,
@@ -25,6 +27,7 @@ import {
   type CatalogueBrowsePageFragment,
   type CatalogueCategoryFieldsFragment,
   type CatalogueQueryVariables,
+  type CheckoutQuoteInput,
 } from './generated/operations';
 import type { BrowseSection } from './catalogue-url';
 
@@ -199,5 +202,17 @@ export class StorefrontApi {
   async removeCartLine(shopId: string, credentials: StorefrontCredentials, lineId: string) {
     return (await this.write(shopId, RemoveCartLineDocument, { lineId }, credentials))
       .removeCartLine;
+  }
+
+  async checkout(shopId: string, credentials: StorefrontCredentials) {
+    return (await this.read(shopId, CheckoutDocument, {}, credentials)).checkout;
+  }
+
+  async quoteCheckout(
+    shopId: string,
+    credentials: StorefrontCredentials,
+    input: CheckoutQuoteInput,
+  ) {
+    return (await this.write(shopId, QuoteCheckoutDocument, { input }, credentials)).quoteCheckout;
   }
 }

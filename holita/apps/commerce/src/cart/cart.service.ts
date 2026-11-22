@@ -9,6 +9,7 @@ import type {
   CartMergeIssue,
 } from '../generated/graphql/storefront-types.js';
 import { Prisma, type CartLine as StoredCartLine } from '../generated/prisma/client.js';
+import { productImageUrl } from '../products/product-images.js';
 import {
   compareCatalogueOptionValues,
   trackedVariantQuantity,
@@ -18,7 +19,7 @@ import { CartRepository, type CartOwner } from './cart.repository.js';
 
 const MAX_QUANTITY = 2_147_483_647;
 // A full-size price multiplied by an Int quantity can exceed Decimal's default precision.
-const CartPrice = Prisma.Decimal.clone({ precision: 32 });
+export const CartPrice = Prisma.Decimal.clone({ precision: 32 });
 type CartToken = string | string[] | undefined;
 type PublicVariant = Awaited<ReturnType<CartRepository['publicVariants']>>[number];
 
@@ -96,11 +97,14 @@ function variantIds(lines: StoredCartLine[]) {
 }
 
 function presentLine(line: StoredCartLine, variant: PublicVariant | undefined): CartLine {
+  const image = variant?.product.images[0];
+  const issue = issueFor(variant, line.quantity);
   return {
     id: line.id,
     variantId: variant?.id ?? null,
     productId: variant?.product.id ?? null,
     name: variant?.product.name ?? null,
+    coverImage: image ? { url: productImageUrl(image), altText: image.altText } : null,
     optionLabels:
       variant?.values
         .map(({ optionValue }) => optionValue)
@@ -109,8 +113,8 @@ function presentLine(line: StoredCartLine, variant: PublicVariant | undefined): 
     quantity: line.quantity,
     unitPrice: variant?.price.toFixed(2) ?? null,
     lineTotal: variant ? new CartPrice(variant.price).mul(line.quantity).toFixed(2) : null,
-    availableQuantity: variant ? trackedVariantQuantity(variant) : null,
-    issue: issueFor(variant, line.quantity),
+    available: issue === null,
+    issue,
   };
 }
 
@@ -118,20 +122,22 @@ function presentLine(line: StoredCartLine, variant: PublicVariant | undefined): 
 export class CartService {
   constructor(private readonly carts: CartRepository) {}
 
-  async read(context: CartContext): Promise<Cart> {
+  read(context: CartContext): Promise<Cart> {
+    return this.carts.readTransaction((tx) => this.readInTransaction(tx, context));
+  }
+
+  async readInTransaction(tx: Prisma.TransactionClient, context: CartContext): Promise<Cart> {
     const { scope } = context;
     const owner = ownerFor(context);
     const empty = { lines: [], itemCount: 0, subtotal: '0.00' };
     if (!owner) {
       return empty;
     }
-    return this.carts.readTransaction(async (tx) => {
-      const cart = await this.carts.find(tx, scope, owner);
-      if (!cart && 'guestTokenHash' in owner) {
-        throw cartMissing();
-      }
-      return cart ? this.present(tx, scope, cart.id) : empty;
-    });
+    const cart = await this.carts.find(tx, scope, owner);
+    if (!cart && 'guestTokenHash' in owner) {
+      throw cartMissing();
+    }
+    return cart ? this.present(tx, scope, cart.id) : empty;
   }
 
   add(context: CartContext, id: string, quantity: number): Promise<CartAddResult> {

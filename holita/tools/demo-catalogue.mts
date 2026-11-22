@@ -118,6 +118,12 @@ export const demoShopper = {
   cartSkus: ['GUV-2L', 'PAN-28-SAND'],
 };
 
+export const demoPaymentMethod = {
+  label: 'Наложен платеж',
+  instructions: 'Платете при получаване.',
+};
+export const demoShippingMethod = { label: 'Доставка до адрес', fixedFee: '6.00' };
+
 interface DemoBrand {
   readonly id: number;
   readonly name: string;

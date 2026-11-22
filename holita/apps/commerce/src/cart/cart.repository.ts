@@ -82,7 +82,18 @@ export class CartRepository {
       where: { ...scope, id: { in: ids }, active: true, product: { ...scope, status: 'ACTIVE' } },
       select: {
         id: true,
-        product: { select: { id: true, name: true } },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            images: {
+              where: scope,
+              orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+              take: 1,
+              select: { branchId: true, storageKey: true, altText: true },
+            },
+          },
+        },
         inventoryTracked: true,
         quantity: true,
         price: true,

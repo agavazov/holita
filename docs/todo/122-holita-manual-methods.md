@@ -1,6 +1,6 @@
 # 122 Admin manual payment and shipping methods
 
-**Status:** Ready after [115](115-holita-checkout-quote.md), [118](118-holita-admin-order-management.md). **Product:** Holita.
+**Status:** Ready after [118](118-holita-admin-order-management.md). **Product:** Holita.
 
 ## Background
 
