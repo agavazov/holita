@@ -181,6 +181,10 @@ export class CategoriesPage {
     scope: this.scope(),
     search: this.url.state().search,
   }));
+  protected readonly deleteConflict = linkedSignal({
+    source: this.actionContext,
+    computation: () => false,
+  });
   protected readonly drawerHost: DrawerHost = {
     saved: ({ message }) => {
       this.messages.add({ severity: 'success', summary: message });
@@ -214,6 +218,8 @@ export class CategoriesPage {
       this.open(id);
       return;
     }
+    const context = this.actionContext();
+    this.deleteConflict.set(false);
     this.deleting.set(true);
     try {
       await this.api.delete(scope, id);
@@ -223,14 +229,17 @@ export class CategoriesPage {
       }
     } catch (error: unknown) {
       if (!this.destroyRef.destroyed && this.scope() === scope) {
-        this.messages.add({
-          severity: 'error',
-          summary:
-            errorCode(error) === 'CONFLICT'
-              ? this.text().categoryDeleteConflict
-              : this.text().categoryDeleteFailed,
-          sticky: true,
-        });
+        if (errorCode(error) === 'CONFLICT') {
+          if (this.actionContext() === context) {
+            this.deleteConflict.set(true);
+          }
+        } else {
+          this.messages.add({
+            severity: 'error',
+            summary: this.text().categoryDeleteFailed,
+            sticky: true,
+          });
+        }
       }
     } finally {
       this.deleting.set(false);

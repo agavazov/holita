@@ -61,20 +61,22 @@
             (onChange)="clearError('brandId')"
           />
           @if (brands.error()) {
-          <p-message id="product-brand-load-error" severity="warn" variant="simple" size="small">
-            {{ text().brandsUnavailable }}
-          </p-message>
-          <button
-            pButton
-            type="button"
-            severity="secondary"
-            [text]="true"
-            aria-describedby="product-brand-load-error"
-            [disabled]="saving()"
-            (click)="brands.reload()"
-          >
-            {{ shared().retry }}
-          </button>
+          <div class="product-field-feedback">
+            <p-message id="product-brand-load-error" severity="warn" variant="simple" size="small">
+              {{ text().brandsUnavailable }}
+            </p-message>
+            <button
+              [pButton]="{ size: 'small' }"
+              type="button"
+              severity="secondary"
+              [text]="true"
+              aria-describedby="product-brand-load-error"
+              [disabled]="saving()"
+              (click)="brands.reload()"
+            >
+              {{ shared().retry }}
+            </button>
+          </div>
           }
         </osnova-form-field>
         @let categoryError = errors()['categoryId'] ?? null;
@@ -102,20 +104,27 @@
             (onChange)="clearError('categoryId')"
           />
           @if (categories.error()) {
-          <p-message id="product-category-load-error" severity="warn" variant="simple" size="small">
-            {{ text().categoriesUnavailable }}
-          </p-message>
-          <button
-            pButton
-            type="button"
-            severity="secondary"
-            [text]="true"
-            aria-describedby="product-category-load-error"
-            [disabled]="saving()"
-            (click)="categories.reload()"
-          >
-            {{ shared().retry }}
-          </button>
+          <div class="product-field-feedback">
+            <p-message
+              id="product-category-load-error"
+              severity="warn"
+              variant="simple"
+              size="small"
+            >
+              {{ text().categoriesUnavailable }}
+            </p-message>
+            <button
+              [pButton]="{ size: 'small' }"
+              type="button"
+              severity="secondary"
+              [text]="true"
+              aria-describedby="product-category-load-error"
+              [disabled]="saving()"
+              (click)="categories.reload()"
+            >
+              {{ shared().retry }}
+            </button>
+          </div>
           }
         </osnova-form-field>
       </div>
@@ -191,12 +200,12 @@
           (onChange)="changeMarkers('badgeIds', badgesPicker, $event.originalEvent)"
         />
         @if (badgeChoices.error()) {
-        <p-message id="product-badges-load-error" severity="warn" variant="simple" size="small">
-          {{ text().badgesUnavailable }}
-        </p-message>
-        <div>
+        <div class="product-field-feedback">
+          <p-message id="product-badges-load-error" severity="warn" variant="simple" size="small">
+            {{ text().badgesUnavailable }}
+          </p-message>
           <button
-            pButton
+            [pButton]="{ size: 'small' }"
             type="button"
             severity="secondary"
             [text]="true"
@@ -263,12 +272,12 @@
           (onChange)="changeMarkers('tagIds', tagsPicker, $event.originalEvent)"
         />
         @if (tagResults.error()) {
-        <p-message id="product-tags-load-error" severity="warn" variant="simple" size="small">
-          {{ text().tagSearchFailed }}
-        </p-message>
-        <div>
+        <div class="product-field-feedback">
+          <p-message id="product-tags-load-error" severity="warn" variant="simple" size="small">
+            {{ text().tagSearchFailed }}
+          </p-message>
           <button
-            pButton
+            [pButton]="{ size: 'small' }"
             type="button"
             severity="secondary"
             [text]="true"
@@ -348,13 +357,13 @@
           {{ text().productImageAdd }}
         </button>
         @if (galleryError) {
-        <div class="product-image-feedback">
+        <div class="product-field-feedback">
           <p-message id="product-gallery-error" severity="error" variant="simple" size="small">
             {{ galleryError }}
           </p-message>
           @if (pickerError) {
           <button
-            pButton
+            [pButton]="{ size: 'small' }"
             type="button"
             severity="secondary"
             [text]="true"
@@ -437,13 +446,13 @@
             {{ attachmentError }}
           </p-message>
           } @else if (preview === null) {
-          <div class="product-image-feedback">
+          <div class="product-field-feedback">
             <p-message severity="warn" variant="simple" size="small">
               {{ text().productImageUnavailable }}
             </p-message>
             @if (image.controls.url.value) {
             <button
-              pButton
+              [pButton]="{ size: 'small' }"
               type="button"
               severity="secondary"
               [text]="true"
@@ -536,7 +545,8 @@
             [placeholder]="text().variantChooseValues"
             [invalid]="!!valuesError"
             [overlayOptions]="{ style: { width: '100%' } }"
-            [pt]="selectPt(valuesError, valuesId, true)"
+            [pt]="variantValuesPt(valuesError, valuesId)"
+            (onShow)="resetVariantValuesScroll($event)"
             (onChange)="changeOptionValues(index, valuesPicker, $event.originalEvent)"
           >
             <ng-template #item let-value>{{ value.label }}</ng-template>
@@ -592,19 +602,18 @@
             />
           </osnova-form-field>
           @if (retained) {
-          <osnova-form-field
-            [controlId]="quantityId"
-            [label]="text().variantQuantity"
-            [hint]="variant.controls.inventoryTracked.value ? text().inventoryAdjustProductHint : null"
-          >
-            <input
-              pInputText
-              [id]="quantityId"
-              [value]="quantityText(variant.controls.inventoryTracked.value ? variant.controls.quantity.value : null)"
-              [attr.aria-describedby]="variant.controls.inventoryTracked.value ? quantityId + '-hint' : null"
-              readonly
-            />
-          </osnova-form-field>
+          <dl class="app-facts">
+            <div>
+              <dt>{{ text().variantQuantity }}</dt>
+              <dd class="app-num">
+                {{ quantityText(variant.controls.inventoryTracked.value ?
+                variant.controls.quantity.value : null) }}
+              </dd>
+              @if (variant.controls.inventoryTracked.value) {
+              <dd><small class="app-muted">{{ text().inventoryAdjustProductHint }}</small></dd>
+              }
+            </div>
+          </dl>
           } @else if (variant.controls.inventoryTracked.value) {
           <osnova-form-field
             [controlId]="quantityId"

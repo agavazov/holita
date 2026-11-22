@@ -55,11 +55,11 @@
   display: flex;
 }
 
-.product-image-feedback {
+.product-field-feedback {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--p-app-space-2);
+  gap: var(--p-app-space-1) var(--p-app-space-2);
 }
 
 .product-specification-group,

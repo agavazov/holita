@@ -41,12 +41,6 @@
   }
 }
 
-@include bp.from(sm) {
-  :host(.filter-builder--mobile-full) .filter-builder__search {
-    flex-basis: auto;
-  }
-}
-
 .filter-builder__add {
   gap: var(--p-app-space-2);
 

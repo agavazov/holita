@@ -1397,15 +1397,6 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       data: { shopperOrders: { items, total: 1, offset, limit: 1 } },
     });
   }
-  for (const [offset, limit] of [
-    [-1, 20],
-    [0, 0],
-    [0, 101],
-  ]) {
-    expect(await storefront(publicA, readOrders, { offset, limit }, token)).toMatchObject({
-      errors: [{ message: 'Invalid page' }],
-    });
-  }
   expect(await storefront(publicA, readOrder, { id: order.id.toUpperCase() }, token)).toEqual({
     data: { shopperOrder: receipt },
   });

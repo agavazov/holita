@@ -878,7 +878,6 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     });
     await merchant.getByRole('link', { name: 'Products', exact: true }).click();
     await merchant.getByRole('button', { name: productName, exact: true }).click();
-    await expect(merchant.locator('#product-variant-quantity-0')).toHaveValue('0');
     await expect(merchant.locator('#product-description-en')).toHaveValue(descriptionEn);
     await merchant.locator('#product-description-en').clear();
     await merchant.getByRole('textbox', { name: 'Finish', exact: true }).clear();

@@ -19,6 +19,7 @@
   [emptyDescription]="text().emptyBrandsDescription"
   [page]="pagination()"
   [actionContext]="params()"
+  [actionFeedback]="deleteConflict() ? text().brandDeleteConflict : null"
   [actions]="actions()"
   (action)="run($event)"
   (pageChange)="url.setPage($event)"

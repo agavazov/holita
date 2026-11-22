@@ -1,10 +1,9 @@
 :host {
   display: block;
 }
-.design-page,
-.design-page section,
-.scheme {
+#mobile-listing {
   grid-template-columns: minmax(0, 1fr);
+  max-inline-size: calc(100vw - 2 * var(--p-app-space-6));
 }
 .design-page {
   display: grid;

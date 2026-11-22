@@ -55,6 +55,7 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
+import type { SelectPassThrough } from 'primeng/types/select';
 import { debounceTime, distinctUntilChanged, map } from 'rxjs';
 import { BrandsApi } from '../brands/brands-api';
 import { CategoriesApi } from '../categories/categories-api';
@@ -414,6 +415,32 @@ export class ProductEditor {
       option: { style: { whiteSpace: 'normal', overflowWrap: 'anywhere' } },
       optionGroup: { style: { whiteSpace: 'normal', overflowWrap: 'anywhere' } },
     };
+  }
+
+  protected variantValuesPt(error: string | null, id: string): SelectPassThrough {
+    const pt = this.selectPt(error, id, true);
+    return {
+      ...pt,
+      listContainer: { 'data-variant-values-list': '' },
+      option: {
+        style: {
+          ...pt.option.style,
+          paddingInlineStart: 'calc(var(--p-app-space-3) + var(--p-app-space-2))',
+        },
+      },
+      optionGroup: {
+        style: {
+          ...pt.optionGroup.style,
+          fontSize: 'var(--p-app-text-sm)',
+          fontWeight: '600',
+        },
+      },
+    };
+  }
+
+  protected resetVariantValuesScroll({ element }: { element: Element }): void {
+    // Select scrolls a selected option into view before emitting onShow.
+    element.querySelector('[data-variant-values-list]')?.scrollTo({ top: 0 });
   }
 
   protected path(index: number, field: string): string {

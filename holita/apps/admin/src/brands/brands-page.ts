@@ -154,6 +154,10 @@ export class BrandsPage {
       ? { scope, variables: { offset: (page - 1) * pageSize, limit: pageSize, search, sort } }
       : undefined;
   });
+  protected readonly deleteConflict = linkedSignal({
+    source: this.params,
+    computation: () => false,
+  });
   protected readonly list = resource({
     params: this.params,
     loader: ({ params }) => this.api.list(params.scope, params.variables),
@@ -240,6 +244,8 @@ export class BrandsPage {
       this.open(id);
       return;
     }
+    const context = this.params();
+    this.deleteConflict.set(false);
     this.deleting.set(true);
     try {
       await this.api.delete(scope, id);
@@ -249,14 +255,17 @@ export class BrandsPage {
       }
     } catch (error: unknown) {
       if (!this.destroyRef.destroyed && this.scope() === scope) {
-        this.messages.add({
-          severity: 'error',
-          summary:
-            errorCode(error) === 'CONFLICT'
-              ? this.text().brandDeleteConflict
-              : this.text().brandDeleteFailed,
-          sticky: true,
-        });
+        if (errorCode(error) === 'CONFLICT') {
+          if (this.params() === context) {
+            this.deleteConflict.set(true);
+          }
+        } else {
+          this.messages.add({
+            severity: 'error',
+            summary: this.text().brandDeleteFailed,
+            sticky: true,
+          });
+        }
       }
     } finally {
       this.deleting.set(false);

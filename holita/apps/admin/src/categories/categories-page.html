@@ -18,6 +18,7 @@
   [emptyTitle]="text().emptyCategories"
   [emptyDescription]="text().emptyCategoriesDescription"
   [actionContext]="actionContext()"
+  [actionFeedback]="deleteConflict() ? text().categoryDeleteConflict : null"
   [actions]="actions()"
   (action)="run($event)"
   (retry)="list.reload()"
