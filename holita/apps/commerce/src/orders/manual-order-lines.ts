@@ -54,15 +54,22 @@ export function reviseOrderLines(
   const sellableVariants = new Map(sellable.map((variant) => [variant.id, variant]));
   const seenLines = new Set<string>();
   const seenVariants = new Set<string>();
+  const previousStock = new Map<string, Pick<OrderLine, 'quantity' | 'stockDeductedQuantity'>>();
   const stockDeltas = new Map<string, { quantity: number; path: string }>();
   let subtotal = new CartPrice(0);
 
-  for (const { variantId, stockDeductedQuantity } of previous) {
-    if (variantId && stockDeductedQuantity) {
-      stockDeltas.set(variantId, {
-        quantity: (stockDeltas.get(variantId)?.quantity ?? 0) - stockDeductedQuantity,
-        path: 'lines',
-      });
+  for (const { variantId, quantity, stockDeductedQuantity } of previous) {
+    if (!variantId) {
+      continue;
+    }
+    const prior = previousStock.get(variantId);
+    const deducted = (prior?.stockDeductedQuantity ?? 0) + stockDeductedQuantity;
+    previousStock.set(variantId, {
+      quantity: (prior?.quantity ?? 0) + quantity,
+      stockDeductedQuantity: deducted,
+    });
+    if (deducted) {
+      stockDeltas.set(variantId, { quantity: -deducted, path: 'lines' });
     }
   }
 
@@ -99,14 +106,15 @@ export function reviseOrderLines(
       if (!snapshot) {
         throw checkoutError(path, 'ORDER_VARIANT_UNAVAILABLE', 'Choose an available variant');
       }
-      // Keep previous deductions for the retained quantity, even if tracking changed.
-      const addedQuantity = Math.max(0, quantity - (retained?.quantity ?? 0));
+      // Track retained units by variant even when the line snapshot is replaced.
+      const prior = id ? previousStock.get(id) : retained;
+      const priorDeduction = prior?.stockDeductedQuantity ?? 0;
+      const addedQuantity = Math.max(0, quantity - (prior?.quantity ?? 0));
       const stockDeductedQuantity =
-        Math.min(quantity, retained?.stockDeductedQuantity ?? 0) +
-        (variant?.inventoryTracked ? addedQuantity : 0);
+        Math.min(quantity, priorDeduction) + (variant?.inventoryTracked ? addedQuantity : 0);
       if (id && stockDeductedQuantity) {
         stockDeltas.set(id, {
-          quantity: (stockDeltas.get(id)?.quantity ?? 0) + stockDeductedQuantity,
+          quantity: stockDeductedQuantity - priorDeduction,
           path: `lines.${String(sortOrder)}.quantity`,
         });
       }

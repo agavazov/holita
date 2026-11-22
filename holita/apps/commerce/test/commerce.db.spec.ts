@@ -2511,6 +2511,11 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     updateManualOrder(id:$id,input:$input){id total shippingFee lines{id quantity unitPrice}}
   }`;
   const variantIdentity = { ...categoryScope, id: replacement.id };
+  const readManualStock = () =>
+    database.productVariant.findUniqueOrThrow({
+      where: variantIdentity,
+      select: { quantity: true },
+    });
   await database.productVariant.update({
     where: variantIdentity,
     data: { active: true, inventoryTracked: true, price: '8.00', quantity: 7 },
@@ -2547,13 +2552,16 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     include: { lines: true },
   });
   const [manualLine] = manual.lines;
-  const manualEdit = (quantity: number) => ({
+  const manualEdit = (
+    quantity: number,
+    line: { lineId: string } | { variantId: string } = { lineId: manualLine.id },
+  ) => ({
     id: manual.id,
     input: {
       contact,
       shippingAddress,
       customerId: order.customerId,
-      lines: [{ lineId: manualLine.id, quantity }],
+      lines: [{ ...line, quantity }],
     },
   });
   expect(
@@ -2593,6 +2601,35 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(await storefront(publicA, readOrder, { id: manual.id }, foreignOwner)).toEqual({
     data: { shopperOrder: null },
   });
+  await database.productVariant.update({
+    where: variantIdentity,
+    data: { inventoryTracked: false },
+  });
+  expect(await readManualStock()).toEqual({ quantity: 4 });
+  const readded = await query(
+    tokens.operator,
+    publicA,
+    updateManual,
+    manualEdit(3, { variantId: replacement.id }),
+  );
+  const readdedLine = await database.orderLine.findFirstOrThrow({
+    where: { ...categoryScope, orderId: manual.id, variantId: replacement.id },
+    select: { id: true, stockDeductedQuantity: true },
+  });
+  expect(readdedLine.id).not.toBe(manualLine.id);
+  expect(readdedLine.stockDeductedQuantity).toBe(3);
+  expect(readded).toMatchObject({
+    data: {
+      updateManualOrder: {
+        total: '126.00',
+        shippingFee: '99.00',
+        lines: [{ id: readdedLine.id, quantity: 3, unitPrice: '9.00' }],
+      },
+    },
+  });
+  expect(await readManualStock()).toEqual({ quantity: 4 });
+
+  const lineReference = { lineId: readdedLine.id };
   for (const [inventoryTracked, quantity, stockDeductedQuantity, onHand] of [
     [false, 5, 3, 4],
     [false, 4, 3, 4],
@@ -2600,42 +2637,39 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     [true, 4, 4, 3],
   ] as const) {
     await database.productVariant.update({ where: variantIdentity, data: { inventoryTracked } });
-    expect(await query(tokens.operator, publicA, updateManual, manualEdit(quantity))).toMatchObject(
-      {
-        data: { updateManualOrder: { lines: [{ id: manualLine.id, quantity }] } },
-      },
-    );
+    expect(
+      await query(tokens.operator, publicA, updateManual, manualEdit(quantity, lineReference)),
+    ).toMatchObject({
+      data: { updateManualOrder: { lines: [{ id: readdedLine.id, quantity }] } },
+    });
     expect(
       await database.orderLine.findUniqueOrThrow({
-        where: { ...categoryScope, id: manualLine.id },
+        where: { ...categoryScope, id: readdedLine.id },
         select: { stockDeductedQuantity: true },
       }),
     ).toEqual({ stockDeductedQuantity });
-    expect(
-      await database.productVariant.findUniqueOrThrow({
-        where: variantIdentity,
-        select: { quantity: true },
-      }),
-    ).toEqual({ quantity: onHand });
+    expect(await readManualStock()).toEqual({ quantity: onHand });
   }
-  expect(await query(tokens.operator, publicA, updateManual, manualEdit(1))).toMatchObject({
-    data: { updateManualOrder: { total: '107.00', lines: [{ id: manualLine.id, quantity: 1 }] } },
-  });
-  expect(
-    await database.productVariant.findUniqueOrThrow({
-      where: variantIdentity,
-      select: { quantity: true },
-    }),
-  ).toEqual({ quantity: 6 });
+  const reduction = manualEdit(1, lineReference);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    expect(await query(tokens.operator, publicA, updateManual, reduction)).toMatchObject({
+      data: {
+        updateManualOrder: { total: '108.00', lines: [{ id: readdedLine.id, quantity: 1 }] },
+      },
+    });
+    expect(await readManualStock()).toEqual({ quantity: 6 });
+  }
   await database.productVariant.update({
     where: variantIdentity,
     data: { inventoryTracked: false },
   });
-  expect(await query(tokens.operator, publicA, updateManual, manualEdit(2))).toMatchObject({
-    data: { updateManualOrder: { total: '115.00' } },
+  const untrackedIncrease = manualEdit(2, lineReference);
+  expect(await query(tokens.operator, publicA, updateManual, untrackedIncrease)).toMatchObject({
+    data: { updateManualOrder: { total: '117.00' } },
   });
+  expect(await readManualStock()).toEqual({ quantity: 6 });
   await query(tokens.operator, publicA, markPaid, { id: manual.id });
-  expect(await query(tokens.operator, publicA, updateManual, manualEdit(2))).toHaveProperty(
+  expect(await query(tokens.operator, publicA, updateManual, untrackedIncrease)).toHaveProperty(
     'errors',
   );
   for (const status of ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'COMPLETED']) {
@@ -2646,7 +2680,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(
     await query(tokens.operator, publicA, recordRefund, {
       orderId: manual.id,
-      input: { amount: '115.00', restock: true },
+      input: { amount: '117.00', restock: true },
     }),
   ).toMatchObject({ data: { recordOrderRefund: { restock: true } } });
   expect(
@@ -2655,12 +2689,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       select: { status: true },
     }),
   ).toEqual({ status: 'COMPLETED' });
-  expect(
-    await database.productVariant.findUniqueOrThrow({
-      where: variantIdentity,
-      select: { quantity: true },
-    }),
-  ).toEqual({ quantity: 7 });
+  expect(await readManualStock()).toEqual({ quantity: 7 });
 
   const oneUse = await database.discount.create({
     data: {
