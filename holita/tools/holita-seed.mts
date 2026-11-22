@@ -11,7 +11,7 @@ import {
   demoCharacteristicGroups,
   demoCollections,
   demoOptions,
-  demoOrder,
+  demoOrders,
   demoPaymentMethod,
   demoProductCovers,
   demoProductImages,
@@ -397,7 +397,9 @@ async function seedCatalogue(): Promise<void> {
         demoShippingMethod.fixedFee,
       ],
     );
-    await seedShopperOrder(client, tenantId, branchId);
+    for (const order of demoOrders) {
+      await seedShopperOrder(client, tenantId, branchId, order);
+    }
     await client.query('COMMIT');
     console.log(
       `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options, ${String(productsInserted)} products, ${String(collectionsInserted)} collections, ${String(characteristicGroupsInserted)} characteristic groups and ${String(imagesInserted)} product images.`,
@@ -462,10 +464,16 @@ async function seedShopperCart(client: pg.Client, tenantId: string, branchId: st
   }
 }
 
-async function seedShopperOrder(client: pg.Client, tenantId: string, branchId: string) {
-  const { placedAt, phone, city, postalCode, address, subtotal, total, lines } = demoOrder;
-  const cartId = fixtureId('e2', 2);
-  const orderId = fixtureId('d5', 1);
+async function seedShopperOrder(
+  client: pg.Client,
+  tenantId: string,
+  branchId: string,
+  fixture: (typeof demoOrders)[number],
+) {
+  const { id, status, placedAt, phone, city, postalCode, address, subtotal, total, lines } =
+    fixture;
+  const cartId = fixtureId('e2', id + 1);
+  const orderId = fixtureId('d5', id);
   const variantIds = lines.map(({ variant }) => fixtureId('92', variant));
   const {
     rows: [cart],
@@ -488,8 +496,8 @@ async function seedShopperOrder(client: pg.Client, tenantId: string, branchId: s
        "status", "paymentStatus", "placedAt", "contactName", "contactEmail", "contactPhone",
        "shippingCountryCode", "shippingCity", "shippingPostalCode", "shippingLine1",
        "paymentMethodLabel", "paymentInstructions", "shippingMethodLabel", "currency", "subtotal", "shippingFee", "total")
-     VALUES ($1, $2, $3, $4, $5, $6, 'placed', 'unpaid', $7, $8, $9, $10, 'BG', $11, $12, $13, $14, $15, $16,
-       'BGN', $17, $18, $19) ON CONFLICT DO NOTHING`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'unpaid', $8, $9, $10, $11, 'BG', $12, $13, $14, $15, $16, $17,
+       'BGN', $18, $19, $20) ON CONFLICT DO NOTHING`,
     [
       orderId,
       tenantId,
@@ -497,6 +505,7 @@ async function seedShopperOrder(client: pg.Client, tenantId: string, branchId: s
       cartId,
       cart.customerId,
       `H-${orderId}`,
+      status,
       placedAt,
       demoShopper.name,
       demoShopper.email,
@@ -517,15 +526,23 @@ async function seedShopperOrder(client: pg.Client, tenantId: string, branchId: s
       const variantId = fixtureId('92', line.variant);
       await client.query(
         `INSERT INTO "cartLine" ("id", "tenantId", "branchId", "cartId", "variantId", "quantity", "createdAt")
-         VALUES ($1, $2, $3, $4, $5, 1, $6) ON CONFLICT DO NOTHING`,
-        [fixtureId('f2', sortOrder + 3), tenantId, branchId, cartId, variantId, placedAt],
+         VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT DO NOTHING`,
+        [
+          fixtureId('f2', line.id + 2),
+          tenantId,
+          branchId,
+          cartId,
+          variantId,
+          line.quantity,
+          placedAt,
+        ],
       );
       await client.query(
         `INSERT INTO "orderLine" ("id", "tenantId", "branchId", "orderId", "variantId", "sortOrder",
            "sku", "label", "quantity", "unitPrice", "stockDecremented")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, $9, false) ON CONFLICT DO NOTHING`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, false) ON CONFLICT DO NOTHING`,
         [
-          fixtureId('d6', sortOrder + 1),
+          fixtureId('d6', line.id),
           tenantId,
           branchId,
           orderId,
@@ -533,6 +550,7 @@ async function seedShopperOrder(client: pg.Client, tenantId: string, branchId: s
           sortOrder,
           line.sku,
           line.label,
+          line.quantity,
           line.unitPrice,
         ],
       );

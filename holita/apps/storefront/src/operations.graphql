@@ -387,3 +387,25 @@ query OrderConfirmation($orderId: ID!) {
     ...OrderConfirmationFields
   }
 }
+query ShopperOrders($offset: Int!, $limit: Int!) {
+  shopperOrders(offset: $offset, limit: $limit) {
+    items {
+      id
+      number
+      placedAt
+      status
+      shippingMethodLabel
+      paymentMethodLabel
+      total
+      currency
+    }
+    total
+    offset
+    limit
+  }
+}
+query ShopperOrder($id: ID!) {
+  shopperOrder(id: $id) {
+    ...OrderConfirmationFields
+  }
+}

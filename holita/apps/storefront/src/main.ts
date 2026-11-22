@@ -35,6 +35,7 @@ import {
 import { CartMergeNotice, CartPage } from './cart-page';
 import { CheckoutPage } from './checkout-page';
 import { OrderConfirmationPage } from './order-confirmation-page';
+import { ShopperOrdersPage } from './shopper-orders-page';
 import type { CatalogueProductQuery } from './generated/operations';
 
 type VariantSelection = NonNullable<CatalogueProductQuery['catalogueProduct']>['variantSelection'];
@@ -54,6 +55,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
     CartPage,
     CheckoutPage,
     OrderConfirmationPage,
+    ShopperOrdersPage,
   ],
   providers: [CartState],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -90,7 +92,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         </a>
         <a
           [routerLink]="[...base(), 'account']"
-          [attr.aria-current]="page === 'account' ? 'page' : null"
+          [attr.aria-current]="page === 'account' ? 'page' : page === 'orders' ? 'true' : null"
         >
           {{ t().account }}
         </a>
@@ -107,6 +109,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
           cartState.sessionExpired() &&
           page !== 'cart' &&
           page !== 'checkout' &&
+          page !== 'orders' &&
           page !== 'sign-in' &&
           page !== 'register'
         ) {
@@ -425,9 +428,19 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                   <p>{{ person.name }}</p>
                   <p>{{ person.email }}</p>
                 </div>
-                <button type="button" [disabled]="busy()" (click)="signOut()">
-                  {{ t().signOut }}
-                </button>
+                <div class="account-actions">
+                  <a class="shop-primary" [routerLink]="[...base(), 'account', 'orders']">
+                    {{ t().accountOrders }}
+                  </a>
+                  <button
+                    class="shop-secondary"
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="signOut()"
+                  >
+                    {{ t().signOut }}
+                  </button>
+                </div>
               } @else {
                 <div class="account-actions">
                   <a class="shop-primary" [routerLink]="[...base(), 'sign-in']">{{ t().signIn }}</a>
@@ -438,6 +451,15 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
               }
             </div>
           </section>
+        }
+        @if (page === 'orders') {
+          @if (shop()) {
+            <holita-shopper-orders [language]="language()" [orderId]="orderId()" />
+          } @else if (error()) {
+            <ng-container [ngTemplateOutlet]="requestError" />
+          } @else {
+            <p class="shop-state" role="status">{{ t().loading }}</p>
+          }
         }
       }
     </main>
@@ -461,7 +483,9 @@ class StorefrontPage {
   protected readonly cartState = inject(CartState);
   readonly shopId = this.cartState.shopId;
   readonly base = computed(() => ['/s', this.shopId()]);
-  readonly page = this.route.routeConfig?.path?.split('/').at(2) ?? 'catalogue';
+  readonly page = this.route.routeConfig?.data?.['orderHistory']
+    ? 'orders'
+    : (this.route.routeConfig?.path?.split('/').at(2) ?? 'catalogue');
   readonly section = browseSections.find((item) => item === this.page) ?? null;
   readonly browseSections = browseSections;
   readonly browse = this.page === 'catalogue' || this.section !== null;
@@ -700,6 +724,12 @@ const pages = [
   ]),
   { path: 's/:shopId/register', component: StorefrontPage },
   { path: 's/:shopId/sign-in', component: StorefrontPage },
+  {
+    path: 's/:shopId/account/orders/:orderId',
+    component: StorefrontPage,
+    data: { orderHistory: true },
+  },
+  { path: 's/:shopId/account/orders', component: StorefrontPage, data: { orderHistory: true } },
   { path: 's/:shopId/account', component: StorefrontPage },
   { path: 's/:shopId/cart', component: StorefrontPage },
   { path: 's/:shopId/checkout/confirmation/:orderId', component: StorefrontPage },

@@ -237,6 +237,7 @@ input PlaceOrderInput {
 }
 enum OrderStatus {
   PLACED
+  COMPLETED
 }
 enum OrderPaymentStatus {
   UNPAID
@@ -276,6 +277,22 @@ type OrderConfirmation {
   subtotal: String!
   shippingFee: String!
   total: String!
+}
+type ShopperOrderSummary {
+  id: ID!
+  number: String!
+  status: OrderStatus!
+  placedAt: String!
+  paymentMethodLabel: String!
+  shippingMethodLabel: String!
+  currency: String!
+  total: String!
+}
+type ShopperOrderPage {
+  items: [ShopperOrderSummary!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
 }
 type CatalogueSpecificationGroup {
   name: String!
@@ -331,6 +348,8 @@ type Query {
     sort: CatalogueSort
   ): CataloguePage
   shopperMe: Shopper
+  shopperOrders(offset: Int! = 0, limit: Int! = 20): ShopperOrderPage!
+  shopperOrder(id: ID!): OrderConfirmation
   cart: Cart!
   checkout: CheckoutState
   orderConfirmation(orderId: ID!): OrderConfirmation

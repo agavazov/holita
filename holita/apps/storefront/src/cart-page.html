@@ -37,10 +37,10 @@
   </div>
   @if (cart.lines.length) {
   <div class="cart-layout" [attr.aria-busy]="state.pending()">
-    <ul class="cart-lines" role="list">
+    <ul class="shop-panel shop-panel--sections cart-lines" role="list">
       @for (line of cart.lines; track line.id) { @let error = lineError(); @let control =
       quantities().get(line.id);
-      <li class="cart-line" [attr.aria-labelledby]="'cart-line-' + line.id">
+      <li class="shop-panel-section cart-line" [attr.aria-labelledby]="'cart-line-' + line.id">
         <div class="cart-line-identity">
           @if (line.coverImage; as photo) {
           <img class="shop-line-thumbnail" [src]="photo.url" alt="" />
@@ -121,7 +121,7 @@
       </li>
       }
     </ul>
-    <aside class="cart-summary" [attr.aria-label]="t().cartSubtotal">
+    <aside class="shop-panel cart-summary" [attr.aria-label]="t().cartSubtotal">
       <dl>
         <div>
           <dt>{{ t().cartSubtotal }}</dt>

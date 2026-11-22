@@ -16,6 +16,10 @@ export interface Scope {
   branchId: string;
 }
 
+export interface ShopperScope extends Scope {
+  customerId: string;
+}
+
 export async function requireScope(context: RequestContext, write: boolean): Promise<Scope> {
   const identity: SessionIdentity | undefined = await readSession(context.authorization);
   if (!identity) {

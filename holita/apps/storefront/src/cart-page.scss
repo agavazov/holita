@@ -17,15 +17,6 @@
   list-style: none;
 }
 
-.cart-lines,
-.cart-summary {
-  border: 1px solid var(--shop-border);
-  border-radius: var(--p-app-radius-panel);
-  background: var(--shop-paper);
-}
-
-.cart-line,
-.cart-summary,
 .cart-merge {
   padding: clamp(var(--p-app-space-4), 3vw, var(--p-app-space-6));
   overflow-wrap: anywhere;
@@ -39,10 +30,6 @@
   @include bp.from(lg) {
     grid-template-columns: minmax(0, 1fr) auto;
   }
-}
-
-.cart-line + .cart-line {
-  border-block-start: 1px solid var(--shop-border);
 }
 
 .cart-line-identity {

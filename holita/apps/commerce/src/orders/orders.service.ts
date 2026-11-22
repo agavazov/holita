@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { randomUUID } from 'node:crypto';
 import { CartRepository } from '../cart/cart.repository.js';
@@ -10,17 +10,35 @@ import {
   type CartContext,
 } from '../cart/cart.service.js';
 import { checkoutError, CheckoutService } from '../checkout/checkout.service.js';
-import type { OrderConfirmation, PlaceOrderInput } from '../generated/graphql/storefront-types.js';
+import type {
+  OrderConfirmation,
+  PlaceOrderInput,
+  QueryShopperOrdersArgs,
+  ShopperOrderPage,
+} from '../generated/graphql/storefront-types.js';
 import type { Order, OrderLine, Prisma } from '../generated/prisma/client.js';
+import type { ShopperScope } from '../scope.js';
 import { OrdersRepository } from './orders.repository.js';
 
-function confirmation(order: Order & { lines: OrderLine[] }): OrderConfirmation {
+type OrderSummaryRow = Awaited<ReturnType<OrdersRepository['shopperOrders']>>['items'][number];
+
+function summary(order: OrderSummaryRow) {
   return {
     id: order.id,
     number: order.orderNumber,
     status: order.status,
-    paymentStatus: order.paymentStatus,
     placedAt: order.placedAt.toISOString(),
+    paymentMethodLabel: order.paymentMethodLabel,
+    shippingMethodLabel: order.shippingMethodLabel,
+    currency: order.currency,
+    total: order.total.toFixed(2),
+  };
+}
+
+function confirmation(order: Order & { lines: OrderLine[] }): OrderConfirmation {
+  return {
+    ...summary(order),
+    paymentStatus: order.paymentStatus,
     contact: { name: order.contactName, email: order.contactEmail, phone: order.contactPhone },
     shippingAddress: {
       countryCode: order.shippingCountryCode,
@@ -29,9 +47,7 @@ function confirmation(order: Order & { lines: OrderLine[] }): OrderConfirmation 
       line1: order.shippingLine1,
       line2: order.shippingLine2,
     },
-    paymentMethodLabel: order.paymentMethodLabel,
     paymentInstructions: order.paymentInstructions,
-    shippingMethodLabel: order.shippingMethodLabel,
     lines: order.lines.map(({ sku, label, quantity, unitPrice }) => ({
       sku,
       label,
@@ -39,10 +55,8 @@ function confirmation(order: Order & { lines: OrderLine[] }): OrderConfirmation 
       unitPrice: unitPrice.toFixed(2),
       lineTotal: new CartPrice(unitPrice).mul(quantity).toFixed(2),
     })),
-    currency: order.currency,
     subtotal: order.subtotal.toFixed(2),
     shippingFee: order.shippingFee.toFixed(2),
-    total: order.total.toFixed(2),
   };
 }
 
@@ -58,6 +72,25 @@ export class OrdersService {
     private readonly carts: CartService,
     private readonly checkout: CheckoutService,
   ) {}
+
+  async shopperOrders(
+    scope: ShopperScope,
+    { offset = 0, limit = 20 }: QueryShopperOrdersArgs,
+  ): Promise<ShopperOrderPage> {
+    if (offset < 0 || limit < 1 || limit > 100) {
+      throw new BadRequestException('Invalid page');
+    }
+    const page = await this.orders.shopperOrders(scope, offset, limit);
+    return { ...page, items: page.items.map(summary) };
+  }
+
+  async shopperOrder(scope: ShopperScope, id: string): Promise<OrderConfirmation | null> {
+    if (!isUUID(id)) {
+      return null;
+    }
+    const order = await this.orders.shopperOrder(scope, id.toLowerCase());
+    return order ? confirmation(order) : null;
+  }
 
   async confirmation(context: CartContext, orderId: string): Promise<OrderConfirmation | null> {
     const owner = cartOwner(context);

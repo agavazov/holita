@@ -84,6 +84,10 @@ export class CartState {
   readonly shopId = computed(() => this.params().get('shopId') ?? '');
   private readonly ownerChange = signal(0);
   readonly sessionExpired = linkedSignal({ source: this.shopId, computation: () => false });
+  readonly shopperToken = computed(() => {
+    this.ownerChange();
+    return this.sessionExpired() ? null : sessionStorage.getItem(shopperStorageKey(this.shopId()));
+  });
   readonly pending = linkedSignal({ source: this.shopId, computation: () => false });
 
   private readonly request = resource({
@@ -143,18 +147,22 @@ export class CartState {
   }
 
   expireSession(shopId: string, credentials: StorefrontCredentials, error: unknown) {
-    const key = shopperStorageKey(shopId);
-    if (
+    return Boolean(
       credentials.shopperToken &&
-      sessionStorage.getItem(key) === credentials.shopperToken &&
       CombinedGraphQLErrors.is(error) &&
-      error.errors.some(({ extensions }) => extensions?.['code'] === 'UNAUTHENTICATED')
-    ) {
-      sessionStorage.removeItem(key);
-      this.sessionExpired.set(true);
-      return true;
+      error.errors.some(({ extensions }) => extensions?.['code'] === 'UNAUTHENTICATED') &&
+      this.clearShopperSession(shopId, credentials.shopperToken),
+    );
+  }
+
+  clearShopperSession(shopId: string, shopperToken: string) {
+    const key = shopperStorageKey(shopId);
+    if (shopId !== this.shopId() || sessionStorage.getItem(key) !== shopperToken) {
+      return false;
     }
-    return false;
+    sessionStorage.removeItem(key);
+    this.sessionExpired.set(true);
+    return true;
   }
 
   private async write(

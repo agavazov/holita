@@ -23,6 +23,8 @@ import {
   RegisterShopperDocument,
   RemoveCartLineDocument,
   ShopperMeDocument,
+  ShopperOrderDocument,
+  ShopperOrdersDocument,
   SignInShopperDocument,
   SignOutShopperDocument,
   UpdateCartLineDocument,
@@ -159,6 +161,15 @@ export class StorefrontApi {
   }
   async me(shopId: string, shopperToken: string | null) {
     return (await this.read(shopId, ShopperMeDocument, {}, { shopperToken })).shopperMe;
+  }
+
+  async shopperOrders(shopId: string, shopperToken: string, offset: number, limit: number) {
+    return (await this.read(shopId, ShopperOrdersDocument, { offset, limit }, { shopperToken }))
+      .shopperOrders;
+  }
+
+  async shopperOrder(shopId: string, shopperToken: string, id: string) {
+    return (await this.read(shopId, ShopperOrderDocument, { id }, { shopperToken })).shopperOrder;
   }
 
   async register(

@@ -142,6 +142,7 @@ beforeAll(async () => {
     '20261122090000_shopper_cart',
     '20261122100000_checkout_methods',
     '20261122110000_order_placement',
+    '20261122120000_shopper_order_history',
   ]) {
     await connection.query(
       await readFile(
@@ -1237,7 +1238,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   });
 
   const receiptFields =
-    'id status paymentStatus paymentMethodLabel paymentInstructions shippingMethodLabel shippingFee total lines{sku quantity unitPrice lineTotal}';
+    'id number placedAt status paymentStatus paymentMethodLabel paymentInstructions shippingMethodLabel shippingAddress{countryCode city postalCode line1} currency subtotal shippingFee total lines{sku label quantity unitPrice lineTotal}';
   const placeOperation = `mutation($input:PlaceOrderInput!){placeOrder(input:$input){${receiptFields}}}`;
   const receiptOperation = `query($orderId:ID!){orderConfirmation(orderId:$orderId){${receiptFields}}}`;
   const place = (review: typeof currentReview, bearer = token) =>
@@ -1271,14 +1272,21 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   const order = await database.order.findFirstOrThrow({ where: orderScope });
   const receipt = {
     id: order.id,
+    number: order.orderNumber,
+    placedAt: order.placedAt.toISOString(),
     status: 'PLACED',
     paymentStatus: 'UNPAID',
     paymentMethodLabel: 'Cash on Delivery',
     paymentInstructions: 'Pay on arrival.',
     shippingMethodLabel: 'Home Delivery',
+    shippingAddress: quoteInput.shippingAddress,
+    currency: 'BGN',
+    subtotal: '8.50',
     shippingFee: '6.00',
     total: '14.50',
-    lines: [{ sku: variant.sku, quantity: 2, unitPrice: '4.25', lineTotal: '8.50' }],
+    lines: [
+      { sku: variant.sku, label: 'Visible', quantity: 2, unitPrice: '4.25', lineTotal: '8.50' },
+    ],
   };
   expect(placed).toEqual({ data: { placeOrder: receipt } });
   expect(order.customerId).toBe(accountCart.customerId);
@@ -1312,6 +1320,32 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     }),
   ).toEqual({ quantity: 1 });
 
+  const guestCheckoutToken = randomBytes(32).toString('base64url');
+  await database.cart.create({
+    data: {
+      ...categoryScope,
+      guestTokenHash: createHash('sha256').update(guestCheckoutToken).digest('hex'),
+    },
+  });
+  expect(
+    await storefront(publicA, add, { id: variant.id, quantity: 1 }, undefined, guestCheckoutToken),
+  ).toMatchObject({ data: { addCartLine: { cart: { itemCount: 1 } } } });
+  const guestReview = reviewedCart(
+    await storefront(publicA, quoteOperation, { input: quoteInput }, undefined, guestCheckoutToken),
+  );
+  expect(
+    await storefront(
+      publicA,
+      placeOperation,
+      { input: { ...quoteInput, ...guestReview } },
+      undefined,
+      guestCheckoutToken,
+    ),
+  ).toHaveProperty('data.placeOrder.id');
+  const guestOrder = await database.order.findFirstOrThrow({
+    where: { ...categoryScope, cartId: guestReview.cartId, customerId: null },
+  });
+
   expect(await saveVariants(variant.id, '5.00')).toEqual({
     data: { updateProduct: { variants: [{ id: variant.id }] } },
   });
@@ -1341,4 +1375,84 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(await storefront(publicA, remove, { id: newLine.id }, token)).toEqual({
     data: { removeCartLine: { itemCount: 0 } },
   });
+
+  const readOrders =
+    'query($offset:Int! = 0,$limit:Int! = 20){shopperOrders(offset:$offset,limit:$limit){items{id number placedAt status paymentMethodLabel shippingMethodLabel currency total} total offset limit}}';
+  const readOrder = `query($id:ID!){shopperOrder(id:$id){${receiptFields}}}`;
+  const orderSummary = {
+    id: receipt.id,
+    number: receipt.number,
+    placedAt: receipt.placedAt,
+    status: receipt.status,
+    paymentMethodLabel: receipt.paymentMethodLabel,
+    shippingMethodLabel: receipt.shippingMethodLabel,
+    currency: receipt.currency,
+    total: receipt.total,
+  };
+  for (const [offset, items] of [
+    [0, [orderSummary]],
+    [1, []],
+  ] as const) {
+    expect(await storefront(publicA, readOrders, { offset, limit: 1 }, token)).toEqual({
+      data: { shopperOrders: { items, total: 1, offset, limit: 1 } },
+    });
+  }
+  for (const [offset, limit] of [
+    [-1, 20],
+    [0, 0],
+    [0, 101],
+  ]) {
+    expect(await storefront(publicA, readOrders, { offset, limit }, token)).toMatchObject({
+      errors: [{ message: 'Invalid page' }],
+    });
+  }
+  expect(await storefront(publicA, readOrder, { id: order.id.toUpperCase() }, token)).toEqual({
+    data: { shopperOrder: receipt },
+  });
+  for (const id of [guestOrder.id, randomUUID(), 'invalid']) {
+    expect(await storefront(publicA, readOrder, { id }, token)).toEqual({
+      data: { shopperOrder: null },
+    });
+  }
+  expect(
+    await storefront(
+      publicA,
+      receiptOperation,
+      { orderId: guestOrder.id },
+      undefined,
+      guestCheckoutToken,
+    ),
+  ).toMatchObject({ data: { orderConfirmation: { id: guestOrder.id } } });
+  for (const [branch, bearer] of [
+    [publicA, foreignOwner],
+    [publicB, foreignShopBearer],
+  ] as const) {
+    expect(await storefront(branch, readOrders, {}, bearer)).toEqual({
+      data: { shopperOrders: { items: [], total: 0, offset: 0, limit: 20 } },
+    });
+    expect(await storefront(branch, readOrder, { id: order.id }, bearer)).toEqual({
+      data: { shopperOrder: null },
+    });
+  }
+  await database.shopperSession.update({
+    where: { ...categoryScope, tokenHash: createHash('sha256').update(token).digest('hex') },
+    data: { expiresAt: new Date(0) },
+  });
+  for (const [branch, bearer, cartToken] of [
+    [publicA, undefined, undefined],
+    [publicA, undefined, guestCheckoutToken],
+    [publicA, foreignShopBearer, undefined],
+    [publicA, tokens.operator, undefined],
+    [publicA, 'invalid', undefined],
+    [publicA, token, undefined],
+  ] as const) {
+    for (const [operation, variables] of [
+      [readOrders, {}],
+      [readOrder, { id: order.id }],
+    ] as const) {
+      expect(await storefront(branch, operation, variables, bearer, cartToken)).toMatchObject({
+        errors: [{ message: 'Sign in to this shop to view your orders' }],
+      });
+    }
+  }
 }, 15_000);

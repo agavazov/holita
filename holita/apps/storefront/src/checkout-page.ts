@@ -23,6 +23,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { CartState, rememberGuestReceipt } from './cart-state';
+import { checkoutCountries, defaultCountryCode } from './checkout-countries';
 import { StorefrontApi, type StorefrontCredentials } from './storefront-api';
 import { messages, type Language } from './storefront-messages';
 import { formatStorefrontMoney } from './storefront-money';
@@ -35,7 +36,6 @@ const contactFields = [
 ] as const;
 
 const addressFields = [
-  { name: 'countryCode', label: 'countryCode', autocomplete: 'country' },
   { name: 'city', label: 'city', autocomplete: 'address-level2' },
   { name: 'postalCode', label: 'postalCode', autocomplete: 'postal-code' },
   { name: 'line1', label: 'addressLine1', autocomplete: 'address-line1' },
@@ -107,7 +107,7 @@ function required(control: AbstractControl) {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './checkout-page.html',
-  styleUrl: './checkout-page.scss',
+  styleUrls: ['./checkout-layout.scss', './checkout-page.scss'],
 })
 export class CheckoutPage {
   readonly language = input.required<Language>();
@@ -124,6 +124,7 @@ export class CheckoutPage {
   protected readonly t = computed(() => messages[this.language()]);
   protected readonly contactFields = contactFields;
   protected readonly addressFields = addressFields;
+  protected readonly countries = computed(() => checkoutCountries(this.language()));
   protected readonly form = this.fb.group({
     contact: this.fb.group({
       name: ['', required],
@@ -131,7 +132,7 @@ export class CheckoutPage {
       phone: ['', required],
     }),
     shippingAddress: this.fb.group({
-      countryCode: ['', [required, Validators.pattern(/^[a-z]{2}$/i)]],
+      countryCode: [defaultCountryCode, required],
       city: ['', required],
       postalCode: ['', required],
       line1: ['', required],

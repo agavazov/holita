@@ -15,6 +15,12 @@
   margin: 0;
 }
 
+.receipt-number dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-app-space-3) var(--p-app-space-5);
+}
+
 .receipt-number dt,
 .receipt-methods dt {
   color: var(--shop-muted);
@@ -27,7 +33,12 @@
   font-weight: 700;
 }
 
+.receipt-number .app-num {
+  white-space: normal;
+}
+
 .receipt-number dl,
+.receipt-number dl > div,
 .receipt-methods > div {
   min-inline-size: 0;
 }

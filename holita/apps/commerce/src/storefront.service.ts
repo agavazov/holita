@@ -37,7 +37,7 @@ import type {
   Shopper,
   ShopperSession,
 } from './generated/graphql/storefront-types.js';
-import type { Scope } from './scope.js';
+import type { Scope, ShopperScope } from './scope.js';
 import { CatalogueRepository, type BrowseCriteria } from './products/catalogue.repository.js';
 import { CommerceRepository } from './products/commerce.repository.js';
 import { productImageUrl } from './products/product-images.js';
@@ -464,6 +464,14 @@ export class StorefrontService {
   }
   async me(context: StorefrontContext) {
     return this.verifiedShopper(await this.publicScope(context), context);
+  }
+  async requireShopper(context: StorefrontContext): Promise<ShopperScope> {
+    const scope = await this.publicScope(context);
+    const shopper = await this.verifiedShopper(scope, context);
+    if (!shopper) {
+      throw new UnauthorizedException('Sign in to this shop to view your orders');
+    }
+    return { ...scope, customerId: shopper.id };
   }
   async cartContext(context: StorefrontContext): Promise<CartContext> {
     const scope = await this.publicScope(context);

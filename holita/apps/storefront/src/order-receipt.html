@@ -1,0 +1,103 @@
+@let receipt = order();
+<div class="checkout-layout order-receipt">
+  <section class="shop-panel checkout-summary" aria-labelledby="receipt-summary-heading">
+    <div class="receipt-number">
+      <dl>
+        <div>
+          <dt>{{ t().orderNumber }}</dt>
+          <dd class="app-num">{{ receipt.number }}</dd>
+        </div>
+        @if (showPlacement()) {
+        <div>
+          <dt>{{ t().orderDate }}</dt>
+          <dd>
+            <time [attr.datetime]="receipt.placedAt">{{ placedOn() }}</time>
+          </dd>
+        </div>
+        <div>
+          <dt>{{ t().orderStatus }}</dt>
+          <dd>
+            <span
+              class="shop-chip"
+              [attr.data-tone]="receipt.status === 'COMPLETED' ? 'SUCCESS' : 'INFO'"
+            >
+              {{ receipt.status === 'COMPLETED' ? t().orderStatusCompleted : t().orderStatusPlaced
+              }}
+            </span>
+          </dd>
+        </div>
+        }
+      </dl>
+      @if (receipt.paymentStatus === 'UNPAID') {
+      <span class="shop-chip" data-tone="WARN">{{ t().paymentUnpaid }}</span>
+      }
+    </div>
+    <h2 id="receipt-summary-heading">{{ t().orderSummary }}</h2>
+    <ul class="checkout-lines" role="list">
+      @for (line of receipt.lines; track $index) {
+      <li class="checkout-line">
+        <div class="checkout-line-details">
+          <strong>{{ line.label }}</strong>
+          <span>{{ line.sku }}</span>
+          <span class="app-num">{{ line.quantity }} × {{ formatPrice(line.unitPrice) }}</span>
+        </div>
+        <strong class="app-num checkout-line-total">{{ formatPrice(line.lineTotal) }}</strong>
+      </li>
+      }
+    </ul>
+    <dl class="checkout-totals">
+      <div>
+        <dt>{{ t().subtotal }}</dt>
+        <dd class="app-num">{{ formatPrice(receipt.subtotal) }}</dd>
+      </div>
+      <div>
+        <dt>{{ t().shippingFee }}</dt>
+        <dd class="app-num">{{ formatPrice(receipt.shippingFee) }}</dd>
+      </div>
+      <div class="checkout-total">
+        <dt>{{ t().quoteTotal }}</dt>
+        <dd class="app-num">{{ formatPrice(receipt.total) }}</dd>
+      </div>
+    </dl>
+  </section>
+  <div class="shop-panel shop-panel--sections">
+    <section class="shop-panel-section checkout-section" aria-labelledby="receipt-contact-heading">
+      <h2 id="receipt-contact-heading">{{ t().contactDetails }}</h2>
+      <div class="receipt-address">
+        <strong>{{ receipt.contact.name }}</strong>
+        <span>{{ receipt.contact.email }}</span>
+        <span>{{ receipt.contact.phone }}</span>
+      </div>
+    </section>
+    <section class="shop-panel-section checkout-section" aria-labelledby="receipt-address-heading">
+      <h2 id="receipt-address-heading">{{ t().shippingAddress }}</h2>
+      <div class="receipt-address">
+        <strong>{{ receipt.shippingAddress.line1 }}</strong>
+        @if (receipt.shippingAddress.line2; as line2) {
+        <span>{{ line2 }}</span>
+        }
+        <span>{{ receipt.shippingAddress.postalCode }} {{ receipt.shippingAddress.city }}</span>
+        <span>{{ receipt.shippingAddress.countryCode }}</span>
+      </div>
+    </section>
+    <section class="shop-panel-section checkout-section" aria-labelledby="receipt-methods-heading">
+      <h2 id="receipt-methods-heading">{{ t().checkoutMethods }}</h2>
+      <dl class="receipt-methods">
+        <div>
+          <dt>{{ t().shippingMethod }}</dt>
+          <dd>{{ receipt.shippingMethodLabel }}</dd>
+        </div>
+        <div>
+          <dt>{{ t().paymentMethod }}</dt>
+          <dd>{{ receipt.paymentMethodLabel }}</dd>
+        </div>
+      </dl>
+      @if (receipt.paymentInstructions) {
+      <div class="checkout-note">
+        <strong>{{ t().paymentInstructions }}</strong>
+        <p>{{ receipt.paymentInstructions }}</p>
+      </div>
+      }
+    </section>
+  </div>
+</div>

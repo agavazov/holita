@@ -1,6 +1,6 @@
 # 118 Admin order management
 
-**Status:** Ready after [117](117-holita-shopper-orders.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

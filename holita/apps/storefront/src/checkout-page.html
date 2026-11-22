@@ -1,5 +1,5 @@
 <section class="checkout-view" aria-labelledby="checkout-title">
-  <header class="shop-page-heading checkout-heading">
+  <header class="shop-page-heading shop-page-heading--with-link">
     <h1 id="checkout-title">{{ t().checkoutTitle }}</h1>
     <a class="shop-text-link" [routerLink]="[...base(), 'cart']">{{ t().backToCart }}</a>
   </header>
@@ -23,13 +23,17 @@
     } @else {
     <form
       #checkoutForm
-      class="checkout-panel checkout-form"
+      class="shop-panel shop-panel--sections"
       id="checkout-form"
       [formGroup]="form"
       (ngSubmit)="review()"
     >
       <fieldset class="checkout-form-content" [disabled]="busy()">
-        <section class="checkout-section" aria-labelledby="contact-heading" formGroupName="contact">
+        <section
+          class="shop-panel-section checkout-section"
+          aria-labelledby="contact-heading"
+          formGroupName="contact"
+        >
           <h2 id="contact-heading">{{ t().contactDetails }}</h2>
           <div class="checkout-fields">
             @for (field of contactFields; track field.name) { @let control =
@@ -54,16 +58,35 @@
           </div>
         </section>
         <section
-          class="checkout-section"
+          class="shop-panel-section checkout-section"
           aria-labelledby="address-heading"
           formGroupName="shippingAddress"
         >
           <h2 id="address-heading">{{ t().shippingAddress }}</h2>
           <div class="checkout-fields">
+            @let countryError = fieldError( 'shippingAddress.countryCode',
+            form.controls.shippingAddress.controls.countryCode );
+            <div class="shop-form-field">
+              <label for="countryCode">{{ t().country }}</label>
+              <select
+                id="countryCode"
+                formControlName="countryCode"
+                autocomplete="country"
+                required
+                [attr.aria-invalid]="countryError ? 'true' : null"
+                [attr.aria-describedby]="countryError ? 'country-error' : null"
+              >
+                @for (country of countries(); track country.code) {
+                <option [value]="country.code">{{ country.label }}</option>
+                }
+              </select>
+              @if (countryError) {
+              <span class="field-error" id="country-error">{{ countryError }}</span>
+              }
+            </div>
             @for (field of addressFields; track field.name) { @let control =
             form.controls.shippingAddress.controls[field.name]; @let error =
-            fieldError('shippingAddress.' + field.name, control); @let country = field.name ===
-            'countryCode';
+            fieldError('shippingAddress.' + field.name, control);
             <div
               class="shop-form-field"
               [class.checkout-field-wide]="field.name === 'line1' || field.name === 'line2'"
@@ -74,20 +97,17 @@
                 [formControlName]="field.name"
                 [autocomplete]="field.autocomplete"
                 [required]="field.name !== 'line2'"
-                [attr.maxlength]="country ? 2 : null"
                 [attr.aria-invalid]="error ? 'true' : null"
-                [attr.aria-describedby]="error ? field.name + '-error' : (country ? 'country-hint' : null)"
+                [attr.aria-describedby]="error ? field.name + '-error' : null"
               />
               @if (error) {
               <span class="field-error" [id]="field.name + '-error'">{{ error }}</span>
-              } @else if (country) {
-              <span class="checkout-hint" id="country-hint">{{ t().countryCodeHint }}</span>
               }
             </div>
             }
           </div>
         </section>
-        <section class="checkout-section" aria-labelledby="methods-heading">
+        <section class="shop-panel-section checkout-section" aria-labelledby="methods-heading">
           <h2 id="methods-heading">{{ t().checkoutMethods }}</h2>
           <div class="checkout-fields checkout-methods">
             @let shippingError = fieldError('shippingMethodId', form.controls.shippingMethodId); @if
@@ -102,9 +122,12 @@
                 [attr.aria-describedby]="shippingError ? 'shipping-method-error' : null"
               >
                 <option value="">{{ t().selectMethod }}</option>
-                @for (method of state.shippingMethods; track method.id) {
+                @for (method of state.shippingMethods; track method.id) { @let quoted = reviewed &&
+                reviewed.shippingMethod.id === method.id ? reviewed : null; @let fee =
+                quoted?.shippingFee ?? (reviewed ? null : method.fixedFee);
                 <option [value]="method.id">
-                  {{ method.label }} · {{ formatPrice(method.fixedFee) }}
+                  {{ quoted?.shippingMethod.label ?? method.label }}{{ fee === null ? '' : ' · ' +
+                  formatPrice(fee) }}
                 </option>
                 }
               </select>
@@ -127,7 +150,10 @@
               >
                 <option value="">{{ t().selectMethod }}</option>
                 @for (method of state.paymentMethods; track method.id) {
-                <option [value]="method.id">{{ method.label }}</option>
+                <option [value]="method.id">
+                  {{ reviewed && reviewed.paymentMethod.id === method.id ?
+                  reviewed.paymentMethod.label : method.label }}
+                </option>
                 }
               </select>
               @if (paymentError) {
@@ -148,7 +174,7 @@
       </fieldset>
     </form>
     }
-    <aside class="checkout-panel checkout-summary" aria-labelledby="summary-heading">
+    <aside class="shop-panel checkout-summary" aria-labelledby="summary-heading">
       <h2 id="summary-heading">{{ t().orderSummary }}</h2>
       <ul class="checkout-lines" role="list">
         @for (line of reviewed?.lines ?? state.cart.lines; track line.id) {

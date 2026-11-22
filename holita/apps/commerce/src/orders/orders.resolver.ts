@@ -2,6 +2,8 @@ import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type {
   MutationPlaceOrderArgs,
   QueryOrderConfirmationArgs,
+  QueryShopperOrderArgs,
+  QueryShopperOrdersArgs,
 } from '../generated/graphql/storefront-types.js';
 import { StorefrontService, type StorefrontContext } from '../storefront.service.js';
 import { OrdersService } from './orders.service.js';
@@ -12,6 +14,16 @@ export class OrdersResolver {
     private readonly orders: OrdersService,
     private readonly storefront: StorefrontService,
   ) {}
+
+  @Query('shopperOrders')
+  async shopperOrders(@Context() context: StorefrontContext, @Args() args: QueryShopperOrdersArgs) {
+    return this.orders.shopperOrders(await this.storefront.requireShopper(context), args);
+  }
+
+  @Query('shopperOrder')
+  async shopperOrder(@Context() context: StorefrontContext, @Args() { id }: QueryShopperOrderArgs) {
+    return this.orders.shopperOrder(await this.storefront.requireShopper(context), id);
+  }
 
   @Query('orderConfirmation')
   async confirmation(

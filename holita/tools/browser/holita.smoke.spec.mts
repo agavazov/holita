@@ -1328,7 +1328,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Shopper');
       await page.getByRole('textbox', { name: 'Email', exact: true }).fill(shopperEmail);
       await page.getByRole('textbox', { name: 'Phone', exact: true }).fill('+359 2 555 0100');
-      await page.locator('#countryCode').fill('BG');
+      await page.locator('#countryCode').selectOption('BG');
       await page.getByRole('textbox', { name: 'City', exact: true }).fill('Sofia');
       await page.getByRole('textbox', { name: 'Postal code', exact: true }).fill('1000');
       await page
@@ -1458,6 +1458,32 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       });
       expect(await denied.json()).toEqual({ data: { orderConfirmation: null } });
     }
+
+    await shopper.goto(configuredProductUrl);
+    await addSatin();
+    await shopper.getByRole('link', { name: 'Cart, 1 item', exact: true }).click();
+    await reviewCheckout(shopper, '30.00', '36.50');
+    await shopper.getByRole('button', { name: 'Place order', exact: true }).click();
+    await shopper.waitForURL(`${shopApp.origin}/s/${shopId}/checkout/confirmation/*`);
+    const accountOrderId = new URL(shopper.url()).pathname.split('/').at(-1);
+    if (!accountOrderId) {
+      throw new Error('Missing account order ID in the confirmation route');
+    }
+    const orderNumber = `H-${accountOrderId}`;
+    await shopper.getByRole('link', { name: 'My account' }).click();
+    const orders = waitForCart(shopper, 'ShopperOrders');
+    await shopper.getByRole('link', { name: 'My orders', exact: true }).click();
+    expect(await (await orders).json()).toMatchObject({
+      data: { shopperOrders: { items: [{ id: accountOrderId, number: orderNumber }], total: 1 } },
+    });
+    const detail = waitForCart(shopper, 'ShopperOrder');
+    await shopper.getByRole('link', { name: orderNumber, exact: true }).click();
+    await detail;
+    const reloadedOrder = waitForCart(shopper, 'ShopperOrder');
+    await shopper.reload();
+    expect(await (await reloadedOrder).json()).toMatchObject({
+      data: { shopperOrder: { number: orderNumber, shippingFee: '6.50', total: '36.50' } },
+    });
 
     await merchant.getByRole('link', { name: 'Customers', exact: true }).click();
     await expect(merchant.getByText('Shopper', { exact: true })).toBeVisible();

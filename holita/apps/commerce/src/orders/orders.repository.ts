@@ -2,10 +2,13 @@ import { Injectable } from '@nestjs/common';
 import type { CartOwner } from '../cart/cart.repository.js';
 import { DatabaseService } from '../database.service.js';
 import { Prisma } from '../generated/prisma/client.js';
-import type { Scope } from '../scope.js';
+import type { Scope, ShopperScope } from '../scope.js';
 
 function orderLines(scope: Scope) {
-  return { where: scope, orderBy: { sortOrder: 'asc' } } satisfies Prisma.Order$linesArgs;
+  return {
+    where: scope,
+    orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+  } satisfies Prisma.Order$linesArgs;
 }
 
 @Injectable()
@@ -15,6 +18,41 @@ export class OrdersRepository {
   transaction<T>(work: (tx: Prisma.TransactionClient) => Promise<T>) {
     return this.database.client.$transaction(work, {
       isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+    });
+  }
+
+  async shopperOrders(scope: ShopperScope, offset: number, limit: number) {
+    const order = this.database.client.order;
+    const [items, total] = await this.database.client.$transaction(
+      [
+        order.findMany({
+          where: scope,
+          skip: offset,
+          take: limit,
+          orderBy: [{ placedAt: 'desc' }, { id: 'desc' }],
+          select: {
+            id: true,
+            orderNumber: true,
+            placedAt: true,
+            status: true,
+            shippingMethodLabel: true,
+            paymentMethodLabel: true,
+            total: true,
+            currency: true,
+          },
+        }),
+        order.count({ where: scope }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return { items, total, offset, limit };
+  }
+
+  shopperOrder(scope: ShopperScope, id: string) {
+    const { tenantId, branchId } = scope;
+    return this.database.client.order.findUnique({
+      where: { ...scope, id },
+      include: { lines: orderLines({ tenantId, branchId }) },
     });
   }
 

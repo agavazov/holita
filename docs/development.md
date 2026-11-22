@@ -556,9 +556,14 @@ After reviewing the total, choose Place order. A change in available stock, pric
 methods prompts you to review the checkout again. The confirmation shows the placed, unpaid order
 with its saved items, delivery fee and payment instructions. Signed-in shoppers can reopen their
 confirmation when signed in to the same shop. Guest confirmations can be reopened in the browser
-that placed the order. The Sofia seed includes one unpaid order for the demo shopper.
+that placed the order.
 The storefront graph uses `placeOrder` with the reviewed cart ID and quote revision, and
 `orderConfirmation` with the order ID and the placing shopper's authorization.
+
+Sign in to the shop and open Account → My orders. The list and detail show orders linked to that
+shopper at placement, with the saved items, delivery and payment details, charged fee and totals.
+Use Back to orders to return to the same list page. The Sofia demo shopper has a placed and a
+completed order. The storefront graph exposes `shopperOrders` and `shopperOrder` for this history.
 
 The Product drawer's Descriptions section accepts optional Bulgarian and English plain text.
 The storefront product page shows the selected language when available and falls back to the

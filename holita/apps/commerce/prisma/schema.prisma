@@ -42,6 +42,7 @@ enum ProductBadgeColor {
 
 enum OrderStatus {
   PLACED @map("placed")
+  COMPLETED @map("completed")
   @@map("orderStatus")
 }
 
@@ -448,6 +449,7 @@ model Order {
   @@unique([tenantId, branchId, cartId])
   @@unique([tenantId, branchId, orderNumber])
   @@index([tenantId, branchId, customerId])
+  @@index([tenantId, branchId, customerId, placedAt(sort: Desc), id(sort: Desc)])
   @@map("order")
 }
 

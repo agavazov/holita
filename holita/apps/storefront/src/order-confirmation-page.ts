@@ -13,14 +13,13 @@ import { RouterLink } from '@angular/router';
 import { CartState, guestReceiptToken, shopperStorageKey } from './cart-state';
 import { StorefrontApi } from './storefront-api';
 import { messages, type Language } from './storefront-messages';
-import { formatStorefrontMoney } from './storefront-money';
+import { OrderReceipt } from './order-receipt';
 
 @Component({
   selector: 'holita-order-confirmation',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, OrderReceipt],
   templateUrl: './order-confirmation-page.html',
-  styleUrls: ['./checkout-page.scss', './order-confirmation-page.scss'],
 })
 export class OrderConfirmationPage {
   readonly language = input.required<Language>();
@@ -55,23 +54,11 @@ export class OrderConfirmationPage {
   protected readonly loading = this.request.isLoading;
   protected readonly loadFailed = computed(() => this.request.status() === 'error');
   protected readonly sessionExpired = this.cartState.sessionExpired;
-  private readonly price = computed(
-    () =>
-      new Intl.NumberFormat(this.language(), {
-        style: 'currency',
-        currency: this.order()?.currency ?? 'BGN',
-      }),
-  );
-
   constructor() {
     afterNextRender(() => this.heading()?.nativeElement.focus());
   }
 
   protected retry() {
     this.request.reload();
-  }
-
-  protected formatPrice(value: string) {
-    return formatStorefrontMoney(value, this.price());
   }
 }
