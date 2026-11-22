@@ -14,7 +14,12 @@ import {
   validatePassword,
   verifyPassword,
 } from '@osnova/auth';
-import { Prisma, type Brand, type Product } from './generated/prisma/client.js';
+import {
+  Prisma,
+  type Brand,
+  type Product,
+  type ProductVariant,
+} from './generated/prisma/client.js';
 import { brandLogoUrl } from './brands/brand-images.js';
 import { BrandsRepository } from './brands/brands.repository.js';
 import { CategoriesService } from './categories/categories.service.js';
@@ -23,8 +28,10 @@ import { CollectionsService } from './collections/collections.service.js';
 import type {
   CatalogueCategory,
   CatalogueListing,
+  CatalogueOption,
   CataloguePage,
   CatalogueProduct,
+  CatalogueVariantSelection,
   QueryCatalogueArgs,
 } from './generated/graphql/storefront-types.js';
 import type { Scope } from './scope.js';
@@ -125,11 +132,20 @@ function browseCriteria({
 }
 
 type CatalogueProductRow = NonNullable<Awaited<ReturnType<CommerceRepository['publicProduct']>>>;
+type CatalogueProductSummary = Omit<CatalogueProduct, 'variantSelection'>;
+type CataloguePageSummary = Omit<CataloguePage, 'items'> & { items: CatalogueProductSummary[] };
+
+function variantAvailable({
+  inventoryTracked,
+  quantity,
+}: Pick<ProductVariant, 'inventoryTracked' | 'quantity'>): boolean {
+  return !inventoryTracked || quantity > 0;
+}
 
 function catalogueProduct(
   item: CatalogueProductRow,
   categories: ReadonlyMap<string, CatalogueCategory>,
-): CatalogueProduct {
+): CatalogueProductSummary {
   const variant = item.variants[0];
   if (!variant) {
     throw new Error('Public catalogue product is missing an active variant');
@@ -147,9 +163,7 @@ function catalogueProduct(
     descriptionBg: item.descriptionBg,
     descriptionEn: item.descriptionEn,
     price: variant.price.toFixed(2),
-    available: item.variants.some(
-      ({ inventoryTracked, quantity }) => !inventoryTracked || quantity > 0,
-    ),
+    available: item.variants.some(variantAvailable),
     brand: item.brand?.status === 'ACTIVE' ? catalogueBrand(item.brand) : null,
     category: category ?? null,
     categoryPath: category ? categoryPathFor(category.id, categories) : [],
@@ -221,7 +235,10 @@ export class StorefrontService {
     }
     return shop;
   }
-  async catalogue(context: StorefrontContext, args: QueryCatalogueArgs): Promise<CataloguePage> {
+  async catalogue(
+    context: StorefrontContext,
+    args: QueryCatalogueArgs,
+  ): Promise<CataloguePageSummary> {
     const scope = await this.publicScope(context);
     const page = await this.browsing.page(scope, { kind: 'all' }, browseCriteria(args));
     if (!page) {
@@ -234,7 +251,7 @@ export class StorefrontService {
     page: NonNullable<Awaited<ReturnType<CatalogueRepository['page']>>>,
     tree?: CatalogueCategory[],
     listing?: CatalogueListing,
-  ): Promise<CataloguePage> {
+  ): Promise<CataloguePageSummary> {
     const categories = tree
       ? new Map(tree.map((category) => [category.id, category]))
       : await this.productCategories(scope, page.items);
@@ -253,6 +270,48 @@ export class StorefrontService {
     }
     const item = await this.products.publicProduct(scope, id.toLowerCase());
     return item ? catalogueProduct(item, await this.productCategories(scope, [item])) : null;
+  }
+  async productVariantSelection(
+    context: StorefrontContext,
+    id: string,
+  ): Promise<CatalogueVariantSelection> {
+    const item = await this.products.publicProductVariantSelection(
+      await this.publicScope(context),
+      id,
+    );
+    const variants = item?.variants ?? [];
+    const distinctValues = new Map(
+      variants.flatMap(({ values }) =>
+        values.map(({ optionValue }) => [optionValue.id, optionValue] as const),
+      ),
+    );
+    const orderedValues = [...distinctValues.values()].sort(
+      (left, right) =>
+        left.option.name.localeCompare(right.option.name) ||
+        left.option.id.localeCompare(right.option.id) ||
+        left.sortOrder - right.sortOrder ||
+        left.id.localeCompare(right.id),
+    );
+    const optionGroups = new Map<string, CatalogueOption>();
+    for (const { id, label, option } of orderedValues) {
+      const group = optionGroups.get(option.id) ?? { ...option, values: [] };
+      group.values.push({ id, label });
+      optionGroups.set(option.id, group);
+    }
+    const orderedValueIds = orderedValues.map(({ id }) => id);
+    return {
+      options: [...optionGroups.values()],
+      variants: variants.map((variant) => {
+        const valueIds = new Set(variant.values.map(({ optionValue }) => optionValue.id));
+        return {
+          id: variant.id,
+          sku: variant.sku,
+          price: variant.price.toFixed(2),
+          available: variantAvailable(variant),
+          optionValueIds: orderedValueIds.filter((id) => valueIds.has(id)),
+        };
+      }),
+    };
   }
   async productSpecifications(context: StorefrontContext, id: string) {
     return this.characteristics.publicSpecifications(await this.publicScope(context), id);
@@ -295,7 +354,7 @@ export class StorefrontService {
     context: StorefrontContext,
     kind: 'category' | 'brand' | 'collection' | 'tag',
     args: QueryCatalogueArgs & { slug: string },
-  ): Promise<CataloguePage | null> {
+  ): Promise<CataloguePageSummary | null> {
     const scope = await this.publicScope(context);
     const criteria = browseCriteria(args);
     const { slug } = args;

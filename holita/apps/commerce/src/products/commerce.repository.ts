@@ -158,6 +158,45 @@ export class CommerceRepository {
     );
   }
 
+  publicProductVariantSelection(scope: Scope, id: string) {
+    return this.database.client.$transaction(
+      (tx) =>
+        tx.product.findUnique({
+          where: { id, ...catalogueProductWhere(scope) },
+          select: {
+            variants: {
+              where: { ...scope, active: true },
+              orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+              select: {
+                id: true,
+                sku: true,
+                price: true,
+                quantity: true,
+                inventoryTracked: true,
+                values: {
+                  where: {
+                    ...scope,
+                    optionValue: { ...scope, option: { ...scope, active: true } },
+                  },
+                  select: {
+                    optionValue: {
+                      select: {
+                        id: true,
+                        label: true,
+                        sortOrder: true,
+                        option: { select: { id: true, name: true } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        }),
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+  }
+
   image(scope: Scope, storageKey: string, publicOnly: boolean) {
     return this.database.client.productImage.findFirst({
       where: {

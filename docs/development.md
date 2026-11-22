@@ -528,10 +528,14 @@ with zero stock.
 Omit quantity for saved variants in `updateProduct`. The mutation rejects a supplied quantity
 that differs from the saved stock count.
 
-The storefront lists active products with an active variant and uses the lowest active variant
-price on cards and detail pages. The public `CatalogueProduct.available` field is true when
-at least one active variant has stock or sells without inventory tracking. Sold-out products
-remain visible. The Sofia demo shop includes stocked, sold-out and untracked variants.
+The storefront lists active products with an active variant and shows the lowest active variant
+price on catalogue cards. The public `CatalogueProduct.available` field reports whether any active
+variant is available. On a product page, `CatalogueProduct.variantSelection` supplies the active
+variants and their public option labels. The page starts with the first available variant in the
+merchant's saved order, or the first active variant when all are sold out. Choosing a combination
+updates its price and availability. A variant is available when it has stock or sells without
+inventory tracking. The Sofia demo shop includes a configurable product with two differently
+priced combinations, one in stock and one sold out.
 
 The Product drawer's Descriptions section accepts optional Bulgarian and English plain text.
 The storefront product page shows the selected language when available and falls back to the

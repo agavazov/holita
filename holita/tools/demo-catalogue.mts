@@ -2,7 +2,7 @@ type DemoVariant = readonly [
   sku: string,
   price: string,
   quantity: number,
-  colour?: number,
+  optionValues?: readonly number[],
   inventoryTracked?: boolean,
 ];
 
@@ -12,7 +12,7 @@ type DemoProduct = readonly [
   price: string,
   status?: 'active' | 'draft' | 'archived',
   category?: number,
-  variants?: readonly DemoVariant[],
+  variants?: readonly DemoVariant[] | undefined,
   descriptions?: Readonly<{ bg: string; en: string }>,
 ];
 
@@ -140,8 +140,8 @@ export const demoCatalogue: readonly DemoBrand[] = [
         'active',
         3,
         [
-          ['PAN-28-SAND', '79.90', 7, 1],
-          ['PAN-28-GRAPHITE', '84.90', 4, 2],
+          ['PAN-28-SAND', '79.90', 7, [1]],
+          ['PAN-28-GRAPHITE', '84.90', 4, [2]],
         ],
       ],
       [
@@ -150,7 +150,7 @@ export const demoCatalogue: readonly DemoBrand[] = [
         '69.90',
         'active',
         3,
-        [['PAN-24-GRAPHITE', '69.90', 0, 2, true]],
+        [['PAN-24-GRAPHITE', '69.90', 0, [2], true]],
       ],
       [
         57,
@@ -182,7 +182,7 @@ export const demoCatalogue: readonly DemoBrand[] = [
         '49.90',
         'active',
         3,
-        [['DL-111-SOLD', '49.90', 0, undefined, true]],
+        [['DL-111-SOLD', '49.90', 0, [], true]],
         {
           bg: 'Глинена касерола с капак и светла глазура за бавно печене.',
           en: 'A lidded clay casserole with a light glaze for slow baking.',
@@ -194,10 +194,25 @@ export const demoCatalogue: readonly DemoBrand[] = [
         '59.90',
         'active',
         3,
-        [['DL-111-FREE', '59.90', 0, undefined, false]],
+        [['DL-111-FREE', '59.90', 0, [], false]],
         {
           bg: 'Керамична тенджера с две дръжки и капак за приготвяне на ястия във фурната.',
           en: 'A ceramic pot with two handles and a lid for oven cooking.',
+        },
+      ],
+      [
+        71,
+        'Керамичен съд „Пясъчна глина“',
+        '39.90',
+        'active',
+        3,
+        [
+          ['DEMO-71-SAND-S', '39.90', 0, [1, 3]],
+          ['DEMO-71-GRAPHITE-L', '49.90', 6, [2, 4]],
+        ],
+        {
+          bg: 'Керамичен съд с две дръжки за печене и сервиране.',
+          en: 'A two-handled ceramic dish for baking and serving.',
         },
       ],
     ],

@@ -168,8 +168,23 @@ query CatalogueProduct($id: ID!) {
     name
     descriptionBg
     descriptionEn
-    price
-    available
+    variantSelection {
+      options {
+        id
+        name
+        values {
+          id
+          label
+        }
+      }
+      variants {
+        id
+        sku
+        price
+        available
+        optionValueIds
+      }
+    }
     images {
       url
       altText

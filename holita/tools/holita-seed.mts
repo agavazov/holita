@@ -145,13 +145,11 @@ async function seedCatalogue(): Promise<void> {
         descriptions,
       ] of brand.products) {
         const productId = fixtureId('52', id);
-        const variants = configuredVariants ?? [
-          [`DEMO-${String(id)}`, price, 0, undefined] as const,
-        ];
+        const variants = configuredVariants ?? [[`DEMO-${String(id)}`, price, 0] as const];
         const valueIds = [
           ...new Set(
-            variants.flatMap(([, , , colour]) =>
-              colour === undefined ? [] : [fixtureId('82', colour)],
+            variants.flatMap(([, , , values = []]) =>
+              values.map((value) => fixtureId('82', value)),
             ),
           ),
         ];
@@ -186,13 +184,11 @@ async function seedCatalogue(): Promise<void> {
         productsInserted += product.rowCount;
         for (const [
           sortOrder,
-          [sku, variantPrice, quantity, colour, inventoryTracked],
+          [sku, variantPrice, quantity, values = [], inventoryTracked],
         ] of variants.entries()) {
           const variantId = fixtureId('92', id * 10 + sortOrder);
-          const optionValueId = colour === undefined ? null : fixtureId('82', colour);
-          const key = createHash('sha256')
-            .update(optionValueId ?? '')
-            .digest('hex');
+          const optionValueIds = values.map((value) => fixtureId('82', value)).sort();
+          const key = createHash('sha256').update(optionValueIds.join(',')).digest('hex');
           await client.query(
             `INSERT INTO "productVariant" ("id", "tenantId", "branchId", "productId", "sku", "price",
                 "quantity", "inventoryTracked", "combinationKey", "sortOrder")
@@ -210,7 +206,7 @@ async function seedCatalogue(): Promise<void> {
               sortOrder,
             ],
           );
-          if (optionValueId) {
+          for (const optionValueId of optionValueIds) {
             await client.query(
               `INSERT INTO "productVariantValue" ("tenantId", "branchId", "variantId", "optionValueId")
                VALUES ($1, $2, $3, $4)`,

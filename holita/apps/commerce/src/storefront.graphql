@@ -35,6 +35,7 @@ type CatalogueProduct {
   price: String!
   "Whether at least one active variant can be sold."
   available: Boolean!
+  variantSelection: CatalogueVariantSelection!
   brand: CatalogueBrand
   category: CatalogueCategory
   "The visible categories from the root through the product's category."
@@ -84,6 +85,20 @@ type CatalogueOption {
   id: ID!
   name: String!
   values: [CatalogueOptionValue!]!
+}
+type CatalogueVariantSelection {
+  "Active option groups and their values used by these variants."
+  options: [CatalogueOption!]!
+  "Active variants in merchant order, including sold-out variants."
+  variants: [CatalogueVariant!]!
+}
+type CatalogueVariant {
+  id: ID!
+  sku: String!
+  price: String!
+  available: Boolean!
+  "Visible values in option group order."
+  optionValueIds: [ID!]!
 }
 type CatalogueFacets {
   brands: [CatalogueBrand!]!

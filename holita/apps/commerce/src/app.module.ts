@@ -4,7 +4,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage } from 'node:http';
 import { CommerceResolver } from './products/commerce.resolver.js';
-import { StorefrontResolver } from './storefront.resolver.js';
+import { CatalogueProductResolver, StorefrontResolver } from './storefront.resolver.js';
 import { StorefrontService } from './storefront.service.js';
 import { CustomersModule } from './customers/customers.module.js';
 import { CustomersResolver } from './customers/customers.resolver.js';
@@ -66,7 +66,7 @@ class OperatorModule {}
     CustomersModule,
   ],
   controllers: [BrandImagesController, ProductImagesController],
-  providers: [StorefrontResolver, StorefrontService],
+  providers: [StorefrontResolver, CatalogueProductResolver, StorefrontService],
 })
 class StorefrontModule {}
 const context = ({ req }: { req: IncomingMessage }) => ({

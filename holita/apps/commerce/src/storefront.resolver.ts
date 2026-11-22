@@ -1,5 +1,6 @@
-import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Context, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import type {
+  CatalogueProduct,
   MutationRegisterShopperArgs,
   MutationSignInShopperArgs,
   QueryCatalogueArgs,
@@ -15,6 +16,19 @@ import type {
   QueryCatalogueProductSpecificationsArgs,
 } from './generated/graphql/storefront-types.js';
 import { StorefrontService, type StorefrontContext } from './storefront.service.js';
+
+@Resolver('CatalogueProduct')
+export class CatalogueProductResolver {
+  constructor(private readonly service: StorefrontService) {}
+
+  @ResolveField('variantSelection')
+  variantSelection(
+    @Parent() product: Pick<CatalogueProduct, 'id'>,
+    @Context() context: StorefrontContext,
+  ) {
+    return this.service.productVariantSelection(context, product.id);
+  }
+}
 
 @Resolver()
 export class StorefrontResolver {

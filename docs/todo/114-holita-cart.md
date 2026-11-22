@@ -1,6 +1,6 @@
 # 114 Shopper cart
 
-**Status:** Ready after [113](113-holita-storefront-variant-choice.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

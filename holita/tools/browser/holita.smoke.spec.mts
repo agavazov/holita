@@ -800,12 +800,12 @@ test('staff creates a merchant and its administrator creates a product', async (
         ],
       },
     });
-    const galleryQuery = async (): Promise<unknown> => {
+    const galleryQuery = async (branchId = shopId): Promise<unknown> => {
       const response = await shopper.request.post(`${shopApp.origin}/graphql`, {
-        headers: { 'x-branch-id': shopId },
+        headers: { 'x-branch-id': branchId },
         data: {
           query: `query($id:ID!){
-            catalogueProduct(id:$id){coverImage{url altText} images{url altText}}
+            catalogueProduct(id:$id){coverImage{url altText} images{url altText} variantSelection{variants{id}}}
             catalogue{items{id coverImage{url altText}}}
           }`,
           variables: { id: productId },
@@ -836,6 +836,7 @@ test('staff creates a merchant and its administrator creates a product', async (
     const description = shopper.locator('.product-description');
     await expect(description).toHaveText(descriptionEn);
     const availability = shopper.locator('.product-availability');
+    await expect(shopper.locator('.product-price')).toHaveText(/\b25\.50\b/);
     await expect(availability).toHaveText('In stock');
     await shopper.getByRole('button', { name: 'BG', exact: true }).click();
     await expect(description).toHaveText(descriptionBg);
@@ -1038,6 +1039,14 @@ test('staff creates a merchant and its administrator creates a product', async (
     await filtered.getByRole('button', { name: 'Apply', exact: true }).click();
     await expect(filtered.locator('.catalogue-card h2')).toHaveText([configuredProductName]);
     const sharedUrl = filtered.url();
+    await filtered.getByRole('link', { name: configuredProductName, exact: true }).click();
+    const variantPrice = filtered.locator('.product-price');
+    const variantAvailability = filtered.locator('.product-availability');
+    await expect(variantPrice).toHaveText(/\b30\.00\b/);
+    await expect(variantAvailability).toHaveText('In stock');
+    await filtered.getByRole('radio', { name: 'Gloss', exact: true }).press('Space');
+    await expect(variantPrice).toHaveText(/\b24\.00\b/);
+    await expect(variantAvailability).toHaveText('Out of stock');
     await filtered.close();
     const reopened = await shopperContext.newPage();
     await reopened.goto(sharedUrl);
@@ -1109,6 +1118,9 @@ test('staff creates a merchant and its administrator creates a product', async (
     });
     expect(await specificationsQuery(secondShopId)).toEqual({
       data: { catalogueProductSpecifications: [] },
+    });
+    expect(await galleryQuery(secondShopId)).toEqual({
+      data: { catalogueProduct: null, catalogue: { items: [] } },
     });
     await shopper.goto(`${shopApp.origin}/s/${secondShopId}`);
     await expect(shopper.getByRole('link', { name: 'Second shop', exact: true })).toBeVisible();

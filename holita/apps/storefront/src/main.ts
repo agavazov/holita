@@ -24,6 +24,14 @@ import { StorefrontApi } from './storefront-api';
 import { CatalogueBrowse } from './catalogue-browse';
 import { browseSections } from './catalogue-url';
 import { availabilitySeverity } from './product-display';
+import type { CatalogueProductQuery } from './generated/operations';
+
+type VariantSelection = NonNullable<CatalogueProductQuery['catalogueProduct']>['variantSelection'];
+type ProductVariant = VariantSelection['variants'][number];
+
+function preferredVariant(variants: readonly ProductVariant[]): ProductVariant | null {
+  return variants.find((variant) => variant.available) ?? variants[0] ?? null;
+}
 
 @Component({
   selector: 'holita-storefront-page',
@@ -150,14 +158,59 @@ import { availabilitySeverity } from './product-display';
                   </a>
                 }
                 <h1>{{ item.name }}</h1>
-                <div class="product-offer">
-                  <p class="app-num product-price">{{ formatPrice(item.price) }}</p>
-                  <p-tag
-                    class="product-availability"
-                    [value]="item.available ? t().inStock : t().outOfStock"
-                    [severity]="availabilitySeverity(item.available)"
-                  />
-                </div>
+                @if (selectedVariant(); as variant) {
+                  @let available = sellableVariantId() !== null;
+                  <div class="product-offer" role="status" aria-atomic="true">
+                    <p class="app-num product-price">{{ formatPrice(variant.price) }}</p>
+                    <p-tag
+                      class="product-availability"
+                      [value]="available ? t().inStock : t().outOfStock"
+                      [severity]="availabilitySeverity(available)"
+                    />
+                  </div>
+                  @if (variantOptions().length || variantChoices().length) {
+                    <div class="product-variants">
+                      @for (option of variantOptions(); track option.id; let index = $index) {
+                        <fieldset class="variant-group">
+                          <legend>{{ option.name }}</legend>
+                          <div class="variant-choices">
+                            @for (value of option.values; track value.id) {
+                              <label class="variant-choice">
+                                <input
+                                  type="radio"
+                                  [name]="option.id"
+                                  [value]="value.id"
+                                  [checked]="variant.optionValueIds[index] === value.id"
+                                  [disabled]="!matchingVariants(index, value.id).length"
+                                  (change)="chooseOption(index, value.id)"
+                                />
+                                <span>{{ value.label }}</span>
+                              </label>
+                            }
+                          </div>
+                        </fieldset>
+                      } @empty {
+                        <fieldset class="variant-group">
+                          <legend>{{ t().variant }}</legend>
+                          <div class="variant-choices">
+                            @for (choice of variantChoices(); track choice.variant.id) {
+                              <label class="variant-choice">
+                                <input
+                                  type="radio"
+                                  name="variant"
+                                  [value]="choice.variant.id"
+                                  [checked]="variant.id === choice.variant.id"
+                                  (change)="selectedVariant.set(choice.variant)"
+                                />
+                                <span>{{ choice.label }}</span>
+                              </label>
+                            }
+                          </div>
+                        </fieldset>
+                      }
+                    </div>
+                  }
+                }
                 @if (description(); as detail) {
                   <p class="product-description" [attr.lang]="detail.language">{{ detail.text }}</p>
                 }
@@ -296,6 +349,41 @@ class StorefrontPage {
     () => this.productDetail()?.catalogueProductSpecifications ?? [],
   );
   readonly photoIndex = linkedSignal({ source: () => this.product()?.id, computation: () => 0 });
+  private readonly variantSelection = computed(() => this.product()?.variantSelection ?? null);
+  protected readonly selectedVariant = linkedSignal(() =>
+    preferredVariant(this.variantSelection()?.variants ?? []),
+  );
+  protected readonly sellableVariantId = computed(() => {
+    const variant = this.selectedVariant();
+    return variant?.available ? variant.id : null;
+  });
+  protected readonly variantOptions = computed(() => {
+    const selection = this.variantSelection();
+    if (!selection?.options.length) {
+      return [];
+    }
+    const { options, variants } = selection;
+    const combinations = new Set(variants.map(({ optionValueIds }) => optionValueIds.join(',')));
+    const complete = variants.every(
+      ({ optionValueIds }) => optionValueIds.length === options.length,
+    );
+    return complete && combinations.size === variants.length ? options : [];
+  });
+  protected readonly variantChoices = computed(() => {
+    const selection = this.variantSelection();
+    if (!selection || selection.variants.length < 2 || this.variantOptions().length) {
+      return [];
+    }
+    const labels = new Map(
+      selection.options.flatMap(({ values }) =>
+        values.map<[string, string]>(({ id, label }) => [id, label]),
+      ),
+    );
+    return selection.variants.map((variant) => ({
+      variant,
+      label: [...variant.optionValueIds.map((id) => labels.get(id)), variant.sku].join(' · '),
+    }));
+  });
   readonly description = computed(() => {
     const item = this.product();
     const bg = item?.descriptionBg;
@@ -328,6 +416,27 @@ class StorefrontPage {
     return this.price().format(Number(value));
   }
   protected readonly availabilitySeverity = availabilitySeverity;
+  protected matchingVariants(optionIndex: number, valueId: string) {
+    const preceding = this.selectedVariant()?.optionValueIds.slice(0, optionIndex) ?? [];
+    return (this.variantSelection()?.variants ?? []).filter(
+      ({ optionValueIds }) =>
+        optionValueIds[optionIndex] === valueId &&
+        preceding.every((id, index) => optionValueIds[index] === id),
+    );
+  }
+  protected chooseOption(optionIndex: number, valueId: string): void {
+    const current = this.selectedVariant();
+    if (!current) {
+      return;
+    }
+    const variants = this.matchingVariants(optionIndex, valueId);
+    const exact = variants.find(({ optionValueIds }) =>
+      optionValueIds.every(
+        (id, index) => index === optionIndex || id === current.optionValueIds[index],
+      ),
+    );
+    this.selectedVariant.set(exact ?? preferredVariant(variants));
+  }
   toggleLanguage() {
     const language = this.language() === 'bg' ? 'en' : 'bg';
     this.language.set(language);
