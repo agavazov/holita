@@ -115,23 +115,36 @@ export class OrdersRepository {
     });
   }
 
-  async restoreStock(tx: Prisma.TransactionClient, scope: Scope, orderId: string) {
+  async lockOrderProducts(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    orderId: string | null,
+    variantIds: string[] = [],
+  ) {
+    const addedVariants = variantIds.length
+      ? Prisma.sql`v."id" IN (${Prisma.join(variantIds.map((id) => Prisma.sql`${id}::uuid`))})`
+      : Prisma.sql`FALSE`;
     // Product saves may replace retained variants or detach removed ones under this parent lock.
     await tx.$queryRaw`
       SELECT p."id" FROM ${this.database.table('product')} AS p
       WHERE p."tenantId" = ${scope.tenantId}::uuid AND p."branchId" = ${scope.branchId}::uuid
         AND EXISTS (
-          SELECT 1 FROM ${this.database.table('orderLine')} AS line
-          JOIN ${this.database.table('productVariant')} AS v
-            ON v."tenantId" = line."tenantId" AND v."branchId" = line."branchId"
-            AND v."id" = line."variantId"
-          WHERE line."tenantId" = p."tenantId" AND line."branchId" = p."branchId"
-            AND line."orderId" = ${orderId}::uuid AND line."stockDecremented"
+          SELECT 1 FROM ${this.database.table('productVariant')} AS v
+          WHERE v."tenantId" = p."tenantId" AND v."branchId" = p."branchId"
             AND v."productId" = p."id"
+            AND (${addedVariants} OR EXISTS (
+              SELECT 1 FROM ${this.database.table('orderLine')} AS line
+              WHERE line."tenantId" = v."tenantId" AND line."branchId" = v."branchId"
+                AND line."variantId" = v."id" AND line."orderId" = ${orderId}::uuid
+            ))
         )
       ORDER BY p."id"
       FOR UPDATE
     `;
+  }
+
+  async restoreStock(tx: Prisma.TransactionClient, scope: Scope, orderId: string) {
+    await this.lockOrderProducts(tx, scope, orderId);
     const deductions = await tx.orderLine.groupBy({
       by: ['variantId'],
       where: { ...scope, orderId, stockDecremented: true, variantId: { not: null } },
@@ -139,10 +152,7 @@ export class OrdersRepository {
     });
     for (const { variantId, _sum } of deductions) {
       if (variantId !== null && _sum.quantity !== null) {
-        await tx.productVariant.updateMany({
-          where: { ...scope, id: variantId },
-          data: { quantity: { increment: _sum.quantity } },
-        });
+        await this.incrementStock(tx, scope, variantId, _sum.quantity);
       }
     }
   }
@@ -187,7 +197,11 @@ export class OrdersRepository {
     const ownership =
       'customerId' in owner
         ? { customerId: owner.customerId }
-        : { customerId: null, cart: { ...scope, ...owner, consumedAt: { not: null } } };
+        : {
+            customerId: null,
+            cartId: { not: null },
+            cart: { ...scope, ...owner, consumedAt: { not: null } },
+          };
     return this.database.client.order.findUnique({
       where: { ...scope, id, ...ownership },
       include: { lines: orderLines(scope) },
@@ -224,6 +238,42 @@ export class OrdersRepository {
     `;
   }
 
+  lines(tx: Prisma.TransactionClient, scope: Scope, orderId: string) {
+    return tx.orderLine.findMany({ ...orderLines(scope), where: { ...scope, orderId } });
+  }
+
+  trackedVariants(tx: Prisma.TransactionClient, scope: Scope, ids: string[]) {
+    return tx.productVariant.findMany({
+      where: { ...scope, id: { in: ids }, inventoryTracked: true },
+      select: { id: true },
+    });
+  }
+
+  incrementStock(tx: Prisma.TransactionClient, scope: Scope, id: string, quantity: number) {
+    return tx.productVariant.updateMany({
+      where: { ...scope, id },
+      data: { quantity: { increment: quantity } },
+    });
+  }
+
+  async updateManual(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    id: string,
+    data: Omit<Prisma.OrderUncheckedUpdateInput, keyof Scope | 'id' | 'lines'>,
+    lines?: Prisma.OrderLineCreateManyOrderInput[],
+  ) {
+    if (lines) {
+      // The line position is unique per order. Reinsert the snapshots with their retained IDs.
+      await tx.orderLine.deleteMany({ where: { ...scope, orderId: id } });
+    }
+    return tx.order.update({
+      where: { ...scope, id },
+      data: { ...data, ...(lines ? { lines: { createMany: { data: lines } } } : {}) },
+      include: orderDetail(scope),
+    });
+  }
+
   async decrementStock(tx: Prisma.TransactionClient, scope: Scope, id: string, quantity: number) {
     const { count } = await tx.productVariant.updateMany({
       where: { ...scope, id, inventoryTracked: true, quantity: { gte: quantity } },
@@ -240,7 +290,7 @@ export class OrdersRepository {
   ) {
     return tx.order.create({
       data: { ...scope, ...order, lines: { createMany: { data: lines } } },
-      include: { lines: orderLines(scope) },
+      include: orderDetail(scope),
     });
   }
 }

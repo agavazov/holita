@@ -416,6 +416,8 @@ type OrderShippingAddress {
   line2: String
 }
 type OrderLine {
+  id: ID!
+  variantId: ID
   sku: String!
   label: String!
   quantity: Int!
@@ -447,7 +449,72 @@ type Order {
   statusChanges: [OrderStatusChange!]!
   nextStatuses: [OrderStatus!]!
   canMarkPaid: Boolean!
+  canEditManualOrder: Boolean!
+  customerId: ID
+  merchantNote: String
+  paymentMethodId: ID
+  shippingMethodId: ID
   invoice: InvoiceSummary
+}
+input OrderContactInput {
+  name: String!
+  email: String!
+  phone: String!
+}
+input OrderShippingAddressInput {
+  countryCode: String!
+  city: String!
+  postalCode: String!
+  line1: String!
+  line2: String
+}
+input ManualOrderLineInput {
+  variantId: ID!
+  quantity: Int!
+}
+input ManualOrderUpdateLineInput {
+  "Choose either an existing line or a new variant."
+  lineId: ID
+  variantId: ID
+  quantity: Int!
+}
+input ManualOrderInput {
+  customerId: ID
+  merchantNote: String
+  contact: OrderContactInput!
+  shippingAddress: OrderShippingAddressInput!
+  paymentMethodId: ID!
+  shippingMethodId: ID!
+  lines: [ManualOrderLineInput!]!
+}
+input ManualOrderUpdateInput {
+  "Omit to keep the saved link. Pass null to record a guest order."
+  customerId: ID
+  "Omit to keep the saved note. Pass null to clear it."
+  merchantNote: String
+  contact: OrderContactInput!
+  shippingAddress: OrderShippingAddressInput!
+  "Omit to keep the saved payment terms."
+  paymentMethodId: ID
+  "Omit to keep the saved shipping terms."
+  shippingMethodId: ID
+  "Omit to keep the saved lines. An ordered replacement requires at least one line."
+  lines: [ManualOrderUpdateLineInput!]
+}
+type ManualOrderPaymentMethod {
+  id: ID!
+  label: String!
+  instructions: String!
+}
+type ManualOrderShippingMethod {
+  id: ID!
+  label: String!
+  fixedFee: String!
+}
+type ManualOrderMethods {
+  currency: String!
+  paymentMethods: [ManualOrderPaymentMethod!]!
+  shippingMethods: [ManualOrderShippingMethod!]!
 }
 type InvoiceSummary {
   id: ID!
@@ -577,6 +644,7 @@ type Query {
   productTags(search: String, limit: Int! = 20): [ProductTag!]!
   orders(offset: Int! = 0, limit: Int! = 20, search: String, status: OrderStatus): OrderPage!
   order(id: ID!): Order
+  manualOrderMethods: ManualOrderMethods!
   orderInvoice(orderId: ID!): Invoice
   orderRefundSummary(orderId: ID!): OrderRefundSummary
 }
@@ -599,6 +667,8 @@ type Mutation {
   createProductBadge(input: ProductBadgeInput!): ProductBadge!
   updateProductBadge(id: ID!, input: ProductBadgeInput!): ProductBadge!
   createProductTag(name: String!): ProductTag!
+  createManualOrder(input: ManualOrderInput!): Order!
+  updateManualOrder(id: ID!, input: ManualOrderUpdateInput!): Order!
   updateOrderStatus(id: ID!, status: OrderStatus!): Order!
   markOrderPaid(id: ID!): Order!
   issueOrderInvoice(orderId: ID!, input: IssueOrderInvoiceInput!): Invoice!

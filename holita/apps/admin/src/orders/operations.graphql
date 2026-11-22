@@ -16,6 +16,11 @@ fragment OperatorOrderDetail on Order {
   status
   paymentStatus
   paidAt
+  canEditManualOrder
+  customerId
+  merchantNote
+  paymentMethodId
+  shippingMethodId
   contact {
     name
     email
@@ -32,6 +37,8 @@ fragment OperatorOrderDetail on Order {
   paymentInstructions
   shippingMethodLabel
   lines {
+    id
+    variantId
     sku
     label
     quantity
@@ -147,5 +154,59 @@ mutation OperatorRecordOrderRefund($orderId: ID!, $input: RecordOrderRefundInput
     reason
     restock
     createdAt
+  }
+}
+
+query OperatorManualOrderChoices {
+  manualOrderMethods {
+    currency
+    paymentMethods {
+      id
+      label
+    }
+    shippingMethods {
+      id
+      label
+      fixedFee
+    }
+  }
+  customers {
+    id
+    name
+    email
+  }
+  productOptions {
+    active
+    values {
+      id
+      label
+    }
+  }
+}
+
+query OperatorManualOrderProducts($search: String) {
+  products(search: $search, filter: { statuses: [ACTIVE] }) {
+    items {
+      name
+      variants {
+        id
+        active
+        sku
+        optionValueIds
+      }
+    }
+    total
+  }
+}
+
+mutation OperatorCreateManualOrder($input: ManualOrderInput!) {
+  createManualOrder(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateManualOrder($id: ID!, $input: ManualOrderUpdateInput!) {
+  updateManualOrder(id: $id, input: $input) {
+    id
   }
 }

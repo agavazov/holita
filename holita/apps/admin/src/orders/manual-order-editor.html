@@ -1,0 +1,264 @@
+<osnova-route-drawer
+  size="lg"
+  [title]="editing ? text().editManualOrder : text().createManualOrder"
+  [subtitle]="order()?.number ?? null"
+  [state]="state()"
+  [errorText]="text().manualOrderUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  @if (canEdit()) {
+  <form id="manual-order-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
+    @if (saveError(); as message) {
+    <p-message severity="error">{{ message }}</p-message>
+    }
+    <section class="app-form-section" aria-labelledby="manual-contact-heading">
+      <h3 id="manual-contact-heading">{{ text().orderContact }}</h3>
+      <div class="app-form-grid">
+        @let customerError = error('customerId');
+        <osnova-form-field
+          class="app-form-grid--wide"
+          controlId="manual-customerId"
+          [label]="text().chooseCustomer"
+          [error]="customerError"
+        >
+          <p-select
+            inputId="manual-customerId"
+            ariaLabelledBy="manual-customerId-label"
+            formControlName="customerId"
+            [options]="customerOptions()"
+            optionLabel="label"
+            optionValue="id"
+            [filter]="true"
+            filterBy="label"
+            [ariaFilterLabel]="text().chooseCustomer"
+            [invalid]="!!customerError"
+            [pt]="{ label: { 'aria-invalid': customerError ? 'true' : undefined, 'aria-describedby': customerError ? 'manual-customerId-error' : undefined } }"
+            (onChange)="customerChanged()"
+          />
+        </osnova-form-field>
+        @for (field of contactFields(); track field.key) {
+        <ng-container
+          *ngTemplateOutlet="manualInput; context: {
+          $implicit: { path: 'contact.' + field.key, control: form.controls.contact.controls[field.key], label: field.label, type: field.type, required: true },
+        }"
+        />
+        }
+      </div>
+    </section>
+    <section class="app-form-section" aria-labelledby="manual-address-heading">
+      <h3 id="manual-address-heading">{{ text().orderShippingAddress }}</h3>
+      <div class="app-form-grid">
+        @for (field of addressFields(); track field.key) {
+        <ng-container
+          *ngTemplateOutlet="manualInput; context: {
+          $implicit: { path: 'shippingAddress.' + field.key, control: form.controls.shippingAddress.controls[field.key], label: field.label, required: field.required, wide: field.wide },
+        }"
+        />
+        }
+      </div>
+    </section>
+    <section class="app-form-section" aria-labelledby="manual-lines-heading">
+      <h3 id="manual-lines-heading">{{ text().orderItems }}</h3>
+      @let linesError = error('lines');
+      <osnova-form-field
+        controlId="manual-lines"
+        [label]="text().addOrderLine"
+        [error]="linesError"
+      >
+        <p-autocomplete
+          inputId="manual-lines"
+          ariaLabelledBy="manual-lines-label"
+          formControlName="variantPicker"
+          [suggestions]="suggestions()"
+          optionLabel="label"
+          [dropdown]="true"
+          [dropdownAriaLabel]="text().addOrderLine"
+          [placeholder]="text().chooseVariant"
+          [delay]="300"
+          autocomplete="off"
+          fluid
+          [invalid]="!!linesError"
+          [emptyMessage]="variantEmptyMessage()"
+          [pt]="{
+            ...pickerPt('manual-lines', !!linesError),
+            option: { style: { whiteSpace: 'normal', overflowWrap: 'anywhere' } },
+          }"
+          (completeMethod)="searchVariants($event.query)"
+          (onSelect)="addLine($event.value)"
+        />
+      </osnova-form-field>
+      @if (products.error()) {
+      <div class="app-stack">
+        <p-message severity="error">{{ text().manualOrderProductsUnavailable }}</p-message>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving()"
+          (click)="products.reload()"
+        >
+          {{ shared().retry }}
+        </button>
+      </div>
+      } @for (line of lines.controls; track line; let index = $index) { @let path = 'lines.' + index
+      + '.quantity'; @let id = 'manual-' + path; @let message = lineError(index);
+      <div class="manual-order-line" role="group" [attr.aria-labelledby]="id + '-item'">
+        <strong [id]="id + '-item'">{{ line.controls.choice.value.label }}</strong>
+        <osnova-form-field
+          [controlId]="id"
+          [label]="text().orderQuantity"
+          [required]="true"
+          [error]="message"
+        >
+          <input
+            pInputText
+            [id]="id"
+            type="number"
+            min="1"
+            step="1"
+            [formControl]="line.controls.quantity"
+            [invalid]="!!message"
+            aria-required="true"
+            [attr.aria-invalid]="message ? 'true' : null"
+            [attr.aria-describedby]="message ? id + '-error' : null"
+            (input)="lineChanged(index)"
+          />
+        </osnova-form-field>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving()"
+          [attr.aria-label]="text().removeOrderLine + ' · ' + line.controls.choice.value.label"
+          (click)="removeLine(index)"
+        >
+          {{ text().removeOrderLine }}
+        </button>
+      </div>
+      }
+    </section>
+    <section class="app-form-section" aria-labelledby="manual-methods-heading">
+      <h3 id="manual-methods-heading">{{ text().orderDelivery }} · {{ text().orderPayment }}</h3>
+      @if (!shippingOptions().length || !paymentOptions().length) {
+      <p-message severity="warn">{{ text().manualOrderMethodsEmpty }}</p-message>
+      }
+      <div class="app-form-grid">
+        @let shippingError = error('shippingMethodId'); @let paymentError =
+        error('paymentMethodId');
+        <osnova-form-field
+          controlId="manual-shippingMethodId"
+          [label]="text().orderShippingMethod"
+          [required]="true"
+          [error]="shippingError"
+        >
+          <p-select
+            inputId="manual-shippingMethodId"
+            ariaLabelledBy="manual-shippingMethodId-label"
+            formControlName="shippingMethodId"
+            [options]="shippingOptions()"
+            optionLabel="label"
+            optionValue="id"
+            [placeholder]="text().orderChooseMethod"
+            [invalid]="!!shippingError"
+            [pt]="{ label: { 'aria-required': 'true', 'aria-invalid': shippingError ? 'true' : undefined, 'aria-describedby': shippingError ? 'manual-shippingMethodId-error' : undefined } }"
+            (onChange)="clearError('shippingMethodId')"
+          />
+        </osnova-form-field>
+        <osnova-form-field
+          controlId="manual-paymentMethodId"
+          [label]="text().orderPaymentMethod"
+          [required]="true"
+          [error]="paymentError"
+        >
+          <p-select
+            inputId="manual-paymentMethodId"
+            ariaLabelledBy="manual-paymentMethodId-label"
+            formControlName="paymentMethodId"
+            [options]="paymentOptions()"
+            optionLabel="label"
+            optionValue="id"
+            [placeholder]="text().orderChooseMethod"
+            [invalid]="!!paymentError"
+            [pt]="{ label: { 'aria-required': 'true', 'aria-invalid': paymentError ? 'true' : undefined, 'aria-describedby': paymentError ? 'manual-paymentMethodId-error' : undefined } }"
+            (onChange)="clearError('paymentMethodId')"
+          />
+        </osnova-form-field>
+      </div>
+      @if (shippingFee(); as fee) {
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().orderShippingFee }}</dt>
+          <dd class="app-num">{{ fee }}</dd>
+        </div>
+      </dl>
+      }
+    </section>
+    <section class="app-form-section">
+      @let noteError = error('merchantNote');
+      <osnova-form-field
+        controlId="manual-merchantNote"
+        [label]="text().merchantNote"
+        [error]="noteError"
+      >
+        <textarea
+          pTextarea
+          id="manual-merchantNote"
+          rows="3"
+          formControlName="merchantNote"
+          [invalid]="!!noteError"
+          [attr.aria-invalid]="noteError ? 'true' : null"
+          [attr.aria-describedby]="noteError ? 'manual-merchantNote-error' : null"
+          (input)="clearError('merchantNote')"
+        ></textarea>
+      </osnova-form-field>
+    </section>
+    <ng-template #manualInput let-field>
+      @let id = 'manual-' + field.path; @let message = error(field.path);
+      <osnova-form-field
+        [class.app-form-grid--wide]="field.wide"
+        [controlId]="id"
+        [label]="field.label"
+        [required]="field.required"
+        [error]="message"
+      >
+        <input
+          pInputText
+          [id]="id"
+          [type]="field.type ?? 'text'"
+          [formControl]="field.control"
+          [invalid]="!!message"
+          [attr.aria-required]="field.required || null"
+          [attr.aria-invalid]="message ? 'true' : null"
+          [attr.aria-describedby]="message ? id + '-error' : null"
+          (input)="clearError(field.path)"
+        />
+      </osnova-form-field>
+    </ng-template>
+  </form>
+  } @else {
+  <p-message severity="info"
+    >{{ editing ? text().manualOrderNotEditable : text().manualOrderUnavailable }}</p-message
+  >
+  }
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ canEdit() ? shared().cancel : shared().close }}
+    </button>
+    @if (canEdit()) {
+    <button pButton type="submit" form="manual-order-form" [disabled]="saving()">
+      {{ editing ? text().save : text().createManualOrder }}
+    </button>
+    }
+  </div>
+</osnova-route-drawer>

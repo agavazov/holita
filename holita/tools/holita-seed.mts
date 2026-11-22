@@ -11,6 +11,7 @@ import {
   demoCharacteristicGroups,
   demoCollections,
   demoInvoice,
+  demoManualOrder,
   demoOptions,
   demoOrders,
   demoPaymentMethod,
@@ -402,6 +403,7 @@ async function seedCatalogue(): Promise<void> {
     for (const order of demoOrders) {
       await seedShopperOrder(client, tenantId, branchId, order);
     }
+    await seedManualOrder(client, tenantId, branchId);
     await seedOrderInvoice(client, tenantId, branchId);
     await client.query('COMMIT');
     console.log(
@@ -596,6 +598,69 @@ async function seedShopperOrder(
         ],
       );
     }
+  }
+}
+
+async function seedManualOrder(client: pg.Client, tenantId: string, branchId: string) {
+  const fixture = demoManualOrder;
+  const orderId = fixtureId('d5', fixture.id);
+  const variantId = fixtureId('92', fixture.line.variant);
+  const inserted = await client.query(
+    `INSERT INTO "order" ("id", "tenantId", "branchId", "orderNumber", "placedAt",
+       "contactName", "contactEmail", "contactPhone", "shippingCountryCode", "shippingCity",
+       "shippingPostalCode", "shippingLine1", "merchantNote", "paymentMethodId", "paymentMethodLabel",
+       "paymentInstructions", "shippingMethodId", "shippingMethodLabel", "currency",
+       "subtotal", "shippingFee", "total")
+     SELECT $1, $2, $3, $4, $5, $6, $7, $8, 'BG', $9, $10, $11, $12, p."id", $13, $14,
+       s."id", $15, 'BGN', $16::numeric * $17::integer, $18::numeric,
+       $16::numeric * $17::integer + $18::numeric
+     FROM "productVariant" v
+     JOIN "paymentMethod" p ON p."tenantId" = v."tenantId" AND p."branchId" = v."branchId"
+     JOIN "shippingMethod" s ON s."tenantId" = v."tenantId" AND s."branchId" = v."branchId"
+     WHERE v."tenantId" = $2 AND v."branchId" = $3 AND v."id" = $19 AND NOT v."inventoryTracked"
+       AND p."id" = $20 AND s."id" = $21
+     ON CONFLICT DO NOTHING`,
+    [
+      orderId,
+      tenantId,
+      branchId,
+      `H-${orderId}`,
+      fixture.placedAt,
+      fixture.contactName,
+      fixture.contactEmail,
+      fixture.phone,
+      fixture.city,
+      fixture.postalCode,
+      fixture.address,
+      fixture.merchantNote,
+      demoPaymentMethod.label,
+      demoPaymentMethod.instructions,
+      demoShippingMethod.label,
+      fixture.line.unitPrice,
+      fixture.line.quantity,
+      demoShippingMethod.fixedFee,
+      variantId,
+      fixtureId('d3', 1),
+      fixtureId('d4', 1),
+    ],
+  );
+  if (inserted.rowCount) {
+    await client.query(
+      `INSERT INTO "orderLine" ("id", "tenantId", "branchId", "orderId", "variantId", "sortOrder",
+         "sku", "label", "quantity", "unitPrice", "stockDecremented")
+       VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8, $9, false) ON CONFLICT DO NOTHING`,
+      [
+        fixtureId('d6', fixture.line.id),
+        tenantId,
+        branchId,
+        orderId,
+        variantId,
+        fixture.line.sku,
+        fixture.line.label,
+        fixture.line.quantity,
+        fixture.line.unitPrice,
+      ],
+    );
   }
 }
 

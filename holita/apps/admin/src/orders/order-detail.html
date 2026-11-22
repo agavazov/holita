@@ -60,6 +60,12 @@
       <dt>{{ text().orderTotal }}</dt>
       <dd class="app-num"><strong>{{ amount(item.total, item.currency, language()) }}</strong></dd>
     </div>
+    @if (item.merchantNote; as note) {
+    <div class="app-facts--wide">
+      <dt>{{ text().merchantNote }}</dt>
+      <dd class="order-merchant-note">{{ note }}</dd>
+    </div>
+    }
   </dl>
 </section>
 <div class="app-card-grid">

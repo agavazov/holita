@@ -402,6 +402,7 @@ model PaymentMethod {
   sortOrder Int @default(0)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  orders Order[]
   @@unique([tenantId, branchId, id])
   @@index([tenantId, branchId, enabled, sortOrder, id])
   @@map("paymentMethod")
@@ -417,6 +418,7 @@ model ShippingMethod {
   sortOrder Int @default(0)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  orders Order[]
   @@unique([tenantId, branchId, id])
   @@index([tenantId, branchId, enabled, sortOrder, id])
   @@map("shippingMethod")
@@ -426,8 +428,8 @@ model Order {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
   branchId String @db.Uuid
-  cartId String @db.Uuid
-  cart Cart @relation(fields: [tenantId, branchId, cartId], references: [tenantId, branchId, id], onDelete: Restrict)
+  cartId String? @db.Uuid
+  cart Cart? @relation(fields: [tenantId, branchId, cartId], references: [tenantId, branchId, id], onDelete: Restrict)
   customerId String? @db.Uuid
   customer Customer? @relation(fields: [tenantId, branchId, customerId], references: [tenantId, branchId, id], onDelete: Restrict)
   orderNumber String @db.VarChar(38)
@@ -443,8 +445,13 @@ model Order {
   shippingPostalCode String @db.Text
   shippingLine1 String @db.Text
   shippingLine2 String? @db.Text
+  merchantNote String? @db.Text
+  paymentMethodId String? @db.Uuid
+  paymentMethod PaymentMethod? @relation(fields: [tenantId, branchId, paymentMethodId], references: [tenantId, branchId, id], onDelete: Restrict)
   paymentMethodLabel String @db.VarChar(200)
   paymentInstructions String @db.Text
+  shippingMethodId String? @db.Uuid
+  shippingMethod ShippingMethod? @relation(fields: [tenantId, branchId, shippingMethodId], references: [tenantId, branchId, id], onDelete: Restrict)
   shippingMethodLabel String @db.VarChar(200)
   currency String @db.Char(3)
   subtotal Decimal @db.Decimal(32, 2)

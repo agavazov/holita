@@ -68,7 +68,7 @@
       <osnova-form-field
         controlId="refund-restock"
         [label]="text().refundRestock"
-        [hint]="item.status === 'CANCELLED' ? text().refundAlreadyRestocked : text().refundRestockHint"
+        [hint]="item.status === 'CANCELLED' ? text().refundAlreadyRestocked : (item.status === 'SHIPPED' || item.status === 'COMPLETED') ? text().refundFulfilledRestockHint : text().refundRestockHint"
         [error]="restockMessage"
       >
         <p-checkbox

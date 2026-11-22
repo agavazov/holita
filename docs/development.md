@@ -562,7 +562,7 @@ The storefront graph uses `placeOrder` with the reviewed cart ID and quote revis
 `orderConfirmation` with the order ID and the placing shopper's authorization.
 
 Sign in to the shop and open Account → My orders. The list and detail show orders linked to that
-shopper at placement, with the current statuses and saved checkout details. Use Back to orders
+shopper, with the current statuses and saved checkout details. Use Back to orders
 to return to the same list page. The Sofia demo shopper has placed, confirmed, shipped and
 completed orders. The shipped example is marked paid. The storefront graph exposes `shopperOrders`
 and `shopperOrder` for this history.
@@ -576,6 +576,15 @@ surviving variants once. Use Mark as paid to record manual payment. Cancellation
 recorded payment. The operator graph exposes `orders`, `order`, `updateOrderStatus` and
 `markOrderPaid`.
 
+Choose Create manual order to record a phone order. Select a customer to link it to their
+shop order history or leave it as a guest order. Enter contact and delivery details, add variants,
+select enabled payment and shipping methods, and optionally enter a private merchant note.
+Open a placed, unpaid manual order and choose Edit manual order to revise it. Commerce derives
+totals and adjusts stock by the change in held quantities. Existing lines retain their booked
+prices, and unchanged methods retain their saved terms. The Sofia demo shop includes a guest
+phone order. The operator graph exposes `manualOrderMethods`, `createManualOrder` and
+`updateManualOrder`.
+
 On Order Detail, choose Create invoice, enter the invoice number and issuer details, and
 review the recipient and amounts copied from the order. Each shop uses unique invoice numbers.
 Open the issued document from its numbered link on the order. Later changes to the order leave
@@ -584,8 +593,8 @@ exposes `orderInvoice` and `issueOrderInvoice`.
 
 After returning money outside Holita, use Record refund on a paid order. Order Detail shows the
 refund history and remaining balance, including the delivery fee in the original paid amount.
-For a refund of the full remaining balance, orders eligible for cancellation offer a restock
-option that cancels the order and restores original stock deductions once. For an order already
+A refund of the full remaining balance can restore the original stock deductions. It cancels
+orders that have yet to ship and preserves the status of shipped and completed orders. For an order already
 cancelled, the option records the restock choice and leaves stock as it is. The Sofia demo includes
 a partially refunded paid order. The operator graph exposes `orderRefundSummary` and
 `recordOrderRefund`.

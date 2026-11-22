@@ -1647,6 +1647,64 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       data: { inventoryVariant: { ...trackedVariant, quantity: 5 } },
     });
 
+    await merchant.getByRole('link', { name: 'Back to orders', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Create manual order', exact: true }).click();
+    await merchant.locator('#manual-customerId').click();
+    await merchant.getByRole('option', { name: `Shopper · ${shopperEmail}`, exact: true }).click();
+    await merchant.locator('[id="manual-contact.name"]').fill('Phone Shopper');
+    await merchant.locator('[id="manual-contact.phone"]').fill('+359 2 555 0100');
+    await merchant.locator('[id="manual-shippingAddress.city"]').fill('Sofia');
+    await merchant.locator('[id="manual-shippingAddress.postalCode"]').fill('1000');
+    await merchant.locator('[id="manual-shippingAddress.line1"]').fill('12 Demo Street');
+    await merchant.locator('#manual-lines').fill(configuredProductName);
+    await merchant.getByRole('option', { name: /CONFIG-Satin/ }).click();
+    await merchant.locator('#manual-shippingMethodId').click();
+    await merchant.getByRole('option', { name: shippingLabel, exact: true }).click();
+    await merchant.locator('#manual-paymentMethodId').click();
+    await merchant.getByRole('option', { name: paymentLabel, exact: true }).click();
+    await merchant.locator('#manual-merchantNote').fill('Phone order');
+    const manualCreate = waitForCart(merchant, 'OperatorCreateManualOrder');
+    await merchant
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Create manual order', exact: true })
+      .click();
+    expect(await (await manualCreate).json()).toMatchObject({
+      data: { createManualOrder: { id: expect.any(String) } },
+    });
+    await merchant.getByRole('link', { name: /Open order · .* · Phone Shopper/ }).click();
+    await merchant.waitForURL(/\/orders\/[0-9a-f-]+$/u);
+    const manualId = new URL(merchant.url()).pathname.split('/').at(-1);
+    if (!manualId) {
+      throw new Error('Missing manual order ID');
+    }
+    await merchant.getByRole('button', { name: 'Edit manual order', exact: true }).click();
+    await merchant.locator('[id="manual-lines.0.quantity"]').fill('2');
+    const manualUpdate = waitForCart(merchant, 'OperatorUpdateManualOrder');
+    await merchant.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+    expect(await (await manualUpdate).json()).toMatchObject({
+      data: { updateManualOrder: { id: manualId } },
+    });
+
+    await shopper.getByRole('link', { name: 'Back to orders', exact: true }).click();
+    const phoneOrder = waitForCart(shopper, 'ShopperOrder');
+    await shopper.getByRole('link', { name: `H-${manualId}`, exact: true }).click();
+    expect(await (await phoneOrder).json()).toMatchObject({
+      data: { shopperOrder: { id: manualId, shippingFee: '6.50', total: '66.50' } },
+    });
+    const persistedManual = waitForCart(shopper, 'ShopperOrder');
+    await shopper.reload();
+    expect(await (await persistedManual).json()).toMatchObject({
+      data: {
+        shopperOrder: {
+          total: '66.50',
+          lines: [{ sku: 'CONFIG-Satin', quantity: 2, unitPrice: '30.00' }],
+        },
+      },
+    });
+    expect(await refundRouter(inventoryRead, trackedVariant)).toEqual({
+      data: { inventoryVariant: { ...trackedVariant, quantity: 3 } },
+    });
+
     await merchant.getByRole('link', { name: 'Customers', exact: true }).click();
     await expect(merchant.getByText('Shopper', { exact: true })).toBeVisible();
     await merchant.getByRole('link', { name: 'Products', exact: true }).click();

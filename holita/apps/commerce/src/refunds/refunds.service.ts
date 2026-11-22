@@ -8,7 +8,7 @@ import type {
   RecordOrderRefundInput,
 } from '../generated/graphql/types.js';
 import type { Order, OrderRefund as StoredRefund, Prisma } from '../generated/prisma/client.js';
-import { canCancelOrder, OrdersService } from '../orders/orders.service.js';
+import { OrdersService } from '../orders/orders.service.js';
 import { requireScope, type RequestContext } from '../scope.js';
 import { RefundsRepository } from './refunds.repository.js';
 
@@ -73,7 +73,7 @@ export class RefundsService {
       refundedAmount: refunded.toFixed(2),
       refundableAmount: remaining.toFixed(2),
       canRecordRefund: remaining.gt(0),
-      canRestockOnCompletion: remaining.gt(0) && canCancelOrder(order.status),
+      canRestockOnCompletion: remaining.gt(0),
       refunds: order.refunds.map(present),
     };
   }
@@ -101,14 +101,14 @@ export class RefundsService {
         );
       }
       if (restock) {
-        if (!amount.eq(remaining) || !canCancelOrder(order.status)) {
+        if (!amount.eq(remaining)) {
           throw inputError(
             'restock',
             'REFUND_RESTOCK_UNAVAILABLE',
             'Restock is unavailable for this refund',
           );
         }
-        await this.orders.changeLockedStatus(tx, scope, order, 'CANCELLED');
+        await this.orders.restockLockedRefund(tx, scope, order);
       }
       return present(
         await this.refunds.create(tx, scope, order.id, {

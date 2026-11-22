@@ -124,6 +124,26 @@ export const demoPaymentMethod = {
 };
 export const demoShippingMethod = { label: 'Доставка до адрес', fixedFee: '6.00' };
 
+export const demoManualOrder = {
+  id: 6,
+  placedAt: '2026-11-22T11:00:00Z',
+  contactName: 'Елена Тодорова',
+  contactEmail: 'elena@demo.holita.test',
+  phone: '+359 2 555 0105',
+  city: 'София',
+  postalCode: '1000',
+  address: 'ул. „Граф Игнатиев“ 18',
+  merchantNote: 'Поръчка по телефона. Клиентката помоли да се обадим преди доставката.',
+  line: {
+    id: 8,
+    variant: 570,
+    sku: 'DEMO-57',
+    label: 'Керамична касерола „Горска жарава“, 1,5 л',
+    quantity: 2,
+    unitPrice: '52.90',
+  },
+};
+
 export const demoOrders = [
   {
     id: 1,

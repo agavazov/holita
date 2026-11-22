@@ -86,6 +86,15 @@ export function compareCatalogueOptionValues(
   );
 }
 
+export function catalogueOptionLabels(
+  values: { optionValue: CatalogueOptionValue & Pick<OptionValue, 'label'> }[],
+) {
+  return values
+    .map(({ optionValue }) => optionValue)
+    .sort(compareCatalogueOptionValues)
+    .map(({ label }) => label);
+}
+
 export function trackedVariantQuantity({
   inventoryTracked,
   quantity,

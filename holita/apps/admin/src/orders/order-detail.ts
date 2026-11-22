@@ -67,7 +67,8 @@ type OrderDetailParams = { scope: NonNullable<ReturnType<OrdersApi['scope']>>; i
   templateUrl: './order-detail.html',
   styles: `
     .order-payment-instructions,
-    .order-refund-reason {
+    .order-refund-reason,
+    .order-merchant-note {
       white-space: pre-wrap;
       overflow-wrap: anywhere;
     }
@@ -134,8 +135,18 @@ export class OrderDetail {
     const disabled = this.paymentBusy() || this.record.isLoading();
     const canUpdate = order.nextStatuses.length > 0;
     return [
+      ...(order.canEditManualOrder
+        ? [{ id: 'edit', label: this.text().editManualOrder, primary: true, disabled }]
+        : []),
       ...(canUpdate
-        ? [{ id: 'status', label: this.text().updateOrderStatus, primary: true, disabled }]
+        ? [
+            {
+              id: 'status',
+              label: this.text().updateOrderStatus,
+              primary: !order.canEditManualOrder,
+              disabled,
+            },
+          ]
         : []),
       ...(order.canMarkPaid
         ? [{ id: 'paid', label: this.text().markOrderPaid, primary: !canUpdate, disabled }]
@@ -249,7 +260,7 @@ export class OrderDetail {
   }
 
   protected async run({ id }: MenuChoice): Promise<void> {
-    if (id === 'status' || id === 'create-invoice' || id === 'record-refund') {
+    if (id === 'edit' || id === 'status' || id === 'create-invoice' || id === 'record-refund') {
       void this.router.navigate([id === 'status' ? 'fulfillment' : id], {
         relativeTo: this.route,
         queryParamsHandling: 'preserve',

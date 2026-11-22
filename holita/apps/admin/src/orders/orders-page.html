@@ -1,4 +1,9 @@
-<osnova-page-header [title]="text().orders" [moduleInfo]="text().ordersInfo" />
+<osnova-page-header
+  [title]="text().orders"
+  [moduleInfo]="text().ordersInfo"
+  [actions]="headerActions()"
+  (action)="headerAction($event)"
+/>
 @if (scope()) {
 <osnova-table-panel
   #panel
@@ -135,3 +140,4 @@
 } @else {
 <p-message severity="info">{{ text().noShop }}</p-message>
 }
+<router-outlet [routerOutletData]="drawerHost" />

@@ -10,7 +10,14 @@ import {
   CartService,
   type CartContext,
 } from '../cart/cart.service.js';
-import { checkoutError, CheckoutService } from '../checkout/checkout.service.js';
+import {
+  checkoutCurrency,
+  checkoutError,
+  CheckoutService,
+  invalidValue,
+  validateOrderContact,
+} from '../checkout/checkout.service.js';
+import { ShopperRepository } from '../customers/shopper.repository.js';
 import type {
   OrderConfirmation,
   PlaceOrderInput,
@@ -18,6 +25,8 @@ import type {
   ShopperOrderPage,
 } from '../generated/graphql/storefront-types.js';
 import type {
+  ManualOrderInput,
+  ManualOrderUpdateInput,
   MutationUpdateOrderStatusArgs,
   Order as OperatorOrder,
   OrderPage,
@@ -25,6 +34,12 @@ import type {
 } from '../generated/graphql/types.js';
 import type { Order, OrderLine, OrderStatus, Prisma } from '../generated/prisma/client.js';
 import { requireScope, type RequestContext, type Scope, type ShopperScope } from '../scope.js';
+import {
+  manualLineInputs,
+  manualOrderId,
+  orderLineSnapshot,
+  reviseOrderLines,
+} from './manual-order-lines.js';
 import { OrdersRepository } from './orders.repository.js';
 
 type ShopperOrderRow = Awaited<ReturnType<OrdersRepository['shopperOrders']>>['items'][number];
@@ -43,8 +58,26 @@ const nextStatuses: Record<OrderStatus, OrderStatus[]> = {
   CANCELLED: [],
 };
 
-export function canCancelOrder(status: OrderStatus): boolean {
-  return status === 'CANCELLED' || nextStatuses[status].includes('CANCELLED');
+function canEditManualOrder(order: Order): boolean {
+  return order.cartId === null && order.status === 'PLACED' && order.paymentStatus === 'UNPAID';
+}
+
+function orderIdentity() {
+  const id = randomUUID();
+  return { id, orderNumber: `H-${id}`, placedAt: new Date() };
+}
+
+function orderContactFields({ contact, shippingAddress }: ReturnType<typeof validateOrderContact>) {
+  return {
+    contactName: contact.name,
+    contactEmail: contact.email,
+    contactPhone: contact.phone,
+    shippingCountryCode: shippingAddress.countryCode,
+    shippingCity: shippingAddress.city,
+    shippingPostalCode: shippingAddress.postalCode,
+    shippingLine1: shippingAddress.line1,
+    shippingLine2: shippingAddress.line2,
+  };
 }
 
 function summary(order: OrderSummaryRow) {
@@ -67,6 +100,16 @@ function shopperSummary(order: ShopperOrderRow) {
   };
 }
 
+function presentLine({ sku, label, quantity, unitPrice }: OrderLine) {
+  return {
+    sku,
+    label,
+    quantity,
+    unitPrice: unitPrice.toFixed(2),
+    lineTotal: new CartPrice(unitPrice).mul(quantity).toFixed(2),
+  };
+}
+
 function confirmation(order: Order & { lines: OrderLine[] }) {
   return {
     ...shopperSummary(order),
@@ -79,13 +122,7 @@ function confirmation(order: Order & { lines: OrderLine[] }) {
       line2: order.shippingLine2,
     },
     paymentInstructions: order.paymentInstructions,
-    lines: order.lines.map(({ sku, label, quantity, unitPrice }) => ({
-      sku,
-      label,
-      quantity,
-      unitPrice: unitPrice.toFixed(2),
-      lineTotal: new CartPrice(unitPrice).mul(quantity).toFixed(2),
-    })),
+    lines: order.lines.map(presentLine),
     subtotal: order.subtotal.toFixed(2),
     shippingFee: order.shippingFee.toFixed(2),
   };
@@ -100,6 +137,16 @@ function operatorDetail(order: OrderDetailRow): OperatorOrder {
     ...confirmation(order),
     invoice: order.invoice,
     paidAt: order.paidAt?.toISOString() ?? null,
+    canEditManualOrder: canEditManualOrder(order),
+    customerId: order.customerId,
+    merchantNote: order.merchantNote,
+    paymentMethodId: order.paymentMethodId,
+    shippingMethodId: order.shippingMethodId,
+    lines: order.lines.map((line) => ({
+      ...presentLine(line),
+      id: line.id,
+      variantId: line.variantId,
+    })),
     statusChanges: order.statusChanges.map(({ fromStatus, toStatus, occurredAt }) => ({
       fromStatus,
       toStatus,
@@ -141,6 +188,7 @@ export class OrdersService {
     private readonly cartRepository: CartRepository,
     private readonly carts: CartService,
     private readonly checkout: CheckoutService,
+    private readonly customers: ShopperRepository,
   ) {}
 
   async operatorOrders(
@@ -170,6 +218,167 @@ export class OrdersService {
     }
     const order = await this.orders.operatorOrder(scope, id.toLowerCase());
     return order ? operatorDetail(order) : null;
+  }
+
+  async manualMethods(context: RequestContext) {
+    const scope = await requireScope(context, false);
+    return this.orders.transaction((tx) => this.checkout.enabledMethods(tx, scope));
+  }
+
+  async createManual(context: RequestContext, input: ManualOrderInput): Promise<OperatorOrder> {
+    const scope = await requireScope(context, true);
+    return this.orders.transaction(async (tx) => {
+      const { data, revised } = await this.manualChanges(tx, scope, input, null);
+      if (!revised) {
+        throw invalidValue('lines');
+      }
+      const order = await this.orders.create(
+        tx,
+        scope,
+        {
+          ...orderIdentity(),
+          ...data,
+          subtotal: revised.subtotal,
+          total: revised.subtotal.plus(data.shippingFee),
+        },
+        revised.lines,
+      );
+      return operatorDetail(order);
+    });
+  }
+
+  async updateManual(
+    context: RequestContext,
+    id: string,
+    input: ManualOrderUpdateInput,
+  ): Promise<OperatorOrder> {
+    const scope = await requireScope(context, true);
+    return this.orders.transaction(async (tx) => {
+      const order = await this.requireLockedOrder(tx, scope, id);
+      if (!canEditManualOrder(order)) {
+        throw checkoutError('order', 'MANUAL_ORDER_NOT_EDITABLE', 'This order cannot be edited');
+      }
+      const { data, revised } = await this.manualChanges(tx, scope, input, order);
+      const subtotal = revised?.subtotal ?? order.subtotal;
+      const updated = await this.orders.updateManual(
+        tx,
+        scope,
+        order.id,
+        {
+          ...data,
+          subtotal,
+          total: new CartPrice(subtotal).plus(data.shippingFee),
+        },
+        revised?.lines,
+      );
+      return operatorDetail(updated);
+    });
+  }
+
+  private async manualChanges(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    input: ManualOrderUpdateInput,
+    order: Order | null,
+  ) {
+    const contact = orderContactFields(validateOrderContact(input));
+    const customerId =
+      input.customerId === undefined
+        ? (order?.customerId ?? null)
+        : input.customerId === null
+          ? null
+          : manualOrderId(input.customerId, 'customerId');
+    if (customerId && !(await this.customers.findById(tx, scope, customerId))) {
+      throw checkoutError(
+        'customerId',
+        'ORDER_CUSTOMER_UNAVAILABLE',
+        'Choose a customer from this shop',
+      );
+    }
+    const merchantNote =
+      input.merchantNote === undefined ? order?.merchantNote : input.merchantNote?.trim();
+    if (merchantNote?.includes('\u0000')) {
+      throw invalidValue('merchantNote');
+    }
+
+    const paymentMethodId =
+      input.paymentMethodId === undefined
+        ? order?.paymentMethodId
+        : this.checkout.paymentMethodId(input.paymentMethodId ?? '');
+    const shippingMethodId =
+      input.shippingMethodId === undefined
+        ? order?.shippingMethodId
+        : this.checkout.shippingMethodId(input.shippingMethodId ?? '');
+    if (!paymentMethodId || !shippingMethodId) {
+      throw invalidValue(!paymentMethodId ? 'paymentMethodId' : 'shippingMethodId');
+    }
+    const payment =
+      order?.paymentMethodId === paymentMethodId
+        ? { label: order.paymentMethodLabel, instructions: order.paymentInstructions }
+        : await this.checkout.paymentMethod(tx, scope, paymentMethodId);
+    const shipping =
+      order?.shippingMethodId === shippingMethodId
+        ? { label: order.shippingMethodLabel, fixedFee: order.shippingFee }
+        : await this.checkout.shippingMethod(tx, scope, shippingMethodId);
+
+    if (input.lines === null) {
+      throw invalidValue('lines');
+    }
+    const revised =
+      input.lines === undefined
+        ? undefined
+        : await this.reviseLines(tx, scope, order?.id ?? null, input.lines);
+    return {
+      data: {
+        ...contact,
+        customerId,
+        merchantNote: merchantNote || null,
+        currency: order?.currency ?? checkoutCurrency,
+        paymentMethodId,
+        paymentMethodLabel: payment.label,
+        paymentInstructions: payment.instructions,
+        shippingMethodId,
+        shippingMethodLabel: shipping.label,
+        shippingFee: shipping.fixedFee,
+      },
+      revised,
+    };
+  }
+
+  private async reviseLines(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    orderId: string | null,
+    lines: NonNullable<ManualOrderUpdateInput['lines']>,
+  ) {
+    const inputs = manualLineInputs(lines);
+    const newIds = inputs.flatMap(({ variantId }) => variantId ?? []);
+    await this.orders.lockOrderProducts(tx, scope, orderId, newIds);
+    // A product edit may have detached a line while this transaction waited for the product lock.
+    const saved = orderId ? await this.orders.lines(tx, scope, orderId) : [];
+    const ids = [...new Set([...newIds, ...saved.flatMap(({ variantId }) => variantId ?? [])])];
+    const sellable = await this.cartRepository.publicVariants(tx, scope, ids);
+    const trackedIds = new Set(
+      (await this.orders.trackedVariants(tx, scope, ids)).map(({ id }) => id),
+    );
+    const revised = reviseOrderLines(inputs, saved, sellable, trackedIds);
+    for (const [id, { quantity, path }] of revised.stockDeltas) {
+      if (quantity > 0 && !(await this.orders.decrementStock(tx, scope, id, quantity))) {
+        throw checkoutError(path, 'ORDER_STOCK_SHORT', 'Requested stock is no longer available');
+      }
+      if (quantity < 0) {
+        await this.orders.incrementStock(tx, scope, id, -quantity);
+      }
+    }
+    return revised;
+  }
+
+  async restockLockedRefund(tx: Prisma.TransactionClient, scope: Scope, order: OrderDetailRow) {
+    if (order.status === 'SHIPPED' || order.status === 'COMPLETED') {
+      await this.orders.restoreStock(tx, scope, order.id);
+    } else if (order.status !== 'CANCELLED') {
+      await this.changeLockedStatus(tx, scope, order, 'CANCELLED');
+    }
   }
 
   async updateStatus(
@@ -308,35 +517,22 @@ export class OrdersService {
           throw stockChanged();
         }
         lines.push({
-          variantId: variant.id,
+          ...orderLineSnapshot(variant, line.optionLabels),
           sortOrder,
-          sku: variant.sku,
-          label: [variant.product.name, ...line.optionLabels].join(' · '),
           quantity: line.quantity,
-          unitPrice: variant.price,
           stockDecremented: variant.inventoryTracked,
         });
       }
 
-      const id = randomUUID();
-      const placedAt = new Date();
+      const identity = orderIdentity();
       const order = await this.orders.create(
         tx,
         scope,
         {
-          id,
+          ...identity,
           cartId,
           customerId: customerId ?? null,
-          orderNumber: `H-${id}`,
-          placedAt,
-          contactName: contact.name,
-          contactEmail: contact.email,
-          contactPhone: contact.phone,
-          shippingCountryCode: shippingAddress.countryCode,
-          shippingCity: shippingAddress.city,
-          shippingPostalCode: shippingAddress.postalCode,
-          shippingLine1: shippingAddress.line1,
-          shippingLine2: shippingAddress.line2,
+          ...orderContactFields({ contact, shippingAddress }),
           paymentMethodLabel: quote.paymentMethod.label,
           paymentInstructions: quote.paymentMethod.instructions,
           shippingMethodLabel: quote.shippingMethod.label,
@@ -347,7 +543,7 @@ export class OrdersService {
         },
         lines,
       );
-      await this.cartRepository.consume(tx, scope, cartId, placedAt);
+      await this.cartRepository.consume(tx, scope, cartId, identity.placedAt);
       return confirmation(order);
     });
   }

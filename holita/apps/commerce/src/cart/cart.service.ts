@@ -10,10 +10,7 @@ import type {
 } from '../generated/graphql/storefront-types.js';
 import { Prisma, type CartLine as StoredCartLine } from '../generated/prisma/client.js';
 import { productImageUrl } from '../products/product-images.js';
-import {
-  compareCatalogueOptionValues,
-  trackedVariantQuantity,
-} from '../products/product-relations.js';
+import { catalogueOptionLabels, trackedVariantQuantity } from '../products/product-relations.js';
 import type { Scope } from '../scope.js';
 import { CartRepository, type CartOwner } from './cart.repository.js';
 
@@ -106,11 +103,7 @@ function presentLine(line: StoredCartLine, variant: PublicVariant | undefined): 
     productId: variant?.product.id ?? null,
     name: variant?.product.name ?? null,
     coverImage: image ? { url: productImageUrl(image), altText: image.altText } : null,
-    optionLabels:
-      variant?.values
-        .map(({ optionValue }) => optionValue)
-        .sort(compareCatalogueOptionValues)
-        .map(({ label }) => label) ?? [],
+    optionLabels: variant ? catalogueOptionLabels(variant.values) : [],
     quantity: line.quantity,
     unitPrice: variant?.price.toFixed(2) ?? null,
     lineTotal: variant ? new CartPrice(variant.price).mul(line.quantity).toFixed(2) : null,

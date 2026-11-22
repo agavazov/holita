@@ -26,6 +26,10 @@ export class ShopperRepository {
     return tx.customer.create({ data: { ...scope, ...input } });
   }
 
+  findById(tx: Prisma.TransactionClient, scope: Scope, id: string) {
+    return tx.customer.findUnique({ where: { ...scope, id }, select: { id: true } });
+  }
+
   findByEmail(scope: Scope, email: string) {
     return this.database.client.customer.findFirst({
       where: { ...scope, email: { equals: email, mode: 'insensitive' } },

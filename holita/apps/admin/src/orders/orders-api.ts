@@ -4,6 +4,12 @@ import { OperatorLanguage } from '@holita/operator';
 import { DemoSession, OperatorConfig, graphqlOptions, type Language } from '@osnova/ui/app';
 import { HttpLink } from 'apollo-angular/http';
 import {
+  OperatorCreateManualOrderDocument,
+  OperatorManualOrderChoicesDocument,
+  OperatorManualOrderProductsDocument,
+  OperatorUpdateManualOrderDocument,
+  type ManualOrderInput,
+  type ManualOrderUpdateInput,
   OperatorIssueOrderInvoiceDocument,
   OperatorMarkOrderPaidDocument,
   OperatorOrderInvoiceDocument,
@@ -79,6 +85,71 @@ export class OrdersApi {
         throw new Error('Missing order result');
       }
       return data.order ? { ...data.order, refundSummary: data.orderRefundSummary } : null;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async manualChoices(scope: OrdersScope) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorManualOrderChoicesDocument,
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing manual order choices');
+      }
+      return data;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async manualProducts(scope: OrdersScope, search: string) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorManualOrderProductsDocument,
+        variables: { search },
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing manual order products');
+      }
+      return data.products;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async createManual(scope: OrdersScope, input: ManualOrderInput) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: OperatorCreateManualOrderDocument,
+        variables: { input },
+      });
+      if (!data) {
+        throw new Error('Missing created manual order');
+      }
+      return data.createManualOrder.id;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async updateManual(scope: OrdersScope, id: string, input: ManualOrderUpdateInput) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: OperatorUpdateManualOrderDocument,
+        variables: { id, input },
+      });
+      if (!data) {
+        throw new Error('Missing updated manual order');
+      }
+      return data.updateManualOrder.id;
     } finally {
       client.stop();
     }

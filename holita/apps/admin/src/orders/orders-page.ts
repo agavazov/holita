@@ -7,7 +7,7 @@ import {
   linkedSignal,
   resource,
 } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { OperatorLanguage, operatorStrings } from '@holita/operator';
 import {
   FilterBuilder,
@@ -21,6 +21,9 @@ import {
   tableView,
   trackById,
   uiMessages,
+  type DrawerHost,
+  type MenuChoice,
+  type PageHeaderAction,
   type FilterCondition,
   type FilterField,
   type ListAction,
@@ -28,6 +31,7 @@ import {
   type ListDefinition,
   type TableColumn,
 } from '@osnova/ui';
+import { MessageService } from 'primeng/api';
 import { Message } from 'primeng/message';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
@@ -65,6 +69,7 @@ const definition: ListDefinition<OrderFilters, 'PLACED_AT'> = {
     Message,
     PageHeader,
     RouterLink,
+    RouterOutlet,
     RowActions,
     TableModule,
     TablePanel,
@@ -78,6 +83,7 @@ export class OrdersPage {
   private readonly api = inject(OrdersApi);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly messages = inject(MessageService);
   protected readonly language = inject(OperatorLanguage).value;
   protected readonly text = computed(() => operatorStrings[this.language()]);
   protected readonly shared = computed(() => uiMessages[this.language()]);
@@ -91,6 +97,17 @@ export class OrdersPage {
   protected readonly paymentText = orderPaymentText;
   protected readonly paymentSeverity = orderPaymentSeverity;
   protected readonly trackById = trackById;
+  protected readonly headerActions = computed<readonly PageHeaderAction[]>(() =>
+    this.api.canWrite() ? [{ id: 'new', label: this.text().createManualOrder, primary: true }] : [],
+  );
+  protected readonly drawerHost: DrawerHost = {
+    saved: ({ message }) => {
+      if (message) {
+        this.messages.add({ severity: 'success', summary: message });
+      }
+      this.list.reload();
+    },
+  };
   protected readonly actions = computed<
     readonly ListAction<OrdersAction, OperatorOrderSummaryFragment>[]
   >(() => [{ id: 'open', label: this.text().openOrder }]);
@@ -208,12 +225,22 @@ export class OrdersPage {
   protected run(request: ListActionRequest<OrdersAction>): void {
     const id = request.ids[0];
     if (id) {
-      this.url.cancelPending();
-      void this.router.navigate([id], {
-        relativeTo: this.route,
-        queryParamsHandling: 'preserve',
-        preserveFragment: true,
-      });
+      this.open(id);
     }
+  }
+
+  protected headerAction({ id }: MenuChoice): void {
+    if (id === 'new' && this.api.canWrite()) {
+      this.open(id);
+    }
+  }
+
+  private open(path: string): void {
+    this.url.cancelPending();
+    void this.router.navigate([path], {
+      relativeTo: this.route,
+      queryParamsHandling: 'preserve',
+      preserveFragment: true,
+    });
   }
 }

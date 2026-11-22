@@ -146,6 +146,7 @@ beforeAll(async () => {
     '20261122130000_order_management',
     '20261122140000_order_invoices',
     '20261122150000_manual_order_refunds',
+    '20261122160000_manual_orders',
   ]) {
     await connection.query(
       await readFile(
@@ -1808,6 +1809,132 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     }),
   ]);
   expect(await query(tokens.viewer, publicA, readInvoice, invoiceTarget)).toEqual(savedInvoice);
+
+  const createManual = `mutation($input:ManualOrderInput!){
+    createManualOrder(input:$input){id total shippingFee customerId merchantNote canEditManualOrder}
+  }`;
+  const updateManual = `mutation($id:ID!,$input:ManualOrderUpdateInput!){
+    updateManualOrder(id:$id,input:$input){id total shippingFee lines{id quantity unitPrice}}
+  }`;
+  const variantIdentity = { ...categoryScope, id: replacement.id };
+  await database.productVariant.update({
+    where: variantIdentity,
+    data: { active: true, inventoryTracked: true, price: '8.00', quantity: 7 },
+  });
+  const { contact, shippingAddress, paymentMethodId, shippingMethodId } = quoteInput;
+  const manualInput = {
+    contact,
+    shippingAddress,
+    paymentMethodId,
+    shippingMethodId,
+    merchantNote: 'Private note',
+    lines: [{ variantId: replacement.id, quantity: 2 }],
+  };
+  expect(await query(tokens.viewer, publicA, createManual, { input: manualInput })).toHaveProperty(
+    'errors',
+  );
+  expect(
+    await query(tokens.operator, branchB, createManual, { input: manualInput }),
+  ).toHaveProperty('errors');
+
+  const created = await query(tokens.operator, publicA, createManual, { input: manualInput });
+  expect(created).toMatchObject({
+    data: {
+      createManualOrder: {
+        customerId: null,
+        merchantNote: 'Private note',
+        total: '115.00',
+        canEditManualOrder: true,
+      },
+    },
+  });
+  const manual = await database.order.findFirstOrThrow({
+    where: { ...categoryScope, cartId: null, merchantNote: 'Private note' },
+    include: { lines: true },
+  });
+  const [manualLine] = manual.lines;
+  const manualEdit = (quantity: number) => ({
+    id: manual.id,
+    input: {
+      contact,
+      shippingAddress,
+      customerId: order.customerId,
+      lines: [{ lineId: manualLine.id, quantity }],
+    },
+  });
+  expect(
+    await storefront(
+      publicA,
+      receiptOperation,
+      { orderId: manual.id },
+      undefined,
+      guestCheckoutToken,
+    ),
+  ).toEqual({ data: { orderConfirmation: null } });
+  expect(await query(tokens.operator, branchB, updateManual, manualEdit(3))).toMatchObject({
+    errors: [{ message: 'Order not found' }],
+  });
+  await database.shippingMethod.update({
+    where: { ...categoryScope, id: shippingMethodId },
+    data: { enabled: false, fixedFee: '12.00' },
+  });
+  await database.productVariant.update({ where: variantIdentity, data: { price: '9.00' } });
+  expect(await query(tokens.operator, publicA, updateManual, manualEdit(3))).toMatchObject({
+    data: {
+      updateManualOrder: {
+        total: '123.00',
+        shippingFee: '99.00',
+        lines: [{ id: manualLine.id, quantity: 3, unitPrice: '8.00' }],
+      },
+    },
+  });
+  expect(await query(tokens.operator, publicA, updateManual, manualEdit(8))).toMatchObject({
+    errors: [
+      { extensions: { fieldErrors: [{ path: 'lines0Quantity', code: 'ORDER_STOCK_SHORT' }] } },
+    ],
+  });
+  expect(await storefront(publicA, readOrder, { id: manual.id }, token)).toMatchObject({
+    data: { shopperOrder: { total: '123.00', lines: [{ quantity: 3, unitPrice: '8.00' }] } },
+  });
+  expect(await storefront(publicA, readOrder, { id: manual.id }, foreignOwner)).toEqual({
+    data: { shopperOrder: null },
+  });
+  expect(await query(tokens.operator, publicA, updateManual, manualEdit(1))).toMatchObject({
+    data: { updateManualOrder: { total: '107.00', lines: [{ id: manualLine.id, quantity: 1 }] } },
+  });
+  expect(
+    await database.productVariant.findUniqueOrThrow({
+      where: variantIdentity,
+      select: { quantity: true },
+    }),
+  ).toEqual({ quantity: 6 });
+  await query(tokens.operator, publicA, markPaid, { id: manual.id });
+  expect(await query(tokens.operator, publicA, updateManual, manualEdit(2))).toHaveProperty(
+    'errors',
+  );
+  for (const status of ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'COMPLETED']) {
+    expect(
+      await query(tokens.operator, publicA, updateOrder, { id: manual.id, status }),
+    ).toMatchObject({ data: { updateOrderStatus: { status } } });
+  }
+  expect(
+    await query(tokens.operator, publicA, recordRefund, {
+      orderId: manual.id,
+      input: { amount: '107.00', restock: true },
+    }),
+  ).toMatchObject({ data: { recordOrderRefund: { restock: true } } });
+  expect(
+    await database.order.findUniqueOrThrow({
+      where: { ...categoryScope, id: manual.id },
+      select: { status: true },
+    }),
+  ).toEqual({ status: 'COMPLETED' });
+  expect(
+    await database.productVariant.findUniqueOrThrow({
+      where: variantIdentity,
+      select: { quantity: true },
+    }),
+  ).toEqual({ quantity: 7 });
 
   await database.shopperSession.update({
     where: { ...categoryScope, tokenHash: createHash('sha256').update(token).digest('hex') },

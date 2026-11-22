@@ -101,6 +101,57 @@ const context = ({ req }: { req: IncomingMessage }) => ({
   authorization: req.headers.authorization,
   branchId: req.headers['x-branch-id'],
 });
+const formatFieldErrors: NonNullable<ApolloFederationDriverConfig['formatError']> = (
+  formatted,
+  error,
+) => {
+  const cause: unknown = unwrapResolverError(error);
+  if (!(cause instanceof UnprocessableEntityException)) {
+    return formatted;
+  }
+  const response = cause.getResponse();
+  const fieldErrors =
+    typeof response === 'object' && 'fieldErrors' in response ? response.fieldErrors : undefined;
+  return {
+    ...formatted,
+    extensions: { code: 'BAD_USER_INPUT', ...(fieldErrors ? { fieldErrors } : {}) },
+  };
+};
+
+const formatOperatorError: NonNullable<ApolloFederationDriverConfig['formatError']> = (
+  formatted,
+  error,
+) => {
+  if (!(unwrapResolverError(error) instanceof UnprocessableEntityException)) {
+    return formatted;
+  }
+  const result = formatFieldErrors(formatted, error);
+  const fields: unknown = result.extensions?.['fieldErrors'];
+  if (!Array.isArray(fields)) {
+    return result;
+  }
+  return {
+    ...result,
+    extensions: {
+      ...result.extensions,
+      // The Router's public field path contract allows only alphanumeric names.
+      fieldErrors: fields.map((field: unknown) => {
+        if (
+          typeof field !== 'object' ||
+          field === null ||
+          !('path' in field) ||
+          typeof field.path !== 'string'
+        ) {
+          return field;
+        }
+        return {
+          ...field,
+          path: field.path.replace(/\.([a-z0-9])/gu, (_, initial: string) => initial.toUpperCase()),
+        };
+      }),
+    },
+  };
+};
 @Module({
   controllers: [HealthController],
   imports: [
@@ -112,6 +163,7 @@ const context = ({ req }: { req: IncomingMessage }) => ({
       path: '/graphql',
       include: [OperatorModule],
       context,
+      formatError: formatOperatorError,
     }),
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
@@ -124,21 +176,9 @@ const context = ({ req }: { req: IncomingMessage }) => ({
       }),
       formatError: (formatted, error) => {
         const cause: unknown = unwrapResolverError(error);
-        if (!(
-          cause instanceof NotFoundException || cause instanceof UnprocessableEntityException
-        )) {
-          return formatted;
-        }
-        const code = cause instanceof NotFoundException ? 'NOT_FOUND' : 'BAD_USER_INPUT';
-        const response = cause.getResponse();
-        const fieldErrors =
-          typeof response === 'object' && 'fieldErrors' in response
-            ? response.fieldErrors
-            : undefined;
-        return {
-          ...formatted,
-          extensions: { code, ...(fieldErrors ? { fieldErrors } : {}) },
-        };
+        return cause instanceof NotFoundException
+          ? { ...formatted, extensions: { code: 'NOT_FOUND' } }
+          : formatFieldErrors(formatted, error);
       },
     }),
   ],

@@ -17,6 +17,7 @@ import { OptionEditor } from './options/option-editor';
 import { OptionsPage } from './options/options-page';
 import { InvoiceDetail } from './orders/invoice-detail';
 import { InvoiceEditor } from './orders/invoice-editor';
+import { ManualOrderEditor } from './orders/manual-order-editor';
 import { OrderDetail } from './orders/order-detail';
 import { OrderRefundEditor } from './orders/order-refund-editor';
 import { OrderStatusEditor } from './orders/order-status-editor';
@@ -167,7 +168,18 @@ void startOperator({
         },
       ],
     },
-    { path: 'orders', component: OrdersPage },
+    {
+      path: 'orders',
+      component: OrdersPage,
+      children: [
+        {
+          path: 'new',
+          component: ManualOrderEditor,
+          data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
     { path: 'orders/:recordId/invoice', component: InvoiceDetail },
     {
       path: 'orders/:recordId',
@@ -183,6 +195,12 @@ void startOperator({
           path: 'record-refund',
           component: OrderRefundEditor,
           data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: 'edit',
+          component: ManualOrderEditor,
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
           canDeactivate: [leaveDrawer],
         },
         {

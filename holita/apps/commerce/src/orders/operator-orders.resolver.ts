@@ -1,6 +1,8 @@
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type {
+  MutationCreateManualOrderArgs,
   MutationMarkOrderPaidArgs,
+  MutationUpdateManualOrderArgs,
   MutationUpdateOrderStatusArgs,
   QueryOrderArgs,
   QueryOrdersArgs,
@@ -20,6 +22,21 @@ export class OperatorOrdersResolver {
   @Query('order')
   order(@Args() { id }: QueryOrderArgs, @Context() context: RequestContext) {
     return this.orders.operatorOrder(context, id);
+  }
+
+  @Query('manualOrderMethods')
+  methods(@Context() context: RequestContext) {
+    return this.orders.manualMethods(context);
+  }
+
+  @Mutation('createManualOrder')
+  create(@Args() { input }: MutationCreateManualOrderArgs, @Context() context: RequestContext) {
+    return this.orders.createManual(context, input);
+  }
+
+  @Mutation('updateManualOrder')
+  update(@Args() { id, input }: MutationUpdateManualOrderArgs, @Context() context: RequestContext) {
+    return this.orders.updateManual(context, id, input);
   }
 
   @Mutation('updateOrderStatus')
