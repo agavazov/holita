@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { validContentSlug } from '../content-validation.js';
 import { DatabaseService } from '../database.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import type { Scope } from '../scope.js';
@@ -34,6 +35,30 @@ function namedSearch(words: string[]) {
       { slug: { contains: word, mode: 'insensitive' as const } },
     ],
   }));
+}
+
+function exactSlug(words: string[]) {
+  const slug = words.join(' ').toLowerCase();
+  return validContentSlug(slug) ? slug : undefined;
+}
+
+function partialWindow(offset: number, limit: number, slug: string | undefined) {
+  // Leave room for the exact match at the front if the query finds one.
+  const preceding = slug && offset > 0 ? 1 : 0;
+  return { skip: offset - preceding, take: limit + preceding };
+}
+
+function rankedPage<T>(
+  partial: T[],
+  exact: T | null | undefined,
+  total: number,
+  offset: number,
+  limit: number,
+  skip: number,
+) {
+  const start = exact ? 0 : offset - skip;
+  const items = exact && offset === 0 ? [exact, ...partial] : partial;
+  return { items: items.slice(start, start + limit), total, offset, limit };
 }
 
 @Injectable()
@@ -124,39 +149,43 @@ export class NavigationRepository {
   async categoryChoices(scope: Scope, offset: number, limit: number, words: string[]) {
     const category = this.database.client.category;
     const where = { ...scope, AND: namedSearch(words) };
-    const [items, total] = await this.database.client.$transaction(
+    const slug = exactSlug(words);
+    const window = partialWindow(offset, limit, slug);
+    const [items, total, exact] = await this.database.client.$transaction(
       [
         category.findMany({
-          where,
-          skip: offset,
-          take: limit,
+          where: slug ? { ...where, slug: { not: slug } } : where,
+          ...window,
           orderBy: [{ name: 'asc' }, { id: 'asc' }],
           select: namedTarget,
         }),
         category.count({ where }),
+        ...(slug ? [category.findFirst({ where: { ...where, slug }, select: namedTarget })] : []),
       ],
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
-    return { items, total, offset, limit };
+    return rankedPage(items, exact, total, offset, limit, window.skip);
   }
 
   async collectionChoices(scope: Scope, offset: number, limit: number, words: string[]) {
     const collection = this.database.client.productCollection;
     const where = { ...scope, AND: namedSearch(words) };
-    const [items, total] = await this.database.client.$transaction(
+    const slug = exactSlug(words);
+    const window = partialWindow(offset, limit, slug);
+    const [items, total, exact] = await this.database.client.$transaction(
       [
         collection.findMany({
-          where,
-          skip: offset,
-          take: limit,
+          where: slug ? { ...where, slug: { not: slug } } : where,
+          ...window,
           orderBy: [{ name: 'asc' }, { id: 'asc' }],
           select: namedTarget,
         }),
         collection.count({ where }),
+        ...(slug ? [collection.findFirst({ where: { ...where, slug }, select: namedTarget })] : []),
       ],
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
-    return { items, total, offset, limit };
+    return rankedPage(items, exact, total, offset, limit, window.skip);
   }
 
   async pageChoices(scope: Scope, offset: number, limit: number, words: string[]) {
@@ -171,19 +200,21 @@ export class NavigationRepository {
         ],
       })),
     };
-    const [items, total] = await this.database.client.$transaction(
+    const slug = exactSlug(words);
+    const window = partialWindow(offset, limit, slug);
+    const [items, total, exact] = await this.database.client.$transaction(
       [
         page.findMany({
-          where,
-          skip: offset,
-          take: limit,
+          where: slug ? { ...where, slug: { not: slug } } : where,
+          ...window,
           orderBy: [{ slug: 'asc' }, { id: 'asc' }],
           select: pageTarget,
         }),
         page.count({ where }),
+        ...(slug ? [page.findFirst({ where: { ...where, slug }, select: pageTarget })] : []),
       ],
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
-    return { items, total, offset, limit };
+    return rankedPage(items, exact, total, offset, limit, window.skip);
   }
 }

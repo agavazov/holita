@@ -1405,6 +1405,15 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       data: { catalogueCategories: [{ name: 'Kitchen' }], catalogueCategoryProducts: null },
     });
     const secondShopId = await createShop(staff, 'Second shop');
+    expect(await collectionQuery(ruleSlug, 0, secondShopId)).toEqual({
+      data: { catalogueCollections: { items: [], total: 0 }, catalogueCollectionProducts: null },
+    });
+    expect(await specificationsQuery(secondShopId)).toEqual({
+      data: { catalogueProductSpecifications: [] },
+    });
+    expect(await publicProductsQuery(secondShopId)).toEqual({
+      data: { catalogueProduct: null, catalogue: { items: [] } },
+    });
     expect(await publicShopSettings(secondShopId)).toEqual({
       data: {
         shop: {
@@ -1417,30 +1426,20 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         },
       },
     });
-    expect(await collectionQuery(ruleSlug, 0, secondShopId)).toEqual({
-      data: { catalogueCollections: { items: [], total: 0 }, catalogueCollectionProducts: null },
-    });
-    expect(await specificationsQuery(secondShopId)).toEqual({
-      data: { catalogueProductSpecifications: [] },
-    });
-    expect(await publicProductsQuery(secondShopId)).toEqual({
-      data: { catalogueProduct: null, catalogue: { items: [] } },
-    });
-    const secondNavigation = await shopper.request.post(`${shopApp.origin}/graphql`, {
-      headers: { 'x-branch-id': secondShopId },
-      data: { query: '{ shopNavigation { header { href } footer { href } } }' },
-    });
-    expect(await secondNavigation.json()).toEqual({
+    const [secondNavigation] = await Promise.all([
+      shopper.waitForResponse((response) => {
+        const request = response.request();
+        return (
+          request.headers()['x-branch-id'] === secondShopId &&
+          request.postData()?.includes('"operationName":"PublicShopNavigation"') === true
+        );
+      }),
+      shopper.goto(`${shopApp.origin}/s/${secondShopId}`),
+    ]);
+    expect(await secondNavigation.json()).toMatchObject({
       data: { shopNavigation: { header: [], footer: [] } },
     });
-    await shopper.goto(`${shopApp.origin}/s/${secondShopId}`);
-    const secondShopName = shopper.getByRole('link', { name: 'Second shop', exact: true });
-    const retryShop = shopper.getByRole('main').getByRole('button', { name: 'Retry', exact: true });
-    await expect(secondShopName.or(retryShop).first()).toBeVisible({ timeout: 15_000 });
-    if (!(await secondShopName.isVisible())) {
-      await retryShop.click();
-    }
-    await expect(secondShopName).toBeVisible({ timeout: 15_000 });
+    await expect(shopper.getByRole('link', { name: 'Second shop', exact: true })).toBeVisible();
     await expect(menuLinks(shopper)).toHaveCount(0);
     const foreignProductImage = angled.replace(shopId, secondShopId);
     expect(

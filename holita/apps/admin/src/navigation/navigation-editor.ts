@@ -27,6 +27,7 @@ import {
   injectDrawerHost,
   interpolate,
   lockWhileSaving,
+  normalizeSearch,
   requireOneOf,
   searchApplies,
   textValidator,
@@ -360,7 +361,7 @@ export class NavigationEditor {
   protected search(row: LinkForm, search: string): void {
     const type = row.controls.destinationType.value;
     if (recordDestination(type)) {
-      this.picker.set({ row, type, search });
+      this.picker.set({ row, type, search: normalizeSearch(search) });
     }
   }
 
@@ -409,7 +410,9 @@ export class NavigationEditor {
     const row = this.links.at(index);
     this.links.removeAt(index, { emitEvent: false });
     this.links.insert(next, row);
-    this.linksChanged(next);
+    const continued = next + direction;
+    const action = continued >= 0 && continued < this.links.length ? direction : -direction;
+    this.linksChanged(next, action === -1 ? 'up' : 'down');
   }
 
   protected removeLink(index: number): void {
@@ -502,14 +505,14 @@ export class NavigationEditor {
     };
   }
 
-  private linksChanged(next: number): void {
+  private linksChanged(next: number, focus: 'label-bg' | 'up' | 'down' = 'label-bg'): void {
     this.links.markAsDirty();
     this.errors.update(({ placement }) => ({ placement }));
     this.picker.set(null);
     afterNextRender(
       () => {
         const target =
-          next < 0 ? 'navigation-add-link' : `navigation-link-${String(next)}-label-bg`;
+          next < 0 ? 'navigation-add-link' : `navigation-link-${String(next)}-${focus}`;
         this.formElement()?.nativeElement.ownerDocument.getElementById(target)?.focus();
       },
       { injector: this.injector },

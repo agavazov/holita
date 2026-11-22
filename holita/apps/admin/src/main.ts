@@ -374,7 +374,11 @@ void startOperator({
       ],
     },
     { path: 'customers', component: CustomersPage },
-    { path: 'general-settings', component: ShopSettingsPage },
+    {
+      path: 'general-settings',
+      component: ShopSettingsPage,
+      canDeactivate: [(page: ShopSettingsPage | null) => page?.canLeave() ?? true],
+    },
     {
       path: 'customers/:recordId',
       component: CustomerDetail,

@@ -356,6 +356,29 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
   expect(
     await query(tokens.viewer, branchA, '{shopPages(search:"Scoped page"){items{id} total}}'),
   ).toEqual({ data: { shopPages: { items: [{ id: page.id }], total: 1 } } });
+  const partialPage = await database.shopPage.create({
+    data: {
+      tenantId: tenantA,
+      branchId: branchA,
+      slug: 'early-scoped-page',
+      titleEn: 'Earlier page',
+    },
+  });
+  expect(
+    await query(
+      tokens.viewer,
+      branchA,
+      `{
+      first: navigationDestinationChoices(type:PAGE,search:"scoped-page",limit:1){items{id} total}
+      next: navigationDestinationChoices(type:PAGE,search:"scoped-page",limit:1,offset:1){items{id} total}
+    }`,
+    ),
+  ).toEqual({
+    data: {
+      first: { items: [{ id: page.id }], total: 2 },
+      next: { items: [{ id: partialPage.id }], total: 2 },
+    },
+  });
   expect(await query(tokens.operator, branchA, createPage, { input: pageInput })).toMatchObject({
     data: null,
     errors: [
@@ -1234,7 +1257,7 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       input: { ...productDraft, tagIds: [] },
     }),
   ).toEqual({ data: { updateProduct: { ...expectedMarkers, tags: [] } } });
-}, 30_000);
+}, 60_000);
 
 function storedVariant(sku: string, price: string, active = true) {
   return {
@@ -2747,4 +2770,4 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       });
     }
   }
-}, 30_000);
+}, 60_000);

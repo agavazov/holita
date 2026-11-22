@@ -232,10 +232,11 @@ export class OperatorApplication {
     }
   }
   changeLanguage(language: Language): void {
-    this.language.set(language);
-    void this.router.navigate(
-      this.session.current() ? this.homeLink() : ['/', language, 'sign-in'],
-    );
+    void this.router.navigate([
+      '/',
+      language,
+      this.session.current() ? this.options.defaultPage : 'sign-in',
+    ]);
   }
   changeLanguageValue(value: string): void {
     if (value === 'bg' || value === 'en') {

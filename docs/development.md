@@ -663,8 +663,10 @@ is unavailable. Save a menu with no links to clear its placement.
 
 In Admin, open General Settings to update the selected shop's public display name, email,
 phone and address. Save publishes those values to the storefront. Discard changes restores
-the last saved form values. Clear the display name to use the shop's Branch name. The
-storefront shows available details in its footer and at `/s/<branchId>/contacts`. The operator
+the last saved form values. Leaving the page with unsaved changes, including when switching
+the Admin language, asks whether to keep editing or discard the draft. Clear the display name
+to use the shop's Branch name. The storefront shows available details in its footer and at
+`/s/<branchId>/contacts`. The operator
 graph exposes `shopSettings` and `updateShopSettings`, and the storefront graph exposes the
 public fields on `shop`.
 

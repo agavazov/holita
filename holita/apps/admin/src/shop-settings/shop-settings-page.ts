@@ -19,6 +19,8 @@ import {
   EmptyState,
   FormField,
   PageHeader,
+  confirmDialogPt,
+  confirmDiscard,
   fieldErrors,
   focusFirstInvalid,
   lockWhileSaving,
@@ -28,8 +30,9 @@ import {
   validationMessage,
 } from '@osnova/ui';
 import { DemoSession } from '@osnova/ui/app';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
+import { ConfirmDialog } from 'primeng/confirmdialog';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Skeleton } from 'primeng/skeleton';
@@ -46,6 +49,7 @@ type SettingsScope = NonNullable<ReturnType<ShopSettingsApi['scope']>>;
   selector: 'holita-shop-settings-page',
   imports: [
     ButtonDirective,
+    ConfirmDialog,
     EmptyState,
     FormField,
     InputText,
@@ -55,6 +59,7 @@ type SettingsScope = NonNullable<ReturnType<ShopSettingsApi['scope']>>;
     Skeleton,
     Textarea,
   ],
+  providers: [ConfirmationService],
   templateUrl: './shop-settings-page.html',
   host: { class: 'app-view' },
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -64,6 +69,7 @@ export class ShopSettingsPage {
   private readonly language = inject(OperatorLanguage).value;
   private readonly session = inject(DemoSession);
   private readonly messages = inject(MessageService);
+  private readonly confirmation = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('settingsForm');
@@ -71,6 +77,7 @@ export class ShopSettingsPage {
   protected readonly scope = this.api.scope;
   protected readonly text = computed(() => operatorStrings[this.language()]);
   protected readonly shared = computed(() => uiMessages[this.language()]);
+  protected readonly discardDialogPt = computed(() => confirmDialogPt(this.language()));
   protected readonly canWrite = computed(() => !!this.scope() && this.session.hasRole('OPERATOR'));
   protected readonly record = resource({
     params: () => this.scope() ?? undefined,
@@ -82,6 +89,7 @@ export class ShopSettingsPage {
     return scope !== null && scope === this.scope();
   });
   protected readonly saveError = signal(false);
+  private pendingLeave: Promise<boolean> | null = null;
   private readonly errors = signal<Partial<Record<SettingsField, string>>>({});
   protected readonly form = new FormGroup({
     displayName: new FormControl('', { nonNullable: true, validators: [textValidator(200)] }),
@@ -107,6 +115,19 @@ export class ShopSettingsPage {
         this.focusError();
       },
     );
+  }
+
+  canLeave(): boolean | Promise<boolean> {
+    if (this.saving()) {
+      return false;
+    }
+    if (!this.form.dirty) {
+      return true;
+    }
+    this.pendingLeave ??= confirmDiscard(this.confirmation, this.language()).finally(() => {
+      this.pendingLeave = null;
+    });
+    return this.pendingLeave;
   }
 
   protected fieldError(field: SettingsField): string | null {
