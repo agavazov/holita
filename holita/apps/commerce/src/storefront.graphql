@@ -39,6 +39,17 @@ type CataloguePage {
   offset: Int!
   limit: Int!
 }
+type CatalogueCollection {
+  id: ID!
+  name: String!
+  slug: String!
+}
+type CatalogueCollectionPage {
+  items: [CatalogueCollection!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
 type Shopper {
   id: ID!
   name: String!
@@ -56,6 +67,9 @@ type Query {
   catalogueBrands(offset: Int! = 0, limit: Int! = 20): [CatalogueBrand!]!
   "Visible shop categories in tree order. A null parentId denotes a root."
   catalogueCategories: [CatalogueCategory!]!
+  catalogueCollections(offset: Int! = 0, limit: Int! = 20): CatalogueCollectionPage!
+  "Active members in collection order, or null for a missing or inactive collection."
+  catalogueCollectionProducts(slug: String!, offset: Int! = 0, limit: Int! = 20): CataloguePage
   shopperMe: Shopper
 }
 type Mutation {

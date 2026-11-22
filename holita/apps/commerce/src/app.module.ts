@@ -15,23 +15,33 @@ import { BrandsModule } from './brands/brands.module.js';
 import { BrandsResolver } from './brands/brands.resolver.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { CategoriesResolver } from './categories/categories.resolver.js';
+import { CollectionsModule } from './collections/collections.module.js';
+import { CollectionsResolver } from './collections/collections.resolver.js';
 import { OptionsModule } from './options/options.module.js';
 import { OptionsResolver } from './options/options.resolver.js';
 import { ProductsModule } from './products/products.module.js';
 
 @Module({
-  imports: [ProductsModule, BrandsModule, CategoriesModule, OptionsModule, CustomersModule],
+  imports: [
+    ProductsModule,
+    BrandsModule,
+    CategoriesModule,
+    OptionsModule,
+    CollectionsModule,
+    CustomersModule,
+  ],
   providers: [
     CommerceResolver,
     BrandsResolver,
     CategoriesResolver,
     OptionsResolver,
+    CollectionsResolver,
     CustomersResolver,
   ],
 })
 class OperatorModule {}
 @Module({
-  imports: [ProductsModule, BrandsModule, CategoriesModule, CustomersModule],
+  imports: [ProductsModule, BrandsModule, CategoriesModule, CollectionsModule, CustomersModule],
   controllers: [BrandImagesController, ProductImagesController],
   providers: [StorefrontResolver, StorefrontService],
 })

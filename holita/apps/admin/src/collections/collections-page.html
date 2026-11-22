@@ -1,0 +1,137 @@
+<osnova-page-header
+  [title]="text().collections"
+  [moduleInfo]="text().collectionsInfo"
+  [actions]="headerActions()"
+  (action)="open('new')"
+/>
+@if (scope()) {
+<osnova-table-panel
+  #panel
+  [heading]="text().shopCollections"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
+  [view]="view()"
+  [total]="page()?.total ?? null"
+  [busy]="list.isLoading()"
+  [errorText]="text().collectionsUnavailable"
+  [emptyTitle]="text().emptyCollections"
+  [emptyDescription]="text().emptyCollectionsDescription"
+  [page]="pagination()"
+  [actionContext]="params()"
+  [actions]="actions()"
+  (action)="run($event)"
+  (pageChange)="url.setPage($event)"
+  (retry)="list.reload()"
+  (clearFilters)="url.clearFilters()"
+>
+  <osnova-filter-builder
+    panelActions
+    [searchLabel]="text().searchCollections"
+    [search]="url.searchDraft()"
+    [searchError]="url.searchError() ? shared().searchTooManyWords : null"
+    (searchChange)="url.editSearch($event)"
+  />
+  <osnova-list-sort-menu
+    panelActions
+    [fields]="sortFields()"
+    [sort]="sort()"
+    (sortChange)="changeSort($event)"
+  />
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="page()?.items ?? []"
+    [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    [sortField]="sort().field"
+    [sortOrder]="sort().direction === 'asc' ? 1 : -1"
+    (onLazyLoad)="tableSort($event)"
+    dataKey="id"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="
+                column.kind === 'identity'
+                  ? 'var(--app-table-identity-width, ' + column.width + ')'
+                  : column.width
+              "
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity" pSortableColumn="NAME">
+          {{ text().name }} <p-sort-icon field="NAME" />
+        </th>
+        <th scope="col" pSortableColumn="ACTIVE">
+          {{ text().status }} <p-sort-icon field="ACTIVE" />
+        </th>
+        <th scope="col" class="app-col-secondary">{{ text().collectionMode }}</th>
+        @if (canWrite()) {
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ shared().pageHeader.actions }}</span>
+        </th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-collection>
+      @let row = record(collection);
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-cell-identity">
+            @if (canWrite()) {
+            <button
+              type="button"
+              class="app-link"
+              [title]="collection.name"
+              (click)="panel.run('edit', [row], $event.currentTarget)"
+            >
+              {{ collection.name }}
+            </button>
+            } @else {
+            <span [title]="collection.name">{{ collection.name }}</span>
+            }
+            <span [title]="collection.slug">{{ collection.slug }}</span>
+          </div>
+          @if (canWrite()) {
+          <div class="app-table-mobile-actions">
+            <osnova-row-actions
+              [actions]="actions()"
+              [record]="row"
+              (choose)="panel.run($event.action, [row], $event.origin)"
+            />
+          </div>
+          }
+        </td>
+        <td>
+          <div class="app-cell-status">
+            <p-tag
+              [severity]="tone(collection.active ? 'success' : 'neutral')"
+              [value]="collection.active ? text().collectionActive : text().collectionInactive"
+            />
+          </div>
+        </td>
+        <td class="app-col-secondary">{{ modeLabel(collection.mode) }}</td>
+        @if (canWrite()) {
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <osnova-row-actions
+            [actions]="actions()"
+            [record]="row"
+            (choose)="panel.run($event.action, [row], $event.origin)"
+          />
+        </td>
+        }
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+} @else {
+<p-message severity="info">{{ text().noShop }}</p-message>
+}
+<router-outlet [routerOutletData]="drawerHost" />

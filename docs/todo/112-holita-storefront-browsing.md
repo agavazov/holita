@@ -1,6 +1,6 @@
 # 112 Storefront catalogue browsing
 
-**Status:** Ready after [108](108-holita-collections.md), [110](110-holita-badges-tags.md), [111](111-holita-inventory.md). **Product:** Holita.
+**Status:** Ready after [110](110-holita-badges-tags.md), [111](111-holita-inventory.md). **Product:** Holita.
 
 ## Background
 
@@ -15,8 +15,8 @@ Shoppers can navigate the catalogue and narrow results within the current shop.
 1. Add category, brand, collection and tag indexes and product listings. Include subcategories on
    category pages.
 2. Support paged results, name search, name or price sort, price range, brand, filterable options
-   and in-stock filters in the public graph and URL. Reuse the paged collection member query from
-   [108](108-holita-collections.md) and extend it with these browsing filters and URL state.
+   and in-stock filters in the public graph and URL. Extend `catalogueCollectionProducts` with
+   these browsing filters and URL state.
 3. Keep Admin on the existing catalogue screens. Seed a product that shares a category and brand
    with an existing fixture and differs in a filterable option or availability.
 

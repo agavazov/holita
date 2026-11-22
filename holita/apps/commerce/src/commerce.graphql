@@ -182,6 +182,58 @@ type OptionPage {
   offset: Int!
   limit: Int!
 }
+enum ProductCollectionMode {
+  MANUAL
+  CATEGORY
+  BRAND
+}
+enum ProductCollectionSortField {
+  NAME
+  SLUG
+  ACTIVE
+}
+input ProductCollectionSort {
+  field: ProductCollectionSortField! = NAME
+  direction: SortDirection! = ASC
+}
+input ProductCollectionInput {
+  name: String!
+  slug: String!
+  active: Boolean!
+  mode: ProductCollectionMode!
+  categoryId: ID
+  brandId: ID
+  "The complete selection in display order for a manual collection."
+  productIds: [ID!]! = []
+}
+type CollectionProductRef {
+  id: ID!
+  name: String!
+  status: ProductStatus!
+}
+type ProductCollection {
+  id: ID!
+  name: String!
+  slug: String!
+  active: Boolean!
+  mode: ProductCollectionMode!
+  categoryId: ID
+  brandId: ID
+  manualProducts: [CollectionProductRef!]!
+}
+type ProductCollectionSummary {
+  id: ID!
+  name: String!
+  slug: String!
+  active: Boolean!
+  mode: ProductCollectionMode!
+}
+type ProductCollectionPage {
+  items: [ProductCollectionSummary!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
 type Query {
   products(
     offset: Int! = 0
@@ -201,6 +253,13 @@ type Query {
   option(id: ID!): Option
   "Shop options and their values for the product editor."
   productOptions: [Option!]!
+  productCollections(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    sort: ProductCollectionSort
+  ): ProductCollectionPage!
+  productCollection(id: ID!): ProductCollection
 }
 type Mutation {
   createProduct(input: ProductInput!): Product!
@@ -213,4 +272,6 @@ type Mutation {
   deleteCategory(id: ID!): Boolean!
   createOption(input: OptionInput!): Option!
   updateOption(id: ID!, input: OptionInput!): Option!
+  createProductCollection(input: ProductCollectionInput!): ProductCollection!
+  updateProductCollection(id: ID!, input: ProductCollectionInput!): ProductCollection!
 }

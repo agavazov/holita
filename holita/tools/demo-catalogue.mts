@@ -53,6 +53,32 @@ export const demoCategories: readonly DemoCategory[] = [
   [6, 'Домашен текстил', 'home-textiles', 2, 20],
 ];
 
+type DemoCollection = {
+  readonly id: number;
+  readonly name: string;
+  readonly slug: string;
+} & (
+  | { readonly mode: 'manual'; readonly productIds: readonly number[] }
+  | { readonly mode: 'category'; readonly categoryId: number }
+);
+
+export const demoCollections: readonly DemoCollection[] = [
+  {
+    id: 1,
+    name: 'Kitchen Essentials',
+    slug: 'kitchen-essentials',
+    mode: 'manual',
+    productIds: [52, 15, 51],
+  },
+  {
+    id: 2,
+    name: 'Съдове за готвене',
+    slug: 'cookware-picks',
+    mode: 'category',
+    categoryId: 3,
+  },
+];
+
 interface DemoBrand {
   readonly id: number;
   readonly name: string;

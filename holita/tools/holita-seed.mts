@@ -7,6 +7,7 @@ import pg from 'pg';
 import {
   demoCatalogue,
   demoCategories,
+  demoCollections,
   demoOptions,
   demoProductImages,
 } from './demo-catalogue.mjs';
@@ -63,6 +64,7 @@ async function seedCatalogue(): Promise<void> {
   let categoriesInserted = 0;
   let optionsInserted = 0;
   let productsInserted = 0;
+  let collectionsInserted = 0;
   let imagesInserted = 0;
   await client.connect();
   try {
@@ -207,6 +209,44 @@ async function seedCatalogue(): Promise<void> {
         }
       }
     }
+    for (const collection of demoCollections) {
+      const collectionId = fixtureId('a2', collection.id);
+      const categoryId =
+        collection.mode === 'category' ? fixtureId('62', collection.categoryId) : null;
+      const productIds =
+        collection.mode === 'manual' ? collection.productIds.map((id) => fixtureId('52', id)) : [];
+      const { rowCount } = await client.query(
+        `INSERT INTO "productCollection" ("id", "tenantId", "branchId", "name", "slug", "mode", "categoryId")
+         SELECT $1, $2, $3, $4, $5, $6, $7
+         WHERE ($7::uuid IS NULL OR EXISTS (
+           SELECT 1 FROM "category" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $7
+         ))
+         AND (SELECT COUNT(*) FROM "product"
+           WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = ANY($8::uuid[])
+         ) = cardinality($8::uuid[])
+         ON CONFLICT DO NOTHING`,
+        [
+          collectionId,
+          tenantId,
+          branchId,
+          collection.name,
+          collection.slug,
+          collection.mode,
+          categoryId,
+          productIds,
+        ],
+      );
+      if (rowCount) {
+        collectionsInserted += rowCount;
+        for (const [sortOrder, productId] of productIds.entries()) {
+          await client.query(
+            `INSERT INTO "productCollectionItem" ("tenantId", "branchId", "collectionId", "productId", "sortOrder")
+             VALUES ($1, $2, $3, $4, $5)`,
+            [tenantId, branchId, collectionId, productId, sortOrder],
+          );
+        }
+      }
+    }
     for (const [id, photos] of Object.entries(demoProductImages)) {
       const productId = fixtureId('52', Number(id));
       // Backfill untouched demo products without restoring a merchant's cleared gallery.
@@ -246,7 +286,7 @@ async function seedCatalogue(): Promise<void> {
     }
     await client.query('COMMIT');
     console.log(
-      `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options, ${String(productsInserted)} products and ${String(imagesInserted)} product images.`,
+      `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options, ${String(productsInserted)} products, ${String(collectionsInserted)} collections and ${String(imagesInserted)} product images.`,
     );
   } finally {
     await client.end();

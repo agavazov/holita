@@ -487,6 +487,17 @@ storefront shows each product's active category path in its breadcrumbs. A hidde
 suppresses the whole subtree. The Sofia demo shop includes Kitchen and Home trees with products in
 their child categories.
 
+In Admin, use Collections to group products for the selected shop. Choose a manual collection
+to select products and arrange their order, or choose a category or brand rule to include
+products directly assigned to that category or brand. To take a collection offline, turn off
+its active status. A category or brand used in a rule can be deleted after the rule is changed.
+The Sofia demo shop includes the curated Kitchen Essentials collection and a Cookware collection.
+
+The public `catalogueCollections` query lists active collections. Use
+`catalogueCollectionProducts(slug, offset, limit)` to page through a collection's eligible
+products. Manual collections preserve the saved order, and rule-based collections sort by name.
+Products appear only while active and with at least one active variant.
+
 In Admin, use Options to define reusable options for the selected shop. The drawer lets you set
 the option's status and filter visibility, edit its text values and move them into order. The Sofia
 demo shop includes Colour and Size. The operator graph exposes `options`, `option`, `createOption`

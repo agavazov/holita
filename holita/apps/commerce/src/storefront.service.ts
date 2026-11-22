@@ -18,6 +18,7 @@ import { Prisma, type Brand, type Product, type ProductImage } from './generated
 import { brandLogoUrl } from './brands/brand-images.js';
 import { BrandsRepository } from './brands/brands.repository.js';
 import { CategoriesService } from './categories/categories.service.js';
+import { CollectionsService } from './collections/collections.service.js';
 import type { CatalogueCategory, CatalogueProduct } from './generated/graphql/storefront-types.js';
 import type { Scope } from './scope.js';
 import { CommerceRepository } from './products/commerce.repository.js';
@@ -55,6 +56,12 @@ function credentials(name: string, email: string, password: string) {
 
 function catalogueBrand(brand: Brand) {
   return { id: brand.id, name: brand.name, slug: brand.slug, logoUrl: brandLogoUrl(brand) };
+}
+
+function validatePage(offset: number, limit: number): void {
+  if (offset < 0 || limit < 1 || limit > 100) {
+    throw new BadRequestException('Invalid page');
+  }
 }
 
 function catalogueProduct(
@@ -101,6 +108,7 @@ export class StorefrontService {
     private readonly shoppers: ShopperRepository,
     private readonly brands: BrandsRepository,
     private readonly categories: CategoriesService,
+    private readonly collections: CollectionsService,
   ) {}
   async shop(context: StorefrontContext): Promise<ShopScope | null> {
     if (!context.branchId || !isUUID(context.branchId)) {
@@ -156,25 +164,15 @@ export class StorefrontService {
   }
   async catalogue(context: StorefrontContext, offset: number, limit: number) {
     const scope = await this.publicScope(context);
-    if (offset < 0 || limit < 1 || limit > 100) {
-      throw new BadRequestException('Invalid page');
-    }
-    const { items, total } = await this.products.products(
-      scope,
-      offset,
-      limit,
-      [],
-      { statuses: ['ACTIVE'] },
-      null,
-      true,
-    );
-    const categories = await this.productCategories(scope, items);
-    return {
-      items: items.map((item) => catalogueProduct(item, categories)),
-      total,
-      offset,
-      limit,
-    };
+    validatePage(offset, limit);
+    return this.cataloguePage(scope, await this.products.catalogue(scope, offset, limit));
+  }
+  private async cataloguePage(
+    scope: Scope,
+    page: Awaited<ReturnType<CommerceRepository['catalogue']>>,
+  ) {
+    const categories = await this.productCategories(scope, page.items);
+    return { ...page, items: page.items.map((item) => catalogueProduct(item, categories)) };
   }
   async product(context: StorefrontContext, id: string) {
     const scope = await this.publicScope(context);
@@ -196,13 +194,27 @@ export class StorefrontService {
   }
   async catalogueBrands(context: StorefrontContext, offset: number, limit: number) {
     const scope = await this.publicScope(context);
-    if (offset < 0 || limit < 1 || limit > 100) {
-      throw new BadRequestException('Invalid page');
-    }
+    validatePage(offset, limit);
     return (await this.brands.active(scope, offset, limit)).map(catalogueBrand);
   }
   async catalogueCategories(context: StorefrontContext) {
     return this.categories.publicTree(await this.publicScope(context));
+  }
+  async catalogueCollections(context: StorefrontContext, offset: number, limit: number) {
+    const scope = await this.publicScope(context);
+    validatePage(offset, limit);
+    return this.collections.publicList(scope, offset, limit);
+  }
+  async catalogueCollectionProducts(
+    context: StorefrontContext,
+    slug: string,
+    offset: number,
+    limit: number,
+  ) {
+    const scope = await this.publicScope(context);
+    validatePage(offset, limit);
+    const page = await this.collections.publicProducts(scope, slug, offset, limit);
+    return page ? this.cataloguePage(scope, page) : null;
   }
   private async createSession(
     shop: ShopScope,

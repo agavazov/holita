@@ -4,6 +4,8 @@ import type {
   MutationSignInShopperArgs,
   QueryCatalogueArgs,
   QueryCatalogueBrandsArgs,
+  QueryCatalogueCollectionProductsArgs,
+  QueryCatalogueCollectionsArgs,
   QueryCatalogueProductArgs,
 } from './generated/graphql/storefront-types.js';
 import { StorefrontService, type StorefrontContext } from './storefront.service.js';
@@ -34,6 +36,23 @@ export class StorefrontResolver {
   }
   @Query('catalogueCategories') categories(@Context() context: StorefrontContext) {
     return this.service.catalogueCategories(context);
+  }
+  @Query('catalogueCollections') collections(
+    @Context() context: StorefrontContext,
+    @Args() args: QueryCatalogueCollectionsArgs,
+  ) {
+    return this.service.catalogueCollections(context, args.offset ?? 0, args.limit ?? 20);
+  }
+  @Query('catalogueCollectionProducts') collectionProducts(
+    @Context() context: StorefrontContext,
+    @Args() args: QueryCatalogueCollectionProductsArgs,
+  ) {
+    return this.service.catalogueCollectionProducts(
+      context,
+      args.slug,
+      args.offset ?? 0,
+      args.limit ?? 20,
+    );
   }
   @Query('shopperMe') me(@Context() context: StorefrontContext) {
     return this.service.me(context);

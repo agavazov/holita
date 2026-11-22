@@ -1,0 +1,344 @@
+<osnova-route-drawer
+  [title]="editing ? text().editCollection : text().newCollection"
+  [subtitle]="subtitle()"
+  [state]="state()"
+  [errorText]="text().collectionsUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  <form id="collection-editor-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
+    <section class="app-form-section">
+      <osnova-form-field
+        controlId="collection-name"
+        [label]="text().name"
+        [required]="true"
+        [error]="error('name')"
+      >
+        <input
+          #name
+          pInputText
+          id="collection-name"
+          formControlName="name"
+          autocomplete="off"
+          aria-required="true"
+          aria-describedby="collection-name-error"
+          [invalid]="!!error('name')"
+          [attr.aria-invalid]="!!error('name')"
+          (input)="changeName(name.value)"
+        />
+      </osnova-form-field>
+      <osnova-form-field
+        controlId="collection-slug"
+        [label]="text().slug"
+        [hint]="text().slugHint"
+        [required]="true"
+        [error]="error('slug')"
+      >
+        <input
+          pInputText
+          id="collection-slug"
+          formControlName="slug"
+          autocomplete="off"
+          spellcheck="false"
+          aria-required="true"
+          aria-describedby="collection-slug-hint collection-slug-error"
+          [invalid]="!!error('slug')"
+          [attr.aria-invalid]="!!error('slug')"
+          (input)="clearError('slug')"
+        />
+      </osnova-form-field>
+      <div class="app-form-grid">
+        <osnova-form-field
+          controlId="collection-active"
+          [label]="text().status"
+          [required]="true"
+          [error]="error('active')"
+        >
+          <p-select
+            inputId="collection-active"
+            ariaLabelledBy="collection-active-label"
+            formControlName="active"
+            [options]="statusOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [invalid]="!!error('active')"
+            [pt]="{
+              label: {
+                'aria-required': 'true',
+                'aria-describedby': 'collection-active-error',
+                'aria-invalid': error('active') ? 'true' : undefined,
+              },
+            }"
+            (onChange)="clearError('active')"
+          />
+        </osnova-form-field>
+        <osnova-form-field
+          controlId="collection-mode"
+          [label]="text().collectionMode"
+          [required]="true"
+          [error]="error('mode')"
+        >
+          <p-select
+            inputId="collection-mode"
+            ariaLabelledBy="collection-mode-label"
+            formControlName="mode"
+            [options]="modeOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [invalid]="!!error('mode')"
+            [pt]="{
+              label: {
+                'aria-required': 'true',
+                'aria-describedby': 'collection-mode-error',
+                'aria-invalid': error('mode') ? 'true' : undefined,
+              },
+            }"
+            (onChange)="changeMode()"
+          />
+        </osnova-form-field>
+      </div>
+    </section>
+    @switch (mode()) { @case ('MANUAL') {
+    <section class="app-form-section" aria-labelledby="collection-products-title">
+      <h3 id="collection-products-title">{{ text().collectionProducts }}</h3>
+      <osnova-form-field
+        controlId="collection-products"
+        [label]="text().collectionPickProduct"
+        [error]="productSearchInvalid() ? shared().searchTooManyWords : error('productIds')"
+      >
+        <p-autocomplete
+          inputId="collection-products"
+          ariaLabelledBy="collection-products-label"
+          [formControl]="picker"
+          [suggestions]="suggestions()"
+          optionLabel="name"
+          [dropdown]="true"
+          [dropdownAriaLabel]="text().collectionPickProduct"
+          [placeholder]="text().searchProducts"
+          [delay]="300"
+          autocomplete="off"
+          fluid
+          [invalid]="productSearchInvalid() || !!error('productIds')"
+          [emptyMessage]="
+                productResults.isLoading()
+                  ? shared().loading
+                  : productSearchInvalid()
+                    ? shared().searchTooManyWords
+                    : productResults.error()
+                      ? text().collectionProductsUnavailable
+                      : shared().table.noResultsTitle
+              "
+          [pt]="{
+                ...pickerPt('collection-products', productSearchInvalid() || !!error('productIds')),
+                option: { style: { whiteSpace: 'normal', overflowWrap: 'anywhere' } },
+              }"
+          (completeMethod)="searchProducts($event.query)"
+          (onSelect)="addProduct($event.value)"
+          (onClear)="clearSearch()"
+        >
+          <ng-template #item let-product>
+            @let status = productStatus(product.status);
+            <div class="collection-product-option">
+              <span>{{ product.name }}</span>
+              <p-tag [value]="status.label" [severity]="status.severity" />
+            </div>
+          </ng-template>
+          @if (moreResults()) {
+          <ng-template #footer>
+            <div class="collection-product-search-hint">{{ text().collectionRefineSearch }}</div>
+          </ng-template>
+          }
+        </p-autocomplete>
+      </osnova-form-field>
+      @if (productResults.error()) {
+      <p-message severity="error">{{ text().collectionProductsUnavailable }}</p-message>
+      <div>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving()"
+          (click)="productResults.reload()"
+        >
+          {{ shared().retry }}
+        </button>
+      </div>
+      } @if (selectedProducts().length) {
+      <ol class="collection-products" role="list" aria-labelledby="collection-products-title">
+        @for (product of selectedProducts(); track product.id; let index = $index, first = $first,
+        last = $last) { @let status = productStatus(product.status); @let moveUp =
+        productAction(text().collectionMoveProductUp, product.name); @let moveDown =
+        productAction(text().collectionMoveProductDown, product.name); @let remove =
+        productAction(text().collectionRemoveProduct, product.name);
+        <li class="collection-product">
+          <div class="collection-product-identity">
+            <span [title]="product.name">{{ product.name }}</span>
+            <p-tag [value]="status.label" [severity]="status.severity" />
+          </div>
+          <div class="collection-product-actions">
+            <button
+              type="button"
+              class="app-icon-button"
+              [id]="'collection-product-' + product.id + '-up'"
+              [attr.aria-label]="moveUp"
+              [title]="moveUp"
+              [disabled]="first || saving()"
+              (click)="moveProduct(index, -1)"
+            >
+              <svg data-p-icon="arrow-up" aria-hidden="true"></svg>
+            </button>
+            <button
+              type="button"
+              class="app-icon-button"
+              [id]="'collection-product-' + product.id + '-down'"
+              [attr.aria-label]="moveDown"
+              [title]="moveDown"
+              [disabled]="last || saving()"
+              (click)="moveProduct(index, 1)"
+            >
+              <svg data-p-icon="arrow-down" aria-hidden="true"></svg>
+            </button>
+            <button
+              type="button"
+              class="app-icon-button"
+              [id]="'collection-product-' + product.id + '-remove'"
+              [attr.aria-label]="remove"
+              [title]="remove"
+              [disabled]="saving()"
+              (click)="removeProduct(index)"
+            >
+              <svg data-p-icon="trash" aria-hidden="true"></svg>
+            </button>
+          </div>
+        </li>
+        }
+      </ol>
+      } @else {
+      <p>{{ text().collectionNoProducts }}</p>
+      }
+    </section>
+    } @case ('CATEGORY') {
+    <section class="app-form-section">
+      <osnova-form-field
+        controlId="collection-category"
+        [label]="text().category"
+        [required]="true"
+        [error]="error('categoryId')"
+      >
+        <p-select
+          inputId="collection-category"
+          ariaLabelledBy="collection-category-label"
+          formControlName="categoryId"
+          [options]="categoryOptions()"
+          [loading]="categoryRules.isLoading()"
+          optionLabel="name"
+          optionValue="id"
+          [placeholder]="text().collectionChooseCategory"
+          [filter]="true"
+          [ariaFilterLabel]="text().searchCategories"
+          [filterPlaceholder]="text().searchCategories"
+          [emptyFilterMessage]="shared().table.noResultsTitle"
+          [invalid]="!!error('categoryId')"
+          [overlayOptions]="{ style: { width: '100%' } }"
+          [pt]="{
+                label: {
+                  'aria-required': 'true',
+                  'aria-describedby': 'collection-category-error',
+                  'aria-invalid': error('categoryId') ? 'true' : undefined,
+                },
+                option: { style: { whiteSpace: 'normal', overflowWrap: 'anywhere' } },
+              }"
+          (onChange)="clearError('categoryId')"
+        />
+      </osnova-form-field>
+      @if (categoryRules.error()) {
+      <p-message severity="error">{{ text().categoriesUnavailable }}</p-message>
+      <div>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          (click)="categoryRules.reload()"
+        >
+          {{ shared().retry }}
+        </button>
+      </div>
+      }
+    </section>
+    } @case ('BRAND') {
+    <section class="app-form-section">
+      <osnova-form-field
+        controlId="collection-brand"
+        [label]="text().brand"
+        [required]="true"
+        [error]="error('brandId')"
+      >
+        <p-select
+          inputId="collection-brand"
+          ariaLabelledBy="collection-brand-label"
+          formControlName="brandId"
+          [options]="brandOptions()"
+          [loading]="brandRules.isLoading()"
+          optionLabel="name"
+          optionValue="id"
+          [placeholder]="text().collectionChooseBrand"
+          [filter]="true"
+          [ariaFilterLabel]="text().searchBrands"
+          [filterPlaceholder]="text().searchBrands"
+          [emptyFilterMessage]="shared().table.noResultsTitle"
+          [invalid]="!!error('brandId')"
+          [overlayOptions]="{ style: { width: '100%' } }"
+          [pt]="{
+                label: {
+                  'aria-required': 'true',
+                  'aria-describedby': 'collection-brand-error',
+                  'aria-invalid': error('brandId') ? 'true' : undefined,
+                },
+                option: { style: { whiteSpace: 'normal', overflowWrap: 'anywhere' } },
+              }"
+          (onChange)="clearError('brandId')"
+        />
+      </osnova-form-field>
+      @if (brandRules.error()) {
+      <p-message severity="error">{{ text().brandsUnavailable }}</p-message>
+      <div>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          (click)="brandRules.reload()"
+        >
+          {{ shared().retry }}
+        </button>
+      </div>
+      }
+    </section>
+    } } @if (saveError()) {
+    <p-message severity="error">{{ text().collectionSaveFailed }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button
+      pButton
+      type="submit"
+      form="collection-editor-form"
+      [disabled]="saving() || ruleUnavailable()"
+    >
+      {{ text().save }}
+    </button>
+  </div>
+</osnova-route-drawer>

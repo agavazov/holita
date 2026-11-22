@@ -415,6 +415,32 @@ function readOption(value: unknown) {
   };
 }
 
+async function newCollection(page: Page, name: string, slug: string): Promise<void> {
+  await page.getByRole('button', { name: 'Add collection', exact: true }).click();
+  await page.locator('#collection-name').fill(name);
+  await page.locator('#collection-slug').fill(slug);
+}
+
+function waitForCategories(page: Page): Promise<Response> {
+  return page.waitForResponse(
+    (response) =>
+      response.request().postData()?.includes('"operationName":"OperatorCategories"') === true,
+  );
+}
+
+async function chooseCookware(
+  page: Page,
+  control: '#collection-category' | '#product-category',
+  categories: Promise<Response>,
+): Promise<void> {
+  expect((await categories).ok()).toBe(true);
+  const select = page.locator(control);
+  await expect(select).toBeVisible();
+  await expect(page.locator(`p-select:has(${control}) .p-select-loading-icon`)).toBeHidden();
+  await select.press('Space');
+  await page.getByRole('option', { name: 'Kitchen / Cookware', exact: true }).click();
+}
+
 async function previewBytes(image: Locator): Promise<Buffer> {
   const bytes = await image.evaluate(async (element) => {
     if (!(element instanceof HTMLImageElement)) {
@@ -662,7 +688,8 @@ test('staff creates a merchant and its administrator creates a product', async (
     await dismissSuccess(merchant, 'Product saved.');
     await expect(merchant.getByText(productName, { exact: true })).toBeVisible();
     await merchant.getByRole('button', { name: 'Create product', exact: true }).click();
-    await merchant.locator('#product-name').fill('Configured cookware');
+    const configuredProductName = 'Stoneware cookware';
+    await merchant.locator('#product-name').fill(configuredProductName);
     for (const [index, label, price] of [
       [0, 'Gloss', '24.00'],
       [1, 'Satin', '30.00'],
@@ -676,6 +703,8 @@ test('staff creates a merchant and its administrator creates a product', async (
       await merchant.locator(`#product-variant-sku-${String(index)}`).fill(`CONFIG-${label}`);
       await merchant.locator(`#product-variant-price-${String(index)}`).fill(price);
     }
+    await merchant.locator('#product-status').click();
+    await merchant.getByRole('option', { name: 'Active', exact: true }).click();
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Product saved.');
     const shopperContext = await browser.newContext();
@@ -763,6 +792,114 @@ test('staff creates a merchant and its administrator creates a product', async (
       data: { catalogueProduct: { coverImage: angledPhoto, images: [angledPhoto] } },
     });
     expect((await shopper.request.get(new URL(front, shopApp.origin).href)).status()).toBe(404);
+
+    const manualName = 'Cookware essentials';
+    const manualSlug = 'cookware-essentials';
+    const ruleName = 'Cookware category picks';
+    const ruleSlug = 'cookware-category-picks';
+    const collectionQuery = async (
+      slug: string,
+      offset = 0,
+      branchId = shopId,
+    ): Promise<unknown> => {
+      const response = await shopper.request.post(`${shopApp.origin}/graphql`, {
+        headers: { 'x-branch-id': branchId },
+        data: {
+          query: `query($slug: String!, $offset: Int!) {
+            catalogueCollections { items { name slug } total }
+            catalogueCollectionProducts(slug: $slug, offset: $offset, limit: 1) {
+              items { name }
+              total offset limit
+            }
+          }`,
+          variables: { slug, offset },
+        },
+      });
+      expect(response.status()).toBe(200);
+      return response.json();
+    };
+    await merchant.getByRole('link', { name: 'Collections', exact: true }).click();
+    await newCollection(merchant, manualName, manualSlug);
+    for (const name of [productName, configuredProductName]) {
+      await merchant.locator('#collection-products').fill(name);
+      await merchant.getByRole('option', { name, exact: true }).click();
+    }
+    await merchant
+      .getByRole('button', { name: `Move ${configuredProductName} up`, exact: true })
+      .click();
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Collection saved.');
+    expect(await collectionQuery(manualSlug)).toEqual({
+      data: {
+        catalogueCollections: { items: [{ name: manualName, slug: manualSlug }], total: 1 },
+        catalogueCollectionProducts: {
+          items: [{ name: configuredProductName }],
+          total: 2,
+          offset: 0,
+          limit: 1,
+        },
+      },
+    });
+    expect(await collectionQuery(manualSlug, 1)).toMatchObject({
+      data: {
+        catalogueCollectionProducts: {
+          items: [{ name: productName }],
+          total: 2,
+          offset: 1,
+          limit: 1,
+        },
+      },
+    });
+
+    await newCollection(merchant, ruleName, ruleSlug);
+    await merchant.locator('#collection-mode').click();
+    const collectionCategories = waitForCategories(merchant);
+    await merchant.getByRole('option', { name: 'By category', exact: true }).click();
+    await chooseCookware(merchant, '#collection-category', collectionCategories);
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Collection saved.');
+    expect(await collectionQuery(ruleSlug)).toMatchObject({
+      data: { catalogueCollectionProducts: { items: [{ name: productName }], total: 1 } },
+    });
+
+    await merchant.getByRole('link', { name: 'Products', exact: true }).click();
+    const configuredProduct = merchant.getByRole('button', {
+      name: configuredProductName,
+      exact: true,
+    });
+    const productCategories = waitForCategories(merchant);
+    await configuredProduct.click();
+    await chooseCookware(merchant, '#product-category', productCategories);
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Product saved.');
+    expect(await collectionQuery(ruleSlug, 1)).toMatchObject({
+      data: { catalogueCollectionProducts: { items: [{ name: configuredProductName }], total: 2 } },
+    });
+
+    await configuredProduct.click();
+    await merchant.locator('#product-status').click();
+    await merchant.getByRole('option', { name: 'Draft', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Product saved.');
+    for (const slug of [manualSlug, ruleSlug]) {
+      expect(await collectionQuery(slug)).toMatchObject({
+        data: { catalogueCollectionProducts: { items: [{ name: productName }], total: 1 } },
+      });
+    }
+
+    await merchant.getByRole('link', { name: 'Collections', exact: true }).click();
+    await merchant.getByRole('button', { name: manualName, exact: true }).click();
+    await merchant.locator('#collection-active').click();
+    await merchant.getByRole('option', { name: 'Inactive', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Collection saved.');
+    expect(await collectionQuery(manualSlug)).toEqual({
+      data: {
+        catalogueCollections: { items: [{ name: ruleName, slug: ruleSlug }], total: 1 },
+        catalogueCollectionProducts: null,
+      },
+    });
+
     await merchant.getByRole('link', { name: 'Categories', exact: true }).click();
     await merchant.getByRole('button', { name: 'Cookware', exact: true }).click();
     await merchant.locator('#category-parent').click();
@@ -793,6 +930,9 @@ test('staff creates a merchant and its administrator creates a product', async (
       data: { catalogueCategories: [{ name: 'Kitchen' }] },
     });
     const secondShopId = await createShop(staff, 'Second shop');
+    expect(await collectionQuery(ruleSlug, 0, secondShopId)).toEqual({
+      data: { catalogueCollections: { items: [], total: 0 }, catalogueCollectionProducts: null },
+    });
     await shopper.goto(`${shopApp.origin}/s/${secondShopId}`);
     await expect(shopper.getByRole('link', { name: 'Second shop', exact: true })).toBeVisible();
     const foreignProductImage = angled.replace(shopId, secondShopId);

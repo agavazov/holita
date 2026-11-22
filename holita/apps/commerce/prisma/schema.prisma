@@ -22,6 +22,13 @@ enum BrandStatus {
   @@map("brandStatus")
 }
 
+enum ProductCollectionMode {
+  MANUAL @map("manual")
+  CATEGORY @map("category")
+  BRAND @map("brand")
+  @@map("productCollectionMode")
+}
+
 model Brand {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
@@ -33,6 +40,7 @@ model Brand {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
   products Product[]
+  collections ProductCollection[]
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, slug])
   @@unique([tenantId, branchId, logoKey])
@@ -52,6 +60,7 @@ model Category {
   sortOrder Int @default(0)
   active Boolean @default(true)
   products Product[]
+  collections ProductCollection[]
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, slug])
   @@index([tenantId, branchId, parentId])
@@ -98,6 +107,7 @@ model Product {
   descriptionEn String? @db.Text
   variants ProductVariant[]
   images ProductImage[]
+  collectionItems ProductCollectionItem[]
   legacyPrice Decimal? @map("price") @db.Decimal(12, 2)
   status ProductStatus @default(DRAFT)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
@@ -107,6 +117,40 @@ model Product {
   @@index([tenantId, branchId, brandId])
   @@index([tenantId, branchId, categoryId])
   @@map("product")
+}
+
+model ProductCollection {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  name String @db.VarChar(200)
+  slug String @db.VarChar(200)
+  active Boolean @default(true)
+  mode ProductCollectionMode
+  categoryId String? @db.Uuid
+  category Category? @relation(fields: [tenantId, branchId, categoryId], references: [tenantId, branchId, id], onDelete: Restrict)
+  brandId String? @db.Uuid
+  brand Brand? @relation(fields: [tenantId, branchId, brandId], references: [tenantId, branchId, id], onDelete: Restrict)
+  items ProductCollectionItem[]
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, slug])
+  @@index([tenantId, branchId, categoryId])
+  @@index([tenantId, branchId, brandId])
+  @@map("productCollection")
+}
+
+model ProductCollectionItem {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  collectionId String @db.Uuid
+  collection ProductCollection @relation(fields: [tenantId, branchId, collectionId], references: [tenantId, branchId, id], onDelete: Cascade)
+  productId String @db.Uuid
+  product Product @relation(fields: [tenantId, branchId, productId], references: [tenantId, branchId, id], onDelete: Cascade)
+  sortOrder Int
+  @@id([tenantId, branchId, collectionId, productId])
+  @@unique([tenantId, branchId, collectionId, sortOrder])
+  @@index([tenantId, branchId, productId])
+  @@map("productCollectionItem")
 }
 
 model ProductImage {

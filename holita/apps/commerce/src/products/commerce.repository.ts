@@ -5,6 +5,11 @@ import type { ProductInput, ProductSort, ProductFilter } from '../generated/grap
 import type { Scope } from '../scope.js';
 import { DatabaseService } from '../database.service.js';
 import type { ProductImageWrite } from './product-images.js';
+import {
+  catalogueProductRelations,
+  catalogueProductWhere,
+  productRelations,
+} from './product-relations.js';
 
 type ProductFields = Omit<ProductInput, 'variants' | 'images'>;
 interface VariantWrite {
@@ -19,31 +24,8 @@ interface VariantWrite {
   optionValueIds: string[];
 }
 
-const available = { some: { active: true } } satisfies Prisma.ProductVariantListRelationFilter;
-
-function listRelations(scope: Scope, publicOnly: boolean) {
-  const relations = productRelations(scope);
-  return {
-    ...relations,
-    brand: true,
-    variants: {
-      ...relations.variants,
-      ...(publicOnly
-        ? { where: { ...scope, active: true }, orderBy: { price: 'asc' }, take: 1 }
-        : {}),
-    },
-  } satisfies Prisma.ProductInclude;
-}
-
-function productRelations(scope: Scope) {
-  return {
-    images: { where: scope, orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] },
-    variants: {
-      where: scope,
-      orderBy: { sortOrder: 'asc' },
-      include: { values: { where: scope, select: { optionValueId: true } } },
-    },
-  } satisfies Prisma.ProductInclude;
+function listRelations(scope: Scope) {
+  return { ...productRelations(scope), brand: true } satisfies Prisma.ProductInclude;
 }
 
 @Injectable()
@@ -57,13 +39,11 @@ export class CommerceRepository {
     search: string[],
     filter: ProductFilter | null | undefined,
     sort: ProductSort | null | undefined,
-    publicOnly = false,
   ) {
     const where: Prisma.ProductWhereInput = {
       ...scope,
       AND: search.map((word) => ({ name: { contains: word, mode: 'insensitive' } })),
       ...(filter?.statuses ? { status: { in: filter.statuses } } : {}),
-      ...(publicOnly ? { variants: available } : {}),
     };
     const direction = sort?.direction === 'DESC' ? 'desc' : 'asc';
     const order: Prisma.ProductOrderByWithRelationInput =
@@ -82,7 +62,7 @@ export class CommerceRepository {
                 skip: offset,
                 take: limit,
                 orderBy: [order, { id: 'desc' }],
-                include: listRelations(scope, publicOnly),
+                include: listRelations(scope),
               });
         return { items, total: await tx.product.count({ where }), offset, limit };
       },
@@ -138,7 +118,7 @@ export class CommerceRepository {
     });
     const rows = await tx.product.findMany({
       where: { ...scope, id: { in: ids } },
-      include: listRelations(scope, false),
+      include: listRelations(scope),
     });
     const indexed = new Map(rows.map((row) => [row.id, row]));
     return ids.flatMap((id) => indexed.get(id) ?? []);
@@ -151,12 +131,30 @@ export class CommerceRepository {
     });
   }
 
+  async catalogue(scope: Scope, offset: number, limit: number) {
+    const where = catalogueProductWhere(scope);
+    const [items, total] = await this.database.client.$transaction(
+      [
+        this.database.client.product.findMany({
+          where,
+          skip: offset,
+          take: limit,
+          orderBy: [{ name: 'asc' }, { id: 'desc' }],
+          include: catalogueProductRelations(scope),
+        }),
+        this.database.client.product.count({ where }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return { items, total, offset, limit };
+  }
+
   publicProduct(scope: Scope, id: string) {
     return this.database.client.$transaction(
       (tx) =>
         tx.product.findUnique({
-          where: { id, ...scope, status: 'ACTIVE', variants: available },
-          include: listRelations(scope, true),
+          where: { id, ...catalogueProductWhere(scope) },
+          include: catalogueProductRelations(scope),
         }),
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
@@ -167,7 +165,7 @@ export class CommerceRepository {
       where: {
         ...scope,
         storageKey,
-        ...(publicOnly ? { product: { ...scope, status: 'ACTIVE', variants: available } } : {}),
+        ...(publicOnly ? { product: catalogueProductWhere(scope) } : {}),
       },
       select: { id: true },
     });

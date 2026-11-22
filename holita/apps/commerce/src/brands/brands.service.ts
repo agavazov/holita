@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
+import { GraphQLError } from 'graphql';
 import type { Brand, BrandInput, QueryBrandsArgs } from '../generated/graphql/types.js';
 import { Prisma, type Brand as StoredBrand } from '../generated/prisma/client.js';
 import { requireScope, type RequestContext } from '../scope.js';
@@ -121,7 +122,9 @@ export class BrandsService {
           throw new NotFoundException('Brand not found');
         }
         if (error.code === 'P2003') {
-          throw new ConflictException('Brand assignments changed');
+          throw new GraphQLError('Change collection rules before deleting this brand', {
+            extensions: { code: 'CONFLICT' },
+          });
         }
       }
       throw error;

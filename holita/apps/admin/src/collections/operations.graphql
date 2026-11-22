@@ -1,0 +1,65 @@
+fragment OperatorCollectionSummary on ProductCollectionSummary {
+  id
+  name
+  slug
+  active
+  mode
+}
+
+fragment CollectionProductFields on CollectionProductRef {
+  id
+  name
+  status
+}
+
+query OperatorCollections(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $sort: ProductCollectionSort
+) {
+  productCollections(offset: $offset, limit: $limit, search: $search, sort: $sort) {
+    items {
+      ...OperatorCollectionSummary
+    }
+    total
+  }
+}
+
+query OperatorCollection($id: ID!) {
+  productCollection(id: $id) {
+    id
+    name
+    slug
+    active
+    mode
+    categoryId
+    brandId
+    manualProducts {
+      ...CollectionProductFields
+    }
+  }
+}
+
+query CollectionProductPicker($offset: Int!, $limit: Int!, $search: String) {
+  products(offset: $offset, limit: $limit, search: $search) {
+    items {
+      id
+      name
+      status
+    }
+    total
+  }
+}
+
+mutation OperatorCreateCollection($input: ProductCollectionInput!) {
+  createProductCollection(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateCollection($id: ID!, $input: ProductCollectionInput!) {
+  updateProductCollection(id: $id, input: $input) {
+    id
+  }
+}

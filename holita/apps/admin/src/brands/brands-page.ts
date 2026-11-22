@@ -18,6 +18,7 @@ import {
   RowActions,
   TablePanel,
   UrlListState,
+  errorCode,
   injectSortReady,
   listQuery,
   listRecord,
@@ -246,11 +247,14 @@ export class BrandsPage {
         this.messages.add({ severity: 'success', summary: this.text().brandDeleted });
         this.list.reload();
       }
-    } catch {
+    } catch (error: unknown) {
       if (!this.destroyRef.destroyed && this.scope() === scope) {
         this.messages.add({
           severity: 'error',
-          summary: this.text().brandDeleteFailed,
+          summary:
+            errorCode(error) === 'CONFLICT'
+              ? this.text().brandDeleteConflict
+              : this.text().brandDeleteFailed,
           sticky: true,
         });
       }
