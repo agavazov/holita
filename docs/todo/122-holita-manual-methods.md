@@ -16,7 +16,7 @@ Merchants manage the manual options already used by checkout.
    label, active status, order, payment instructions and the fixed shipping fee.
 2. Let merchants add, edit and deactivate methods. Have checkout show the current enabled options.
    Display the payment instructions and charged shipping fee from the
-   [order snapshot](116-holita-place-order.md) on historical orders.
+   stored order snapshot on historical orders.
 3. Seed a second enabled payment method and an inactive delivery option.
 
 ## Done when

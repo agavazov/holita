@@ -496,7 +496,7 @@ function pngAtSize(source: Buffer, size: number): Buffer {
   return Buffer.concat([source.subarray(0, -12), chunk, source.subarray(-12)]);
 }
 
-test('staff provisions a shop, its merchant publishes a product and a shopper merges a cart', async ({
+test('staff provisions a shop, its merchant publishes a product and shoppers check out', async ({
   browser,
 }) => {
   const staffEmail = process.env.HOLITA_STAFF_EMAIL;
@@ -677,8 +677,11 @@ test('staff provisions a shop, its merchant publishes a product and a shopper me
     await expect(
       merchant.locator('p-select:has(#product-badges) .p-select-loading-icon'),
     ).toBeHidden();
-    await merchant.locator('#product-badges').press('Space');
-    await merchant.getByRole('option', { name: badgeName, exact: true }).click();
+    const badges = merchant.locator('#product-badges');
+    await badges.press('Space');
+    await expect(merchant.getByRole('option', { name: badgeName, exact: true })).toBeVisible();
+    await badges.press('ArrowDown');
+    await badges.press('Enter');
     await merchant.getByRole('heading', { name: 'Badges and tags', exact: true }).click();
     await merchant.locator('#product-tag-search').fill(tagName);
     const tagCreated = merchant.waitForResponse(
@@ -1243,11 +1246,11 @@ test('staff provisions a shop, its merchant publishes a product and a shopper me
       shopper.getByRole('heading', { name: configuredProductName, exact: true }),
     ).toBeVisible();
     const configuredProductUrl = shopper.url();
-    const addSatin = async () => {
-      await shopper.getByRole('radio', { name: 'Gloss', exact: true }).check();
-      await shopper.getByRole('radio', { name: 'Satin', exact: true }).check();
-      await shopper.getByRole('button', { name: 'Add to cart', exact: true }).click();
-      await expect(shopper.getByRole('link', { name: 'Cart, 1 item', exact: true })).toBeVisible();
+    const addSatin = async (page = shopper) => {
+      await page.getByRole('radio', { name: 'Gloss', exact: true }).check();
+      await page.getByRole('radio', { name: 'Satin', exact: true }).check();
+      await page.getByRole('button', { name: 'Add to cart', exact: true }).click();
+      await expect(page.getByRole('link', { name: 'Cart, 1 item', exact: true })).toBeVisible();
     };
     const expectedSatin = {
       name: configuredProductName,
@@ -1320,26 +1323,26 @@ test('staff provisions a shop, its merchant publishes a product and a shopper me
        VALUES ($1, $2, $3, $4, $5, true, CURRENT_TIMESTAMP)`,
       [shippingId, shopScope.tenantId, shopId, shippingLabel, '6.50'],
     );
-    const reviewCheckout = async (subtotal: string, total: string) => {
-      await shopper.getByRole('link', { name: 'Checkout', exact: true }).click();
-      await shopper.getByRole('textbox', { name: 'Name', exact: true }).fill('Shopper');
-      await shopper.getByRole('textbox', { name: 'Email', exact: true }).fill(shopperEmail);
-      await shopper.getByRole('textbox', { name: 'Phone', exact: true }).fill('+359 2 555 0100');
-      await shopper.locator('#countryCode').fill('BG');
-      await shopper.getByRole('textbox', { name: 'City', exact: true }).fill('Sofia');
-      await shopper.getByRole('textbox', { name: 'Postal code', exact: true }).fill('1000');
-      await shopper
+    const reviewCheckout = async (page: Page, subtotal: string, total: string) => {
+      await page.getByRole('link', { name: 'Checkout', exact: true }).click();
+      await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Shopper');
+      await page.getByRole('textbox', { name: 'Email', exact: true }).fill(shopperEmail);
+      await page.getByRole('textbox', { name: 'Phone', exact: true }).fill('+359 2 555 0100');
+      await page.locator('#countryCode').fill('BG');
+      await page.getByRole('textbox', { name: 'City', exact: true }).fill('Sofia');
+      await page.getByRole('textbox', { name: 'Postal code', exact: true }).fill('1000');
+      await page
         .getByRole('textbox', { name: 'Address line 1', exact: true })
         .fill('12 Demo Street');
-      await shopper.getByLabel('Delivery method', { exact: true }).selectOption(shippingId);
-      await shopper.getByLabel('Payment method', { exact: true }).selectOption(paymentId);
-      const quoted = waitForCart(shopper, 'QuoteCheckout');
-      await shopper.getByRole('button', { name: 'Review total', exact: true }).click();
+      await page.getByLabel('Delivery method', { exact: true }).selectOption(shippingId);
+      await page.getByLabel('Payment method', { exact: true }).selectOption(paymentId);
+      const quoted = waitForCart(page, 'QuoteCheckout');
+      await page.getByRole('button', { name: 'Review total', exact: true }).click();
       expect(await (await quoted).json()).toMatchObject({
         data: { quoteCheckout: { subtotal, shippingFee: '6.50', total, currency: 'BGN' } },
       });
     };
-    await reviewCheckout('30.00', '36.50');
+    await reviewCheckout(shopper, '30.00', '36.50');
 
     const readWithGuestToken = async (branchId: string): Promise<unknown> => {
       const response = await shopper.request.post(`${shopApp.origin}/graphql`, {
@@ -1371,7 +1374,7 @@ test('staff provisions a shop, its merchant publishes a product and a shopper me
       },
     });
     expect(await readWithGuestToken(shopId)).toMatchObject(missingCart);
-    await reviewCheckout('60.00', '66.50');
+    await reviewCheckout(shopper, '60.00', '66.50');
     await shopper.getByRole('link', { name: 'Back to cart', exact: true }).click();
 
     await shopper.getByRole('spinbutton', { name: 'Quantity', exact: true }).fill('3');
@@ -1391,6 +1394,70 @@ test('staff provisions a shop, its merchant publishes a product and a shopper me
     expect(await (await removed).json()).toMatchObject({
       data: { removeCartLine: { itemCount: 0, subtotal: '0.00', lines: [] } },
     });
+
+    await commerceDb.client.query(
+      `UPDATE "productVariant" SET "quantity" = 1
+       WHERE "tenantId" = $1 AND "branchId" = $2 AND "productId" = $3 AND "sku" = 'SMOKE-001'`,
+      [shopScope.tenantId, shopId, productId],
+    );
+    const guestOrderContext = await browser.newContext();
+    cleanup.push(() => guestOrderContext.close());
+    const guestOrder = await guestOrderContext.newPage();
+    await guestOrder.goto(productUrl);
+    await guestOrder.getByRole('button', { name: 'EN', exact: true }).click();
+    await guestOrder.getByRole('button', { name: 'Add to cart', exact: true }).click();
+    await guestOrder.getByRole('link', { name: 'Cart, 1 item', exact: true }).click();
+    const orderCartToken = await guestOrder.evaluate(
+      (id) => localStorage.getItem(`holita.cart.${id}`),
+      shopId,
+    );
+    if (!orderCartToken) {
+      throw new Error('Missing guest authorization for checkout');
+    }
+    await reviewCheckout(guestOrder, '25.50', '32.00');
+    const placed = waitForCart(guestOrder, 'PlaceOrder');
+    await guestOrder.getByRole('button', { name: 'Place order', exact: true }).click();
+    await guestOrder.waitForURL(`${shopApp.origin}/s/${shopId}/checkout/confirmation/*`);
+    const confirmationUrl = guestOrder.url();
+    const orderId = new URL(confirmationUrl).pathname.split('/').at(-1);
+    if (!orderId) {
+      throw new Error('Missing order ID in the confirmation route');
+    }
+    const expectedOrder = {
+      id: orderId,
+      status: 'PLACED',
+      paymentStatus: 'UNPAID',
+      subtotal: '25.50',
+      shippingFee: '6.50',
+      total: '32.00',
+      paymentInstructions: 'Pay when the parcel arrives.',
+    };
+    expect(await (await placed).json()).toMatchObject({ data: { placeOrder: expectedOrder } });
+    const receipt = waitForCart(guestOrder, 'OrderConfirmation');
+    await guestOrder.reload();
+    expect(await (await receipt).json()).toMatchObject({
+      data: { orderConfirmation: expectedOrder },
+    });
+    await guestOrder.goto(configuredProductUrl);
+    await addSatin(guestOrder);
+    const priorReceipt = waitForCart(guestOrder, 'OrderConfirmation');
+    await guestOrder.goto(confirmationUrl);
+    expect(await (await priorReceipt).json()).toMatchObject({
+      data: { orderConfirmation: expectedOrder },
+    });
+    for (const [branchId, credential] of [
+      [shopId, guestToken],
+      [secondShopId, orderCartToken],
+    ]) {
+      const denied = await guestOrder.request.post(`${shopApp.origin}/graphql`, {
+        headers: { 'x-branch-id': branchId, 'x-cart-token': credential },
+        data: {
+          query: 'query($id:ID!){orderConfirmation(orderId:$id){id}}',
+          variables: { id: orderId },
+        },
+      });
+      expect(await denied.json()).toEqual({ data: { orderConfirmation: null } });
+    }
 
     await merchant.getByRole('link', { name: 'Customers', exact: true }).click();
     await expect(merchant.getByText('Shopper', { exact: true })).toBeVisible();

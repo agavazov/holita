@@ -327,6 +327,8 @@ query Checkout {
 }
 mutation QuoteCheckout($input: CheckoutQuoteInput!) {
   quoteCheckout(input: $input) {
+    cartId
+    quoteRevision
     lines {
       ...PublicCartLineFields
     }
@@ -340,5 +342,48 @@ mutation QuoteCheckout($input: CheckoutQuoteInput!) {
     subtotal
     shippingFee
     total
+  }
+}
+fragment OrderConfirmationFields on OrderConfirmation {
+  id
+  number
+  placedAt
+  status
+  paymentStatus
+  contact {
+    name
+    email
+    phone
+  }
+  shippingAddress {
+    countryCode
+    city
+    postalCode
+    line1
+    line2
+  }
+  paymentMethodLabel
+  paymentInstructions
+  shippingMethodLabel
+  lines {
+    sku
+    label
+    quantity
+    unitPrice
+    lineTotal
+  }
+  currency
+  subtotal
+  shippingFee
+  total
+}
+mutation PlaceOrder($input: PlaceOrderInput!) {
+  placeOrder(input: $input) {
+    ...OrderConfirmationFields
+  }
+}
+query OrderConfirmation($orderId: ID!) {
+  orderConfirmation(orderId: $orderId) {
+    ...OrderConfirmationFields
   }
 }

@@ -21,17 +21,36 @@ export class CartRepository {
   }
 
   find(tx: Prisma.TransactionClient, scope: Scope, owner: CartOwner) {
-    return tx.cart.findFirst({ where: { ...scope, ...owner }, select: { id: true } });
-  }
-
-  async lock(tx: Prisma.TransactionClient, scope: Scope, owner: CartOwner) {
-    // Serialize writes and merges on this cart before reading its lines.
-    const [cart] = await tx.cart.updateManyAndReturn({
-      where: { ...scope, ...owner },
-      data: { updatedAt: new Date() },
+    return tx.cart.findFirst({
+      where: { ...scope, ...owner, consumedAt: null },
       select: { id: true },
     });
+  }
+
+  async lock(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    owner: CartOwner,
+    placementCartId?: string,
+  ) {
+    // Placement locks the exact cart, including consumed carts for retries.
+    const [cart] = await tx.cart.updateManyAndReturn({
+      where: {
+        ...scope,
+        ...owner,
+        ...(placementCartId ? { id: placementCartId } : { consumedAt: null }),
+      },
+      data: { updatedAt: new Date() },
+      select: { id: true, consumedAt: true },
+    });
     return cart;
+  }
+
+  consume(tx: Prisma.TransactionClient, scope: Scope, cartId: string, consumedAt: Date) {
+    return tx.cart.update({
+      where: { ...scope, id: cartId, consumedAt: null },
+      data: { consumedAt },
+    });
   }
 
   async lockCustomerCart(tx: Prisma.TransactionClient, scope: Scope, customerId: string) {
@@ -82,6 +101,7 @@ export class CartRepository {
       where: { ...scope, id: { in: ids }, active: true, product: { ...scope, status: 'ACTIVE' } },
       select: {
         id: true,
+        sku: true,
         product: {
           select: {
             id: true,

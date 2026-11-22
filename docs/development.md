@@ -552,6 +552,14 @@ Commerce. The Sofia seed enables Наложен платеж and Доставк�
 The storefront graph exposes the checkout options with `checkout` and prices the selected options
 with `quoteCheckout`, using the cart's existing authorization.
 
+After reviewing the total, choose Place order. A change in available stock, prices or selected
+methods prompts you to review the checkout again. The confirmation shows the placed, unpaid order
+with its saved items, delivery fee and payment instructions. Signed-in shoppers can reopen their
+confirmation when signed in to the same shop. Guest confirmations can be reopened in the browser
+that placed the order. The Sofia seed includes one unpaid order for the demo shopper.
+The storefront graph uses `placeOrder` with the reviewed cart ID and quote revision, and
+`orderConfirmation` with the order ID and the placing shopper's authorization.
+
 The Product drawer's Descriptions section accepts optional Bulgarian and English plain text.
 The storefront product page shows the selected language when available and falls back to the
 other description. The Sofia demo shop includes a bilingual ceramic casserole under Cookware.

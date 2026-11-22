@@ -15,6 +15,8 @@ import {
   CatalogueTagProductsDocument,
   CatalogueTagsDocument,
   CheckoutDocument,
+  OrderConfirmationDocument,
+  PlaceOrderDocument,
   PublicCartDocument,
   PublicShopDocument,
   QuoteCheckoutDocument,
@@ -28,6 +30,7 @@ import {
   type CatalogueCategoryFieldsFragment,
   type CatalogueQueryVariables,
   type CheckoutQuoteInput,
+  type PlaceOrderInput,
 } from './generated/operations';
 import type { BrowseSection } from './catalogue-url';
 
@@ -214,5 +217,14 @@ export class StorefrontApi {
     input: CheckoutQuoteInput,
   ) {
     return (await this.write(shopId, QuoteCheckoutDocument, { input }, credentials)).quoteCheckout;
+  }
+
+  async placeOrder(shopId: string, credentials: StorefrontCredentials, input: PlaceOrderInput) {
+    return (await this.write(shopId, PlaceOrderDocument, { input }, credentials)).placeOrder;
+  }
+
+  async orderConfirmation(shopId: string, credentials: StorefrontCredentials, orderId: string) {
+    return (await this.read(shopId, OrderConfirmationDocument, { orderId }, credentials))
+      .orderConfirmation;
   }
 }

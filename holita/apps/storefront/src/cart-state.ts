@@ -43,6 +43,19 @@ export function forgetGuestCart(shopId: string, token: string | null) {
   }
 }
 
+function guestReceiptStorageKey(shopId: string, orderId: string) {
+  return `holita.receipt.${shopId}.${orderId}`;
+}
+
+export function guestReceiptToken(shopId: string, orderId: string) {
+  return localStorage.getItem(guestReceiptStorageKey(shopId, orderId));
+}
+
+export function rememberGuestReceipt(shopId: string, orderId: string, token: string) {
+  localStorage.setItem(guestReceiptStorageKey(shopId, orderId), token);
+  forgetGuestCart(shopId, token);
+}
+
 export type CartWriteError = 'cartUnavailable' | 'cartInsufficientStock' | 'cartUpdateFailed';
 type CartWriteResult = 'ok' | 'expired' | CartWriteError;
 

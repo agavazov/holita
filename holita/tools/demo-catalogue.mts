@@ -124,6 +124,30 @@ export const demoPaymentMethod = {
 };
 export const demoShippingMethod = { label: 'Доставка до адрес', fixedFee: '6.00' };
 
+export const demoOrder = {
+  placedAt: '2026-11-20T10:00:00Z',
+  phone: '+359 2 555 0100',
+  city: 'София',
+  postalCode: '1000',
+  address: 'ул. „Професор Иван Георгов“ 15',
+  subtotal: '107.80',
+  total: '113.80',
+  lines: [
+    {
+      variant: 570,
+      sku: 'DEMO-57',
+      label: 'Керамична касерола „Горска жарава“, 1,5 л',
+      unitPrice: '52.90',
+    },
+    {
+      variant: 580,
+      sku: 'DEMO-58',
+      label: 'Глинен съд за печене „Орех“, 2 л',
+      unitPrice: '54.90',
+    },
+  ],
+};
+
 interface DemoBrand {
   readonly id: number;
   readonly name: string;

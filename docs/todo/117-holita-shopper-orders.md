@@ -1,6 +1,6 @@
 # 117 Shopper order history
 
-**Status:** Ready after [116](116-holita-place-order.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

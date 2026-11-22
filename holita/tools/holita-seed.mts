@@ -11,6 +11,7 @@ import {
   demoCharacteristicGroups,
   demoCollections,
   demoOptions,
+  demoOrder,
   demoPaymentMethod,
   demoProductCovers,
   demoProductImages,
@@ -396,6 +397,7 @@ async function seedCatalogue(): Promise<void> {
         demoShippingMethod.fixedFee,
       ],
     );
+    await seedShopperOrder(client, tenantId, branchId);
     await client.query('COMMIT');
     console.log(
       `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options, ${String(productsInserted)} products, ${String(collectionsInserted)} collections, ${String(characteristicGroupsInserted)} characteristic groups and ${String(imagesInserted)} product images.`,
@@ -455,6 +457,84 @@ async function seedShopperCart(client: pg.Client, tenantId: string, branchId: st
         `INSERT INTO "cartLine" ("id", "tenantId", "branchId", "cartId", "variantId", "quantity")
          VALUES ($1, $2, $3, $4, $5, 1)`,
         [fixtureId('f2', index + 1), tenantId, branchId, cartId, variant.id],
+      );
+    }
+  }
+}
+
+async function seedShopperOrder(client: pg.Client, tenantId: string, branchId: string) {
+  const { placedAt, phone, city, postalCode, address, subtotal, total, lines } = demoOrder;
+  const cartId = fixtureId('e2', 2);
+  const orderId = fixtureId('d5', 1);
+  const variantIds = lines.map(({ variant }) => fixtureId('92', variant));
+  const {
+    rows: [cart],
+  } = await client.query<{ customerId: string }>(
+    `INSERT INTO "cart" ("id", "tenantId", "branchId", "customerId", "createdAt", "updatedAt", "consumedAt")
+     SELECT $1, "tenantId", "branchId", "id", $5, $5, $5 FROM "customer"
+     WHERE "tenantId" = $2 AND "branchId" = $3 AND lower("email") = $4
+       AND (SELECT COUNT(*) FROM "productVariant"
+         WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = ANY($6::uuid[])
+           AND NOT "inventoryTracked"
+       ) = cardinality($6::uuid[])
+     ON CONFLICT DO NOTHING RETURNING "customerId"`,
+    [cartId, tenantId, branchId, demoShopper.email, placedAt, variantIds],
+  );
+  if (!cart) {
+    return;
+  }
+  const order = await client.query(
+    `INSERT INTO "order" ("id", "tenantId", "branchId", "cartId", "customerId", "orderNumber",
+       "status", "paymentStatus", "placedAt", "contactName", "contactEmail", "contactPhone",
+       "shippingCountryCode", "shippingCity", "shippingPostalCode", "shippingLine1",
+       "paymentMethodLabel", "paymentInstructions", "shippingMethodLabel", "currency", "subtotal", "shippingFee", "total")
+     VALUES ($1, $2, $3, $4, $5, $6, 'placed', 'unpaid', $7, $8, $9, $10, 'BG', $11, $12, $13, $14, $15, $16,
+       'BGN', $17, $18, $19) ON CONFLICT DO NOTHING`,
+    [
+      orderId,
+      tenantId,
+      branchId,
+      cartId,
+      cart.customerId,
+      `H-${orderId}`,
+      placedAt,
+      demoShopper.name,
+      demoShopper.email,
+      phone,
+      city,
+      postalCode,
+      address,
+      demoPaymentMethod.label,
+      demoPaymentMethod.instructions,
+      demoShippingMethod.label,
+      subtotal,
+      demoShippingMethod.fixedFee,
+      total,
+    ],
+  );
+  if (order.rowCount) {
+    for (const [sortOrder, line] of lines.entries()) {
+      const variantId = fixtureId('92', line.variant);
+      await client.query(
+        `INSERT INTO "cartLine" ("id", "tenantId", "branchId", "cartId", "variantId", "quantity", "createdAt")
+         VALUES ($1, $2, $3, $4, $5, 1, $6) ON CONFLICT DO NOTHING`,
+        [fixtureId('f2', sortOrder + 3), tenantId, branchId, cartId, variantId, placedAt],
+      );
+      await client.query(
+        `INSERT INTO "orderLine" ("id", "tenantId", "branchId", "orderId", "variantId", "sortOrder",
+           "sku", "label", "quantity", "unitPrice", "stockDecremented")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, $9, false) ON CONFLICT DO NOTHING`,
+        [
+          fixtureId('d6', sortOrder + 1),
+          tenantId,
+          branchId,
+          orderId,
+          variantId,
+          sortOrder,
+          line.sku,
+          line.label,
+          line.unitPrice,
+        ],
       );
     }
   }

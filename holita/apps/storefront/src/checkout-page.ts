@@ -20,10 +20,10 @@ import {
   Validators,
   type AbstractControl,
 } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { CartState } from './cart-state';
-import { StorefrontApi } from './storefront-api';
+import { CartState, rememberGuestReceipt } from './cart-state';
+import { StorefrontApi, type StorefrontCredentials } from './storefront-api';
 import { messages, type Language } from './storefront-messages';
 import { formatStorefrontMoney } from './storefront-money';
 import type { QuoteCheckoutMutation } from './generated/operations';
@@ -68,7 +68,35 @@ function checkoutFieldErrors(error: unknown): CheckoutFieldError[] {
   });
 }
 
-type CheckoutProblem = 'checkoutEmptyCart' | 'checkoutCartChanged' | 'checkoutQuoteFailed';
+type CheckoutProblem =
+  | 'checkoutEmptyCart'
+  | 'checkoutCartChanged'
+  | 'checkoutQuoteFailed'
+  | 'checkoutQuoteChanged'
+  | 'checkoutStockChanged'
+  | 'orderPlacementFailed';
+
+interface ReviewedCheckout {
+  readonly shopId: string;
+  readonly credentials: StorefrontCredentials;
+  readonly quote: QuoteCheckoutMutation['quoteCheckout'];
+}
+
+function cartProblem(code: string): CheckoutProblem | null {
+  switch (code) {
+    case 'CART_NOT_FOUND':
+    case 'CHECKOUT_EMPTY_CART':
+      return 'checkoutEmptyCart';
+    case 'CHECKOUT_CART_CHANGED':
+      return 'checkoutCartChanged';
+    case 'CHECKOUT_QUOTE_CHANGED':
+      return 'checkoutQuoteChanged';
+    case 'CHECKOUT_STOCK_CHANGED':
+      return 'checkoutStockChanged';
+    default:
+      return null;
+  }
+}
 
 function required(control: AbstractControl) {
   return Validators.required(control);
@@ -84,10 +112,13 @@ function required(control: AbstractControl) {
 export class CheckoutPage {
   readonly language = input.required<Language>();
   private readonly api = inject(StorefrontApi);
+  private readonly router = inject(Router);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly destroy = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('checkoutForm');
+  private readonly placeButton = viewChild<ElementRef<HTMLButtonElement>>('placeButton');
+  private readonly problemElement = viewChild<ElementRef<HTMLParagraphElement>>('placementProblem');
   protected readonly cartState = inject(CartState);
   protected readonly base = computed(() => ['/s', this.cartState.shopId()]);
   protected readonly t = computed(() => messages[this.language()]);
@@ -110,8 +141,19 @@ export class CheckoutPage {
     paymentMethodId: ['', required],
   });
   protected readonly reviewing = signal(false);
-  protected readonly quote = signal<QuoteCheckoutMutation['quoteCheckout'] | null>(null);
+  protected readonly placing = signal(false);
+  protected readonly busy = computed(() => this.reviewing() || this.placing());
+  private readonly reviewed = signal<ReviewedCheckout | null>(null);
+  protected readonly quote = computed(() => this.reviewed()?.quote ?? null);
   protected readonly problem = signal<CheckoutProblem | null>(null);
+  protected readonly needsCartReview = computed(() => {
+    const problem = this.problem();
+    return (
+      problem === 'checkoutCartChanged' ||
+      problem === 'checkoutEmptyCart' ||
+      problem === 'checkoutStockChanged'
+    );
+  });
   private readonly rejectedFields = signal<readonly CheckoutFieldError[]>([]);
   private readonly request = resource({
     params: () => this.cartState.shopId(),
@@ -161,7 +203,7 @@ export class CheckoutPage {
 
   constructor() {
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
-      this.quote.set(null);
+      this.reviewed.set(null);
       this.problem.set(null);
       this.rejectedFields.set([]);
     });
@@ -213,7 +255,7 @@ export class CheckoutPage {
   }
 
   protected async review() {
-    if (this.reviewing() || this.blocked()) {
+    if (this.busy() || this.blocked()) {
       return;
     }
     this.problem.set(null);
@@ -225,39 +267,81 @@ export class CheckoutPage {
     }
     const shopId = this.cartState.shopId();
     const credentials = this.cartState.credentials(shopId);
+    this.reviewed.set(null);
     this.reviewing.set(true);
     try {
       const quote = await this.api.quoteCheckout(shopId, credentials, this.form.getRawValue());
       if (!this.destroy.destroyed) {
-        this.quote.set(quote);
+        this.reviewed.set({ shopId, credentials, quote });
+        afterNextRender(() => this.placeButton()?.nativeElement.focus(), {
+          injector: this.injector,
+        });
       }
     } catch (error) {
       if (!this.destroy.destroyed && !this.cartState.expireSession(shopId, credentials, error)) {
-        this.showRejection(error);
+        this.showRejection(error, 'checkoutQuoteFailed');
       }
     } finally {
       this.reviewing.set(false);
     }
   }
 
-  private showRejection(error: unknown) {
-    this.quote.set(null);
+  protected async placeOrder() {
+    const reviewed = this.reviewed();
+    if (this.busy() || !reviewed || reviewed.shopId !== this.cartState.shopId()) {
+      return;
+    }
+    const {
+      shopId,
+      credentials,
+      quote: { cartId, quoteRevision },
+    } = reviewed;
+    this.problem.set(null);
+    this.placing.set(true);
+    try {
+      const order = await this.api.placeOrder(shopId, credentials, {
+        ...this.form.getRawValue(),
+        cartId,
+        quoteRevision,
+      });
+      if (credentials.guestCartToken) {
+        rememberGuestReceipt(shopId, order.id, credentials.guestCartToken);
+      }
+      if (!this.destroy.destroyed) {
+        await this.router.navigate(['/s', shopId, 'checkout', 'confirmation', order.id], {
+          replaceUrl: true,
+        });
+      }
+    } catch (error) {
+      if (!this.destroy.destroyed && !this.cartState.expireSession(shopId, credentials, error)) {
+        this.showRejection(error, 'orderPlacementFailed');
+      }
+    } finally {
+      this.placing.set(false);
+    }
+  }
+
+  private showRejection(error: unknown, fallback: 'checkoutQuoteFailed' | 'orderPlacementFailed') {
     const errors = checkoutFieldErrors(error);
-    const cartError = errors.find(({ path }) => path === 'cart');
+    const problem = errors.map(({ code }) => cartProblem(code)).find((value) => value !== null);
     const formErrors = errors.filter(({ path }) => this.form.get(path));
-    if (cartError) {
-      this.problem.set(
-        cartError.code === 'CHECKOUT_CART_CHANGED' ? 'checkoutCartChanged' : 'checkoutEmptyCart',
-      );
+    if (problem) {
+      this.reviewed.set(null);
+      this.problem.set(problem);
     } else if (formErrors.length) {
+      this.reviewed.set(null);
       this.rejectedFields.set(formErrors);
       if (formErrors.some(({ code }) => code === 'INVALID_METHOD')) {
         this.request.reload();
       }
       this.focusError();
+      return;
     } else {
-      this.problem.set('checkoutQuoteFailed');
+      this.problem.set(fallback);
     }
+    afterNextRender(() => this.problemElement()?.nativeElement.focus(), {
+      injector: this.injector,
+    });
   }
 
   private focusError() {

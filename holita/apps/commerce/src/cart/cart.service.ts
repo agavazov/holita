@@ -35,7 +35,7 @@ function guestOwner(token: CartToken) {
     : undefined;
 }
 
-function cartMissing() {
+export function cartMissing() {
   const message = 'Cart not found';
   return new NotFoundException({
     message,
@@ -43,15 +43,16 @@ function cartMissing() {
   });
 }
 
-function ownerFor({ customerId, cartToken }: CartContext): CartOwner | undefined {
-  if (customerId) {
-    return { customerId };
-  }
-  const guest = guestOwner(cartToken);
-  if (cartToken !== undefined && !guest) {
+export function cartOwner({ customerId, cartToken }: CartContext): CartOwner | undefined {
+  return customerId ? { customerId } : guestOwner(cartToken);
+}
+
+function ownerFor(context: CartContext) {
+  const owner = cartOwner(context);
+  if (context.cartToken !== undefined && !owner) {
     throw cartMissing();
   }
-  return guest;
+  return owner;
 }
 
 function inputIssue(path: string, code: string, message: string) {
@@ -122,22 +123,22 @@ function presentLine(line: StoredCartLine, variant: PublicVariant | undefined): 
 export class CartService {
   constructor(private readonly carts: CartRepository) {}
 
-  read(context: CartContext): Promise<Cart> {
-    return this.carts.readTransaction((tx) => this.readInTransaction(tx, context));
+  async read(context: CartContext): Promise<Cart> {
+    const ownedCart = await this.carts.readTransaction((tx) => this.readOwned(tx, context));
+    return ownedCart?.cart ?? { lines: [], itemCount: 0, subtotal: '0.00' };
   }
 
-  async readInTransaction(tx: Prisma.TransactionClient, context: CartContext): Promise<Cart> {
+  async readOwned(tx: Prisma.TransactionClient, context: CartContext) {
     const { scope } = context;
     const owner = ownerFor(context);
-    const empty = { lines: [], itemCount: 0, subtotal: '0.00' };
     if (!owner) {
-      return empty;
+      return null;
     }
     const cart = await this.carts.find(tx, scope, owner);
     if (!cart && 'guestTokenHash' in owner) {
       throw cartMissing();
     }
-    return cart ? this.present(tx, scope, cart.id) : empty;
+    return cart ? { id: cart.id, cart: await this.present(tx, scope, cart.id) } : null;
   }
 
   add(context: CartContext, id: string, quantity: number): Promise<CartAddResult> {
@@ -259,7 +260,7 @@ export class CartService {
     return new Map(variants.map((variant) => [variant.id, variant]));
   }
 
-  private async present(tx: Prisma.TransactionClient, scope: Scope, cartId: string): Promise<Cart> {
+  async snapshot(tx: Prisma.TransactionClient, scope: Scope, cartId: string) {
     const lines = await this.carts.lines(tx, scope, cartId);
     const variants = await this.variantMap(tx, scope, lines);
     let itemCount = 0;
@@ -272,6 +273,11 @@ export class CartService {
       }
       return result;
     });
-    return { lines: presented, itemCount, subtotal: subtotal.toFixed(2) };
+    const cart: Cart = { lines: presented, itemCount, subtotal: subtotal.toFixed(2) };
+    return { cart, variants };
+  }
+
+  private async present(tx: Prisma.TransactionClient, scope: Scope, cartId: string): Promise<Cart> {
+    return (await this.snapshot(tx, scope, cartId)).cart;
   }
 }

@@ -14,7 +14,7 @@
     <button class="shop-secondary" type="button" (click)="retry()">{{ t().retry }}</button>
   </div>
   } @else if (checkout(); as state) { @let reviewed = quote();
-  <div class="checkout-layout" [attr.aria-busy]="reviewing()">
+  <div class="checkout-layout" [attr.aria-busy]="busy()">
     @if (blocked()) {
     <div class="shop-state">
       <p role="alert">{{ t().checkoutCartChanged }}</p>
@@ -28,7 +28,7 @@
       [formGroup]="form"
       (ngSubmit)="review()"
     >
-      <fieldset class="checkout-form-content" [disabled]="reviewing()">
+      <fieldset class="checkout-form-content" [disabled]="busy()">
         <section class="checkout-section" aria-labelledby="contact-heading" formGroupName="contact">
           <h2 id="contact-heading">{{ t().contactDetails }}</h2>
           <div class="checkout-fields">
@@ -194,16 +194,27 @@
       </dl>
       @if (problem(); as failure) {
       <div class="checkout-problem">
-        <p role="alert">{{ t()[failure] }}</p>
-        @if (failure === 'checkoutCartChanged' || failure === 'checkoutEmptyCart') {
+        <p #placementProblem role="alert" tabindex="-1">{{ t()[failure] }}</p>
+        @if (needsCartReview()) {
         <a class="shop-text-link" [routerLink]="[...base(), 'cart']">{{ t().backToCart }}</a>
         }
       </div>
-      } @if (!blocked() && state.shippingMethods.length && state.paymentMethods.length) {
+      } @if (!blocked() && state.shippingMethods.length && state.paymentMethods.length) { @if
+      (reviewed) {
+      <button
+        #placeButton
+        class="shop-primary"
+        type="button"
+        [disabled]="busy()"
+        (click)="placeOrder()"
+      >
+        {{ placing() ? t().placingOrder : t().placeOrder }}
+      </button>
+      } @else {
       <button class="shop-primary" type="submit" form="checkout-form" [disabled]="reviewing()">
         {{ reviewing() ? t().loading : t().reviewTotal }}
       </button>
-      }
+      } }
     </aside>
   </div>
   } @else if (loading()) {

@@ -1,0 +1,167 @@
+import { Injectable } from '@nestjs/common';
+import { isUUID } from 'class-validator';
+import { randomUUID } from 'node:crypto';
+import { CartRepository } from '../cart/cart.repository.js';
+import {
+  cartMissing,
+  cartOwner,
+  CartPrice,
+  CartService,
+  type CartContext,
+} from '../cart/cart.service.js';
+import { checkoutError, CheckoutService } from '../checkout/checkout.service.js';
+import type { OrderConfirmation, PlaceOrderInput } from '../generated/graphql/storefront-types.js';
+import type { Order, OrderLine, Prisma } from '../generated/prisma/client.js';
+import { OrdersRepository } from './orders.repository.js';
+
+function confirmation(order: Order & { lines: OrderLine[] }): OrderConfirmation {
+  return {
+    id: order.id,
+    number: order.orderNumber,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    placedAt: order.placedAt.toISOString(),
+    contact: { name: order.contactName, email: order.contactEmail, phone: order.contactPhone },
+    shippingAddress: {
+      countryCode: order.shippingCountryCode,
+      city: order.shippingCity,
+      postalCode: order.shippingPostalCode,
+      line1: order.shippingLine1,
+      line2: order.shippingLine2,
+    },
+    paymentMethodLabel: order.paymentMethodLabel,
+    paymentInstructions: order.paymentInstructions,
+    shippingMethodLabel: order.shippingMethodLabel,
+    lines: order.lines.map(({ sku, label, quantity, unitPrice }) => ({
+      sku,
+      label,
+      quantity,
+      unitPrice: unitPrice.toFixed(2),
+      lineTotal: new CartPrice(unitPrice).mul(quantity).toFixed(2),
+    })),
+    currency: order.currency,
+    subtotal: order.subtotal.toFixed(2),
+    shippingFee: order.shippingFee.toFixed(2),
+    total: order.total.toFixed(2),
+  };
+}
+
+function stockChanged() {
+  return checkoutError('cart', 'CHECKOUT_STOCK_CHANGED', 'Requested stock is no longer available');
+}
+
+@Injectable()
+export class OrdersService {
+  constructor(
+    private readonly orders: OrdersRepository,
+    private readonly cartRepository: CartRepository,
+    private readonly carts: CartService,
+    private readonly checkout: CheckoutService,
+  ) {}
+
+  async confirmation(context: CartContext, orderId: string): Promise<OrderConfirmation | null> {
+    const owner = cartOwner(context);
+    if (!owner || !isUUID(orderId)) {
+      return null;
+    }
+    const order = await this.orders.findConfirmation(context.scope, orderId.toLowerCase(), owner);
+    return order ? confirmation(order) : null;
+  }
+
+  place(context: CartContext, input: PlaceOrderInput): Promise<OrderConfirmation> {
+    const { scope, customerId } = context;
+    const owner = cartOwner(context);
+    if (!owner || !isUUID(input.cartId)) {
+      throw cartMissing();
+    }
+    return this.orders.transaction(async (tx) => {
+      const storedCart = await this.cartRepository.lock(
+        tx,
+        scope,
+        owner,
+        input.cartId.toLowerCase(),
+      );
+      if (!storedCart) {
+        throw cartMissing();
+      }
+      const cartId = storedCart.id;
+      if (storedCart.consumedAt) {
+        const order = await this.orders.findForCart(tx, scope, cartId, customerId ?? null);
+        if (!order) {
+          throw cartMissing();
+        }
+        return confirmation(order);
+      }
+
+      await this.orders.lockProducts(tx, scope, cartId);
+      const { cart, variants } = await this.carts.snapshot(tx, scope, cartId);
+      if (cart.lines.some(({ issue }) => issue === 'INSUFFICIENT_STOCK')) {
+        throw stockChanged();
+      }
+      const { quote, contact, shippingAddress } = await this.checkout.quoteCart(
+        tx,
+        scope,
+        { id: cartId, cart },
+        input,
+      );
+      if (input.quoteRevision !== quote.quoteRevision) {
+        throw checkoutError('cart', 'CHECKOUT_QUOTE_CHANGED', 'Review the updated checkout total');
+      }
+
+      const lines: Prisma.OrderLineCreateManyOrderInput[] = [];
+      for (const [sortOrder, line] of quote.lines.entries()) {
+        const variant = line.variantId ? variants.get(line.variantId) : undefined;
+        if (!variant) {
+          throw checkoutError('cart', 'CHECKOUT_CART_CHANGED', 'Review the cart before checkout');
+        }
+        if (
+          variant.inventoryTracked &&
+          !(await this.orders.decrementStock(tx, scope, variant.id, line.quantity))
+        ) {
+          throw stockChanged();
+        }
+        lines.push({
+          variantId: variant.id,
+          sortOrder,
+          sku: variant.sku,
+          label: [variant.product.name, ...line.optionLabels].join(' · '),
+          quantity: line.quantity,
+          unitPrice: variant.price,
+          stockDecremented: variant.inventoryTracked,
+        });
+      }
+
+      const id = randomUUID();
+      const placedAt = new Date();
+      const order = await this.orders.create(
+        tx,
+        scope,
+        {
+          id,
+          cartId,
+          customerId: customerId ?? null,
+          orderNumber: `H-${id}`,
+          placedAt,
+          contactName: contact.name,
+          contactEmail: contact.email,
+          contactPhone: contact.phone,
+          shippingCountryCode: shippingAddress.countryCode,
+          shippingCity: shippingAddress.city,
+          shippingPostalCode: shippingAddress.postalCode,
+          shippingLine1: shippingAddress.line1,
+          shippingLine2: shippingAddress.line2,
+          paymentMethodLabel: quote.paymentMethod.label,
+          paymentInstructions: quote.paymentMethod.instructions,
+          shippingMethodLabel: quote.shippingMethod.label,
+          currency: quote.currency,
+          subtotal: quote.subtotal,
+          shippingFee: quote.shippingFee,
+          total: quote.total,
+        },
+        lines,
+      );
+      await this.cartRepository.consume(tx, scope, cartId, placedAt);
+      return confirmation(order);
+    });
+  }
+}

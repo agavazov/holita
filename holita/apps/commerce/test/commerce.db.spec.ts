@@ -141,6 +141,7 @@ beforeAll(async () => {
     '20261122080000_inventory_lookup',
     '20261122090000_shopper_cart',
     '20261122100000_checkout_methods',
+    '20261122110000_order_placement',
   ]) {
     await connection.query(
       await readFile(
@@ -937,7 +938,28 @@ function registeredToken(value: unknown): string {
   }
   return value.data.registerShopper.token;
 }
-it('isolates shoppers, catalogue, carts and checkout by shop and hides suspended shops', async () => {
+function reviewedCart(value: unknown): { cartId: string; quoteRevision: string } {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('data' in value) ||
+    typeof value.data !== 'object' ||
+    value.data === null ||
+    !('quoteCheckout' in value.data) ||
+    typeof value.data.quoteCheckout !== 'object' ||
+    value.data.quoteCheckout === null ||
+    !('cartId' in value.data.quoteCheckout) ||
+    typeof value.data.quoteCheckout.cartId !== 'string' ||
+    !('quoteRevision' in value.data.quoteCheckout) ||
+    typeof value.data.quoteCheckout.quoteRevision !== 'string'
+  ) {
+    throw new Error('Checkout quote failed');
+  }
+  const { cartId, quoteRevision } = value.data.quoteCheckout;
+  return { cartId, quoteRevision };
+}
+
+it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () => {
   if (!database) {
     throw new Error('Missing database');
   }
@@ -990,7 +1012,11 @@ it('isolates shoppers, catalogue, carts and checkout by shop and hides suspended
     await storefront(publicA, mutation, { email: 'same@example.test' }),
   );
   expect(token).toMatch(/^holita-shopper\.[A-Za-z0-9_-]{43}$/);
-  expect(await storefront(publicB, mutation, { email: 'same@example.test' })).toMatchObject({
+  const foreignShopRegistration = await storefront(publicB, mutation, {
+    email: 'same@example.test',
+  });
+  const foreignShopBearer = registeredToken(foreignShopRegistration);
+  expect(foreignShopRegistration).toMatchObject({
     data: { registerShopper: { shopper: { email: 'same@example.test' } } },
   });
   for (const [branch, expected] of [
@@ -1149,7 +1175,7 @@ it('isolates shoppers, catalogue, carts and checkout by shop and hides suspended
     shippingMethodId: methodIds.shippingMethodId.available,
   };
   const quoteOperation =
-    'mutation($input:CheckoutQuoteInput!){quoteCheckout(input:$input){subtotal shippingFee total lines{id variantId unitPrice}}}';
+    'mutation($input:CheckoutQuoteInput!){quoteCheckout(input:$input){cartId quoteRevision subtotal shippingFee total lines{id variantId unitPrice}}}';
   const quote = (input = quoteInput) => storefront(publicA, quoteOperation, { input }, token);
   for (const path of ['paymentMethodId', 'shippingMethodId'] as const) {
     for (const key of ['foreign', 'disabled'] as const) {
@@ -1163,9 +1189,13 @@ it('isolates shoppers, catalogue, carts and checkout by shop and hides suspended
       });
     }
   }
-  expect(await quote()).toEqual({
+  const initialQuote = await quote();
+  const firstReview = reviewedCart(initialQuote);
+  expect(initialQuote).toEqual({
     data: {
       quoteCheckout: {
+        cartId: accountCart.id,
+        quoteRevision: expect.any(String),
         subtotal: '2.00',
         shippingFee: '6.00',
         total: '8.00',
@@ -1180,20 +1210,24 @@ it('isolates shoppers, catalogue, carts and checkout by shop and hides suspended
     sku: variant.sku,
     price: '4.25',
     active: true,
-    inventoryTracked: false,
+    inventoryTracked: true,
     optionValueIds: [],
   };
-  const saveVariants = (id?: string) =>
+  const saveVariants = (id?: string, price = draft.price) =>
     query(tokens.operator, publicA, saveProduct, {
       id: variant.productId,
-      input: { name: 'Visible', status: 'ACTIVE', variants: [{ ...draft, id }] },
+      input: { name: 'Visible', status: 'ACTIVE', variants: [{ ...draft, id, price }] },
     });
   expect(await saveVariants(variant.id)).toEqual({
     data: { updateProduct: { variants: [{ id: variant.id }] } },
   });
-  expect(await quote()).toEqual({
+  const repricedQuote = await quote();
+  const currentReview = reviewedCart(repricedQuote);
+  expect(repricedQuote).toEqual({
     data: {
       quoteCheckout: {
+        cartId: accountCart.id,
+        quoteRevision: expect.any(String),
         subtotal: '8.50',
         shippingFee: '6.00',
         total: '14.50',
@@ -1201,16 +1235,110 @@ it('isolates shoppers, catalogue, carts and checkout by shop and hides suspended
       },
     },
   });
-  expect(await saveVariants()).toHaveProperty('data.updateProduct');
+
+  const receiptFields =
+    'id status paymentStatus paymentMethodLabel paymentInstructions shippingMethodLabel shippingFee total lines{sku quantity unitPrice lineTotal}';
+  const placeOperation = `mutation($input:PlaceOrderInput!){placeOrder(input:$input){${receiptFields}}}`;
+  const receiptOperation = `query($orderId:ID!){orderConfirmation(orderId:$orderId){${receiptFields}}}`;
+  const place = (review: typeof currentReview, bearer = token) =>
+    storefront(publicA, placeOperation, { input: { ...quoteInput, ...review } }, bearer);
+  const orderScope = { ...categoryScope, cartId: accountCart.id };
+  const variantKey = { ...categoryScope, id: variant.id };
+  const cartKey = { ...categoryScope, id: accountCart.id };
+  for (const [review, quantity, code] of [
+    [firstReview, 2, 'CHECKOUT_QUOTE_CHANGED'],
+    [currentReview, 1, 'CHECKOUT_STOCK_CHANGED'],
+  ] as const) {
+    await database.productVariant.update({ where: variantKey, data: { quantity } });
+    expect(await place(review)).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'cart', code }] } }],
+    });
+    expect(await database.order.count({ where: orderScope })).toBe(0);
+    expect(
+      await database.cart.findUniqueOrThrow({ where: cartKey, select: { consumedAt: true } }),
+    ).toEqual({ consumedAt: null });
+    expect(
+      await database.productVariant.findUniqueOrThrow({
+        where: variantKey,
+        select: { quantity: true },
+      }),
+    ).toEqual({ quantity });
+  }
+
+  await database.productVariant.update({ where: variantKey, data: { quantity: 3 } });
+  const placed = await place(currentReview);
+  const order = await database.order.findFirstOrThrow({ where: orderScope });
+  const receipt = {
+    id: order.id,
+    status: 'PLACED',
+    paymentStatus: 'UNPAID',
+    paymentMethodLabel: 'Cash on Delivery',
+    paymentInstructions: 'Pay on arrival.',
+    shippingMethodLabel: 'Home Delivery',
+    shippingFee: '6.00',
+    total: '14.50',
+    lines: [{ sku: variant.sku, quantity: 2, unitPrice: '4.25', lineTotal: '8.50' }],
+  };
+  expect(placed).toEqual({ data: { placeOrder: receipt } });
+  expect(order.customerId).toBe(accountCart.customerId);
+  expect(await cart()).toEqual({ data: { cart: { itemCount: 0, subtotal: '0.00', lines: [] } } });
+  expect(await storefront(publicA, add, { id: variant.id, quantity: 1 }, token)).toMatchObject({
+    data: { addCartLine: { cart: { itemCount: 1 } } },
+  });
+  const newCart = await database.cart.findFirstOrThrow({
+    where: { ...categoryScope, customerId: accountCart.customerId, consumedAt: null },
+  });
+  expect(newCart.id).not.toBe(accountCart.id);
+  const newLine = await database.cartLine.findFirstOrThrow({
+    where: { ...categoryScope, cartId: newCart.id },
+  });
+
+  await database.paymentMethod.update({
+    where: { ...categoryScope, id: quoteInput.paymentMethodId },
+    data: { label: 'New payment method', instructions: 'Updated instructions.' },
+  });
+  await database.shippingMethod.update({
+    where: { ...categoryScope, id: quoteInput.shippingMethodId },
+    data: { label: 'New shipping method', fixedFee: '99.00' },
+  });
+  expect(await place(currentReview)).toEqual({ data: { placeOrder: receipt } });
+  expect(await place(currentReview, foreignOwner)).toHaveProperty('errors');
+  expect(await database.order.count({ where: orderScope })).toBe(1);
+  expect(
+    await database.productVariant.findUniqueOrThrow({
+      where: variantKey,
+      select: { quantity: true },
+    }),
+  ).toEqual({ quantity: 1 });
+
+  expect(await saveVariants(variant.id, '5.00')).toEqual({
+    data: { updateProduct: { variants: [{ id: variant.id }] } },
+  });
+  expect(await saveVariants(undefined, '5.00')).toHaveProperty('data.updateProduct');
+  const receiptVariables = { orderId: order.id };
+  expect(await storefront(publicA, receiptOperation, receiptVariables, token)).toEqual({
+    data: { orderConfirmation: receipt },
+  });
+  for (const [branch, bearer] of [
+    [publicA, undefined],
+    [publicA, foreignOwner],
+    [publicB, foreignShopBearer],
+  ] as const) {
+    expect(await storefront(branch, receiptOperation, receiptVariables, bearer)).toEqual({
+      data: { orderConfirmation: null },
+    });
+  }
+
   expect(await cart()).toMatchObject({
     data: {
       cart: {
         subtotal: '0.00',
-        lines: [{ id: line.id, variantId: null, name: null, issue: 'UNAVAILABLE' }],
+        lines: [{ id: newLine.id, variantId: null, name: null, issue: 'UNAVAILABLE' }],
       },
     },
   });
-  expect(await storefront(publicA, remove, { id: line.id }, token)).toEqual({
+  expect(await storefront(publicA, remove, { id: newLine.id }, token)).toEqual({
     data: { removeCartLine: { itemCount: 0 } },
   });
 }, 15_000);

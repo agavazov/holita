@@ -1,17 +1,21 @@
 import { BadRequestException, Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { normalizedEmail, userName } from '@osnova/auth';
 import { isUUID } from 'class-validator';
+import { hash } from 'node:crypto';
 import { CartPrice, CartService, type CartContext } from '../cart/cart.service.js';
 import type {
+  Cart,
   CheckoutQuote,
   CheckoutQuoteInput,
   CheckoutState,
 } from '../generated/graphql/storefront-types.js';
+import type { Prisma } from '../generated/prisma/client.js';
+import type { Scope } from '../scope.js';
 import { CheckoutRepository } from './checkout.repository.js';
 
 const checkoutCurrency = 'BGN';
 
-function checkoutError(path: string, code: string, message: string) {
+export function checkoutError(path: string, code: string, message: string) {
   return new UnprocessableEntityException({ message, fieldErrors: [{ path, code, message }] });
 }
 
@@ -82,14 +86,14 @@ export class CheckoutService {
 
   read(context: CartContext): Promise<CheckoutState | null> {
     return this.methods.readTransaction(async (tx) => {
-      const cart = await this.carts.readInTransaction(tx, context);
-      if (!cart.lines.length) {
+      const ownedCart = await this.carts.readOwned(tx, context);
+      if (!ownedCart?.cart.lines.length) {
         return null;
       }
       const paymentMethods = await this.methods.paymentMethods(tx, context.scope);
       const shippingMethods = await this.methods.shippingMethods(tx, context.scope);
       return {
-        cart,
+        cart: ownedCart.cart,
         currency: checkoutCurrency,
         paymentMethods,
         shippingMethods: shippingMethods.map((method) => ({
@@ -102,32 +106,62 @@ export class CheckoutService {
 
   quote(context: CartContext, input: CheckoutQuoteInput): Promise<CheckoutQuote> {
     return this.methods.readTransaction(async (tx) => {
-      const cart = await this.carts.readInTransaction(tx, context);
-      if (!cart.lines.length) {
+      const ownedCart = await this.carts.readOwned(tx, context);
+      if (!ownedCart) {
         throw checkoutError('cart', 'CHECKOUT_EMPTY_CART', 'The cart is empty');
       }
-      if (cart.lines.some(({ available }) => !available)) {
-        throw checkoutError('cart', 'CHECKOUT_CART_CHANGED', 'Review the cart before checkout');
-      }
-      const { paymentMethodId, shippingMethodId } = validateCheckoutInput(input);
-      const paymentMethod = await this.methods.paymentMethod(tx, context.scope, paymentMethodId);
-      if (!paymentMethod) {
-        throw invalidMethod('paymentMethodId');
-      }
-      const shippingMethod = await this.methods.shippingMethod(tx, context.scope, shippingMethodId);
-      if (!shippingMethod) {
-        throw invalidMethod('shippingMethodId');
-      }
-      const shippingFee = shippingMethod.fixedFee.toFixed(2);
-      return {
-        lines: cart.lines,
-        paymentMethod,
-        shippingMethod: { ...shippingMethod, fixedFee: shippingFee },
-        currency: checkoutCurrency,
-        subtotal: cart.subtotal,
-        shippingFee,
-        total: new CartPrice(cart.subtotal).plus(shippingFee).toFixed(2),
-      };
+      const review = await this.quoteCart(tx, context.scope, ownedCart, input);
+      return review.quote;
     });
+  }
+
+  async quoteCart(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    { id: cartId, cart }: { id: string; cart: Cart },
+    input: CheckoutQuoteInput,
+  ) {
+    if (!cart.lines.length) {
+      throw checkoutError('cart', 'CHECKOUT_EMPTY_CART', 'The cart is empty');
+    }
+    if (cart.lines.some(({ available }) => !available)) {
+      throw checkoutError('cart', 'CHECKOUT_CART_CHANGED', 'Review the cart before checkout');
+    }
+    const { contact, shippingAddress, paymentMethodId, shippingMethodId } =
+      validateCheckoutInput(input);
+    const paymentMethod = await this.methods.paymentMethod(tx, scope, paymentMethodId);
+    if (!paymentMethod) {
+      throw invalidMethod('paymentMethodId');
+    }
+    const shippingMethod = await this.methods.shippingMethod(tx, scope, shippingMethodId);
+    if (!shippingMethod) {
+      throw invalidMethod('shippingMethodId');
+    }
+    const shippingFee = shippingMethod.fixedFee.toFixed(2);
+    const terms = [
+      cartId,
+      cart.lines.map(({ variantId, quantity, unitPrice, name, optionLabels }) => [
+        variantId,
+        quantity,
+        unitPrice,
+        name,
+        optionLabels,
+      ]),
+      [paymentMethod.id, paymentMethod.label, paymentMethod.instructions],
+      [shippingMethod.id, shippingMethod.label, shippingFee],
+      checkoutCurrency,
+    ];
+    const quote: CheckoutQuote = {
+      cartId,
+      quoteRevision: hash('sha256', JSON.stringify(terms), 'hex'),
+      lines: cart.lines,
+      paymentMethod,
+      shippingMethod: { ...shippingMethod, fixedFee: shippingFee },
+      currency: checkoutCurrency,
+      subtotal: cart.subtotal,
+      shippingFee,
+      total: new CartPrice(cart.subtotal).plus(shippingFee).toFixed(2),
+    };
+    return { quote, contact, shippingAddress };
   }
 }

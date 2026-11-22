@@ -255,6 +255,10 @@ export class CommerceRepository {
           where: { ...scope, variantId: { in: removedIds } },
           data: { variantId: null },
         });
+        await tx.orderLine.updateMany({
+          where: { ...scope, variantId: { in: removedIds } },
+          data: { variantId: null },
+        });
       }
       // Replace the aggregate atomically, keeping the IDs of retained variants.
       // This also permits exchanging a SKU or combination between rows in one edit.

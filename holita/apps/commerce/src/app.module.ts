@@ -8,6 +8,8 @@ import { CartModule } from './cart/cart.module.js';
 import { CartResolver } from './cart/cart.resolver.js';
 import { CheckoutModule } from './checkout/checkout.module.js';
 import { CheckoutResolver } from './checkout/checkout.resolver.js';
+import { OrdersModule } from './orders/orders.module.js';
+import { OrdersResolver } from './orders/orders.resolver.js';
 import { CommerceResolver } from './products/commerce.resolver.js';
 import { CatalogueProductResolver, StorefrontResolver } from './storefront.resolver.js';
 import { StorefrontService } from './storefront.service.js';
@@ -71,6 +73,7 @@ class OperatorModule {}
     CustomersModule,
     CartModule,
     CheckoutModule,
+    OrdersModule,
   ],
   controllers: [BrandImagesController, ProductImagesController],
   providers: [
@@ -78,6 +81,7 @@ class OperatorModule {}
     CatalogueProductResolver,
     CartResolver,
     CheckoutResolver,
+    OrdersResolver,
     StorefrontService,
   ],
 })

@@ -23,8 +23,7 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 
 | Ticket                                                                                           | Wave | Status | Depends on           |
 | ------------------------------------------------------------------------------------------------ | ---- | ------ | -------------------- |
-| [116 Checkout order placement](116-holita-place-order.md)                                        | 2    | Ready  |                      |
-| [117 Shopper order history](117-holita-shopper-orders.md)                                        | 2    | Ready  | 116                  |
+| [117 Shopper order history](117-holita-shopper-orders.md)                                        | 2    | Ready  |                      |
 | [149 Osnova listing override points](149-osnova-listing-mobile.md)                               | 3    | Ready  |                      |
 | [147 Holita Admin polish](147-holita-admin-polish.md)                                            | 3    | Ready  | 149                  |
 | [118 Admin order management](118-holita-admin-order-management.md)                               | 3    | Ready  | 117                  |

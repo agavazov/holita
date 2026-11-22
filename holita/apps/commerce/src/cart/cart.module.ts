@@ -6,6 +6,6 @@ import { CartService } from './cart.service.js';
 @Module({
   imports: [DatabaseModule],
   providers: [CartRepository, CartService],
-  exports: [CartService],
+  exports: [CartRepository, CartService],
 })
 export class CartModule {}

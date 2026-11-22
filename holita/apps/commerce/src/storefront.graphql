@@ -217,9 +217,61 @@ input CheckoutQuoteInput {
   shippingMethodId: ID!
 }
 type CheckoutQuote {
+  cartId: ID!
+  quoteRevision: String!
   lines: [CartLine!]!
   paymentMethod: CheckoutPaymentMethod!
   shippingMethod: CheckoutShippingMethod!
+  currency: String!
+  subtotal: String!
+  shippingFee: String!
+  total: String!
+}
+input PlaceOrderInput {
+  cartId: ID!
+  quoteRevision: String!
+  contact: CheckoutContactInput!
+  shippingAddress: CheckoutAddressInput!
+  paymentMethodId: ID!
+  shippingMethodId: ID!
+}
+enum OrderStatus {
+  PLACED
+}
+enum OrderPaymentStatus {
+  UNPAID
+}
+type OrderContact {
+  name: String!
+  email: String!
+  phone: String!
+}
+type OrderShippingAddress {
+  countryCode: String!
+  city: String!
+  postalCode: String!
+  line1: String!
+  line2: String
+}
+type OrderConfirmationLine {
+  sku: String!
+  label: String!
+  quantity: Int!
+  unitPrice: String!
+  lineTotal: String!
+}
+type OrderConfirmation {
+  id: ID!
+  number: String!
+  status: OrderStatus!
+  paymentStatus: OrderPaymentStatus!
+  placedAt: String!
+  contact: OrderContact!
+  shippingAddress: OrderShippingAddress!
+  paymentMethodLabel: String!
+  paymentInstructions: String!
+  shippingMethodLabel: String!
+  lines: [OrderConfirmationLine!]!
   currency: String!
   subtotal: String!
   shippingFee: String!
@@ -281,6 +333,7 @@ type Query {
   shopperMe: Shopper
   cart: Cart!
   checkout: CheckoutState
+  orderConfirmation(orderId: ID!): OrderConfirmation
 }
 type Mutation {
   registerShopper(name: String!, email: String!, password: String!): ShopperSession!
@@ -290,4 +343,5 @@ type Mutation {
   updateCartLine(lineId: ID!, quantity: Int!): Cart!
   removeCartLine(lineId: ID!): Cart!
   quoteCheckout(input: CheckoutQuoteInput!): CheckoutQuote!
+  placeOrder(input: PlaceOrderInput!): OrderConfirmation!
 }

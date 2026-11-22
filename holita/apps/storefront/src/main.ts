@@ -34,6 +34,7 @@ import {
 } from './cart-state';
 import { CartMergeNotice, CartPage } from './cart-page';
 import { CheckoutPage } from './checkout-page';
+import { OrderConfirmationPage } from './order-confirmation-page';
 import type { CatalogueProductQuery } from './generated/operations';
 
 type VariantSelection = NonNullable<CatalogueProductQuery['catalogueProduct']>['variantSelection'];
@@ -52,6 +53,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
     CatalogueBrowse,
     CartPage,
     CheckoutPage,
+    OrderConfirmationPage,
   ],
   providers: [CartState],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -350,7 +352,11 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         }
         @if (page === 'checkout') {
           @if (shop()) {
-            <holita-checkout [language]="language()" />
+            @if (orderId(); as order) {
+              <holita-order-confirmation [language]="language()" [orderId]="order" />
+            } @else {
+              <holita-checkout [language]="language()" />
+            }
           } @else if (error()) {
             <ng-container [ngTemplateOutlet]="requestError" />
           } @else {
@@ -451,6 +457,7 @@ class StorefrontPage {
   private readonly destroy = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
   private readonly params = toSignal(this.route.paramMap, { requireSync: true });
+  protected readonly orderId = computed(() => this.params().get('orderId'));
   protected readonly cartState = inject(CartState);
   readonly shopId = this.cartState.shopId;
   readonly base = computed(() => ['/s', this.shopId()]);
@@ -695,6 +702,7 @@ const pages = [
   { path: 's/:shopId/sign-in', component: StorefrontPage },
   { path: 's/:shopId/account', component: StorefrontPage },
   { path: 's/:shopId/cart', component: StorefrontPage },
+  { path: 's/:shopId/checkout/confirmation/:orderId', component: StorefrontPage },
   { path: 's/:shopId/checkout', component: StorefrontPage },
 ];
 // PrimeNG requires its license in the bootstrap providers, before its initializer runs.

@@ -3,6 +3,7 @@ generator client {
   output = "../src/generated/prisma"
   moduleFormat = "esm"
   importFileExtension = "js"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -37,6 +38,16 @@ enum ProductBadgeColor {
   WARN @map("warn")
   DANGER @map("danger")
   @@map("productBadgeColor")
+}
+
+enum OrderStatus {
+  PLACED @map("placed")
+  @@map("orderStatus")
+}
+
+enum OrderPaymentStatus {
+  UNPAID @map("unpaid")
+  @@map("orderPaymentStatus")
 }
 
 model Brand {
@@ -291,6 +302,7 @@ model ProductVariant {
   sortOrder Int
   values ProductVariantValue[]
   cartLines CartLine[]
+  orderLines OrderLine[]
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, sku])
   @@unique([tenantId, branchId, productId, combinationKey], map: "productVariant_product_combination_key")
@@ -319,7 +331,8 @@ model Customer {
   name String @db.VarChar(200)
   passwordHash String? @db.VarChar(255)
   sessions ShopperSession[]
-  cart Cart?
+  carts Cart[]
+  orders Order[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
   @@unique([tenantId, branchId, id])
@@ -348,10 +361,12 @@ model Cart {
   customer Customer? @relation(fields: [tenantId, branchId, customerId], references: [tenantId, branchId, id], onDelete: Cascade)
   guestTokenHash String? @db.Char(64)
   lines CartLine[]
+  order Order?
+  consumedAt DateTime? @db.Timestamptz(3)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
   @@unique([tenantId, branchId, id])
-  @@unique([tenantId, branchId, customerId])
+  @@unique([tenantId, branchId, customerId], where: raw("\"consumedAt\" IS NULL"))
   @@unique([tenantId, branchId, guestTokenHash])
   @@map("cart")
 }
@@ -399,4 +414,58 @@ model ShippingMethod {
   @@unique([tenantId, branchId, id])
   @@index([tenantId, branchId, enabled, sortOrder, id])
   @@map("shippingMethod")
+}
+
+model Order {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  cartId String @db.Uuid
+  cart Cart @relation(fields: [tenantId, branchId, cartId], references: [tenantId, branchId, id], onDelete: Restrict)
+  customerId String? @db.Uuid
+  customer Customer? @relation(fields: [tenantId, branchId, customerId], references: [tenantId, branchId, id], onDelete: Restrict)
+  orderNumber String @db.VarChar(38)
+  status OrderStatus @default(PLACED)
+  paymentStatus OrderPaymentStatus @default(UNPAID)
+  placedAt DateTime @db.Timestamptz(3)
+  contactName String @db.VarChar(200)
+  contactEmail String @db.VarChar(254)
+  contactPhone String @db.Text
+  shippingCountryCode String @db.Char(2)
+  shippingCity String @db.Text
+  shippingPostalCode String @db.Text
+  shippingLine1 String @db.Text
+  shippingLine2 String? @db.Text
+  paymentMethodLabel String @db.VarChar(200)
+  paymentInstructions String @db.Text
+  shippingMethodLabel String @db.VarChar(200)
+  currency String @db.Char(3)
+  subtotal Decimal @db.Decimal(32, 2)
+  shippingFee Decimal @db.Decimal(12, 2)
+  total Decimal @db.Decimal(32, 2)
+  lines OrderLine[]
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, cartId])
+  @@unique([tenantId, branchId, orderNumber])
+  @@index([tenantId, branchId, customerId])
+  @@map("order")
+}
+
+model OrderLine {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  orderId String @db.Uuid
+  order Order @relation(fields: [tenantId, branchId, orderId], references: [tenantId, branchId, id], onDelete: Cascade)
+  variantId String? @db.Uuid
+  variant ProductVariant? @relation(fields: [tenantId, branchId, variantId], references: [tenantId, branchId, id], onDelete: NoAction)
+  sortOrder Int
+  sku String @db.VarChar(100)
+  label String @db.Text
+  quantity Int
+  unitPrice Decimal @db.Decimal(12, 2)
+  stockDecremented Boolean
+  @@unique([tenantId, branchId, orderId, sortOrder])
+  @@index([tenantId, branchId, variantId])
+  @@map("orderLine")
 }
