@@ -136,6 +136,8 @@ type Customer {
   id: ID!
   name: String!
   email: String!
+  "Contact phone from the most recent linked order when its email matches this account."
+  orderPhone: String
   createdAt: String!
   updatedAt: String!
 }

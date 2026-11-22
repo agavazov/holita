@@ -67,7 +67,8 @@ type LineForm = FormGroup<{
 
 const required = (control: AbstractControl) => Validators.required(control);
 
-const contactPaths = ['contact.name', 'contact.email', 'contact.phone'];
+const contactKeys = ['name', 'email', 'phone'] as const;
+const contactPaths = contactKeys.map((key) => `contact.${key}`);
 const addressPaths = [
   'shippingAddress.line1',
   'shippingAddress.line2',
@@ -96,21 +97,17 @@ function operatorFieldPath(path: string): string {
   ],
   templateUrl: './manual-order-editor.html',
   styles: `
-    .manual-order-line {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: var(--p-app-space-2) var(--p-app-space-4);
-      align-items: start;
-    }
-
     .manual-order-line > strong {
-      grid-column: 1 / -1;
       overflow-wrap: anywhere;
     }
 
-    .manual-order-line > button {
-      align-self: start;
-      margin-block-start: calc(var(--p-app-text-sm) * 1.4 + var(--p-app-space-1));
+    .manual-order-quantity > input {
+      flex: 1;
+      min-inline-size: 0;
+    }
+
+    .manual-order-quantity > button {
+      flex-shrink: 0;
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -173,11 +170,12 @@ export class ManualOrderEditor {
   });
   protected readonly canEdit = computed(() => this.canWrite() && !!this.choices());
   protected readonly customerOptions = computed(() => [
-    { id: '', label: this.text().guestOrder, name: '', email: '' },
-    ...(this.choices()?.customers ?? []).map(({ id, name, email }) => ({
+    { id: '', label: this.text().guestOrder, name: '', email: '', phone: '' },
+    ...(this.choices()?.customers ?? []).map(({ id, name, email, orderPhone }) => ({
       id,
       name,
       email,
+      phone: orderPhone ?? '',
       label: `${name} · ${email}`,
     })),
   ]);
@@ -209,6 +207,7 @@ export class ManualOrderEditor {
   protected readonly saving = signal(false);
   protected readonly saveError = signal<string | null>(null);
   private readonly errors = signal<Partial<Record<string, string>>>({});
+  private readonly autofilledContact = new Set<(typeof contactKeys)[number]>();
   protected readonly form = this.builder.group({
     customerId: '',
     contact: this.builder.group({
@@ -313,6 +312,7 @@ export class ManualOrderEditor {
       this.params();
       const order = this.order();
       this.lines.clear();
+      this.autofilledContact.clear();
       this.form.reset({
         customerId: order?.customerId ?? '',
         ...(order && {
@@ -353,15 +353,16 @@ export class ManualOrderEditor {
     const selected = this.customerOptions().find(
       ({ id }) => id === this.form.controls.customerId.value,
     );
-    if (selected?.id) {
-      const { name, email } = this.form.controls.contact.controls;
-      if (!name.value.trim()) {
-        name.setValue(selected.name);
-        this.clearError('contact.name');
-      }
-      if (!email.value.trim()) {
-        email.setValue(selected.email);
-        this.clearError('contact.email');
+    if (!selected) {
+      return;
+    }
+    const contact = this.form.controls.contact.controls;
+    for (const key of contactKeys) {
+      const field = contact[key];
+      if (field.pristine && (this.autofilledContact.has(key) || !field.value.trim())) {
+        field.setValue(selected[key]);
+        this.autofilledContact.add(key);
+        this.clearError(`contact.${key}`);
       }
     }
   }

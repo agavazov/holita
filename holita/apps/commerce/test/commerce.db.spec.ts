@@ -147,6 +147,7 @@ beforeAll(async () => {
     '20261122140000_order_invoices',
     '20261122150000_manual_order_refunds',
     '20261122160000_manual_orders',
+    '20261122170000_order_line_stock_deductions',
   ]) {
     await connection.query(
       await readFile(
@@ -1125,7 +1126,16 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   ).toEqual({
     data: { addCartLine: { guestCartToken: null, cart: { itemCount: 1, subtotal: '1.00' } } },
   });
-  expect(await storefront(publicB, readCart, {}, undefined, guestToken)).toHaveProperty('errors');
+  expect(await storefront(publicB, readCart, {}, undefined, guestToken)).toMatchObject({
+    errors: [
+      {
+        extensions: {
+          code: 'NOT_FOUND',
+          fieldErrors: [{ path: 'cart', code: 'CART_NOT_FOUND', message: 'Cart not found' }],
+        },
+      },
+    ],
+  });
   expect(await storefront(publicA, remove, { id: line.id }, undefined, guestToken)).toHaveProperty(
     'errors',
   );
@@ -1585,7 +1595,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       label: 'Tracked product',
       quantity: 2,
       unitPrice: '4.25',
-      stockDecremented: true,
+      stockDeductedQuantity: 2,
     },
   });
   expect(
@@ -1899,6 +1909,31 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(await storefront(publicA, readOrder, { id: manual.id }, foreignOwner)).toEqual({
     data: { shopperOrder: null },
   });
+  for (const [inventoryTracked, quantity, stockDeductedQuantity, onHand] of [
+    [false, 5, 3, 4],
+    [false, 4, 3, 4],
+    [true, 6, 5, 2],
+    [true, 4, 4, 3],
+  ] as const) {
+    await database.productVariant.update({ where: variantIdentity, data: { inventoryTracked } });
+    expect(await query(tokens.operator, publicA, updateManual, manualEdit(quantity))).toMatchObject(
+      {
+        data: { updateManualOrder: { lines: [{ id: manualLine.id, quantity }] } },
+      },
+    );
+    expect(
+      await database.orderLine.findUniqueOrThrow({
+        where: { ...categoryScope, id: manualLine.id },
+        select: { stockDeductedQuantity: true },
+      }),
+    ).toEqual({ stockDeductedQuantity });
+    expect(
+      await database.productVariant.findUniqueOrThrow({
+        where: variantIdentity,
+        select: { quantity: true },
+      }),
+    ).toEqual({ quantity: onHand });
+  }
   expect(await query(tokens.operator, publicA, updateManual, manualEdit(1))).toMatchObject({
     data: { updateManualOrder: { total: '107.00', lines: [{ id: manualLine.id, quantity: 1 }] } },
   });
@@ -1908,6 +1943,13 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       select: { quantity: true },
     }),
   ).toEqual({ quantity: 6 });
+  await database.productVariant.update({
+    where: variantIdentity,
+    data: { inventoryTracked: false },
+  });
+  expect(await query(tokens.operator, publicA, updateManual, manualEdit(2))).toMatchObject({
+    data: { updateManualOrder: { total: '115.00' } },
+  });
   await query(tokens.operator, publicA, markPaid, { id: manual.id });
   expect(await query(tokens.operator, publicA, updateManual, manualEdit(2))).toHaveProperty(
     'errors',
@@ -1920,7 +1962,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(
     await query(tokens.operator, publicA, recordRefund, {
       orderId: manual.id,
-      input: { amount: '107.00', restock: true },
+      input: { amount: '115.00', restock: true },
     }),
   ).toMatchObject({ data: { recordOrderRefund: { restock: true } } });
   expect(

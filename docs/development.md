@@ -577,8 +577,10 @@ recorded payment. The operator graph exposes `orders`, `order`, `updateOrderStat
 `markOrderPaid`.
 
 Choose Create manual order to record a phone order. Select a customer to link it to their
-shop order history or leave it as a guest order. Enter contact and delivery details, add variants,
-select enabled payment and shipping methods, and optionally enter a private merchant note.
+shop order history or leave it as a guest order. Customer selection fills untouched contact
+fields using the account name and email, and the phone from its latest linked order when the email
+matches. Enter delivery details, add variants, select enabled payment and shipping methods, and
+optionally enter a private merchant note.
 Open a placed, unpaid manual order and choose Edit manual order to revise it. Commerce derives
 totals and adjusts stock by the change in held quantities. Existing lines retain their booked
 prices, and unchanged methods retain their saved terms. The Sofia demo shop includes a guest

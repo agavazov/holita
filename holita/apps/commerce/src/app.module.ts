@@ -106,7 +106,7 @@ const formatFieldErrors: NonNullable<ApolloFederationDriverConfig['formatError']
   error,
 ) => {
   const cause: unknown = unwrapResolverError(error);
-  if (!(cause instanceof UnprocessableEntityException)) {
+  if (!(cause instanceof UnprocessableEntityException || cause instanceof NotFoundException)) {
     return formatted;
   }
   const response = cause.getResponse();
@@ -114,7 +114,10 @@ const formatFieldErrors: NonNullable<ApolloFederationDriverConfig['formatError']
     typeof response === 'object' && 'fieldErrors' in response ? response.fieldErrors : undefined;
   return {
     ...formatted,
-    extensions: { code: 'BAD_USER_INPUT', ...(fieldErrors ? { fieldErrors } : {}) },
+    extensions: {
+      code: cause instanceof NotFoundException ? 'NOT_FOUND' : 'BAD_USER_INPUT',
+      ...(fieldErrors ? { fieldErrors } : {}),
+    },
   };
 };
 
@@ -174,12 +177,7 @@ const formatOperatorError: NonNullable<ApolloFederationDriverConfig['formatError
         ...context(http),
         cartToken: http.req.headers['x-cart-token'],
       }),
-      formatError: (formatted, error) => {
-        const cause: unknown = unwrapResolverError(error);
-        return cause instanceof NotFoundException
-          ? { ...formatted, extensions: { code: 'NOT_FOUND' } }
-          : formatFieldErrors(formatted, error);
-      },
+      formatError: formatFieldErrors,
     }),
   ],
 })

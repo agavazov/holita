@@ -9,10 +9,11 @@ export class CustomersResolver {
   @Query('customers')
   async customers(@Context() context: RequestContext) {
     const rows = await this.shoppers.customers(await requireScope(context, false));
-    return rows.map(({ id, name, email, createdAt, updatedAt }) => ({
+    return rows.map(({ id, name, email, createdAt, updatedAt, orders: [latest] }) => ({
       id,
       name,
       email,
+      orderPhone: latest?.contactEmail === email ? latest.contactPhone : null,
       createdAt: createdAt.toISOString(),
       updatedAt: updatedAt.toISOString(),
     }));

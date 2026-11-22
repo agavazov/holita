@@ -147,12 +147,12 @@ export class OrdersRepository {
     await this.lockOrderProducts(tx, scope, orderId);
     const deductions = await tx.orderLine.groupBy({
       by: ['variantId'],
-      where: { ...scope, orderId, stockDecremented: true, variantId: { not: null } },
-      _sum: { quantity: true },
+      where: { ...scope, orderId, stockDeductedQuantity: { gt: 0 }, variantId: { not: null } },
+      _sum: { stockDeductedQuantity: true },
     });
     for (const { variantId, _sum } of deductions) {
-      if (variantId !== null && _sum.quantity !== null) {
-        await this.incrementStock(tx, scope, variantId, _sum.quantity);
+      if (variantId !== null && _sum.stockDeductedQuantity !== null) {
+        await this.incrementStock(tx, scope, variantId, _sum.stockDeductedQuantity);
       }
     }
   }
@@ -240,13 +240,6 @@ export class OrdersRepository {
 
   lines(tx: Prisma.TransactionClient, scope: Scope, orderId: string) {
     return tx.orderLine.findMany({ ...orderLines(scope), where: { ...scope, orderId } });
-  }
-
-  trackedVariants(tx: Prisma.TransactionClient, scope: Scope, ids: string[]) {
-    return tx.productVariant.findMany({
-      where: { ...scope, id: { in: ids }, inventoryTracked: true },
-      select: { id: true },
-    });
   }
 
   incrementStock(tx: Prisma.TransactionClient, scope: Scope, id: string, quantity: number) {

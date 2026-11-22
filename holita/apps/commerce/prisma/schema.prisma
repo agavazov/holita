@@ -483,7 +483,8 @@ model OrderLine {
   label String @db.Text
   quantity Int
   unitPrice Decimal @db.Decimal(12, 2)
-  stockDecremented Boolean
+  stockDeductedQuantity Int @default(0)
+  stockDecremented Boolean @default(false) @ignore
   @@unique([tenantId, branchId, orderId, sortOrder])
   @@index([tenantId, branchId, variantId])
   @@map("orderLine")

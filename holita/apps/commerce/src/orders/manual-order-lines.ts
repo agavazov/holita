@@ -49,7 +49,6 @@ export function reviseOrderLines(
   inputs: ReturnType<typeof manualLineInputs>,
   previous: OrderLine[],
   sellable: PublicVariant[],
-  trackedIds: Set<string>,
 ) {
   const oldLines = new Map(previous.map((line) => [line.id, line]));
   const sellableVariants = new Map(sellable.map((variant) => [variant.id, variant]));
@@ -58,10 +57,10 @@ export function reviseOrderLines(
   const stockDeltas = new Map<string, { quantity: number; path: string }>();
   let subtotal = new CartPrice(0);
 
-  for (const { variantId, stockDecremented, quantity } of previous) {
-    if (variantId && stockDecremented) {
+  for (const { variantId, stockDeductedQuantity } of previous) {
+    if (variantId && stockDeductedQuantity) {
       stockDeltas.set(variantId, {
-        quantity: (stockDeltas.get(variantId)?.quantity ?? 0) - quantity,
+        quantity: (stockDeltas.get(variantId)?.quantity ?? 0) - stockDeductedQuantity,
         path: 'lines',
       });
     }
@@ -100,16 +99,19 @@ export function reviseOrderLines(
       if (!snapshot) {
         throw checkoutError(path, 'ORDER_VARIANT_UNAVAILABLE', 'Choose an available variant');
       }
-      const stockDecremented =
-        retained?.quantity === quantity ? retained.stockDecremented : !!id && trackedIds.has(id);
-      if (id && stockDecremented) {
+      // Keep previous deductions for the retained quantity, even if tracking changed.
+      const addedQuantity = Math.max(0, quantity - (retained?.quantity ?? 0));
+      const stockDeductedQuantity =
+        Math.min(quantity, retained?.stockDeductedQuantity ?? 0) +
+        (variant?.inventoryTracked ? addedQuantity : 0);
+      if (id && stockDeductedQuantity) {
         stockDeltas.set(id, {
-          quantity: (stockDeltas.get(id)?.quantity ?? 0) + quantity,
+          quantity: (stockDeltas.get(id)?.quantity ?? 0) + stockDeductedQuantity,
           path: `lines.${String(sortOrder)}.quantity`,
         });
       }
       subtotal = subtotal.plus(new CartPrice(snapshot.unitPrice).mul(quantity));
-      return { ...snapshot, sortOrder, quantity, stockDecremented };
+      return { ...snapshot, sortOrder, quantity, stockDeductedQuantity };
     },
   );
 

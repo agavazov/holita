@@ -1598,13 +1598,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await openRefund();
     await merchant.locator('#refund-amount').fill('12.00');
     await merchant.locator('#refund-reason').fill('Partial refund recorded externally');
+    const partial = waitForCart(merchant, 'OperatorOrder').then((response) => response.json());
     expect(await submitRefund()).toMatchObject({
       data: { recordOrderRefund: { amount: '12.00', currency: 'BGN', restock: false } },
     });
     await merchant.waitForURL((url) => url.pathname.endsWith(accountOrderId));
-    const partial = waitForCart(merchant, 'OperatorOrder');
-    await merchant.reload();
-    expect(await (await partial).json()).toMatchObject({
+    expect(await partial).toMatchObject({
       data: {
         orderRefundSummary: {
           status: 'PARTIAL',
@@ -1631,13 +1630,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await openRefund();
     await merchant.locator('#refund-amount').fill('24.50');
     await merchant.locator('#refund-restock').check();
+    const full = waitForCart(merchant, 'OperatorOrder').then((response) => response.json());
     expect(await submitRefund()).toMatchObject({
       data: { recordOrderRefund: { amount: '24.50', currency: 'BGN', restock: true } },
     });
     await merchant.waitForURL((url) => url.pathname.endsWith(accountOrderId));
-    const full = waitForCart(merchant, 'OperatorOrder');
-    await merchant.reload();
-    expect(await (await full).json()).toMatchObject({
+    expect(await full).toMatchObject({
       data: {
         order: { id: accountOrderId, status: 'CANCELLED', paymentStatus: 'PAID' },
         orderRefundSummary: { status: 'FULL', refundedAmount: '36.50', refundableAmount: '0.00' },
@@ -1648,11 +1646,28 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     });
 
     await merchant.getByRole('link', { name: 'Back to orders', exact: true }).click();
+    const otherEmail = 'other-order-customer@example.test';
+    await commerceDb.client.query(
+      `INSERT INTO "customer" ("id", "tenantId", "branchId", "name", "email", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
+      [randomUUID(), shopScope.tenantId, shopId, 'Other Customer', otherEmail],
+    );
     await merchant.getByRole('button', { name: 'Create manual order', exact: true }).click();
-    await merchant.locator('#manual-customerId').click();
-    await merchant.getByRole('option', { name: `Shopper · ${shopperEmail}`, exact: true }).click();
-    await merchant.locator('[id="manual-contact.name"]').fill('Phone Shopper');
-    await merchant.locator('[id="manual-contact.phone"]').fill('+359 2 555 0100');
+    const selectCustomer = async (label: string) => {
+      await merchant.locator('#manual-customerId').click();
+      await merchant.getByRole('option', { name: label, exact: true }).click();
+    };
+    const originalCustomer = `Shopper · ${shopperEmail}`;
+    const contactName = merchant.locator('[id="manual-contact.name"]');
+    const contactPhone = merchant.locator('[id="manual-contact.phone"]');
+    await selectCustomer(originalCustomer);
+    await expect(contactPhone).toHaveValue('+359 2 555 0100');
+    await contactName.fill('Phone Shopper');
+    await selectCustomer(`Other Customer · ${otherEmail}`);
+    await expect(contactName).toHaveValue('Phone Shopper');
+    await expect(merchant.locator('[id="manual-contact.email"]')).toHaveValue(otherEmail);
+    await expect(contactPhone).toHaveValue('');
+    await selectCustomer(originalCustomer);
     await merchant.locator('[id="manual-shippingAddress.city"]').fill('Sofia');
     await merchant.locator('[id="manual-shippingAddress.postalCode"]').fill('1000');
     await merchant.locator('[id="manual-shippingAddress.line1"]').fill('12 Demo Street');

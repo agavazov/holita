@@ -105,39 +105,48 @@
       </div>
       } @for (line of lines.controls; track line; let index = $index) { @let path = 'lines.' + index
       + '.quantity'; @let id = 'manual-' + path; @let message = lineError(index);
-      <div class="manual-order-line" role="group" [attr.aria-labelledby]="id + '-item'">
-        <strong [id]="id + '-item'">{{ line.controls.choice.value.label }}</strong>
+      <div
+        class="app-form-grid manual-order-line"
+        role="group"
+        [attr.aria-labelledby]="id + '-item'"
+      >
+        <strong class="app-form-grid--wide" [id]="id + '-item'"
+          >{{ line.controls.choice.value.label }}</strong
+        >
         <osnova-form-field
+          class="app-form-grid--wide"
           [controlId]="id"
           [label]="text().orderQuantity"
           [required]="true"
           [error]="message"
         >
-          <input
-            pInputText
-            [id]="id"
-            type="number"
-            min="1"
-            step="1"
-            [formControl]="line.controls.quantity"
-            [invalid]="!!message"
-            aria-required="true"
-            [attr.aria-invalid]="message ? 'true' : null"
-            [attr.aria-describedby]="message ? id + '-error' : null"
-            (input)="lineChanged(index)"
-          />
+          <div class="app-inline manual-order-quantity">
+            <input
+              pInputText
+              [id]="id"
+              type="number"
+              min="1"
+              step="1"
+              [formControl]="line.controls.quantity"
+              [invalid]="!!message"
+              aria-required="true"
+              [attr.aria-invalid]="message ? 'true' : null"
+              [attr.aria-describedby]="message ? id + '-error' : null"
+              (input)="lineChanged(index)"
+            />
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [outlined]="true"
+              [disabled]="saving()"
+              [attr.aria-label]="text().removeOrderLine + ' · ' + line.controls.choice.value.label"
+              (click)="removeLine(index)"
+            >
+              {{ text().removeOrderLine }}
+            </button>
+          </div>
         </osnova-form-field>
-        <button
-          pButton
-          type="button"
-          severity="secondary"
-          [outlined]="true"
-          [disabled]="saving()"
-          [attr.aria-label]="text().removeOrderLine + ' · ' + line.controls.choice.value.label"
-          (click)="removeLine(index)"
-        >
-          {{ text().removeOrderLine }}
-        </button>
       </div>
       }
     </section>

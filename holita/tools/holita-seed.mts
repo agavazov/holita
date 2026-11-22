@@ -565,8 +565,8 @@ async function seedShopperOrder(
       );
       await client.query(
         `INSERT INTO "orderLine" ("id", "tenantId", "branchId", "orderId", "variantId", "sortOrder",
-           "sku", "label", "quantity", "unitPrice", "stockDecremented")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, false) ON CONFLICT DO NOTHING`,
+           "sku", "label", "quantity", "unitPrice", "stockDeductedQuantity")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 0) ON CONFLICT DO NOTHING`,
         [
           fixtureId('d6', line.id),
           tenantId,
@@ -647,8 +647,8 @@ async function seedManualOrder(client: pg.Client, tenantId: string, branchId: st
   if (inserted.rowCount) {
     await client.query(
       `INSERT INTO "orderLine" ("id", "tenantId", "branchId", "orderId", "variantId", "sortOrder",
-         "sku", "label", "quantity", "unitPrice", "stockDecremented")
-       VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8, $9, false) ON CONFLICT DO NOTHING`,
+         "sku", "label", "quantity", "unitPrice", "stockDeductedQuantity")
+       VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8, $9, 0) ON CONFLICT DO NOTHING`,
       [
         fixtureId('d6', fixture.line.id),
         tenantId,

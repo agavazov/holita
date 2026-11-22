@@ -11,6 +11,19 @@ export class ShopperRepository {
     return this.database.client.customer.findMany({
       where: scope,
       orderBy: [{ name: 'asc' }, { id: 'desc' }],
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+        updatedAt: true,
+        orders: {
+          where: scope,
+          orderBy: [{ placedAt: 'desc' }, { id: 'desc' }],
+          take: 1,
+          select: { contactEmail: true, contactPhone: true },
+        },
+      },
     });
   }
 

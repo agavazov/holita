@@ -358,10 +358,7 @@ export class OrdersService {
     const saved = orderId ? await this.orders.lines(tx, scope, orderId) : [];
     const ids = [...new Set([...newIds, ...saved.flatMap(({ variantId }) => variantId ?? [])])];
     const sellable = await this.cartRepository.publicVariants(tx, scope, ids);
-    const trackedIds = new Set(
-      (await this.orders.trackedVariants(tx, scope, ids)).map(({ id }) => id),
-    );
-    const revised = reviseOrderLines(inputs, saved, sellable, trackedIds);
+    const revised = reviseOrderLines(inputs, saved, sellable);
     for (const [id, { quantity, path }] of revised.stockDeltas) {
       if (quantity > 0 && !(await this.orders.decrementStock(tx, scope, id, quantity))) {
         throw checkoutError(path, 'ORDER_STOCK_SHORT', 'Requested stock is no longer available');
@@ -520,7 +517,7 @@ export class OrdersService {
           ...orderLineSnapshot(variant, line.optionLabels),
           sortOrder,
           quantity: line.quantity,
-          stockDecremented: variant.inventoryTracked,
+          stockDeductedQuantity: variant.inventoryTracked ? line.quantity : 0,
         });
       }
 
