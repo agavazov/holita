@@ -2120,7 +2120,16 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(await saveVariants(variant.id, '5.00')).toEqual({
     data: { updateProduct: { variants: [{ id: variant.id }] } },
   });
-  expect(await saveVariants(undefined, '5.00')).toHaveProperty('data.updateProduct');
+  expect(await saveVariants(undefined, '5.00')).toMatchObject({
+    errors: [
+      {
+        extensions: {
+          code: 'BAD_USER_INPUT',
+          fieldErrors: [{ path: 'variants', code: 'VARIANT_HAS_OUTSTANDING_DEDUCTIONS' }],
+        },
+      },
+    ],
+  });
   const receiptVariables = { orderId: order.id };
   expect(await storefront(publicA, receiptOperation, receiptVariables, token)).toEqual({
     data: { orderConfirmation: receipt },
@@ -2134,18 +2143,6 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       data: { orderConfirmation: null },
     });
   }
-
-  expect(await cart()).toMatchObject({
-    data: {
-      cart: {
-        subtotal: '0.00',
-        lines: [{ id: newLine.id, variantId: null, name: null, issue: 'UNAVAILABLE' }],
-      },
-    },
-  });
-  expect(await storefront(publicA, remove, { id: newLine.id }, token)).toEqual({
-    data: { removeCartLine: { itemCount: 0 } },
-  });
 
   const readOrders =
     'query($offset:Int! = 0,$limit:Int! = 20){shopperOrders(offset:$offset,limit:$limit){items{id number placedAt status paymentStatus paymentMethodLabel shippingMethodLabel currency total} total offset limit}}';
@@ -2197,13 +2194,6 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       data: { shopperOrder: null },
     });
   }
-  const replacement = await database.productVariant.findFirstOrThrow({
-    where: {
-      ...categoryScope,
-      productId: variant.productId,
-    },
-  });
-  expect(replacement.id).not.toBe(variant.id);
   const paidOrder = await query(tokens.operator, publicA, markPaid, operatorTarget);
   expect(paidOrder).toMatchObject({
     data: {
@@ -2216,10 +2206,29 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   ).toMatchObject({ data: { updateOrderStatus: { status: 'CANCELLED', paymentStatus: 'PAID' } } });
   expect(
     await database.productVariant.findUniqueOrThrow({
-      where: { ...categoryScope, id: replacement.id },
+      where: variantKey,
       select: { quantity: true },
     }),
-  ).toEqual({ quantity: replacement.quantity });
+  ).toEqual({ quantity: 3 });
+  expect(await saveVariants(undefined, '5.00')).toHaveProperty('data.updateProduct');
+  const replacement = await database.productVariant.findFirstOrThrow({
+    where: {
+      ...categoryScope,
+      productId: variant.productId,
+    },
+  });
+  expect(replacement.id).not.toBe(variant.id);
+  expect(await cart()).toMatchObject({
+    data: {
+      cart: {
+        subtotal: '0.00',
+        lines: [{ id: newLine.id, variantId: null, name: null, issue: 'UNAVAILABLE' }],
+      },
+    },
+  });
+  expect(await storefront(publicA, remove, { id: newLine.id }, token)).toEqual({
+    data: { removeCartLine: { itemCount: 0 } },
+  });
   expect(await storefront(publicA, readOrder, operatorTarget, token)).toEqual({
     data: { shopperOrder: { ...receipt, status: 'CANCELLED', paymentStatus: 'PAID' } },
   });

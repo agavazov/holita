@@ -8,6 +8,7 @@ import type {
   ProductCharacteristicValueInput,
 } from '../generated/graphql/types.js';
 import type { Scope } from '../scope.js';
+import { CartPrice } from '../cart/cart.service.js';
 import { CharacteristicsRepository } from '../characteristics/characteristics.repository.js';
 import { DatabaseService } from '../database.service.js';
 import type { ProductImageWrite } from './product-images.js';
@@ -219,22 +220,26 @@ export class CommerceRepository {
       const current = id
         ? await tx.productVariant.findMany({
             where: productScope,
-            select: { id: true, quantity: true },
+            select: { id: true, quantity: true, combinationKey: true },
           })
         : [];
-      const quantities = new Map(current.map((variant) => [variant.id, variant.quantity]));
+      const currentById = new Map(current.map((variant) => [variant.id, variant]));
+      const reassigned = new Map<string, number>();
       const replacements = variants.map((variant, index) => {
         if (!variant.id) {
           return { ...variant, quantity: variant.quantity ?? 0 };
         }
-        const quantity = quantities.get(variant.id);
-        if (quantity === undefined) {
+        const existing = currentById.get(variant.id);
+        if (!existing) {
           throw new InvalidVariantIdError(index);
         }
-        if (variant.quantity !== undefined && variant.quantity !== quantity) {
+        if (variant.quantity !== undefined && variant.quantity !== existing.quantity) {
           throw new ConflictingVariantQuantityError(index);
         }
-        return { ...variant, quantity };
+        if (variant.combinationKey !== existing.combinationKey) {
+          reassigned.set(variant.id, index);
+        }
+        return { ...variant, quantity: existing.quantity };
       });
       const conflicting = await tx.productVariant.findFirst({
         where: {
@@ -250,6 +255,20 @@ export class CommerceRepository {
       }
       const retainedIds = new Set(replacements.map((variant) => variant.id));
       const removedIds = current.map((variant) => variant.id).filter((id) => !retainedIds.has(id));
+      if (removedIds.length || reassigned.size) {
+        const protectedIds = await this.variantsWithOutstandingDeductions(tx, scope, [
+          ...removedIds,
+          ...reassigned.keys(),
+        ]);
+        if (removedIds.some((id) => protectedIds.has(id))) {
+          throw new VariantOutstandingDeductionsError();
+        }
+        for (const [id, index] of reassigned) {
+          if (protectedIds.has(id)) {
+            throw new VariantOutstandingDeductionsError(index);
+          }
+        }
+      }
       if (removedIds.length) {
         await tx.cartLine.updateMany({
           where: { ...scope, variantId: { in: removedIds } },
@@ -288,6 +307,39 @@ export class CommerceRepository {
       });
       return { row, retiredKeys };
     });
+  }
+
+  private async variantsWithOutstandingDeductions(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    variantIds: string[],
+  ) {
+    const deduction = { ...scope, variantId: { in: variantIds }, stockDeductedQuantity: { gt: 0 } };
+    const orders = await tx.order.findMany({
+      where: { ...scope, status: { not: 'CANCELLED' }, lines: { some: deduction } },
+      select: {
+        status: true,
+        total: true,
+        lines: { where: deduction, select: { variantId: true } },
+        refunds: { where: scope, select: { amount: true } },
+      },
+    });
+    const protectedIds = new Set<string>();
+    for (const { status, total, lines, refunds } of orders) {
+      // After shipping, only a completing refund can restore stock.
+      if (status === 'SHIPPED' || status === 'COMPLETED') {
+        const refunded = refunds.reduce((sum, { amount }) => sum.plus(amount), new CartPrice(0));
+        if (total.lte(refunded)) {
+          continue;
+        }
+      }
+      for (const { variantId } of lines) {
+        if (variantId !== null) {
+          protectedIds.add(variantId);
+        }
+      }
+    }
+    return protectedIds;
   }
 
   private async replaceBadgeAssignments(
@@ -377,6 +429,12 @@ export class InvalidVariantIdError extends Error {
 export class ConflictingVariantQuantityError extends Error {
   constructor(readonly index: number) {
     super('Use Inventory to adjust quantities for tracked variants');
+  }
+}
+
+export class VariantOutstandingDeductionsError extends Error {
+  constructor(readonly index?: number) {
+    super('This variant still has stock to restore');
   }
 }
 

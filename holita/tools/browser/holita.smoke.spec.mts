@@ -1041,7 +1041,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         ],
       },
     });
-    const publicProductsQuery = async (branchId = shopId): Promise<unknown> => {
+    const publicProductsQuery = async (branchId = shopId, id = productId): Promise<unknown> => {
       const response = await shopper.request.post(`${shopApp.origin}/graphql`, {
         headers: { 'x-branch-id': branchId },
         data: {
@@ -1055,7 +1055,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
               variants { id sku price available optionValueIds }
             }
           }`,
-          variables: { id: productId },
+          variables: { id },
         },
       });
       expect(response.status()).toBe(200);
@@ -1839,12 +1839,17 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       [shopScope.tenantId, shopId, orderCartId],
     );
     expect(cartOrders).toEqual([{ id: orderId }]);
-    const { rows: remainingStock } = await commerceDb.client.query(
-      `SELECT "quantity" FROM "productVariant"
+    const {
+      rows: [simpleVariant],
+    } = await commerceDb.client.query<{ id: string; quantity: number }>(
+      `SELECT "id", "quantity" FROM "productVariant"
        WHERE "tenantId" = $1 AND "branchId" = $2 AND "productId" = $3 AND "sku" = 'SMOKE-001'`,
       [shopScope.tenantId, shopId, productId],
     );
-    expect(remainingStock).toEqual([{ quantity: 0 }]);
+    if (!simpleVariant) {
+      throw new Error('Missing tracked variant for the guest order');
+    }
+    expect(simpleVariant.quantity).toBe(0);
     const receipt = waitForCart(guestOrder, 'OrderConfirmation');
     await guestOrder.reload();
     expect(await (await receipt).json()).toMatchObject({
@@ -1943,6 +1948,15 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       subtotal: '30.00',
       shippingFee: '6.50',
       total: chargedTotal,
+      lines: [
+        {
+          sku: 'CONFIG-Satin',
+          label: `${configuredProductName} · Satin`,
+          quantity: 1,
+          unitPrice: '30.00',
+          lineTotal: '30.00',
+        },
+      ],
       ...discountedQuote,
     };
     expect(await (await detail).json()).toMatchObject({
@@ -2032,7 +2046,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     if (!authorization || branchId !== shopId) {
       throw new Error('Missing scoped operator request');
     }
-    const refundRouter = async (
+    const operatorRouter = async (
       query: string,
       variables: Record<string, unknown>,
     ): Promise<unknown> => {
@@ -2043,8 +2057,118 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       return response.json();
     };
     const inventoryRead = 'query($id:ID!){inventoryVariant(id:$id){id quantity}}';
-    expect(await refundRouter(inventoryRead, trackedVariant)).toEqual({
+    expect(await operatorRouter(inventoryRead, trackedVariant)).toEqual({
       data: { inventoryVariant: { ...trackedVariant, quantity: 4 } },
+    });
+    const setOrderStatus = (id: string, status: 'PROCESSING' | 'SHIPPED' | 'CANCELLED') =>
+      operatorRouter(
+        'mutation($id:ID!,$status:OrderStatus!){updateOrderStatus(id:$id,status:$status){id status}}',
+        { id, status },
+      );
+    for (const status of ['PROCESSING', 'SHIPPED'] as const) {
+      expect(await setOrderStatus(accountOrderId, status)).toEqual({
+        data: { updateOrderStatus: { id: accountOrderId, status } },
+      });
+    }
+
+    const configuredProductId = new URL(configuredProductUrl).pathname.split('/').at(-1);
+    if (!configuredProductId) {
+      throw new Error('Missing configured product ID');
+    }
+    const readConfiguredProduct = () =>
+      operatorRouter(
+        `query($id:ID!){product(id:$id){name status brandId categoryId
+          variants{id sku price inventoryTracked active optionValueIds}}}`,
+        { id: configuredProductId },
+      );
+    const configuredRead = await readConfiguredProduct();
+    if (
+      typeof configuredRead !== 'object' ||
+      configuredRead === null ||
+      !('data' in configuredRead) ||
+      typeof configuredRead.data !== 'object' ||
+      configuredRead.data === null ||
+      !('product' in configuredRead.data) ||
+      typeof configuredRead.data.product !== 'object' ||
+      configuredRead.data.product === null ||
+      !('variants' in configuredRead.data.product) ||
+      !Array.isArray(configuredRead.data.product.variants)
+    ) {
+      throw new Error('The operator product read did not return variants');
+    }
+    const { variants, ...productFields } = configuredRead.data.product;
+    const savedVariants: readonly unknown[] = variants;
+    const [glossVariant, satinVariant] = savedVariants;
+    if (
+      typeof glossVariant !== 'object' ||
+      glossVariant === null ||
+      typeof satinVariant !== 'object' ||
+      satinVariant === null
+    ) {
+      throw new Error('The configured product requires both saved variants');
+    }
+    expect(savedVariants).toMatchObject([
+      { sku: 'CONFIG-Gloss', optionValueIds: [gloss.id] },
+      { id: trackedVariant.id, sku: 'CONFIG-Satin', optionValueIds: [satin.id] },
+    ]);
+
+    const saveConfiguredVariants = (variants: readonly object[]) =>
+      operatorRouter(
+        'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){id}}',
+        {
+          id: configuredProductId,
+          input: { ...productFields, variants },
+        },
+      );
+    for (const [draft, path] of [
+      [[glossVariant], 'variants'],
+      [
+        [
+          { ...glossVariant, optionValueIds: [satin.id] },
+          { ...satinVariant, optionValueIds: [gloss.id] },
+        ],
+        'variants1OptionValueIds',
+      ],
+    ] as const) {
+      expect(await saveConfiguredVariants(draft)).toMatchObject({
+        errors: [
+          {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              fieldErrors: [{ path, code: 'VARIANT_HAS_OUTSTANDING_DEDUCTIONS' }],
+            },
+          },
+        ],
+      });
+    }
+    expect(await readConfiguredProduct()).toEqual(configuredRead);
+    expect(
+      await operatorRouter('query($id:ID!){order(id:$id){lines{variantId sku}}}', {
+        id: accountOrderId,
+      }),
+    ).toEqual({
+      data: { order: { lines: [{ variantId: trackedVariant.id, sku: 'CONFIG-Satin' }] } },
+    });
+
+    expect(
+      await saveConfiguredVariants([glossVariant, { ...satinVariant, active: false }]),
+    ).toEqual({
+      data: { updateProduct: { id: configuredProductId } },
+    });
+    expect(await publicProductsQuery(shopId, configuredProductId)).toMatchObject({
+      data: {
+        catalogueProduct: {
+          variantSelection: {
+            options: [{ name: 'Surface finish', values: [gloss] }],
+            variants: [{ sku: 'CONFIG-Gloss', optionValueIds: [gloss.id] }],
+          },
+        },
+      },
+    });
+    const inactiveVariantReceipt = waitForCart(shopper, 'ShopperOrder');
+    await shopper.reload();
+    expect(await (await inactiveVariantReceipt).json()).toMatchObject({
+      data: { shopperOrder: { ...accountOrderSnapshot, status: 'SHIPPED' } },
     });
 
     await merchant.getByRole('link', { name: 'Back to order', exact: true }).click();
@@ -2077,12 +2201,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         },
       },
     });
-    expect(
-      await refundRouter(
+    const recordRefund = (input: { amount: string; restock?: boolean }) =>
+      operatorRouter(
         'mutation($orderId:ID!,$input:RecordOrderRefundInput!){recordOrderRefund(orderId:$orderId,input:$input){id}}',
-        { orderId: accountOrderId, input: { amount: '21.51' } },
-      ),
-    ).toMatchObject({
+        { orderId: accountOrderId, input },
+      );
+    const refundExceedsBalance = {
       errors: [
         {
           extensions: {
@@ -2091,7 +2215,8 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
           },
         },
       ],
-    });
+    };
+    expect(await recordRefund({ amount: '21.51' })).toMatchObject(refundExceedsBalance);
     await openRefund();
     await merchant.locator('#refund-amount').fill('21.50');
     await merchant.locator('#refund-restock').check();
@@ -2102,7 +2227,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.waitForURL((url) => url.pathname.endsWith(accountOrderId));
     expect(await full).toMatchObject({
       data: {
-        order: { id: accountOrderId, status: 'CANCELLED', paymentStatus: 'PAID' },
+        order: {
+          id: accountOrderId,
+          status: 'SHIPPED',
+          paymentStatus: 'PAID',
+          lines: [{ variantId: trackedVariant.id, sku: 'CONFIG-Satin' }],
+        },
         orderRefundSummary: {
           status: 'FULL',
           refundedAmount: chargedTotal,
@@ -2110,8 +2240,17 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         },
       },
     });
-    expect(await refundRouter(inventoryRead, trackedVariant)).toEqual({
+    expect(await operatorRouter(inventoryRead, trackedVariant)).toEqual({
       data: { inventoryVariant: { ...trackedVariant, quantity: 5 } },
+    });
+    expect(await recordRefund({ amount: '21.50', restock: true })).toMatchObject(
+      refundExceedsBalance,
+    );
+    expect(await operatorRouter(inventoryRead, trackedVariant)).toEqual({
+      data: { inventoryVariant: { ...trackedVariant, quantity: 5 } },
+    });
+    expect(await saveConfiguredVariants([glossVariant, satinVariant])).toEqual({
+      data: { updateProduct: { id: configuredProductId } },
     });
 
     await merchant.getByRole('link', { name: 'Back to orders', exact: true }).click();
@@ -2191,7 +2330,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         },
       },
     });
-    expect(await refundRouter(inventoryRead, trackedVariant)).toEqual({
+    expect(await operatorRouter(inventoryRead, trackedVariant)).toEqual({
       data: { inventoryVariant: { ...trackedVariant, quantity: 3 } },
     });
 
@@ -2335,6 +2474,18 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await shopper.goto(productUrl);
     await expect(shopper.getByRole('heading', { name: 'Product not found.' })).toBeVisible();
     expect((await shopper.request.get(new URL(angled, shopApp.origin).href)).status()).toBe(404);
+    const simpleVariantId = { id: simpleVariant.id };
+    expect(await operatorRouter(inventoryRead, simpleVariantId)).toEqual({
+      data: { inventoryVariant: { ...simpleVariantId, quantity: 0 } },
+    });
+    for (const status of ['CANCELLED', 'CANCELLED'] as const) {
+      expect(await setOrderStatus(orderId, status)).toEqual({
+        data: { updateOrderStatus: { id: orderId, status } },
+      });
+      expect(await operatorRouter(inventoryRead, simpleVariantId)).toEqual({
+        data: { inventoryVariant: { ...simpleVariantId, quantity: 1 } },
+      });
+    }
     await merchant.getByRole('button', { name: productName, exact: true }).click();
     await merchant.locator('#product-variant-active-0').click();
     await merchant.getByRole('option', { name: 'Active', exact: true }).click();

@@ -1,6 +1,6 @@
 # 202 Record the manual refund for an approved return
 
-**Status:** Ready after [151](151-holita-order-stock-deductions.md), [215](215-holita-shopper-return-request.md), [252](252-holita-manual-order-stock-deltas.md). **Product:** Holita.
+**Status:** Ready after [215](215-holita-shopper-return-request.md), [252](252-holita-manual-order-stock-deltas.md). **Product:** Holita.
 
 ## Background
 

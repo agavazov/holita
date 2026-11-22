@@ -40,7 +40,6 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 | [144 Hand off a won lead to an existing merchant](144-holita-sales-existing-merchant-handoff.md)         | 4    | Ready       | 141                |
 | [145 Manage prospect online stores](145-holita-sales-online-stores.md)                                   | 4    | Ready       | 131                |
 | [142 Show the daily sales dashboard](142-holita-sales-dashboard.md)                                      | 4    | Ready       | 137, 138, 140, 144 |
-| [151 Preserve sold variant links for stock restoration](151-holita-order-stock-deductions.md)            | 5    | Ready       |                    |
 | [252 Preserve stock deductions on manual order edits](252-holita-manual-order-stock-deltas.md)           | 5    | Ready       |                    |
 | [152 Use the maintained phone in new manual orders](152-holita-manual-order-customer-phone.md)           | 5    | Ready       |                    |
 | [199 Capture a separate checkout billing address](199-holita-checkout-billing-address.md)                | 5    | Ready       |                    |
@@ -62,7 +61,7 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 | [176 Inspect catalogue imports and retry failed work](176-holita-catalogue-import-history.md)            | 5    | Ready       | 175                |
 | [201 Review and decide order return cases in Admin](201-holita-admin-return-cases.md)                    | 5    | Ready       |                    |
 | [215 Accept authenticated shopper return requests through the API](215-holita-shopper-return-request.md) | 5    | Ready       | 201                |
-| [202 Record the manual refund for an approved return](202-holita-admin-return-refund.md)                 | 5    | Ready       | 151, 215, 252      |
+| [202 Record the manual refund for an approved return](202-holita-admin-return-refund.md)                 | 5    | Ready       | 215, 252           |
 | [222 Show best sellers and category sales](222-holita-admin-sales-breakdowns.md)                         | 5    | Ready       | 221                |
 | [154 Translate demo catalogue labels and repair demo SKU references](154-holita-demo-backfilled-skus.md) | 5    | Ready       |                    |
 | [159 Show shop picker loading and failures](159-holita-admin-shop-picker-states.md)                      | 5    | Ready       |                    |

@@ -485,10 +485,16 @@
       }
     </section>
     <section class="app-form-section" aria-labelledby="product-variants-title">
-      <h3 id="product-variants-title">{{ text().variants }}</h3>
+      <h3
+        id="product-variants-title"
+        tabindex="-1"
+        [attr.aria-describedby]="errors()['variants'] ? 'product-variants-error' : null"
+      >
+        {{ text().variants }}
+      </h3>
       <p>{{ optionGroups().length ? text().variantOptionsHint : text().variantNoOptions }}</p>
       @if (errors()['variants']; as message) {
-      <p-message severity="error">{{ message }}</p-message>
+      <p-message id="product-variants-error" severity="error">{{ message }}</p-message>
       } @for (variant of variants.controls; track variant; let index = $index) { @let valuesId =
       'product-variant-values-' + index; @let skuId = 'product-variant-sku-' + index; @let priceId =
       'product-variant-price-' + index; @let quantityId = 'product-variant-quantity-' + index; @let

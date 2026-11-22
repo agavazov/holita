@@ -21,7 +21,10 @@ input ProductFilter {
   statuses: [ProductStatus!]
 }
 input ProductVariantInput {
-  "Keep the ID when editing an existing variant."
+  """
+  Keep the ID when editing an existing variant.
+  Keep its option values while stock can still be restored to it. Set active to false to stop sales.
+  """
   id: ID
   sku: String!
   price: String!

@@ -762,6 +762,9 @@ export class ProductEditor {
       if (this.destroyRef.destroyed || this.api.scope() !== scope) {
         return;
       }
+      const variantOptionPaths = variants.map(
+        (_, index) => `variants${String(index)}OptionValueIds`,
+      );
       const fields = [
         ...productFields,
         'images',
@@ -774,6 +777,7 @@ export class ProductEditor {
           ),
         ),
         'variants',
+        ...variantOptionPaths,
         ...variants.flatMap((_, index) =>
           [...variantFields, 'id'].map((field) => this.path(index, field)),
         ),
@@ -813,6 +817,11 @@ export class ProductEditor {
         if (path.startsWith('variants.') && path.endsWith('.id')) {
           return this.text().variantUnavailable;
         }
+        if (code === 'VARIANT_HAS_OUTSTANDING_DEDUCTIONS') {
+          return path === 'variants'
+            ? this.text().variantOutstandingDeductionRemoval
+            : this.text().variantOutstandingDeductionCombination;
+        }
         return messages[code];
       });
       for (const [index, { characteristicId }] of specifications.entries()) {
@@ -820,6 +829,12 @@ export class ProductEditor {
         const message = errors[`${path}.characteristicId`] ?? errors[`${path}.value`];
         if (message) {
           errors[characteristicId] = message;
+        }
+      }
+      for (const [index, path] of variantOptionPaths.entries()) {
+        const message = errors[path];
+        if (message) {
+          errors[this.path(index, 'optionValueIds')] = message;
         }
       }
       this.errors.set(errors);
@@ -861,6 +876,8 @@ export class ProductEditor {
       form.ownerDocument.activeElement
         ?.closest('.product-image-card')
         ?.scrollIntoView({ block: 'nearest' });
+    } else if (form && this.errors()['variants']) {
+      form.querySelector<HTMLElement>('#product-variants-title')?.focus();
     } else {
       this.drawer().focusTitle();
     }

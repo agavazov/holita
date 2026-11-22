@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { GraphQLError } from 'graphql';
 import { createHash } from 'node:crypto';
@@ -12,6 +17,7 @@ import {
   InvalidImageIdError,
   InvalidMarkerIdError,
   InvalidVariantIdError,
+  VariantOutstandingDeductionsError,
 } from './commerce.repository.js';
 import { requireScope, type RequestContext, type Scope } from '../scope.js';
 import {
@@ -276,6 +282,16 @@ export class CommerceService {
       }
       if (error instanceof ConflictingVariantQuantityError) {
         throw variantError(error.index, 'quantity', 'INVENTORY_QUANTITY_CONFLICT', error.message);
+      }
+      if (error instanceof VariantOutstandingDeductionsError) {
+        const path =
+          error.index === undefined ? 'variants' : `variants.${String(error.index)}.optionValueIds`;
+        throw new UnprocessableEntityException({
+          message: error.message,
+          fieldErrors: [
+            { path, code: 'VARIANT_HAS_OUTSTANDING_DEDUCTIONS', message: error.message },
+          ],
+        });
       }
       if (error instanceof DuplicateSkuError) {
         const index = variants.findIndex((variant) => variant.sku === error.sku);
