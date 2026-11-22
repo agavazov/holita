@@ -151,6 +151,7 @@ beforeAll(async () => {
     '20261122180000_customer_detail',
     '20261122190000_discounts',
     '20261122200000_invoice_discount',
+    '20261122210000_shop_pages',
   ]) {
     await connection.query(
       await readFile(
@@ -288,6 +289,51 @@ async function query(
 it('enforces tenant and Branch isolation and merchant roles through Core', async () => {
   if (!database) {
     throw new Error('Missing test database');
+  }
+  const pageInput = { slug: 'scoped-page', status: 'DRAFT', titleEn: 'Scoped page' };
+  const createPage = 'mutation($input:ShopPageInput!){createShopPage(input:$input){slug}}';
+  const updatePage =
+    'mutation($id:ID!,$input:ShopPageInput!){updateShopPage(id:$id,input:$input){id}}';
+  const readPage = 'query($id:ID!){shopPage(id:$id){id}}';
+  for (const [token, branch] of [
+    [tokens.operator, branchA],
+    [tokens.operator, branchB],
+    [tokens.foreign, branchForeign],
+  ]) {
+    expect(await query(token, branch, createPage, { input: pageInput })).toEqual({
+      data: { createShopPage: { slug: pageInput.slug } },
+    });
+  }
+  const page = await database.shopPage.findFirstOrThrow({
+    where: { tenantId: tenantA, branchId: branchA, slug: pageInput.slug },
+  });
+  expect(
+    await query(tokens.viewer, branchA, '{shopPages(search:"Scoped page"){items{id} total}}'),
+  ).toEqual({ data: { shopPages: { items: [{ id: page.id }], total: 1 } } });
+  expect(await query(tokens.operator, branchA, createPage, { input: pageInput })).toMatchObject({
+    data: null,
+    errors: [
+      {
+        extensions: {
+          code: 'BAD_USER_INPUT',
+          fieldErrors: [{ path: 'slug', code: 'DUPLICATE_VALUE' }],
+        },
+      },
+    ],
+  });
+  expect(
+    await query(tokens.viewer, branchA, updatePage, { id: page.id, input: pageInput }),
+  ).toMatchObject({ data: null, errors: [{ message: 'Your role does not permit this action' }] });
+  for (const [token, branch] of [
+    [tokens.operator, branchB],
+    [tokens.foreign, branchForeign],
+  ]) {
+    expect(await query(token, branch, readPage, { id: page.id })).toEqual({
+      data: { shopPage: null },
+    });
+    expect(await query(token, branch, updatePage, { id: page.id, input: pageInput })).toMatchObject(
+      { data: null, errors: [{ extensions: { code: 'NOT_FOUND' } }] },
+    );
   }
   const rows = await Promise.all([
     database.product.findUniqueOrThrow({ where: { id: legacyProductId } }),
@@ -1104,6 +1150,30 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   if (!database) {
     throw new Error('Missing database');
   }
+  const publishedPage = { slug: 'published-page', titleBg: 'За нас', bodyBg: 'Нашият магазин.' };
+  const readPublicPage = 'query($slug:String!){shopPage(slug:$slug){slug titleBg bodyBg}}';
+  await database.shopPage.createMany({
+    data: [
+      { tenantId: tenantA, branchId: publicA, ...publishedPage, status: 'PUBLISHED' },
+      { tenantId: tenantA, branchId: publicB, ...publishedPage, status: 'DRAFT' },
+      {
+        tenantId: tenantB,
+        branchId: publicA,
+        ...publishedPage,
+        slug: 'foreign-page',
+        status: 'PUBLISHED',
+      },
+    ],
+  });
+  expect(await storefront(publicA, readPublicPage, { slug: publishedPage.slug })).toEqual({
+    data: { shopPage: publishedPage },
+  });
+  expect(await storefront(publicB, readPublicPage, { slug: publishedPage.slug })).toEqual({
+    data: { shopPage: null },
+  });
+  expect(await storefront(publicA, readPublicPage, { slug: 'foreign-page' })).toEqual({
+    data: { shopPage: null },
+  });
   const visible = await database.brand.create({
     data: { tenantId: tenantA, branchId: publicA, name: 'Visible Brand', slug: 'visible' },
   });

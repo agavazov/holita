@@ -637,6 +637,14 @@ Adding a tag makes it available in the shop immediately. Save the product to app
 assignments. The storefront shows active badges on catalogue cards and tags on product pages.
 Deactivating a badge hides it from shoppers and keeps its assignments.
 
+In Admin, open Pages for the selected shop. Give the page a shop-unique slug and enter plain-text
+titles and bodies. Set the status to Published once at least one language has both a title and a
+body. Share the path shown beside the published page, `/s/<branchId>/pages/<slug>`.
+The storefront uses the shopper's language when its title and body are both present and falls
+back to the other language as a pair. Returning the page to Draft removes it from public reads.
+The operator graph exposes `shopPages`, `shopPage`, `createShopPage` and `updateShopPage`.
+The storefront graph exposes `shopPage(slug: ...)` for published pages in the current shop.
+
 `npm run dev` starts both products. `npm run kill` stops their development applications while
 leaving PostgreSQL and the ERM units running. Discocan Core reads `discocan/config/core.env`;
 Holita Core reads `holita/config/core.env`. Their watch outputs are `dist-discocan` and

@@ -131,6 +131,25 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             <p class="shop-state" role="status">{{ t().loading }}</p>
           }
         }
+        @if (page === 'pages') {
+          <div class="product-navigation">
+            <a class="product-back" [routerLink]="base()">
+              <span aria-hidden="true">←</span> {{ t().back }}
+            </a>
+          </div>
+          @if (error()) {
+            <ng-container [ngTemplateOutlet]="requestError" />
+          } @else if (loading()) {
+            <p class="shop-state" role="status">{{ t().loading }}</p>
+          } @else if (content(); as article) {
+            <article class="shop-panel content-article" [attr.lang]="article.language">
+              <h1>{{ article.title }}</h1>
+              <p>{{ article.body }}</p>
+            </article>
+          } @else {
+            <h1 class="shop-state">{{ t().pageMissing }}</h1>
+          }
+        }
         @if (page === 'product') {
           @let item = product();
           <div class="product-navigation">
@@ -494,13 +513,18 @@ class StorefrontPage {
   );
   readonly t = () => messages[this.language()];
   private readonly request = resource({
-    params: () => ({ shopId: this.shopId(), id: this.params().get('id') }),
-    loader: async ({ params: { shopId, id }, abortSignal }) => {
+    params: () => ({
+      shopId: this.shopId(),
+      id: this.params().get('id'),
+      slug: this.params().get('slug'),
+    }),
+    loader: async ({ params: { shopId, id, slug }, abortSignal }) => {
       const shop = await this.api.shop(shopId);
       abortSignal.throwIfAborted();
       return {
         shop,
         detail: shop && this.page === 'product' && id ? await this.api.product(shopId, id) : null,
+        page: shop && this.page === 'pages' && slug ? await this.api.shopPage(shopId, slug) : null,
         shopper:
           shop && this.page === 'account'
             ? await this.api.me(shopId, sessionStorage.getItem(shopperStorageKey(shopId)))
@@ -517,6 +541,16 @@ class StorefrontPage {
   readonly error = computed(() => this.actionError() || this.request.status() === 'error');
   readonly loading = this.request.isLoading;
   readonly busy = signal(false);
+  protected readonly content = computed(() => {
+    const page = this.view()?.page;
+    if (!page) {
+      return null;
+    }
+    const { titleBg, titleEn, bodyBg, bodyEn } = page;
+    const bg = titleBg && bodyBg ? { title: titleBg, body: bodyBg, language: 'bg' } : null;
+    const en = titleEn && bodyEn ? { title: titleEn, body: bodyEn, language: 'en' } : null;
+    return this.language() === 'bg' ? (bg ?? en) : (en ?? bg);
+  });
   private readonly productDetail = computed(() => this.view()?.detail ?? null);
   readonly product = computed(() => this.productDetail()?.catalogueProduct ?? null);
   readonly specifications = computed(
@@ -718,6 +752,7 @@ class StorefrontApp {}
 const pages = [
   { path: 's/:shopId', component: StorefrontPage },
   { path: 's/:shopId/product/:id', component: StorefrontPage },
+  { path: 's/:shopId/pages/:slug', component: StorefrontPage },
   ...browseSections.flatMap((section) => [
     { path: `s/:shopId/${section}`, component: StorefrontPage },
     { path: `s/:shopId/${section}/:slug`, component: StorefrontPage },

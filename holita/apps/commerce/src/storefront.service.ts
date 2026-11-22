@@ -38,6 +38,7 @@ import type {
   ShopperSession,
 } from './generated/graphql/storefront-types.js';
 import type { Scope, ShopperScope } from './scope.js';
+import { PagesService } from './pages/pages.service.js';
 import { CatalogueRepository, type BrowseCriteria } from './products/catalogue.repository.js';
 import { CommerceRepository } from './products/commerce.repository.js';
 import { productImageUrl } from './products/product-images.js';
@@ -229,6 +230,7 @@ export class StorefrontService {
     private readonly categories: CategoriesService,
     private readonly collections: CollectionsService,
     private readonly characteristics: CharacteristicsService,
+    private readonly pages: PagesService,
   ) {}
   async shop(context: StorefrontContext): Promise<ShopScope | null> {
     if (!context.branchId || !isUUID(context.branchId)) {
@@ -281,6 +283,9 @@ export class StorefrontService {
       throw new NotFoundException('Shop not found');
     }
     return shop;
+  }
+  async shopPage(context: StorefrontContext, slug: string) {
+    return this.pages.published(await this.publicScope(context), slug);
   }
   async catalogue(
     context: StorefrontContext,

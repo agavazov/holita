@@ -630,6 +630,53 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const merchant = await merchantContext.newPage();
     await merchant.goto(admin.origin);
     await signIn(merchant, merchantEmail, merchantPassword);
+    const pageSlug = 'delivery-notes';
+    const pageTitle = 'Бележки за доставката';
+    const pageBody = 'Изпращаме съдовете в работни дни.\n\nОпаковаме всеки съд отделно.';
+    await merchant.getByRole('link', { name: 'Pages', exact: true }).click();
+    await merchant.getByRole('button', { name: 'New page', exact: true }).click();
+    await merchant.locator('#page-title-bg').fill(pageTitle);
+    await merchant.locator('#page-slug').fill(pageSlug);
+    await merchant.locator('#page-body-bg').fill(pageBody);
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Page saved.');
+    const shopperContext = await browser.newContext();
+    cleanup.push(() => shopperContext.close());
+    const contentShopper = await shopperContext.newPage();
+    const publicPage = async (): Promise<unknown> => {
+      const response = await contentShopper.request.post(`${shopApp.origin}/graphql`, {
+        headers: { 'x-branch-id': shopId },
+        data: {
+          query: 'query($slug: String!) { shopPage(slug: $slug) { slug } }',
+          variables: { slug: pageSlug },
+        },
+      });
+      expect(response.status()).toBe(200);
+      return response.json();
+    };
+    expect(await publicPage()).toEqual({ data: { shopPage: null } });
+    const pageRow = merchant.getByRole('button', { name: pageTitle, exact: true });
+    const setPageStatus = async (status: 'Draft' | 'Published') => {
+      await pageRow.click();
+      await merchant.locator('#page-status').click();
+      await merchant.getByRole('option', { name: status, exact: true }).click();
+      await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+      await dismissSuccess(merchant, 'Page saved.');
+    };
+    await setPageStatus('Published');
+    await contentShopper.addInitScript(() => {
+      sessionStorage.setItem('holita.storefront.language', 'en');
+    });
+    await contentShopper.goto(`${shopApp.origin}/s/${shopId}/pages/${pageSlug}`);
+    await expect(contentShopper.getByRole('heading', { name: pageTitle })).toBeVisible();
+    await contentShopper.reload();
+    const content = contentShopper.getByRole('article').filter({ hasText: pageTitle });
+    await expect(content).toHaveAttribute('lang', 'bg');
+    await expect(content.getByText(pageBody, { exact: true })).toBeVisible();
+    await setPageStatus('Draft');
+    expect(await publicPage()).toEqual({ data: { shopPage: null } });
+    await contentShopper.close();
+
     await merchant.getByRole('link', { name: 'Brands', exact: true }).click();
     await merchant.getByRole('button', { name: 'Add brand', exact: true }).click();
     await merchant.locator('#brand-name').fill('Smoke Brand');
@@ -763,8 +810,6 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.getByRole('option', { name: 'Active', exact: true }).click();
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Product saved.');
-    const shopperContext = await browser.newContext();
-    cleanup.push(() => shopperContext.close());
     const shopper = await shopperContext.newPage();
     await shopper.goto(`${shopApp.origin}/s/${shopId}`);
     await shopper.getByRole('button', { name: 'EN', exact: true }).click();

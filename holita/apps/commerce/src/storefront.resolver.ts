@@ -14,6 +14,7 @@ import type {
   QueryCatalogueCollectionsArgs,
   QueryCatalogueProductArgs,
   QueryCatalogueProductSpecificationsArgs,
+  QueryShopPageArgs,
 } from './generated/graphql/storefront-types.js';
 import { StorefrontService, type StorefrontContext } from './storefront.service.js';
 
@@ -35,6 +36,12 @@ export class StorefrontResolver {
   constructor(private readonly service: StorefrontService) {}
   @Query('shop') shop(@Context() context: StorefrontContext) {
     return this.service.shop(context);
+  }
+  @Query('shopPage') shopPage(
+    @Context() context: StorefrontContext,
+    @Args() args: QueryShopPageArgs,
+  ) {
+    return this.service.shopPage(context, args.slug);
   }
   @Query('catalogue') catalogue(
     @Context() context: StorefrontContext,

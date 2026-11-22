@@ -1,0 +1,125 @@
+<osnova-route-drawer
+  [title]="editing ? text().editPage : text().newPage"
+  [subtitle]="subtitle()"
+  [errorText]="text().pagesUnavailable"
+  [state]="state()"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="record.reload()"
+>
+  <form
+    id="page-editor-form"
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="app-form-section"
+  >
+    <div class="app-form-grid">
+      @let slugError = error('slug');
+      <osnova-form-field
+        controlId="page-slug"
+        [label]="text().slug"
+        [hint]="text().slugHint"
+        [error]="slugError"
+        [required]="true"
+      >
+        <input
+          pInputText
+          id="page-slug"
+          formControlName="slug"
+          autocomplete="off"
+          aria-required="true"
+          aria-describedby="page-slug-hint page-slug-error"
+          [invalid]="!!slugError"
+          [attr.aria-invalid]="!!slugError"
+          (input)="clearError('slug')"
+        />
+      </osnova-form-field>
+      @let statusError = error('status');
+      <osnova-form-field
+        controlId="page-status"
+        [label]="text().status"
+        [hint]="statusError ? null : text().pagePublishNeedsTranslation"
+        [error]="statusError"
+        [required]="true"
+      >
+        <p-select
+          inputId="page-status"
+          ariaLabelledBy="page-status-label"
+          formControlName="status"
+          [options]="statusOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [invalid]="!!statusError"
+          [pt]="{ label: {
+            'aria-required': 'true',
+            'aria-describedby': 'page-status-hint page-status-error',
+            'aria-invalid': statusError ? 'true' : undefined,
+          } }"
+          (onChange)="clearError('status')"
+        />
+      </osnova-form-field>
+    </div>
+    @if (path(); as publicPath) {
+    <osnova-form-field controlId="page-public-path" [label]="text().pagePublicPath">
+      <input pInputText id="page-public-path" class="app-mono" [value]="publicPath" readonly />
+    </osnova-form-field>
+    }
+    <div class="app-form-grid">
+      @for (translation of translations(); track translation.lang) { @let titleId = 'page-title-' +
+      translation.lang; @let bodyId = 'page-body-' + translation.lang; @let titleError =
+      error(translation.title); @let bodyError = error(translation.body);
+      <div class="app-form-section">
+        <osnova-form-field
+          [controlId]="titleId"
+          [label]="translation.titleLabel"
+          [error]="titleError"
+        >
+          <input
+            pInputText
+            [id]="titleId"
+            [formControlName]="translation.title"
+            [attr.lang]="translation.lang"
+            [attr.aria-describedby]="titleId + '-error'"
+            [invalid]="!!titleError"
+            [attr.aria-invalid]="!!titleError"
+            (input)="clearError(translation.title)"
+          />
+        </osnova-form-field>
+        <osnova-form-field [controlId]="bodyId" [label]="translation.bodyLabel" [error]="bodyError">
+          <textarea
+            pTextarea
+            [id]="bodyId"
+            [formControlName]="translation.body"
+            [attr.lang]="translation.lang"
+            rows="6"
+            [attr.aria-describedby]="'page-plain-text-hint ' + bodyId + '-error'"
+            [invalid]="!!bodyError"
+            [attr.aria-invalid]="!!bodyError"
+            (input)="clearError(translation.body)"
+          ></textarea>
+        </osnova-form-field>
+      </div>
+      }
+    </div>
+    <p class="app-muted" id="page-plain-text-hint">{{ text().pagePlainTextHint }}</p>
+    @if (saveError()) {
+    <p-message severity="error">{{ text().pageSaveFailed }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="page-editor-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+  </div>
+</osnova-route-drawer>

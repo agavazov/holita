@@ -17,6 +17,8 @@ import { ManualMethodsResolver } from './manual-methods/manual-methods.resolver.
 import { OperatorOrdersResolver } from './orders/operator-orders.resolver.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { OrdersResolver } from './orders/orders.resolver.js';
+import { PagesModule } from './pages/pages.module.js';
+import { PagesResolver } from './pages/pages.resolver.js';
 import { RefundsModule } from './refunds/refunds.module.js';
 import { RefundsResolver } from './refunds/refunds.resolver.js';
 import { CommerceResolver } from './products/commerce.resolver.js';
@@ -62,6 +64,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     OrdersModule,
     InvoicesModule,
     RefundsModule,
+    PagesModule,
   ],
   providers: [
     CommerceResolver,
@@ -79,6 +82,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     OperatorOrdersResolver,
     InvoicesResolver,
     RefundsResolver,
+    PagesResolver,
   ],
 })
 class OperatorModule {}
@@ -93,6 +97,7 @@ class OperatorModule {}
     CartModule,
     CheckoutModule,
     OrdersModule,
+    PagesModule,
   ],
   controllers: [BrandImagesController, ProductImagesController],
   providers: [

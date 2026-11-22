@@ -584,6 +584,40 @@ export const demoProductImages: Readonly<Record<number, readonly DemoImage[]>> =
   ],
 };
 
+export const demoPages = [
+  {
+    id: 1,
+    slug: 'about-us',
+    status: 'published',
+    titleBg: 'За нас',
+    bodyBg:
+      'Подбираме съдове, текстил и вещи за дома, които с удоволствие ще използвате всеки ден. Работим с малки производители и търсим естествени материали, удобни форми и изработка, която издържа на ежедневна употреба.\n\nОт София изпращаме всичко за масата и кухнята — от глинени купи и ленени покривки до дървени дъски за споделени вечери.',
+    titleEn: 'About Us',
+    bodyEn:
+      'We choose tableware, textiles and home goods you will enjoy using every day. We work with small makers and look for natural materials, practical shapes and craftsmanship that holds up to daily use.\n\nFrom Sofia, we ship essentials for the table and kitchen, from clay bowls and linen tablecloths to wooden boards for shared suppers.',
+  },
+  {
+    id: 2,
+    slug: 'delivery-information',
+    status: 'published',
+    titleBg: 'Информация за доставката',
+    bodyBg:
+      'Подготвяме пратките в работни дни. Ще видите наличните начини за доставка и цената им, преди да потвърдите поръчката.\n\nУвиваме керамиката и стъклото поотделно. Ако получите повреден съд, запазете опаковката, за да ни помогнете да установим какво се е случило.',
+    titleEn: 'Delivery Information',
+    bodyEn:
+      'We pack orders on working days. You can see the available delivery methods and their prices before confirming your order.\n\nWe wrap ceramic and glass items individually. If an item arrives damaged, keep the packaging so you can help us work out what happened.',
+  },
+  {
+    id: 3,
+    slug: 'care-guide',
+    status: 'draft',
+    titleBg: 'Грижа за съдовете',
+    bodyBg: 'Оставяйте нагорещените съдове да изстинат, преди да ги измиете с хладка вода.',
+    titleEn: null,
+    bodyEn: null,
+  },
+] as const;
+
 export const demoProductCovers: Readonly<Record<number, readonly DemoImage[]>> = {
   15: [[150, 'product-15.webp', 'Сервиз за закуска „Първа светлина“, 6 части']],
   16: [[160, 'product-16.webp', 'Дъбова дъска за сервиране „Рила“, 38 см']],

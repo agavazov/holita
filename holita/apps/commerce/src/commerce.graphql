@@ -201,6 +201,51 @@ type BrandPage {
   offset: Int!
   limit: Int!
 }
+enum ShopPageStatus {
+  DRAFT
+  PUBLISHED
+}
+enum ShopPageSortField {
+  UPDATED_AT
+  SLUG
+  STATUS
+}
+input ShopPageSort {
+  field: ShopPageSortField! = UPDATED_AT
+  direction: SortDirection! = DESC
+}
+input ShopPageFilter {
+  statuses: [ShopPageStatus!]
+}
+"""
+Plain text translations replace the saved values. Omitted, null and blank values clear a field.
+Publishing requires a title and body in at least one language.
+"""
+input ShopPageInput {
+  slug: String!
+  status: ShopPageStatus!
+  titleBg: String
+  titleEn: String
+  bodyBg: String
+  bodyEn: String
+}
+type ShopPage {
+  id: ID!
+  slug: String!
+  status: ShopPageStatus!
+  titleBg: String
+  titleEn: String
+  bodyBg: String
+  bodyEn: String
+  createdAt: String!
+  updatedAt: String!
+}
+type ShopPageList {
+  items: [ShopPage!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
 input CategoryInput {
   name: String!
   slug: String!
@@ -727,6 +772,14 @@ type Query {
   customer(id: ID!): CustomerDetail
   brands(offset: Int! = 0, limit: Int! = 20, search: String, sort: BrandSort): BrandPage!
   brand(id: ID!): Brand
+  shopPages(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    sort: ShopPageSort
+    filter: ShopPageFilter
+  ): ShopPageList!
+  shopPage(id: ID!): ShopPage
   "Shop categories in tree order. A null parentId denotes a root."
   categories: [Category!]!
   category(id: ID!): Category
@@ -791,6 +844,8 @@ type Mutation {
   createBrand(input: BrandInput!): Brand!
   updateBrand(id: ID!, input: BrandInput!): Brand!
   deleteBrand(id: ID!): Boolean!
+  createShopPage(input: ShopPageInput!): ShopPage!
+  updateShopPage(id: ID!, input: ShopPageInput!): ShopPage!
   createCategory(input: CategoryInput!): Category!
   updateCategory(id: ID!, input: CategoryInput!): Category!
   deleteCategory(id: ID!): Boolean!

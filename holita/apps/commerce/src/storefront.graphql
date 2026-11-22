@@ -2,6 +2,13 @@ type Shop {
   id: ID!
   name: String!
 }
+type PublishedShopPage {
+  slug: String!
+  titleBg: String
+  titleEn: String
+  bodyBg: String
+  bodyEn: String
+}
 type CatalogueProductImage {
   url: String!
   altText: String
@@ -328,6 +335,8 @@ type CatalogueSpecification {
 }
 type Query {
   shop: Shop
+  "The published page with this slug in the current shop."
+  shopPage(slug: String!): PublishedShopPage
   catalogue(
     offset: Int! = 0
     limit: Int! = 20

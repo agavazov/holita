@@ -158,6 +158,23 @@ main {
   border-block-start: 1px solid var(--shop-border);
 }
 
+.content-article {
+  max-inline-size: 52rem;
+}
+
+.content-article h1 {
+  margin: 0;
+  font: var(--shop-title);
+  letter-spacing: var(--shop-title-tracking);
+}
+
+.content-article p {
+  max-inline-size: 68ch;
+  margin: var(--p-app-space-5) 0 0;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
 .product-breadcrumbs ol {
   display: flex;
   flex-wrap: wrap;

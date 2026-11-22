@@ -17,6 +17,7 @@ import {
   demoManualOrder,
   demoOptions,
   demoOrders,
+  demoPages,
   demoPaymentMethod,
   demoProductCovers,
   demoProductImages,
@@ -87,6 +88,7 @@ async function seedCatalogue(): Promise<void> {
   let tagsInserted = 0;
   let markerAssignmentsInserted = 0;
   let discountsInserted = 0;
+  let pagesInserted = 0;
   await client.connect();
   try {
     await client.query('BEGIN');
@@ -383,6 +385,25 @@ async function seedCatalogue(): Promise<void> {
         markerAssignmentsInserted += assignments.rowCount ?? 0;
       }
     }
+    for (const page of demoPages) {
+      const { rowCount } = await client.query(
+        `INSERT INTO "shopPage" ("id", "tenantId", "branchId", "slug", "status",
+                                 "titleBg", "bodyBg", "titleEn", "bodyEn", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
+        [
+          fixtureId('c3', page.id),
+          tenantId,
+          branchId,
+          page.slug,
+          page.status,
+          page.titleBg,
+          page.bodyBg,
+          page.titleEn,
+          page.bodyEn,
+        ],
+      );
+      pagesInserted += rowCount ?? 0;
+    }
     await seedShopperCart(client, tenantId, branchId);
     for (const [id, method, sortOrder] of [
       [1, demoPaymentMethod, 0],
@@ -434,6 +455,7 @@ async function seedCatalogue(): Promise<void> {
       `Demo product markers inserted ${String(badgesInserted)} badges, ${String(tagsInserted)} tags and ${String(markerAssignmentsInserted)} assignments.`,
     );
     console.log(`Demo discounts inserted ${String(discountsInserted)} codes.`);
+    console.log(`Demo content inserted ${String(pagesInserted)} pages.`);
   } finally {
     await client.end();
   }

@@ -1,6 +1,6 @@
 # 125 Shop navigation menus
 
-**Status:** Ready after [123](123-holita-pages.md), [124](124-holita-blog.md). **Product:** Holita.
+**Status:** Ready after [124](124-holita-blog.md). **Product:** Holita.
 
 ## Background
 

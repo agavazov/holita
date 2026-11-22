@@ -1,5 +1,8 @@
+import { inject } from '@angular/core';
+import { createUrlTreeFromSnapshot, type CanActivateFn } from '@angular/router';
 import { startOperator } from '@holita/operator';
 import { leaveDrawer } from '@osnova/ui';
+import { DemoSession } from '@osnova/ui/app';
 import { BadgeEditor } from './badges/badge-editor';
 import { BadgesPage } from './badges/badges-page';
 import { BrandEditor } from './brands/brand-editor';
@@ -27,12 +30,21 @@ import { OrderDetail } from './orders/order-detail';
 import { OrderRefundEditor } from './orders/order-refund-editor';
 import { OrderStatusEditor } from './orders/order-status-editor';
 import { OrdersPage } from './orders/orders-page';
+import { PageEditor } from './pages/page-editor';
+import { PagesPage } from './pages/pages-page';
 import { PaymentMethodEditor } from './payment-methods/payment-method-editor';
 import { PaymentMethodsPage } from './payment-methods/payment-methods-page';
 import { ShippingMethodEditor } from './shipping-methods/shipping-method-editor';
 import { ShippingMethodsPage } from './shipping-methods/shipping-methods-page';
 import { ProductEditor } from './products/product-editor';
 import { ProductsPage } from './products/products-page';
+
+const canEditShopContent: CanActivateFn = (route) => {
+  const session = inject(DemoSession);
+  return !session.current() || (session.hasRole('OPERATOR') && session.branchId())
+    ? true
+    : createUrlTreeFromSnapshot(route, ['..'], route.queryParams, route.fragment);
+};
 
 void startOperator({
   name: 'admin',
@@ -178,6 +190,26 @@ void startOperator({
       ],
     },
     {
+      path: 'pages',
+      component: PagesPage,
+      children: [
+        {
+          path: 'new',
+          component: PageEditor,
+          canActivate: [canEditShopContent],
+          data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: ':recordId',
+          component: PageEditor,
+          canActivate: [canEditShopContent],
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
+    {
       path: 'orders',
       component: OrdersPage,
       children: [
@@ -314,6 +346,7 @@ void startOperator({
       path: 'characteristic-groups',
     },
     { id: 'badges', label: 'badges', icon: 'tag', path: 'badges' },
+    { id: 'pages', label: 'pages', icon: 'clone', path: 'pages' },
     { id: 'orders', label: 'orders', icon: 'truck', path: 'orders' },
     { id: 'discounts', label: 'discounts', icon: 'tags', path: 'discounts' },
     { id: 'customers', label: 'customers', icon: 'users', path: 'customers' },

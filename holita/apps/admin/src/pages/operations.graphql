@@ -1,0 +1,43 @@
+fragment OperatorShopPageListFields on ShopPage {
+  id
+  slug
+  titleBg
+  titleEn
+  status
+  updatedAt
+}
+
+query OperatorShopPages(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $sort: ShopPageSort
+  $filter: ShopPageFilter
+) {
+  shopPages(offset: $offset, limit: $limit, search: $search, sort: $sort, filter: $filter) {
+    items {
+      ...OperatorShopPageListFields
+    }
+    total
+  }
+}
+
+query OperatorShopPage($id: ID!) {
+  shopPage(id: $id) {
+    ...OperatorShopPageListFields
+    bodyBg
+    bodyEn
+  }
+}
+
+mutation OperatorCreateShopPage($input: ShopPageInput!) {
+  createShopPage(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateShopPage($id: ID!, $input: ShopPageInput!) {
+  updateShopPage(id: $id, input: $input) {
+    id
+  }
+}

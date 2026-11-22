@@ -149,6 +149,7 @@ export const messages = {
     productImageNumber: (number: number) => `Снимка ${String(number)}`,
     loading: 'Зареждане…',
     productMissing: 'Продуктът не е намерен.',
+    pageMissing: 'Страницата не е намерена.',
     retry: 'Опитай отново',
   },
   en: {
@@ -300,6 +301,7 @@ export const messages = {
     productImageNumber: (number: number) => `Photo ${String(number)}`,
     loading: 'Loading…',
     productMissing: 'Product not found.',
+    pageMissing: 'Page not found.',
     retry: 'Retry',
   },
 };

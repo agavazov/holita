@@ -4,6 +4,15 @@ query PublicShop {
     name
   }
 }
+query PublicShopPage($slug: String!) {
+  shopPage(slug: $slug) {
+    slug
+    titleBg
+    titleEn
+    bodyBg
+    bodyEn
+  }
+}
 fragment CatalogueBrandFields on CatalogueBrand {
   id
   name
