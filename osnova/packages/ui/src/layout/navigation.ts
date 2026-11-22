@@ -18,7 +18,12 @@ export type NavIconName =
   | 'folder'
   | 'clock'
   | 'info-circle'
-  | 'envelope';
+  | 'envelope'
+  | 'box'
+  | 'warehouse'
+  | 'clone'
+  | 'list-check'
+  | 'tag';
 
 export interface NavItem {
   readonly id: string;

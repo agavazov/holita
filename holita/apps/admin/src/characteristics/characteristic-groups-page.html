@@ -8,6 +8,7 @@
 <osnova-table-panel
   #panel
   [heading]="text().shopCharacteristicGroups"
+  [mobileFullWidthActions]="true"
   [columns]="columns()"
   [tableMinWidth]="tableMinWidth"
   [view]="view()"
@@ -26,17 +27,19 @@
 >
   <osnova-filter-builder
     panelActions
+    [mobileFullWidth]="true"
     [searchLabel]="text().searchCharacteristicGroups"
     [search]="url.searchDraft()"
     [searchError]="url.searchError() ? shared().searchTooManyWords : null"
     (searchChange)="url.editSearch($event)"
-  />
-  <osnova-list-sort-menu
-    panelActions
-    [fields]="sortFields()"
-    [sort]="sort()"
-    (sortChange)="changeSort($event)"
-  />
+  >
+    <osnova-list-sort-menu
+      filterActions
+      [fields]="sortFields()"
+      [sort]="sort()"
+      (sortChange)="changeSort($event)"
+    />
+  </osnova-filter-builder>
   <p-table
     class="app-responsive-table app-table-fixed"
     [value]="page()?.items ?? []"

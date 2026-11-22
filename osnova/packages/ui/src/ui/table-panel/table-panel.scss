@@ -52,6 +52,13 @@
   &:empty {
     display: none;
   }
+
+  @include bp.below(sm) {
+    &--mobile-full {
+      flex-basis: 100%;
+      min-inline-size: 0;
+    }
+  }
 }
 
 // Indeterminate refresh bar on the header edge (PrimeNG's ProgressBar renders an invalid
@@ -101,6 +108,23 @@
 
 .table-panel__inline-error {
   background: var(--p-app-tone-danger-background);
+}
+
+.table-panel__action-feedback p-message {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.table-panel__skeleton-meta {
+  inline-size: 75%;
+}
+
+.table-panel__skeleton-number {
+  text-align: end;
+
+  .app-cell-identity {
+    align-items: flex-end;
+  }
 }
 
 .table-panel__cursor {

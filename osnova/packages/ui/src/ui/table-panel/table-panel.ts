@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -81,6 +82,7 @@ let nextId = 0;
     ButtonDirective,
     ConfirmDialog,
     Message,
+    NgTemplateOutlet,
     Paginator,
     Skeleton,
     TableModule,
@@ -99,6 +101,7 @@ export class TablePanel<A extends string = string> {
   readonly total = input<number | null>(null);
   readonly view = input.required<TableView>();
   readonly errorText = input<string | null>(null);
+  readonly actionFeedback = input<string | null>(null);
   readonly busy = input(false);
   /** Query identity: a changed context retires unsubmitted confirmations. */
   readonly actionContext = input<unknown>(null);
@@ -114,6 +117,8 @@ export class TablePanel<A extends string = string> {
   readonly cursorPage = input<TableCursorPage | null>(null);
   readonly columns = input<readonly TableColumn[]>([]);
   readonly tableMinWidth = input('100%');
+  readonly mobileIdentityLayout = input<'stacked' | 'trailing'>('stacked');
+  readonly mobileFullWidthActions = input(false);
   readonly pageSizes = input<readonly number[]>([10, 20, 50, 100]);
   readonly skeletonRows = input<number | null>(null);
   readonly action = output<ListActionRequest<A>>();
@@ -158,6 +163,11 @@ export class TablePanel<A extends string = string> {
   );
   protected readonly hasActionColumn = computed(() =>
     this.columns().some((column) => column.kind === 'actions'),
+  );
+  protected readonly hasMergedStatusColumn = computed(() =>
+    this.columns().some(
+      (column) => column.kind === 'status' && column.className === 'app-table-merged-column',
+    ),
   );
   protected readonly cursorPageText = computed(() =>
     interpolate(this.text().table.cursorPage, {

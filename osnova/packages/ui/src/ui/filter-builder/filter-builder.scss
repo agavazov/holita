@@ -7,6 +7,12 @@
   min-inline-size: 0;
 }
 
+@include bp.below(sm) {
+  :host(.filter-builder--mobile-full) {
+    inline-size: 100%;
+  }
+}
+
 .filter-builder__row {
   display: flex;
   flex-wrap: wrap;
@@ -32,6 +38,12 @@
   @include bp.below(sm) {
     flex-basis: 100%;
     max-inline-size: none;
+  }
+}
+
+@include bp.from(sm) {
+  :host(.filter-builder--mobile-full) .filter-builder__search {
+    flex-basis: auto;
   }
 }
 

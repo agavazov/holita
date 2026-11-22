@@ -8,6 +8,7 @@
 <osnova-table-panel
   #panel
   [heading]="text().shopOptions"
+  [mobileFullWidthActions]="true"
   [columns]="columns()"
   [tableMinWidth]="tableMinWidth"
   [view]="view()"
@@ -26,17 +27,19 @@
 >
   <osnova-filter-builder
     panelActions
+    [mobileFullWidth]="true"
     [searchLabel]="text().searchOptions"
     [search]="url.searchDraft()"
     [searchError]="url.searchError() ? shared().searchTooManyWords : null"
     (searchChange)="url.editSearch($event)"
-  />
-  <osnova-list-sort-menu
-    panelActions
-    [fields]="sortFields()"
-    [sort]="sort()"
-    (sortChange)="changeSort($event)"
-  />
+  >
+    <osnova-list-sort-menu
+      filterActions
+      [fields]="sortFields()"
+      [sort]="sort()"
+      (sortChange)="changeSort($event)"
+    />
+  </osnova-filter-builder>
   <p-table
     class="app-responsive-table app-table-fixed"
     [value]="page()?.items ?? []"
@@ -90,16 +93,16 @@
             @if (canWrite()) {
             <button
               type="button"
-              class="app-link"
+              class="app-link app-table-identity-wrap"
               [title]="option.name"
               (click)="panel.run('edit', [row], $event.currentTarget)"
             >
               {{ option.name }}
             </button>
             } @else {
-            <span [title]="option.name">{{ option.name }}</span>
+            <span class="app-table-identity-wrap" [title]="option.name">{{ option.name }}</span>
             } @if (values) {
-            <span [title]="values">{{ values }}</span>
+            <span class="app-table-identity-wrap" [title]="values">{{ values }}</span>
             }
           </div>
           @if (canWrite()) {

@@ -3,6 +3,8 @@
 <osnova-table-panel
   #panel
   [heading]="text().inventoryItems"
+  mobileIdentityLayout="trailing"
+  [mobileFullWidthActions]="true"
   [columns]="columns()"
   [tableMinWidth]="tableMinWidth"
   [view]="view()"
@@ -21,6 +23,7 @@
 >
   <osnova-filter-builder
     panelActions
+    [mobileFullWidth]="true"
     [searchLabel]="text().inventorySearch"
     [search]="url.searchDraft()"
     [searchError]="url.searchError() ? shared().searchTooManyWords : null"
@@ -72,8 +75,8 @@
         <th scope="col" class="app-cell-number" pSortableColumn="QUANTITY">
           {{ text().variantQuantity }} <p-sort-icon field="QUANTITY" />
         </th>
-        <th scope="col">{{ text().inventoryTracking }}</th>
-        <th scope="col" pSortableColumn="SKU">
+        <th scope="col" class="app-table-merged-column">{{ text().inventoryTracking }}</th>
+        <th scope="col" class="app-col-secondary" pSortableColumn="SKU">
           {{ text().variantSku }} <p-sort-icon field="SKU" />
         </th>
         <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
@@ -84,40 +87,45 @@
     <ng-template #body let-item>
       @let row = record(item); @let label = variant(item); @let amount =
       quantity(item.inventoryTracked ? item.quantity : null); @let tracking = item.inventoryTracked
-      ? text().variantTracked : text().variantUntracked; @let openLabel = canWrite() &&
+      ? text().variantTracked : text().variantUntracked; @let trackingTone =
+      tone(item.inventoryTracked ? 'info' : 'neutral'); @let openLabel = canWrite() &&
       item.inventoryTracked ? text().inventoryAdjust : text().inventoryOpenVariant;
       <tr>
         <td class="app-col-identity">
-          <div class="app-cell-identity">
-            <button
-              type="button"
-              class="app-link"
-              [title]="item.productName"
-              [attr.aria-label]="openLabel + ' · ' + row.label"
-              (click)="panel.run('open', [row], $event.currentTarget)"
-            >
-              {{ item.productName }}
-            </button>
-            <span [title]="label">{{ label }}</span>
-          </div>
-          <div class="app-table-mobile-actions">
-            <osnova-row-actions
-              [actions]="actions()"
-              [record]="row"
-              (choose)="panel.run($event.action, [row], $event.origin)"
-            />
+          <div class="app-table-identity-layout">
+            <div class="app-cell-identity">
+              <button
+                type="button"
+                class="app-link app-table-identity-wrap"
+                [title]="item.productName"
+                [attr.aria-label]="openLabel + ' · ' + row.label"
+                (click)="panel.run('open', [row], $event.currentTarget)"
+              >
+                {{ item.productName }}
+              </button>
+              <span [title]="label">{{ label }}</span>
+              <div class="app-table-mobile-meta app-cell-status app-table-tag-wrap">
+                <p-tag [severity]="trackingTone" [value]="tracking" />
+              </div>
+            </div>
+            <div class="app-table-mobile-actions">
+              <osnova-row-actions
+                [actions]="actions()"
+                [record]="row"
+                (choose)="panel.run($event.action, [row], $event.origin)"
+              />
+            </div>
           </div>
         </td>
         <td class="app-cell-number" [title]="amount">{{ amount }}</td>
-        <td>
+        <td class="app-table-merged-column">
           <div class="app-cell-status">
-            <p-tag
-              [severity]="tone(item.inventoryTracked ? 'info' : 'neutral')"
-              [value]="tracking"
-            />
+            <p-tag [severity]="trackingTone" [value]="tracking" />
           </div>
         </td>
-        <td><span class="app-cell-truncate" [title]="item.sku">{{ item.sku }}</span></td>
+        <td class="app-col-secondary">
+          <span class="app-cell-truncate" [title]="item.sku">{{ item.sku }}</span>
+        </td>
         <td class="app-col-actions" pFrozenColumn alignFrozen="right">
           <osnova-row-actions
             [actions]="actions()"

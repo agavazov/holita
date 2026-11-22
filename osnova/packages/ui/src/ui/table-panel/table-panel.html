@@ -18,13 +18,20 @@
       }
     </h2>
     }
-    <div class="table-panel__actions">
+    <div
+      class="table-panel__actions"
+      [class.table-panel__actions--mobile-full]="mobileFullWidthActions()"
+    >
       <ng-content select="[panelActions]" />
     </div>
   </div>
   @if (busy() && showTable()) {
   <!-- Decorative: aria-busy on the panel announces the refresh. -->
   <span class="table-panel__progress" aria-hidden="true"></span>
+  } @if (showTable() && actionFeedback(); as feedback) {
+  <div class="table-panel__inline-error table-panel__action-feedback">
+    <p-message severity="error" variant="simple" size="small">{{ feedback }}</p-message>
+  </div>
   } @switch (view().kind) { @case ('loading') {
   <div class="table-panel__skeleton" role="status" [attr.aria-label]="text().loading">
     <p-table
@@ -56,6 +63,7 @@
           <th
             scope="col"
             [class]="column.className ?? ''"
+            [class.table-panel__skeleton-number]="mobileIdentityLayout() === 'trailing' && column.kind === 'number'"
             pFrozenColumn
             [frozen]="column.kind === 'actions'"
             alignFrozen="right"
@@ -69,14 +77,36 @@
         }
       </ng-template>
       <ng-template #body>
+        <ng-template #mobileMenu>
+          <div class="app-table-mobile-actions">
+            <p-skeleton width="var(--p-app-control-height)" height="var(--p-app-control-height)" />
+          </div>
+        </ng-template>
         <tr>
           @for (column of loadingColumns(); track column.id) {
           <td
             [class]="column.className ?? ''"
+            [class.table-panel__skeleton-number]="mobileIdentityLayout() === 'trailing' && column.kind === 'number'"
             pFrozenColumn
             [frozen]="column.kind === 'actions'"
             alignFrozen="right"
           >
+            @if (column.kind === 'identity' && mobileIdentityLayout() === 'trailing') {
+            <div class="app-table-identity-layout">
+              <div class="app-cell-identity">
+                <p-skeleton width="75%" height="0.875rem" />
+                <p-skeleton width="50%" height="0.75rem" />
+                @if (hasMergedStatusColumn()) {
+                <div class="app-table-mobile-meta table-panel__skeleton-meta">
+                  <p-skeleton width="100%" height="var(--p-app-space-5)" />
+                </div>
+                }
+              </div>
+              @if (hasActionColumn()) {
+              <ng-container [ngTemplateOutlet]="mobileMenu" />
+              }
+            </div>
+            } @else {
             <span class="app-cell-identity">
               <p-skeleton
                 [width]="
@@ -89,13 +119,8 @@
               }
             </span>
             @if (column.kind === 'identity' && hasActionColumn()) {
-            <div class="app-table-mobile-actions">
-              <p-skeleton
-                width="var(--p-app-control-height)"
-                height="var(--p-app-control-height)"
-              />
-            </div>
-            }
+            <ng-container [ngTemplateOutlet]="mobileMenu" />
+            } }
           </td>
           }
         </tr>

@@ -84,11 +84,13 @@ let nextCondition = 0;
   templateUrl: './filter-builder.html',
   styleUrl: './filter-builder.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.filter-builder--mobile-full]': 'mobileFullWidth()' },
 })
 export class FilterBuilder {
   readonly searchLabel = input.required<string>();
   readonly search = input('');
   readonly searchable = input(true);
+  readonly mobileFullWidth = input(false);
   readonly quickFilterKeys = input<readonly string[]>([]);
   readonly searchError = input<string | null>(null);
   readonly fields = input<readonly FilterField[]>([]);

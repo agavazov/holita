@@ -1,6 +1,6 @@
 # 147 Holita Admin polish
 
-**Status:** Ready after [149](149-osnova-listing-mobile.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
@@ -24,7 +24,7 @@ delete feedback where merchants can act on it.
 
 1. Set the Holita navigation icons in `holita/apps/admin/src/main.ts`. Use a box for Products,
    shelves or a stock glyph for Inventory, a stack for Collections, sliders or a checklist for
-   Characteristic groups and one tag for Badges. Use the shared sidebar mapping supplied by 149
+   Characteristic groups and one tag for Badges. Use the shared sidebar mapping
    so the desktop rail and mobile drawer show the same glyphs.
 2. In the Bulgarian operator catalog, use “Добави група” under the full Characteristic groups
    heading and “Добави колекция” on Collections. Follow the “Добави значка” wording and retain
@@ -40,7 +40,7 @@ delete feedback where merchants can act on it.
    row with shared token spacing. Align Brand and Category with the existing tag and gallery
    feedback. Let the row wrap in narrow drawers and preserve the retry behavior.
 7. Show Category and Brand dependency conflicts in the originating TablePanel's inline feedback
-   area provided by 149, above the retained rows. Reuse the localized conflict messages and
+   area above the retained rows. Reuse the localized conflict messages and
    reserve the panel's refresh error state for failed loads.
 
 ## Done when
@@ -55,12 +55,11 @@ light and dark, using Bulgarian and English where applicable.
 
 ## Limits
 
-Holita Admin presentation and Bulgarian labels only. Use existing shared styling and the
-override points from 149. Preserve existing catalog operations, validation and delete behavior.
+Holita Admin presentation and Bulgarian labels only. Use existing shared styling and listing
+override points. Preserve existing catalog operations, validation and delete behavior.
 
 ## References
 
-- [Shared listing and sidebar support in ticket 149](149-osnova-listing-mobile.md)
 - [Admin design system](../admin-design-system.md)
 - [Admin navigation](../../holita/apps/admin/src/main.ts) and [Bulgarian labels](../../holita/packages/operator/src/i18n/bg.json)
 - [Collection editor styles](../../holita/apps/admin/src/collections/collection-editor.scss)

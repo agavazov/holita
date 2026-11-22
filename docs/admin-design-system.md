@@ -300,6 +300,21 @@ The scroll container is a keyboard tab stop. Secondary columns hide below md but
 Freeze the final action column right. Below sm, pin the bounded identity cell and its mobile
 row menu, hide the separate action column and keep remaining columns horizontally scrollable.
 
+For a trailing mobile row menu, set `mobileIdentityLayout="trailing"` on TablePanel and put
+`.app-cell-identity` and `.app-table-mobile-actions` inside `.app-table-identity-layout`. Use
+`var(--app-table-identity-width, <column width>)` for the identity `col` width and
+`var(--app-table-responsive-min-width)` for the projected table minimum width. The live and
+loading rows share these widths. Use `.app-table-identity-wrap` on names or summaries and
+`.app-table-tag-wrap` on status wrappers that must show their full tag text. Keep identifiers on
+the smaller, truncated secondary line. A status shown inside the identity in
+`.app-table-mobile-meta` can use `.app-table-merged-column` on the desktop column so it is hidden
+below sm. Keep its `kind: 'status'` and class name in the shared column definition so the loading
+row also shows its placeholder under the identity.
+
+For a full-width search row below sm, bind `[mobileFullWidthActions]="true"` on TablePanel and
+`[mobileFullWidth]="true"` on the FilterBuilder projected into `panelActions`. Project Sort into
+`filterActions` to keep it on the controls row with the filter disclosure.
+
 Define each action once as `ListAction` with applicability, bulk/danger and confirmation metadata.
 Record links, menus and bulk actions use `TablePanel.run`; no direct row Delete buttons.
 Opening/editing one record is never bulk. Confirmations name applicable records and explain
@@ -320,6 +335,10 @@ The top-right outlet must not shift page/table layout or steal focus.
 Success announces polite status; other outcomes announce alerts. Load errors, field errors,
 editable-draft save errors and contextual warnings stay inline with Retry where applicable.
 Retired callbacks cannot publish into a new workspace.
+
+Bind localized `actionFeedback` on TablePanel for action errors that belong with retained rows.
+The message wraps above the rows and can appear alongside a failed refresh with its own Retry.
+The feature owns the message and passes `null` when feedback should clear.
 
 ### PrimeNG usage rules
 

@@ -1,6 +1,11 @@
 :host {
   display: block;
 }
+.design-page,
+.design-page section,
+.scheme {
+  grid-template-columns: minmax(0, 1fr);
+}
 .design-page {
   display: grid;
   gap: var(--p-app-space-6);

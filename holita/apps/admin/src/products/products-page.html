@@ -8,6 +8,8 @@
 <osnova-table-panel
   #panel
   [heading]="text().shopProducts"
+  mobileIdentityLayout="trailing"
+  [mobileFullWidthActions]="true"
   [columns]="columns()"
   [tableMinWidth]="tableMinWidth"
   [view]="view()"
@@ -25,6 +27,7 @@
 >
   <osnova-filter-builder
     panelActions
+    [mobileFullWidth]="true"
     [searchLabel]="text().searchProducts"
     [search]="url.searchDraft()"
     [searchError]="url.searchError() ? shared().searchTooManyWords : null"
@@ -90,29 +93,31 @@
       @let row = record(product); @let amount = formatPrice(product.price);
       <tr>
         <td class="app-col-identity">
-          <div class="app-cell-identity">
+          <div class="app-table-identity-layout">
+            <div class="app-cell-identity">
+              @if (canWrite()) {
+              <button
+                type="button"
+                class="app-link app-table-identity-wrap"
+                [title]="product.name"
+                (click)="panel.run('edit', [row], $event.currentTarget)"
+              >
+                {{ product.name }}
+              </button>
+              } @else {
+              <span class="app-table-identity-wrap" [title]="product.name">{{ product.name }}</span>
+              }
+            </div>
             @if (canWrite()) {
-            <button
-              type="button"
-              class="app-link"
-              [title]="product.name"
-              (click)="panel.run('edit', [row], $event.currentTarget)"
-            >
-              {{ product.name }}
-            </button>
-            } @else {
-            <span [title]="product.name">{{ product.name }}</span>
+            <div class="app-table-mobile-actions">
+              <osnova-row-actions
+                [actions]="rowActions()"
+                [record]="row"
+                (choose)="panel.run($event.action, [row], $event.origin)"
+              />
+            </div>
             }
           </div>
-          @if (canWrite()) {
-          <div class="app-table-mobile-actions">
-            <osnova-row-actions
-              [actions]="rowActions()"
-              [record]="row"
-              (choose)="panel.run($event.action, [row], $event.origin)"
-            />
-          </div>
-          }
         </td>
         <td class="app-cell-number" [title]="amount">{{ amount }}</td>
         <td>

@@ -8,6 +8,7 @@
 <osnova-table-panel
   #panel
   [heading]="text().shopBadges"
+  [mobileFullWidthActions]="true"
   [columns]="columns()"
   [tableMinWidth]="tableMinWidth"
   [view]="view()"
@@ -26,17 +27,19 @@
 >
   <osnova-filter-builder
     panelActions
+    [mobileFullWidth]="true"
     [searchLabel]="text().searchBadges"
     [search]="url.searchDraft()"
     [searchError]="url.searchError() ? shared().searchTooManyWords : null"
     (searchChange)="url.editSearch($event)"
-  />
-  <osnova-list-sort-menu
-    panelActions
-    [fields]="sortFields()"
-    [sort]="sort()"
-    (sortChange)="changeSort($event)"
-  />
+  >
+    <osnova-list-sort-menu
+      filterActions
+      [fields]="sortFields()"
+      [sort]="sort()"
+      (sortChange)="changeSort($event)"
+    />
+  </osnova-filter-builder>
   <p-table
     class="app-responsive-table app-table-fixed"
     [value]="page()?.items ?? []"
@@ -91,14 +94,14 @@
             @if (canWrite()) {
             <button
               type="button"
-              class="app-link"
+              class="app-link app-table-identity-wrap"
               [title]="badge.name"
               (click)="panel.run('edit', [row], $event.currentTarget)"
             >
               {{ badge.name }}
             </button>
             } @else {
-            <span [title]="badge.name">{{ badge.name }}</span>
+            <span class="app-table-identity-wrap" [title]="badge.name">{{ badge.name }}</span>
             }
             <span class="app-mono" [title]="badge.slug">{{ badge.slug }}</span>
           </div>

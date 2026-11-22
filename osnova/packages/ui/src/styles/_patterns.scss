@@ -858,6 +858,42 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
           display: block;
           white-space: nowrap;
         }
+
+        > .app-table-identity-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: start;
+
+          > .app-table-mobile-actions {
+            margin-block-start: 0;
+          }
+
+          > .app-table-mobile-actions:not(:empty) {
+            margin-inline-start: var(--p-app-space-2);
+          }
+        }
+
+        .app-table-identity-layout > .app-cell-identity,
+        .app-cell-identity:has(> .app-table-identity-wrap) {
+          block-size: auto;
+          min-block-size: calc(var(--p-app-space-8) + var(--p-app-space-1));
+          overflow: visible;
+        }
+
+        > .app-cell-identity:has(> .app-table-identity-wrap) {
+          inline-size: auto;
+          min-inline-size: 0;
+          max-inline-size: 100%;
+        }
+
+        .app-cell-identity > .app-table-identity-wrap {
+          display: block;
+          overflow: visible;
+          -webkit-line-clamp: unset;
+          white-space: normal;
+          text-wrap: pretty;
+          overflow-wrap: anywhere;
+        }
       }
 
       .p-datatable-thead .app-col-identity {
@@ -877,6 +913,12 @@ $categories: c1, c2, c3, c4, c5, c6, c7, c8;
       .app-table-mobile-actions {
         display: flex;
         margin-block-start: var(--p-app-space-2);
+      }
+
+      .app-table-tag-wrap,
+      .app-table-tag-wrap .p-tag-label {
+        white-space: normal;
+        overflow-wrap: anywhere;
       }
 
       .p-datatable-tbody > tr:hover > .app-col-identity {

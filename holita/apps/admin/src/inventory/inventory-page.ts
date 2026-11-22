@@ -111,8 +111,20 @@ export class InventoryPage {
       className: 'app-col-identity',
     },
     { id: 'QUANTITY', label: this.text().variantQuantity, width: '8rem', kind: 'number' },
-    { id: 'tracking', label: this.text().inventoryTracking, width: '10rem', kind: 'status' },
-    { id: 'SKU', label: this.text().variantSku, width: '11.5rem', kind: 'text' },
+    {
+      id: 'tracking',
+      label: this.text().inventoryTracking,
+      width: '10rem',
+      kind: 'status',
+      className: 'app-table-merged-column',
+    },
+    {
+      id: 'SKU',
+      label: this.text().variantSku,
+      width: '11.5rem',
+      kind: 'text',
+      className: 'app-col-secondary',
+    },
     {
       id: 'actions',
       label: this.shared().pageHeader.actions,

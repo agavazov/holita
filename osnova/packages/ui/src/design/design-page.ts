@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { UI_LANGUAGE } from '../ui/ui-language';
 import { ThemeMenu } from '../ui/theme-menu/theme-menu';
@@ -7,7 +7,11 @@ import { PageHeader } from '../ui/page-header/page-header';
 import { KpiStrip } from '../ui/kpi/kpi-strip';
 import { KpiTile } from '../ui/kpi/kpi-tile';
 import { FilterBuilder } from '../ui/filter-builder/filter-builder';
-import { TablePanel } from '../ui/table-panel/table-panel';
+import { trackById } from '../ui/list/list-actions';
+import type { ListQuery } from '../ui/list/list-query';
+import { ListSortMenu } from '../ui/list/list-sort-menu';
+import { TablePanel, type TableColumn } from '../ui/table-panel/table-panel';
+import type { TableView } from '../ui/table-panel/table-view';
 import { RowActions } from '../ui/row-actions/row-actions';
 import { FormField } from '../ui/form-field/form-field';
 import { EmptyState } from '../ui/empty-state/empty-state';
@@ -43,6 +47,47 @@ import { selectMultiplePt } from '../ui/select-multiple';
 
 const vehicles = Array.from({ length: 200 }, (_, index) => `CB ${String(1001 + index)} AX`);
 
+const listingMessages = {
+  bg: {
+    title: 'Адаптивен списък',
+    heading: 'Записи',
+    state: 'Състояние на списъка',
+    feedback: 'Съобщение за действие',
+    rows: 'Записи без съобщение',
+    'rows-error': 'Грешка при обновяване',
+    loading: 'Зареждане',
+    empty: 'Празен списък',
+    name: 'Име',
+    quantity: 'Брой',
+    status: 'Състояние',
+    actions: 'Действия',
+    search: 'Търсене на записи',
+    record: 'Архивна папка с протоколи от годишните проверки',
+    badge: 'ОчакваПотвърждениеОтОтговорника',
+    archive: 'Архивирай',
+    actionError: 'Записът не може да бъде архивиран, докато е включен в текущ преглед.',
+  },
+  en: {
+    title: 'Responsive listing',
+    heading: 'Records',
+    state: 'Listing state',
+    feedback: 'Action feedback',
+    rows: 'Rows without feedback',
+    'rows-error': 'Refresh failure',
+    loading: 'Loading',
+    empty: 'Empty',
+    name: 'Name',
+    quantity: 'Count',
+    status: 'Status',
+    actions: 'Actions',
+    search: 'Search records',
+    record: 'Annual inspection reports and supporting documents',
+    badge: 'Waiting for review',
+    archive: 'Archive',
+    actionError: 'This record cannot be archived while it belongs to an active review.',
+  },
+};
+
 /** Development-only page: the tokens, every registered PrimeNG control and each shared pattern once. */
 @Component({
   selector: 'osnova-design-page',
@@ -54,6 +99,7 @@ const vehicles = Array.from({ length: 200 }, (_, index) => `CB ${String(1001 + i
     KpiStrip,
     KpiTile,
     FilterBuilder,
+    ListSortMenu,
     TablePanel,
     RowActions,
     FormField,
@@ -137,6 +183,53 @@ export class DesignPage {
     '--p-app-radius-tag',
   ];
   readonly language = inject(UI_LANGUAGE);
+  readonly listingText = computed(() => listingMessages[this.language()]);
+  readonly listingStates = ['feedback', 'rows', 'rows-error', 'loading', 'empty'] as const;
+  readonly listingState = signal<(typeof this.listingStates)[number]>('feedback');
+  readonly listingView = computed<TableView>(() => {
+    const state = this.listingState();
+    return { kind: state === 'feedback' ? 'rows' : state };
+  });
+  readonly listingFeedback = computed(() => {
+    const state = this.listingState();
+    return state === 'feedback' || state === 'rows-error' ? this.listingText().actionError : null;
+  });
+  readonly listingColumns = computed<readonly TableColumn[]>(() => {
+    const text = this.listingText();
+    return [
+      {
+        id: 'name',
+        label: text.name,
+        width: 'auto',
+        kind: 'identity',
+        className: 'app-col-identity',
+      },
+      { id: 'quantity', label: text.quantity, width: '5rem', kind: 'number' },
+      {
+        id: 'status',
+        label: text.status,
+        width: '15rem',
+        kind: 'status',
+        className: 'app-table-merged-column',
+      },
+      {
+        id: 'actions',
+        label: text.actions,
+        width: '3.25rem',
+        kind: 'actions',
+        className: 'app-col-actions',
+      },
+    ];
+  });
+  readonly listingRecords = computed(() => [
+    { id: 'archive-2026', label: this.listingText().record, unavailable: [] },
+  ]);
+  readonly listingActions = computed(() => [{ id: 'archive', label: this.listingText().archive }]);
+  readonly listingSort = signal<NonNullable<ListQuery['sort']>>({
+    field: 'name',
+    direction: 'asc',
+  });
+  readonly trackById = trackById;
   readonly actions = [
     { id: 'edit', label: 'Edit' },
     { id: 'delete', label: 'Delete', danger: true },
