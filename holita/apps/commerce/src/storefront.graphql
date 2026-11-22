@@ -60,10 +60,19 @@ type ShopperSession {
   shopper: Shopper!
   expiresAt: String!
 }
+type CatalogueSpecificationGroup {
+  name: String!
+  values: [CatalogueSpecification!]!
+}
+type CatalogueSpecification {
+  name: String!
+  value: String!
+}
 type Query {
   shop: Shop
   catalogue(offset: Int! = 0, limit: Int! = 20): CataloguePage!
   catalogueProduct(id: ID!): CatalogueProduct
+  catalogueProductSpecifications(productId: ID!): [CatalogueSpecificationGroup!]!
   catalogueBrands(offset: Int! = 0, limit: Int! = 20): [CatalogueBrand!]!
   "Visible shop categories in tree order. A null parentId denotes a root."
   catalogueCategories: [CatalogueCategory!]!

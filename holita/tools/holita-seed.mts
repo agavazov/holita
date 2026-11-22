@@ -7,6 +7,7 @@ import pg from 'pg';
 import {
   demoCatalogue,
   demoCategories,
+  demoCharacteristicGroups,
   demoCollections,
   demoOptions,
   demoProductImages,
@@ -66,6 +67,7 @@ async function seedCatalogue(): Promise<void> {
   let productsInserted = 0;
   let collectionsInserted = 0;
   let imagesInserted = 0;
+  let characteristicGroupsInserted = 0;
   await client.connect();
   try {
     await client.query('BEGIN');
@@ -247,6 +249,41 @@ async function seedCatalogue(): Promise<void> {
         }
       }
     }
+    for (const group of demoCharacteristicGroups) {
+      const groupId = fixtureId('93', group.id);
+      const { rowCount } = await client.query(
+        `INSERT INTO "characteristicGroup" ("id", "tenantId", "branchId", "name", "sortOrder")
+         VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+        [groupId, tenantId, branchId, group.name, group.sortOrder],
+      );
+      if (rowCount) {
+        characteristicGroupsInserted += rowCount;
+        for (const characteristic of group.characteristics) {
+          await client.query(
+            `INSERT INTO "characteristic" ("id", "tenantId", "branchId", "groupId", "name", "sortOrder")
+             VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING`,
+            [
+              fixtureId('94', characteristic.id),
+              tenantId,
+              branchId,
+              groupId,
+              characteristic.name,
+              characteristic.sortOrder,
+            ],
+          );
+        }
+        for (const [product, characteristic, value] of group.values) {
+          await client.query(
+            `INSERT INTO "productCharacteristicValue" ("tenantId", "branchId", "productId", "characteristicId", "value")
+             SELECT $1, $2, $3, $4, $5 WHERE EXISTS (
+               SELECT 1 FROM "product" WHERE "tenantId" = $1 AND "branchId" = $2 AND "id" = $3
+             )
+             ON CONFLICT DO NOTHING`,
+            [tenantId, branchId, fixtureId('52', product), fixtureId('94', characteristic), value],
+          );
+        }
+      }
+    }
     for (const [id, photos] of Object.entries(demoProductImages)) {
       const productId = fixtureId('52', Number(id));
       // Backfill untouched demo products without restoring a merchant's cleared gallery.
@@ -286,7 +323,7 @@ async function seedCatalogue(): Promise<void> {
     }
     await client.query('COMMIT');
     console.log(
-      `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options, ${String(productsInserted)} products, ${String(collectionsInserted)} collections and ${String(imagesInserted)} product images.`,
+      `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options, ${String(productsInserted)} products, ${String(collectionsInserted)} collections, ${String(characteristicGroupsInserted)} characteristic groups and ${String(imagesInserted)} product images.`,
     );
   } finally {
     await client.end();

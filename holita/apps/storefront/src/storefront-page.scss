@@ -290,6 +290,46 @@ main > a:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.product-specifications {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: var(--p-app-space-5);
+  padding: clamp(1.25rem, 5vw, 4rem);
+  border-block-start: 1px solid var(--shop-border);
+  overflow-wrap: anywhere;
+}
+
+.product-specifications h2 {
+  margin: 0;
+  font: 600 clamp(1.25rem, 3vw, 1.75rem) var(--shop-serif);
+}
+
+.product-specifications h3 {
+  margin: 0 0 var(--p-app-space-2);
+  font-size: 1rem;
+}
+
+.product-specifications dl,
+.product-specifications dd {
+  margin: 0;
+}
+
+.product-specifications dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--p-app-space-3);
+  padding-block: var(--p-app-space-2);
+  border-block-start: 1px solid var(--shop-border);
+}
+
+.product-specifications dt {
+  color: var(--shop-muted);
+}
+
+.product-specifications dd {
+  white-space: pre-wrap;
+}
+
 .brand-art {
   display: grid;
   grid-area: 1 / 1;

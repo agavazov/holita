@@ -18,6 +18,7 @@ import {
   FormArray,
   FormControl,
   FormGroup,
+  FormRecord,
   ReactiveFormsModule,
   type AbstractControl,
 } from '@angular/forms';
@@ -164,6 +165,19 @@ export class ProductEditor {
     params: () => this.api.scope() ?? undefined,
     loader: ({ params }) => this.api.options(params),
   });
+  private readonly specifications = resource({
+    params: () => {
+      const scope = this.api.scope();
+      const productId = this.id();
+      return scope && (!this.editing || (productId && uuid.test(productId)))
+        ? { scope, productId }
+        : undefined;
+    },
+    loader: ({ params }) => this.api.characteristics(params.scope, params.productId),
+  });
+  protected readonly specificationGroups = computed(() =>
+    this.specifications.hasValue() ? this.specifications.value().groups : [],
+  );
   protected readonly state = computed<RouteDrawerState>(() => {
     if (!this.api.scope() || !this.session.hasRole('OPERATOR')) {
       return 'error';
@@ -171,10 +185,10 @@ export class ProductEditor {
     if (this.editing && !uuid.test(this.id() ?? '')) {
       return 'invalid-id';
     }
-    if (this.record.isLoading() || this.options.isLoading()) {
+    if (this.record.isLoading() || this.options.isLoading() || this.specifications.isLoading()) {
       return 'loading';
     }
-    if (this.record.error() || this.options.error()) {
+    if (this.record.error() || this.options.error() || this.specifications.error()) {
       return 'error';
     }
     return !this.editing || (this.record.hasValue() && this.record.value()) ? 'ready' : 'not-found';
@@ -218,6 +232,7 @@ export class ProductEditor {
   protected readonly saving = signal(false);
   protected readonly saveError = signal(false);
   protected readonly errors = signal<Partial<Record<string, string>>>({});
+  protected readonly characteristicValues = new FormRecord<FormControl<string>>({});
   protected readonly variants = new FormArray([variantForm()]);
   protected readonly images = new FormArray<ImageForm>([]);
   protected readonly previews = signal(new Map<ImageForm, string | null>());
@@ -234,6 +249,7 @@ export class ProductEditor {
     categoryId: new FormControl<string | null>(null),
     descriptionBg: new FormControl('', { nonNullable: true }),
     descriptionEn: new FormControl('', { nonNullable: true }),
+    characteristicValues: this.characteristicValues,
     variants: this.variants,
     images: this.images,
   });
@@ -266,6 +282,7 @@ export class ProductEditor {
           categoryId: product?.categoryId ?? null,
           descriptionBg: product?.descriptionBg ?? '',
           descriptionEn: product?.descriptionEn ?? '',
+          characteristicValues: this.characteristicValues.getRawValue(),
           variants: this.variants.getRawValue(),
           images: this.images.getRawValue(),
         },
@@ -273,6 +290,26 @@ export class ProductEditor {
       );
       this.errors.set({});
       this.saveError.set(false);
+    });
+    effect(() => {
+      const specifications = this.specifications.hasValue() ? this.specifications.value() : null;
+      const values = new Map(
+        specifications?.values.map(({ characteristicId, value }) => [characteristicId, value]),
+      );
+      for (const id of Object.keys(this.characteristicValues.controls)) {
+        this.characteristicValues.removeControl(id, { emitEvent: false });
+      }
+      for (const group of specifications?.groups ?? []) {
+        for (const { id } of group.characteristics) {
+          this.characteristicValues.addControl(
+            id,
+            new FormControl(values.get(id) ?? '', {
+              nonNullable: true,
+            }),
+            { emitEvent: false },
+          );
+        }
+      }
     });
     this.destroyRef.onDestroy(() => {
       this.releasePreviews();
@@ -291,7 +328,7 @@ export class ProductEditor {
   }
 
   protected retry(): void {
-    for (const resource of [this.record, this.options]) {
+    for (const resource of [this.record, this.options, this.specifications]) {
       if (resource.error()) {
         resource.reload();
       }
@@ -535,7 +572,10 @@ export class ProductEditor {
       );
       return;
     }
-    const { variants, images, ...draft } = this.form.getRawValue();
+    const { variants, images, characteristicValues, ...draft } = this.form.getRawValue();
+    const specifications = Object.entries(characteristicValues)
+      .filter(([id]) => this.characteristicValues.controls[id]?.dirty)
+      .map(([characteristicId, value]) => ({ characteristicId, value }));
     const recordId = this.id();
     const galleryChanged = this.images.dirty;
     const input: ProductVariantInput[] = variants.map(({ id, quantity, price, ...variant }) => ({
@@ -556,7 +596,12 @@ export class ProductEditor {
       }
       const id = await this.api.save(
         scope,
-        { ...draft, variants: input, ...(galleryChanged ? { images: gallery } : {}) },
+        {
+          ...draft,
+          variants: input,
+          ...(specifications.length ? { characteristicValues: specifications } : {}),
+          ...(galleryChanged ? { images: gallery } : {}),
+        },
         recordId,
       );
       if (this.destroyRef.destroyed || this.api.scope() !== scope) {
@@ -575,6 +620,11 @@ export class ProductEditor {
         'images',
         ...images.flatMap((_, index) =>
           imageErrorFields.map((field) => this.imageErrorPath(index, field)),
+        ),
+        ...specifications.flatMap((_, index) =>
+          ['characteristicId', 'value'].map(
+            (field) => `characteristicValues.${String(index)}.${field}`,
+          ),
         ),
         'variants',
         ...variants.flatMap((_, index) =>
@@ -602,11 +652,23 @@ export class ProductEditor {
         if (path === 'descriptionBg' || path === 'descriptionEn') {
           return this.text().productDescriptionInvalid;
         }
+        if (path.startsWith('characteristicValues.')) {
+          return path.endsWith('.characteristicId')
+            ? this.text().characteristicUnavailable
+            : this.text().characteristicValueInvalid;
+        }
         if (path.startsWith('variants.') && path.endsWith('.id')) {
           return this.text().variantUnavailable;
         }
         return messages[code];
       });
+      for (const [index, { characteristicId }] of specifications.entries()) {
+        const path = `characteristicValues.${String(index)}`;
+        const message = errors[`${path}.characteristicId`] ?? errors[`${path}.value`];
+        if (message) {
+          errors[characteristicId] = message;
+        }
+      }
       this.errors.set(errors);
       this.saveError.set(!Object.keys(errors).length);
     } finally {
@@ -633,6 +695,7 @@ export class ProductEditor {
       'category',
       'description-bg',
       'description-en',
+      ...Object.keys(this.characteristicValues.controls).map((id) => `specification-${id}`),
       'image-add',
       ...this.images.controls.map((_, index) => `image-alt-${String(index)}`),
       ...this.variants.controls.flatMap((_, index) =>

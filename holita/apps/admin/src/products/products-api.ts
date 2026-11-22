@@ -8,6 +8,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   OperatorCreateProductDocument,
   OperatorProductDocument,
+  OperatorProductCharacteristicsDocument,
   OperatorProductOptionsDocument,
   OperatorProductsDocument,
   OperatorUpdateProductDocument,
@@ -88,6 +89,23 @@ export class ProductsApi {
         throw new Error('Missing product options');
       }
       return data.productOptions;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async characteristics(scope: ProductScope, productId: string | null) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorProductCharacteristicsDocument,
+        variables: { productId },
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing product characteristics');
+      }
+      return data.productCharacteristics;
     } finally {
       client.stop();
     }

@@ -636,6 +636,21 @@ test('staff creates a merchant and its administrator creates a product', async (
     await addCategory(merchant, 'Home');
     await addCategory(merchant, 'Cookware', 'Kitchen');
     await editOption(merchant);
+    await merchant.getByRole('link', { name: 'Characteristic groups', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Add characteristic group', exact: true }).click();
+    await merchant.locator('#characteristic-group-name').fill('Materials');
+    for (const [index, [name, order]] of (
+      [
+        ['Finish', '20'],
+        ['Material', '10'],
+      ] as const
+    ).entries()) {
+      await merchant.getByRole('button', { name: 'Add characteristic', exact: true }).click();
+      await merchant.locator(`#characteristic-group-name-${String(index)}`).fill(name);
+      await merchant.locator(`#characteristic-group-sort-order-${String(index)}`).fill(order);
+    }
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Characteristic group saved.');
     await merchant.getByRole('link', { name: 'Products', exact: true }).click();
     await merchant.getByRole('button', { name: 'Create product', exact: true }).click();
     const productName = `Product ${randomUUID()}`;
@@ -644,6 +659,8 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.locator('#product-name').fill(productName);
     await merchant.locator('#product-description-bg').fill(descriptionBg);
     await merchant.locator('#product-description-en').fill(descriptionEn);
+    await merchant.getByRole('textbox', { name: 'Finish', exact: true }).fill('Matte glaze');
+    await merchant.getByRole('textbox', { name: 'Material', exact: true }).fill('Ceramic');
     await merchant.locator('#product-variant-sku-0').fill('SMOKE-001');
     await merchant.locator('#product-variant-price-0').fill('25.50');
     await merchant.locator('#product-status').click();
@@ -717,6 +734,22 @@ test('staff creates a merchant and its administrator creates a product', async (
     await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
     const productUrl = shopper.url();
     const productId = new URL(productUrl).pathname.split('/').at(-1);
+    const specificationsQuery = async (branchId = shopId): Promise<unknown> => {
+      const response = await shopper.request.post(`${shopApp.origin}/graphql`, {
+        headers: { 'x-branch-id': branchId },
+        data: {
+          query: `query($id:ID!){
+            catalogueProductSpecifications(productId:$id){name values{name value}}
+          }`,
+          variables: { id: productId },
+        },
+      });
+      expect(response.status()).toBe(200);
+      return response.json();
+    };
+    const specifications = shopper.getByRole('region', { name: 'Specifications' });
+    await expect(specifications.locator('dt')).toHaveText(['Material', 'Finish']);
+    await expect(specifications.locator('dd')).toHaveText(['Ceramic', 'Matte glaze']);
     const galleryQuery = async (): Promise<unknown> => {
       const response = await shopper.request.post(`${shopApp.origin}/graphql`, {
         headers: { 'x-branch-id': shopId },
@@ -758,11 +791,36 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.getByRole('button', { name: productName, exact: true }).click();
     await expect(merchant.locator('#product-description-en')).toHaveValue(descriptionEn);
     await merchant.locator('#product-description-en').clear();
+    await merchant.getByRole('textbox', { name: 'Finish', exact: true }).clear();
     await merchant.getByRole('button', { name: 'Move photo 2 up', exact: true }).press('Enter');
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Product saved.');
     await shopper.reload();
     await expect(description).toHaveText(descriptionBg);
+    await expect(specifications.locator('dt')).toHaveText(['Material']);
+    await expect(specifications.locator('dd')).toHaveText(['Ceramic']);
+    await merchant.getByRole('link', { name: 'Characteristic groups', exact: true }).click();
+    for (const [switchId, visible] of [
+      ['characteristic-group-active', false],
+      ['characteristic-group-active', true],
+      ['characteristic-group-active-0', false],
+      ['characteristic-group-active-0', true],
+    ] as const) {
+      await merchant.getByRole('button', { name: 'Materials', exact: true }).click();
+      const toggle = merchant.getByRole('switch').and(merchant.locator(`#${switchId}`));
+      await toggle.waitFor({ state: 'visible' });
+      await toggle.press('Space');
+      await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+      await dismissSuccess(merchant, 'Characteristic group saved.');
+      expect(await specificationsQuery(), `${switchId} set to ${String(visible)}`).toEqual({
+        data: {
+          catalogueProductSpecifications: visible
+            ? [{ name: 'Materials', values: [{ name: 'Material', value: 'Ceramic' }] }]
+            : [],
+        },
+      });
+    }
+    await merchant.getByRole('link', { name: 'Products', exact: true }).click();
     const breadcrumbs = shopper.getByRole('navigation', { name: 'Product breadcrumbs' });
     await expect(breadcrumbs.locator('li > :last-child')).toHaveText([
       'Products',
@@ -932,6 +990,9 @@ test('staff creates a merchant and its administrator creates a product', async (
     const secondShopId = await createShop(staff, 'Second shop');
     expect(await collectionQuery(ruleSlug, 0, secondShopId)).toEqual({
       data: { catalogueCollections: { items: [], total: 0 }, catalogueCollectionProducts: null },
+    });
+    expect(await specificationsQuery(secondShopId)).toEqual({
+      data: { catalogueProductSpecifications: [] },
     });
     await shopper.goto(`${shopApp.origin}/s/${secondShopId}`);
     await expect(shopper.getByRole('link', { name: 'Second shop', exact: true })).toBeVisible();

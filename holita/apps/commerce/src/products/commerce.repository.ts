@@ -1,8 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { Prisma } from '../generated/prisma/client.js';
-import type { ProductInput, ProductSort, ProductFilter } from '../generated/graphql/types.js';
+import type {
+  ProductInput,
+  ProductSort,
+  ProductFilter,
+  ProductCharacteristicValueInput,
+} from '../generated/graphql/types.js';
 import type { Scope } from '../scope.js';
+import { CharacteristicsRepository } from '../characteristics/characteristics.repository.js';
 import { DatabaseService } from '../database.service.js';
 import type { ProductImageWrite } from './product-images.js';
 import {
@@ -11,7 +17,7 @@ import {
   productRelations,
 } from './product-relations.js';
 
-type ProductFields = Omit<ProductInput, 'variants' | 'images'>;
+type ProductFields = Omit<ProductInput, 'variants' | 'images' | 'characteristicValues'>;
 interface VariantWrite {
   id?: string;
   sku: string;
@@ -30,7 +36,10 @@ function listRelations(scope: Scope) {
 
 @Injectable()
 export class CommerceRepository {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly characteristics: CharacteristicsRepository,
+  ) {}
 
   async products(
     scope: Scope,
@@ -184,6 +193,7 @@ export class CommerceRepository {
     input: ProductFields,
     variants: VariantWrite[],
     images: ProductImageWrite[] | undefined,
+    characteristicValues: ProductCharacteristicValueInput[],
   ) {
     return this.database.client.$transaction(async (tx) => {
       const product = id
@@ -224,6 +234,9 @@ export class CommerceRepository {
             values: { create: optionValueIds.map((optionValueId) => ({ optionValueId })) },
           },
         });
+      }
+      if (characteristicValues.length) {
+        await this.characteristics.patchProductValues(tx, productScope, characteristicValues);
       }
       const retiredKeys = images ? await this.replaceImages(tx, productScope, images) : [];
       const row = await tx.product.findUniqueOrThrow({

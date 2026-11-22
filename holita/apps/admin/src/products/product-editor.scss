@@ -61,3 +61,8 @@
   flex-wrap: wrap;
   gap: var(--p-app-space-2);
 }
+
+.product-specification-group,
+.product-specifications osnova-form-field {
+  overflow-wrap: anywhere;
+}

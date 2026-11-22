@@ -161,6 +161,43 @@
         </osnova-form-field>
       </div>
     </section>
+    <section
+      class="app-form-section product-specifications"
+      aria-labelledby="product-specifications-title"
+    >
+      <h3 id="product-specifications-title">{{ text().productSpecifications }}</h3>
+      @for (group of specificationGroups(); track group.id) {
+      <div
+        class="app-card"
+        role="group"
+        [attr.aria-labelledby]="'product-specification-group-' + group.id"
+      >
+        <h4 class="product-specification-group" [id]="'product-specification-group-' + group.id">
+          {{ group.name }}
+        </h4>
+        <div class="app-form-grid" formGroupName="characteristicValues">
+          @for (characteristic of group.characteristics; track characteristic.id) { @let id =
+          'product-specification-' + characteristic.id; @let error = errors()[characteristic.id] ??
+          null;
+          <osnova-form-field [controlId]="id" [label]="characteristic.name" [error]="error">
+            <textarea
+              pTextarea
+              [id]="id"
+              [formControlName]="characteristic.id"
+              rows="2"
+              [attr.aria-describedby]="id + '-error'"
+              [invalid]="!!error"
+              [attr.aria-invalid]="!!error"
+              (input)="clearError(characteristic.id)"
+            ></textarea>
+          </osnova-form-field>
+          }
+        </div>
+      </div>
+      } @empty {
+      <p>{{ text().productSpecificationsEmpty }}</p>
+      }
+    </section>
     <section class="app-form-section" aria-labelledby="product-gallery-title">
       <h3 id="product-gallery-title">{{ text().productGallery }}</h3>
       <p id="product-gallery-hint">{{ text().productImageHint }}</p>

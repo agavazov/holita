@@ -21,6 +21,7 @@ export const operationPaths = [
   'holita/apps/admin/src/collections/operations.graphql',
   'holita/apps/admin/src/options/operations.graphql',
   'holita/apps/admin/src/products/operations.graphql',
+  'holita/apps/admin/src/characteristics/operations.graphql',
 ];
 export const targets = {
   gateway: {
@@ -37,6 +38,10 @@ export const targets = {
   },
   admin: {
     clients: [
+      {
+        path: 'holita/apps/admin/src/generated/characteristics-operations.ts',
+        operations: ['holita/apps/admin/src/characteristics/operations.graphql'],
+      },
       {
         path: 'holita/apps/admin/src/generated/products-operations.ts',
         operations: ['holita/apps/admin/src/products/operations.graphql'],

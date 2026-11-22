@@ -94,6 +94,48 @@ model OptionValue {
   @@map("optionValue")
 }
 
+model CharacteristicGroup {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  name String @db.VarChar(200)
+  sortOrder Int @default(0)
+  active Boolean @default(true)
+  characteristics Characteristic[]
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, name])
+  @@index([tenantId, branchId, sortOrder, id])
+  @@map("characteristicGroup")
+}
+
+model Characteristic {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  groupId String @db.Uuid
+  group CharacteristicGroup @relation(fields: [tenantId, branchId, groupId], references: [tenantId, branchId, id], onDelete: Restrict)
+  name String @db.VarChar(200)
+  sortOrder Int @default(0)
+  active Boolean @default(true)
+  productValues ProductCharacteristicValue[]
+  @@unique([tenantId, branchId, id])
+  @@index([tenantId, branchId, groupId, sortOrder, id])
+  @@map("characteristic")
+}
+
+model ProductCharacteristicValue {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  productId String @db.Uuid
+  characteristicId String @db.Uuid
+  product Product @relation(fields: [tenantId, branchId, productId], references: [tenantId, branchId, id], onDelete: Cascade)
+  characteristic Characteristic @relation(fields: [tenantId, branchId, characteristicId], references: [tenantId, branchId, id], onDelete: Restrict)
+  value String @db.Text
+  @@id([tenantId, branchId, productId, characteristicId])
+  @@index([tenantId, branchId, characteristicId])
+  @@map("productCharacteristicValue")
+}
+
 model Product {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
@@ -108,6 +150,7 @@ model Product {
   variants ProductVariant[]
   images ProductImage[]
   collectionItems ProductCollectionItem[]
+  characteristicValues ProductCharacteristicValue[]
   legacyPrice Decimal? @map("price") @db.Decimal(12, 2)
   status ProductStatus @default(DRAFT)
   createdAt DateTime @default(now()) @db.Timestamptz(3)

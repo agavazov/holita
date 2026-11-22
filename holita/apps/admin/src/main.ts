@@ -4,6 +4,8 @@ import { BrandEditor } from './brands/brand-editor';
 import { BrandsPage } from './brands/brands-page';
 import { CategoriesPage } from './categories/categories-page';
 import { CategoryEditor } from './categories/category-editor';
+import { CharacteristicGroupEditor } from './characteristics/characteristic-group-editor';
+import { CharacteristicGroupsPage } from './characteristics/characteristic-groups-page';
 import { CollectionEditor } from './collections/collection-editor';
 import { CollectionsPage } from './collections/collections-page';
 import { CustomersPage } from './customers-page';
@@ -107,14 +109,38 @@ void startOperator({
         },
       ],
     },
+    {
+      path: 'characteristic-groups',
+      component: CharacteristicGroupsPage,
+      children: [
+        {
+          path: 'new',
+          component: CharacteristicGroupEditor,
+          data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: ':recordId',
+          component: CharacteristicGroupEditor,
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
     { path: 'customers', component: CustomersPage },
   ],
   navigation: [
     { id: 'products', label: 'products', icon: 'tags', path: 'products' },
     { id: 'categories', label: 'categories', icon: 'th-large', path: 'categories' },
     { id: 'brands', label: 'brands', icon: 'folder', path: 'brands' },
-    { id: 'collections', label: 'collections', icon: 'th-large', path: 'collections' },
+    { id: 'collections', label: 'collections', icon: 'directions', path: 'collections' },
     { id: 'options', label: 'options', icon: 'cog', path: 'options' },
+    {
+      id: 'characteristic-groups',
+      label: 'characteristicGroups',
+      icon: 'id-card',
+      path: 'characteristic-groups',
+    },
     { id: 'customers', label: 'customers', icon: 'users', path: 'customers' },
   ],
 }).catch((error: unknown) => {

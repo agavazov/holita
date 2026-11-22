@@ -72,3 +72,20 @@ query OperatorProductOptions {
     }
   }
 }
+
+query OperatorProductCharacteristics($productId: ID) {
+  productCharacteristics(productId: $productId) {
+    groups {
+      id
+      name
+      characteristics {
+        id
+        name
+      }
+    }
+    values {
+      characteristicId
+      value
+    }
+  }
+}

@@ -46,6 +46,13 @@ query CatalogueProduct($id: ID!) {
       name
     }
   }
+  catalogueProductSpecifications(productId: $id) {
+    name
+    values {
+      name
+      value
+    }
+  }
 }
 query ShopperMe {
   shopperMe {

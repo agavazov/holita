@@ -18,6 +18,7 @@ import { Prisma, type Brand, type Product, type ProductImage } from './generated
 import { brandLogoUrl } from './brands/brand-images.js';
 import { BrandsRepository } from './brands/brands.repository.js';
 import { CategoriesService } from './categories/categories.service.js';
+import { CharacteristicsService } from './characteristics/characteristics.service.js';
 import { CollectionsService } from './collections/collections.service.js';
 import type { CatalogueCategory, CatalogueProduct } from './generated/graphql/storefront-types.js';
 import type { Scope } from './scope.js';
@@ -109,6 +110,7 @@ export class StorefrontService {
     private readonly brands: BrandsRepository,
     private readonly categories: CategoriesService,
     private readonly collections: CollectionsService,
+    private readonly characteristics: CharacteristicsService,
   ) {}
   async shop(context: StorefrontContext): Promise<ShopScope | null> {
     if (!context.branchId || !isUUID(context.branchId)) {
@@ -181,6 +183,9 @@ export class StorefrontService {
     }
     const item = await this.products.publicProduct(scope, id.toLowerCase());
     return item ? catalogueProduct(item, await this.productCategories(scope, [item])) : null;
+  }
+  async productSpecifications(context: StorefrontContext, id: string) {
+    return this.characteristics.publicSpecifications(await this.publicScope(context), id);
   }
   private async productCategories(scope: Scope, products: readonly Product[]) {
     const tree = products.some((product) => product.categoryId)

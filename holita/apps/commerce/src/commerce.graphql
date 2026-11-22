@@ -62,6 +62,11 @@ input ProductInput {
   Ordered replacement. Omit to keep existing images, or pass an empty list to remove them.
   """
   images: [ProductImageInput!]
+  """
+  Patches the listed characteristic values. Blank text clears a value.
+  Omitted IDs and an omitted, null or empty list preserve existing values.
+  """
+  characteristicValues: [ProductCharacteristicValueInput!]
   status: ProductStatus!
   brandId: ID
   categoryId: ID
@@ -182,6 +187,59 @@ type OptionPage {
   offset: Int!
   limit: Int!
 }
+enum CharacteristicGroupSortField {
+  NAME
+  SORT_ORDER
+}
+input CharacteristicGroupSort {
+  field: CharacteristicGroupSortField! = SORT_ORDER
+  direction: SortDirection! = ASC
+}
+input CharacteristicInput {
+  id: ID
+  name: String!
+  sortOrder: Int!
+  active: Boolean!
+}
+input CharacteristicGroupInput {
+  name: String!
+  sortOrder: Int!
+  active: Boolean!
+  "Existing characteristics omitted from this list are retained."
+  characteristics: [CharacteristicInput!]!
+}
+type Characteristic {
+  id: ID!
+  name: String!
+  sortOrder: Int!
+  active: Boolean!
+}
+type CharacteristicGroup {
+  id: ID!
+  name: String!
+  sortOrder: Int!
+  active: Boolean!
+  characteristics: [Characteristic!]!
+}
+type CharacteristicGroupPage {
+  items: [CharacteristicGroup!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+input ProductCharacteristicValueInput {
+  characteristicId: ID!
+  value: String!
+}
+type ProductCharacteristicValue {
+  characteristicId: ID!
+  value: String!
+}
+type ProductCharacteristics {
+  groups: [CharacteristicGroup!]!
+  values: [ProductCharacteristicValue!]!
+}
+
 enum ProductCollectionMode {
   MANUAL
   CATEGORY
@@ -253,6 +311,14 @@ type Query {
   option(id: ID!): Option
   "Shop options and their values for the product editor."
   productOptions: [Option!]!
+  characteristicGroups(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    sort: CharacteristicGroupSort
+  ): CharacteristicGroupPage!
+  characteristicGroup(id: ID!): CharacteristicGroup
+  productCharacteristics(productId: ID): ProductCharacteristics!
   productCollections(
     offset: Int! = 0
     limit: Int! = 20
@@ -272,6 +338,8 @@ type Mutation {
   deleteCategory(id: ID!): Boolean!
   createOption(input: OptionInput!): Option!
   updateOption(id: ID!, input: OptionInput!): Option!
+  createCharacteristicGroup(input: CharacteristicGroupInput!): CharacteristicGroup!
+  updateCharacteristicGroup(id: ID!, input: CharacteristicGroupInput!): CharacteristicGroup!
   createProductCollection(input: ProductCollectionInput!): ProductCollection!
   updateProductCollection(id: ID!, input: ProductCollectionInput!): ProductCollection!
 }

@@ -1,0 +1,44 @@
+fragment OperatorCharacteristicGroupSummary on CharacteristicGroup {
+  id
+  name
+  sortOrder
+  active
+}
+
+query OperatorCharacteristicGroups(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $sort: CharacteristicGroupSort
+) {
+  characteristicGroups(offset: $offset, limit: $limit, search: $search, sort: $sort) {
+    items {
+      ...OperatorCharacteristicGroupSummary
+    }
+    total
+  }
+}
+
+query OperatorCharacteristicGroup($id: ID!) {
+  characteristicGroup(id: $id) {
+    ...OperatorCharacteristicGroupSummary
+    characteristics {
+      id
+      name
+      sortOrder
+      active
+    }
+  }
+}
+
+mutation OperatorCreateCharacteristicGroup($input: CharacteristicGroupInput!) {
+  createCharacteristicGroup(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateCharacteristicGroup($id: ID!, $input: CharacteristicGroupInput!) {
+  updateCharacteristicGroup(id: $id, input: $input) {
+    id
+  }
+}

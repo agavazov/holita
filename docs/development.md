@@ -498,6 +498,13 @@ The public `catalogueCollections` query lists active collections. Use
 products. Manual collections preserve the saved order, and rule-based collections sort by name.
 Products appear only while active and with at least one active variant.
 
+In Admin, open Characteristic groups to define product specifications and set the display order
+and active status of each group and characteristic. In the Product drawer, enter text in
+Specifications. Clearing a value removes it. Deactivating a group or characteristic hides its
+specifications and preserves the saved values. Shoppers see populated groups in the saved order
+on the product detail page. The public graph exposes `catalogueProductSpecifications(productId)`.
+The Sofia demo shop includes Material and Finish values on a ceramic baking dish and an oak bowl.
+
 In Admin, use Options to define reusable options for the selected shop. The drawer lets you set
 the option's status and filter visibility, edit its text values and move them into order. The Sofia
 demo shop includes Colour and Size. The operator graph exposes `options`, `option`, `createOption`

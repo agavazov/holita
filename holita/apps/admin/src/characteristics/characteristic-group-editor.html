@@ -1,0 +1,166 @@
+<osnova-route-drawer
+  [title]="editing ? text().editCharacteristicGroup : text().addCharacteristicGroup"
+  [subtitle]="subtitle()"
+  [state]="state()"
+  [errorText]="text().characteristicGroupsUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="record.reload()"
+>
+  <form id="characteristic-group-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
+    <section class="app-form-section">
+      @let nameError = controlError(form.controls.name, 'name');
+      <osnova-form-field
+        controlId="characteristic-group-name"
+        [label]="text().name"
+        [required]="true"
+        [error]="nameError"
+      >
+        <input
+          pInputText
+          id="characteristic-group-name"
+          formControlName="name"
+          autocomplete="off"
+          aria-required="true"
+          aria-describedby="characteristic-group-name-error"
+          [invalid]="!!nameError"
+          [attr.aria-invalid]="!!nameError"
+          (input)="clearError('name')"
+        />
+      </osnova-form-field>
+      <div class="app-form-grid">
+        @let orderError = controlError(form.controls.sortOrder, 'sortOrder');
+        <osnova-form-field
+          controlId="characteristic-group-sort-order"
+          [label]="text().categorySortOrder"
+          [required]="true"
+          [error]="orderError"
+        >
+          <input
+            pInputText
+            id="characteristic-group-sort-order"
+            type="number"
+            min="0"
+            step="1"
+            formControlName="sortOrder"
+            aria-required="true"
+            aria-describedby="characteristic-group-sort-order-error"
+            [invalid]="!!orderError"
+            [attr.aria-invalid]="!!orderError"
+            (input)="clearError('sortOrder')"
+          />
+        </osnova-form-field>
+        <osnova-form-field controlId="characteristic-group-active" [label]="text().active">
+          <p-toggleswitch
+            inputId="characteristic-group-active"
+            ariaLabelledBy="characteristic-group-active-label"
+            formControlName="active"
+          />
+        </osnova-form-field>
+      </div>
+    </section>
+    <section class="app-form-section" aria-labelledby="characteristic-group-items">
+      <h3 id="characteristic-group-items">{{ text().characteristics }}</h3>
+      @for (item of characteristics.controls; track item; let index = $index) { @let path =
+      'characteristics.' + index; @let nameId = 'characteristic-group-name-' + index; @let orderId =
+      'characteristic-group-sort-order-' + index; @let activeId = 'characteristic-group-active-' +
+      index; @let itemNameError = errors()[path + '.id'] ?? controlError(item.controls.name, path +
+      '.name'); @let itemOrderError = controlError(item.controls.sortOrder, path + '.sortOrder');
+      <div class="app-card" [formGroup]="item">
+        <osnova-form-field
+          [controlId]="nameId"
+          [label]="text().name"
+          [required]="true"
+          [error]="itemNameError"
+        >
+          <input
+            pInputText
+            [id]="nameId"
+            formControlName="name"
+            autocomplete="off"
+            aria-required="true"
+            [attr.aria-describedby]="nameId + '-error'"
+            [invalid]="!!itemNameError"
+            [attr.aria-invalid]="!!itemNameError"
+            (input)="clearError(path + '.name')"
+          />
+        </osnova-form-field>
+        <div class="app-form-grid">
+          <osnova-form-field
+            [controlId]="orderId"
+            [label]="text().categorySortOrder"
+            [required]="true"
+            [error]="itemOrderError"
+          >
+            <input
+              pInputText
+              [id]="orderId"
+              type="number"
+              min="0"
+              step="1"
+              formControlName="sortOrder"
+              aria-required="true"
+              [attr.aria-describedby]="orderId + '-error'"
+              [invalid]="!!itemOrderError"
+              [attr.aria-invalid]="!!itemOrderError"
+              (input)="clearError(path + '.sortOrder')"
+            />
+          </osnova-form-field>
+          <osnova-form-field [controlId]="activeId" [label]="text().active">
+            <p-toggleswitch
+              [inputId]="activeId"
+              [ariaLabelledBy]="activeId + '-label'"
+              formControlName="active"
+            />
+          </osnova-form-field>
+        </div>
+        @if (!item.controls.id.value) {
+        <div>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [text]="true"
+            [disabled]="saving()"
+            (click)="removeCharacteristic(index)"
+          >
+            {{ text().removeCharacteristic }}
+          </button>
+        </div>
+        }
+      </div>
+      }
+      <div>
+        <button
+          pButton
+          id="characteristic-group-add"
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving()"
+          (click)="addCharacteristic()"
+        >
+          {{ text().addCharacteristic }}
+        </button>
+      </div>
+      @if (saveError()) {
+      <p-message severity="error">{{ text().characteristicGroupSaveFailed }}</p-message>
+      }
+    </section>
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="characteristic-group-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+  </div>
+</osnova-route-drawer>

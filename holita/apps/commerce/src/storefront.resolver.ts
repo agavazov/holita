@@ -7,6 +7,7 @@ import type {
   QueryCatalogueCollectionProductsArgs,
   QueryCatalogueCollectionsArgs,
   QueryCatalogueProductArgs,
+  QueryCatalogueProductSpecificationsArgs,
 } from './generated/graphql/storefront-types.js';
 import { StorefrontService, type StorefrontContext } from './storefront.service.js';
 
@@ -27,6 +28,12 @@ export class StorefrontResolver {
     @Args() args: QueryCatalogueProductArgs,
   ) {
     return this.service.product(context, args.id);
+  }
+  @Query('catalogueProductSpecifications') productSpecifications(
+    @Context() context: StorefrontContext,
+    @Args() args: QueryCatalogueProductSpecificationsArgs,
+  ) {
+    return this.service.productSpecifications(context, args.productId);
   }
   @Query('catalogueBrands') brands(
     @Context() context: StorefrontContext,

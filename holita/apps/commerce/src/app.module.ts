@@ -19,6 +19,8 @@ import { CollectionsModule } from './collections/collections.module.js';
 import { CollectionsResolver } from './collections/collections.resolver.js';
 import { OptionsModule } from './options/options.module.js';
 import { OptionsResolver } from './options/options.resolver.js';
+import { CharacteristicsModule } from './characteristics/characteristics.module.js';
+import { CharacteristicsResolver } from './characteristics/characteristics.resolver.js';
 import { ProductsModule } from './products/products.module.js';
 
 @Module({
@@ -28,6 +30,7 @@ import { ProductsModule } from './products/products.module.js';
     CategoriesModule,
     OptionsModule,
     CollectionsModule,
+    CharacteristicsModule,
     CustomersModule,
   ],
   providers: [
@@ -36,12 +39,20 @@ import { ProductsModule } from './products/products.module.js';
     CategoriesResolver,
     OptionsResolver,
     CollectionsResolver,
+    CharacteristicsResolver,
     CustomersResolver,
   ],
 })
 class OperatorModule {}
 @Module({
-  imports: [ProductsModule, BrandsModule, CategoriesModule, CollectionsModule, CustomersModule],
+  imports: [
+    ProductsModule,
+    BrandsModule,
+    CategoriesModule,
+    CollectionsModule,
+    CharacteristicsModule,
+    CustomersModule,
+  ],
   controllers: [BrandImagesController, ProductImagesController],
   providers: [StorefrontResolver, StorefrontService],
 })

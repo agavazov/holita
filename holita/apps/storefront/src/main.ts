@@ -51,6 +51,7 @@ const messages = {
     back: 'Към продуктите',
     productPath: 'Път до продукта',
     productGallery: 'Снимки на продукта',
+    specifications: 'Характеристики',
     productImageNumber: (number: number) => `Снимка ${String(number)}`,
     loading: 'Зареждане…',
     productMissing: 'Продуктът не е намерен.',
@@ -76,6 +77,7 @@ const messages = {
     back: 'Back to products',
     productPath: 'Product breadcrumbs',
     productGallery: 'Product photos',
+    specifications: 'Specifications',
     productImageNumber: (number: number) => `Photo ${String(number)}`,
     loading: 'Loading…',
     productMissing: 'Product not found.',
@@ -312,6 +314,24 @@ class StorefrontApi {
                   <img [src]="logo" alt="" width="144" height="144" />
                 </div>
               }
+              @if (specifications().length) {
+                <section class="product-specifications" aria-labelledby="product-specifications">
+                  <h2 id="product-specifications">{{ t().specifications }}</h2>
+                  @for (group of specifications(); track $index) {
+                    <div>
+                      <h3>{{ group.name }}</h3>
+                      <dl>
+                        @for (specification of group.values; track $index) {
+                          <div>
+                            <dt>{{ specification.name }}</dt>
+                            <dd>{{ specification.value }}</dd>
+                          </div>
+                        }
+                      </dl>
+                    </div>
+                  }
+                </section>
+              }
             </article>
           } @else if (loading()) {
             <p class="shop-state" role="status">{{ t().loading }}</p>
@@ -387,7 +407,11 @@ class StorefrontPage {
   readonly catalogueLoading = signal(false);
   readonly busy = signal(false);
   readonly catalogue = signal<CatalogueQuery['catalogue'] | null>(null);
-  readonly product = signal<CatalogueProductQuery['catalogueProduct']>(null);
+  private readonly productDetail = signal<CatalogueProductQuery | null>(null);
+  readonly product = computed(() => this.productDetail()?.catalogueProduct ?? null);
+  readonly specifications = computed(
+    () => this.productDetail()?.catalogueProductSpecifications ?? [],
+  );
   readonly photoIndex = signal(0);
   readonly description = computed(() => {
     const item = this.product();
@@ -444,10 +468,8 @@ class StorefrontPage {
         await this.loadCatalogue(0);
       }
       if (this.page === 'product') {
-        this.product.set(
-          (await this.api.product(this.route.snapshot.paramMap.get('id') ?? '')).data
-            ?.catalogueProduct ?? null,
-        );
+        const { data } = await this.api.product(this.route.snapshot.paramMap.get('id') ?? '');
+        this.productDetail.set(data ?? null);
       }
       if (this.page === 'account') {
         this.shopper.set((await this.api.me()).data?.shopperMe ?? null);

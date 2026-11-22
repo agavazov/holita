@@ -3,6 +3,7 @@ import { isUUID } from 'class-validator';
 import { GraphQLError } from 'graphql';
 import { createHash } from 'node:crypto';
 import type { Product, ProductInput, QueryProductsArgs } from '../generated/graphql/types.js';
+import { InvalidCharacteristicIdError } from '../characteristics/characteristics.repository.js';
 import { Prisma } from '../generated/prisma/client.js';
 import {
   CommerceRepository,
@@ -78,7 +79,7 @@ function productFields({
   descriptionBg,
   descriptionEn,
   ...input
-}: Omit<ProductInput, 'variants' | 'images'>) {
+}: Omit<ProductInput, 'variants' | 'images' | 'characteristicValues'>) {
   const name = input.name.trim();
   if (!name || Array.from(name).length > 200 || name.includes('\u0000')) {
     throw fieldError('name', 'INVALID_VALUE', 'Product name must contain 1 to 200 characters');
@@ -109,6 +110,36 @@ function invalidReference(path: 'brandId' | 'categoryId') {
     'INVALID_VALUE',
     path === 'brandId' ? 'Choose a brand from this shop' : 'Choose a category from this shop',
   );
+}
+
+function invalidCharacteristicId(
+  index: number,
+  message = 'Choose a characteristic from this shop',
+) {
+  return fieldError(
+    `characteristicValues.${String(index)}.characteristicId`,
+    'INVALID_VALUE',
+    message,
+  );
+}
+
+function characteristicValues(input: ProductInput['characteristicValues']) {
+  const ids = new Set<string>();
+  return (input ?? []).map(({ characteristicId: rawId, value }, index) => {
+    const characteristicId = rawId.toLowerCase();
+    if (!isUUID(characteristicId) || ids.has(characteristicId)) {
+      throw invalidCharacteristicId(index, 'Choose a distinct characteristic from this shop');
+    }
+    if (value.includes('\u0000')) {
+      throw fieldError(
+        `characteristicValues.${String(index)}.value`,
+        'INVALID_VALUE',
+        'Characteristic value contains a null character',
+      );
+    }
+    ids.add(characteristicId);
+    return { characteristicId, value: value.trim() };
+  });
 }
 
 function recordId(id: string): string {
@@ -170,7 +201,13 @@ export class CommerceService {
   private async save(context: RequestContext, input: ProductInput, rawId?: string) {
     const scope = await requireScope(context, true);
     const id = rawId === undefined ? undefined : recordId(rawId);
-    const { variants: requested, images: requestedImages, ...fields } = input;
+    const {
+      variants: requested,
+      images: requestedImages,
+      characteristicValues: requestedValues,
+      ...fields
+    } = input;
+    const values = characteristicValues(requestedValues);
     const data = productFields(fields);
     const variants = await this.variants(scope, requested, id !== undefined);
     const drafts = validateProductImages(requestedImages, id !== undefined);
@@ -188,9 +225,19 @@ export class CommerceService {
           images.push(draft);
         }
       }
-      saved = await this.repository.save(scope, id, data, variants, drafts ? images : undefined);
+      saved = await this.repository.save(
+        scope,
+        id,
+        data,
+        variants,
+        drafts ? images : undefined,
+        values,
+      );
     } catch (error: unknown) {
       await this.imageFiles.remove(scope, newKeys);
+      if (error instanceof InvalidCharacteristicIdError) {
+        throw invalidCharacteristicId(error.index, error.message);
+      }
       if (error instanceof InvalidImageIdError) {
         throw fieldError(`image${String(error.index)}Id`, 'INVALID_IMAGE_ID', error.message);
       }

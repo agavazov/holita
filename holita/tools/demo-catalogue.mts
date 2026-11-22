@@ -79,6 +79,24 @@ export const demoCollections: readonly DemoCollection[] = [
   },
 ];
 
+export const demoCharacteristicGroups = [
+  {
+    id: 1,
+    name: 'Materials',
+    sortOrder: 10,
+    characteristics: [
+      { id: 1, name: 'Material', sortOrder: 10 },
+      { id: 2, name: 'Finish', sortOrder: 20 },
+    ],
+    values: [
+      [51, 1, 'Ceramic'],
+      [51, 2, 'Matte glaze'],
+      [52, 1, 'Oak'],
+      [52, 2, 'Food-safe oil'],
+    ] as const,
+  },
+];
+
 interface DemoBrand {
   readonly id: number;
   readonly name: string;
