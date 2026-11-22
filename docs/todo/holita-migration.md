@@ -24,10 +24,13 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 | Ticket                                                                                           | Wave | Status | Depends on           |
 | ------------------------------------------------------------------------------------------------ | ---- | ------ | -------------------- |
 | [113 Storefront product variant choice](113-holita-storefront-variant-choice.md)                 | 2    | Ready  |                      |
+| [148 Holita storefront polish](148-holita-storefront-polish.md)                                  | 2    | Ready  | 112                  |
 | [114 Shopper cart](114-holita-cart.md)                                                           | 2    | Ready  | 113                  |
 | [115 Checkout form and manual quote](115-holita-checkout-quote.md)                               | 2    | Ready  | 114                  |
 | [116 Checkout order placement](116-holita-place-order.md)                                        | 2    | Ready  | 115                  |
 | [117 Shopper order history](117-holita-shopper-orders.md)                                        | 2    | Ready  | 116                  |
+| [149 Osnova listing override points](149-osnova-listing-mobile.md)                               | 3    | Ready  |                      |
+| [147 Holita Admin polish](147-holita-admin-polish.md)                                            | 3    | Ready  | 149                  |
 | [118 Admin order management](118-holita-admin-order-management.md)                               | 3    | Ready  | 117                  |
 | [128 Order invoices](128-holita-order-invoices.md)                                               | 3    | Ready  | 118                  |
 | [129 Manual order refunds](129-holita-manual-refunds.md)                                         | 3    | Ready  | 118                  |
