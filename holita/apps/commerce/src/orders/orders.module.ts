@@ -8,6 +8,6 @@ import { OrdersService } from './orders.service.js';
 @Module({
   imports: [DatabaseModule, CartModule, CheckoutModule],
   providers: [OrdersRepository, OrdersService],
-  exports: [OrdersService],
+  exports: [OrdersService, OrdersRepository],
 })
 export class OrdersModule {}

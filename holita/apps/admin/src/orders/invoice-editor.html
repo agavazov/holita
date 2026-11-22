@@ -1,0 +1,149 @@
+<osnova-route-drawer
+  size="lg"
+  [title]="text().createInvoice"
+  [subtitle]="order()?.number ?? null"
+  [state]="state()"
+  [errorText]="text().orderUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="record.reload()"
+>
+  @if (canIssue() && order(); as item) {
+  <form id="invoice-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
+    <section class="app-form-section">
+      <p-message severity="info">{{ text().invoiceIssueHint }}</p-message>
+      <div class="app-form-grid">
+        @for (field of documentFields; track field.key) {
+        <ng-container *ngTemplateOutlet="invoiceField; context: { $implicit: field }" />
+        } @let dateError = fieldError('issueDate');
+        <osnova-form-field
+          controlId="invoice-issueDate"
+          [label]="text().invoiceIssueDate"
+          [required]="true"
+          [error]="dateError"
+        >
+          <p-datepicker
+            inputId="invoice-issueDate"
+            formControlName="issueDate"
+            appendTo="body"
+            iconDisplay="input"
+            [showIcon]="true"
+            [fluid]="true"
+            [dateFormat]="format.datePickerFormat()"
+            [invalid]="!!dateError"
+            [pt]="datePickerInputPt('invoice-issueDate', !!dateError)"
+            (onSelect)="clearError('issueDate')"
+            (input)="clearError('issueDate')"
+          />
+        </osnova-form-field>
+      </div>
+    </section>
+    <section class="app-form-section">
+      <h3>{{ text().invoiceIssuer }}</h3>
+      <div class="app-form-grid">
+        @for (field of issuerFields; track field.key) {
+        <ng-container *ngTemplateOutlet="invoiceField; context: { $implicit: field }" />
+        }
+      </div>
+    </section>
+    <section class="app-form-section">
+      <h3>{{ text().invoiceRecipient }}</h3>
+      <div class="app-form-grid">
+        @for (field of recipientFields; track field.key) {
+        <ng-container *ngTemplateOutlet="invoiceField; context: { $implicit: field }" />
+        }
+      </div>
+    </section>
+    <section class="app-form-section">
+      <h3>{{ text().orderItems }}</h3>
+      <dl class="app-facts">
+        @for (line of item.lines; track $index) {
+        <div class="app-facts--wide">
+          <dt>{{ line.label }} · {{ line.sku }}</dt>
+          <dd class="app-num">
+            {{ quantity(line.quantity, language()) }} × {{ amount(line.unitPrice, item.currency,
+            language()) }} · {{ amount(line.lineTotal, item.currency, language()) }}
+          </dd>
+        </div>
+        }
+        <div>
+          <dt>{{ text().orderSubtotal }}</dt>
+          <dd class="app-num">{{ amount(item.subtotal, item.currency, language()) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().orderShippingFee }}</dt>
+          <dd class="app-num">{{ amount(item.shippingFee, item.currency, language()) }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().orderTotal }}</dt>
+          <dd class="app-num">
+            <strong>{{ amount(item.total, item.currency, language()) }}</strong>
+          </dd>
+        </div>
+      </dl>
+    </section>
+    @if (saveError()) {
+    <p-message severity="error">{{ text().invoiceIssueFailed }}</p-message>
+    }
+
+    <ng-template #invoiceField let-field>
+      @let id = 'invoice-' + field.key; @let error = fieldError(field.key);
+      <osnova-form-field
+        [class.app-form-grid--wide]="field.multiline"
+        [controlId]="id"
+        [label]="fieldLabel(field)"
+        [required]="!!field.required"
+        [error]="error"
+      >
+        @if (field.multiline) {
+        <textarea
+          pTextarea
+          rows="3"
+          [id]="id"
+          [formControlName]="field.key"
+          [invalid]="!!error"
+          [attr.aria-invalid]="!!error"
+          [attr.aria-required]="field.required || null"
+          [attr.aria-describedby]="error ? id + '-error' : null"
+          (input)="clearError(field.key)"
+        ></textarea>
+        } @else {
+        <input
+          pInputText
+          [id]="id"
+          [type]="field.type ?? 'text'"
+          [formControlName]="field.key"
+          [invalid]="!!error"
+          [attr.aria-invalid]="!!error"
+          [attr.aria-required]="field.required || null"
+          [attr.aria-describedby]="error ? id + '-error' : null"
+          (input)="clearError(field.key)"
+        />
+        }
+      </osnova-form-field>
+    </ng-template>
+  </form>
+  } @else if (order()) {
+  <p-message severity="info"
+    >{{ alreadyIssued() ? text().invoiceAlreadyIssued : text().invoiceUnavailable }}</p-message
+  >
+  }
+
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ canIssue() ? shared().cancel : shared().close }}
+    </button>
+    @if (canIssue()) {
+    <button pButton type="submit" form="invoice-form" [disabled]="saving()">
+      {{ text().createInvoice }}
+    </button>
+    }
+  </div>
+</osnova-route-drawer>

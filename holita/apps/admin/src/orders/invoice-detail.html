@@ -1,0 +1,182 @@
+<osnova-page-header
+  [title]="title()"
+  [moduleInfo]="text().invoiceInfo"
+  [moduleInfoTitle]="text().invoice"
+  [backLink]="['/', language(), 'orders', id()]"
+  [backLabel]="text().backToOrder"
+  [backQueryParams]="queryParams()"
+  [backFragment]="fragment()"
+/>
+@if (invoice(); as item) {
+<div class="app-card-grid">
+  <section class="app-card" aria-labelledby="invoice-summary">
+    <h2 id="invoice-summary" class="app-card__title">{{ text().orderSummary }}</h2>
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().invoiceIssueDate }}</dt>
+        <dd><time [dateTime]="item.issueDate">{{ date(item.issueDate) }}</time></dd>
+      </div>
+      <div>
+        <dt>{{ text().order }}</dt>
+        <dd>{{ item.orderNumber }}</dd>
+      </div>
+    </dl>
+  </section>
+  <section class="app-card" aria-labelledby="invoice-issuer">
+    <h2 id="invoice-issuer" class="app-card__title">{{ text().invoiceIssuer }}</h2>
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().name }}</dt>
+        <dd>{{ item.issuerName }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().companyId }}</dt>
+        <dd>{{ item.issuerCompanyId }}</dd>
+      </div>
+      @if (item.issuerVatNumber) {
+      <div>
+        <dt>{{ text().vatNumber }}</dt>
+        <dd>{{ item.issuerVatNumber }}</dd>
+      </div>
+      }
+      <div class="app-facts--wide">
+        <dt>{{ text().address }}</dt>
+        <dd class="invoice-address">{{ item.issuerAddress }}</dd>
+      </div>
+    </dl>
+  </section>
+  <section class="app-card" aria-labelledby="invoice-recipient">
+    <h2 id="invoice-recipient" class="app-card__title">{{ text().invoiceRecipient }}</h2>
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().name }}</dt>
+        <dd>{{ item.recipientName }}</dd>
+      </div>
+      @if (item.recipientCompanyId) {
+      <div>
+        <dt>{{ text().companyId }}</dt>
+        <dd>{{ item.recipientCompanyId }}</dd>
+      </div>
+      } @if (item.recipientVatNumber) {
+      <div>
+        <dt>{{ text().vatNumber }}</dt>
+        <dd>{{ item.recipientVatNumber }}</dd>
+      </div>
+      }
+      <div class="app-facts--wide">
+        <dt>{{ text().address }}</dt>
+        <dd class="invoice-address">{{ item.recipientAddress }}</dd>
+      </div>
+      @if (item.recipientEmail) {
+      <div>
+        <dt>{{ text().email }}</dt>
+        <dd>{{ item.recipientEmail }}</dd>
+      </div>
+      } @if (item.recipientPhone) {
+      <div>
+        <dt>{{ text().orderPhone }}</dt>
+        <dd>{{ item.recipientPhone }}</dd>
+      </div>
+      }
+    </dl>
+  </section>
+</div>
+<osnova-table-panel
+  mode="local"
+  mobileIdentityLayout="trailing"
+  [heading]="text().orderItems"
+  [columns]="lineColumns()"
+  tableMinWidth="34rem"
+  [view]="lineView()"
+  [total]="item.lines.length"
+>
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="item.lines"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of lineColumns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="
+            column.kind === 'identity'
+              ? 'var(--app-table-identity-width, ' + column.width + ')'
+              : column.width
+          "
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        @for (column of lineColumns(); track column.id) {
+        <th
+          scope="col"
+          [class]="column.className ?? ''"
+          [class.app-cell-number]="column.kind === 'number'"
+        >
+          {{ column.label }}
+        </th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-line>
+      @let unitPrice = amount(line.unitPrice, item.currency, language()); @let total =
+      amount(line.lineTotal, item.currency, language());
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-cell-identity">
+            <span class="app-table-identity-wrap" [title]="line.description"
+              >{{ line.description }}</span
+            >
+            <span [title]="line.sku">{{ line.sku }}</span>
+            <span class="app-table-mobile-meta app-table-tag-wrap"
+              >{{ text().orderUnitPrice }} {{ unitPrice }}</span
+            >
+          </div>
+        </td>
+        <td class="app-cell-number">{{ quantity(line.quantity, language()) }}</td>
+        <td class="app-cell-number app-table-merged-column" [title]="unitPrice">{{ unitPrice }}</td>
+        <td class="app-cell-number" [title]="total">{{ total }}</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+<section class="app-card" aria-labelledby="invoice-amounts">
+  <h2 id="invoice-amounts" class="app-card__title">{{ text().invoiceAmounts }}</h2>
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().orderSubtotal }}</dt>
+      <dd class="app-num">{{ amount(item.subtotal, item.currency, language()) }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().orderShippingFee }}</dt>
+      <dd class="app-num">{{ amount(item.shippingFee, item.currency, language()) }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().orderTotal }}</dt>
+      <dd class="app-num"><strong>{{ amount(item.total, item.currency, language()) }}</strong></dd>
+    </div>
+  </dl>
+</section>
+} @else if (record.isLoading()) {
+<div class="app-card" role="status" [attr.aria-label]="shared().loading">
+  <p-skeleton width="40%" />
+  <p-skeleton height="var(--p-app-control-height)" />
+</div>
+} @else if (record.error()) {
+<section class="app-card">
+  <osnova-empty-state kind="error" [title]="text().invoiceLoadFailed">
+    <button pButton emptyActions type="button" (click)="record.reload()">
+      {{ shared().retry }}
+    </button>
+  </osnova-empty-state>
+</section>
+} @else {
+<section class="app-card">
+  <osnova-empty-state kind="not-found" [title]="text().invoiceUnavailable" />
+</section>
+}

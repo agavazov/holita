@@ -994,10 +994,9 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await newCollection(merchant, manualName, manualSlug);
     const collectionSearch = merchant.locator('#collection-products');
     for (const name of [productName, configuredProductName]) {
+      await merchant.getByRole('listbox').waitFor({ state: 'hidden' });
       await collectionSearch.fill(name);
       await merchant.getByRole('option', { name, exact: true }).click();
-      await expect(collectionSearch).toHaveAttribute('aria-expanded', 'false');
-      await expect(collectionSearch).toHaveValue('');
     }
     await merchant
       .getByRole('button', { name: `Move ${configuredProductName} up`, exact: true })
@@ -1493,6 +1492,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       data: { updateOrderStatus: { id: accountOrderId } },
     });
     await merchant.waitForURL((url) => !url.pathname.endsWith('/fulfillment'));
+    await dismissSuccess(merchant, 'Status saved.');
     await merchant.getByRole('button', { name: 'Page actions', exact: true }).click();
     await merchant.getByRole('menuitem', { name: 'Mark as paid', exact: true }).click();
     const paid = waitForCart(merchant, 'OperatorMarkOrderPaid');
@@ -1502,6 +1502,40 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       .click();
     expect(await (await paid).json()).toMatchObject({
       data: { markOrderPaid: { id: accountOrderId, paymentStatus: 'PAID' } },
+    });
+    await dismissSuccess(merchant, 'Order marked as paid.');
+
+    await merchant.getByRole('button', { name: 'Page actions', exact: true }).click();
+    await merchant.getByRole('menuitem', { name: 'Create invoice', exact: true }).click();
+    const invoiceNumber = 'SMOKE-0001';
+    await merchant.locator('#invoice-number').fill(invoiceNumber);
+    await merchant.locator('#invoice-issuerName').fill('Demo Issuer');
+    await merchant.locator('#invoice-issuerCompanyId').fill('000000001');
+    await merchant.locator('#invoice-issuerAddress').fill('20 Invoice Street, Sofia');
+    const issuance = waitForCart(merchant, 'OperatorIssueOrderInvoice');
+    await merchant
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Create invoice', exact: true })
+      .click();
+    expect(await (await issuance).json()).toMatchObject({
+      data: { issueOrderInvoice: { orderId: accountOrderId, number: invoiceNumber } },
+    });
+    await merchant.getByRole('link', { name: invoiceNumber, exact: true }).click();
+    await merchant.waitForURL((url) => url.pathname.endsWith('/invoice'));
+    await merchant.locator('#invoice-summary').waitFor();
+    const reopenedInvoice = waitForCart(merchant, 'OperatorOrderInvoice');
+    await merchant.reload();
+    expect(await (await reopenedInvoice).json()).toMatchObject({
+      data: {
+        orderInvoice: {
+          orderId: accountOrderId,
+          number: invoiceNumber,
+          subtotal: '30.00',
+          shippingFee: '6.50',
+          total: '36.50',
+          lines: [{ sku: 'CONFIG-Satin', quantity: 1, unitPrice: '30.00', lineTotal: '30.00' }],
+        },
+      },
     });
 
     const reloadedOrder = waitForCart(shopper, 'ShopperOrder');

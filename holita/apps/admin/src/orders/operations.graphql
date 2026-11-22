@@ -49,6 +49,10 @@ fragment OperatorOrderDetail on Order {
   }
   nextStatuses
   canMarkPaid
+  invoice {
+    id
+    number
+  }
 }
 
 query OperatorOrders($offset: Int!, $limit: Int!, $search: String, $status: OrderStatus) {
@@ -75,5 +79,45 @@ mutation OperatorUpdateOrderStatus($id: ID!, $status: OrderStatus!) {
 mutation OperatorMarkOrderPaid($id: ID!) {
   markOrderPaid(id: $id) {
     ...OperatorOrderDetail
+  }
+}
+
+query OperatorOrderInvoice($orderId: ID!) {
+  orderInvoice(orderId: $orderId) {
+    id
+    orderId
+    orderNumber
+    number
+    issueDate
+    issuerName
+    issuerCompanyId
+    issuerAddress
+    issuerVatNumber
+    recipientName
+    recipientAddress
+    recipientCompanyId
+    recipientVatNumber
+    recipientEmail
+    recipientPhone
+    currency
+    subtotal
+    shippingFee
+    total
+    lines {
+      id
+      description
+      sku
+      quantity
+      unitPrice
+      lineTotal
+    }
+  }
+}
+
+mutation OperatorIssueOrderInvoice($orderId: ID!, $input: IssueOrderInvoiceInput!) {
+  issueOrderInvoice(orderId: $orderId, input: $input) {
+    id
+    orderId
+    number
   }
 }

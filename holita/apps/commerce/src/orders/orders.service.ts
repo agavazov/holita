@@ -94,6 +94,7 @@ function canMarkPaid(order: Order): boolean {
 function operatorDetail(order: OrderDetailRow): OperatorOrder {
   return {
     ...confirmation(order),
+    invoice: order.invoice,
     paidAt: order.paidAt?.toISOString() ?? null,
     statusChanges: order.statusChanges.map(({ fromStatus, toStatus, occurredAt }) => ({
       fromStatus,

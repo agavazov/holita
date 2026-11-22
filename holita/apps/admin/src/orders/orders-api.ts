@@ -4,7 +4,10 @@ import { OperatorLanguage } from '@holita/operator';
 import { DemoSession, OperatorConfig, graphqlOptions, type Language } from '@osnova/ui/app';
 import { HttpLink } from 'apollo-angular/http';
 import {
+  OperatorIssueOrderInvoiceDocument,
   OperatorMarkOrderPaidDocument,
+  OperatorOrderInvoiceDocument,
+  type IssueOrderInvoiceInput,
   OperatorOrderDocument,
   OperatorOrdersDocument,
   OperatorUpdateOrderStatusDocument,
@@ -74,6 +77,39 @@ export class OrdersApi {
         throw new Error('Missing order result');
       }
       return data.order;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async invoice(scope: OrdersScope, orderId: string) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorOrderInvoiceDocument,
+        variables: { orderId },
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing invoice result');
+      }
+      return data.orderInvoice;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async issueInvoice(scope: OrdersScope, orderId: string, input: IssueOrderInvoiceInput) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: OperatorIssueOrderInvoiceDocument,
+        variables: { orderId, input },
+      });
+      if (!data) {
+        throw new Error('Missing issued invoice result');
+      }
+      return data.issueOrderInvoice;
     } finally {
       client.stop();
     }

@@ -86,7 +86,8 @@
           <dd>{{ receipt.paymentMethodLabel }}</dd>
         </div>
       </dl>
-      @if (receipt.paymentInstructions) {
+      @if (receipt.paymentStatus === 'UNPAID' && receipt.status !== 'CANCELLED' && receipt.status
+      !== 'COMPLETED' && receipt.paymentInstructions) {
       <div class="checkout-note">
         <strong>{{ t().paymentInstructions }}</strong>
         <p>{{ receipt.paymentInstructions }}</p>

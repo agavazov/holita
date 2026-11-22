@@ -144,6 +144,7 @@ beforeAll(async () => {
     '20261122110000_order_placement',
     '20261122120000_shopper_order_history',
     '20261122130000_order_management',
+    '20261122140000_order_invoices',
   ]) {
     await connection.query(
       await readFile(
@@ -1542,6 +1543,81 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(await storefront(publicA, readOrder, operatorTarget, token)).toEqual({
     data: { shopperOrder: { ...receipt, status: 'CANCELLED', paymentStatus: 'PAID' } },
   });
+  const issueInvoice = `mutation($orderId:ID!,$input:IssueOrderInvoiceInput!){
+    issueOrderInvoice(orderId:$orderId,input:$input){id orderId number issueDate recipientName subtotal shippingFee total lines{description sku quantity unitPrice lineTotal}}
+  }`;
+  const readInvoice = `query($orderId:ID!){
+    orderInvoice(orderId:$orderId){id orderId number issueDate recipientName subtotal shippingFee total lines{description sku quantity unitPrice lineTotal}}
+  }`;
+  const invoiceInput = {
+    number: 'TEST-0001',
+    issueDate: '2026-11-22',
+    issuerName: 'Invoice issuer',
+    issuerCompanyId: '000000001',
+    issuerAddress: '1 Invoice Street',
+    recipientName: order.contactName,
+    recipientAddress: order.shippingLine1,
+  };
+  const invoiceTarget = { orderId: order.id };
+  const issuance = { ...invoiceTarget, input: invoiceInput };
+  expect(await query(tokens.viewer, publicA, issueInvoice, issuance)).toHaveProperty('errors');
+  const issued = await query(tokens.operator, publicA, issueInvoice, issuance);
+  expect(issued).toMatchObject({
+    data: {
+      issueOrderInvoice: {
+        ...invoiceTarget,
+        number: invoiceInput.number,
+        issueDate: invoiceInput.issueDate,
+        recipientName: order.contactName,
+        subtotal: receipt.subtotal,
+        shippingFee: receipt.shippingFee,
+        total: receipt.total,
+        lines: [{ description: expect.any(String), quantity: expect.any(Number) }],
+      },
+    },
+  });
+  const savedInvoice = await query(tokens.viewer, publicA, readInvoice, invoiceTarget);
+  expect(savedInvoice).toMatchObject({
+    data: { orderInvoice: { ...invoiceTarget, number: invoiceInput.number } },
+  });
+  for (const [credential, branch] of [
+    [tokens.operator, branchB],
+    [tokens.foreign, branchForeign],
+  ] as const) {
+    expect(await query(credential, branch, readInvoice, invoiceTarget)).toEqual({
+      data: { orderInvoice: null },
+    });
+    expect(await query(credential, branch, issueInvoice, issuance)).toMatchObject({
+      errors: [{ message: 'Order not found' }],
+    });
+  }
+  expect(await query(tokens.operator, publicA, issueInvoice, issuance)).toMatchObject({
+    errors: [{ extensions: { code: 'CONFLICT' } }],
+  });
+  expect(
+    await query(tokens.operator, publicA, issueInvoice, { ...issuance, orderId: guestOrder.id }),
+  ).toMatchObject({
+    errors: [
+      {
+        extensions: {
+          code: 'BAD_USER_INPUT',
+          fieldErrors: [{ path: 'number', code: 'INVOICE_NUMBER_USED' }],
+        },
+      },
+    ],
+  });
+  await database.$transaction([
+    database.order.update({
+      where: { ...categoryScope, id: order.id },
+      data: { contactName: 'Changed order contact', total: '999.00' },
+    }),
+    database.orderLine.updateMany({
+      where: { ...categoryScope, orderId: order.id },
+      data: { label: 'Changed order line' },
+    }),
+  ]);
+  expect(await query(tokens.viewer, publicA, readInvoice, invoiceTarget)).toEqual(savedInvoice);
+
   await database.shopperSession.update({
     where: { ...categoryScope, tokenHash: createHash('sha256').update(token).digest('hex') },
     data: { expiresAt: new Date(0) },

@@ -554,7 +554,8 @@ with `quoteCheckout`, using the cart's existing authorization.
 
 After reviewing the total, choose Place order. A change in available stock, prices or selected
 methods prompts you to review the checkout again. The confirmation shows the order's current
-fulfillment and payment status with its saved items, delivery fee and payment instructions.
+fulfillment and payment status with its saved items and delivery fee. Payment instructions are shown
+while the order is unpaid and active.
 Signed-in shoppers can reopen their confirmation in the same shop. Guests can reopen theirs
 in the browser that placed the order.
 The storefront graph uses `placeOrder` with the reviewed cart ID and quote revision, and
@@ -574,6 +575,12 @@ Shipped and Completed. Cancelling before shipment returns the original deduction
 surviving variants once. Use Mark as paid to record manual payment. Cancellation preserves a
 recorded payment. The operator graph exposes `orders`, `order`, `updateOrderStatus` and
 `markOrderPaid`.
+
+On Order Detail, choose Create invoice, enter the invoice number and issuer details, and
+review the recipient and amounts copied from the order. Each shop uses unique invoice numbers.
+Open the issued document from its numbered link on the order. Later changes to the order leave
+the invoice intact. The Sofia demo shipped order has an issued invoice. The operator graph
+exposes `orderInvoice` and `issueOrderInvoice`.
 
 The Product drawer's Descriptions section accepts optional Bulgarian and English plain text.
 The storefront product page shows the selected language when available and falls back to the

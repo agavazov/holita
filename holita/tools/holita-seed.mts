@@ -10,6 +10,7 @@ import {
   demoCategories,
   demoCharacteristicGroups,
   demoCollections,
+  demoInvoice,
   demoOptions,
   demoOrders,
   demoPaymentMethod,
@@ -400,6 +401,7 @@ async function seedCatalogue(): Promise<void> {
     for (const order of demoOrders) {
       await seedShopperOrder(client, tenantId, branchId, order);
     }
+    await seedOrderInvoice(client, tenantId, branchId);
     await client.query('COMMIT');
     console.log(
       `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options, ${String(productsInserted)} products, ${String(collectionsInserted)} collections, ${String(characteristicGroupsInserted)} characteristic groups and ${String(imagesInserted)} product images.`,
@@ -576,6 +578,44 @@ async function seedShopperOrder(
         ],
       );
     }
+  }
+}
+
+async function seedOrderInvoice(client: pg.Client, tenantId: string, branchId: string) {
+  const invoiceId = fixtureId('d7', 1);
+  const orderId = fixtureId('d5', demoInvoice.order);
+  const invoice = await client.query(
+    `INSERT INTO "invoice" ("id", "tenantId", "branchId", "orderId", "orderNumber", "number", "issueDate",
+       "issuerName", "issuerCompanyId", "issuerAddress", "issuerVatNumber",
+       "recipientName", "recipientAddress", "recipientEmail", "recipientPhone", "currency", "subtotal", "shippingFee", "total")
+     SELECT $1, "tenantId", "branchId", "id", "orderNumber", $5, $6, $7, $8, $9, $10,
+       "contactName", concat_ws(chr(10), "shippingLine1", "shippingLine2",
+         "shippingPostalCode" || ' ' || "shippingCity", "shippingCountryCode"),
+       "contactEmail", "contactPhone", "currency", "subtotal", "shippingFee", "total"
+     FROM "order" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $4
+     ON CONFLICT DO NOTHING`,
+    [
+      invoiceId,
+      tenantId,
+      branchId,
+      orderId,
+      demoInvoice.number,
+      demoInvoice.issueDate,
+      demoInvoice.issuerName,
+      demoInvoice.issuerCompanyId,
+      demoInvoice.issuerAddress,
+      demoInvoice.issuerVatNumber,
+    ],
+  );
+  if (invoice.rowCount) {
+    await client.query(
+      `INSERT INTO "invoiceLine" ("id", "tenantId", "branchId", "invoiceId", "sortOrder",
+         "description", "sku", "quantity", "unitPrice", "lineTotal")
+       SELECT ('d8000000-0000-4000-8000-' || lpad(("sortOrder" + 1)::text, 12, '0'))::uuid,
+         "tenantId", "branchId", $1, "sortOrder", "label", "sku", "quantity", "unitPrice", "unitPrice" * "quantity"
+       FROM "orderLine" WHERE "tenantId" = $2 AND "branchId" = $3 AND "orderId" = $4`,
+      [invoiceId, tenantId, branchId, orderId],
+    );
   }
 }
 

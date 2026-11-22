@@ -23,7 +23,6 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 
 | Ticket                                                                                           | Wave | Status | Depends on           |
 | ------------------------------------------------------------------------------------------------ | ---- | ------ | -------------------- |
-| [128 Order invoices](128-holita-order-invoices.md)                                               | 3    | Ready  |                      |
 | [129 Manual order refunds](129-holita-manual-refunds.md)                                         | 3    | Ready  |                      |
 | [119 Manual orders in Admin](119-holita-admin-manual-orders.md)                                  | 3    | Ready  |                      |
 | [120 Admin customer detail](120-holita-customer-detail.md)                                       | 3    | Ready  |                      |

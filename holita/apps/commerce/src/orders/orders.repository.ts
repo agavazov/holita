@@ -14,6 +14,7 @@ function orderLines(scope: Scope) {
 function orderDetail(scope: Scope) {
   return {
     lines: orderLines(scope),
+    invoice: { select: { id: true, number: true } },
     statusChanges: { where: scope, orderBy: { id: 'asc' } },
   } satisfies Prisma.OrderInclude;
 }

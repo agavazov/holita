@@ -15,6 +15,8 @@ import { InventoryEditor } from './inventory/inventory-editor';
 import { InventoryPage } from './inventory/inventory-page';
 import { OptionEditor } from './options/option-editor';
 import { OptionsPage } from './options/options-page';
+import { InvoiceDetail } from './orders/invoice-detail';
+import { InvoiceEditor } from './orders/invoice-editor';
 import { OrderDetail } from './orders/order-detail';
 import { OrderStatusEditor } from './orders/order-status-editor';
 import { OrdersPage } from './orders/orders-page';
@@ -165,10 +167,17 @@ void startOperator({
       ],
     },
     { path: 'orders', component: OrdersPage },
+    { path: 'orders/:recordId/invoice', component: InvoiceDetail },
     {
       path: 'orders/:recordId',
       component: OrderDetail,
       children: [
+        {
+          path: 'create-invoice',
+          component: InvoiceEditor,
+          data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
         {
           path: 'fulfillment',
           component: OrderStatusEditor,

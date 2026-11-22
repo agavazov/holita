@@ -18,6 +18,7 @@ import { HttpLink } from 'apollo-angular/http';
 import {
   AdminShell,
   ModuleInfo,
+  PageRecord,
   OperationToast,
   SignIn,
   UI_LANGUAGE,
@@ -142,14 +143,19 @@ export class OperatorApplication {
   private readonly branchApi = inject(BranchesApi);
   private readonly router = inject(Router);
   private readonly moduleInfo = inject(ModuleInfo);
-  readonly context = computed(() =>
-    this.moduleInfo.info()
-      ? navigationContext(
-          this.navigation(),
-          this.router.lastSuccessfulNavigation()?.finalUrl?.toString() ?? this.router.url,
-        )
-      : null,
-  );
+  private readonly pageRecord = inject(PageRecord);
+  readonly context = computed(() => {
+    if (!this.moduleInfo.info()) {
+      return null;
+    }
+    const context = navigationContext(
+      this.navigation(),
+      this.router.lastSuccessfulNavigation()?.finalUrl?.toString() ?? this.router.url,
+    );
+    const record = this.pageRecord.label();
+    const pageLink = this.pageRecord.pageLink();
+    return context && record ? { ...context, record, ...(pageLink ? { pageLink } : {}) } : context;
+  });
   private readonly messages = inject(MessageService);
 
   constructor() {

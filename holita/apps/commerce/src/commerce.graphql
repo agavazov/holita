@@ -447,6 +447,55 @@ type Order {
   statusChanges: [OrderStatusChange!]!
   nextStatuses: [OrderStatus!]!
   canMarkPaid: Boolean!
+  invoice: InvoiceSummary
+}
+type InvoiceSummary {
+  id: ID!
+  number: String!
+}
+type InvoiceLine {
+  id: ID!
+  description: String!
+  sku: String!
+  quantity: Int!
+  unitPrice: String!
+  lineTotal: String!
+}
+type Invoice {
+  id: ID!
+  orderId: ID!
+  orderNumber: String!
+  number: String!
+  issueDate: String!
+  issuerName: String!
+  issuerCompanyId: String!
+  issuerAddress: String!
+  issuerVatNumber: String
+  recipientName: String!
+  recipientAddress: String!
+  recipientCompanyId: String
+  recipientVatNumber: String
+  recipientEmail: String
+  recipientPhone: String
+  currency: String!
+  subtotal: String!
+  shippingFee: String!
+  total: String!
+  lines: [InvoiceLine!]!
+}
+input IssueOrderInvoiceInput {
+  number: String!
+  issueDate: String!
+  issuerName: String!
+  issuerCompanyId: String!
+  issuerAddress: String!
+  issuerVatNumber: String
+  recipientName: String!
+  recipientAddress: String!
+  recipientCompanyId: String
+  recipientVatNumber: String
+  recipientEmail: String
+  recipientPhone: String
 }
 type Query {
   products(
@@ -502,6 +551,7 @@ type Query {
   productTags(search: String, limit: Int! = 20): [ProductTag!]!
   orders(offset: Int! = 0, limit: Int! = 20, search: String, status: OrderStatus): OrderPage!
   order(id: ID!): Order
+  orderInvoice(orderId: ID!): Invoice
 }
 type Mutation {
   createProduct(input: ProductInput!): Product!
@@ -524,4 +574,5 @@ type Mutation {
   createProductTag(name: String!): ProductTag!
   updateOrderStatus(id: ID!, status: OrderStatus!): Order!
   markOrderPaid(id: ID!): Order!
+  issueOrderInvoice(orderId: ID!, input: IssueOrderInvoiceInput!): Invoice!
 }

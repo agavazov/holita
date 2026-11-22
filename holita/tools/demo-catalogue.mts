@@ -239,6 +239,16 @@ export const demoOrders = [
   },
 ] as const;
 
+export const demoInvoice = {
+  order: 4,
+  number: '0000000001',
+  issueDate: '2026-11-21',
+  issuerName: 'Домашни находки София ООД',
+  issuerCompanyId: '000000001',
+  issuerVatNumber: 'BG000000001',
+  issuerAddress: 'ул. „Керамична работилница“ 12, 1000 София',
+} as const;
+
 interface DemoBrand {
   readonly id: number;
   readonly name: string;

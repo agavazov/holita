@@ -34,6 +34,20 @@
         />
       </dd>
     </div>
+    @if (item.invoice; as invoice) {
+    <div>
+      <dt>{{ text().invoice }}</dt>
+      <dd>
+        <a
+          class="app-link"
+          routerLink="invoice"
+          queryParamsHandling="preserve"
+          [preserveFragment]="true"
+          >{{ invoice.number }}</a
+        >
+      </dd>
+    </div>
+    }
     <div>
       <dt>{{ text().orderSubtotal }}</dt>
       <dd class="app-num">{{ amount(item.subtotal, item.currency, language()) }}</dd>
@@ -228,7 +242,7 @@
 <p-confirmdialog
   appendTo="body"
   [pt]="confirmPt()"
-  [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }"
+  [style]="{ width: 'min(28rem, calc(100vw - 2 * var(--p-app-space-4)))' }"
 >
   <ng-template #message>
     <div id="mark-order-paid-message" class="app-stack">

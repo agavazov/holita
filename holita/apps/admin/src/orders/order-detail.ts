@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { OperatorLanguage, operatorStrings } from '@holita/operator';
 import {
   EmptyState,
@@ -19,6 +19,7 @@ import {
   fieldErrors,
   formatNumber,
   injectDisplayFormat,
+  injectPageRecord,
   interpolate,
   tableView,
   uiMessages,
@@ -54,6 +55,7 @@ type OrderDetailParams = { scope: NonNullable<ReturnType<OrdersApi['scope']>>; i
     EmptyState,
     Message,
     PageHeader,
+    RouterLink,
     RouterOutlet,
     Skeleton,
     TableModule,
@@ -136,6 +138,16 @@ export class OrderDetail {
       ...(order.canMarkPaid
         ? [{ id: 'paid', label: this.text().markOrderPaid, primary: !canUpdate, disabled }]
         : []),
+      ...(!order.invoice
+        ? [
+            {
+              id: 'create-invoice',
+              label: this.text().createInvoice,
+              primary: !canUpdate && !order.canMarkPaid,
+              disabled,
+            },
+          ]
+        : []),
     ];
   });
   protected readonly lineColumns = computed<readonly TableColumn[]>(() => [
@@ -146,7 +158,7 @@ export class OrderDetail {
       kind: 'identity',
       className: 'app-col-identity',
     },
-    { id: 'quantity', label: this.text().orderQuantity, width: '5rem', kind: 'number' },
+    { id: 'quantity', label: this.text().orderQuantity, width: '4rem', kind: 'number' },
     {
       id: 'unitPrice',
       label: this.text().orderUnitPrice,
@@ -154,7 +166,7 @@ export class OrderDetail {
       kind: 'number',
       className: 'app-table-merged-column',
     },
-    { id: 'total', label: this.text().orderTotal, width: '7.5rem', kind: 'number' },
+    { id: 'total', label: this.text().orderTotal, width: '6.5rem', kind: 'number' },
   ]);
   protected readonly linesMinWidth = '34rem';
   protected readonly lineView = computed(() =>
@@ -177,21 +189,33 @@ export class OrderDetail {
   protected readonly drawerHost: DrawerHost = {
     saved: ({ message, recordId }) => {
       if (recordId === this.id()) {
-        this.messages.add({ severity: 'success', summary: message });
+        if (message) {
+          this.messages.add({ severity: 'success', summary: message });
+        }
         this.record.reload();
       }
     },
   };
 
   constructor() {
+    injectPageRecord(
+      () => this.order()?.number ?? null,
+      () => {
+        const fragment = this.fragment();
+        return this.router.createUrlTree(['/', this.language(), 'orders'], {
+          queryParams: this.queryParams(),
+          ...(fragment ? { fragment } : {}),
+        });
+      },
+    );
     this.destroyRef.onDestroy(() => {
       this.confirmAbort.abort();
     });
   }
 
   protected async run({ id }: MenuChoice): Promise<void> {
-    if (id === 'status') {
-      void this.router.navigate(['fulfillment'], {
+    if (id === 'status' || id === 'create-invoice') {
+      void this.router.navigate([id === 'status' ? 'fulfillment' : id], {
         relativeTo: this.route,
         queryParamsHandling: 'preserve',
         preserveFragment: true,

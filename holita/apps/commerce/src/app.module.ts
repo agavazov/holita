@@ -8,6 +8,8 @@ import { CartModule } from './cart/cart.module.js';
 import { CartResolver } from './cart/cart.resolver.js';
 import { CheckoutModule } from './checkout/checkout.module.js';
 import { CheckoutResolver } from './checkout/checkout.resolver.js';
+import { InvoicesModule } from './invoices/invoices.module.js';
+import { InvoicesResolver } from './invoices/invoices.resolver.js';
 import { OperatorOrdersResolver } from './orders/operator-orders.resolver.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { OrdersResolver } from './orders/orders.resolver.js';
@@ -50,6 +52,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     TagsModule,
     CustomersModule,
     OrdersModule,
+    InvoicesModule,
   ],
   providers: [
     CommerceResolver,
@@ -63,6 +66,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     TagsResolver,
     CustomersResolver,
     OperatorOrdersResolver,
+    InvoicesResolver,
   ],
 })
 class OperatorModule {}
