@@ -1,6 +1,6 @@
 # 113 Storefront product variant choice
 
-**Status:** Ready after [111](111-holita-inventory.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

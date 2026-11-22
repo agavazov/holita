@@ -183,7 +183,10 @@ async function seedCatalogue(): Promise<void> {
           continue;
         }
         productsInserted += product.rowCount;
-        for (const [sortOrder, [sku, variantPrice, quantity, colour]] of variants.entries()) {
+        for (const [
+          sortOrder,
+          [sku, variantPrice, quantity, colour, inventoryTracked],
+        ] of variants.entries()) {
           const variantId = fixtureId('92', id * 10 + sortOrder);
           const optionValueId = colour === undefined ? null : fixtureId('82', colour);
           const key = createHash('sha256')
@@ -201,7 +204,7 @@ async function seedCatalogue(): Promise<void> {
               sku,
               variantPrice,
               quantity,
-              !!configuredVariants,
+              inventoryTracked ?? !!configuredVariants,
               key,
               sortOrder,
             ],

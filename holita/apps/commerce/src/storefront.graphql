@@ -33,6 +33,8 @@ type CatalogueProduct {
   descriptionEn: String
   "Lowest active variant price."
   price: String!
+  "Whether at least one active variant can be sold."
+  available: Boolean!
   brand: CatalogueBrand
   category: CatalogueCategory
   "The visible categories from the root through the product's category."

@@ -1,0 +1,145 @@
+<osnova-page-header [title]="text().inventory" [moduleInfo]="text().inventoryInfo" />
+@if (scope()) {
+<osnova-table-panel
+  #panel
+  [heading]="text().inventoryItems"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
+  [view]="view()"
+  [total]="page()?.total ?? null"
+  [busy]="list.isLoading()"
+  [errorText]="text().inventoryLoadFailed"
+  [emptyTitle]="text().inventoryEmpty"
+  [emptyDescription]="text().inventoryEmptyDescription"
+  [page]="pagination()"
+  [actionContext]="params()"
+  [actions]="actions()"
+  (action)="run($event)"
+  (pageChange)="url.setPage($event)"
+  (retry)="list.reload()"
+  (clearFilters)="url.clearFilters()"
+>
+  <osnova-filter-builder
+    panelActions
+    [searchLabel]="text().inventorySearch"
+    [search]="url.searchDraft()"
+    [searchError]="url.searchError() ? shared().searchTooManyWords : null"
+    [fields]="filterFields()"
+    [conditions]="conditions()"
+    [maxConditions]="filterFields().length"
+    (searchChange)="url.editSearch($event)"
+    (conditionsChange)="changeConditions($event)"
+  >
+    <osnova-list-sort-menu
+      filterActions
+      [fields]="sortFields()"
+      [sort]="sort()"
+      (sortChange)="changeSort($event)"
+    />
+  </osnova-filter-builder>
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="page()?.items ?? []"
+    [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    [sortField]="sort().field"
+    [sortOrder]="sort().direction === 'asc' ? 1 : -1"
+    (onLazyLoad)="tableSort($event)"
+    dataKey="id"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="
+            column.kind === 'identity'
+              ? 'var(--app-table-identity-width, ' + column.width + ')'
+              : column.width
+          "
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity" pSortableColumn="PRODUCT_NAME">
+          {{ text().inventoryProduct }} <p-sort-icon field="PRODUCT_NAME" />
+        </th>
+        <th scope="col" class="app-cell-number" pSortableColumn="QUANTITY">
+          {{ text().variantQuantity }} <p-sort-icon field="QUANTITY" />
+        </th>
+        <th scope="col">{{ text().inventoryTracking }}</th>
+        <th scope="col" pSortableColumn="SKU">
+          {{ text().variantSku }} <p-sort-icon field="SKU" />
+        </th>
+        @if (canWrite()) {
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ shared().pageHeader.actions }}</span>
+        </th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-item>
+      @let row = record(item); @let label = variant(item); @let amount = quantity(item.quantity);
+      @let tracking = item.inventoryTracked ? text().variantTracked : text().variantUntracked;
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-cell-identity">
+            @if (canWrite() && item.inventoryTracked) {
+            <button
+              type="button"
+              class="app-link"
+              [title]="item.productName"
+              [attr.aria-label]="text().inventoryAdjust + ' · ' + row.label"
+              (click)="panel.run('adjust', [row], $event.currentTarget)"
+            >
+              {{ item.productName }}
+            </button>
+            } @else {
+            <span [title]="item.productName">{{ item.productName }}</span>
+            }
+            <span [title]="label">{{ label }}</span>
+          </div>
+          @if (canWrite() && item.inventoryTracked) {
+          <div class="app-table-mobile-actions">
+            <osnova-row-actions
+              [actions]="actions()"
+              [record]="row"
+              (choose)="panel.run($event.action, [row], $event.origin)"
+            />
+          </div>
+          }
+        </td>
+        <td class="app-cell-number" [title]="amount">{{ amount }}</td>
+        <td>
+          <div class="app-cell-status">
+            <p-tag
+              [severity]="tone(item.inventoryTracked ? 'info' : 'neutral')"
+              [value]="tracking"
+            />
+          </div>
+        </td>
+        <td><span class="app-cell-truncate" [title]="item.sku">{{ item.sku }}</span></td>
+        @if (canWrite()) {
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          @if (item.inventoryTracked) {
+          <osnova-row-actions
+            [actions]="actions()"
+            [record]="row"
+            (choose)="panel.run($event.action, [row], $event.origin)"
+          />
+          }
+        </td>
+        }
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+} @else {
+<p-message severity="info">{{ text().noShop }}</p-message>
+}
+<router-outlet [routerOutletData]="drawerHost" />

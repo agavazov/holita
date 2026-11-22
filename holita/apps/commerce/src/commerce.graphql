@@ -25,7 +25,8 @@ input ProductVariantInput {
   id: ID
   sku: String!
   price: String!
-  quantity: Int!
+  "Initial quantity for a new tracked variant. Existing stock is adjusted through Inventory."
+  quantity: Int
   inventoryTracked: Boolean!
   active: Boolean!
   "One value from each option used by this product. Leave empty for a simple product."
@@ -94,6 +95,39 @@ type Product {
 }
 type ProductPage {
   items: [Product!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+enum InventorySortField {
+  PRODUCT_NAME
+  SKU
+  QUANTITY
+}
+input InventorySort {
+  field: InventorySortField! = PRODUCT_NAME
+  direction: SortDirection! = ASC
+}
+input InventoryFilter {
+  inventoryTracked: Boolean
+  "True restricts results to tracked variants with zero stock."
+  outOfStock: Boolean
+}
+type InventoryOptionValue {
+  optionName: String!
+  label: String!
+}
+type InventoryVariant {
+  id: ID!
+  productId: ID!
+  productName: String!
+  sku: String!
+  inventoryTracked: Boolean!
+  quantity: Int!
+  optionValues: [InventoryOptionValue!]!
+}
+type InventoryPage {
+  items: [InventoryVariant!]!
   total: Int!
   offset: Int!
   limit: Int!
@@ -350,6 +384,14 @@ type Query {
     sort: ProductSort
   ): ProductPage!
   product(id: ID!): Product
+  inventory(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    filter: InventoryFilter
+    sort: InventorySort
+  ): InventoryPage!
+  inventoryVariant(id: ID!): InventoryVariant
   customers: [Customer!]!
   brands(offset: Int! = 0, limit: Int! = 20, search: String, sort: BrandSort): BrandPage!
   brand(id: ID!): Brand
@@ -389,6 +431,7 @@ type Query {
 type Mutation {
   createProduct(input: ProductInput!): Product!
   updateProduct(id: ID!, input: ProductInput!): Product!
+  updateInventoryQuantity(id: ID!, quantity: Int!): InventoryVariant!
   createBrand(input: BrandInput!): Brand!
   updateBrand(id: ID!, input: BrandInput!): Brand!
   deleteBrand(id: ID!): Boolean!

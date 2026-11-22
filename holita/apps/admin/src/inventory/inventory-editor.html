@@ -1,0 +1,94 @@
+<osnova-route-drawer
+  [title]="canAdjust() || !variant() ? text().inventoryAdjust : text().inventory"
+  [subtitle]="variant()?.productName ?? null"
+  [state]="state()"
+  [errorText]="text().inventoryLoadFailed"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  @if (variant(); as item) {
+  <div class="app-form-section">
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().inventoryVariant }}</dt>
+        <dd>{{ label() }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().variantSku }}</dt>
+        <dd>{{ item.sku }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().inventoryTracking }}</dt>
+        <dd>
+          <p-tag
+            [severity]="tone(item.inventoryTracked ? 'info' : 'neutral')"
+            [value]="item.inventoryTracked ? text().variantTracked : text().variantUntracked"
+          />
+        </dd>
+      </div>
+      @if (!canAdjust()) {
+      <div>
+        <dt>{{ text().variantQuantity }}</dt>
+        <dd>{{ quantityText(item.quantity) }}</dd>
+      </div>
+      }
+    </dl>
+    @if (!item.inventoryTracked) {
+    <p-message severity="warn">{{ text().inventoryTrackingRequired }}</p-message>
+    }
+  </div>
+  } @if (canAdjust()) {
+  <form
+    id="inventory-editor-form"
+    #editorForm
+    class="app-form-section"
+    [formGroup]="form"
+    (ngSubmit)="save()"
+  >
+    <osnova-form-field
+      controlId="inventory-quantity"
+      [label]="text().variantQuantity"
+      [hint]="text().inventoryQuantityHint"
+      [required]="true"
+      [error]="quantityError()"
+    >
+      <input
+        pInputText
+        id="inventory-quantity"
+        type="number"
+        inputmode="numeric"
+        min="0"
+        [max]="maxQuantity"
+        step="1"
+        formControlName="quantity"
+        aria-required="true"
+        aria-describedby="inventory-quantity-hint inventory-quantity-error"
+        [invalid]="!!quantityError()"
+        [attr.aria-invalid]="!!quantityError()"
+        (input)="clearError()"
+      />
+    </osnova-form-field>
+    @if (saveError()) {
+    <p-message severity="error">{{ text().inventorySaveFailed }}</p-message>
+    }
+  </form>
+  }
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ canAdjust() ? shared().cancel : shared().close }}
+    </button>
+    @if (canAdjust()) {
+    <button pButton type="submit" form="inventory-editor-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+    }
+  </div>
+</osnova-route-drawer>

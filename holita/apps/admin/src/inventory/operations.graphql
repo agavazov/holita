@@ -1,0 +1,38 @@
+fragment OperatorInventoryVariantFields on InventoryVariant {
+  id
+  productName
+  sku
+  inventoryTracked
+  quantity
+  optionValues {
+    optionName
+    label
+  }
+}
+
+query OperatorInventory(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $filter: InventoryFilter
+  $sort: InventorySort
+) {
+  inventory(offset: $offset, limit: $limit, search: $search, filter: $filter, sort: $sort) {
+    items {
+      ...OperatorInventoryVariantFields
+    }
+    total
+  }
+}
+
+query OperatorInventoryVariant($id: ID!) {
+  inventoryVariant(id: $id) {
+    ...OperatorInventoryVariantFields
+  }
+}
+
+mutation OperatorUpdateInventoryQuantity($id: ID!, $quantity: Int!) {
+  updateInventoryQuantity(id: $id, quantity: $quantity) {
+    id
+  }
+}

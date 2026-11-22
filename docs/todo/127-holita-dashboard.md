@@ -1,6 +1,6 @@
 # 127 Admin shop dashboard
 
-**Status:** Ready after [111](111-holita-inventory.md), [118](118-holita-admin-order-management.md), [120](120-holita-customer-detail.md). **Product:** Holita.
+**Status:** Ready after [118](118-holita-admin-order-management.md), [120](120-holita-customer-detail.md). **Product:** Holita.
 
 ## Background
 

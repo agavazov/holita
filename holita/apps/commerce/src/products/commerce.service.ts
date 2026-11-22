@@ -320,7 +320,7 @@ export class CommerceService {
           id: rawId,
           sku: rawSku,
           price,
-          quantity,
+          quantity: initialQuantity,
           inventoryTracked,
           active,
           optionValueIds: values,
@@ -350,12 +350,21 @@ export class CommerceService {
             'Enter a non-negative price with up to two decimal places',
           );
         }
+        const quantity = initialQuantity ?? 0;
         if (!Number.isInteger(quantity) || quantity < 0 || quantity > 2_147_483_647) {
           throw variantError(
             index,
             'quantity',
             'INVALID_VALUE',
             'Enter a non-negative whole quantity',
+          );
+        }
+        if (!id && !inventoryTracked && quantity !== 0) {
+          throw variantError(
+            index,
+            'quantity',
+            'INVENTORY_TRACKING_REQUIRED',
+            'Enable inventory tracking to set an initial quantity',
           );
         }
         const optionValueIds = values.map((value) => value.toLowerCase()).sort();

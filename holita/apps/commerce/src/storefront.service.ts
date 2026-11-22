@@ -94,6 +94,9 @@ function catalogueProduct(
     descriptionBg: item.descriptionBg,
     descriptionEn: item.descriptionEn,
     price: variant.price.toFixed(2),
+    available: item.variants.some(
+      ({ inventoryTracked, quantity }) => !inventoryTracked || quantity > 0,
+    ),
     brand: item.brand?.status === 'ACTIVE' ? catalogueBrand(item.brand) : null,
     category: category ?? null,
     categoryPath: categoryPath.reverse(),

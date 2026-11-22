@@ -113,7 +113,7 @@ function variantForm(variant?: Variant) {
       validators: [textValidator(13, { required: true }), patternValidator(pricePattern)],
     }),
     quantity: new FormControl<number | null>(variant?.quantity ?? 0, {
-      validators: [integerValidator(0, 2_147_483_647, { required: true })],
+      validators: variant ? [] : [integerValidator(0, 2_147_483_647, { required: true })],
     }),
     inventoryTracked: new FormControl(variant?.inventoryTracked ?? false, { nonNullable: true }),
     active: new FormControl(variant?.active ?? true, { nonNullable: true }),
@@ -631,6 +631,18 @@ export class ProductEditor {
     this.variantsChanged('product-variant-values-' + String(this.variants.length - 1));
   }
 
+  protected changeTracking(index: number): void {
+    const { id, inventoryTracked, quantity } = this.variants.at(index).controls;
+    if (!id.value && !inventoryTracked.value) {
+      quantity.reset(0);
+      this.clearError(this.path(index, 'quantity'));
+    }
+  }
+
+  protected quantityText(quantity: number | null): string {
+    return formatNumber(quantity, this.language.value());
+  }
+
   protected removeVariant(index: number): void {
     this.variants.removeAt(index);
     this.variantsChanged('product-add-variant');
@@ -690,7 +702,7 @@ export class ProductEditor {
       ...variant,
       ...(id ? { id } : {}),
       price: price.replace(',', '.'),
-      quantity: quantity ?? 0,
+      ...(!id && variant.inventoryTracked ? { quantity: quantity ?? 0 } : {}),
     }));
     this.saving.set(true);
     try {

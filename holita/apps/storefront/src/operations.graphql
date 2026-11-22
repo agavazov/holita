@@ -14,6 +14,7 @@ query Catalogue($offset: Int!, $limit: Int!) {
       id
       name
       price
+      available
       coverImage {
         url
         altText
@@ -39,6 +40,7 @@ query CatalogueProduct($id: ID!) {
     descriptionBg
     descriptionEn
     price
+    available
     images {
       url
       altText

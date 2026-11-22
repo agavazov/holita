@@ -11,6 +11,8 @@ import { CharacteristicGroupsPage } from './characteristics/characteristic-group
 import { CollectionEditor } from './collections/collection-editor';
 import { CollectionsPage } from './collections/collections-page';
 import { CustomersPage } from './customers-page';
+import { InventoryEditor } from './inventory/inventory-editor';
+import { InventoryPage } from './inventory/inventory-page';
 import { OptionEditor } from './options/option-editor';
 import { OptionsPage } from './options/options-page';
 import { ProductEditor } from './products/product-editor';
@@ -34,6 +36,18 @@ void startOperator({
         {
           path: ':recordId',
           component: ProductEditor,
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
+    {
+      path: 'inventory',
+      component: InventoryPage,
+      children: [
+        {
+          path: ':recordId',
+          component: InventoryEditor,
           data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
           canDeactivate: [leaveDrawer],
         },
@@ -151,6 +165,7 @@ void startOperator({
   ],
   navigation: [
     { id: 'products', label: 'products', icon: 'tags', path: 'products' },
+    { id: 'inventory', label: 'inventory', icon: 'folder', path: 'inventory' },
     { id: 'categories', label: 'categories', icon: 'th-large', path: 'categories' },
     { id: 'brands', label: 'brands', icon: 'folder', path: 'brands' },
     { id: 'collections', label: 'collections', icon: 'directions', path: 'collections' },

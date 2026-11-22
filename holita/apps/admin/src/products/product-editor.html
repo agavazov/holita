@@ -486,7 +486,7 @@
       trackingId = 'product-variant-tracking-' + index; @let activeId = 'product-variant-active-' +
       index; @let valuesError = variantError(index, 'optionValueIds'); @let skuError =
       variantError(index, 'sku'); @let priceError = variantError(index, 'price'); @let quantityError
-      = variantError(index, 'quantity');
+      = variantError(index, 'quantity'); @let retained = !!variant.controls.id.value;
       <div
         class="app-card"
         role="group"
@@ -580,9 +580,35 @@
               (input)="clearError(path(index, 'price'))"
             />
           </osnova-form-field>
+          <osnova-form-field [controlId]="trackingId" [label]="text().variantInventory">
+            <p-select
+              [inputId]="trackingId"
+              [ariaLabelledBy]="trackingId + '-label'"
+              formControlName="inventoryTracked"
+              [options]="trackingOptions()"
+              optionLabel="label"
+              optionValue="value"
+              (onChange)="changeTracking(index)"
+            />
+          </osnova-form-field>
+          @if (retained) {
           <osnova-form-field
             [controlId]="quantityId"
             [label]="text().variantQuantity"
+            [hint]="variant.controls.inventoryTracked.value ? text().inventoryAdjustProductHint : null"
+          >
+            <input
+              pInputText
+              [id]="quantityId"
+              [value]="quantityText(variant.controls.quantity.value)"
+              [attr.aria-describedby]="variant.controls.inventoryTracked.value ? quantityId + '-hint' : null"
+              readonly
+            />
+          </osnova-form-field>
+          } @else if (variant.controls.inventoryTracked.value) {
+          <osnova-form-field
+            [controlId]="quantityId"
+            [label]="text().inventoryInitialQuantity"
             [required]="true"
             [error]="quantityError"
           >
@@ -592,6 +618,7 @@
               formControlName="quantity"
               type="number"
               min="0"
+              max="2147483647"
               step="1"
               inputmode="numeric"
               aria-required="true"
@@ -601,16 +628,7 @@
               (input)="clearError(path(index, 'quantity'))"
             />
           </osnova-form-field>
-          <osnova-form-field [controlId]="trackingId" [label]="text().variantInventory">
-            <p-select
-              [inputId]="trackingId"
-              [ariaLabelledBy]="trackingId + '-label'"
-              formControlName="inventoryTracked"
-              [options]="trackingOptions()"
-              optionLabel="label"
-              optionValue="value"
-            />
-          </osnova-form-field>
+          }
           <osnova-form-field [controlId]="activeId" [label]="text().variantStatus">
             <p-select
               [inputId]="activeId"

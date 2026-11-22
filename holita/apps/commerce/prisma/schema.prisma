@@ -294,6 +294,7 @@ model ProductVariant {
   @@unique([tenantId, branchId, sku])
   @@unique([tenantId, branchId, productId, combinationKey], map: "productVariant_product_combination_key")
   @@index([tenantId, branchId, productId, active, price])
+  @@index([tenantId, branchId, inventoryTracked, quantity])
   @@map("productVariant")
 }
 

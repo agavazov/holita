@@ -513,9 +513,14 @@ and `updateOption`. To delete a value used by a product variant, first remove it
 In Admin, open a product and edit its Variants section. Leave option values empty for the
 default variant of a simple product. For a configurable product, add one row per combination
 and choose one value from each of the same options in every row. Each variant has a shop-unique
-SKU, price, quantity, inventory tracking and status. The storefront lists active products with
-an active variant and uses the lowest active variant price on cards and detail pages. The Sofia
-demo shop has a tracked ceramic casserole and a two-colour cast-iron pan.
+SKU, price, inventory tracking and status. Set an initial quantity when adding a tracked variant.
+For a saved variant, open Inventory, search by product name or SKU, and choose Adjust quantity
+to set its stock count. Filter by tracking status or show only tracked variants with zero stock.
+
+The storefront lists active products with an active variant and uses the lowest active variant
+price on cards and detail pages. The public `CatalogueProduct.available` field is true when
+at least one active variant has stock or sells without inventory tracking. Sold-out products
+remain visible. The Sofia demo shop includes stocked, sold-out and untracked variants.
 
 The Product drawer's Descriptions section accepts optional Bulgarian and English plain text.
 The storefront product page shows the selected language when available and falls back to the

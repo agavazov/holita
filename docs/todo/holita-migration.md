@@ -23,9 +23,8 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 
 | Ticket                                                                                           | Wave | Status | Depends on           |
 | ------------------------------------------------------------------------------------------------ | ---- | ------ | -------------------- |
-| [111 Inventory list and adjustments](111-holita-inventory.md)                                    | 1    | Ready  |                      |
-| [112 Storefront catalogue browsing](112-holita-storefront-browsing.md)                           | 2    | Ready  | 111                  |
-| [113 Storefront product variant choice](113-holita-storefront-variant-choice.md)                 | 2    | Ready  | 111                  |
+| [112 Storefront catalogue browsing](112-holita-storefront-browsing.md)                           | 2    | Ready  |                      |
+| [113 Storefront product variant choice](113-holita-storefront-variant-choice.md)                 | 2    | Ready  |                      |
 | [114 Shopper cart](114-holita-cart.md)                                                           | 2    | Ready  | 113                  |
 | [115 Checkout form and manual quote](115-holita-checkout-quote.md)                               | 2    | Ready  | 114                  |
 | [116 Checkout order placement](116-holita-place-order.md)                                        | 2    | Ready  | 115                  |
@@ -41,7 +40,7 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 | [124 Shop blog](124-holita-blog.md)                                                              | 3    | Ready  |                      |
 | [125 Shop navigation menus](125-holita-navigation.md)                                            | 3    | Ready  | 112, 123, 124        |
 | [126 General shop settings](126-holita-general-settings.md)                                      | 3    | Ready  |                      |
-| [127 Admin shop dashboard](127-holita-dashboard.md)                                              | 3    | Ready  | 111, 118, 120        |
+| [127 Admin shop dashboard](127-holita-dashboard.md)                                              | 3    | Ready  | 118, 120             |
 | [131 Establish the Sales subgraph](131-holita-sales-sales-service.md)                            | 4    | Ready  |                      |
 | [132 Manage prospect records](132-holita-sales-leads.md)                                         | 4    | Ready  | 131                  |
 | [133 Manage lead contacts](133-holita-sales-contacts.md)                                         | 4    | Ready  | 132                  |

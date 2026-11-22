@@ -673,12 +673,22 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.getByRole('option', { name: badgeName, exact: true }).click();
     await merchant.getByRole('heading', { name: 'Badges and tags', exact: true }).click();
     await merchant.locator('#product-tag-search').fill(tagName);
+    const tagCreated = merchant.waitForResponse(
+      (response) =>
+        response.request().postData()?.includes('"operationName":"OperatorCreateProductTag"') ===
+        true,
+    );
     await merchant.getByRole('button', { name: 'Add tag', exact: true }).click();
-    await expect(merchant.locator('#product-tag-search')).toBeEmpty();
+    expect(await (await tagCreated).json()).toMatchObject({
+      data: { createProductTag: { name: tagName } },
+    });
     await merchant.getByRole('textbox', { name: 'Finish', exact: true }).fill('Matte glaze');
     await merchant.getByRole('textbox', { name: 'Material', exact: true }).fill('Ceramic');
     await merchant.locator('#product-variant-sku-0').fill('SMOKE-001');
     await merchant.locator('#product-variant-price-0').fill('25.50');
+    await merchant.locator('#product-variant-tracking-0').click();
+    await merchant.getByRole('option', { name: 'Tracked', exact: true }).click();
+    await merchant.locator('#product-variant-quantity-0').fill('1');
     await merchant.locator('#product-status').click();
     await merchant.getByRole('option', { name: 'Active', exact: true }).click();
     await merchant.locator('#product-brand').click();
@@ -736,6 +746,8 @@ test('staff creates a merchant and its administrator creates a product', async (
       await merchant.locator(`#product-variant-sku-${String(index)}`).fill(`CONFIG-${label}`);
       await merchant.locator(`#product-variant-price-${String(index)}`).fill(price);
     }
+    await merchant.locator('#product-variant-tracking-0').click();
+    await merchant.getByRole('option', { name: 'Tracked', exact: true }).click();
     await merchant.locator('#product-status').click();
     await merchant.getByRole('option', { name: 'Active', exact: true }).click();
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
@@ -749,6 +761,11 @@ test('staff creates a merchant and its administrator creates a product', async (
     const productLink = shopper.getByRole('link', { name: productName, exact: true });
     const productCard = shopper.locator('.catalogue-card').filter({ has: productLink });
     await expect(productCard.getByText(badgeName, { exact: true })).toBeVisible();
+    await expect(productCard.getByText('In stock', { exact: true })).toBeVisible();
+    const untrackedCard = shopper.locator('.catalogue-card').filter({
+      has: shopper.getByRole('link', { name: configuredProductName, exact: true }),
+    });
+    await expect(untrackedCard.getByText('In stock', { exact: true })).toBeVisible();
     await productLink.click();
     await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
     await expect(shopper.getByText(tagName, { exact: true })).toBeVisible();
@@ -815,10 +832,23 @@ test('staff creates a merchant and its administrator creates a product', async (
     expect((await angledImage.body()).equals(angledBytes)).toBe(true);
     const description = shopper.locator('.product-description');
     await expect(description).toHaveText(descriptionEn);
+    const availability = shopper.locator('.product-availability');
+    await expect(availability).toHaveText('In stock');
     await shopper.getByRole('button', { name: 'BG', exact: true }).click();
     await expect(description).toHaveText(descriptionBg);
     await shopper.getByRole('button', { name: 'EN', exact: true }).click();
+    await merchant.getByRole('link', { name: 'Inventory', exact: true }).click();
+    await merchant
+      .getByRole('button', { name: `Adjust quantity · ${productName} · SMOKE-001`, exact: true })
+      .click();
+    await merchant.locator('#inventory-quantity').fill('0');
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Quantity saved.');
+    await shopper.reload();
+    await expect(availability).toHaveText('Out of stock');
+    await merchant.getByRole('link', { name: 'Products', exact: true }).click();
     await merchant.getByRole('button', { name: productName, exact: true }).click();
+    await expect(merchant.locator('#product-variant-quantity-0')).toHaveValue('0');
     await expect(merchant.locator('#product-description-en')).toHaveValue(descriptionEn);
     await merchant.locator('#product-description-en').clear();
     await merchant.getByRole('textbox', { name: 'Finish', exact: true }).clear();
@@ -827,6 +857,7 @@ test('staff creates a merchant and its administrator creates a product', async (
     await dismissSuccess(merchant, 'Product saved.');
     await shopper.reload();
     await expect(description).toHaveText(descriptionBg);
+    await expect(availability).toHaveText('Out of stock');
     expect(await specificationsQuery()).toEqual({
       data: {
         catalogueProductSpecifications: [

@@ -1,4 +1,10 @@
-type DemoVariant = readonly [sku: string, price: string, quantity: number, colour?: number];
+type DemoVariant = readonly [
+  sku: string,
+  price: string,
+  quantity: number,
+  colour?: number,
+  inventoryTracked?: boolean,
+];
 
 type DemoProduct = readonly [
   id: number,
@@ -160,6 +166,30 @@ export const demoCatalogue: readonly DemoBrand[] = [
         {
           bg: 'Глазиран глинен съд с капак и две дръжки за бавно печене.',
           en: 'A glazed earthenware pot with a lid and two handles for slow baking.',
+        },
+      ],
+      [
+        59,
+        'Бежова глинена касерола „Жарава“, 1,5 л',
+        '49.90',
+        'active',
+        3,
+        [['DL-111-SOLD', '49.90', 0, undefined, true]],
+        {
+          bg: 'Глинена касерола с капак и светла глазура за бавно печене.',
+          en: 'A lidded clay casserole with a light glaze for slow baking.',
+        },
+      ],
+      [
+        60,
+        'Бяла керамична тенджера „Млечен път“, 2 л',
+        '59.90',
+        'active',
+        3,
+        [['DL-111-FREE', '59.90', 0, undefined, false]],
+        {
+          bg: 'Керамична тенджера с две дръжки и капак за приготвяне на ястия във фурната.',
+          en: 'A ceramic pot with two handles and a lid for oven cooking.',
         },
       ],
     ],

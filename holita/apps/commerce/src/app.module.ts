@@ -26,10 +26,13 @@ import { BadgesResolver } from './badges/badges.resolver.js';
 import { TagsModule } from './tags/tags.module.js';
 import { TagsResolver } from './tags/tags.resolver.js';
 import { ProductsModule } from './products/products.module.js';
+import { InventoryModule } from './inventory/inventory.module.js';
+import { InventoryResolver } from './inventory/inventory.resolver.js';
 
 @Module({
   imports: [
     ProductsModule,
+    InventoryModule,
     BrandsModule,
     CategoriesModule,
     OptionsModule,
@@ -41,6 +44,7 @@ import { ProductsModule } from './products/products.module.js';
   ],
   providers: [
     CommerceResolver,
+    InventoryResolver,
     BrandsResolver,
     CategoriesResolver,
     OptionsResolver,

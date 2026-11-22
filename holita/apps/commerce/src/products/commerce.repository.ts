@@ -208,17 +208,20 @@ export class CommerceRepository {
         ? await tx.product.update({ where: { id, ...scope }, data: input })
         : await tx.product.create({ data: { ...scope, ...input } });
       const productScope = { ...scope, productId: product.id };
-      if (id) {
-        const current = await tx.productVariant.findMany({
-          where: productScope,
-          select: { id: true },
-        });
-        const ids = new Set(current.map((variant) => variant.id));
-        const invalidIdIndex = variants.findIndex((variant) => variant.id && !ids.has(variant.id));
-        if (invalidIdIndex !== -1) {
-          throw new InvalidVariantIdError(invalidIdIndex);
+      const current = id
+        ? await tx.productVariant.findMany({
+            where: productScope,
+            select: { id: true, quantity: true },
+          })
+        : [];
+      const quantities = new Map(current.map((variant) => [variant.id, variant.quantity]));
+      const replacements = variants.map((variant, index) => {
+        const quantity = variant.id ? quantities.get(variant.id) : variant.quantity;
+        if (quantity === undefined) {
+          throw new InvalidVariantIdError(index);
         }
-      }
+        return { ...variant, quantity };
+      });
       const conflicting = await tx.productVariant.findFirst({
         where: {
           ...scope,
@@ -234,7 +237,7 @@ export class CommerceRepository {
       // Replace the aggregate atomically, keeping the IDs of retained variants.
       // This also permits exchanging a SKU or combination between rows in one edit.
       await tx.productVariant.deleteMany({ where: productScope });
-      for (const { optionValueIds, ...variant } of variants) {
+      for (const { optionValueIds, ...variant } of replacements) {
         await tx.productVariant.create({
           data: {
             ...productScope,

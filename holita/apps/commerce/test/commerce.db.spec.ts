@@ -138,6 +138,7 @@ beforeAll(async () => {
   for (const migration of [
     '20261122060000_product_characteristics',
     '20261122070000_product_markers',
+    '20261122080000_inventory_lookup',
   ]) {
     await connection.query(
       await readFile(
@@ -283,16 +284,20 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
         tenantId: tenantA,
         branchId: branchB,
         name: 'Other shop',
-        variants: { create: storedVariant('OTHER-SHOP', '4.00') },
+        variants: { create: { ...storedVariant('OTHER-SHOP', '4.00'), inventoryTracked: true } },
       },
+      include: { variants: true },
     }),
     database.product.create({
       data: {
         tenantId: tenantB,
         branchId: branchForeign,
         name: 'Other merchant',
-        variants: { create: storedVariant('OTHER-MERCHANT', '2.00') },
+        variants: {
+          create: { ...storedVariant('OTHER-MERCHANT', '2.00'), inventoryTracked: true },
+        },
       },
+      include: { variants: true },
     }),
   ]);
   expect(
@@ -335,11 +340,16 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     const result = await query(
       bearer,
       branch,
-      '{products{items{id name price} total offset limit}}',
+      '{products{items{id name price} total offset limit} inventory{total items{productId}}}',
     );
     expect({ role, result }).toMatchObject({
       role,
-      result: { data: { products: { total: 1, items: [{ id: expectedId }] } } },
+      result: {
+        data: {
+          products: { total: 1, items: [{ id: expectedId }] },
+          inventory: { total: 1, items: [{ productId: expectedId }] },
+        },
+      },
     });
     const write = await query(
       bearer,
@@ -374,6 +384,24 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       { id: rows[2].id },
     ),
   ).toMatchObject({ data: null, errors: expect.any(Array) });
+  const adjustQuantity =
+    'mutation($id:ID!,$quantity:Int!){updateInventoryQuantity(id:$id,quantity:$quantity){quantity}}';
+  for (const outside of [...rows[1].variants, ...rows[2].variants]) {
+    expect(
+      await query(tokens.viewer, branchA, 'query($id:ID!){inventoryVariant(id:$id){id}}', {
+        id: outside.id,
+      }),
+    ).toEqual({ data: { inventoryVariant: null } });
+    expect(
+      await query(tokens.operator, branchA, adjustQuantity, { id: outside.id, quantity: 3 }),
+    ).toMatchObject({ data: null, errors: [{ message: 'Variant not found' }] });
+  }
+  expect(
+    await query(tokens.operator, branchA, adjustQuantity, { id: legacyProductId, quantity: 3 }),
+  ).toMatchObject({
+    data: null,
+    errors: [{ extensions: { code: 'INVENTORY_TRACKING_REQUIRED' } }],
+  });
   const imageScope = { tenantId: tenantA, branchId: branchA };
   await expect(
     database.productImage.create({
@@ -638,6 +666,51 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
   expect(await query(tokens.operator, branchA, saveProduct, { input: configured })).toMatchObject({
     data: { createProduct: { price: '8.95', variants: configured.variants } },
   });
+  const [configuredVariant, alternative] = await client.productVariant.findMany({
+    where: { ...optionScope, sku: { in: configured.variants.map(({ sku }) => sku) } },
+    orderBy: { sortOrder: 'asc' },
+  });
+  if (!configuredVariant || !alternative) {
+    throw new Error('Missing configured variants');
+  }
+  const stock = { id: configuredVariant.id, quantity: 3 };
+  expect(await query(tokens.viewer, branchA, adjustQuantity, stock)).toHaveProperty('errors');
+  expect(
+    await query(tokens.operator, branchA, adjustQuantity, { id: stock.id, quantity: -1 }),
+  ).toMatchObject({
+    data: null,
+    errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'quantity' }] } }],
+  });
+  expect(await query(tokens.operator, branchA, adjustQuantity, stock)).toEqual({
+    data: { updateInventoryQuantity: { quantity: 3 } },
+  });
+  expect(
+    await query(
+      tokens.operator,
+      branchA,
+      'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){variants{id quantity inventoryTracked}}}',
+      {
+        id: configuredVariant.productId,
+        input: {
+          ...configured,
+          variants: configured.variants.map((draft) =>
+            draft.sku === configuredVariant.sku
+              ? { ...draft, id: configuredVariant.id, inventoryTracked: false }
+              : { ...draft, id: alternative.id },
+          ),
+        },
+      },
+    ),
+  ).toEqual({
+    data: {
+      updateProduct: {
+        variants: [
+          { id: configuredVariant.id, quantity: 3, inventoryTracked: false },
+          { id: alternative.id, quantity: 5, inventoryTracked: true },
+        ],
+      },
+    },
+  });
   expect(
     await query(
       tokens.viewer,
@@ -665,9 +738,6 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
   expect(
     await query(tokens.operator, branchA, updateOption, { id: scopedOption.id, values: [] }),
   ).toMatchObject({ data: null, errors: [{ extensions: { code: 'CONFLICT' } }] });
-  const configuredVariant = await client.productVariant.findFirstOrThrow({
-    where: { ...optionScope, sku: 'COMBO-1' },
-  });
   const foreignValue = await client.optionValue.findFirstOrThrow({
     where: { tenantId: tenantA, branchId: branchB },
   });

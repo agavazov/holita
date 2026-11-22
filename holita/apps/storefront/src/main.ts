@@ -56,6 +56,8 @@ const messages = {
     productGallery: 'Снимки на продукта',
     productTags: 'Етикети',
     specifications: 'Характеристики',
+    inStock: 'В наличност',
+    outOfStock: 'Изчерпан',
     productImageNumber: (number: number) => `Снимка ${String(number)}`,
     loading: 'Зареждане…',
     productMissing: 'Продуктът не е намерен.',
@@ -83,6 +85,8 @@ const messages = {
     productGallery: 'Product photos',
     productTags: 'Tags',
     specifications: 'Specifications',
+    inStock: 'In stock',
+    outOfStock: 'Out of stock',
     productImageNumber: (number: number) => `Photo ${String(number)}`,
     loading: 'Loading…',
     productMissing: 'Product not found.',
@@ -187,7 +191,9 @@ class StorefrontApi {
                       class="product-link"
                       [routerLink]="[...base, 'product', item.id]"
                       [attr.aria-labelledby]="'product-' + item.id"
-                      [attr.aria-describedby]="item.badges.length ? 'badges-' + item.id : null"
+                      [attr.aria-describedby]="
+                        'availability-' + item.id + (item.badges.length ? ' badges-' + item.id : '')
+                      "
                     >
                       @if (item.coverImage; as cover) {
                         <img
@@ -219,9 +225,17 @@ class StorefrontApi {
                           }
                         </span>
                       }
-                      <span class="catalogue-card-bottom">
-                        <span class="app-num">{{ formatPrice(item.price) }}</span>
-                        <span class="product-arrow" aria-hidden="true">↗</span>
+                      <span class="catalogue-offer">
+                        <span class="catalogue-card-bottom">
+                          <span class="app-num">{{ formatPrice(item.price) }}</span>
+                          <span class="product-arrow" aria-hidden="true">↗</span>
+                        </span>
+                        <p-tag
+                          class="product-availability"
+                          [id]="'availability-' + item.id"
+                          [value]="item.available ? t().inStock : t().outOfStock"
+                          [severity]="availabilitySeverity(item.available)"
+                        />
                       </span>
                     </a>
                   </li>
@@ -325,7 +339,14 @@ class StorefrontApi {
                   </p>
                 }
                 <h1>{{ item.name }}</h1>
-                <p class="app-num product-price">{{ formatPrice(item.price) }}</p>
+                <div class="product-offer">
+                  <p class="app-num product-price">{{ formatPrice(item.price) }}</p>
+                  <p-tag
+                    class="product-availability"
+                    [value]="item.available ? t().inStock : t().outOfStock"
+                    [severity]="availabilitySeverity(item.available)"
+                  />
+                </div>
                 @if (description(); as detail) {
                   <p class="product-description" [attr.lang]="detail.language">{{ detail.text }}</p>
                 }
@@ -481,6 +502,9 @@ class StorefrontPage {
   }
   protected badgeSeverity(color: CatalogueBadgeColor) {
     return toneSeverity(badgeTones[color]);
+  }
+  protected availabilitySeverity(available: boolean) {
+    return toneSeverity(available ? 'success' : 'neutral');
   }
   toggleLanguage() {
     const language = this.language() === 'bg' ? 'en' : 'bg';
