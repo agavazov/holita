@@ -17,6 +17,7 @@ import {
   demoDiscounts,
   demoInvoice,
   demoManualOrder,
+  demoNavigationMenus,
   demoOptions,
   demoOrders,
   demoPages,
@@ -446,6 +447,7 @@ async function seedCatalogue(): Promise<void> {
         );
       }
     }
+    const navigationMenusInserted = await seedNavigationMenus(client, tenantId, branchId);
     await seedShopperCart(client, tenantId, branchId);
     for (const [id, method, sortOrder] of [
       [1, demoPaymentMethod, 0],
@@ -501,9 +503,56 @@ async function seedCatalogue(): Promise<void> {
     console.log(
       `Demo blog inserted ${String(blogTagsInserted)} tags and ${String(blogArticlesInserted)} articles.`,
     );
+    console.log(`Demo navigation inserted ${String(navigationMenusInserted)} menus.`);
   } finally {
     await client.end();
   }
+}
+
+async function seedNavigationMenus(client: pg.Client, tenantId: string, branchId: string) {
+  let inserted = 0;
+  for (const menu of demoNavigationMenus) {
+    const menuId = fixtureId('f3', menu.id);
+    const categoryIds = menu.links.flatMap((link) =>
+      link.type === 'category' ? [fixtureId('62', link.target)] : [],
+    );
+    const pageIds = menu.links.flatMap((link) =>
+      link.type === 'page' ? [fixtureId('c3', link.target)] : [],
+    );
+    const { rowCount } = await client.query(
+      `INSERT INTO "navigationMenu" ("id", "tenantId", "branchId", "placement", "updatedAt")
+       SELECT $1, $2, $3, $4, CURRENT_TIMESTAMP
+       WHERE (SELECT count(*) FROM "category"
+              WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = ANY($5::uuid[])) = cardinality($5::uuid[])
+         AND (SELECT count(*) FROM "shopPage"
+              WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = ANY($6::uuid[])) = cardinality($6::uuid[])
+       ON CONFLICT DO NOTHING`,
+      [menuId, tenantId, branchId, menu.placement, categoryIds, pageIds],
+    );
+    if (rowCount) {
+      inserted += rowCount;
+      for (const [sortOrder, link] of menu.links.entries()) {
+        await client.query(
+          `INSERT INTO "navigationMenuItem" ("id", "tenantId", "branchId", "menuId", "sortOrder",
+                                            "labelBg", "labelEn", "destinationType", "categoryId", "pageId")
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT DO NOTHING`,
+          [
+            fixtureId('f4', link.id),
+            tenantId,
+            branchId,
+            menuId,
+            sortOrder,
+            link.labelBg,
+            link.labelEn,
+            link.type,
+            link.type === 'category' ? fixtureId('62', link.target) : null,
+            link.type === 'page' ? fixtureId('c3', link.target) : null,
+          ],
+        );
+      }
+    }
+  }
+  return inserted;
 }
 
 async function seedShopperCart(client: pg.Client, tenantId: string, branchId: string) {

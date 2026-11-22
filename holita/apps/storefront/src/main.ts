@@ -13,7 +13,14 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { ActivatedRoute, Router, RouterLink, RouterOutlet, provideRouter } from '@angular/router';
+import {
+  ActivatedRoute,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+  RouterOutlet,
+  provideRouter,
+} from '@angular/router';
 import { InMemoryCache } from '@apollo/client/core';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
@@ -38,7 +45,10 @@ import { OrderConfirmationPage } from './order-confirmation-page';
 import { ShopperOrdersPage } from './shopper-orders-page';
 import { StorefrontBlog } from './storefront-blog';
 import { localizedContent } from './storefront-content';
-import type { CatalogueProductQuery } from './generated/operations';
+import type {
+  CatalogueProductQuery,
+  ShopNavigationLinkFieldsFragment,
+} from './generated/operations';
 
 type VariantSelection = NonNullable<CatalogueProductQuery['catalogueProduct']>['variantSelection'];
 type ProductVariant = VariantSelection['variants'][number];
@@ -51,6 +61,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
   selector: 'holita-storefront-page',
   imports: [
     RouterLink,
+    RouterLinkActive,
     ReactiveFormsModule,
     NgTemplateOutlet,
     CatalogueBrowse,
@@ -63,9 +74,11 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
   providers: [CartState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    @let header = headerLinks();
+    @let footer = footerLinks();
     <header class="shop-header">
       <a class="shop-name" [routerLink]="base()">{{ shop()?.name ?? 'Holita' }}</a>
-      <nav [attr.aria-label]="t().navigation">
+      <nav class="shop-utilities" [attr.aria-label]="t().navigation">
         <a [routerLink]="base()" [attr.aria-current]="page === 'catalogue' ? 'page' : null">
           {{ t().products }}
         </a>
@@ -77,12 +90,6 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             {{ t()[section] }}
           </a>
         }
-        <a
-          [routerLink]="[...base(), 'blog']"
-          [attr.aria-current]="page === 'blog' ? (slug() ? 'true' : 'page') : null"
-        >
-          {{ t().blog }}
-        </a>
       </nav>
       <div class="shop-actions">
         @let cartCount = cartState.cart()?.itemCount ?? null;
@@ -109,6 +116,20 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
           {{ language() === 'bg' ? 'EN' : 'BG' }}
         </button>
       </div>
+      @if (header.length) {
+        <nav class="shop-header-links" [attr.aria-label]="t().shopHeaderNavigation">
+          <ng-container
+            [ngTemplateOutlet]="menuLinks"
+            [ngTemplateOutletContext]="{ $implicit: header }"
+          />
+        </nav>
+      }
+      @if (shopNavigation.status() === 'error') {
+        <div class="shop-menu-error">
+          <span role="alert">{{ t().shopNavigationUnavailable }}</span>
+          <button type="button" (click)="shopNavigation.reload()">{{ t().retry }}</button>
+        </div>
+      }
     </header>
     <main>
       @if (missing()) {
@@ -500,6 +521,32 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         }
       }
     </main>
+    @if (footer.length) {
+      <footer class="shop-footer">
+        <nav [attr.aria-label]="t().shopFooterNavigation">
+          <ng-container
+            [ngTemplateOutlet]="menuLinks"
+            [ngTemplateOutletContext]="{ $implicit: footer }"
+          />
+        </nav>
+      </footer>
+    }
+    <ng-template #menuLinks let-links>
+      @for (link of links; track link.id) {
+        @if (link.route) {
+          <a
+            [routerLink]="link.route"
+            routerLinkActive
+            [routerLinkActiveOptions]="menuLinkMatch"
+            ariaCurrentWhenActive="page"
+            [attr.lang]="link.language"
+            >{{ link.label }}</a
+          >
+        } @else {
+          <a [href]="link.href" [attr.lang]="link.language">{{ link.label }}</a>
+        }
+      }
+    </ng-template>
     <ng-template #requestError>
       <div class="shop-state">
         <p role="alert">{{ t().error }}</p>
@@ -555,6 +602,21 @@ class StorefrontPage {
     this.request.hasValue() ? this.request.value() : undefined,
   );
   readonly shop = computed(() => this.view()?.shop ?? null);
+  protected readonly shopNavigation = resource({
+    params: () => this.shop()?.id,
+    loader: ({ params: shopId }) => this.api.shopNavigation(shopId),
+  });
+  private readonly navigation = computed(() =>
+    this.shopNavigation.hasValue() ? this.shopNavigation.value() : undefined,
+  );
+  protected readonly headerLinks = computed(() => this.menuLinks(this.navigation()?.header));
+  protected readonly footerLinks = computed(() => this.menuLinks(this.navigation()?.footer));
+  protected readonly menuLinkMatch = {
+    paths: 'exact',
+    queryParams: 'ignored',
+    fragment: 'ignored',
+    matrixParams: 'ignored',
+  } as const;
   readonly missing = computed(() => this.view()?.shop === null);
   private readonly actionError = signal(false);
   readonly error = computed(() => this.actionError() || this.request.status() === 'error');
@@ -643,6 +705,19 @@ class StorefrontPage {
   constructor() {
     inject(Appearance);
     this.document.documentElement.lang = this.language();
+  }
+  private menuLinks(links: readonly ShopNavigationLinkFieldsFragment[] = []) {
+    const preferred = this.language();
+    return links.map(({ id, href, external, labelBg, labelEn }) => {
+      const language = labelEn && (preferred === 'en' || !labelBg) ? 'en' : 'bg';
+      return {
+        id,
+        href,
+        route: external ? null : this.router.parseUrl(href),
+        label: language === 'en' ? labelEn : labelBg,
+        language,
+      };
+    });
   }
   formatPrice(value: string): string {
     return this.price().format(Number(value));

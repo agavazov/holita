@@ -25,6 +25,8 @@ import { DiscountEditor } from './discounts/discount-editor';
 import { DiscountsPage } from './discounts/discounts-page';
 import { InventoryEditor } from './inventory/inventory-editor';
 import { InventoryPage } from './inventory/inventory-page';
+import { NavigationEditor } from './navigation/navigation-editor';
+import { NavigationPage } from './navigation/navigation-page';
 import { OptionEditor } from './options/option-editor';
 import { OptionsPage } from './options/options-page';
 import { InvoiceDetail } from './orders/invoice-detail';
@@ -254,6 +256,26 @@ void startOperator({
       ],
     },
     {
+      path: 'navigation',
+      component: NavigationPage,
+      children: [
+        {
+          path: 'new',
+          component: NavigationEditor,
+          canActivate: [canEditShopContent],
+          data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: ':recordId',
+          component: NavigationEditor,
+          canActivate: [canEditShopContent],
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
+    {
       path: 'orders',
       component: OrdersPage,
       children: [
@@ -393,6 +415,7 @@ void startOperator({
     { id: 'pages', label: 'pages', icon: 'clone', path: 'pages' },
     { id: 'blog-articles', label: 'blogArticles', icon: 'list-check', path: 'blog-articles' },
     { id: 'blog-tags', label: 'blogTags', icon: 'tags', path: 'blog-tags' },
+    { id: 'navigation', label: 'navigation', icon: 'directions', path: 'navigation' },
     { id: 'orders', label: 'orders', icon: 'truck', path: 'orders' },
     { id: 'discounts', label: 'discounts', icon: 'tags', path: 'discounts' },
     { id: 'customers', label: 'customers', icon: 'users', path: 'customers' },

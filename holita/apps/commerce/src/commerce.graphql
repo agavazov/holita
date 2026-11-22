@@ -246,6 +246,64 @@ type ShopPageList {
   offset: Int!
   limit: Int!
 }
+enum NavigationPlacement {
+  HEADER
+  FOOTER
+}
+enum NavigationDestinationType {
+  CATEGORY
+  COLLECTION
+  PAGE
+  BLOG
+  URL
+}
+type NavigationMenuSummary {
+  id: ID!
+  placement: NavigationPlacement!
+  itemCount: Int!
+}
+type NavigationMenu {
+  id: ID!
+  placement: NavigationPlacement!
+  items: [NavigationMenuItem!]!
+}
+type NavigationMenuItem {
+  id: ID!
+  labelBg: String
+  labelEn: String
+  destinationType: NavigationDestinationType!
+  destinationId: ID
+  destinationName: String
+  destinationTitleBg: String
+  destinationTitleEn: String
+  destinationVisible: Boolean
+  url: String
+}
+type NavigationDestinationChoice {
+  id: ID!
+  name: String
+  titleBg: String
+  titleEn: String
+  slug: String!
+  visible: Boolean!
+}
+type NavigationDestinationPage {
+  items: [NavigationDestinationChoice!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+input NavigationMenuItemInput {
+  labelBg: String
+  labelEn: String
+  destinationType: NavigationDestinationType!
+  destinationId: ID
+  url: String
+}
+input CreateNavigationMenuInput {
+  placement: NavigationPlacement!
+  items: [NavigationMenuItemInput!]!
+}
 enum BlogArticleStatus {
   DRAFT
   PUBLISHED
@@ -848,6 +906,15 @@ type Query {
     filter: ShopPageFilter
   ): ShopPageList!
   shopPage(id: ID!): ShopPage
+  navigationMenus: [NavigationMenuSummary!]!
+  navigationMenu(id: ID!): NavigationMenu
+  "Search this shop's categories, collections or pages, including unavailable destinations."
+  navigationDestinationChoices(
+    type: NavigationDestinationType!
+    search: String
+    offset: Int! = 0
+    limit: Int! = 20
+  ): NavigationDestinationPage!
   blogArticles(
     offset: Int! = 0
     limit: Int! = 20
@@ -926,6 +993,9 @@ type Mutation {
   deleteBrand(id: ID!): Boolean!
   createShopPage(input: ShopPageInput!): ShopPage!
   updateShopPage(id: ID!, input: ShopPageInput!): ShopPage!
+  createNavigationMenu(input: CreateNavigationMenuInput!): NavigationMenu!
+  "Replace the menu links in input order. An empty array clears the menu."
+  updateNavigationMenu(id: ID!, items: [NavigationMenuItemInput!]!): NavigationMenu!
   createBlogArticle(input: BlogArticleInput!): BlogArticle!
   updateBlogArticle(id: ID!, input: BlogArticleInput!): BlogArticle!
   createBlogTag(input: BlogTagInput!): BlogTag!

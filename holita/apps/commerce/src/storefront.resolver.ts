@@ -39,6 +39,9 @@ export class StorefrontResolver {
   @Query('shop') shop(@Context() context: StorefrontContext) {
     return this.service.shop(context);
   }
+  @Query('shopNavigation') shopNavigation(@Context() context: StorefrontContext) {
+    return this.service.shopNavigation(context);
+  }
   @Query('shopPage') shopPage(
     @Context() context: StorefrontContext,
     @Args() args: QueryShopPageArgs,

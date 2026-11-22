@@ -23,6 +23,7 @@ import {
   PublicBlogArticlesDocument,
   PublicCartDocument,
   PublicShopDocument,
+  PublicShopNavigationDocument,
   PublicShopPageDocument,
   QuoteCheckoutDocument,
   RegisterShopperDocument,
@@ -188,6 +189,9 @@ export class StorefrontApi {
 
   async shop(shopId: string) {
     return (await this.read(shopId, PublicShopDocument, {})).shop;
+  }
+  async shopNavigation(shopId: string) {
+    return (await this.read(shopId, PublicShopNavigationDocument, {})).shopNavigation;
   }
   async shopPage(shopId: string, slug: string) {
     return (await this.read(shopId, PublicShopPageDocument, { slug })).shopPage;

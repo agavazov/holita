@@ -40,6 +40,7 @@ import type {
   ShopperSession,
 } from './generated/graphql/storefront-types.js';
 import type { Scope, ShopperScope } from './scope.js';
+import { NavigationService } from './navigation/navigation.service.js';
 import { PagesService } from './pages/pages.service.js';
 import { CatalogueRepository, type BrowseCriteria } from './products/catalogue.repository.js';
 import { CommerceRepository } from './products/commerce.repository.js';
@@ -234,6 +235,7 @@ export class StorefrontService {
     private readonly characteristics: CharacteristicsService,
     private readonly pages: PagesService,
     private readonly blog: BlogService,
+    private readonly navigation: NavigationService,
   ) {}
   async shop(context: StorefrontContext): Promise<ShopScope | null> {
     if (!context.branchId || !isUUID(context.branchId)) {
@@ -289,6 +291,9 @@ export class StorefrontService {
   }
   async shopPage(context: StorefrontContext, slug: string) {
     return this.pages.published(await this.publicScope(context), slug);
+  }
+  async shopNavigation(context: StorefrontContext) {
+    return this.navigation.publicLinks(await this.publicScope(context));
   }
   async blogArticles(context: StorefrontContext, args: QueryBlogArticlesArgs) {
     const scope = await this.publicScope(context);

@@ -2,6 +2,17 @@ type Shop {
   id: ID!
   name: String!
 }
+type ShopNavigation {
+  header: [ShopNavigationLink!]!
+  footer: [ShopNavigationLink!]!
+}
+type ShopNavigationLink {
+  id: ID!
+  labelBg: String
+  labelEn: String
+  href: String!
+  external: Boolean!
+}
 type PublishedShopPage {
   slug: String!
   titleBg: String
@@ -354,6 +365,8 @@ type CatalogueSpecification {
 }
 type Query {
   shop: Shop
+  "Saved shop navigation links whose destinations are publicly available."
+  shopNavigation: ShopNavigation!
   "The published page with this slug in the current shop."
   shopPage(slug: String!): PublishedShopPage
   "Published articles in descending publication order, optionally filtered by an assigned tag."

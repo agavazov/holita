@@ -618,6 +618,31 @@ export const demoPages = [
   },
 ] as const;
 
+export const demoNavigationMenus = [
+  {
+    id: 1,
+    placement: 'header',
+    links: [
+      { id: 1, type: 'category', target: 1, labelBg: 'Кухня', labelEn: 'Kitchen' },
+      { id: 2, type: 'blog', labelBg: 'Блог', labelEn: 'Blog' },
+    ],
+  },
+  {
+    id: 2,
+    placement: 'footer',
+    links: [
+      { id: 3, type: 'page', target: 1, labelBg: 'За нас', labelEn: 'About Us' },
+      {
+        id: 4,
+        type: 'page',
+        target: 2,
+        labelBg: 'Информация за доставката',
+        labelEn: 'Delivery Information',
+      },
+    ],
+  },
+] as const;
+
 export const demoBlogTags = [{ id: 1, name: 'Грижа за съдовете', slug: 'cookware-care' }] as const;
 
 export const demoBlogArticles = [

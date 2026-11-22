@@ -1,0 +1,61 @@
+fragment OperatorNavigationMenuSummaryFields on NavigationMenuSummary {
+  id
+  placement
+  itemCount
+}
+
+query OperatorNavigationMenus {
+  navigationMenus {
+    ...OperatorNavigationMenuSummaryFields
+  }
+}
+
+query OperatorNavigationMenu($id: ID!) {
+  navigationMenu(id: $id) {
+    id
+    placement
+    items {
+      id
+      labelBg
+      labelEn
+      destinationType
+      destinationId
+      destinationName
+      destinationTitleBg
+      destinationTitleEn
+      destinationVisible
+      url
+    }
+  }
+}
+
+query OperatorNavigationDestinationChoices(
+  $type: NavigationDestinationType!
+  $search: String
+  $offset: Int! = 0
+  $limit: Int! = 20
+) {
+  navigationDestinationChoices(type: $type, search: $search, offset: $offset, limit: $limit) {
+    items {
+      id
+      name
+      titleBg
+      titleEn
+      slug
+      visible
+    }
+    total
+  }
+}
+
+mutation OperatorCreateNavigationMenu($input: CreateNavigationMenuInput!) {
+  createNavigationMenu(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateNavigationMenu($id: ID!, $items: [NavigationMenuItemInput!]!) {
+  updateNavigationMenu(id: $id, items: $items) {
+    id
+  }
+}

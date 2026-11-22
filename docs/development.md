@@ -655,6 +655,12 @@ The storefront graph exposes `blogArticles`, `blogArticle` and `blogTags` for pu
 The operator graph also provides article and tag creation and updates, plus `blogTagChoices` for
 article assignments.
 
+In Admin, open Navigation for the selected shop to create a Header or Footer menu. Add links
+with a Bulgarian or English label, choose a shop destination or enter an HTTP(S) URL, and move
+links into the order shoppers should see them. The storefront graph exposes `shopNavigation`
+with both placements in saved order. A hidden or unpublished destination is omitted while it
+is unavailable. Save a menu with no links to clear its placement.
+
 `npm run dev` starts both products. `npm run kill` stops their development applications while
 leaving PostgreSQL and the ERM units running. Discocan Core reads `discocan/config/core.env`;
 Holita Core reads `holita/config/core.env`. Their watch outputs are `dist-discocan` and

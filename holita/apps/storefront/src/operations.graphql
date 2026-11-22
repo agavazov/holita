@@ -4,6 +4,23 @@ query PublicShop {
     name
   }
 }
+fragment ShopNavigationLinkFields on ShopNavigationLink {
+  id
+  labelBg
+  labelEn
+  href
+  external
+}
+query PublicShopNavigation {
+  shopNavigation {
+    header {
+      ...ShopNavigationLinkFields
+    }
+    footer {
+      ...ShopNavigationLinkFields
+    }
+  }
+}
 query PublicShopPage($slug: String!) {
   shopPage(slug: $slug) {
     slug

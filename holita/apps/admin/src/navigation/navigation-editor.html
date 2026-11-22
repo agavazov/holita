@@ -1,0 +1,242 @@
+<osnova-route-drawer
+  [title]="editing ? text().editNavigationMenu : text().newNavigationMenu"
+  [subtitle]="placementLabel()"
+  [state]="state()"
+  [errorText]="text().navigationUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  @if (!editing && !placementOptions().length && state() === 'ready') {
+  <p-message severity="info">{{ text().navigationNoPlacements }}</p-message>
+  } @else {
+  <form id="navigation-editor-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
+    @if (!editing) { @let placementError = errors()['placement'];
+    <section class="app-form-section">
+      <osnova-form-field
+        controlId="navigation-placement"
+        [label]="text().navigationPlacement"
+        [required]="true"
+        [error]="placementError ?? null"
+      >
+        <p-select
+          inputId="navigation-placement"
+          ariaLabelledBy="navigation-placement-label"
+          formControlName="placement"
+          [options]="placementOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [invalid]="!!placementError"
+          [pt]="{ label: {
+                'aria-required': 'true',
+                'aria-describedby': 'navigation-placement-error',
+                'aria-invalid': placementError ? 'true' : undefined,
+              } }"
+          (onChange)="clearError('placement')"
+        />
+      </osnova-form-field>
+    </section>
+    } @for (row of links.controls; track row; let index = $index; let first = $first; let last =
+    $last) { @let prefix = 'navigation-link-' + index; @let type =
+    row.controls.destinationType.value;
+    <section class="app-form-section" [attr.aria-labelledby]="prefix + '-heading'">
+      <div class="app-context-toolbar">
+        <h3 class="app-card__title" [id]="prefix + '-heading'">
+          {{ indexedLabel(text().navigationLink, index) }}
+        </h3>
+        <div class="app-page-actions">
+          @let moveUp = indexedLabel(text().navigationMoveLinkUp, index); @let moveDown =
+          indexedLabel(text().navigationMoveLinkDown, index); @let remove =
+          indexedLabel(text().navigationRemoveLink, index);
+          <button
+            type="button"
+            class="app-icon-button"
+            [attr.aria-label]="moveUp"
+            [title]="moveUp"
+            [disabled]="first || saving()"
+            (click)="moveLink(index, -1)"
+          >
+            <svg data-p-icon="arrow-up" aria-hidden="true"></svg>
+          </button>
+          <button
+            type="button"
+            class="app-icon-button"
+            [attr.aria-label]="moveDown"
+            [title]="moveDown"
+            [disabled]="last || saving()"
+            (click)="moveLink(index, 1)"
+          >
+            <svg data-p-icon="arrow-down" aria-hidden="true"></svg>
+          </button>
+          <button
+            type="button"
+            class="app-icon-button"
+            [attr.aria-label]="remove"
+            [title]="remove"
+            [disabled]="saving()"
+            (click)="removeLink(index)"
+          >
+            <svg data-p-icon="trash" aria-hidden="true"></svg>
+          </button>
+        </div>
+      </div>
+      <div class="app-form-grid">
+        @for (label of labelFields(); track label.field) { @let controlId = prefix + '-' + label.id;
+        @let error = labelError(row, index, label.field);
+        <osnova-form-field [controlId]="controlId" [label]="label.label" [error]="error">
+          <input
+            pInputText
+            [id]="controlId"
+            [formControl]="row.controls[label.field]"
+            autocomplete="off"
+            [attr.aria-describedby]="controlId + '-error'"
+            [invalid]="!!error"
+            [attr.aria-invalid]="!!error"
+            (input)="clearLabelErrors(index)"
+          />
+        </osnova-form-field>
+        }
+        <osnova-form-field
+          [controlId]="prefix + '-type'"
+          [label]="text().navigationDestinationType"
+          [required]="true"
+        >
+          <p-select
+            [inputId]="prefix + '-type'"
+            [ariaLabelledBy]="prefix + '-type-label'"
+            [formControl]="row.controls.destinationType"
+            [options]="destinationOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [pt]="{ label: { 'aria-required': 'true' } }"
+            (onChange)="changeDestination(row, index)"
+          />
+        </osnova-form-field>
+        @if (recordDestination(type)) { @let controlId = prefix + '-destination'; @let error =
+        searchError(row) ?? destinationError(row, index);
+        <osnova-form-field
+          [controlId]="controlId"
+          [label]="text().navigationDestination"
+          [hint]="hiddenHint(row)"
+          [error]="error"
+          [required]="true"
+        >
+          <p-autocomplete
+            [inputId]="controlId"
+            [ariaLabelledBy]="controlId + '-label'"
+            [formControl]="row.controls.destination"
+            [suggestions]="suggestions(row)"
+            optionLabel="label"
+            [dropdown]="true"
+            [dropdownAriaLabel]="text().navigationSearchDestinations"
+            [placeholder]="text().navigationSearchDestinations"
+            [delay]="300"
+            autocomplete="off"
+            fluid
+            [invalid]="!!error"
+            [emptyMessage]="pickerMessage(row)"
+            [pt]="{
+                    ...pickerPt(controlId, !!error),
+                    option: { style: { whiteSpace: 'normal', overflowWrap: 'anywhere' } },
+                  }"
+            (completeMethod)="search(row, $event.query)"
+            (onSelect)="clearError(linkPath(index, 'DestinationId'))"
+            (onClear)="clearError(linkPath(index, 'DestinationId'))"
+          >
+            <ng-template #item let-choice>
+              <div>
+                <div>{{ choice.label }}</div>
+                @if (choice.slug && choice.slug !== choice.label) {
+                <small>{{ choice.slug }}</small>
+                } @if (!choice.visible) {
+                <div><small>{{ text().hidden }}</small></div>
+                }
+              </div>
+            </ng-template>
+            @if (moreChoices()) {
+            <ng-template #footer>
+              <small>{{ text().navigationRefineSearch }}</small>
+            </ng-template>
+            }
+          </p-autocomplete>
+        </osnova-form-field>
+        @if (searchFailed(row)) {
+        <div class="app-form-grid--wide">
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="saving()"
+            (click)="retrySearch()"
+          >
+            {{ shared().retry }}
+          </button>
+        </div>
+        } } @else if (type === 'URL') { @let controlId = prefix + '-url'; @let error = urlError(row,
+        index);
+        <osnova-form-field
+          class="app-form-grid--wide"
+          [controlId]="controlId"
+          [label]="text().navigationUrl"
+          [error]="error"
+          [required]="true"
+        >
+          <input
+            pInputText
+            type="url"
+            [id]="controlId"
+            [formControl]="row.controls.url"
+            autocomplete="off"
+            aria-required="true"
+            [attr.aria-describedby]="controlId + '-error'"
+            [invalid]="!!error"
+            [attr.aria-invalid]="!!error"
+            (input)="clearError(linkPath(index, 'Url'))"
+          />
+        </osnova-form-field>
+        }
+      </div>
+    </section>
+    }
+    <section class="app-form-section">
+      @if (!links.length) {
+      <div>{{ text().navigationNoLinks }}</div>
+      }
+      <div>
+        <button
+          pButton
+          id="navigation-add-link"
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving()"
+          (click)="addLink()"
+        >
+          {{ text().navigationAddLink }}
+        </button>
+      </div>
+      @if (saveError()) {
+      <p-message severity="error">{{ text().navigationSaveFailed }}</p-message>
+      }
+    </section>
+  </form>
+  }
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    @if (editing || placementOptions().length) {
+    <button pButton type="submit" form="navigation-editor-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+    }
+  </div>
+</osnova-route-drawer>

@@ -673,8 +673,66 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const content = contentShopper.getByRole('article').filter({ hasText: pageTitle });
     await expect(content).toHaveAttribute('lang', 'bg');
     await expect(content.getByText(pageBody, { exact: true })).toBeVisible();
+
+    const navigation = merchant.getByRole('link', { name: 'Navigation', exact: true });
+    const footerMenu = merchant.getByRole('button', { name: 'Footer', exact: true });
+    const addMenuLink = async (
+      label: string,
+      type: 'Blog' | 'Page' | 'Category',
+      target?: string,
+    ) => {
+      await merchant.getByRole('button', { name: 'Add link', exact: true }).click();
+      await merchant
+        .getByRole('textbox', { name: 'Label (English)', exact: true })
+        .last()
+        .fill(label);
+      await merchant
+        .getByRole('combobox', { name: /^Destination type\b/u })
+        .last()
+        .click();
+      await merchant.getByRole('option', { name: type, exact: true }).click();
+      if (target) {
+        await merchant
+          .getByRole('combobox', { name: /^Destination(?! type)\b/u })
+          .last()
+          .fill(target);
+        await merchant.getByRole('option', { name: target }).click();
+      }
+    };
+    const saveMenu = async () => {
+      await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+      await dismissSuccess(merchant, 'Menu saved.');
+    };
+    const menuLinks = (page: Page) =>
+      page.getByRole('navigation', { name: 'Shop footer links' }).getByRole('link');
+    const expectMenu = async (page: Page, paths: string[]) => {
+      await expect
+        .poll(() =>
+          menuLinks(page).evaluateAll((links) => links.map((link) => link.getAttribute('href'))),
+        )
+        .toEqual(paths.map((path) => `/s/${shopId}/${path}`));
+    };
+    await navigation.click();
+    await merchant.getByRole('button', { name: 'New menu', exact: true }).click();
+    await merchant.locator('#navigation-placement').click();
+    await merchant.getByRole('option', { name: 'Footer', exact: true }).click();
+    await addMenuLink('Shop news', 'Blog');
+    await addMenuLink('Delivery notes', 'Page', pageTitle);
+    await saveMenu();
+    await contentShopper.goto(`${shopApp.origin}/s/${shopId}`);
+    await expectMenu(contentShopper, ['blog', `pages/${pageSlug}`]);
+    await footerMenu.click();
+    await merchant.getByRole('button', { name: 'Move link 2 up', exact: true }).click();
+    await saveMenu();
+    await contentShopper.reload();
+    await expectMenu(contentShopper, [`pages/${pageSlug}`, 'blog']);
+    await menuLinks(contentShopper).first().click();
+    await expect(contentShopper.getByRole('heading', { name: pageTitle })).toBeVisible();
+    await merchant.getByRole('link', { name: 'Pages', exact: true }).click();
     await setPageStatus('Draft');
     expect(await publicPage()).toEqual({ data: { shopPage: null } });
+    await contentShopper.reload();
+    await expectMenu(contentShopper, ['blog']);
 
     const blogTag = 'Cookware care';
     const blogTagSlug = 'cookware-care';
@@ -764,6 +822,10 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await addCategory(merchant, 'Kitchen');
     await addCategory(merchant, 'Home');
     await addCategory(merchant, 'Cookware', 'Kitchen');
+    await navigation.click();
+    await footerMenu.click();
+    await addMenuLink('Cookware', 'Category', 'Cookware');
+    await saveMenu();
     const optionValues = await editOption(merchant);
     await merchant.getByRole('link', { name: 'Characteristic groups', exact: true }).click();
     await merchant.getByRole('button', { name: 'Add characteristic group', exact: true }).click();
@@ -884,6 +946,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const shopper = await shopperContext.newPage();
     await shopper.goto(`${shopApp.origin}/s/${shopId}`);
     await shopper.getByRole('button', { name: 'EN', exact: true }).click();
+    await expectMenu(shopper, ['blog', 'categories/cookware']);
     const productLink = shopper.getByRole('link', { name: productName, exact: true });
     const productCard = shopper.locator('.catalogue-card').filter({ has: productLink });
     await expect(productCard.getByText('Smoke Brand', { exact: true })).toBeVisible();
@@ -1276,6 +1339,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await shopper.reload();
     await expect(shopper.getByRole('heading', { name: productName })).toBeVisible();
     await expect(breadcrumbs).toHaveCount(0);
+    await expectMenu(shopper, ['blog']);
     const activeCategories = await shopper.request.post(`${shopApp.origin}/graphql`, {
       headers: { 'x-branch-id': shopId },
       data: {
@@ -1296,8 +1360,16 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     expect(await publicProductsQuery(secondShopId)).toEqual({
       data: { catalogueProduct: null, catalogue: { items: [] } },
     });
+    const secondNavigation = await shopper.request.post(`${shopApp.origin}/graphql`, {
+      headers: { 'x-branch-id': secondShopId },
+      data: { query: '{ shopNavigation { header { href } footer { href } } }' },
+    });
+    expect(await secondNavigation.json()).toEqual({
+      data: { shopNavigation: { header: [], footer: [] } },
+    });
     await shopper.goto(`${shopApp.origin}/s/${secondShopId}`);
     await expect(shopper.getByRole('link', { name: 'Second shop', exact: true })).toBeVisible();
+    await expect(menuLinks(shopper)).toHaveCount(0);
     const foreignProductImage = angled.replace(shopId, secondShopId);
     expect(
       (await shopper.request.get(new URL(foreignProductImage, shopApp.origin).href)).status(),

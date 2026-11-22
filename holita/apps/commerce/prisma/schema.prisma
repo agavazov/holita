@@ -74,6 +74,58 @@ enum BlogArticleStatus {
   @@map("blogArticleStatus")
 }
 
+enum NavigationPlacement {
+  HEADER @map("header")
+  FOOTER @map("footer")
+  @@map("navigationPlacement")
+}
+
+enum NavigationDestinationType {
+  CATEGORY @map("category")
+  COLLECTION @map("collection")
+  PAGE @map("page")
+  BLOG @map("blog")
+  URL @map("url")
+  @@map("navigationDestinationType")
+}
+
+model NavigationMenu {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  placement NavigationPlacement
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  items NavigationMenuItem[]
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, placement])
+  @@map("navigationMenu")
+}
+
+model NavigationMenuItem {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  menuId String @db.Uuid
+  sortOrder Int
+  labelBg String? @db.VarChar(200)
+  labelEn String? @db.VarChar(200)
+  destinationType NavigationDestinationType
+  categoryId String? @db.Uuid
+  collectionId String? @db.Uuid
+  pageId String? @db.Uuid
+  url String? @db.VarChar(2048)
+  menu NavigationMenu @relation(fields: [tenantId, branchId, menuId], references: [tenantId, branchId, id], onDelete: Cascade)
+  category Category? @relation(fields: [tenantId, branchId, categoryId], references: [tenantId, branchId, id], onDelete: Cascade)
+  collection ProductCollection? @relation(fields: [tenantId, branchId, collectionId], references: [tenantId, branchId, id], onDelete: Cascade)
+  page ShopPage? @relation(fields: [tenantId, branchId, pageId], references: [tenantId, branchId, id], onDelete: Cascade)
+  @@unique([tenantId, branchId, menuId, sortOrder])
+  @@index([tenantId, branchId, categoryId])
+  @@index([tenantId, branchId, collectionId])
+  @@index([tenantId, branchId, pageId])
+  @@map("navigationMenuItem")
+}
+
 model ShopPage {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
@@ -86,6 +138,7 @@ model ShopPage {
   status ShopPageStatus @default(DRAFT)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  navigationItems NavigationMenuItem[]
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, slug])
   @@index([tenantId, branchId, updatedAt(sort: Desc), id])
@@ -172,6 +225,7 @@ model Category {
   active Boolean @default(true)
   products Product[]
   collections ProductCollection[]
+  navigationItems NavigationMenuItem[]
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, slug])
   @@index([tenantId, branchId, parentId])
@@ -342,6 +396,7 @@ model ProductCollection {
   brandId String? @db.Uuid
   brand Brand? @relation(fields: [tenantId, branchId, brandId], references: [tenantId, branchId, id], onDelete: Restrict)
   items ProductCollectionItem[]
+  navigationItems NavigationMenuItem[]
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, slug])
   @@index([tenantId, branchId, categoryId])

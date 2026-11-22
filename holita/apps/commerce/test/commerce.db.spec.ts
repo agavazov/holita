@@ -153,6 +153,7 @@ beforeAll(async () => {
     '20261122200000_invoice_discount',
     '20261122210000_shop_pages',
     '20261122220000_shop_blog',
+    '20261122230000_shop_navigation',
   ]) {
     await connection.query(
       await readFile(
@@ -335,6 +336,51 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     expect(await query(token, branch, updatePage, { id: page.id, input: pageInput })).toMatchObject(
       { data: null, errors: [{ extensions: { code: 'NOT_FOUND' } }] },
     );
+  }
+  const createMenu =
+    'mutation($input:CreateNavigationMenuInput!){createNavigationMenu(input:$input){id}}';
+  const readMenu = 'query($id:ID!){navigationMenu(id:$id){id}}';
+  const updateMenu =
+    'mutation($id:ID!,$items:[NavigationMenuItemInput!]!){updateNavigationMenu(id:$id,items:$items){id}}';
+  const menuInput = {
+    placement: 'HEADER',
+    items: [{ labelBg: 'Страница', destinationType: 'PAGE', destinationId: page.id }],
+  };
+  expect(await query(tokens.viewer, branchA, createMenu, { input: menuInput })).toMatchObject({
+    data: null,
+    errors: [{ message: 'Your role does not permit this action' }],
+  });
+  expect(await query(tokens.operator, branchA, createMenu, { input: menuInput })).toMatchObject({
+    data: { createNavigationMenu: { id: expect.any(String) } },
+  });
+  const menu = await database.navigationMenu.findFirstOrThrow({
+    where: { tenantId: tenantA, branchId: branchA, placement: 'HEADER' },
+  });
+  expect(await query(tokens.viewer, branchA, readMenu, { id: menu.id })).toEqual({
+    data: { navigationMenu: { id: menu.id } },
+  });
+  for (const [token, branch] of [
+    [tokens.operator, branchB],
+    [tokens.foreign, branchForeign],
+  ]) {
+    expect(await query(token, branch, readMenu, { id: menu.id })).toEqual({
+      data: { navigationMenu: null },
+    });
+    expect(await query(token, branch, updateMenu, { id: menu.id, items: [] })).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    });
+    expect(await query(token, branch, createMenu, { input: menuInput })).toMatchObject({
+      data: null,
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'items0DestinationId', code: 'INVALID_DESTINATION' }],
+          },
+        },
+      ],
+    });
   }
   const blogScope = { tenantId: tenantA, branchId: branchA };
   const blogTags = await database.blogTag.createManyAndReturn({
@@ -1346,6 +1392,45 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   const category = await database.category.create({
     data: { ...categoryScope, name: 'Child', slug: 'child', parentId: parent.id },
   });
+  const createMenu =
+    'mutation($input:CreateNavigationMenuInput!){createNavigationMenu(input:$input){id}}';
+  expect(
+    await query(tokens.operator, publicA, createMenu, {
+      input: {
+        placement: 'HEADER',
+        items: [
+          { labelBg: 'Категория', destinationType: 'CATEGORY', destinationId: category.id },
+          { labelBg: 'Блог', destinationType: 'BLOG' },
+        ],
+      },
+    }),
+  ).toMatchObject({ data: { createNavigationMenu: { id: expect.any(String) } } });
+  const foreignScope = { tenantId: tenantB, branchId: publicA };
+  const foreignMenu = await database.navigationMenu.create({
+    data: { ...foreignScope, placement: 'FOOTER' },
+  });
+  await database.navigationMenuItem.create({
+    data: {
+      ...foreignScope,
+      menuId: foreignMenu.id,
+      sortOrder: 0,
+      labelBg: 'Чужд блог',
+      destinationType: 'BLOG',
+    },
+  });
+  const readNavigation = '{shopNavigation{header{href} footer{href}}}';
+  const blogLink = { href: '/s/' + publicA + '/blog' };
+  expect(await storefront(publicA, readNavigation)).toEqual({
+    data: {
+      shopNavigation: {
+        header: [{ href: '/s/' + publicA + '/categories/child' }, blogLink],
+        footer: [],
+      },
+    },
+  });
+  expect(await storefront(publicB, readNavigation)).toEqual({
+    data: { shopNavigation: { header: [], footer: [] } },
+  });
   for (const [name, status] of [
     ['Visible', 'ACTIVE'],
     ['Draft', 'DRAFT'],
@@ -1422,6 +1507,9 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   });
   await database.brand.update({ where: { id: visible.id }, data: { status: 'HIDDEN' } });
   await database.category.update({ where: { id: parent.id }, data: { active: false } });
+  expect(await storefront(publicA, readNavigation)).toEqual({
+    data: { shopNavigation: { header: [blogLink], footer: [] } },
+  });
   expect(
     await storefront(
       publicA,
