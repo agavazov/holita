@@ -295,17 +295,17 @@ async function seedCatalogue(): Promise<void> {
     }
     for (const [id, photos] of Object.entries({ ...demoProductImages, ...demoProductCovers })) {
       const productId = fixtureId('52', Number(id));
-      // Preserve the guard on restoring the original galleries.
+      // Leave galleries cleared by a merchant empty.
       const available = await client.query(
         `SELECT 1 FROM "product" p
          WHERE p."tenantId" = $1 AND p."branchId" = $2 AND p."id" = $3
-           AND ($4 OR p."createdAt" = p."updatedAt")
+           AND p."createdAt" = p."updatedAt"
            AND NOT EXISTS (
              SELECT 1 FROM "productImage" i
              WHERE i."tenantId" = $1 AND i."branchId" = $2 AND i."productId" = $3
            )
          FOR UPDATE OF p`,
-        [tenantId, branchId, productId, Object.hasOwn(demoProductCovers, id)],
+        [tenantId, branchId, productId],
       );
       if (available.rowCount) {
         const productDirectory = join(directory, 'products');

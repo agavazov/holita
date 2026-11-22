@@ -46,8 +46,8 @@ Use the ticket to choose which layers the feature changes.
   [catalogue fixtures](../../../holita/tools/demo-catalogue.mts) and the
   [seed that loads them](../../../holita/tools/holita-seed.mts). Keep fixture IDs stable.
   Insert only. Reuse existing fixtures as references or give new examples their own IDs when
-  adding fields would require an update. Generate artwork locally and keep the source PNGs in
-  `holita/config/demo/` for the seed to copy into the configured image directory.
+  adding fields would require an update. Generate artwork locally and keep the source WebP or PNG
+  files in `holita/config/demo/` for the seed to copy into the configured image directory.
   A second run should insert nothing and leave existing rows and files unchanged.
 - Follow the [validation skill](../osnova-focused-validation/SKILL.md) and workspace test budget.
   Add or extend tests only for cases the delivery policy permits.

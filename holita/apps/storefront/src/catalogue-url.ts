@@ -62,7 +62,6 @@ export function validCatalogueFilters(filters: CatalogueFilters): boolean {
   const id = /^[\da-f]{8}-[\da-f]{4}-[1-8][\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i;
   return (
     Array.from(query).length <= 200 &&
-    query.split(/\s+/u).length <= 5 &&
     !query.includes('\u0000') &&
     [filters.minPrice, filters.maxPrice].every((value) => !value || price.test(value)) &&
     (!filters.minPrice ||

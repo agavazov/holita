@@ -316,20 +316,6 @@ main > a:focus-visible {
   object-fit: contain;
 }
 
-.shop-state {
-  margin-block: 0 1.25rem;
-  padding: 1.5rem;
-  border: 1px solid var(--shop-border);
-  border-radius: 0.625rem;
-  background: var(--shop-paper);
-  color: var(--shop-ink);
-  overflow-wrap: anywhere;
-}
-
-.shop-state p {
-  margin-block: 0 0.75rem;
-}
-
 form {
   display: grid;
   gap: 0.5rem;

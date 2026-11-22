@@ -98,7 +98,7 @@ function browseCriteria({
   validatePage(offset, limit);
   const search = filter?.search?.trim() ?? '';
   const words = search ? search.split(/\s+/u) : [];
-  if (Array.from(search).length > 200 || words.length > 5 || search.includes('\u0000')) {
+  if (Array.from(search).length > 200 || search.includes('\u0000')) {
     throw new BadRequestException('Invalid search');
   }
   const minPrice = filter?.minPrice ?? null;

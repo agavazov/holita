@@ -1,1 +1,20 @@
 @use '@osnova/ui/styles';
+
+.shop-state {
+  margin: 0;
+  padding: var(--p-app-space-4);
+  border: 1px solid var(--shop-border);
+  border-radius: var(--p-app-radius-panel);
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  overflow-wrap: anywhere;
+}
+
+.shop-state p {
+  margin: 0;
+}
+
+.shop-state p + *,
+.shop-state + * {
+  margin-block-start: var(--p-app-space-3);
+}

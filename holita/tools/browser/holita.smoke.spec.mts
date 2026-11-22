@@ -1036,7 +1036,7 @@ test('staff creates a merchant and its administrator creates a product', async (
     await filtered.getByLabel('Surface finish').selectOption({ label: 'Satin' });
     await filtered.getByLabel('In stock only').check();
     await filtered.getByRole('button', { name: 'Apply', exact: true }).click();
-    await expect(filtered).toHaveURL(/\?.*option=.*inStock=1/);
+    await expect(filtered.locator('.catalogue-card h2')).toHaveText([configuredProductName]);
     const sharedUrl = filtered.url();
     await filtered.close();
     const reopened = await shopperContext.newPage();
