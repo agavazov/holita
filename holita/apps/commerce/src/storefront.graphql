@@ -1,6 +1,11 @@
 type Shop {
   id: ID!
   name: String!
+  "The merchant's public display name, or the Branch name when unset."
+  displayName: String!
+  contactEmail: String
+  contactPhone: String
+  contactAddress: String
 }
 type ShopNavigation {
   header: [ShopNavigationLink!]!

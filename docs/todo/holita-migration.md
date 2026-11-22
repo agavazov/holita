@@ -23,7 +23,6 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 
 | Ticket                                                                                           | Wave | Status | Depends on           |
 | ------------------------------------------------------------------------------------------------ | ---- | ------ | -------------------- |
-| [126 General shop settings](126-holita-general-settings.md)                                      | 3    | Ready  |                      |
 | [127 Admin shop dashboard](127-holita-dashboard.md)                                              | 3    | Ready  |                      |
 | [131 Establish the Sales subgraph](131-holita-sales-sales-service.md)                            | 4    | Ready  |                      |
 | [132 Manage prospect records](132-holita-sales-leads.md)                                         | 4    | Ready  | 131                  |

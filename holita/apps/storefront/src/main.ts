@@ -76,8 +76,9 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
   template: `
     @let header = headerLinks();
     @let footer = footerLinks();
+    @let footerContacts = page !== 'contacts' && hasContactDetails();
     <header class="shop-header">
-      <a class="shop-name" [routerLink]="base()">{{ shop()?.name ?? 'Holita' }}</a>
+      <a class="shop-name" [routerLink]="base()">{{ shop()?.displayName ?? 'Holita' }}</a>
       <nav class="shop-utilities" [attr.aria-label]="t().navigation">
         <a [routerLink]="base()" [attr.aria-current]="page === 'catalogue' ? 'page' : null">
           {{ t().products }}
@@ -90,6 +91,11 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             {{ t()[section] }}
           </a>
         }
+        <a
+          [routerLink]="[...base(), 'contacts']"
+          [attr.aria-current]="page === 'contacts' ? 'page' : null"
+          >{{ t().contacts }}</a
+        >
       </nav>
       <div class="shop-actions">
         @let cartCount = cartState.cart()?.itemCount ?? null;
@@ -155,6 +161,26 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
               [shopId]="shopId()"
               [section]="section"
             />
+          } @else if (error()) {
+            <ng-container [ngTemplateOutlet]="requestError" />
+          } @else {
+            <p class="shop-state" role="status">{{ t().loading }}</p>
+          }
+        }
+        @if (page === 'contacts') {
+          @if (shop()) {
+            <section aria-labelledby="contact-heading">
+              <header class="shop-page-heading">
+                <h1 id="contact-heading">{{ t().contacts }}</h1>
+              </header>
+              <div class="shop-panel shop-contact-panel">
+                @if (hasContactDetails()) {
+                  <ng-container [ngTemplateOutlet]="contactDetails" />
+                } @else {
+                  <p>{{ t().noContactDetails }}</p>
+                }
+              </div>
+            </section>
           } @else if (error()) {
             <ng-container [ngTemplateOutlet]="requestError" />
           } @else {
@@ -521,16 +547,55 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         }
       }
     </main>
-    @if (footer.length) {
+    @if (footer.length || footerContacts) {
       <footer class="shop-footer">
-        <nav [attr.aria-label]="t().shopFooterNavigation">
-          <ng-container
-            [ngTemplateOutlet]="menuLinks"
-            [ngTemplateOutletContext]="{ $implicit: footer }"
-          />
-        </nav>
+        @if (footer.length) {
+          <nav [attr.aria-label]="t().shopFooterNavigation">
+            <ng-container
+              [ngTemplateOutlet]="menuLinks"
+              [ngTemplateOutletContext]="{ $implicit: footer }"
+            />
+          </nav>
+        }
+        @if (footerContacts) {
+          <section [attr.aria-label]="t().contacts">
+            <ng-container [ngTemplateOutlet]="contactDetails" />
+          </section>
+        }
       </footer>
     }
+    <ng-template #contactDetails>
+      @if (shop(); as details) {
+        <dl class="shop-contact-details">
+          @if (details.contactEmail; as email) {
+            <div>
+              <dt>{{ t().email }}</dt>
+              <dd>
+                <a [href]="emailHref()">{{ email }}</a>
+              </dd>
+            </div>
+          }
+          @if (details.contactPhone; as phone) {
+            <div>
+              <dt>{{ t().phone }}</dt>
+              <dd>
+                @if (phoneHref(); as href) {
+                  <a [href]="href">{{ phone }}</a>
+                } @else {
+                  {{ phone }}
+                }
+              </dd>
+            </div>
+          }
+          @if (details.contactAddress; as address) {
+            <div>
+              <dt>{{ t().contactAddress }}</dt>
+              <dd class="shop-contact-address">{{ address }}</dd>
+            </div>
+          }
+        </dl>
+      }
+    </ng-template>
     <ng-template #menuLinks let-links>
       @for (link of links; track link.id) {
         @if (link.route) {
@@ -602,6 +667,22 @@ class StorefrontPage {
     this.request.hasValue() ? this.request.value() : undefined,
   );
   readonly shop = computed(() => this.view()?.shop ?? null);
+  protected readonly hasContactDetails = computed(() => {
+    const shop = this.shop();
+    return !!(shop?.contactEmail || shop?.contactPhone || shop?.contactAddress);
+  });
+  protected readonly emailHref = computed(() => {
+    const email = this.shop()?.contactEmail;
+    if (!email) {
+      return null;
+    }
+    const at = email.lastIndexOf('@');
+    return `mailto:${encodeURIComponent(email.slice(0, at))}@${encodeURIComponent(email.slice(at + 1))}`;
+  });
+  protected readonly phoneHref = computed(() => {
+    const dial = this.shop()?.contactPhone?.replace(/[\p{Zs}().-]/gu, '');
+    return dial && /^\+?\d{3,15}$/u.test(dial) ? `tel:${dial}` : null;
+  });
   protected readonly shopNavigation = resource({
     params: () => this.shop()?.id,
     loader: ({ params: shopId }) => this.api.shopNavigation(shopId),
@@ -840,6 +921,7 @@ const pages = [
   { path: 's/:shopId/pages/:slug', component: StorefrontPage },
   { path: 's/:shopId/blog', component: StorefrontPage },
   { path: 's/:shopId/blog/:slug', component: StorefrontPage },
+  { path: 's/:shopId/contacts', component: StorefrontPage },
   ...browseSections.flatMap((section) => [
     { path: `s/:shopId/${section}`, component: StorefrontPage },
     { path: `s/:shopId/${section}/:slug`, component: StorefrontPage },

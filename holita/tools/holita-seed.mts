@@ -27,6 +27,7 @@ import {
   demoRefund,
   demoSaturdayShipping,
   demoShippingMethod,
+  demoShopSettings,
   demoShopper,
   demoTags,
   type DemoShopperOrder,
@@ -448,6 +449,19 @@ async function seedCatalogue(): Promise<void> {
       }
     }
     const navigationMenusInserted = await seedNavigationMenus(client, tenantId, branchId);
+    const { rowCount: shopSettingsInserted } = await client.query(
+      `INSERT INTO "shopSettings" ("tenantId", "branchId", "displayName",
+                                   "contactEmail", "contactPhone", "contactAddress")
+       VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT ("tenantId", "branchId") DO NOTHING`,
+      [
+        tenantId,
+        branchId,
+        demoShopSettings.displayName,
+        demoShopSettings.contactEmail,
+        demoShopSettings.contactPhone,
+        demoShopSettings.contactAddress,
+      ],
+    );
     await seedShopperCart(client, tenantId, branchId);
     for (const [id, method, sortOrder] of [
       [1, demoPaymentMethod, 0],
@@ -504,6 +518,7 @@ async function seedCatalogue(): Promise<void> {
       `Demo blog inserted ${String(blogTagsInserted)} tags and ${String(blogArticlesInserted)} articles.`,
     );
     console.log(`Demo navigation inserted ${String(navigationMenusInserted)} menus.`);
+    console.log(`Demo shop settings inserted ${String(shopSettingsInserted ?? 0)} rows.`);
   } finally {
     await client.end();
   }

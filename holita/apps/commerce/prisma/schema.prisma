@@ -89,6 +89,17 @@ enum NavigationDestinationType {
   @@map("navigationDestinationType")
 }
 
+model ShopSettings {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  displayName String? @db.VarChar(200)
+  contactEmail String? @db.VarChar(254)
+  contactPhone String? @db.VarChar(50)
+  contactAddress String? @db.VarChar(500)
+  @@id([tenantId, branchId])
+  @@map("shopSettings")
+}
+
 model NavigationMenu {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid

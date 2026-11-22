@@ -72,6 +72,7 @@ main {
 .shop-name {
   grid-area: name;
   min-inline-size: 0;
+  padding-block: var(--p-app-space-2);
   font: bold clamp(1.35rem, 3vw, 2.25rem) / 1.1 var(--shop-serif);
   letter-spacing: -0.05em;
   overflow-wrap: anywhere;
@@ -116,10 +117,12 @@ main {
 }
 
 .shop-footer {
+  display: grid;
+  gap: var(--p-app-space-3);
   padding-block-end: var(--p-app-space-5);
 }
 
-.shop-footer nav {
+.shop-footer > :first-child {
   padding-block-start: var(--p-app-space-3);
   border-block-start: 1px solid var(--shop-border);
 }
@@ -154,9 +157,52 @@ main {
 }
 
 .shop-header :is(a, button):focus-visible,
-.shop-footer a:focus-visible {
+.shop-footer a:focus-visible,
+.shop-contact-details a:focus-visible {
   outline: 2px solid var(--shop-focus);
   outline-offset: 2px;
+}
+
+.shop-contact-panel {
+  max-inline-size: 52rem;
+
+  > p {
+    margin: 0;
+  }
+}
+
+.shop-contact-details {
+  display: grid;
+  gap: var(--p-app-space-4);
+  margin: 0;
+
+  dt {
+    color: var(--shop-muted);
+    font-weight: 700;
+  }
+
+  dd {
+    margin: var(--p-app-space-1) 0 0;
+    overflow-wrap: anywhere;
+  }
+
+  a {
+    color: var(--shop-ink);
+    text-decoration: underline;
+    text-underline-offset: 0.22em;
+  }
+}
+
+.shop-contact-address {
+  white-space: pre-wrap;
+}
+
+.shop-footer .shop-contact-details {
+  font-size: 0.875rem;
+
+  @include bp.from(md) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  }
 }
 
 :where(button, input) {

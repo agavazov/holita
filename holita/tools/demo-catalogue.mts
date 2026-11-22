@@ -643,6 +643,13 @@ export const demoNavigationMenus = [
   },
 ] as const;
 
+export const demoShopSettings = {
+  displayName: 'Дом и уют',
+  contactEmail: 'hello@dom-i-uyut.example.test',
+  contactPhone: '+359 2 000 0000',
+  contactAddress: 'ул. „Примерна“ 12, 1000 София',
+} as const;
+
 export const demoBlogTags = [{ id: 1, name: 'Грижа за съдовете', slug: 'cookware-care' }] as const;
 
 export const demoBlogArticles = [

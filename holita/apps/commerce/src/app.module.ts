@@ -25,6 +25,8 @@ import { PagesModule } from './pages/pages.module.js';
 import { PagesResolver } from './pages/pages.resolver.js';
 import { RefundsModule } from './refunds/refunds.module.js';
 import { RefundsResolver } from './refunds/refunds.resolver.js';
+import { ShopSettingsModule } from './shop-settings/shop-settings.module.js';
+import { ShopSettingsResolver } from './shop-settings/shop-settings.resolver.js';
 import { CommerceResolver } from './products/commerce.resolver.js';
 import { CatalogueProductResolver, StorefrontResolver } from './storefront.resolver.js';
 import { StorefrontService } from './storefront.service.js';
@@ -71,6 +73,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     PagesModule,
     BlogModule,
     NavigationModule,
+    ShopSettingsModule,
   ],
   providers: [
     CommerceResolver,
@@ -91,6 +94,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     PagesResolver,
     BlogResolver,
     NavigationResolver,
+    ShopSettingsResolver,
   ],
 })
 class OperatorModule {}
@@ -108,6 +112,7 @@ class OperatorModule {}
     PagesModule,
     BlogModule,
     NavigationModule,
+    ShopSettingsModule,
   ],
   controllers: [BrandImagesController, ProductImagesController],
   providers: [

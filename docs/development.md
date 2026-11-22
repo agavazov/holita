@@ -661,6 +661,13 @@ links into the order shoppers should see them. The storefront graph exposes `sho
 with both placements in saved order. A hidden or unpublished destination is omitted while it
 is unavailable. Save a menu with no links to clear its placement.
 
+In Admin, open General Settings to update the selected shop's public display name, email,
+phone and address. Save publishes those values to the storefront. Discard changes restores
+the last saved form values. Clear the display name to use the shop's Branch name. The
+storefront shows available details in its footer and at `/s/<branchId>/contacts`. The operator
+graph exposes `shopSettings` and `updateShopSettings`, and the storefront graph exposes the
+public fields on `shop`.
+
 `npm run dev` starts both products. `npm run kill` stops their development applications while
 leaving PostgreSQL and the ERM units running. Discocan Core reads `discocan/config/core.env`;
 Holita Core reads `holita/config/core.env`. Their watch outputs are `dist-discocan` and

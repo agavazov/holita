@@ -154,6 +154,7 @@ beforeAll(async () => {
     '20261122210000_shop_pages',
     '20261122220000_shop_blog',
     '20261122230000_shop_navigation',
+    '20261123000000_shop_settings',
   ]) {
     await connection.query(
       await readFile(
@@ -292,6 +293,49 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
   if (!database) {
     throw new Error('Missing test database');
   }
+  const settingsFields = 'displayName contactEmail contactPhone contactAddress';
+  const readSettings = `{shopSettings{${settingsFields}}}`;
+  const updateSettings = `mutation($input:ShopSettingsInput!){
+    updateShopSettings(input:$input){${settingsFields}}
+  }`;
+  const emptySettings = {
+    displayName: null,
+    contactEmail: null,
+    contactPhone: null,
+    contactAddress: null,
+  };
+  const settings = {
+    ...emptySettings,
+    displayName: 'Моят магазин',
+    contactEmail: 'shop@example.test',
+  };
+  expect(await query(tokens.operator, branchA, updateSettings, { input: settings })).toEqual({
+    data: { updateShopSettings: settings },
+  });
+  for (const [token, message] of [
+    [tokens.viewer, 'Your role does not permit this action'],
+    [tokens.foreign, 'Branch is unavailable'],
+  ]) {
+    expect(
+      await query(token, branchA, updateSettings, { input: { displayName: 'Друг магазин' } }),
+    ).toMatchObject({ data: null, errors: [{ message }] });
+  }
+  expect(await query(tokens.viewer, branchA, readSettings)).toEqual({
+    data: { shopSettings: settings },
+  });
+  for (const [token, branch] of [
+    [tokens.operator, branchB],
+    [tokens.foreign, branchForeign],
+  ]) {
+    expect(await query(token, branch, readSettings)).toEqual({
+      data: { shopSettings: emptySettings },
+    });
+  }
+  expect(
+    await query(tokens.operator, branchA, updateSettings, {
+      input: { displayName: '  ' },
+    }),
+  ).toEqual({ data: { updateShopSettings: emptySettings } });
   const pageInput = { slug: 'scoped-page', status: 'DRAFT', titleEn: 'Scoped page' };
   const createPage = 'mutation($input:ShopPageInput!){createShopPage(input:$input){slug}}';
   const updatePage =
@@ -1190,7 +1234,7 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       input: { ...productDraft, tagIds: [] },
     }),
   ).toEqual({ data: { updateProduct: { ...expectedMarkers, tags: [] } } });
-}, 15_000);
+}, 30_000);
 
 function storedVariant(sku: string, price: string, active = true) {
   return {

@@ -2,6 +2,10 @@ query PublicShop {
   shop {
     id
     name
+    displayName
+    contactEmail
+    contactPhone
+    contactAddress
   }
 }
 fragment ShopNavigationLinkFields on ShopNavigationLink {

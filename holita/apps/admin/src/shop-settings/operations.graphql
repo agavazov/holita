@@ -1,0 +1,18 @@
+fragment OperatorShopSettingsFields on ShopSettings {
+  displayName
+  contactEmail
+  contactPhone
+  contactAddress
+}
+
+query OperatorShopSettings {
+  shopSettings {
+    ...OperatorShopSettingsFields
+  }
+}
+
+mutation OperatorUpdateShopSettings($input: ShopSettingsInput!) {
+  updateShopSettings(input: $input) {
+    ...OperatorShopSettingsFields
+  }
+}

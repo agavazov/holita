@@ -37,7 +37,7 @@ export class CatalogueProductResolver {
 export class StorefrontResolver {
   constructor(private readonly service: StorefrontService) {}
   @Query('shop') shop(@Context() context: StorefrontContext) {
-    return this.service.shop(context);
+    return this.service.publicShop(context);
   }
   @Query('shopNavigation') shopNavigation(@Context() context: StorefrontContext) {
     return this.service.shopNavigation(context);

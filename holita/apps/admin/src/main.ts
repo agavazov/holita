@@ -42,6 +42,7 @@ import { PaymentMethodEditor } from './payment-methods/payment-method-editor';
 import { PaymentMethodsPage } from './payment-methods/payment-methods-page';
 import { ShippingMethodEditor } from './shipping-methods/shipping-method-editor';
 import { ShippingMethodsPage } from './shipping-methods/shipping-methods-page';
+import { ShopSettingsPage } from './shop-settings/shop-settings-page';
 import { ProductEditor } from './products/product-editor';
 import { ProductsPage } from './products/products-page';
 
@@ -373,6 +374,7 @@ void startOperator({
       ],
     },
     { path: 'customers', component: CustomersPage },
+    { path: 'general-settings', component: ShopSettingsPage },
     {
       path: 'customers/:recordId',
       component: CustomerDetail,
@@ -421,6 +423,7 @@ void startOperator({
     { id: 'customers', label: 'customers', icon: 'users', path: 'customers' },
     { id: 'payment-methods', label: 'paymentMethods', icon: 'cog', path: 'payment-methods' },
     { id: 'shipping-methods', label: 'shippingMethods', icon: 'truck', path: 'shipping-methods' },
+    { id: 'general-settings', label: 'generalSettings', icon: 'cog', path: 'general-settings' },
   ],
 }).catch((error: unknown) => {
   console.error(error);

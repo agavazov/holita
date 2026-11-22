@@ -246,6 +246,21 @@ type ShopPageList {
   offset: Int!
   limit: Int!
 }
+type ShopSettings {
+  displayName: String
+  contactEmail: String
+  contactPhone: String
+  contactAddress: String
+}
+"""
+Public shop details replace the saved values. Omitted, null and blank values clear a field.
+"""
+input ShopSettingsInput {
+  displayName: String
+  contactEmail: String
+  contactPhone: String
+  contactAddress: String
+}
 enum NavigationPlacement {
   HEADER
   FOOTER
@@ -906,6 +921,7 @@ type Query {
     filter: ShopPageFilter
   ): ShopPageList!
   shopPage(id: ID!): ShopPage
+  shopSettings: ShopSettings!
   navigationMenus: [NavigationMenuSummary!]!
   navigationMenu(id: ID!): NavigationMenu
   "Search this shop's categories, collections or pages, including unavailable destinations."
@@ -993,6 +1009,7 @@ type Mutation {
   deleteBrand(id: ID!): Boolean!
   createShopPage(input: ShopPageInput!): ShopPage!
   updateShopPage(id: ID!, input: ShopPageInput!): ShopPage!
+  updateShopSettings(input: ShopSettingsInput!): ShopSettings!
   createNavigationMenu(input: CreateNavigationMenuInput!): NavigationMenu!
   "Replace the menu links in input order. An empty array clears the menu."
   updateNavigationMenu(id: ID!, items: [NavigationMenuItemInput!]!): NavigationMenu!

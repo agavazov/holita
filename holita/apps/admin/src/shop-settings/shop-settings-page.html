@@ -1,0 +1,138 @@
+<osnova-page-header [title]="text().generalSettings" [moduleInfo]="text().generalSettingsInfo" />
+@if (!scope()) {
+<p-message severity="info">{{ text().noShop }}</p-message>
+} @else if (record.error()) {
+<section class="app-card">
+  <osnova-empty-state kind="error" [title]="text().generalSettingsUnavailable">
+    <button emptyActions pButton type="button" (click)="record.reload()">
+      {{ shared().retry }}
+    </button>
+  </osnova-empty-state>
+</section>
+} @else if (record.hasValue()) { @if (!canWrite()) {
+<p-message severity="info">{{ text().generalSettingsReadOnly }}</p-message>
+}
+<form
+  #settingsForm
+  class="app-view"
+  [formGroup]="form"
+  [attr.aria-busy]="saving() || null"
+  (ngSubmit)="save()"
+>
+  <section class="app-card app-settings-section" aria-labelledby="public-shop-details">
+    <header>
+      <h2 id="public-shop-details">{{ text().shopPublicDetails }}</h2>
+    </header>
+    <div class="app-form-grid">
+      @let nameError = fieldError('displayName');
+      <osnova-form-field
+        class="app-form-grid--wide"
+        controlId="shop-settings-displayName"
+        [label]="text().shopDisplayName"
+        [hint]="text().shopDisplayNameHint"
+        [error]="nameError"
+      >
+        <input
+          pInputText
+          id="shop-settings-displayName"
+          formControlName="displayName"
+          autocomplete="organization"
+          [readOnly]="!canWrite()"
+          aria-describedby="shop-settings-displayName-hint shop-settings-displayName-error"
+          [invalid]="!!nameError"
+          [attr.aria-invalid]="!!nameError"
+          (input)="clearError('displayName')"
+        />
+      </osnova-form-field>
+      @let emailError = fieldError('contactEmail');
+      <osnova-form-field
+        controlId="shop-settings-contactEmail"
+        [label]="text().shopContactEmail"
+        [error]="emailError"
+      >
+        <input
+          pInputText
+          type="email"
+          id="shop-settings-contactEmail"
+          formControlName="contactEmail"
+          autocomplete="email"
+          [readOnly]="!canWrite()"
+          aria-describedby="shop-settings-contactEmail-error"
+          [invalid]="!!emailError"
+          [attr.aria-invalid]="!!emailError"
+          (input)="clearError('contactEmail')"
+        />
+      </osnova-form-field>
+      @let phoneError = fieldError('contactPhone');
+      <osnova-form-field
+        controlId="shop-settings-contactPhone"
+        [label]="text().shopContactPhone"
+        [error]="phoneError"
+      >
+        <input
+          pInputText
+          type="tel"
+          id="shop-settings-contactPhone"
+          formControlName="contactPhone"
+          autocomplete="tel"
+          [readOnly]="!canWrite()"
+          aria-describedby="shop-settings-contactPhone-error"
+          [invalid]="!!phoneError"
+          [attr.aria-invalid]="!!phoneError"
+          (input)="clearError('contactPhone')"
+        />
+      </osnova-form-field>
+      @let addressError = fieldError('contactAddress');
+      <osnova-form-field
+        class="app-form-grid--wide"
+        controlId="shop-settings-contactAddress"
+        [label]="text().shopContactAddress"
+        [error]="addressError"
+      >
+        <textarea
+          pTextarea
+          id="shop-settings-contactAddress"
+          formControlName="contactAddress"
+          rows="3"
+          autocomplete="street-address"
+          [readOnly]="!canWrite()"
+          aria-describedby="shop-settings-contactAddress-error"
+          [invalid]="!!addressError"
+          [attr.aria-invalid]="!!addressError"
+          (input)="clearError('contactAddress')"
+        ></textarea>
+      </osnova-form-field>
+    </div>
+  </section>
+  @if (saveError()) {
+  <p-message severity="error">{{ text().generalSettingsSaveFailed }}</p-message>
+  } @if (canWrite() && form.dirty) {
+  <div class="app-save-bar">
+    <span>{{ shared().discard.title }}</span>
+    <div class="app-page-actions">
+      <button
+        pButton
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="saving()"
+        (click)="discard()"
+      >
+        {{ shared().discard.discard }}
+      </button>
+      <button pButton type="submit" [disabled]="saving()">{{ text().save }}</button>
+    </div>
+  </div>
+  }
+</form>
+} @else {
+<section class="app-card app-settings-section" role="status" [attr.aria-label]="shared().loading">
+  <p-skeleton width="8rem" />
+  <div class="app-form-grid">
+    <p-skeleton class="app-form-grid--wide" height="var(--p-app-control-height)" />
+    <p-skeleton height="var(--p-app-control-height)" />
+    <p-skeleton height="var(--p-app-control-height)" />
+    <p-skeleton class="app-form-grid--wide" height="var(--p-app-control-height)" />
+  </div>
+</section>
+}

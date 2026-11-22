@@ -630,6 +630,19 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const merchant = await merchantContext.newPage();
     await merchant.goto(admin.origin);
     await signIn(merchant, merchantEmail, merchantPassword);
+    const contactSettings = {
+      displayName: 'Дом и уют за тестове',
+      contactEmail: 'contact@example.test',
+      contactPhone: '+359 2 555 0101',
+      contactAddress: 'ул. „Примерна“ 12\n1000 София',
+    };
+    await merchant.getByRole('link', { name: 'General Settings', exact: true }).click();
+    for (const [field, value] of Object.entries(contactSettings)) {
+      await merchant.locator(`#shop-settings-${field}`).fill(value);
+    }
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Settings saved.');
+
     const pageSlug = 'delivery-notes';
     const pageTitle = 'Бележки за доставката';
     const pageBody = 'Изпращаме съдовете в работни дни.\n\nОпаковаме всеки съд отделно.';
@@ -643,6 +656,19 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const shopperContext = await browser.newContext();
     cleanup.push(() => shopperContext.close());
     const contentShopper = await shopperContext.newPage();
+    const publicShopSettings = async (branchId: string): Promise<unknown> => {
+      const response = await shopperContext.request.post(`${shopApp.origin}/graphql`, {
+        headers: { 'x-branch-id': branchId },
+        data: {
+          query: '{ shop { id name displayName contactEmail contactPhone contactAddress } }',
+        },
+      });
+      expect(response.status()).toBe(200);
+      return response.json();
+    };
+    expect(await publicShopSettings(shopId)).toEqual({
+      data: { shop: { id: shopId, name: 'First shop', ...contactSettings } },
+    });
     const publicPage = async (): Promise<unknown> => {
       const response = await contentShopper.request.post(`${shopApp.origin}/graphql`, {
         headers: { 'x-branch-id': shopId },
@@ -667,6 +693,14 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await contentShopper.addInitScript(() => {
       sessionStorage.setItem('holita.storefront.language', 'en');
     });
+    await contentShopper.goto(`${shopApp.origin}/s/${shopId}`);
+    await expect(
+      contentShopper.getByRole('link', { name: contactSettings.displayName, exact: true }),
+    ).toBeVisible();
+    await contentShopper.getByRole('link', { name: 'Contact', exact: true }).click();
+    await expect(
+      contentShopper.getByRole('link', { name: contactSettings.contactEmail }),
+    ).toHaveAttribute('href', `mailto:${contactSettings.contactEmail}`);
     await contentShopper.goto(`${shopApp.origin}/s/${shopId}/pages/${pageSlug}`);
     await expect(contentShopper.getByRole('heading', { name: pageTitle })).toBeVisible();
     await contentShopper.reload();
@@ -686,22 +720,42 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         .getByRole('textbox', { name: 'Label (English)', exact: true })
         .last()
         .fill(label);
-      await merchant
-        .getByRole('combobox', { name: /^Destination type\b/u })
-        .last()
-        .click();
-      await merchant.getByRole('option', { name: type, exact: true }).click();
-      if (target) {
+      if (type !== 'Category') {
         await merchant
-          .getByRole('combobox', { name: /^Destination(?! type)\b/u })
+          .getByRole('combobox', { name: /^Destination type\b/u })
           .last()
-          .fill(target);
+          .click();
+        await merchant.getByRole('option', { name: type, exact: true }).click();
+      }
+      if (target) {
+        if (type === 'Category') {
+          await merchant
+            .getByRole('button', { name: 'Search by name or slug', exact: true })
+            .last()
+            .click();
+        } else {
+          await merchant
+            .getByRole('combobox', { name: /^Destination(?! type)\b/u })
+            .last()
+            .fill(target);
+        }
         await merchant.getByRole('option', { name: target }).click();
       }
     };
-    const saveMenu = async () => {
+    const saveMenu = async (mutation: 'createNavigationMenu' | 'updateNavigationMenu') => {
+      const operation =
+        mutation === 'createNavigationMenu'
+          ? 'OperatorCreateNavigationMenu'
+          : 'OperatorUpdateNavigationMenu';
+      const saved = merchant.waitForResponse(
+        (response) =>
+          response.request().postData()?.includes(`"operationName":"${operation}"`) === true,
+      );
       await merchant.getByRole('button', { name: 'Save', exact: true }).click();
-      await dismissSuccess(merchant, 'Menu saved.');
+      expect(await (await saved).json()).toMatchObject({
+        data: { [mutation]: { id: expect.any(String) } },
+      });
+      await expect(merchant.getByRole('dialog', { name: /^(New|Edit) menu$/u })).toBeHidden();
     };
     const menuLinks = (page: Page) =>
       page.getByRole('navigation', { name: 'Shop footer links' }).getByRole('link');
@@ -718,12 +772,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.getByRole('option', { name: 'Footer', exact: true }).click();
     await addMenuLink('Shop news', 'Blog');
     await addMenuLink('Delivery notes', 'Page', pageTitle);
-    await saveMenu();
+    await saveMenu('createNavigationMenu');
     await contentShopper.goto(`${shopApp.origin}/s/${shopId}`);
     await expectMenu(contentShopper, ['blog', `pages/${pageSlug}`]);
     await footerMenu.click();
     await merchant.getByRole('button', { name: 'Move link 2 up', exact: true }).click();
-    await saveMenu();
+    await saveMenu('updateNavigationMenu');
     await contentShopper.reload();
     await expectMenu(contentShopper, [`pages/${pageSlug}`, 'blog']);
     await menuLinks(contentShopper).first().click();
@@ -825,7 +879,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await navigation.click();
     await footerMenu.click();
     await addMenuLink('Cookware', 'Category', 'Cookware');
-    await saveMenu();
+    await saveMenu('updateNavigationMenu');
     const optionValues = await editOption(merchant);
     await merchant.getByRole('link', { name: 'Characteristic groups', exact: true }).click();
     await merchant.getByRole('button', { name: 'Add characteristic group', exact: true }).click();
@@ -1351,6 +1405,18 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       data: { catalogueCategories: [{ name: 'Kitchen' }], catalogueCategoryProducts: null },
     });
     const secondShopId = await createShop(staff, 'Second shop');
+    expect(await publicShopSettings(secondShopId)).toEqual({
+      data: {
+        shop: {
+          id: secondShopId,
+          name: 'Second shop',
+          displayName: 'Second shop',
+          contactEmail: null,
+          contactPhone: null,
+          contactAddress: null,
+        },
+      },
+    });
     expect(await collectionQuery(ruleSlug, 0, secondShopId)).toEqual({
       data: { catalogueCollections: { items: [], total: 0 }, catalogueCollectionProducts: null },
     });
@@ -1368,7 +1434,13 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       data: { shopNavigation: { header: [], footer: [] } },
     });
     await shopper.goto(`${shopApp.origin}/s/${secondShopId}`);
-    await expect(shopper.getByRole('link', { name: 'Second shop', exact: true })).toBeVisible();
+    const secondShopName = shopper.getByRole('link', { name: 'Second shop', exact: true });
+    const retryShop = shopper.getByRole('main').getByRole('button', { name: 'Retry', exact: true });
+    await expect(secondShopName.or(retryShop).first()).toBeVisible({ timeout: 15_000 });
+    if (!(await secondShopName.isVisible())) {
+      await retryShop.click();
+    }
+    await expect(secondShopName).toBeVisible({ timeout: 15_000 });
     await expect(menuLinks(shopper)).toHaveCount(0);
     const foreignProductImage = angled.replace(shopId, secondShopId);
     expect(

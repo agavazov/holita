@@ -36,12 +36,14 @@ import type {
   CatalogueVariantSelection,
   QueryBlogArticlesArgs,
   QueryCatalogueArgs,
+  Shop,
   Shopper,
   ShopperSession,
 } from './generated/graphql/storefront-types.js';
 import type { Scope, ShopperScope } from './scope.js';
 import { NavigationService } from './navigation/navigation.service.js';
 import { PagesService } from './pages/pages.service.js';
+import { ShopSettingsService } from './shop-settings/shop-settings.service.js';
 import { CatalogueRepository, type BrowseCriteria } from './products/catalogue.repository.js';
 import { CommerceRepository } from './products/commerce.repository.js';
 import { productImageUrl } from './products/product-images.js';
@@ -236,6 +238,7 @@ export class StorefrontService {
     private readonly pages: PagesService,
     private readonly blog: BlogService,
     private readonly navigation: NavigationService,
+    private readonly shopSettings: ShopSettingsService,
   ) {}
   async shop(context: StorefrontContext): Promise<ShopScope | null> {
     if (!context.branchId || !isUUID(context.branchId)) {
@@ -288,6 +291,22 @@ export class StorefrontService {
       throw new NotFoundException('Shop not found');
     }
     return shop;
+  }
+  async publicShop(context: StorefrontContext): Promise<Shop | null> {
+    const shop = await this.shop(context);
+    if (!shop) {
+      return null;
+    }
+    const { displayName, contactEmail, contactPhone, contactAddress } =
+      await this.shopSettings.readScoped({ tenantId: shop.tenantId, branchId: shop.id });
+    return {
+      id: shop.id,
+      name: shop.name,
+      displayName: displayName ?? shop.name,
+      contactEmail,
+      contactPhone,
+      contactAddress,
+    };
   }
   async shopPage(context: StorefrontContext, slug: string) {
     return this.pages.published(await this.publicScope(context), slug);
