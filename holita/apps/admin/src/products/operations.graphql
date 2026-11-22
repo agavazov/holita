@@ -41,6 +41,8 @@ query OperatorProduct($id: ID!) {
   product(id: $id) {
     id
     name
+    descriptionBg
+    descriptionEn
     status
     brandId
     categoryId

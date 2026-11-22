@@ -491,6 +491,10 @@ SKU, price, quantity, inventory tracking and status. The storefront lists active
 an active variant and uses the lowest active variant price on cards and detail pages. The Sofia
 demo shop has a tracked ceramic casserole and a two-colour cast-iron pan.
 
+The Product drawer's Descriptions section accepts optional Bulgarian and English plain text.
+The storefront product page shows the selected language when available and falls back to the
+other description. The Sofia demo shop includes a bilingual ceramic casserole under Cookware.
+
 `npm run dev` starts both products. `npm run kill` stops their development applications while
 leaving PostgreSQL and the ERM units running. Discocan Core reads `discocan/config/core.env`;
 Holita Core reads `holita/config/core.env`. Their watch outputs are `dist-discocan` and

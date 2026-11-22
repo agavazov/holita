@@ -561,7 +561,11 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.getByRole('link', { name: 'Products', exact: true }).click();
     await merchant.getByRole('button', { name: 'Create product', exact: true }).click();
     const productName = `Product ${randomUUID()}`;
+    const descriptionBg = 'Керамичен съд за печене.';
+    const descriptionEn = 'Ceramic baking dish.';
     await merchant.locator('#product-name').fill(productName);
+    await merchant.locator('#product-description-bg').fill(descriptionBg);
+    await merchant.locator('#product-description-en').fill(descriptionEn);
     await merchant.locator('#product-variant-sku-0').fill('SMOKE-001');
     await merchant.locator('#product-variant-price-0').fill('25.50');
     await merchant.locator('#product-status').click();
@@ -599,6 +603,19 @@ test('staff creates a merchant and its administrator creates a product', async (
     await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
     await shopper.getByRole('link', { name: productName }).click();
     await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
+    const description = shopper.locator('.product-description');
+    await expect(description).toHaveText(descriptionEn);
+    await shopper.getByRole('button', { name: 'BG', exact: true }).click();
+    await expect(description).toHaveText(descriptionBg);
+    await shopper.getByRole('button', { name: 'EN', exact: true }).click();
+    await merchant.getByRole('button', { name: productName, exact: true }).click();
+    await expect(merchant.locator('#product-description-en')).toHaveValue(descriptionEn);
+    await merchant.locator('#product-description-en').clear();
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Product saved.');
+    await shopper.reload();
+    await expect(description).toHaveText(descriptionBg);
+    await expect(description).toHaveAttribute('lang', 'bg');
     const breadcrumbs = shopper.getByRole('navigation', { name: 'Product breadcrumbs' });
     await expect(breadcrumbs.locator('li > :last-child')).toHaveText([
       'Products',

@@ -283,6 +283,13 @@ main > a:focus-visible {
   font-weight: 700;
 }
 
+.product-description {
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .brand-art {
   display: grid;
   grid-area: 1 / 1;

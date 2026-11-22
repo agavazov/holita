@@ -74,6 +74,8 @@ function catalogueProduct(
   return {
     id: item.id,
     name: item.name,
+    descriptionBg: item.descriptionBg,
+    descriptionEn: item.descriptionEn,
     price: variant.price.toFixed(2),
     brand: item.brand?.status === 'ACTIVE' ? catalogueBrand(item.brand) : null,
     category: category ?? null,

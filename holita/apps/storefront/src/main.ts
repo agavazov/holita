@@ -256,6 +256,9 @@ class StorefrontApi {
                 }
                 <h1>{{ item.name }}</h1>
                 <p class="app-num product-price">{{ formatPrice(item.price) }}</p>
+                @if (description(); as detail) {
+                  <p class="product-description" [attr.lang]="detail.language">{{ detail.text }}</p>
+                }
               </div>
               @if (item.brand?.logoUrl; as logo) {
                 <div class="product-brand brand-art">
@@ -338,6 +341,15 @@ class StorefrontPage {
   readonly busy = signal(false);
   readonly catalogue = signal<CatalogueQuery['catalogue'] | null>(null);
   readonly product = signal<CatalogueProductQuery['catalogueProduct']>(null);
+  readonly description = computed(() => {
+    const item = this.product();
+    const bg = item?.descriptionBg;
+    const en = item?.descriptionEn;
+    if (en && (this.language() === 'en' || !bg)) {
+      return { text: en, language: 'en' };
+    }
+    return bg ? { text: bg, language: 'bg' } : null;
+  });
   readonly shopper = signal<ShopperMeQuery['shopperMe']>(null);
   readonly offset = signal(0);
   readonly pageSize = cataloguePageSize;

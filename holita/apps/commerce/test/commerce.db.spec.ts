@@ -111,6 +111,15 @@ beforeAll(async () => {
       'utf8',
     ),
   );
+  await connection.query(
+    await readFile(
+      new URL(
+        '../prisma/migrations/20261122030000_product_descriptions/migration.sql',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
   url.searchParams.set('schema', schema);
   process.env.COMMERCE_DATABASE_URL = url.toString();
   const coreServer = createServer((request, response) => {

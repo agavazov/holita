@@ -8,7 +8,8 @@
   (retry)="retry()"
 >
   <form id="product-editor-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
-    <section class="app-form-section">
+    <section class="app-form-section" aria-labelledby="product-basic-info-title">
+      <h3 id="product-basic-info-title">{{ text().productBasicInfo }}</h3>
       @let nameError = controlError(form.controls.name, 'name');
       <osnova-form-field
         controlId="product-name"
@@ -116,6 +117,47 @@
             {{ shared().retry }}
           </button>
           }
+        </osnova-form-field>
+      </div>
+    </section>
+    <section class="app-form-section" aria-labelledby="product-descriptions-title">
+      <h3 id="product-descriptions-title">{{ text().productDescriptions }}</h3>
+      <div class="app-form-grid">
+        @let descriptionBgError = errors()['descriptionBg'] ?? null;
+        <osnova-form-field
+          controlId="product-description-bg"
+          [label]="text().productDescriptionBg"
+          [error]="descriptionBgError"
+        >
+          <textarea
+            pTextarea
+            id="product-description-bg"
+            formControlName="descriptionBg"
+            lang="bg"
+            rows="3"
+            aria-describedby="product-description-bg-error"
+            [invalid]="!!descriptionBgError"
+            [attr.aria-invalid]="!!descriptionBgError"
+            (input)="clearError('descriptionBg')"
+          ></textarea>
+        </osnova-form-field>
+        @let descriptionEnError = errors()['descriptionEn'] ?? null;
+        <osnova-form-field
+          controlId="product-description-en"
+          [label]="text().productDescriptionEn"
+          [error]="descriptionEnError"
+        >
+          <textarea
+            pTextarea
+            id="product-description-en"
+            formControlName="descriptionEn"
+            lang="en"
+            rows="3"
+            aria-describedby="product-description-en-error"
+            [invalid]="!!descriptionEnError"
+            [attr.aria-invalid]="!!descriptionEnError"
+            (input)="clearError('descriptionEn')"
+          ></textarea>
         </osnova-form-field>
       </div>
     </section>

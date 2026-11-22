@@ -126,6 +126,7 @@ async function seedCatalogue(): Promise<void> {
         status = 'active',
         category,
         configuredVariants,
+        descriptions,
       ] of brand.products) {
         const productId = fixtureId('52', id);
         const variants = configuredVariants ?? [
@@ -139,8 +140,9 @@ async function seedCatalogue(): Promise<void> {
           ),
         ];
         const product = await client.query(
-          `INSERT INTO "product" ("id", "tenantId", "branchId", "brandId", "name", "status", "categoryId", "updatedAt")
-           SELECT $1, "tenantId", "branchId", "id", $5, $6, $7, CURRENT_TIMESTAMP
+          `INSERT INTO "product" ("id", "tenantId", "branchId", "brandId", "name", "status", "categoryId",
+                                  "descriptionBg", "descriptionEn", "updatedAt")
+           SELECT $1, "tenantId", "branchId", "id", $5, $6, $7, $9, $10, CURRENT_TIMESTAMP
            FROM "brand" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $4
            AND ($7::uuid IS NULL OR EXISTS (
              SELECT 1 FROM "category" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $7
@@ -158,6 +160,8 @@ async function seedCatalogue(): Promise<void> {
             status,
             category === undefined ? null : fixtureId('62', category),
             valueIds,
+            descriptions?.bg ?? null,
+            descriptions?.en ?? null,
           ],
         );
         if (!product.rowCount) {

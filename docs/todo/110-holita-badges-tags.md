@@ -1,6 +1,6 @@
 # 110 Product badges and tags
 
-**Status:** Ready after [106](106-holita-product-editor.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

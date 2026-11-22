@@ -27,6 +27,8 @@ query CatalogueProduct($id: ID!) {
   catalogueProduct(id: $id) {
     id
     name
+    descriptionBg
+    descriptionEn
     price
     brand {
       ...CatalogueBrandFields

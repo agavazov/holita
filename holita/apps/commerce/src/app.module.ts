@@ -3,9 +3,7 @@ import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nest
 import { GraphQLModule } from '@nestjs/graphql';
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage } from 'node:http';
-import { CommerceRepository } from './commerce.repository.js';
 import { CommerceResolver } from './commerce.resolver.js';
-import { CommerceService } from './commerce.service.js';
 import { DatabaseModule } from './database.module.js';
 import { StorefrontResolver } from './storefront.resolver.js';
 import { StorefrontService } from './storefront.service.js';
@@ -18,23 +16,17 @@ import { CategoriesModule } from './categories/categories.module.js';
 import { CategoriesResolver } from './categories/categories.resolver.js';
 import { OptionsModule } from './options/options.module.js';
 import { OptionsResolver } from './options/options.resolver.js';
+import { ProductsModule } from './products/products.module.js';
 
 @Module({
-  imports: [DatabaseModule, BrandsModule, CategoriesModule, OptionsModule],
-  providers: [
-    CommerceRepository,
-    CommerceResolver,
-    CommerceService,
-    BrandsResolver,
-    CategoriesResolver,
-    OptionsResolver,
-  ],
+  imports: [ProductsModule, BrandsModule, CategoriesModule, OptionsModule],
+  providers: [CommerceResolver, BrandsResolver, CategoriesResolver, OptionsResolver],
 })
 class OperatorModule {}
 @Module({
-  imports: [DatabaseModule, BrandsModule, CategoriesModule],
+  imports: [DatabaseModule, ProductsModule, BrandsModule, CategoriesModule],
   controllers: [BrandImagesController],
-  providers: [CommerceRepository, ShopperRepository, StorefrontResolver, StorefrontService],
+  providers: [ShopperRepository, StorefrontResolver, StorefrontService],
 })
 class StorefrontModule {}
 const context = ({ req }: { req: IncomingMessage }) => ({

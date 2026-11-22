@@ -23,6 +23,8 @@ function product(row: ProductRow): Product {
   return {
     id: row.id,
     name: row.name,
+    descriptionBg: row.descriptionBg,
+    descriptionEn: row.descriptionEn,
     price: price?.toFixed(2) ?? null,
     status: row.status,
     brandId: row.brandId,
@@ -53,7 +55,14 @@ function variantError(index: number, field: string, code: string, message: strin
   return fieldError(`variants.${String(index)}.${field}`, code, message);
 }
 
-function productFields(input: Omit<ProductInput, 'variants'>) {
+function description(value: string | null, path: 'descriptionBg' | 'descriptionEn'): string | null {
+  if (value?.includes('\u0000')) {
+    throw fieldError(path, 'INVALID_VALUE', 'Product description contains a null character');
+  }
+  return value?.trim() || null;
+}
+
+function productFields({ descriptionBg, descriptionEn, ...input }: Omit<ProductInput, 'variants'>) {
   const name = input.name.trim();
   if (!name || Array.from(name).length > 200 || name.includes('\u0000')) {
     throw fieldError('name', 'INVALID_VALUE', 'Product name must contain 1 to 200 characters');
@@ -67,6 +76,12 @@ function productFields(input: Omit<ProductInput, 'variants'>) {
   return {
     ...input,
     name,
+    ...(descriptionBg === undefined
+      ? {}
+      : { descriptionBg: description(descriptionBg, 'descriptionBg') }),
+    ...(descriptionEn === undefined
+      ? {}
+      : { descriptionEn: description(descriptionEn, 'descriptionEn') }),
     ...(typeof input.brandId === 'string' ? { brandId: input.brandId.toLowerCase() } : {}),
     ...(typeof input.categoryId === 'string' ? { categoryId: input.categoryId.toLowerCase() } : {}),
   };

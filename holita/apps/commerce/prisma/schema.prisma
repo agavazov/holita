@@ -94,6 +94,8 @@ model Product {
   categoryId String? @db.Uuid
   category Category? @relation(fields: [tenantId, branchId, categoryId], references: [tenantId, branchId, id], onDelete: NoAction)
   name String @db.VarChar(200)
+  descriptionBg String? @db.Text
+  descriptionEn String? @db.Text
   variants ProductVariant[]
   legacyPrice Decimal? @map("price") @db.Decimal(12, 2)
   status ProductStatus @default(DRAFT)

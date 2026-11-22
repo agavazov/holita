@@ -42,6 +42,10 @@ type ProductVariant {
 }
 input ProductInput {
   name: String!
+  "Bulgarian plain text. Omit to keep on update or leave unset on create. Null or blank clears it."
+  descriptionBg: String
+  "English plain text. Omit to keep on update or leave unset on create. Null or blank clears it."
+  descriptionEn: String
   "The complete set of variants in display order. Omitted variants are removed."
   variants: [ProductVariantInput!]!
   status: ProductStatus!
@@ -51,6 +55,8 @@ input ProductInput {
 type Product {
   id: ID!
   name: String!
+  descriptionBg: String
+  descriptionEn: String
   "Lowest active variant price, or null when there are no active variants."
   price: String
   variants: [ProductVariant!]!

@@ -7,6 +7,7 @@ type DemoProduct = readonly [
   status?: 'active' | 'draft' | 'archived',
   category?: number,
   variants?: readonly DemoVariant[],
+  descriptions?: Readonly<{ bg: string; en: string }>,
 ];
 
 type DemoCategory = readonly [
@@ -83,6 +84,18 @@ export const demoCatalogue: readonly DemoBrand[] = [
           ['PAN-28-SAND', '79.90', 7, 1],
           ['PAN-28-GRAPHITE', '84.90', 4, 2],
         ],
+      ],
+      [
+        57,
+        'Керамична касерола „Горска жарава“, 1,5 л',
+        '52.90',
+        'active',
+        3,
+        undefined,
+        {
+          bg: 'Керамична касерола с капак за бавно готвене и печене.',
+          en: 'A lidded ceramic casserole for slow cooking and baking.',
+        },
       ],
     ],
   },

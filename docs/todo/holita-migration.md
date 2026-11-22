@@ -23,11 +23,10 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 
 | Ticket                                                                                           | Wave | Status | Depends on           |
 | ------------------------------------------------------------------------------------------------ | ---- | ------ | -------------------- |
-| [106 Product editor and descriptions](106-holita-product-editor.md)                              | 1    | Ready  |                      |
-| [107 Product image gallery](107-holita-product-images.md)                                        | 1    | Ready  | 106                  |
+| [107 Product image gallery](107-holita-product-images.md)                                        | 1    | Ready  |                      |
 | [108 Product collections](108-holita-collections.md)                                             | 1    | Ready  |                      |
-| [109 Product characteristics](109-holita-characteristics.md)                                     | 1    | Ready  | 106                  |
-| [110 Product badges and tags](110-holita-badges-tags.md)                                         | 1    | Ready  | 106                  |
+| [109 Product characteristics](109-holita-characteristics.md)                                     | 1    | Ready  |                      |
+| [110 Product badges and tags](110-holita-badges-tags.md)                                         | 1    | Ready  |                      |
 | [111 Inventory list and adjustments](111-holita-inventory.md)                                    | 1    | Ready  |                      |
 | [112 Storefront catalogue browsing](112-holita-storefront-browsing.md)                           | 2    | Ready  | 107, 108, 110, 111   |
 | [113 Storefront product variant choice](113-holita-storefront-variant-choice.md)                 | 2    | Ready  | 107, 109, 111        |

@@ -45,6 +45,7 @@ import { ButtonDirective } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
+import { Textarea } from 'primeng/textarea';
 import { BrandsApi } from '../brands/brands-api';
 import { CategoriesApi } from '../categories/categories-api';
 import { categoryOptions } from '../categories/category-tree';
@@ -57,6 +58,7 @@ import { ProductsApi } from './products-api';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const pricePattern = /^\d{1,10}(?:[.,]\d{1,2})?$/;
+const productFields = ['name', 'brandId', 'categoryId', 'descriptionBg', 'descriptionEn'] as const;
 const variantFields = ['optionValueIds', 'sku', 'price', 'quantity'] as const;
 type VariantField = (typeof variantFields)[number];
 type Variant = NonNullable<OperatorProductQuery['product']>['variants'][number];
@@ -91,6 +93,7 @@ function variantForm(variant?: Variant) {
     ReactiveFormsModule,
     RouteDrawer,
     Select,
+    Textarea,
   ],
   templateUrl: './product-editor.html',
   styleUrl: './product-editor.scss',
@@ -195,6 +198,8 @@ export class ProductEditor {
     status: new FormControl<ProductStatus>('DRAFT', { nonNullable: true }),
     brandId: new FormControl<string | null>(null),
     categoryId: new FormControl<string | null>(null),
+    descriptionBg: new FormControl('', { nonNullable: true }),
+    descriptionEn: new FormControl('', { nonNullable: true }),
     variants: this.variants,
   });
 
@@ -212,6 +217,8 @@ export class ProductEditor {
           status: product?.status ?? 'DRAFT',
           brandId: product?.brandId ?? null,
           categoryId: product?.categoryId ?? null,
+          descriptionBg: product?.descriptionBg ?? '',
+          descriptionEn: product?.descriptionEn ?? '',
           variants: this.variants.getRawValue(),
         },
         { emitEvent: false },
@@ -294,7 +301,9 @@ export class ProductEditor {
 
   private variantsChanged(focusId: string): void {
     this.variants.markAsDirty();
-    this.errors.update(({ name, brandId, categoryId }) => ({ name, brandId, categoryId }));
+    this.errors.update((errors) =>
+      Object.fromEntries(productFields.map((field) => [field, errors[field]] as const)),
+    );
     afterNextRender(
       () => {
         this.formElement()
@@ -344,9 +353,7 @@ export class ProductEditor {
         return;
       }
       const fields = [
-        'name',
-        'brandId',
-        'categoryId',
+        ...productFields,
         'variants',
         ...variants.flatMap((_, index) =>
           [...variantFields, 'id'].map((field) => this.path(index, field)),
@@ -364,6 +371,9 @@ export class ProductEditor {
         }
         if (path === 'categoryId') {
           return this.text().categoryUnavailable;
+        }
+        if (path === 'descriptionBg' || path === 'descriptionEn') {
+          return this.text().productDescriptionInvalid;
         }
         if (path.endsWith('.id')) {
           return this.text().variantUnavailable;
@@ -383,6 +393,8 @@ export class ProductEditor {
       'name',
       'brand',
       'category',
+      'description-bg',
+      'description-en',
       ...this.variants.controls.flatMap((_, index) =>
         ['values', 'sku', 'price', 'quantity'].map((field) => `variant-${field}-${String(index)}`),
       ),
