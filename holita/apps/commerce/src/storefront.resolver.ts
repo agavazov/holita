@@ -3,6 +3,11 @@ import type {
   MutationRegisterShopperArgs,
   MutationSignInShopperArgs,
   QueryCatalogueArgs,
+  QueryCatalogueBrandIndexArgs,
+  QueryCatalogueBrandProductsArgs,
+  QueryCatalogueCategoryProductsArgs,
+  QueryCatalogueTagProductsArgs,
+  QueryCatalogueTagsArgs,
   QueryCatalogueBrandsArgs,
   QueryCatalogueCollectionProductsArgs,
   QueryCatalogueCollectionsArgs,
@@ -21,7 +26,7 @@ export class StorefrontResolver {
     @Context() context: StorefrontContext,
     @Args() args: QueryCatalogueArgs,
   ) {
-    return this.service.catalogue(context, args.offset ?? 0, args.limit ?? 20);
+    return this.service.catalogue(context, args);
   }
   @Query('catalogueProduct') product(
     @Context() context: StorefrontContext,
@@ -50,16 +55,41 @@ export class StorefrontResolver {
   ) {
     return this.service.catalogueCollections(context, args.offset ?? 0, args.limit ?? 20);
   }
+  @Query('catalogueBrandIndex') brandIndex(
+    @Context() context: StorefrontContext,
+    @Args() args: QueryCatalogueBrandIndexArgs,
+  ) {
+    return this.service.catalogueBrandIndex(context, args.offset ?? 0, args.limit ?? 20);
+  }
+  @Query('catalogueTags') tags(
+    @Context() context: StorefrontContext,
+    @Args() args: QueryCatalogueTagsArgs,
+  ) {
+    return this.service.catalogueTags(context, args.offset ?? 0, args.limit ?? 20);
+  }
+  @Query('catalogueCategoryProducts') categoryProducts(
+    @Context() context: StorefrontContext,
+    @Args() args: QueryCatalogueCategoryProductsArgs,
+  ) {
+    return this.service.catalogueListing(context, 'category', args);
+  }
+  @Query('catalogueBrandProducts') brandProducts(
+    @Context() context: StorefrontContext,
+    @Args() args: QueryCatalogueBrandProductsArgs,
+  ) {
+    return this.service.catalogueListing(context, 'brand', args);
+  }
   @Query('catalogueCollectionProducts') collectionProducts(
     @Context() context: StorefrontContext,
     @Args() args: QueryCatalogueCollectionProductsArgs,
   ) {
-    return this.service.catalogueCollectionProducts(
-      context,
-      args.slug,
-      args.offset ?? 0,
-      args.limit ?? 20,
-    );
+    return this.service.catalogueListing(context, 'collection', args);
+  }
+  @Query('catalogueTagProducts') tagProducts(
+    @Context() context: StorefrontContext,
+    @Args() args: QueryCatalogueTagProductsArgs,
+  ) {
+    return this.service.catalogueListing(context, 'tag', args);
   }
   @Query('shopperMe') me(@Context() context: StorefrontContext) {
     return this.service.me(context);

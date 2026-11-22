@@ -155,8 +155,4 @@ export class CollectionsService {
   publicList(scope: Scope, offset: number, limit: number) {
     return this.repository.publicList(scope, offset, limit);
   }
-
-  async publicProducts(scope: Scope, slug: string, offset: number, limit: number) {
-    return validSlug(slug) ? this.repository.publicProducts(scope, slug, offset, limit) : null;
-  }
 }

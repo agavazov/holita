@@ -10,7 +10,14 @@ export class DatabaseService implements OnModuleDestroy {
     adapter: new PrismaPg({ connectionString: this.connectionString }, { schema: this.schema }),
   });
 
-  table(name: 'product' | 'productVariant'): Prisma.Sql {
+  table(
+    name:
+      | 'product'
+      | 'productVariant'
+      | 'productVariantValue'
+      | 'productTagAssignment'
+      | 'productCollectionItem',
+  ): Prisma.Sql {
     return Prisma.raw(`"${this.schema.replaceAll('"', '""')}"."${name}"`);
   }
 

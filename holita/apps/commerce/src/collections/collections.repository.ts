@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import type { ProductCollectionInput, ProductCollectionSort } from '../generated/graphql/types.js';
-import { catalogueProductRelations, catalogueProductWhere } from '../products/product-relations.js';
 import type { Scope } from '../scope.js';
 
 type CollectionFields = Pick<ProductCollectionInput, 'name' | 'slug' | 'active' | 'mode'> & {
@@ -141,52 +140,5 @@ export class CollectionsRepository {
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
     return { items, total, offset, limit };
-  }
-
-  publicProducts(scope: Scope, slug: string, offset: number, limit: number) {
-    return this.database.client.$transaction(
-      async (tx) => {
-        const collection = await tx.productCollection.findUnique({
-          where: { tenantId_branchId_slug: { ...scope, slug }, active: true },
-          select: { id: true, mode: true, categoryId: true, brandId: true },
-        });
-        if (!collection) {
-          return null;
-        }
-        const publicProduct = catalogueProductWhere(scope);
-        const include = catalogueProductRelations(scope);
-        if (collection.mode === 'MANUAL') {
-          const where = { ...scope, collectionId: collection.id, product: publicProduct };
-          const items = await tx.productCollectionItem.findMany({
-            where,
-            skip: offset,
-            take: limit,
-            orderBy: { sortOrder: 'asc' },
-            select: { product: { include } },
-          });
-          return {
-            items: items.map(({ product }) => product),
-            total: await tx.productCollectionItem.count({ where }),
-            offset,
-            limit,
-          };
-        }
-        const where = {
-          ...publicProduct,
-          ...(collection.mode === 'CATEGORY'
-            ? { categoryId: collection.categoryId }
-            : { brandId: collection.brandId }),
-        };
-        const items = await tx.product.findMany({
-          where,
-          skip: offset,
-          take: limit,
-          orderBy: [{ name: 'asc' }, { id: 'asc' }],
-          include,
-        });
-        return { items, total: await tx.product.count({ where }), offset, limit };
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
-    );
   }
 }

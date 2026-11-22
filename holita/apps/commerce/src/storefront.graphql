@@ -55,8 +55,57 @@ type CatalogueCategory {
   parentId: ID
   sortOrder: Int!
 }
+input CatalogueBrowseFilter {
+  search: String
+  minPrice: String
+  maxPrice: String
+  brandIds: [ID!]
+  optionValueIds: [ID!]
+  inStock: Boolean
+}
+enum CatalogueSort {
+  NAME_ASC
+  NAME_DESC
+  PRICE_ASC
+  PRICE_DESC
+}
+type CatalogueListing {
+  id: ID!
+  name: String!
+  slug: String!
+  categoryPath: [CatalogueCategory!]!
+  subcategories: [CatalogueCategory!]!
+}
+type CatalogueOptionValue {
+  id: ID!
+  label: String!
+}
+type CatalogueOption {
+  id: ID!
+  name: String!
+  values: [CatalogueOptionValue!]!
+}
+type CatalogueFacets {
+  brands: [CatalogueBrand!]!
+  options: [CatalogueOption!]!
+}
 type CataloguePage {
+  listing: CatalogueListing
+  "Choices from the listing before shopper filters are applied."
+  facets: CatalogueFacets!
   items: [CatalogueProduct!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+type CatalogueBrandPage {
+  items: [CatalogueBrand!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+type CatalogueTagPage {
+  items: [CatalogueTag!]!
   total: Int!
   offset: Int!
   limit: Int!
@@ -92,15 +141,49 @@ type CatalogueSpecification {
 }
 type Query {
   shop: Shop
-  catalogue(offset: Int! = 0, limit: Int! = 20): CataloguePage!
+  catalogue(
+    offset: Int! = 0
+    limit: Int! = 20
+    filter: CatalogueBrowseFilter
+    sort: CatalogueSort
+  ): CataloguePage!
   catalogueProduct(id: ID!): CatalogueProduct
   catalogueProductSpecifications(productId: ID!): [CatalogueSpecificationGroup!]!
   catalogueBrands(offset: Int! = 0, limit: Int! = 20): [CatalogueBrand!]!
+  catalogueBrandIndex(offset: Int! = 0, limit: Int! = 20): CatalogueBrandPage!
+  catalogueTags(offset: Int! = 0, limit: Int! = 20): CatalogueTagPage!
   "Visible shop categories in tree order. A null parentId denotes a root."
   catalogueCategories: [CatalogueCategory!]!
   catalogueCollections(offset: Int! = 0, limit: Int! = 20): CatalogueCollectionPage!
-  "Active members in collection order, or null for a missing or inactive collection."
-  catalogueCollectionProducts(slug: String!, offset: Int! = 0, limit: Int! = 20): CataloguePage
+  catalogueCategoryProducts(
+    slug: String!
+    offset: Int! = 0
+    limit: Int! = 20
+    filter: CatalogueBrowseFilter
+    sort: CatalogueSort
+  ): CataloguePage
+  catalogueBrandProducts(
+    slug: String!
+    offset: Int! = 0
+    limit: Int! = 20
+    filter: CatalogueBrowseFilter
+    sort: CatalogueSort
+  ): CataloguePage
+  "Active members in collection order by default, or null for a missing or inactive collection."
+  catalogueCollectionProducts(
+    slug: String!
+    offset: Int! = 0
+    limit: Int! = 20
+    filter: CatalogueBrowseFilter
+    sort: CatalogueSort
+  ): CataloguePage
+  catalogueTagProducts(
+    slug: String!
+    offset: Int! = 0
+    limit: Int! = 20
+    filter: CatalogueBrowseFilter
+    sort: CatalogueSort
+  ): CataloguePage
   shopperMe: Shopper
 }
 type Mutation {

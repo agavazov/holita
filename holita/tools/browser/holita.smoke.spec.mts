@@ -334,10 +334,12 @@ async function dismissSuccess(page: Page, message: string): Promise<void> {
     .click();
 }
 
-async function editOption(page: Page): Promise<void> {
+async function editOption(page: Page) {
   await page.getByRole('link', { name: 'Options', exact: true }).click();
   await page.getByRole('button', { name: 'Add option', exact: true }).click();
   await page.locator('#option-name').fill('Finish');
+  await page.locator('#option-show-in-filters').click();
+  await page.getByRole('option', { name: 'Shown', exact: true }).click();
   const addValue = page.getByRole('button', { name: 'Add value', exact: true });
   await addValue.click();
   await page.locator('#option-value-0').fill('Matt');
@@ -368,6 +370,7 @@ async function editOption(page: Page): Promise<void> {
     .getByRole('dialog', { name: 'Edit option' })
     .getByRole('button', { name: 'Close', exact: true })
     .click();
+  return updated.values;
 }
 
 function optionRead(response: Response): boolean {
@@ -635,7 +638,7 @@ test('staff creates a merchant and its administrator creates a product', async (
     await addCategory(merchant, 'Kitchen');
     await addCategory(merchant, 'Home');
     await addCategory(merchant, 'Cookware', 'Kitchen');
-    await editOption(merchant);
+    const optionValues = await editOption(merchant);
     await merchant.getByRole('link', { name: 'Characteristic groups', exact: true }).click();
     await merchant.getByRole('button', { name: 'Add characteristic group', exact: true }).click();
     await merchant.locator('#characteristic-group-name').fill('Materials');
@@ -757,9 +760,9 @@ test('staff creates a merchant and its administrator creates a product', async (
     const shopper = await shopperContext.newPage();
     await shopper.goto(`${shopApp.origin}/s/${shopId}`);
     await shopper.getByRole('button', { name: 'EN', exact: true }).click();
-    await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
     const productLink = shopper.getByRole('link', { name: productName, exact: true });
     const productCard = shopper.locator('.catalogue-card').filter({ has: productLink });
+    await expect(productCard.getByText('Smoke Brand', { exact: true })).toBeVisible();
     await expect(productCard.getByText(badgeName, { exact: true })).toBeVisible();
     await expect(productCard.getByText('In stock', { exact: true })).toBeVisible();
     const untrackedCard = shopper.locator('.catalogue-card').filter({
@@ -936,18 +939,19 @@ test('staff creates a merchant and its administrator creates a product', async (
       slug: string,
       offset = 0,
       branchId = shopId,
+      filter?: { optionValueIds: string[]; inStock: boolean },
     ): Promise<unknown> => {
       const response = await shopper.request.post(`${shopApp.origin}/graphql`, {
         headers: { 'x-branch-id': branchId },
         data: {
-          query: `query($slug: String!, $offset: Int!) {
+          query: `query($slug: String!, $offset: Int!, $filter: CatalogueBrowseFilter) {
             catalogueCollections { items { name slug } total }
-            catalogueCollectionProducts(slug: $slug, offset: $offset, limit: 1) {
+            catalogueCollectionProducts(slug: $slug, offset: $offset, limit: 1, filter: $filter) {
               items { name }
               total offset limit
             }
           }`,
-          variables: { slug, offset },
+          variables: { slug, offset, filter },
         },
       });
       expect(response.status()).toBe(200);
@@ -1011,6 +1015,38 @@ test('staff creates a merchant and its administrator creates a product', async (
       data: { catalogueCollectionProducts: { items: [{ name: configuredProductName }], total: 2 } },
     });
 
+    const gloss = optionValues.find(({ label }) => label === 'Gloss');
+    if (!gloss) {
+      throw new Error('The smoke option has no Gloss value');
+    }
+    expect(
+      await collectionQuery(ruleSlug, 0, shopId, {
+        optionValueIds: [gloss.id],
+        inStock: true,
+      }),
+    ).toMatchObject({
+      data: { catalogueCollectionProducts: { items: [], total: 0 } },
+    });
+
+    const filtered = await shopperContext.newPage();
+    await filtered.addInitScript(() => {
+      sessionStorage.setItem('holita.storefront.language', 'en');
+    });
+    await filtered.goto(`${shopApp.origin}/s/${shopId}/categories/cookware`);
+    await filtered.getByLabel('Surface finish').selectOption({ label: 'Satin' });
+    await filtered.getByLabel('In stock only').check();
+    await filtered.getByRole('button', { name: 'Apply', exact: true }).click();
+    await expect(filtered).toHaveURL(/\?.*option=.*inStock=1/);
+    const sharedUrl = filtered.url();
+    await filtered.close();
+    const reopened = await shopperContext.newPage();
+    await reopened.goto(sharedUrl);
+    await expect(
+      reopened.getByRole('link', { name: configuredProductName, exact: true }),
+    ).toBeVisible();
+    await expect(reopened.getByRole('link', { name: productName, exact: true })).toHaveCount(0);
+    await reopened.close();
+
     await configuredProduct.click();
     await merchant.locator('#product-status').click();
     await merchant.getByRole('option', { name: 'Draft', exact: true }).click();
@@ -1059,10 +1095,13 @@ test('staff creates a merchant and its administrator creates a product', async (
     await expect(breadcrumbs).toHaveCount(0);
     const activeCategories = await shopper.request.post(`${shopApp.origin}/graphql`, {
       headers: { 'x-branch-id': shopId },
-      data: { query: '{ catalogueCategories { name } }' },
+      data: {
+        query:
+          '{ catalogueCategories { name } catalogueCategoryProducts(slug: "cookware") { total } }',
+      },
     });
     expect(await activeCategories.json()).toEqual({
-      data: { catalogueCategories: [{ name: 'Kitchen' }] },
+      data: { catalogueCategories: [{ name: 'Kitchen' }], catalogueCategoryProducts: null },
     });
     const secondShopId = await createShop(staff, 'Second shop');
     expect(await collectionQuery(ruleSlug, 0, secondShopId)).toEqual({

@@ -147,24 +147,6 @@ export class CommerceRepository {
     });
   }
 
-  async catalogue(scope: Scope, offset: number, limit: number) {
-    const where = catalogueProductWhere(scope);
-    const [items, total] = await this.database.client.$transaction(
-      [
-        this.database.client.product.findMany({
-          where,
-          skip: offset,
-          take: limit,
-          orderBy: [{ name: 'asc' }, { id: 'desc' }],
-          include: catalogueProductRelations(scope),
-        }),
-        this.database.client.product.count({ where }),
-      ],
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
-    );
-    return { items, total, offset, limit };
-  }
-
   publicProduct(scope: Scope, id: string) {
     return this.database.client.$transaction(
       (tx) =>

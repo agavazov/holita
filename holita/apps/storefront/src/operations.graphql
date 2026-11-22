@@ -5,32 +5,161 @@ query PublicShop {
   }
 }
 fragment CatalogueBrandFields on CatalogueBrand {
+  id
   name
+  slug
   logoUrl
 }
-query Catalogue($offset: Int!, $limit: Int!) {
-  catalogue(offset: $offset, limit: $limit) {
+fragment CatalogueCategoryFields on CatalogueCategory {
+  id
+  name
+  slug
+  parentId
+}
+fragment CatalogueBrowsePage on CataloguePage {
+  items {
+    id
+    name
+    price
+    available
+    coverImage {
+      url
+      altText
+    }
+    brand {
+      ...CatalogueBrandFields
+    }
+    badges {
+      id
+      name
+      color
+    }
+  }
+  listing {
+    id
+    name
+    categoryPath {
+      ...CatalogueCategoryFields
+    }
+    subcategories {
+      ...CatalogueCategoryFields
+    }
+  }
+  facets {
+    brands {
+      ...CatalogueBrandFields
+    }
+    options {
+      id
+      name
+      values {
+        id
+        label
+      }
+    }
+  }
+  total
+  offset
+  limit
+}
+query Catalogue($offset: Int!, $limit: Int!, $filter: CatalogueBrowseFilter, $sort: CatalogueSort) {
+  catalogue(offset: $offset, limit: $limit, filter: $filter, sort: $sort) {
+    ...CatalogueBrowsePage
+  }
+}
+query CatalogueCategoryProducts(
+  $slug: String!
+  $offset: Int!
+  $limit: Int!
+  $filter: CatalogueBrowseFilter
+  $sort: CatalogueSort
+) {
+  catalogueCategoryProducts(
+    slug: $slug
+    offset: $offset
+    limit: $limit
+    filter: $filter
+    sort: $sort
+  ) {
+    ...CatalogueBrowsePage
+  }
+}
+query CatalogueBrandProducts(
+  $slug: String!
+  $offset: Int!
+  $limit: Int!
+  $filter: CatalogueBrowseFilter
+  $sort: CatalogueSort
+) {
+  catalogueBrandProducts(
+    slug: $slug
+    offset: $offset
+    limit: $limit
+    filter: $filter
+    sort: $sort
+  ) {
+    ...CatalogueBrowsePage
+  }
+}
+query CatalogueCollectionProducts(
+  $slug: String!
+  $offset: Int!
+  $limit: Int!
+  $filter: CatalogueBrowseFilter
+  $sort: CatalogueSort
+) {
+  catalogueCollectionProducts(
+    slug: $slug
+    offset: $offset
+    limit: $limit
+    filter: $filter
+    sort: $sort
+  ) {
+    ...CatalogueBrowsePage
+  }
+}
+query CatalogueTagProducts(
+  $slug: String!
+  $offset: Int!
+  $limit: Int!
+  $filter: CatalogueBrowseFilter
+  $sort: CatalogueSort
+) {
+  catalogueTagProducts(slug: $slug, offset: $offset, limit: $limit, filter: $filter, sort: $sort) {
+    ...CatalogueBrowsePage
+  }
+}
+query CatalogueCategories {
+  catalogueCategories {
+    ...CatalogueCategoryFields
+  }
+}
+query CatalogueBrandIndex($offset: Int!, $limit: Int!) {
+  catalogueBrandIndex(offset: $offset, limit: $limit) {
+    items {
+      ...CatalogueBrandFields
+    }
+    total
+  }
+}
+query CatalogueCollections($offset: Int!, $limit: Int!) {
+  catalogueCollections(offset: $offset, limit: $limit) {
     items {
       id
       name
-      price
-      available
-      coverImage {
-        url
-        altText
-      }
-      brand {
-        ...CatalogueBrandFields
-      }
-      badges {
-        id
-        name
-        color
-      }
+      slug
     }
     total
-    offset
-    limit
+  }
+}
+query CatalogueTags($offset: Int!, $limit: Int!) {
+  catalogueTags(offset: $offset, limit: $limit) {
+    items {
+      id
+      name
+      slug
+    }
+    total
   }
 }
 query CatalogueProduct($id: ID!) {
@@ -49,8 +178,7 @@ query CatalogueProduct($id: ID!) {
       ...CatalogueBrandFields
     }
     categoryPath {
-      id
-      name
+      ...CatalogueCategoryFields
     }
     tags {
       id

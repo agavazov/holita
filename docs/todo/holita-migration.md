@@ -23,7 +23,6 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 
 | Ticket                                                                                           | Wave | Status | Depends on           |
 | ------------------------------------------------------------------------------------------------ | ---- | ------ | -------------------- |
-| [112 Storefront catalogue browsing](112-holita-storefront-browsing.md)                           | 2    | Ready  |                      |
 | [113 Storefront product variant choice](113-holita-storefront-variant-choice.md)                 | 2    | Ready  |                      |
 | [114 Shopper cart](114-holita-cart.md)                                                           | 2    | Ready  | 113                  |
 | [115 Checkout form and manual quote](115-holita-checkout-quote.md)                               | 2    | Ready  | 114                  |
@@ -38,7 +37,7 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 | [122 Admin manual payment and shipping methods](122-holita-manual-methods.md)                    | 3    | Ready  | 115, 118             |
 | [123 Shop content pages](123-holita-pages.md)                                                    | 3    | Ready  |                      |
 | [124 Shop blog](124-holita-blog.md)                                                              | 3    | Ready  |                      |
-| [125 Shop navigation menus](125-holita-navigation.md)                                            | 3    | Ready  | 112, 123, 124        |
+| [125 Shop navigation menus](125-holita-navigation.md)                                            | 3    | Ready  | 123, 124             |
 | [126 General shop settings](126-holita-general-settings.md)                                      | 3    | Ready  |                      |
 | [127 Admin shop dashboard](127-holita-dashboard.md)                                              | 3    | Ready  | 118, 120             |
 | [131 Establish the Sales subgraph](131-holita-sales-sales-service.md)                            | 4    | Ready  |                      |

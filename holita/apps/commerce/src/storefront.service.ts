@@ -20,8 +20,15 @@ import { BrandsRepository } from './brands/brands.repository.js';
 import { CategoriesService } from './categories/categories.service.js';
 import { CharacteristicsService } from './characteristics/characteristics.service.js';
 import { CollectionsService } from './collections/collections.service.js';
-import type { CatalogueCategory, CatalogueProduct } from './generated/graphql/storefront-types.js';
+import type {
+  CatalogueCategory,
+  CatalogueListing,
+  CataloguePage,
+  CatalogueProduct,
+  QueryCatalogueArgs,
+} from './generated/graphql/storefront-types.js';
 import type { Scope } from './scope.js';
+import { CatalogueRepository, type BrowseCriteria } from './products/catalogue.repository.js';
 import { CommerceRepository } from './products/commerce.repository.js';
 import { productImageUrl } from './products/product-images.js';
 import { ShopperRepository } from './customers/shopper.repository.js';
@@ -65,6 +72,58 @@ function validatePage(offset: number, limit: number): void {
   }
 }
 
+function categoryPathFor(id: string, categories: ReadonlyMap<string, CatalogueCategory>) {
+  const categoryPath: CatalogueCategory[] = [];
+  let current = categories.get(id);
+  while (current) {
+    categoryPath.push(current);
+    current = current.parentId ? categories.get(current.parentId) : undefined;
+  }
+  return categoryPath.reverse();
+}
+
+function filterIds(ids: readonly string[]): string[] {
+  if (ids.some((id) => !isUUID(id))) {
+    throw new BadRequestException('Invalid filter ID');
+  }
+  return [...new Set(ids.map((id) => id.toLowerCase()))];
+}
+
+function browseCriteria({
+  offset = 0,
+  limit = 20,
+  filter,
+  sort,
+}: QueryCatalogueArgs): BrowseCriteria {
+  validatePage(offset, limit);
+  const search = filter?.search?.trim() ?? '';
+  const words = search ? search.split(/\s+/u) : [];
+  if (Array.from(search).length > 200 || words.length > 5 || search.includes('\u0000')) {
+    throw new BadRequestException('Invalid search');
+  }
+  const minPrice = filter?.minPrice ?? null;
+  const maxPrice = filter?.maxPrice ?? null;
+  if (
+    [minPrice, maxPrice].some(
+      (price) => price !== null && !/^\d{1,10}(?:\.\d{1,2})?$/.test(price),
+    ) ||
+    (minPrice !== null && maxPrice !== null && Number(minPrice) > Number(maxPrice))
+  ) {
+    throw new BadRequestException('Invalid price range');
+  }
+  return {
+    offset,
+    limit,
+    words,
+    minPrice,
+    maxPrice,
+    sort: sort ?? null,
+    brandIds: filterIds(filter?.brandIds ?? []),
+    optionValueIds: filterIds(filter?.optionValueIds ?? []),
+    inStock: filter?.inStock === true,
+  };
+}
+
 type CatalogueProductRow = NonNullable<Awaited<ReturnType<CommerceRepository['publicProduct']>>>;
 
 function catalogueProduct(
@@ -76,12 +135,6 @@ function catalogueProduct(
     throw new Error('Public catalogue product is missing an active variant');
   }
   const category = item.categoryId ? categories.get(item.categoryId) : undefined;
-  const categoryPath: CatalogueCategory[] = [];
-  let current = category;
-  while (current) {
-    categoryPath.push(current);
-    current = current.parentId ? categories.get(current.parentId) : undefined;
-  }
   const images = item.images.map((image) => ({
     url: productImageUrl(image),
     altText: image.altText,
@@ -99,7 +152,7 @@ function catalogueProduct(
     ),
     brand: item.brand?.status === 'ACTIVE' ? catalogueBrand(item.brand) : null,
     category: category ?? null,
-    categoryPath: categoryPath.reverse(),
+    categoryPath: category ? categoryPathFor(category.id, categories) : [],
     badges: item.badgeAssignments.map(({ badge: { id, name, color } }) => ({ id, name, color })),
     tags: item.tagAssignments.map(({ tag }) => tag),
   };
@@ -109,6 +162,7 @@ function catalogueProduct(
 export class StorefrontService {
   constructor(
     private readonly products: CommerceRepository,
+    private readonly browsing: CatalogueRepository,
     private readonly shoppers: ShopperRepository,
     private readonly brands: BrandsRepository,
     private readonly categories: CategoriesService,
@@ -167,17 +221,30 @@ export class StorefrontService {
     }
     return shop;
   }
-  async catalogue(context: StorefrontContext, offset: number, limit: number) {
+  async catalogue(context: StorefrontContext, args: QueryCatalogueArgs): Promise<CataloguePage> {
     const scope = await this.publicScope(context);
-    validatePage(offset, limit);
-    return this.cataloguePage(scope, await this.products.catalogue(scope, offset, limit));
+    const page = await this.browsing.page(scope, { kind: 'all' }, browseCriteria(args));
+    if (!page) {
+      throw new Error('Missing shop catalogue');
+    }
+    return this.cataloguePage(scope, page);
   }
   private async cataloguePage(
     scope: Scope,
-    page: Awaited<ReturnType<CommerceRepository['catalogue']>>,
-  ) {
-    const categories = await this.productCategories(scope, page.items);
-    return { ...page, items: page.items.map((item) => catalogueProduct(item, categories)) };
+    page: NonNullable<Awaited<ReturnType<CatalogueRepository['page']>>>,
+    tree?: CatalogueCategory[],
+    listing?: CatalogueListing,
+  ): Promise<CataloguePage> {
+    const categories = tree
+      ? new Map(tree.map((category) => [category.id, category]))
+      : await this.productCategories(scope, page.items);
+    return {
+      ...page,
+      listing:
+        listing ?? (page.listing && { ...page.listing, categoryPath: [], subcategories: [] }),
+      facets: { ...page.facets, brands: page.facets.brands.map(catalogueBrand) },
+      items: page.items.map((item) => catalogueProduct(item, categories)),
+    };
   }
   async product(context: StorefrontContext, id: string) {
     const scope = await this.publicScope(context);
@@ -213,16 +280,54 @@ export class StorefrontService {
     validatePage(offset, limit);
     return this.collections.publicList(scope, offset, limit);
   }
-  async catalogueCollectionProducts(
-    context: StorefrontContext,
-    slug: string,
-    offset: number,
-    limit: number,
-  ) {
+  async catalogueBrandIndex(context: StorefrontContext, offset: number, limit: number) {
     const scope = await this.publicScope(context);
     validatePage(offset, limit);
-    const page = await this.collections.publicProducts(scope, slug, offset, limit);
-    return page ? this.cataloguePage(scope, page) : null;
+    const page = await this.browsing.brands(scope, offset, limit);
+    return { ...page, items: page.items.map(catalogueBrand) };
+  }
+  async catalogueTags(context: StorefrontContext, offset: number, limit: number) {
+    const scope = await this.publicScope(context);
+    validatePage(offset, limit);
+    return this.browsing.tags(scope, offset, limit);
+  }
+  async catalogueListing(
+    context: StorefrontContext,
+    kind: 'category' | 'brand' | 'collection' | 'tag',
+    args: QueryCatalogueArgs & { slug: string },
+  ): Promise<CataloguePage | null> {
+    const scope = await this.publicScope(context);
+    const criteria = browseCriteria(args);
+    const { slug } = args;
+    if (!slug || slug.length > 400 || slug.includes('\u0000')) {
+      return null;
+    }
+    if (kind !== 'category') {
+      const page = await this.browsing.page(scope, { kind, slug }, criteria);
+      return page ? this.cataloguePage(scope, page) : null;
+    }
+    const tree = await this.categories.publicTree(scope);
+    const category = tree.find((entry) => entry.slug === slug);
+    if (!category) {
+      return null;
+    }
+    const descendants = new Set([category.id]);
+    for (const entry of tree) {
+      if (entry.parentId && descendants.has(entry.parentId)) {
+        descendants.add(entry.id);
+      }
+    }
+    const page = await this.browsing.page(scope, { kind, ids: [...descendants] }, criteria);
+    const categories = new Map(tree.map((entry) => [entry.id, entry]));
+    return page
+      ? this.cataloguePage(scope, page, tree, {
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          categoryPath: categoryPathFor(category.id, categories),
+          subcategories: tree.filter((entry) => entry.parentId === category.id),
+        })
+      : null;
   }
   private async createSession(
     shop: ShopScope,

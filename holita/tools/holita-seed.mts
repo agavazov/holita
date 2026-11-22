@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { isAbsolute, join, resolve } from 'node:path';
+import { extname, isAbsolute, join, resolve } from 'node:path';
 import { config } from 'dotenv';
 import pg from 'pg';
 import {
@@ -11,6 +11,7 @@ import {
   demoCharacteristicGroups,
   demoCollections,
   demoOptions,
+  demoProductCovers,
   demoProductImages,
   demoTags,
 } from './demo-catalogue.mjs';
@@ -292,26 +293,26 @@ async function seedCatalogue(): Promise<void> {
         }
       }
     }
-    for (const [id, photos] of Object.entries(demoProductImages)) {
+    for (const [id, photos] of Object.entries({ ...demoProductImages, ...demoProductCovers })) {
       const productId = fixtureId('52', Number(id));
-      // Backfill untouched demo products without restoring a merchant's cleared gallery.
+      // Preserve the guard on restoring the original galleries.
       const available = await client.query(
         `SELECT 1 FROM "product" p
          WHERE p."tenantId" = $1 AND p."branchId" = $2 AND p."id" = $3
-           AND p."createdAt" = p."updatedAt"
+           AND ($4 OR p."createdAt" = p."updatedAt")
            AND NOT EXISTS (
              SELECT 1 FROM "productImage" i
              WHERE i."tenantId" = $1 AND i."branchId" = $2 AND i."productId" = $3
            )
          FOR UPDATE OF p`,
-        [tenantId, branchId, productId],
+        [tenantId, branchId, productId, Object.hasOwn(demoProductCovers, id)],
       );
       if (available.rowCount) {
         const productDirectory = join(directory, 'products');
         await mkdir(productDirectory, { recursive: true });
         for (const [sortOrder, [number, file, altText]] of photos.entries()) {
           const imageId = fixtureId('93', number);
-          const key = `${imageId}.png`;
+          const key = `${imageId}${extname(file)}`;
           await client.query(
             `INSERT INTO "productImage" ("id", "tenantId", "branchId", "productId", "storageKey", "altText", "sortOrder")
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,

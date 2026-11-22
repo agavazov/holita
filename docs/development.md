@@ -493,10 +493,18 @@ products directly assigned to that category or brand. To take a collection offli
 its active status. A category or brand used in a rule can be deleted after the rule is changed.
 The Sofia demo shop includes the curated Kitchen Essentials collection and a Cookware collection.
 
-The public `catalogueCollections` query lists active collections. Use
-`catalogueCollectionProducts(slug, offset, limit)` to page through a collection's eligible
-products. Manual collections preserve the saved order, and rule-based collections sort by name.
-Products appear only while active and with at least one active variant.
+Shop navigation links to category, brand, collection and tag indexes beneath `/s/<branchId>`.
+Open an index entry to browse products by its slug. Category listings include visible descendants
+and link to direct subcategories. Tags appear in the index while assigned to a public product.
+Manual collections preserve the saved order by default, and rule-based collections sort by name.
+
+The public `catalogue` and `catalogueCategoryProducts`, `catalogueBrandProducts`,
+`catalogueCollectionProducts` and `catalogueTagProducts` queries accept filters, sorting and paging.
+The storefront stores browsing state in the URL with `q`, `sort`, `minPrice`, `maxPrice`,
+repeated `brand` and `option` IDs, `inStock=1` and one-based `page`. The sort values are
+`name-asc`, `name-desc`, `price-asc` and `price-desc`. Copy the URL after applying filters to
+share the same view. Price bounds use the displayed price, and selected option values and
+the in-stock filter must match the same active variant.
 
 In Admin, open Characteristic groups to define product specifications and set the display order
 and active status of each group and characteristic. In the Product drawer, enter text in
