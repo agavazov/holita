@@ -1569,6 +1569,19 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     if (!shopScope) {
       throw new Error('Missing scope for the checkout fixture');
     }
+    const guestCartId = async (token: string) => {
+      const {
+        rows: [cart],
+      } = await commerceDb.client.query<{ id: string }>(
+        'SELECT "id" FROM "cart" WHERE "tenantId" = $1 AND "branchId" = $2 AND "guestTokenHash" = $3',
+        [shopScope.tenantId, shopId, hash('sha256', token, 'hex')],
+      );
+      if (!cart) {
+        throw new Error('Missing scoped guest cart for checkout');
+      }
+      return cart.id;
+    };
+    const mergedCartId = await guestCartId(guestToken);
     const paymentLabel = 'Cash on delivery';
     const paymentInstructions = 'Pay when the parcel arrives.';
     const alternativePaymentLabel = 'Bank transfer';
@@ -1745,16 +1758,19 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     if (!orderCartToken) {
       throw new Error('Missing guest authorization for checkout');
     }
-    const {
-      rows: [orderCart],
-    } = await commerceDb.client.query<{ id: string }>(
-      'SELECT "id" FROM "cart" WHERE "tenantId" = $1 AND "branchId" = $2 AND "guestTokenHash" = $3',
-      [shopScope.tenantId, shopId, hash('sha256', orderCartToken, 'hex')],
+    const orderCartId = await guestCartId(orderCartToken);
+    // Recreate the pending browser record left behind when sign-in merged the first guest cart.
+    await guestOrder.evaluate(
+      ({ id, attempt }) => {
+        localStorage.setItem(`holita.checkout.${id}`, JSON.stringify(attempt));
+      },
+      { id: shopId, attempt: { cartId: mergedCartId, token: guestToken } },
     );
-    if (!orderCart) {
-      throw new Error('Missing scoped guest cart for checkout');
-    }
-    await reviewCheckout(guestOrder, '25.50', '32.00');
+    const [missingOrder] = await Promise.all([
+      waitForCart(guestOrder, 'GuestOrderConfirmation'),
+      reviewCheckout(guestOrder, '25.50', '32.00'),
+    ]);
+    expect(await missingOrder.json()).toMatchObject({ data: { guestOrderConfirmation: null } });
     const placementRoute = '**/graphql';
     const isPlacement = (body: string | null) =>
       body?.includes('"operationName":"PlaceOrder"') === true;
@@ -1788,6 +1804,11 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
 
     await interruptPlacement();
     expect(committedPlacement).toMatchObject({ data: { placeOrder: { id: expect.any(String) } } });
+    const shoppingTab = await guestOrderContext.newPage();
+    await shoppingTab.goto(configuredProductUrl);
+    await shoppingTab.getByRole('button', { name: 'EN', exact: true }).click();
+    await addSatin(shoppingTab);
+    await shoppingTab.close();
     const [recovered] = await Promise.all([
       waitForCart(guestOrder, 'GuestOrderConfirmation'),
       guestOrder.reload(),
@@ -1815,7 +1836,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await guestOrder.unroute(placementRoute);
     const { rows: cartOrders } = await commerceDb.client.query(
       'SELECT "id" FROM "order" WHERE "tenantId" = $1 AND "branchId" = $2 AND "cartId" = $3',
-      [shopScope.tenantId, shopId, orderCart.id],
+      [shopScope.tenantId, shopId, orderCartId],
     );
     expect(cartOrders).toEqual([{ id: orderId }]);
     const { rows: remainingStock } = await commerceDb.client.query(
@@ -1829,13 +1850,6 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     expect(await (await receipt).json()).toMatchObject({
       data: { orderConfirmation: expectedOrder },
     });
-    await guestOrder.goto(configuredProductUrl);
-    await addSatin(guestOrder);
-    const priorReceipt = waitForCart(guestOrder, 'OrderConfirmation');
-    await guestOrder.goto(confirmationUrl);
-    expect(await (await priorReceipt).json()).toMatchObject({
-      data: { orderConfirmation: expectedOrder },
-    });
     for (const [branchId, credential] of [
       [shopId, guestToken],
       [secondShopId, orderCartToken],
@@ -1847,7 +1861,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
             orderConfirmation(orderId: $orderId) { id }
             guestOrderConfirmation(cartId: $cartId) { id }
           }`,
-          variables: { orderId, cartId: orderCart.id },
+          variables: { orderId, cartId: orderCartId },
         },
       });
       expect(await denied.json()).toEqual({

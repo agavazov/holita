@@ -143,35 +143,26 @@ export class CheckoutPage {
     params: () => this.cartState.shopId(),
     loader: async ({ params: shopId, abortSignal }) => {
       const { credentials, pending } = this.checkoutOwner(shopId);
+      if (!pending) {
+        return this.readCheckout(shopId, credentials, abortSignal);
+      }
       try {
-        const checkout = await this.api.checkout(shopId, credentials);
-        abortSignal.throwIfAborted();
-        const shopper =
-          checkout && credentials.shopperToken
-            ? await this.api.me(shopId, credentials.shopperToken)
-            : null;
-        return { checkout, shopper };
+        return { checkout: await this.api.checkout(shopId, credentials), shopper: null };
       } catch (error) {
         abortSignal.throwIfAborted();
-        if (!this.cartState.expireSession(shopId, credentials, error) && !cartNotFound(error)) {
+        if (!cartNotFound(error)) {
           throw error;
         }
-        if (pending) {
-          const order = await this.api.guestOrderConfirmation(
-            shopId,
-            pending.cartId,
-            pending.token,
-          );
-          abortSignal.throwIfAborted();
-          if (order) {
-            await this.finishCheckout(shopId, order.id, pending);
-          } else {
-            forgetPendingGuestCheckout(shopId, pending);
-            forgetGuestCart(shopId, pending.token);
-          }
-        }
+      }
+      const order = await this.api.guestOrderConfirmation(shopId, pending.cartId, pending.token);
+      abortSignal.throwIfAborted();
+      if (order) {
+        await this.finishCheckout(shopId, order.id, pending);
         return null;
       }
+      forgetPendingGuestCheckout(shopId, pending);
+      forgetGuestCart(shopId, pending.token);
+      return this.readCheckout(shopId, this.cartState.credentials(shopId), abortSignal);
     },
   });
   protected readonly checkout = computed(() =>
@@ -343,6 +334,28 @@ export class CheckoutPage {
     const credentials = this.cartState.credentials(shopId);
     const pending = credentials.shopperToken ? null : pendingGuestCheckout(shopId);
     return { credentials: pending ? { guestCartToken: pending.token } : credentials, pending };
+  }
+
+  private async readCheckout(
+    shopId: string,
+    credentials: StorefrontCredentials,
+    abortSignal: AbortSignal,
+  ) {
+    try {
+      const checkout = await this.api.checkout(shopId, credentials);
+      abortSignal.throwIfAborted();
+      const shopper =
+        checkout && credentials.shopperToken
+          ? await this.api.me(shopId, credentials.shopperToken)
+          : null;
+      return { checkout, shopper };
+    } catch (error) {
+      abortSignal.throwIfAborted();
+      if (this.cartState.expireSession(shopId, credentials, error) || cartNotFound(error)) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   private async finishCheckout(

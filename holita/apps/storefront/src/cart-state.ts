@@ -166,9 +166,6 @@ export class CartState {
           return null;
         }
         if (credentials.guestCartToken && cartNotFound(error)) {
-          if (pendingGuestCheckout(shopId)?.token === credentials.guestCartToken) {
-            return null;
-          }
           forgetGuestCart(shopId, credentials.guestCartToken);
           return this.api.cart(shopId, this.credentials(shopId));
         }
@@ -285,11 +282,7 @@ export class CartState {
         this.request.set(null);
         return 'expired';
       }
-      if (
-        credentials.guestCartToken &&
-        cartNotFound(error) &&
-        pendingGuestCheckout(shop)?.token !== credentials.guestCartToken
-      ) {
+      if (credentials.guestCartToken && cartNotFound(error)) {
         forgetGuestCart(shop, credentials.guestCartToken);
         if (active()) {
           this.refreshOwner();
