@@ -67,6 +67,10 @@ input ProductInput {
   Omitted IDs and an omitted, null or empty list preserve existing values.
   """
   characteristicValues: [ProductCharacteristicValueInput!]
+  "Replaces the assigned badges. Omit or pass null to keep them on update, or use an empty list to clear them."
+  badgeIds: [ID!]
+  "Replaces the assigned tags. Omit or pass null to keep them on update, or use an empty list to clear them."
+  tagIds: [ID!]
   status: ProductStatus!
   brandId: ID
   categoryId: ID
@@ -80,6 +84,8 @@ type Product {
   price: String
   variants: [ProductVariant!]!
   images: [ProductImage!]!
+  badges: [ProductBadge!]!
+  tags: [ProductTag!]!
   status: ProductStatus!
   brandId: ID
   categoryId: ID
@@ -292,6 +298,49 @@ type ProductCollectionPage {
   offset: Int!
   limit: Int!
 }
+enum ProductBadgeColor {
+  ACCENT
+  NEUTRAL
+  INFO
+  SUCCESS
+  WARN
+  DANGER
+}
+enum ProductBadgeSortField {
+  NAME
+  ACTIVE
+  SORT_ORDER
+}
+input ProductBadgeSort {
+  field: ProductBadgeSortField! = SORT_ORDER
+  direction: SortDirection! = ASC
+}
+input ProductBadgeInput {
+  name: String!
+  slug: String!
+  active: Boolean!
+  color: ProductBadgeColor!
+  sortOrder: Int!
+}
+type ProductBadge {
+  id: ID!
+  name: String!
+  slug: String!
+  active: Boolean!
+  color: ProductBadgeColor!
+  sortOrder: Int!
+}
+type ProductBadgePage {
+  items: [ProductBadge!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+type ProductTag {
+  id: ID!
+  name: String!
+  slug: String!
+}
 type Query {
   products(
     offset: Int! = 0
@@ -326,6 +375,16 @@ type Query {
     sort: ProductCollectionSort
   ): ProductCollectionPage!
   productCollection(id: ID!): ProductCollection
+  productBadges(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    sort: ProductBadgeSort
+  ): ProductBadgePage!
+  productBadge(id: ID!): ProductBadge
+  "Shop badges for the product editor, including inactive badges."
+  productBadgeChoices: [ProductBadge!]!
+  productTags(search: String, limit: Int! = 20): [ProductTag!]!
 }
 type Mutation {
   createProduct(input: ProductInput!): Product!
@@ -342,4 +401,7 @@ type Mutation {
   updateCharacteristicGroup(id: ID!, input: CharacteristicGroupInput!): CharacteristicGroup!
   createProductCollection(input: ProductCollectionInput!): ProductCollection!
   updateProductCollection(id: ID!, input: ProductCollectionInput!): ProductCollection!
+  createProductBadge(input: ProductBadgeInput!): ProductBadge!
+  updateProductBadge(id: ID!, input: ProductBadgeInput!): ProductBadge!
+  createProductTag(name: String!): ProductTag!
 }

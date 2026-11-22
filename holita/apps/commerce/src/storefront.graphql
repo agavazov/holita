@@ -6,6 +6,24 @@ type CatalogueProductImage {
   url: String!
   altText: String
 }
+enum CatalogueBadgeColor {
+  ACCENT
+  NEUTRAL
+  INFO
+  SUCCESS
+  WARN
+  DANGER
+}
+type CatalogueBadge {
+  id: ID!
+  name: String!
+  color: CatalogueBadgeColor!
+}
+type CatalogueTag {
+  id: ID!
+  name: String!
+  slug: String!
+}
 type CatalogueProduct {
   coverImage: CatalogueProductImage
   images: [CatalogueProductImage!]!
@@ -19,6 +37,8 @@ type CatalogueProduct {
   category: CatalogueCategory
   "The visible categories from the root through the product's category."
   categoryPath: [CatalogueCategory!]!
+  badges: [CatalogueBadge!]!
+  tags: [CatalogueTag!]!
 }
 type CatalogueBrand {
   id: ID!

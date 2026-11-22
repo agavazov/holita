@@ -1,6 +1,6 @@
 # 112 Storefront catalogue browsing
 
-**Status:** Ready after [110](110-holita-badges-tags.md), [111](111-holita-inventory.md). **Product:** Holita.
+**Status:** Ready after [111](111-holita-inventory.md). **Product:** Holita.
 
 ## Background
 

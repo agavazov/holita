@@ -171,6 +171,18 @@ main > a:focus-visible {
   letter-spacing: -0.015em;
 }
 
+.catalogue-badges,
+.product-tags ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-app-space-2);
+  overflow-wrap: anywhere;
+}
+
+.catalogue-badges p-tag {
+  max-inline-size: 100%;
+}
+
 .product-brand {
   display: flex;
   align-items: center;
@@ -288,6 +300,26 @@ main > a:focus-visible {
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.product-tags h2 {
+  margin: 0 0 var(--p-app-space-2);
+  font-size: 1rem;
+}
+
+.product-tags ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.product-tags li {
+  min-inline-size: 0;
+  padding: var(--p-app-space-1) var(--p-app-space-2);
+  border: 1px solid var(--shop-border);
+  border-radius: var(--p-app-radius-tag);
+  color: var(--shop-muted);
+  font-size: 0.875rem;
 }
 
 .product-specifications {

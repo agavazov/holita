@@ -17,7 +17,14 @@ import {
   productRelations,
 } from './product-relations.js';
 
-type ProductFields = Omit<ProductInput, 'variants' | 'images' | 'characteristicValues'>;
+type ProductFields = Omit<
+  ProductInput,
+  'variants' | 'images' | 'characteristicValues' | 'badgeIds' | 'tagIds'
+>;
+interface ProductMarkerIds {
+  badgeIds: string[] | undefined;
+  tagIds: string[] | undefined;
+}
 interface VariantWrite {
   id?: string;
   sku: string;
@@ -194,6 +201,7 @@ export class CommerceRepository {
     variants: VariantWrite[],
     images: ProductImageWrite[] | undefined,
     characteristicValues: ProductCharacteristicValueInput[],
+    { badgeIds, tagIds }: ProductMarkerIds,
   ) {
     return this.database.client.$transaction(async (tx) => {
       const product = id
@@ -238,6 +246,12 @@ export class CommerceRepository {
       if (characteristicValues.length) {
         await this.characteristics.patchProductValues(tx, productScope, characteristicValues);
       }
+      if (badgeIds) {
+        await this.replaceBadgeAssignments(tx, productScope, badgeIds);
+      }
+      if (tagIds) {
+        await this.replaceTagAssignments(tx, productScope, tagIds);
+      }
       const retiredKeys = images ? await this.replaceImages(tx, productScope, images) : [];
       const row = await tx.product.findUniqueOrThrow({
         where: { ...scope, id: product.id },
@@ -245,6 +259,48 @@ export class CommerceRepository {
       });
       return { row, retiredKeys };
     });
+  }
+
+  private async replaceBadgeAssignments(
+    tx: Prisma.TransactionClient,
+    productScope: Scope & { productId: string },
+    badgeIds: string[],
+  ) {
+    const { tenantId, branchId } = productScope;
+    if (
+      badgeIds.length &&
+      (await tx.productBadge.count({ where: { tenantId, branchId, id: { in: badgeIds } } })) !==
+        badgeIds.length
+    ) {
+      throw new InvalidMarkerIdError('badgeIds');
+    }
+    await tx.productBadgeAssignment.deleteMany({ where: productScope });
+    if (badgeIds.length) {
+      await tx.productBadgeAssignment.createMany({
+        data: badgeIds.map((badgeId) => ({ ...productScope, badgeId })),
+      });
+    }
+  }
+
+  private async replaceTagAssignments(
+    tx: Prisma.TransactionClient,
+    productScope: Scope & { productId: string },
+    tagIds: string[],
+  ) {
+    const { tenantId, branchId } = productScope;
+    if (
+      tagIds.length &&
+      (await tx.productTag.count({ where: { tenantId, branchId, id: { in: tagIds } } })) !==
+        tagIds.length
+    ) {
+      throw new InvalidMarkerIdError('tagIds');
+    }
+    await tx.productTagAssignment.deleteMany({ where: productScope });
+    if (tagIds.length) {
+      await tx.productTagAssignment.createMany({
+        data: tagIds.map((tagId) => ({ ...productScope, tagId })),
+      });
+    }
   }
 
   private async replaceImages(
@@ -292,5 +348,11 @@ export class InvalidVariantIdError extends Error {
 export class InvalidImageIdError extends Error {
   constructor(readonly index: number) {
     super('Choose an image from this product');
+  }
+}
+
+export class InvalidMarkerIdError extends Error {
+  constructor(readonly field: 'badgeIds' | 'tagIds') {
+    super('Product marker is outside this shop');
   }
 }

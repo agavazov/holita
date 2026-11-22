@@ -3,7 +3,7 @@
   [subtitle]="subtitle()"
   [state]="state()"
   [errorText]="text().productUnavailable"
-  [saving]="saving()"
+  [saving]="saving() || creatingTag()"
   [dirty]="form.dirty"
   (retry)="retry()"
 >
@@ -160,6 +160,127 @@
           ></textarea>
         </osnova-form-field>
       </div>
+    </section>
+    <section class="app-form-section" aria-labelledby="product-markers-title">
+      <h3 id="product-markers-title">{{ text().productMarkers }}</h3>
+      @let badgeError = errors()['badgeIds'] ?? null;
+      <osnova-form-field
+        controlId="product-badges"
+        [label]="text().productBadges"
+        [error]="badgeError"
+      >
+        <p-select
+          #badgesPicker
+          inputId="product-badges"
+          ariaLabelledBy="product-badges-label"
+          formControlName="badgeIds"
+          [options]="badgeOptions()"
+          optionLabel="label"
+          optionValue="id"
+          [multiple]="true"
+          [filter]="true"
+          [loading]="badgeChoices.isLoading()"
+          [placeholder]="text().chooseProductBadges"
+          [ariaFilterLabel]="text().searchBadges"
+          [filterPlaceholder]="text().searchBadges"
+          [emptyMessage]="text().emptyBadges"
+          [emptyFilterMessage]="shared().table.noResultsTitle"
+          [invalid]="!!badgeError"
+          [overlayOptions]="{ style: { width: '100%' } }"
+          [pt]="selectPt(badgeError, 'product-badges', true)"
+          (onChange)="changeMarkers('badgeIds', badgesPicker, $event.originalEvent)"
+        />
+        @if (badgeChoices.error()) {
+        <p-message id="product-badges-load-error" severity="warn" variant="simple" size="small">
+          {{ text().badgesUnavailable }}
+        </p-message>
+        <div>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [text]="true"
+            aria-describedby="product-badges-load-error"
+            [disabled]="saving()"
+            (click)="badgeChoices.reload()"
+          >
+            {{ shared().retry }}
+          </button>
+        </div>
+        }
+      </osnova-form-field>
+      @let tagSearchError = tagCreateError() ?? (tagSearchInvalid() ? shared().searchTooManyWords :
+      null);
+      <osnova-form-field
+        controlId="product-tag-search"
+        [label]="text().searchOrCreateTag"
+        [hint]="text().productTagCreationHint"
+        [error]="tagSearchError"
+      >
+        <input
+          pInputText
+          id="product-tag-search"
+          type="search"
+          autocomplete="off"
+          [formControl]="tagName"
+          [readonly]="saving() || creatingTag()"
+          aria-describedby="product-tag-search-hint product-tag-search-error"
+          [invalid]="!!tagSearchError"
+          [attr.aria-invalid]="!!tagSearchError"
+          (input)="tagCreateError.set(null)"
+          (keydown.enter)="$event.preventDefault()"
+        />
+        <div>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="saving() || creatingTag() || !tagName.value.trim()"
+            (click)="addTag()"
+          >
+            {{ text().addTag }}
+          </button>
+        </div>
+      </osnova-form-field>
+      @let tagError = errors()['tagIds'] ?? null;
+      <osnova-form-field controlId="product-tags" [label]="text().productTags" [error]="tagError">
+        <p-select
+          #tagsPicker
+          inputId="product-tags"
+          ariaLabelledBy="product-tags-label"
+          formControlName="tagIds"
+          [options]="tagOptions()"
+          optionLabel="name"
+          optionValue="id"
+          [multiple]="true"
+          [loading]="tagResults.isLoading()"
+          [placeholder]="text().chooseProductTags"
+          [emptyMessage]="tagResults.error() ? text().tagSearchFailed : shared().table.noResultsTitle"
+          [invalid]="!!tagError"
+          [overlayOptions]="{ style: { width: '100%' } }"
+          [pt]="selectPt(tagError, 'product-tags', true)"
+          (onChange)="changeMarkers('tagIds', tagsPicker, $event.originalEvent)"
+        />
+        @if (tagResults.error()) {
+        <p-message id="product-tags-load-error" severity="warn" variant="simple" size="small">
+          {{ text().tagSearchFailed }}
+        </p-message>
+        <div>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [text]="true"
+            aria-describedby="product-tags-load-error"
+            [disabled]="saving()"
+            (click)="tagResults.reload()"
+          >
+            {{ shared().retry }}
+          </button>
+        </div>
+        }
+      </osnova-form-field>
     </section>
     <section
       class="app-form-section product-specifications"
@@ -527,7 +648,7 @@
       type="button"
       severity="secondary"
       [outlined]="true"
-      [disabled]="saving()"
+      [disabled]="saving() || creatingTag()"
       (click)="drawer().close()"
     >
       {{ shared().cancel }}
@@ -536,7 +657,7 @@
       pButton
       type="submit"
       form="product-editor-form"
-      [disabled]="saving() || !!uploadError()"
+      [disabled]="saving() || creatingTag() || !!uploadError()"
     >
       {{ text().save }}
     </button>

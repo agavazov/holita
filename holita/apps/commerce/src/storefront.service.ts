@@ -14,7 +14,7 @@ import {
   validatePassword,
   verifyPassword,
 } from '@osnova/auth';
-import { Prisma, type Brand, type Product, type ProductImage } from './generated/prisma/client.js';
+import { Prisma, type Brand, type Product } from './generated/prisma/client.js';
 import { brandLogoUrl } from './brands/brand-images.js';
 import { BrandsRepository } from './brands/brands.repository.js';
 import { CategoriesService } from './categories/categories.service.js';
@@ -65,12 +65,10 @@ function validatePage(offset: number, limit: number): void {
   }
 }
 
+type CatalogueProductRow = NonNullable<Awaited<ReturnType<CommerceRepository['publicProduct']>>>;
+
 function catalogueProduct(
-  item: Product & {
-    brand: Brand | null;
-    variants: { price: Prisma.Decimal }[];
-    images: ProductImage[];
-  },
+  item: CatalogueProductRow,
   categories: ReadonlyMap<string, CatalogueCategory>,
 ): CatalogueProduct {
   const variant = item.variants[0];
@@ -99,6 +97,8 @@ function catalogueProduct(
     brand: item.brand?.status === 'ACTIVE' ? catalogueBrand(item.brand) : null,
     category: category ?? null,
     categoryPath: categoryPath.reverse(),
+    badges: item.badgeAssignments.map(({ badge: { id, name, color } }) => ({ id, name, color })),
+    tags: item.tagAssignments.map(({ tag }) => tag),
   };
 }
 

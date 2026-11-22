@@ -21,6 +21,10 @@ import { OptionsModule } from './options/options.module.js';
 import { OptionsResolver } from './options/options.resolver.js';
 import { CharacteristicsModule } from './characteristics/characteristics.module.js';
 import { CharacteristicsResolver } from './characteristics/characteristics.resolver.js';
+import { BadgesModule } from './badges/badges.module.js';
+import { BadgesResolver } from './badges/badges.resolver.js';
+import { TagsModule } from './tags/tags.module.js';
+import { TagsResolver } from './tags/tags.resolver.js';
 import { ProductsModule } from './products/products.module.js';
 
 @Module({
@@ -31,6 +35,8 @@ import { ProductsModule } from './products/products.module.js';
     OptionsModule,
     CollectionsModule,
     CharacteristicsModule,
+    BadgesModule,
+    TagsModule,
     CustomersModule,
   ],
   providers: [
@@ -40,6 +46,8 @@ import { ProductsModule } from './products/products.module.js';
     OptionsResolver,
     CollectionsResolver,
     CharacteristicsResolver,
+    BadgesResolver,
+    TagsResolver,
     CustomersResolver,
   ],
 })

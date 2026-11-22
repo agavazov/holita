@@ -521,6 +521,12 @@ The Product drawer's Descriptions section accepts optional Bulgarian and English
 The storefront product page shows the selected language when available and falls back to the
 other description. The Sofia demo shop includes a bilingual ceramic casserole under Cookware.
 
+In Admin, use Badges to manage the badge names, slugs, colours, display order and active status
+for the selected shop. In the Product drawer, choose badges and search for or add reusable tags.
+Adding a tag makes it available in the shop immediately. Save the product to apply its
+assignments. The storefront shows active badges on catalogue cards and tags on product pages.
+Deactivating a badge hides it from shoppers and keeps its assignments.
+
 `npm run dev` starts both products. `npm run kill` stops their development applications while
 leaving PostgreSQL and the ERM units running. Discocan Core reads `discocan/config/core.env`;
 Holita Core reads `holita/config/core.env`. Their watch outputs are `dist-discocan` and

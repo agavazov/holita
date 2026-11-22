@@ -97,6 +97,15 @@ export const demoCharacteristicGroups = [
   },
 ];
 
+export const demoBadges = [
+  { id: 1, name: 'Ново попълнение', slug: 'novo-popalnenie', color: 'info', productIds: [11, 12] },
+] as const;
+
+export const demoTags = [
+  { id: 1, name: 'Керамика', slug: 'керамика', productIds: [11, 12] },
+  { id: 2, name: 'Ръчна изработка', slug: 'ръчна-изработка', productIds: [11] },
+] as const;
+
 interface DemoBrand {
   readonly id: number;
   readonly name: string;

@@ -7,10 +7,13 @@ import { HttpLink } from 'apollo-angular/http';
 import { firstValueFrom } from 'rxjs';
 import {
   OperatorCreateProductDocument,
+  OperatorCreateProductTagDocument,
+  OperatorProductBadgeChoicesDocument,
   OperatorProductDocument,
   OperatorProductCharacteristicsDocument,
   OperatorProductOptionsDocument,
   OperatorProductsDocument,
+  OperatorProductTagsDocument,
   OperatorUpdateProductDocument,
   type OperatorProductsQueryVariables,
   type ProductInput,
@@ -106,6 +109,55 @@ export class ProductsApi {
         throw new Error('Missing product characteristics');
       }
       return data.productCharacteristics;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async badges(scope: ProductScope) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorProductBadgeChoicesDocument,
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing product badge choices');
+      }
+      return data.productBadgeChoices;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async tags(scope: ProductScope, search: string) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorProductTagsDocument,
+        variables: { search },
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing product tag results');
+      }
+      return data.productTags;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async addTag(scope: ProductScope, name: string) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: OperatorCreateProductTagDocument,
+        variables: { name },
+      });
+      if (!data) {
+        throw new Error('Missing created product tag');
+      }
+      return data.createProductTag;
     } finally {
       client.stop();
     }

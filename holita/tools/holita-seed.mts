@@ -5,12 +5,14 @@ import { isAbsolute, join, resolve } from 'node:path';
 import { config } from 'dotenv';
 import pg from 'pg';
 import {
+  demoBadges,
   demoCatalogue,
   demoCategories,
   demoCharacteristicGroups,
   demoCollections,
   demoOptions,
   demoProductImages,
+  demoTags,
 } from './demo-catalogue.mjs';
 
 config({
@@ -68,6 +70,9 @@ async function seedCatalogue(): Promise<void> {
   let collectionsInserted = 0;
   let imagesInserted = 0;
   let characteristicGroupsInserted = 0;
+  let badgesInserted = 0;
+  let tagsInserted = 0;
+  let markerAssignmentsInserted = 0;
   await client.connect();
   try {
     await client.query('BEGIN');
@@ -321,9 +326,56 @@ async function seedCatalogue(): Promise<void> {
         }
       }
     }
+    for (const badge of demoBadges) {
+      const badgeId = fixtureId('b2', badge.id);
+      const { rowCount } = await client.query(
+        `INSERT INTO "productBadge" ("id", "tenantId", "branchId", "name", "slug", "color")
+         VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING`,
+        [badgeId, tenantId, branchId, badge.name, badge.slug, badge.color],
+      );
+      if (rowCount) {
+        badgesInserted += rowCount;
+        const assignments = await client.query(
+          `INSERT INTO "productBadgeAssignment" ("tenantId", "branchId", "productId", "badgeId")
+           SELECT p."tenantId", p."branchId", p."id", b."id"
+           FROM "product" p
+           JOIN "productBadge" b ON b."tenantId" = p."tenantId" AND b."branchId" = p."branchId"
+           WHERE p."tenantId" = $1 AND p."branchId" = $2
+             AND p."id" = ANY($3::uuid[]) AND b."id" = $4
+           ON CONFLICT DO NOTHING`,
+          [tenantId, branchId, badge.productIds.map((id) => fixtureId('52', id)), badgeId],
+        );
+        markerAssignmentsInserted += assignments.rowCount ?? 0;
+      }
+    }
+    for (const tag of demoTags) {
+      const tagId = fixtureId('c2', tag.id);
+      const { rowCount } = await client.query(
+        `INSERT INTO "productTag" ("id", "tenantId", "branchId", "name", "normalizedName", "slug")
+         VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING`,
+        [tagId, tenantId, branchId, tag.name, tag.name.toLowerCase(), tag.slug],
+      );
+      if (rowCount) {
+        tagsInserted += rowCount;
+        const assignments = await client.query(
+          `INSERT INTO "productTagAssignment" ("tenantId", "branchId", "productId", "tagId")
+           SELECT p."tenantId", p."branchId", p."id", t."id"
+           FROM "product" p
+           JOIN "productTag" t ON t."tenantId" = p."tenantId" AND t."branchId" = p."branchId"
+           WHERE p."tenantId" = $1 AND p."branchId" = $2
+             AND p."id" = ANY($3::uuid[]) AND t."id" = $4
+           ON CONFLICT DO NOTHING`,
+          [tenantId, branchId, tag.productIds.map((id) => fixtureId('52', id)), tagId],
+        );
+        markerAssignmentsInserted += assignments.rowCount ?? 0;
+      }
+    }
     await client.query('COMMIT');
     console.log(
       `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options, ${String(productsInserted)} products, ${String(collectionsInserted)} collections, ${String(characteristicGroupsInserted)} characteristic groups and ${String(imagesInserted)} product images.`,
+    );
+    console.log(
+      `Demo product markers inserted ${String(badgesInserted)} badges, ${String(tagsInserted)} tags and ${String(markerAssignmentsInserted)} assignments.`,
     );
   } finally {
     await client.end();

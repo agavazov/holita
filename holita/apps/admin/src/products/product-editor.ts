@@ -35,7 +35,9 @@ import {
   integerValidator,
   interpolate,
   lockWhileSaving,
+  normalizeSearch,
   patternValidator,
+  searchApplies,
   selectMultiplePt,
   textValidator,
   uiMessages,
@@ -53,13 +55,16 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
+import { debounceTime, distinctUntilChanged, map } from 'rxjs';
 import { BrandsApi } from '../brands/brands-api';
 import { CategoriesApi } from '../categories/categories-api';
 import { categoryOptions } from '../categories/category-tree';
 import type {
   OperatorProductQuery,
+  ProductBadgeChoiceFragment,
   ProductImageInput,
   ProductStatus,
+  ProductTagChoiceFragment,
   ProductVariantInput,
 } from '../generated/products-operations';
 import { encodeImage } from '../image-upload';
@@ -67,7 +72,15 @@ import { ProductsApi } from './products-api';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const pricePattern = /^\d{1,10}(?:[.,]\d{1,2})?$/;
-const productFields = ['name', 'brandId', 'categoryId', 'descriptionBg', 'descriptionEn'] as const;
+const productFields = [
+  'name',
+  'brandId',
+  'categoryId',
+  'descriptionBg',
+  'descriptionEn',
+  'badgeIds',
+  'tagIds',
+] as const;
 const variantFields = ['optionValueIds', 'sku', 'price', 'quantity'] as const;
 type VariantField = (typeof variantFields)[number];
 type Variant = NonNullable<OperatorProductQuery['product']>['variants'][number];
@@ -232,6 +245,44 @@ export class ProductEditor {
   protected readonly saving = signal(false);
   protected readonly saveError = signal(false);
   protected readonly errors = signal<Partial<Record<string, string>>>({});
+  protected readonly creatingTag = signal(false);
+  protected readonly tagCreateError = signal<string | null>(null);
+  protected readonly tagName = new FormControl('', { nonNullable: true });
+  private readonly tagSearch = toSignal(
+    this.tagName.valueChanges.pipe(map(normalizeSearch), debounceTime(300), distinctUntilChanged()),
+    { initialValue: '' },
+  );
+  protected readonly tagSearchInvalid = computed(() => !searchApplies(this.tagSearch()));
+  protected readonly badgeChoices = resource({
+    params: () => this.api.scope() ?? undefined,
+    loader: ({ params }) => this.api.badges(params),
+  });
+  protected readonly badgeOptions = computed(() =>
+    (this.badgeChoices.hasValue()
+      ? this.badgeChoices.value()
+      : ((this.record.hasValue() ? this.record.value()?.badges : []) ?? [])
+    ).map((badge: ProductBadgeChoiceFragment) => ({
+      ...badge,
+      label: badge.active ? badge.name : `${badge.name} · ${this.text().optionInactive}`,
+    })),
+  );
+  protected readonly tagResults = resource({
+    params: () => {
+      const scope = this.api.scope();
+      return scope && this.state() === 'ready' && !this.tagSearchInvalid()
+        ? { scope, search: this.tagSearch() }
+        : undefined;
+    },
+    loader: ({ params }) => this.api.tags(params.scope, params.search),
+  });
+  private readonly selectedTags = signal<ProductTagChoiceFragment[]>([]);
+  protected readonly tagOptions = computed(() => {
+    const options = new Map(this.selectedTags().map((tag) => [tag.id, tag]));
+    for (const tag of this.tagResults.hasValue() ? this.tagResults.value() : []) {
+      options.set(tag.id, tag);
+    }
+    return [...options.values()];
+  });
   protected readonly characteristicValues = new FormRecord<FormControl<string>>({});
   protected readonly variants = new FormArray([variantForm()]);
   protected readonly images = new FormArray<ImageForm>([]);
@@ -249,6 +300,8 @@ export class ProductEditor {
     categoryId: new FormControl<string | null>(null),
     descriptionBg: new FormControl('', { nonNullable: true }),
     descriptionEn: new FormControl('', { nonNullable: true }),
+    badgeIds: new FormControl<string[]>([], { nonNullable: true }),
+    tagIds: new FormControl<string[]>([], { nonNullable: true }),
     characteristicValues: this.characteristicValues,
     variants: this.variants,
     images: this.images,
@@ -282,12 +335,17 @@ export class ProductEditor {
           categoryId: product?.categoryId ?? null,
           descriptionBg: product?.descriptionBg ?? '',
           descriptionEn: product?.descriptionEn ?? '',
+          badgeIds: product?.badges.map(({ id }) => id) ?? [],
+          tagIds: product?.tags.map(({ id }) => id) ?? [],
           characteristicValues: this.characteristicValues.getRawValue(),
           variants: this.variants.getRawValue(),
           images: this.images.getRawValue(),
         },
         { emitEvent: false },
       );
+      this.selectedTags.set(product?.tags ?? []);
+      this.tagName.reset();
+      this.tagCreateError.set(null);
       this.errors.set({});
       this.saveError.set(false);
     });
@@ -324,7 +382,7 @@ export class ProductEditor {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return !this.saving() && this.drawer().confirmLeave(this.form.dirty);
+    return !this.saving() && !this.creatingTag() && this.drawer().confirmLeave(this.form.dirty);
   }
 
   protected retry(): void {
@@ -378,6 +436,56 @@ export class ProductEditor {
     this.clearError(this.path(index, 'optionValueIds'));
     if (event?.type === 'click') {
       picker.focus();
+    }
+  }
+
+  protected changeMarkers(
+    field: 'badgeIds' | 'tagIds',
+    picker: Select,
+    event: Event | undefined,
+  ): void {
+    this.clearError(field);
+    if (field === 'tagIds') {
+      const ids = new Set(this.form.controls.tagIds.value);
+      this.selectedTags.set(this.tagOptions().filter(({ id }) => ids.has(id)));
+    }
+    if (event?.type === 'click') {
+      picker.focus();
+    }
+  }
+
+  protected async addTag(): Promise<void> {
+    const scope = this.api.scope();
+    const name = this.tagName.value.trim();
+    if (!scope || !name || this.saving() || this.creatingTag()) {
+      return;
+    }
+    this.tagCreateError.set(null);
+    this.creatingTag.set(true);
+    try {
+      const tag = await this.api.addTag(scope, name);
+      if (this.destroyRef.destroyed || this.api.scope() !== scope) {
+        return;
+      }
+      const control = this.form.controls.tagIds;
+      this.selectedTags.update((tags) => [...tags, tag]);
+      control.setValue([...control.value, tag.id]);
+      control.markAsDirty();
+      this.clearError('tagIds');
+      this.tagName.reset();
+    } catch (error: unknown) {
+      if (this.destroyRef.destroyed || this.api.scope() !== scope) {
+        return;
+      }
+      const errors = fieldErrors(error, ['name'], scope.language, (code) =>
+        code === 'DUPLICATE_VALUE' ? this.text().productTagNameInUse : undefined,
+      );
+      this.tagCreateError.set(errors.name ?? this.text().tagCreateFailed);
+    } finally {
+      this.creatingTag.set(false);
+      if (!this.destroyRef.destroyed && this.api.scope() === scope) {
+        this.focusControl('product-tag-search');
+      }
     }
   }
 
@@ -553,7 +661,7 @@ export class ProductEditor {
 
   protected async save(): Promise<void> {
     const scope = this.api.scope();
-    if (!scope || this.saving() || this.state() !== 'ready') {
+    if (!scope || this.saving() || this.creatingTag() || this.state() !== 'ready') {
       return;
     }
     if (this.uploadError()) {
@@ -652,6 +760,12 @@ export class ProductEditor {
         if (path === 'descriptionBg' || path === 'descriptionEn') {
           return this.text().productDescriptionInvalid;
         }
+        if (path === 'badgeIds') {
+          return this.text().productBadgeUnavailable;
+        }
+        if (path === 'tagIds') {
+          return this.text().productTagUnavailable;
+        }
         if (path.startsWith('characteristicValues.')) {
           return path.endsWith('.characteristicId')
             ? this.text().characteristicUnavailable
@@ -695,6 +809,8 @@ export class ProductEditor {
       'category',
       'description-bg',
       'description-en',
+      'badges',
+      'tags',
       ...Object.keys(this.characteristicValues.controls).map((id) => `specification-${id}`),
       'image-add',
       ...this.images.controls.map((_, index) => `image-alt-${String(index)}`),

@@ -46,6 +46,12 @@ query OperatorProduct($id: ID!) {
     status
     brandId
     categoryId
+    badges {
+      ...ProductBadgeChoice
+    }
+    tags {
+      ...ProductTagChoice
+    }
     images {
       id
       url
@@ -62,6 +68,36 @@ query OperatorProduct($id: ID!) {
     }
   }
 }
+
+fragment ProductBadgeChoice on ProductBadge {
+  id
+  name
+  active
+}
+
+fragment ProductTagChoice on ProductTag {
+  id
+  name
+}
+
+query OperatorProductBadgeChoices {
+  productBadgeChoices {
+    ...ProductBadgeChoice
+  }
+}
+
+query OperatorProductTags($search: String) {
+  productTags(search: $search) {
+    ...ProductTagChoice
+  }
+}
+
+mutation OperatorCreateProductTag($name: String!) {
+  createProductTag(name: $name) {
+    ...ProductTagChoice
+  }
+}
+
 query OperatorProductOptions {
   productOptions {
     id

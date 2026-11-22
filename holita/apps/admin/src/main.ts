@@ -1,5 +1,7 @@
 import { startOperator } from '@holita/operator';
 import { leaveDrawer } from '@osnova/ui';
+import { BadgeEditor } from './badges/badge-editor';
+import { BadgesPage } from './badges/badges-page';
 import { BrandEditor } from './brands/brand-editor';
 import { BrandsPage } from './brands/brands-page';
 import { CategoriesPage } from './categories/categories-page';
@@ -127,6 +129,24 @@ void startOperator({
         },
       ],
     },
+    {
+      path: 'badges',
+      component: BadgesPage,
+      children: [
+        {
+          path: 'new',
+          component: BadgeEditor,
+          data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: ':recordId',
+          component: BadgeEditor,
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
     { path: 'customers', component: CustomersPage },
   ],
   navigation: [
@@ -141,6 +161,7 @@ void startOperator({
       icon: 'id-card',
       path: 'characteristic-groups',
     },
+    { id: 'badges', label: 'badges', icon: 'tags', path: 'badges' },
     { id: 'customers', label: 'customers', icon: 'users', path: 'customers' },
   ],
 }).catch((error: unknown) => {

@@ -9,6 +9,7 @@ import {
   CommerceRepository,
   DuplicateSkuError,
   InvalidImageIdError,
+  InvalidMarkerIdError,
   InvalidVariantIdError,
 } from './commerce.repository.js';
 import { requireScope, type RequestContext, type Scope } from '../scope.js';
@@ -44,6 +45,8 @@ function product(row: ProductRow): Product {
       url: productImageUrl(image),
       altText: image.altText,
     })),
+    badges: row.badgeAssignments.map(({ badge }) => badge),
+    tags: row.tagAssignments.map(({ tag }) => tag),
     variants: row.variants.map(
       ({ id, sku, price, quantity, inventoryTracked, active, values }) => ({
         id,
@@ -79,7 +82,7 @@ function productFields({
   descriptionBg,
   descriptionEn,
   ...input
-}: Omit<ProductInput, 'variants' | 'images' | 'characteristicValues'>) {
+}: Omit<ProductInput, 'variants' | 'images' | 'characteristicValues' | 'badgeIds' | 'tagIds'>) {
   const name = input.name.trim();
   if (!name || Array.from(name).length > 200 || name.includes('\u0000')) {
     throw fieldError('name', 'INVALID_VALUE', 'Product name must contain 1 to 200 characters');
@@ -110,6 +113,22 @@ function invalidReference(path: 'brandId' | 'categoryId') {
     'INVALID_VALUE',
     path === 'brandId' ? 'Choose a brand from this shop' : 'Choose a category from this shop',
   );
+}
+
+function invalidMarkerIds(path: 'badgeIds' | 'tagIds') {
+  return fieldError(
+    path,
+    'INVALID_VALUE',
+    path === 'badgeIds' ? 'Choose badges from this shop' : 'Choose tags from this shop',
+  );
+}
+
+function markerIds(input: string[] | null | undefined, field: 'badgeIds' | 'tagIds') {
+  const ids = input?.map((id) => id.toLowerCase());
+  if (ids?.some((id) => !isUUID(id))) {
+    throw invalidMarkerIds(field);
+  }
+  return ids && [...new Set(ids)];
 }
 
 function invalidCharacteristicId(
@@ -205,9 +224,15 @@ export class CommerceService {
       variants: requested,
       images: requestedImages,
       characteristicValues: requestedValues,
+      badgeIds: requestedBadgeIds,
+      tagIds: requestedTagIds,
       ...fields
     } = input;
     const values = characteristicValues(requestedValues);
+    const markers = {
+      badgeIds: markerIds(requestedBadgeIds, 'badgeIds'),
+      tagIds: markerIds(requestedTagIds, 'tagIds'),
+    };
     const data = productFields(fields);
     const variants = await this.variants(scope, requested, id !== undefined);
     const drafts = validateProductImages(requestedImages, id !== undefined);
@@ -232,11 +257,15 @@ export class CommerceService {
         variants,
         drafts ? images : undefined,
         values,
+        markers,
       );
     } catch (error: unknown) {
       await this.imageFiles.remove(scope, newKeys);
       if (error instanceof InvalidCharacteristicIdError) {
         throw invalidCharacteristicId(error.index, error.message);
+      }
+      if (error instanceof InvalidMarkerIdError) {
+        throw invalidMarkerIds(error.field);
       }
       if (error instanceof InvalidImageIdError) {
         throw fieldError(`image${String(error.index)}Id`, 'INVALID_IMAGE_ID', error.message);
@@ -256,6 +285,12 @@ export class CommerceService {
           throw fieldError('variants', 'DUPLICATE_SKU', 'This shop already uses the SKU');
         }
         if (error.code === 'P2003') {
+          if (error.message.includes('productBadgeAssignment_')) {
+            throw invalidMarkerIds('badgeIds');
+          }
+          if (error.message.includes('productTagAssignment_')) {
+            throw invalidMarkerIds('tagIds');
+          }
           if (error.message.includes('productVariantValue_tenantId_branchId_optionValueId_fkey')) {
             throw fieldError('variants', 'INVALID_OPTION_VALUES', 'Choose values from this shop');
           }

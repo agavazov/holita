@@ -1,0 +1,35 @@
+fragment OperatorBadgeFields on ProductBadge {
+  id
+  name
+  slug
+  active
+  color
+  sortOrder
+}
+
+query OperatorBadges($offset: Int!, $limit: Int!, $search: String, $sort: ProductBadgeSort) {
+  productBadges(offset: $offset, limit: $limit, search: $search, sort: $sort) {
+    items {
+      ...OperatorBadgeFields
+    }
+    total
+  }
+}
+
+query OperatorBadge($id: ID!) {
+  productBadge(id: $id) {
+    ...OperatorBadgeFields
+  }
+}
+
+mutation OperatorCreateBadge($input: ProductBadgeInput!) {
+  createProductBadge(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateBadge($id: ID!, $input: ProductBadgeInput!) {
+  updateProductBadge(id: $id, input: $input) {
+    id
+  }
+}

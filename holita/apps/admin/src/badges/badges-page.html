@@ -1,0 +1,145 @@
+<osnova-page-header
+  [title]="text().badges"
+  [moduleInfo]="text().badgesInfo"
+  [actions]="headerActions()"
+  (action)="open('new')"
+/>
+@if (scope()) {
+<osnova-table-panel
+  #panel
+  [heading]="text().shopBadges"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
+  [view]="view()"
+  [total]="page()?.total ?? null"
+  [busy]="list.isLoading()"
+  [errorText]="text().badgesUnavailable"
+  [emptyTitle]="text().emptyBadges"
+  [emptyDescription]="text().emptyBadgesDescription"
+  [page]="pagination()"
+  [actionContext]="params()"
+  [actions]="actions()"
+  (action)="run($event)"
+  (pageChange)="url.setPage($event)"
+  (retry)="list.reload()"
+  (clearFilters)="url.clearFilters()"
+>
+  <osnova-filter-builder
+    panelActions
+    [searchLabel]="text().searchBadges"
+    [search]="url.searchDraft()"
+    [searchError]="url.searchError() ? shared().searchTooManyWords : null"
+    (searchChange)="url.editSearch($event)"
+  />
+  <osnova-list-sort-menu
+    panelActions
+    [fields]="sortFields()"
+    [sort]="sort()"
+    (sortChange)="changeSort($event)"
+  />
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="page()?.items ?? []"
+    [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    [sortField]="sort().field"
+    [sortOrder]="sort().direction === 'asc' ? 1 : -1"
+    (onLazyLoad)="tableSort($event)"
+    dataKey="id"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="
+                column.kind === 'identity'
+                  ? 'var(--app-table-identity-width, ' + column.width + ')'
+                  : column.width
+              "
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity" pSortableColumn="NAME">
+          {{ text().name }} <p-sort-icon field="NAME" />
+        </th>
+        <th scope="col" pSortableColumn="ACTIVE">
+          {{ text().status }} <p-sort-icon field="ACTIVE" />
+        </th>
+        <th scope="col" class="app-col-secondary">{{ text().badgeColor }}</th>
+        <th scope="col" class="app-col-secondary app-cell-number" pSortableColumn="SORT_ORDER">
+          {{ text().categorySortOrder }} <p-sort-icon field="SORT_ORDER" />
+        </th>
+        @if (canWrite()) {
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ shared().pageHeader.actions }}</span>
+        </th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-badge>
+      @let row = record(badge); @let palette = color(badge.color);
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-cell-identity">
+            @if (canWrite()) {
+            <button
+              type="button"
+              class="app-link"
+              [title]="badge.name"
+              (click)="panel.run('edit', [row], $event.currentTarget)"
+            >
+              {{ badge.name }}
+            </button>
+            } @else {
+            <span [title]="badge.name">{{ badge.name }}</span>
+            }
+            <span class="app-mono" [title]="badge.slug">{{ badge.slug }}</span>
+          </div>
+          @if (canWrite()) {
+          <div class="app-table-mobile-actions">
+            <osnova-row-actions
+              [actions]="actions()"
+              [record]="row"
+              (choose)="panel.run($event.action, [row], $event.origin)"
+            />
+          </div>
+          }
+        </td>
+        <td>
+          <div class="app-cell-status">
+            <p-tag
+              [severity]="tone(badge.active ? 'success' : 'neutral')"
+              [value]="badge.active ? text().optionActive : text().optionInactive"
+            />
+          </div>
+        </td>
+        <td class="app-col-secondary">
+          <div class="app-cell-status">
+            <p-tag [severity]="palette.severity" [value]="palette.label" />
+          </div>
+        </td>
+        <td class="app-col-secondary app-cell-number">{{ badge.sortOrder }}</td>
+        @if (canWrite()) {
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <osnova-row-actions
+            [actions]="actions()"
+            [record]="row"
+            (choose)="panel.run($event.action, [row], $event.origin)"
+          />
+        </td>
+        }
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+} @else {
+<p-message severity="info">{{ text().noShop }}</p-message>
+}
+<router-outlet [routerOutletData]="drawerHost" />

@@ -21,6 +21,11 @@ query Catalogue($offset: Int!, $limit: Int!) {
       brand {
         ...CatalogueBrandFields
       }
+      badges {
+        id
+        name
+        color
+      }
     }
     total
     offset
@@ -44,6 +49,11 @@ query CatalogueProduct($id: ID!) {
     categoryPath {
       id
       name
+    }
+    tags {
+      id
+      name
+      slug
     }
   }
   catalogueProductSpecifications(productId: $id) {

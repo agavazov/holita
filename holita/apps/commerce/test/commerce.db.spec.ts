@@ -135,6 +135,17 @@ beforeAll(async () => {
       'utf8',
     ),
   );
+  for (const migration of [
+    '20261122060000_product_characteristics',
+    '20261122070000_product_markers',
+  ]) {
+    await connection.query(
+      await readFile(
+        new URL(`../prisma/migrations/${migration}/migration.sql`, import.meta.url),
+        'utf8',
+      ),
+    );
+  }
   url.searchParams.set('schema', schema);
   process.env.COMMERCE_DATABASE_URL = url.toString();
   const coreServer = createServer((request, response) => {
@@ -682,6 +693,106 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       },
     },
   });
+
+  const [localMarkers, ...outsideMarkers] = await Promise.all(
+    rows.map(async ({ tenantId, branchId, id: productId }) => {
+      const scope = { tenantId, branchId };
+      const badge = await client.productBadge.create({
+        data: { ...scope, name: 'Scoped Badge', slug: 'scoped-badge' },
+      });
+      const tag = await client.productTag.create({
+        data: { ...scope, name: 'Scoped Tag', normalizedName: 'scoped tag', slug: 'scoped-tag' },
+      });
+      return { scope, productId, badgeId: badge.id, tagId: tag.id };
+    }),
+  );
+  if (!localMarkers) {
+    throw new Error('Missing local product markers');
+  }
+  const { scope: markerScope, productId, badgeId, tagId } = localMarkers;
+  const readMarkers = 'query($id:ID!){product(id:$id){name badges{id} tags{id}}}';
+  const assignMarkers =
+    'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){name badges{id} tags{id}}}';
+  const productDraft = {
+    name: 'Local',
+    status: 'ACTIVE',
+    variants: [
+      {
+        sku: 'LOCAL',
+        price: '19.95',
+        quantity: 0,
+        inventoryTracked: false,
+        active: true,
+        optionValueIds: [],
+      },
+    ],
+  };
+  const expectedMarkers = { name: 'Local', badges: [{ id: badgeId }], tags: [{ id: tagId }] };
+  expect(
+    await query(
+      tokens.viewer,
+      branchA,
+      '{productBadges(search:"scoped"){total items{id}} productBadgeChoices{id} productTags(search:"scoped"){id}}',
+    ),
+  ).toEqual({
+    data: {
+      productBadges: { total: 1, items: [{ id: badgeId }] },
+      productBadgeChoices: [{ id: badgeId }],
+      productTags: [{ id: tagId }],
+    },
+  });
+  expect(await query(tokens.viewer, branchA, readMarkers, { id: productId })).toEqual({
+    data: { product: { name: 'Local', badges: [], tags: [] } },
+  });
+  expect(
+    await query(tokens.operator, branchA, assignMarkers, {
+      id: productId,
+      input: { ...productDraft, badgeIds: [badgeId, badgeId.toUpperCase()], tagIds: [tagId] },
+    }),
+  ).toEqual({ data: { updateProduct: expectedMarkers } });
+  for (const outside of outsideMarkers) {
+    for (const [field, value] of [
+      ['badgeIds', outside.badgeId],
+      ['tagIds', outside.tagId],
+    ] as const) {
+      expect(
+        await query(tokens.operator, branchA, assignMarkers, {
+          id: productId,
+          input: { ...productDraft, name: 'Rejected', badgeIds: [], tagIds: [], [field]: [value] },
+        }),
+      ).toMatchObject({
+        data: null,
+        errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: field }] } }],
+      });
+      expect(await query(tokens.viewer, branchA, readMarkers, { id: productId })).toEqual({
+        data: { product: expectedMarkers },
+      });
+    }
+    for (const mismatched of [
+      { ...markerScope, productId, badgeId: outside.badgeId, tagId: outside.tagId },
+      { ...markerScope, productId: outside.productId, badgeId, tagId },
+    ]) {
+      const { badgeId: mismatchedBadgeId, tagId: mismatchedTagId, ...scope } = mismatched;
+      await expect(
+        client.productBadgeAssignment.create({ data: { ...scope, badgeId: mismatchedBadgeId } }),
+      ).rejects.toMatchObject({ code: 'P2003' });
+      await expect(
+        client.productTagAssignment.create({ data: { ...scope, tagId: mismatchedTagId } }),
+      ).rejects.toMatchObject({ code: 'P2003' });
+    }
+  }
+  expect(
+    await query(tokens.operator, branchA, assignMarkers, {
+      id: productId,
+      input: { ...productDraft, badgeIds: null },
+    }),
+  ).toEqual({ data: { updateProduct: expectedMarkers } });
+  expect(
+    await query(tokens.operator, branchA, assignMarkers, {
+      id: productId,
+      input: { ...productDraft, tagIds: [] },
+    }),
+  ).toEqual({ data: { updateProduct: { ...expectedMarkers, tags: [] } } });
 }, 15_000);
 
 function storedVariant(sku: string, price: string, active = true) {

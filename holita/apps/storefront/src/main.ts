@@ -14,7 +14,9 @@ import { ActivatedRoute, Router, RouterLink, RouterOutlet, provideRouter } from 
 import { ApolloLink, InMemoryCache } from '@apollo/client/core';
 import { Apollo, provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
+import { Tag } from 'primeng/tag';
 import { firstValueFrom } from 'rxjs';
+import { toneSeverity, type StatusTone } from '@osnova/ui';
 import { loadLocalConfig, readPrimeUiLicense } from '@osnova/ui/app';
 import { Appearance, appTheme, provideOsnovaTheme } from '@osnova/ui/theme';
 import {
@@ -25,6 +27,7 @@ import {
   ShopperMeDocument,
   SignInShopperDocument,
   SignOutShopperDocument,
+  type CatalogueBadgeColor,
   type CatalogueQuery,
   type CatalogueProductQuery,
   type ShopperMeQuery,
@@ -51,6 +54,7 @@ const messages = {
     back: 'Към продуктите',
     productPath: 'Път до продукта',
     productGallery: 'Снимки на продукта',
+    productTags: 'Етикети',
     specifications: 'Характеристики',
     productImageNumber: (number: number) => `Снимка ${String(number)}`,
     loading: 'Зареждане…',
@@ -77,6 +81,7 @@ const messages = {
     back: 'Back to products',
     productPath: 'Product breadcrumbs',
     productGallery: 'Product photos',
+    productTags: 'Tags',
     specifications: 'Specifications',
     productImageNumber: (number: number) => `Photo ${String(number)}`,
     loading: 'Loading…',
@@ -86,6 +91,14 @@ const messages = {
 };
 type Language = keyof typeof messages;
 const cataloguePageSize = 20;
+const badgeTones: Record<CatalogueBadgeColor, StatusTone> = {
+  ACCENT: 'accent',
+  NEUTRAL: 'neutral',
+  INFO: 'info',
+  SUCCESS: 'success',
+  WARN: 'warn',
+  DANGER: 'danger',
+};
 @Injectable({ providedIn: 'root' })
 class StorefrontApi {
   private readonly apollo = inject(Apollo);
@@ -131,7 +144,7 @@ class StorefrontApi {
 }
 @Component({
   selector: 'holita-storefront-page',
-  imports: [RouterLink, ReactiveFormsModule, NgTemplateOutlet],
+  imports: [RouterLink, ReactiveFormsModule, NgTemplateOutlet, Tag],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="shop-header">
@@ -174,6 +187,7 @@ class StorefrontApi {
                       class="product-link"
                       [routerLink]="[...base, 'product', item.id]"
                       [attr.aria-labelledby]="'product-' + item.id"
+                      [attr.aria-describedby]="item.badges.length ? 'badges-' + item.id : null"
                     >
                       @if (item.coverImage; as cover) {
                         <img
@@ -198,6 +212,13 @@ class StorefrontApi {
                         </span>
                       }
                       <h2 [id]="'product-' + item.id">{{ item.name }}</h2>
+                      @if (item.badges.length) {
+                        <span class="catalogue-badges" [id]="'badges-' + item.id">
+                          @for (badge of item.badges; track badge.id) {
+                            <p-tag [value]="badge.name" [severity]="badgeSeverity(badge.color)" />
+                          }
+                        </span>
+                      }
                       <span class="catalogue-card-bottom">
                         <span class="app-num">{{ formatPrice(item.price) }}</span>
                         <span class="product-arrow" aria-hidden="true">↗</span>
@@ -307,6 +328,16 @@ class StorefrontApi {
                 <p class="app-num product-price">{{ formatPrice(item.price) }}</p>
                 @if (description(); as detail) {
                   <p class="product-description" [attr.lang]="detail.language">{{ detail.text }}</p>
+                }
+                @if (item.tags.length) {
+                  <div class="product-tags">
+                    <h2 id="product-tags">{{ t().productTags }}</h2>
+                    <ul role="list" aria-labelledby="product-tags">
+                      @for (tag of item.tags; track tag.id) {
+                        <li>{{ tag.name }}</li>
+                      }
+                    </ul>
+                  </div>
                 }
               </div>
               @if (!photo && item.brand?.logoUrl; as logo) {
@@ -447,6 +478,9 @@ class StorefrontPage {
   }
   formatPrice(value: string): string {
     return this.price().format(Number(value));
+  }
+  protected badgeSeverity(color: CatalogueBadgeColor) {
+    return toneSeverity(badgeTones[color]);
   }
   toggleLanguage() {
     const language = this.language() === 'bg' ? 'en' : 'bg';

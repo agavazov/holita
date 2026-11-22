@@ -1,0 +1,154 @@
+<osnova-route-drawer
+  [title]="editing ? text().editBadge : text().newBadge"
+  [subtitle]="subtitle()"
+  [state]="state()"
+  [errorText]="text().badgesUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  <form
+    id="badge-editor-form"
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="app-form-section"
+  >
+    <osnova-form-field
+      controlId="badge-name"
+      [label]="text().name"
+      [required]="true"
+      [error]="error('name')"
+    >
+      <input
+        #name
+        pInputText
+        id="badge-name"
+        formControlName="name"
+        autocomplete="off"
+        aria-required="true"
+        aria-describedby="badge-name-error"
+        [invalid]="!!error('name')"
+        [attr.aria-invalid]="!!error('name')"
+        (input)="changeName(name.value)"
+      />
+    </osnova-form-field>
+    <osnova-form-field
+      controlId="badge-slug"
+      [label]="text().slug"
+      [hint]="text().slugHint"
+      [required]="true"
+      [error]="error('slug')"
+    >
+      <input
+        pInputText
+        id="badge-slug"
+        formControlName="slug"
+        autocomplete="off"
+        spellcheck="false"
+        aria-required="true"
+        aria-describedby="badge-slug-hint badge-slug-error"
+        [invalid]="!!error('slug')"
+        [attr.aria-invalid]="!!error('slug')"
+        (input)="clearError('slug')"
+      />
+    </osnova-form-field>
+    <div class="app-form-grid">
+      <osnova-form-field
+        controlId="badge-active"
+        [label]="text().status"
+        [required]="true"
+        [error]="error('active')"
+      >
+        <p-select
+          inputId="badge-active"
+          ariaLabelledBy="badge-active-label"
+          formControlName="active"
+          [options]="statusOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [invalid]="!!error('active')"
+          [pt]="{
+            label: {
+              'aria-required': 'true',
+              'aria-describedby': 'badge-active-error',
+              'aria-invalid': error('active') ? 'true' : undefined,
+            },
+          }"
+          (onChange)="clearError('active')"
+        />
+      </osnova-form-field>
+      <osnova-form-field
+        controlId="badge-color"
+        [label]="text().badgeColor"
+        [required]="true"
+        [error]="error('color')"
+      >
+        <p-select
+          inputId="badge-color"
+          ariaLabelledBy="badge-color-label"
+          formControlName="color"
+          [options]="colors()"
+          optionLabel="label"
+          optionValue="value"
+          [invalid]="!!error('color')"
+          [pt]="{
+            label: {
+              'aria-required': 'true',
+              'aria-describedby': 'badge-color-error',
+              'aria-invalid': error('color') ? 'true' : undefined,
+            },
+          }"
+          (onChange)="clearError('color')"
+        >
+          <ng-template #item let-color>
+            <p-tag [value]="color.label" [severity]="color.severity" />
+          </ng-template>
+          <ng-template #selectedItem let-color>
+            <p-tag [value]="color.label" [severity]="color.severity" />
+          </ng-template>
+        </p-select>
+      </osnova-form-field>
+      <osnova-form-field
+        controlId="badge-sort-order"
+        [label]="text().categorySortOrder"
+        [required]="true"
+        [error]="error('sortOrder')"
+      >
+        <input
+          pInputText
+          id="badge-sort-order"
+          type="number"
+          inputmode="numeric"
+          min="0"
+          max="2147483647"
+          step="1"
+          formControlName="sortOrder"
+          aria-required="true"
+          aria-describedby="badge-sort-order-error"
+          [invalid]="!!error('sortOrder')"
+          [attr.aria-invalid]="!!error('sortOrder')"
+          (input)="clearError('sortOrder')"
+        />
+      </osnova-form-field>
+    </div>
+    @if (saveError()) {
+    <p-message severity="error">{{ text().badgeSaveFailed }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="badge-editor-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+  </div>
+</osnova-route-drawer>

@@ -29,6 +29,16 @@ enum ProductCollectionMode {
   @@map("productCollectionMode")
 }
 
+enum ProductBadgeColor {
+  ACCENT @map("accent")
+  NEUTRAL @map("neutral")
+  INFO @map("info")
+  SUCCESS @map("success")
+  WARN @map("warn")
+  DANGER @map("danger")
+  @@map("productBadgeColor")
+}
+
 model Brand {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
@@ -151,6 +161,8 @@ model Product {
   images ProductImage[]
   collectionItems ProductCollectionItem[]
   characteristicValues ProductCharacteristicValue[]
+  badgeAssignments ProductBadgeAssignment[]
+  tagAssignments ProductTagAssignment[]
   legacyPrice Decimal? @map("price") @db.Decimal(12, 2)
   status ProductStatus @default(DRAFT)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
@@ -160,6 +172,60 @@ model Product {
   @@index([tenantId, branchId, brandId])
   @@index([tenantId, branchId, categoryId])
   @@map("product")
+}
+
+model ProductBadge {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  name String @db.VarChar(200)
+  slug String @db.VarChar(200)
+  active Boolean @default(true)
+  color ProductBadgeColor @default(ACCENT)
+  sortOrder Int @default(0)
+  assignments ProductBadgeAssignment[]
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, slug])
+  @@index([tenantId, branchId, sortOrder, name, id])
+  @@map("productBadge")
+}
+
+model ProductBadgeAssignment {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  productId String @db.Uuid
+  badgeId String @db.Uuid
+  product Product @relation(fields: [tenantId, branchId, productId], references: [tenantId, branchId, id], onDelete: Cascade)
+  badge ProductBadge @relation(fields: [tenantId, branchId, badgeId], references: [tenantId, branchId, id], onDelete: Restrict)
+  @@id([tenantId, branchId, productId, badgeId])
+  @@index([tenantId, branchId, badgeId])
+  @@map("productBadgeAssignment")
+}
+
+model ProductTag {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  name String @db.VarChar(200)
+  normalizedName String @db.Text
+  slug String @db.VarChar(200)
+  assignments ProductTagAssignment[]
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, normalizedName])
+  @@unique([tenantId, branchId, slug])
+  @@map("productTag")
+}
+
+model ProductTagAssignment {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  productId String @db.Uuid
+  tagId String @db.Uuid
+  product Product @relation(fields: [tenantId, branchId, productId], references: [tenantId, branchId, id], onDelete: Cascade)
+  tag ProductTag @relation(fields: [tenantId, branchId, tagId], references: [tenantId, branchId, id], onDelete: Restrict)
+  @@id([tenantId, branchId, productId, tagId])
+  @@index([tenantId, branchId, tagId])
+  @@map("productTagAssignment")
 }
 
 model ProductCollection {
