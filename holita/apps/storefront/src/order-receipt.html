@@ -96,7 +96,10 @@
       </dl>
       @if (receipt.paymentInstructions) {
       <div class="checkout-note">
-        <strong>{{ t().paymentInstructions }}</strong>
+        <strong>
+          {{ receipt.paymentStatus === 'UNPAID' && receipt.status !== 'CANCELLED' ?
+          t().paymentInstructions : t().paymentInstructionsAtOrder }}
+        </strong>
         <p>{{ receipt.paymentInstructions }}</p>
       </div>
       }

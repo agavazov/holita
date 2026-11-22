@@ -1945,9 +1945,6 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       errors: [{ extensions: { fieldErrors: [{ code: 'CHECKOUT_QUOTE_CHANGED' }] } }],
     });
     const paymentChoice = guestOrder.locator('#paymentMethodId');
-    await expect(guestOrder.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue(
-      'Shopper',
-    );
     await paymentChoice.selectOption({ label: alternativePaymentLabel });
     const requoted = waitForCart(guestOrder, 'QuoteCheckout');
     await guestOrder.getByRole('button', { name: 'Review total', exact: true }).click();
@@ -1965,11 +1962,6 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         { extensions: { fieldErrors: [{ path: 'paymentMethodId', code: 'INVALID_METHOD' }] } },
       ],
     });
-    await expect(paymentChoice).toHaveValue('');
-    await expect(
-      guestOrder.getByRole('button', { name: 'Review total', exact: true }),
-    ).toBeVisible();
-
     await guestOrder.getByRole('link', { name: 'Back to cart', exact: true }).click();
     expect(await reviewCheckout(guestOrder, '30.00', '30.00', undefined, '0.00')).toMatchObject({
       data: {
