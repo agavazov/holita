@@ -192,7 +192,7 @@ export class CommerceService {
     } catch (error: unknown) {
       await this.imageFiles.remove(scope, newKeys);
       if (error instanceof InvalidImageIdError) {
-        throw fieldError(`images.${String(error.index)}.id`, 'INVALID_IMAGE_ID', error.message);
+        throw fieldError(`image${String(error.index)}Id`, 'INVALID_IMAGE_ID', error.message);
       }
       if (error instanceof InvalidVariantIdError) {
         throw variantError(error.index, 'id', 'INVALID_VALUE', error.message);

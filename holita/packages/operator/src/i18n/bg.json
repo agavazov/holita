@@ -119,6 +119,7 @@
   "productGallery": "Галерия",
   "productImageHint": "Първата снимка е основна. Добавяйте JPEG, PNG или WebP файлове до общо 5 MiB на запис.",
   "productImageAdd": "Добави снимки",
+  "productImageDismissBatch": "Отхвърли избраното",
   "productImageAlt": "Алтернативен текст",
   "productImageCover": "Основна снимка",
   "productImageNumber": "Снимка {number}",

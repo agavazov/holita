@@ -166,7 +166,7 @@
       <p id="product-gallery-hint">{{ text().productImageHint }}</p>
       @let pickerError = uploadError(); @let galleryError = pickerError ? text()[pickerError] :
       errors()['images'];
-      <div>
+      <div class="app-stack product-image-picker">
         <input
           #imageFiles
           type="file"
@@ -189,14 +189,33 @@
         >
           {{ text().productImageAdd }}
         </button>
+        @if (galleryError) {
+        <div class="product-image-feedback">
+          <p-message id="product-gallery-error" severity="error" variant="simple" size="small">
+            {{ galleryError }}
+          </p-message>
+          @if (pickerError) {
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [text]="true"
+            [disabled]="saving()"
+            (click)="dismissImageBatch()"
+          >
+            {{ text().productImageDismissBatch }}
+          </button>
+          }
+        </div>
+        }
       </div>
-      @if (galleryError) {
-      <p-message id="product-gallery-error" severity="error">{{ galleryError }}</p-message>
-      } @if (images.length) {
+      @if (images.length) {
       <ol class="product-gallery">
         @for (image of images.controls; track image; let index = $index) { @let preview =
-        previews().get(image); @let altId = 'product-image-alt-' + index; @let error =
-        imageError(index);
+        previews().get(image); @let altId = 'product-image-alt-' + index; @let altPath =
+        imageErrorPath(index, 'AltText'); @let altError = errors()[altPath] ?? null; @let
+        attachmentError = imageAttachmentError(index); @let attachmentErrorId =
+        'product-image-attachment-error-' + index;
         <li class="app-card product-image-card" [formGroup]="image">
           <div class="product-image-heading">
             <div class="product-image-preview">
@@ -244,7 +263,9 @@
               <button
                 type="button"
                 class="app-icon-button"
+                [id]="'product-image-' + index + '-remove'"
                 [attr.aria-label]="indexedLabel(text().productImageRemove, index)"
+                [attr.aria-describedby]="attachmentError ? attachmentErrorId : null"
                 [title]="indexedLabel(text().productImageRemove, index)"
                 [disabled]="saving()"
                 (click)="removeImage(index)"
@@ -253,7 +274,11 @@
               </button>
             </div>
           </div>
-          @if (preview === null) {
+          @if (attachmentError) {
+          <p-message [id]="attachmentErrorId" severity="error" variant="simple" size="small">
+            {{ attachmentError }}
+          </p-message>
+          } @else if (preview === null) {
           <div class="product-image-feedback">
             <p-message severity="warn" variant="simple" size="small">
               {{ text().productImageUnavailable }}
@@ -272,15 +297,19 @@
             }
           </div>
           }
-          <osnova-form-field [controlId]="altId" [label]="text().productImageAlt" [error]="error">
+          <osnova-form-field
+            [controlId]="altId"
+            [label]="text().productImageAlt"
+            [error]="altError"
+          >
             <input
               pInputText
               [id]="altId"
               formControlName="altText"
               [attr.aria-describedby]="altId + '-error'"
-              [invalid]="!!error"
-              [attr.aria-invalid]="!!error"
-              (input)="clearError('images.' + index + '.altText')"
+              [invalid]="!!altError"
+              [attr.aria-invalid]="!!altError"
+              (input)="clearError(altPath)"
             />
           </osnova-form-field>
         </li>
@@ -466,7 +495,12 @@
     >
       {{ shared().cancel }}
     </button>
-    <button pButton type="submit" form="product-editor-form" [disabled]="saving()">
+    <button
+      pButton
+      type="submit"
+      form="product-editor-form"
+      [disabled]="saving() || !!uploadError()"
+    >
       {{ text().save }}
     </button>
   </div>

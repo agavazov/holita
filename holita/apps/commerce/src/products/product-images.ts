@@ -45,13 +45,13 @@ export function validateProductImages(
   const ids = new Set<string>();
   return input?.map(({ id: rawId, upload: encoded, altText }, sortOrder) => {
     const id = rawId?.toLowerCase();
-    const path = `images.${String(sortOrder)}`;
+    const path = `image${String(sortOrder)}`;
     if (id !== undefined && (!updating || !isUUID(id) || ids.has(id))) {
-      throw imageInputError(`${path}.id`, 'INVALID_IMAGE_ID', 'Choose an image from this product');
+      throw imageInputError(`${path}Id`, 'INVALID_IMAGE_ID', 'Choose an image from this product');
     }
     if (altText?.includes('\u0000')) {
       throw imageInputError(
-        `${path}.altText`,
+        `${path}AltText`,
         'INVALID_ALT_TEXT',
         'Alt text contains a null character',
       );
@@ -64,7 +64,7 @@ export function validateProductImages(
     const upload = id === undefined && typeof encoded === 'string' ? rasterUpload(encoded) : null;
     if (!upload) {
       throw imageInputError(
-        `${path}.upload`,
+        `${path}Upload`,
         'INVALID_IMAGE',
         'Choose a JPEG, PNG or WebP image up to 5 MiB',
       );

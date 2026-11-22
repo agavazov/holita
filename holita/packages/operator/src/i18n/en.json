@@ -119,6 +119,7 @@
   "productGallery": "Gallery",
   "productImageHint": "The first photo is the cover. Add JPEG, PNG or WebP files up to 5 MiB total per save.",
   "productImageAdd": "Add photos",
+  "productImageDismissBatch": "Discard selection",
   "productImageAlt": "Alt text",
   "productImageCover": "Cover",
   "productImageNumber": "Photo {number}",

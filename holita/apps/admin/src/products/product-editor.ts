@@ -71,6 +71,8 @@ const variantFields = ['optionValueIds', 'sku', 'price', 'quantity'] as const;
 type VariantField = (typeof variantFields)[number];
 type Variant = NonNullable<OperatorProductQuery['product']>['variants'][number];
 
+const imageErrorFields = ['Id', 'Upload', 'AltText'] as const;
+type ImageErrorField = (typeof imageErrorFields)[number];
 type ProductImage = NonNullable<OperatorProductQuery['product']>['images'][number];
 const maxImageBytes = 5 * 1024 * 1024;
 
@@ -356,7 +358,7 @@ export class ProductEditor {
           (file.type && !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)),
       )
     ) {
-      this.uploadError.set('productImageInvalid');
+      this.rejectImageBatch('productImageInvalid');
       return;
     }
     const bytes = this.images.controls.reduce(
@@ -364,7 +366,7 @@ export class ProductEditor {
       0,
     );
     if (files.reduce((total, file) => total + file.size, bytes) > maxImageBytes) {
-      this.uploadError.set('productImageBatchTooLarge');
+      this.rejectImageBatch('productImageBatchTooLarge');
       return;
     }
     this.uploadError.set(null);
@@ -375,6 +377,16 @@ export class ProductEditor {
     }
     this.images.markAsDirty();
     this.clearError('images');
+  }
+
+  private rejectImageBatch(error: 'productImageInvalid' | 'productImageBatchTooLarge'): void {
+    this.uploadError.set(error);
+    this.focusControl('product-image-add');
+  }
+
+  protected dismissImageBatch(): void {
+    this.uploadError.set(null);
+    this.focusControl('product-image-add');
   }
 
   protected async loadPreview(row: ImageForm): Promise<void> {
@@ -434,14 +446,13 @@ export class ProductEditor {
     this.previews.set(new Map());
   }
 
-  protected imageError(index: number): string | null {
+  protected imageErrorPath(index: number, field: ImageErrorField): string {
+    return `image${String(index)}${field}`;
+  }
+
+  protected imageAttachmentError(index: number): string | undefined {
     const errors = this.errors();
-    return (
-      errors[`images.${String(index)}.altText`] ??
-      errors[`images.${String(index)}.upload`] ??
-      errors[`images.${String(index)}.id`] ??
-      null
-    );
+    return errors[this.imageErrorPath(index, 'Upload')] ?? errors[this.imageErrorPath(index, 'Id')];
   }
 
   protected moveImage(index: number, direction: -1 | 1): void {
@@ -465,11 +476,8 @@ export class ProductEditor {
 
   private imagesChanged(): void {
     this.images.markAsDirty();
-    this.uploadError.set(null);
     this.errors.update((errors) =>
-      Object.fromEntries(
-        Object.entries(errors).filter(([path]) => path !== 'images' && !path.startsWith('images.')),
-      ),
+      Object.fromEntries(Object.entries(errors).filter(([path]) => !path.startsWith('image'))),
     );
   }
 
@@ -498,9 +506,9 @@ export class ProductEditor {
   private focusControl(focusId: string): void {
     afterNextRender(
       () => {
-        this.formElement()
-          ?.nativeElement.querySelector<HTMLElement>('#' + focusId)
-          ?.focus();
+        const control = this.formElement()?.nativeElement.querySelector<HTMLElement>('#' + focusId);
+        control?.focus();
+        control?.closest('.product-image-picker')?.scrollIntoView({ block: 'nearest' });
       },
       { injector: this.injector },
     );
@@ -509,6 +517,10 @@ export class ProductEditor {
   protected async save(): Promise<void> {
     const scope = this.api.scope();
     if (!scope || this.saving() || this.state() !== 'ready') {
+      return;
+    }
+    if (this.uploadError()) {
+      this.focusControl('product-image-add');
       return;
     }
     this.form.markAllAsTouched();
@@ -562,7 +574,7 @@ export class ProductEditor {
         ...productFields,
         'images',
         ...images.flatMap((_, index) =>
-          ['id', 'upload', 'altText'].map((field) => `images.${String(index)}.${field}`),
+          imageErrorFields.map((field) => this.imageErrorPath(index, field)),
         ),
         'variants',
         ...variants.flatMap((_, index) =>
@@ -604,6 +616,17 @@ export class ProductEditor {
 
   private focusError(): void {
     const form = this.formElement()?.nativeElement;
+    const attachmentIndex = this.images.controls.findIndex((_, index) =>
+      this.imageAttachmentError(index),
+    );
+    if (form && attachmentIndex >= 0) {
+      const remove = form.querySelector<HTMLElement>(
+        `#product-image-${String(attachmentIndex)}-remove`,
+      );
+      remove?.focus();
+      remove?.closest('.product-image-card')?.scrollIntoView({ block: 'nearest' });
+      return;
+    }
     const order = [
       'name',
       'brand',

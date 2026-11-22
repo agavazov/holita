@@ -383,7 +383,7 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     ),
   ).toMatchObject({
     data: null,
-    errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'images.0.id' }] } }],
+    errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'image0Id' }] } }],
   });
   const client = database;
   const [local, otherShop, otherTenant] = await Promise.all(

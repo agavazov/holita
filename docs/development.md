@@ -269,8 +269,8 @@ applies after GraphQL parsing/schema validation, at the supergraph boundary:
 - Known public error codes/messages survive. Unexpected errors become `INTERNAL_SERVER_ERROR`
   with `Internal server error`. Extensions contain only `code`, `requestId` and, for
   `BAD_USER_INPUT`, sanitized `fieldErrors`. Only the first 30 entries are considered;
-  paths use ASCII letters and digits, with names starting with a letter. Indexed fields use
-  `name.index.field` with a numeric index. Messages are at most 300 UTF-16 code units. Invalid variable values use HTTP 400 and `BAD_USER_INPUT`;
+  paths start with an ASCII letter and contain ASCII letters/digits, and messages are
+  at most 300 UTF-16 code units. Invalid variable values use HTTP 400 and `BAD_USER_INPUT`;
   compiler diagnostic wording and locations remain native to Router.
 - Subgraph requests have a five-second timeout. Transport failures, malformed upstream
   responses and subgraph timeouts become `SERVICE_UNAVAILABLE` with
@@ -476,8 +476,10 @@ Direct public product image URLs work only while the product is active and has a
 
 Use Gallery in the Product drawer to add JPEG, PNG or WebP photos, enter alt text, reorder or
 remove photos, then save the product. The first photo is the storefront cover. Add up to 5 MiB
-of new photos per save. The demo catalogue includes covers and a three-photo gallery for the
-„Орех“ baking pot.
+of new photos per save. If the picker rejects files, choose new photos or discard that selection
+before saving. The operator graph reports individual photo errors with flat keys such as
+`image0Upload`, `image0Id` and `image0AltText`. Indexes start at zero. The demo catalogue includes
+covers and a three-photo gallery for the „Орех“ baking pot.
 
 In Admin, use Categories to create, move and reorder shop categories. The Product drawer assigns
 one category per product. The public `catalogueCategories` query returns the active tree, and the

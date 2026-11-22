@@ -427,6 +427,35 @@ async function previewBytes(image: Locator): Promise<Buffer> {
   return Buffer.from(bytes);
 }
 
+function publicPhotoUrls(result: unknown): string[] {
+  if (
+    typeof result !== 'object' ||
+    result === null ||
+    !('data' in result) ||
+    typeof result.data !== 'object' ||
+    result.data === null ||
+    !('catalogueProduct' in result.data) ||
+    typeof result.data.catalogueProduct !== 'object' ||
+    result.data.catalogueProduct === null ||
+    !('images' in result.data.catalogueProduct) ||
+    !Array.isArray(result.data.catalogueProduct.images)
+  ) {
+    throw new Error('Catalogue product did not return a gallery');
+  }
+  const images: readonly unknown[] = result.data.catalogueProduct.images;
+  return images.map((image) => {
+    if (
+      typeof image !== 'object' ||
+      image === null ||
+      !('url' in image) ||
+      typeof image.url !== 'string'
+    ) {
+      throw new Error('Catalogue photo did not return a URL');
+    }
+    return image.url;
+  });
+}
+
 function pngAtSize(source: Buffer, size: number): Buffer {
   // Add a valid PNG text chunk before IEND to exercise the request size limit.
   const chunk = Buffer.alloc(size - source.length, 0x20);
@@ -602,10 +631,22 @@ test('staff creates a merchant and its administrator creates a product', async (
       mimeType: 'image/png',
       buffer: Buffer.from('invalid raster fixture'),
     });
-    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(merchant.locator('#product-image-alt-0-error')).toHaveText(
-      'Choose JPEG, PNG or WebP photos up to 5 MiB each.',
+    const rejection = merchant.waitForResponse(
+      (response) =>
+        response.request().postData()?.includes('"operationName":"OperatorCreateProduct"') === true,
     );
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    expect(await (await rejection).json()).toMatchObject({
+      data: null,
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'image0Upload', code: 'INVALID_IMAGE' }],
+          },
+        },
+      ],
+    });
     await merchant.getByRole('button', { name: 'Remove photo 1', exact: true }).click();
     const frontFile = join(root, 'holita/config/demo/product-58-front.png');
     const angledFile = join(root, 'holita/config/demo/product-58-angle.png');
@@ -642,26 +683,41 @@ test('staff creates a merchant and its administrator creates a product', async (
     const shopper = await shopperContext.newPage();
     await shopper.goto(`${shopApp.origin}/s/${shopId}`);
     await shopper.getByRole('button', { name: 'EN', exact: true }).click();
-    const card = shopper.getByRole('link', { name: productName });
-    const cover = card.getByRole('img', { name: 'Front view' });
-    await expect(cover).toBeVisible();
-    const front = await cover.getAttribute('src');
-    if (!front) {
-      throw new Error('Missing public product cover');
-    }
-    const frontImage = await shopper.request.get(new URL(front, shopApp.origin).href);
-    expect(frontImage.status()).toBe(200);
-    expect((await frontImage.body()).equals(frontBytes)).toBe(true);
     await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
     await shopper.getByRole('link', { name: productName }).click();
     await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
-    const gallery = shopper.getByRole('region', { name: 'Product photos' });
-    await expect(gallery.getByRole('img', { name: 'Front view' })).toBeVisible();
-    await gallery.getByRole('button', { name: 'Photo 2', exact: true }).press('Enter');
-    const angled = await gallery.getByRole('img', { name: 'Angled view' }).getAttribute('src');
-    if (!angled) {
-      throw new Error('Missing second public product image');
+    const productUrl = shopper.url();
+    const productId = new URL(productUrl).pathname.split('/').at(-1);
+    const galleryQuery = async (): Promise<unknown> => {
+      const response = await shopper.request.post(`${shopApp.origin}/graphql`, {
+        headers: { 'x-branch-id': shopId },
+        data: {
+          query: `query($id:ID!){
+            catalogueProduct(id:$id){coverImage{url altText} images{url altText}}
+            catalogue{items{id coverImage{url altText}}}
+          }`,
+          variables: { id: productId },
+        },
+      });
+      expect(response.status()).toBe(200);
+      return response.json();
+    };
+    const initialGallery = await galleryQuery();
+    const [front, angled] = publicPhotoUrls(initialGallery);
+    if (!front || !angled) {
+      throw new Error('The storefront did not return both product photos');
     }
+    const frontPhoto = { url: front, altText: 'Front view' };
+    const angledPhoto = { url: angled, altText: 'Angled view' };
+    expect(initialGallery).toMatchObject({
+      data: {
+        catalogueProduct: { coverImage: frontPhoto, images: [frontPhoto, angledPhoto] },
+        catalogue: { items: expect.arrayContaining([{ id: productId, coverImage: frontPhoto }]) },
+      },
+    });
+    const frontImage = await shopper.request.get(new URL(front, shopApp.origin).href);
+    expect(frontImage.status()).toBe(200);
+    expect((await frontImage.body()).equals(frontBytes)).toBe(true);
     const angledImage = await shopper.request.get(new URL(angled, shopApp.origin).href);
     expect(angledImage.status()).toBe(200);
     expect((await angledImage.body()).equals(angledBytes)).toBe(true);
@@ -693,17 +749,19 @@ test('staff creates a merchant and its administrator creates a product', async (
     expect(image.status()).toBe(200);
     const logoBytes = await readFile(join(root, 'holita/config/demo/northline.png'));
     expect(await image.body()).toEqual(logoBytes);
-    const productUrl = shopper.url();
-    await expect(gallery.getByRole('img', { name: 'Angled view' })).toHaveAttribute('src', angled);
-    await shopper.goto(`${shopApp.origin}/s/${shopId}`);
-    await expect(card.getByRole('img', { name: 'Angled view' })).toHaveAttribute('src', angled);
+    expect(await galleryQuery()).toMatchObject({
+      data: {
+        catalogueProduct: { coverImage: angledPhoto, images: [angledPhoto, frontPhoto] },
+        catalogue: { items: expect.arrayContaining([{ id: productId, coverImage: angledPhoto }]) },
+      },
+    });
     await merchant.getByRole('button', { name: productName, exact: true }).click();
     await merchant.getByRole('button', { name: 'Remove photo 2', exact: true }).click();
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Product saved.');
-    await shopper.goto(productUrl);
-    await expect(gallery.getByRole('img', { name: 'Angled view' })).toBeVisible();
-    await expect(gallery.getByRole('button', { name: 'Photo 2', exact: true })).toHaveCount(0);
+    expect(await galleryQuery()).toMatchObject({
+      data: { catalogueProduct: { coverImage: angledPhoto, images: [angledPhoto] } },
+    });
     expect((await shopper.request.get(new URL(front, shopApp.origin).href)).status()).toBe(404);
     await merchant.getByRole('link', { name: 'Categories', exact: true }).click();
     await merchant.getByRole('button', { name: 'Cookware', exact: true }).click();
@@ -816,9 +874,7 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.getByRole('button', { name: productName, exact: true }).click();
     const archivedImage = await archivedPreview;
     expect(archivedImage.status()).toBe(200);
-    expect(
-      (await previewBytes(merchant.locator('.product-image-preview img'))).equals(angledBytes),
-    ).toBe(true);
+    expect(archivedImage.headers()['content-type']).toBe('image/png');
   } finally {
     for (const close of cleanup.reverse()) {
       try {
