@@ -147,6 +147,10 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                     </ul>
                   }
                 </section>
+              } @else if (item.brand?.logoUrl; as logo) {
+                <div class="product-brand brand-art">
+                  <img [src]="logo" alt="" width="144" height="144" />
+                </div>
               }
               <div class="product-summary">
                 @if (item.brand; as brand) {
@@ -227,11 +231,6 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                   </div>
                 }
               </div>
-              @if (!photo && item.brand?.logoUrl; as logo) {
-                <div class="product-brand brand-art">
-                  <img [src]="logo" alt="" width="144" height="144" />
-                </div>
-              }
               @if (specifications().length) {
                 <section class="product-specifications" aria-labelledby="product-specifications">
                   <h2 id="product-specifications">{{ t().specifications }}</h2>

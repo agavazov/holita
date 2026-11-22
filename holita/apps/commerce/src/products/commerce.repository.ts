@@ -158,12 +158,13 @@ export class CommerceRepository {
     );
   }
 
-  publicProductVariantSelection(scope: Scope, id: string) {
+  publicProductVariantSelections(scope: Scope, ids: string[]) {
     return this.database.client.$transaction(
       (tx) =>
-        tx.product.findUnique({
-          where: { id, ...catalogueProductWhere(scope) },
+        tx.product.findMany({
+          where: { ...catalogueProductWhere(scope), id: { in: ids } },
           select: {
+            id: true,
             variants: {
               where: { ...scope, active: true },
               orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],

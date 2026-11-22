@@ -368,4 +368,5 @@ export const demoProductCovers: Readonly<Record<number, readonly DemoImage[]>> =
   59: [[590, 'product-59.webp', 'Бежова глинена касерола „Жарава“, 1,5 л']],
   60: [[600, 'product-60.webp', 'Бяла керамична тенджера „Млечен път“, 2 л']],
   70: [[700, 'product-56.webp', 'Чугунен тиган в цвят графит']],
+  71: [[710, 'product-71.webp', 'Пясъчен керамичен съд с две дръжки']],
 };

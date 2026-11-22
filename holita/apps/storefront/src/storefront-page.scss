@@ -375,7 +375,6 @@ main > a:focus-visible {
 .brand-art {
   display: grid;
   align-self: stretch;
-  grid-area: 1 / 1;
   min-block-size: clamp(16rem, 31vw, 28rem);
   place-items: center;
   background: var(--shop-accent);
@@ -423,7 +422,6 @@ form {
   }
 
   .brand-art {
-    grid-area: auto;
     min-block-size: 9.5rem;
   }
 

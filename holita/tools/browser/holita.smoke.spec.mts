@@ -800,13 +800,19 @@ test('staff creates a merchant and its administrator creates a product', async (
         ],
       },
     });
-    const galleryQuery = async (branchId = shopId): Promise<unknown> => {
+    const publicProductsQuery = async (branchId = shopId): Promise<unknown> => {
       const response = await shopper.request.post(`${shopApp.origin}/graphql`, {
         headers: { 'x-branch-id': branchId },
         data: {
           query: `query($id:ID!){
-            catalogueProduct(id:$id){coverImage{url altText} images{url altText} variantSelection{variants{id}}}
-            catalogue{items{id coverImage{url altText}}}
+            catalogueProduct(id:$id){coverImage{url altText} images{url altText} ...Variants}
+            catalogue{items{id name coverImage{url altText} ...Variants}}
+          }
+          fragment Variants on CatalogueProduct {
+            variantSelection {
+              options { name values { id label } }
+              variants { id sku price available optionValueIds }
+            }
           }`,
           variables: { id: productId },
         },
@@ -814,17 +820,31 @@ test('staff creates a merchant and its administrator creates a product', async (
       expect(response.status()).toBe(200);
       return response.json();
     };
-    const initialGallery = await galleryQuery();
+    const initialGallery = await publicProductsQuery();
     const [front, angled] = publicPhotoUrls(initialGallery);
     if (!front || !angled) {
       throw new Error('The storefront did not return both product photos');
     }
     const frontPhoto = { url: front, altText: 'Front view' };
     const angledPhoto = { url: angled, altText: 'Angled view' };
+    const simpleSelection = (available: boolean) => ({
+      options: [],
+      variants: [
+        { id: expect.any(String), sku: 'SMOKE-001', price: '25.50', available, optionValueIds: [] },
+      ],
+    });
     expect(initialGallery).toMatchObject({
       data: {
-        catalogueProduct: { coverImage: frontPhoto, images: [frontPhoto, angledPhoto] },
-        catalogue: { items: expect.arrayContaining([{ id: productId, coverImage: frontPhoto }]) },
+        catalogueProduct: {
+          coverImage: frontPhoto,
+          images: [frontPhoto, angledPhoto],
+          variantSelection: simpleSelection(true),
+        },
+        catalogue: {
+          items: expect.arrayContaining([
+            expect.objectContaining({ id: productId, coverImage: frontPhoto }),
+          ]),
+        },
       },
     });
     const frontImage = await shopper.request.get(new URL(front, shopApp.origin).href);
@@ -835,9 +855,6 @@ test('staff creates a merchant and its administrator creates a product', async (
     expect((await angledImage.body()).equals(angledBytes)).toBe(true);
     const description = shopper.locator('.product-description');
     await expect(description).toHaveText(descriptionEn);
-    const availability = shopper.locator('.product-availability');
-    await expect(shopper.locator('.product-price')).toHaveText(/\b25\.50\b/);
-    await expect(availability).toHaveText('In stock');
     await shopper.getByRole('button', { name: 'BG', exact: true }).click();
     await expect(description).toHaveText(descriptionBg);
     await shopper.getByRole('button', { name: 'EN', exact: true }).click();
@@ -848,8 +865,9 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.locator('#inventory-quantity').fill('0');
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Quantity saved.');
-    await shopper.reload();
-    await expect(availability).toHaveText('Out of stock');
+    expect(await publicProductsQuery()).toMatchObject({
+      data: { catalogueProduct: { variantSelection: simpleSelection(false) } },
+    });
     await merchant.getByRole('link', { name: 'Products', exact: true }).click();
     await merchant.getByRole('button', { name: productName, exact: true }).click();
     await expect(merchant.locator('#product-variant-quantity-0')).toHaveValue('0');
@@ -861,7 +879,6 @@ test('staff creates a merchant and its administrator creates a product', async (
     await dismissSuccess(merchant, 'Product saved.');
     await shopper.reload();
     await expect(description).toHaveText(descriptionBg);
-    await expect(availability).toHaveText('Out of stock');
     expect(await specificationsQuery()).toEqual({
       data: {
         catalogueProductSpecifications: [
@@ -906,17 +923,25 @@ test('staff creates a merchant and its administrator creates a product', async (
     expect(image.status()).toBe(200);
     const logoBytes = await readFile(join(root, 'holita/config/demo/northline.png'));
     expect(await image.body()).toEqual(logoBytes);
-    expect(await galleryQuery()).toMatchObject({
+    expect(await publicProductsQuery()).toMatchObject({
       data: {
-        catalogueProduct: { coverImage: angledPhoto, images: [angledPhoto, frontPhoto] },
-        catalogue: { items: expect.arrayContaining([{ id: productId, coverImage: angledPhoto }]) },
+        catalogueProduct: {
+          coverImage: angledPhoto,
+          images: [angledPhoto, frontPhoto],
+          variantSelection: simpleSelection(false),
+        },
+        catalogue: {
+          items: expect.arrayContaining([
+            expect.objectContaining({ id: productId, coverImage: angledPhoto }),
+          ]),
+        },
       },
     });
     await merchant.getByRole('button', { name: productName, exact: true }).click();
     await merchant.getByRole('button', { name: 'Remove photo 2', exact: true }).click();
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Product saved.');
-    expect(await galleryQuery()).toMatchObject({
+    expect(await publicProductsQuery()).toMatchObject({
       data: { catalogueProduct: { coverImage: angledPhoto, images: [angledPhoto] } },
     });
     expect((await shopper.request.get(new URL(front, shopApp.origin).href)).status()).toBe(404);
@@ -1017,8 +1042,9 @@ test('staff creates a merchant and its administrator creates a product', async (
     });
 
     const gloss = optionValues.find(({ label }) => label === 'Gloss');
-    if (!gloss) {
-      throw new Error('The smoke option has no Gloss value');
+    const satin = optionValues.find(({ label }) => label === 'Satin');
+    if (!gloss || !satin) {
+      throw new Error('The smoke option requires Gloss and Satin values');
     }
     expect(
       await collectionQuery(ruleSlug, 0, shopId, {
@@ -1027,6 +1053,37 @@ test('staff creates a merchant and its administrator creates a product', async (
       }),
     ).toMatchObject({
       data: { catalogueCollectionProducts: { items: [], total: 0 } },
+    });
+    expect(await publicProductsQuery()).toMatchObject({
+      data: {
+        catalogue: {
+          items: expect.arrayContaining([
+            expect.objectContaining({ id: productId, variantSelection: simpleSelection(false) }),
+            expect.objectContaining({
+              name: configuredProductName,
+              variantSelection: {
+                options: [{ name: 'Surface finish', values: optionValues }],
+                variants: [
+                  {
+                    id: expect.any(String),
+                    sku: 'CONFIG-Gloss',
+                    price: '24.00',
+                    available: false,
+                    optionValueIds: [gloss.id],
+                  },
+                  {
+                    id: expect.any(String),
+                    sku: 'CONFIG-Satin',
+                    price: '30.00',
+                    available: true,
+                    optionValueIds: [satin.id],
+                  },
+                ],
+              },
+            }),
+          ]),
+        },
+      },
     });
 
     const filtered = await shopperContext.newPage();
@@ -1039,14 +1096,6 @@ test('staff creates a merchant and its administrator creates a product', async (
     await filtered.getByRole('button', { name: 'Apply', exact: true }).click();
     await expect(filtered.locator('.catalogue-card h2')).toHaveText([configuredProductName]);
     const sharedUrl = filtered.url();
-    await filtered.getByRole('link', { name: configuredProductName, exact: true }).click();
-    const variantPrice = filtered.locator('.product-price');
-    const variantAvailability = filtered.locator('.product-availability');
-    await expect(variantPrice).toHaveText(/\b30\.00\b/);
-    await expect(variantAvailability).toHaveText('In stock');
-    await filtered.getByRole('radio', { name: 'Gloss', exact: true }).press('Space');
-    await expect(variantPrice).toHaveText(/\b24\.00\b/);
-    await expect(variantAvailability).toHaveText('Out of stock');
     await filtered.close();
     const reopened = await shopperContext.newPage();
     await reopened.goto(sharedUrl);
@@ -1119,7 +1168,7 @@ test('staff creates a merchant and its administrator creates a product', async (
     expect(await specificationsQuery(secondShopId)).toEqual({
       data: { catalogueProductSpecifications: [] },
     });
-    expect(await galleryQuery(secondShopId)).toEqual({
+    expect(await publicProductsQuery(secondShopId)).toEqual({
       data: { catalogueProduct: null, catalogue: { items: [] } },
     });
     await shopper.goto(`${shopApp.origin}/s/${secondShopId}`);

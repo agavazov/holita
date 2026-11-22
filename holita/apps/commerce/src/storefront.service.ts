@@ -134,12 +134,54 @@ function browseCriteria({
 type CatalogueProductRow = NonNullable<Awaited<ReturnType<CommerceRepository['publicProduct']>>>;
 type CatalogueProductSummary = Omit<CatalogueProduct, 'variantSelection'>;
 type CataloguePageSummary = Omit<CataloguePage, 'items'> & { items: CatalogueProductSummary[] };
+type VariantSelectionRow = Awaited<
+  ReturnType<CommerceRepository['publicProductVariantSelections']>
+>[number];
+interface VariantSelectionBatch {
+  ids: Set<string>;
+  selections: Promise<Map<string, CatalogueVariantSelection>>;
+}
 
 function variantAvailable({
   inventoryTracked,
   quantity,
 }: Pick<ProductVariant, 'inventoryTracked' | 'quantity'>): boolean {
   return !inventoryTracked || quantity > 0;
+}
+
+function catalogueVariantSelection({ variants }: VariantSelectionRow): CatalogueVariantSelection {
+  const distinctValues = new Map(
+    variants.flatMap(({ values }) =>
+      values.map(({ optionValue }) => [optionValue.id, optionValue] as const),
+    ),
+  );
+  const orderedValues = [...distinctValues.values()].sort(
+    (left, right) =>
+      left.option.name.localeCompare(right.option.name) ||
+      left.option.id.localeCompare(right.option.id) ||
+      left.sortOrder - right.sortOrder ||
+      left.id.localeCompare(right.id),
+  );
+  const optionGroups = new Map<string, CatalogueOption>();
+  for (const { id, label, option } of orderedValues) {
+    const group = optionGroups.get(option.id) ?? { ...option, values: [] };
+    group.values.push({ id, label });
+    optionGroups.set(option.id, group);
+  }
+  const orderedValueIds = orderedValues.map(({ id }) => id);
+  return {
+    options: [...optionGroups.values()],
+    variants: variants.map((variant) => {
+      const valueIds = new Set(variant.values.map(({ optionValue }) => optionValue.id));
+      return {
+        id: variant.id,
+        sku: variant.sku,
+        price: variant.price.toFixed(2),
+        available: variantAvailable(variant),
+        optionValueIds: orderedValueIds.filter((id) => valueIds.has(id)),
+      };
+    }),
+  };
 }
 
 function catalogueProduct(
@@ -174,6 +216,11 @@ function catalogueProduct(
 
 @Injectable()
 export class StorefrontService {
+  private readonly variantSelectionBatches = new WeakMap<
+    StorefrontContext,
+    VariantSelectionBatch
+  >();
+
   constructor(
     private readonly products: CommerceRepository,
     private readonly browsing: CatalogueRepository,
@@ -271,47 +318,27 @@ export class StorefrontService {
     const item = await this.products.publicProduct(scope, id.toLowerCase());
     return item ? catalogueProduct(item, await this.productCategories(scope, [item])) : null;
   }
-  async productVariantSelection(
+  productVariantSelection(
     context: StorefrontContext,
     id: string,
   ): Promise<CatalogueVariantSelection> {
-    const item = await this.products.publicProductVariantSelection(
-      await this.publicScope(context),
-      id,
-    );
-    const variants = item?.variants ?? [];
-    const distinctValues = new Map(
-      variants.flatMap(({ values }) =>
-        values.map(({ optionValue }) => [optionValue.id, optionValue] as const),
-      ),
-    );
-    const orderedValues = [...distinctValues.values()].sort(
-      (left, right) =>
-        left.option.name.localeCompare(right.option.name) ||
-        left.option.id.localeCompare(right.option.id) ||
-        left.sortOrder - right.sortOrder ||
-        left.id.localeCompare(right.id),
-    );
-    const optionGroups = new Map<string, CatalogueOption>();
-    for (const { id, label, option } of orderedValues) {
-      const group = optionGroups.get(option.id) ?? { ...option, values: [] };
-      group.values.push({ id, label });
-      optionGroups.set(option.id, group);
+    let batch = this.variantSelectionBatches.get(context);
+    if (!batch) {
+      const ids = new Set<string>();
+      // GraphQL resolves sibling catalogue items with the same request context.
+      const selections = new Promise<void>((resolve) => setImmediate(resolve)).then(async () => {
+        this.variantSelectionBatches.delete(context);
+        const scope = await this.publicScope(context);
+        const rows = await this.products.publicProductVariantSelections(scope, [...ids]);
+        return new Map(rows.map((row) => [row.id, catalogueVariantSelection(row)]));
+      });
+      batch = { ids, selections };
+      this.variantSelectionBatches.set(context, batch);
     }
-    const orderedValueIds = orderedValues.map(({ id }) => id);
-    return {
-      options: [...optionGroups.values()],
-      variants: variants.map((variant) => {
-        const valueIds = new Set(variant.values.map(({ optionValue }) => optionValue.id));
-        return {
-          id: variant.id,
-          sku: variant.sku,
-          price: variant.price.toFixed(2),
-          available: variantAvailable(variant),
-          optionValueIds: orderedValueIds.filter((id) => valueIds.has(id)),
-        };
-      }),
-    };
+    batch.ids.add(id);
+    return batch.selections.then(
+      (selections) => selections.get(id) ?? { options: [], variants: [] },
+    );
   }
   async productSpecifications(context: StorefrontContext, id: string) {
     return this.characteristics.publicSpecifications(await this.publicScope(context), id);
