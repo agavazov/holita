@@ -48,7 +48,9 @@
             [options]="brandOptions()"
             optionLabel="name"
             optionValue="id"
-            [placeholder]="text().noBrand"
+            [placeholder]="brands.hasValue() ? text().noBrand : '—'"
+            [loading]="brands.isLoading()"
+            [readonly]="!brands.hasValue()"
             [filter]="true"
             [ariaFilterLabel]="text().searchBrands"
             [emptyFilterMessage]="shared().table.noResultsTitle"
@@ -57,6 +59,22 @@
             [pt]="selectPt(brandError, 'product-brand')"
             (onChange)="clearError('brandId')"
           />
+          @if (brands.error()) {
+          <p-message id="product-brand-load-error" severity="warn" variant="simple" size="small">
+            {{ text().brandsUnavailable }}
+          </p-message>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [text]="true"
+            aria-describedby="product-brand-load-error"
+            [disabled]="saving()"
+            (click)="brands.reload()"
+          >
+            {{ shared().retry }}
+          </button>
+          }
         </osnova-form-field>
         @let categoryError = errors()['categoryId'] ?? null;
         <osnova-form-field
@@ -71,7 +89,9 @@
             [options]="categoryOptions()"
             optionLabel="name"
             optionValue="id"
-            [placeholder]="text().noCategory"
+            [placeholder]="categories.hasValue() ? text().noCategory : '—'"
+            [loading]="categories.isLoading()"
+            [readonly]="!categories.hasValue()"
             [filter]="true"
             [ariaFilterLabel]="text().searchCategories"
             [emptyFilterMessage]="shared().table.noResultsTitle"
@@ -80,6 +100,22 @@
             [pt]="selectPt(categoryError, 'product-category')"
             (onChange)="clearError('categoryId')"
           />
+          @if (categories.error()) {
+          <p-message id="product-category-load-error" severity="warn" variant="simple" size="small">
+            {{ text().categoriesUnavailable }}
+          </p-message>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [text]="true"
+            aria-describedby="product-category-load-error"
+            [disabled]="saving()"
+            (click)="categories.reload()"
+          >
+            {{ shared().retry }}
+          </button>
+          }
         </osnova-form-field>
       </div>
     </section>
@@ -96,7 +132,7 @@
       variantError(index, 'sku'); @let priceError = variantError(index, 'price'); @let quantityError
       = variantError(index, 'quantity');
       <div
-        class="app-card variant-card"
+        class="app-card"
         role="group"
         [attr.aria-labelledby]="'product-variant-title-' + index"
         [formGroup]="variant"

@@ -33,13 +33,14 @@
     [maxConditions]="1"
     (searchChange)="url.editSearch($event)"
     (conditionsChange)="changeConditions($event)"
-  />
-  <osnova-list-sort-menu
-    panelActions
-    [fields]="sortFields()"
-    [sort]="sort()"
-    (sortChange)="changeSort($event)"
-  />
+  >
+    <osnova-list-sort-menu
+      filterActions
+      [fields]="sortFields()"
+      [sort]="sort()"
+      (sortChange)="changeSort($event)"
+    />
+  </osnova-filter-builder>
   <p-table
     class="app-responsive-table app-table-fixed"
     [value]="page()?.items ?? []"

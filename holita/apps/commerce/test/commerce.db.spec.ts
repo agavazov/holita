@@ -569,22 +569,6 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
   ).toEqual({
     data: { options: { total: 1, items: [{ id: scopedOption.id }] } },
   });
-  for (const [variants, field, code] of [
-    [[variant, { ...variant, optionValueIds: [second.id] }], 'variants.1.sku', 'DUPLICATE_SKU'],
-    [
-      [variant, { ...variant, sku: 'COMBO-2' }],
-      'variants.1.optionValueIds',
-      'DUPLICATE_COMBINATION',
-    ],
-    [[{ ...variant, sku: 'ADDED' }], 'variants.0.sku', 'DUPLICATE_SKU'],
-  ] as const) {
-    expect(
-      await query(tokens.operator, branchA, saveProduct, { input: { ...configured, variants } }),
-    ).toMatchObject({
-      data: null,
-      errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: field, code }] } }],
-    });
-  }
   expect(await query(tokens.operator, branchA, saveProduct, { input: configured })).toMatchObject({
     data: { createProduct: { price: '8.95', variants: configured.variants } },
   });

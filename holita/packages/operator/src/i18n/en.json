@@ -135,5 +135,5 @@
   "variantInvalidValues": "Choose one value per option from this shop.",
   "variantMismatchedOptions": "Use the same options in every variant.",
   "variantUnavailable": "This variant changed. Reopen the product to refresh it.",
-  "optionValueInUse": "A product variant uses a value you removed. Restore the value or remove it from the variant first."
+  "optionValueInUse": "Product variants use the removed value. Cancel and reopen the option, or remove the value from the affected variants first."
 }

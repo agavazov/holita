@@ -120,11 +120,11 @@ export class ProductEditor {
     },
     loader: ({ params }) => this.api.find(params.scope, params.id),
   });
-  private readonly brands = resource({
+  protected readonly brands = resource({
     params: () => this.api.scope() ?? undefined,
     loader: ({ params, abortSignal }) => this.brandsApi.options(params, abortSignal),
   });
-  private readonly categories = resource({
+  protected readonly categories = resource({
     params: () => this.api.scope() ?? undefined,
     loader: ({ params }) => this.categoriesApi.list(params),
   });
@@ -139,20 +139,10 @@ export class ProductEditor {
     if (this.editing && !uuid.test(this.id() ?? '')) {
       return 'invalid-id';
     }
-    if (
-      this.record.isLoading() ||
-      this.brands.isLoading() ||
-      this.categories.isLoading() ||
-      this.options.isLoading()
-    ) {
+    if (this.record.isLoading() || this.options.isLoading()) {
       return 'loading';
     }
-    if (
-      this.record.error() ||
-      this.brands.error() ||
-      this.categories.error() ||
-      this.options.error()
-    ) {
+    if (this.record.error() || this.options.error()) {
       return 'error';
     }
     return !this.editing || (this.record.hasValue() && this.record.value()) ? 'ready' : 'not-found';
@@ -243,7 +233,7 @@ export class ProductEditor {
   }
 
   protected retry(): void {
-    for (const resource of [this.record, this.brands, this.categories, this.options]) {
+    for (const resource of [this.record, this.options]) {
       if (resource.error()) {
         resource.reload();
       }

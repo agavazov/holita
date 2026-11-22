@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { Prisma } from './generated/prisma/client.js';
 import type { ProductInput, ProductSort, ProductFilter } from './generated/graphql/types.js';
 import type { Scope } from './scope.js';
@@ -105,7 +106,7 @@ export class CommerceRepository {
       );
     }
     const order = direction === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
-    const keys = await tx.$queryRaw<{ id: string }[]>`
+    const result = await tx.$queryRaw`
       SELECT p."id"
       FROM ${this.database.table('product')} AS p
       WHERE ${Prisma.join(conditions, ' AND ')}
@@ -116,12 +117,27 @@ export class CommerceRepository {
       ) ${order} NULLS LAST, p."id" DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
+    if (!Array.isArray(result)) {
+      throw new Error('Invalid price-sort result');
+    }
+    const ids = result.map((row: unknown) => {
+      if (
+        typeof row !== 'object' ||
+        row === null ||
+        !('id' in row) ||
+        typeof row.id !== 'string' ||
+        !isUUID(row.id)
+      ) {
+        throw new Error('Invalid product ID in price-sort result');
+      }
+      return row.id;
+    });
     const rows = await tx.product.findMany({
-      where: { ...scope, id: { in: keys.map(({ id }) => id) } },
+      where: { ...scope, id: { in: ids } },
       include: listRelations(scope, false),
     });
     const indexed = new Map(rows.map((row) => [row.id, row]));
-    return keys.flatMap(({ id }) => indexed.get(id) ?? []);
+    return ids.flatMap((id) => indexed.get(id) ?? []);
   }
 
   product(scope: Scope, id: string) {
