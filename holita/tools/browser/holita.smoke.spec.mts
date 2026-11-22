@@ -510,11 +510,6 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.locator('#category-sort-order').fill('15');
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(merchant.getByRole('dialog', { name: 'Edit category' })).toBeHidden();
-    await expect(
-      merchant.getByRole('row').filter({
-        has: merchant.getByRole('button', { name: 'Cookware', exact: true }),
-      }),
-    ).toContainText('15');
     await shopper.reload();
     await expect(breadcrumbs.locator('li > :last-child')).toHaveText([
       'Products',

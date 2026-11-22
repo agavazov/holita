@@ -3,6 +3,7 @@ import type { OperatorCategoryFieldsFragment } from '../generated/categories-ope
 export interface CategoryRow extends OperatorCategoryFieldsFragment {
   readonly depth: number;
   readonly path: string;
+  readonly parentPath: string | null;
 }
 
 /** Category reads visit parents before their descendants. */
@@ -14,6 +15,7 @@ export function categoryRows(categories: readonly OperatorCategoryFieldsFragment
       ...category,
       depth: parent ? parent.depth + 1 : 0,
       path: parent ? `${parent.path} / ${category.name}` : category.name,
+      parentPath: parent?.path ?? null,
     });
   }
   return [...rows.values()];

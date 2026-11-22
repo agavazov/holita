@@ -67,9 +67,15 @@
       </ng-template>
       <ng-template #body let-category>
         @let row = record(category);
+        @let maxIndentedDepth = 3;
+        @let indentCapped = category.depth > maxIndentedDepth;
+        @let detail = indentCapped ? category.parentPath : category.slug;
         <tr>
           <td class="app-col-identity">
-            <div class="category-identity" [style.--category-depth]="category.depth">
+            <div
+              class="category-identity"
+              [style.--category-depth]="indentCapped ? maxIndentedDepth : category.depth"
+            >
               @if (category.parentId) {
                 <span class="category-branch" aria-hidden="true"></span>
               }
@@ -86,7 +92,7 @@
                 } @else {
                   <span [title]="category.path">{{ category.name }}</span>
                 }
-                <span [title]="category.slug">{{ category.slug }}</span>
+                <span [title]="detail">{{ detail }}</span>
               </div>
             </div>
             @if (canWrite()) {

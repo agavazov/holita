@@ -3,10 +3,7 @@
   align-items: center;
   gap: var(--p-app-space-2);
   min-inline-size: 0;
-  padding-inline-start: min(
-    calc(var(--p-app-space-3) * var(--category-depth)),
-    var(--p-app-space-8)
-  );
+  padding-inline-start: calc(var(--p-app-space-3) * var(--category-depth));
 }
 
 .category-branch {

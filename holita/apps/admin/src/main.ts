@@ -53,7 +53,7 @@ void startOperator({
   ],
   navigation: [
     { id: 'products', label: 'products', icon: 'tags', path: 'products' },
-    { id: 'categories', label: 'categories', icon: 'folder', path: 'categories' },
+    { id: 'categories', label: 'categories', icon: 'th-large', path: 'categories' },
     { id: 'brands', label: 'brands', icon: 'folder', path: 'brands' },
     { id: 'customers', label: 'customers', icon: 'users', path: 'customers' },
   ],
