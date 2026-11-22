@@ -9,13 +9,15 @@
   [view]="view()"
   [busy]="list.isLoading()"
   [total]="rows()?.length ?? null"
+  [page]="pagination()"
   [emptyTitle]="text().noCustomers"
   [errorText]="text().unavailable"
+  (pageChange)="url.setPage($event)"
   (retry)="list.reload()"
 >
   <p-table
     class="app-responsive-table app-table-fixed"
-    [value]="rows() ?? []"
+    [value]="pageRows()"
     [rowTrackBy]="trackById"
     [scrollable]="true"
     [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
@@ -47,6 +49,8 @@
               <a
                 class="app-link app-table-identity-wrap"
                 [routerLink]="['/', language(), 'customers', customer.id]"
+                [queryParams]="detailQuery()"
+                [preserveFragment]="true"
                 [title]="customer.name"
                 >{{ customer.name }}</a
               >

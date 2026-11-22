@@ -165,12 +165,26 @@ type CartLine {
   available: Boolean!
   issue: CartIssue
 }
+enum CartDiscountIssue {
+  INVALID
+  NOT_STARTED
+  EXPIRED
+  MINIMUM_NOT_MET
+  EXHAUSTED
+}
+type CartDiscount {
+  code: String!
+  amount: String!
+  issue: CartDiscountIssue
+}
 type Cart {
   lines: [CartLine!]!
   "Total requested quantity across all lines."
   itemCount: Float!
   "Current total for lines that can be fulfilled."
   subtotal: String!
+  discount: CartDiscount
+  discountedSubtotal: String!
 }
 type CartAddResult {
   cart: Cart!
@@ -224,6 +238,8 @@ type CheckoutQuote {
   shippingMethod: CheckoutShippingMethod!
   currency: String!
   subtotal: String!
+  discountCode: String
+  discountAmount: String!
   shippingFee: String!
   total: String!
 }
@@ -280,6 +296,8 @@ type OrderConfirmation {
   lines: [OrderConfirmationLine!]!
   currency: String!
   subtotal: String!
+  discountCode: String
+  discountAmount: String!
   shippingFee: String!
   total: String!
 }
@@ -367,6 +385,8 @@ type Mutation {
   addCartLine(variantId: ID!, quantity: Int!): CartAddResult!
   updateCartLine(lineId: ID!, quantity: Int!): Cart!
   removeCartLine(lineId: ID!): Cart!
+  applyCartDiscount(code: String!): Cart!
+  removeCartDiscount: Cart!
   quoteCheckout(input: CheckoutQuoteInput!): CheckoutQuote!
   placeOrder(input: PlaceOrderInput!): OrderConfirmation!
 }

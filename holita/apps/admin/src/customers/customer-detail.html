@@ -4,6 +4,8 @@
   [moduleInfoTitle]="text().customer"
   [backLink]="backLink()"
   [backLabel]="text().backToCustomers"
+  [backQueryParams]="backQuery()"
+  [backFragment]="fragment()"
   [actions]="headerActions()"
   (action)="runHeaderAction($event)"
 />

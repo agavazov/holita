@@ -5,6 +5,8 @@ import { catalogueVariantValues } from '../products/product-relations.js';
 import type { Scope } from '../scope.js';
 
 export type CartOwner = { customerId: string } | { guestTokenHash: string };
+const cartSelection = { id: true, discountId: true } as const;
+export type CartSelection = Prisma.CartGetPayload<{ select: typeof cartSelection }>;
 
 @Injectable()
 export class CartRepository {
@@ -23,7 +25,7 @@ export class CartRepository {
   find(tx: Prisma.TransactionClient, scope: Scope, owner: CartOwner) {
     return tx.cart.findFirst({
       where: { ...scope, ...owner, consumedAt: null },
-      select: { id: true },
+      select: cartSelection,
     });
   }
 
@@ -41,7 +43,7 @@ export class CartRepository {
         ...(placementCartId ? { id: placementCartId } : { consumedAt: null }),
       },
       data: { updatedAt: new Date() },
-      select: { id: true, consumedAt: true },
+      select: { ...cartSelection, consumedAt: true },
     });
     return cart;
   }
@@ -68,11 +70,15 @@ export class CartRepository {
   }
 
   createGuestCart(tx: Prisma.TransactionClient, scope: Scope, guestTokenHash: string) {
-    return tx.cart.create({ data: { ...scope, guestTokenHash }, select: { id: true } });
+    return tx.cart.create({ data: { ...scope, guestTokenHash }, select: cartSelection });
   }
 
   deleteGuestCart(tx: Prisma.TransactionClient, scope: Scope, id: string) {
     return tx.cart.delete({ where: { ...scope, id } });
+  }
+
+  setDiscount(tx: Prisma.TransactionClient, scope: Scope, id: string, discountId: string | null) {
+    return tx.cart.update({ where: { ...scope, id, consumedAt: null }, data: { discountId } });
   }
 
   lines(tx: Prisma.TransactionClient, scope: Scope, cartId: string) {

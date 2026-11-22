@@ -35,8 +35,12 @@
     <p class="cart-updated">{{ t().cartUpdated }}</p>
     }
   </div>
-  @if (cart.lines.length) {
+  <div class="app-visually-hidden" role="status">
+    @if (promoStatus(); as status) { {{ t()[status] }} }
+  </div>
+  @if (cart.lines.length || cart.discount) {
   <div class="cart-layout" [attr.aria-busy]="state.pending()">
+    @if (cart.lines.length) {
     <ul class="shop-panel shop-panel--sections cart-lines" role="list">
       @for (line of cart.lines; track line.id) { @let error = lineError(); @let control =
       quantities().get(line.id);
@@ -121,14 +125,78 @@
       </li>
       }
     </ul>
-    <aside class="shop-panel cart-summary" [attr.aria-label]="t().cartSubtotal">
-      <dl>
+    } @else {
+    <p class="shop-state">{{ t().cartEmpty }}</p>
+    }
+    <aside class="shop-panel cart-summary" [attr.aria-label]="t().orderSummary">
+      @let discount = cart.discount; @let issue = discount?.issue; @let failure = promoError();
+      <dl class="cart-totals" aria-live="polite">
         <div>
           <dt>{{ t().cartSubtotal }}</dt>
           <dd class="app-num">{{ formatPrice(cart.subtotal) }}</dd>
         </div>
+        @if (discount) { @if (issue) {
+        <div>
+          <dt>{{ t().promoCode }}</dt>
+          <dd class="promo-code app-mono">{{ discount.code }}</dd>
+        </div>
+        } @else {
+        <div>
+          <dt>
+            {{ t().discountAmount }} <span class="promo-code app-mono">{{ discount.code }}</span>
+          </dt>
+          <dd class="app-num cart-saving">−{{ formatPrice(discount.amount) }}</dd>
+        </div>
+        <div class="cart-total">
+          <dt>{{ t().discountedSubtotal }}</dt>
+          <dd class="app-num">{{ formatPrice(cart.discountedSubtotal) }}</dd>
+        </div>
+        } }
       </dl>
-      @if (canCheckout()) {
+      @if (discount) {
+      <button
+        #removePromoButton
+        class="shop-secondary"
+        type="button"
+        [disabled]="state.locked()"
+        [attr.aria-describedby]="issue ? 'cart-promo-issue' : null"
+        (click)="removePromo()"
+      >
+        {{ t().removePromoCode }}
+      </button>
+      } @else {
+      <form class="cart-promo-form" (submit)="$event.preventDefault(); applyPromo()">
+        <div class="shop-form-field">
+          <label for="cart-promo-code">{{ t().promoCode }}</label>
+          <input
+            #promoInput
+            id="cart-promo-code"
+            type="text"
+            maxlength="64"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            [formControl]="promoCode"
+            [readOnly]="state.locked()"
+            [attr.aria-invalid]="failure && failure !== 'promoUpdateFailed' ? 'true' : null"
+            [attr.aria-describedby]="failure ? 'cart-promo-error' : null"
+          />
+        </div>
+        <button
+          class="shop-secondary"
+          type="submit"
+          [disabled]="state.locked() || !promoDraft().trim()"
+        >
+          {{ t().applyPromoCode }}
+        </button>
+      </form>
+      } @if (failure) {
+      <p class="cart-line-error" id="cart-promo-error" role="alert">{{ t()[failure] }}</p>
+      } @if (issue) {
+      <p class="cart-line-error" id="cart-promo-issue" role="alert">
+        {{ t()[promoProblems[issue]] }}
+      </p>
+      } @if (canCheckout()) {
       <a class="shop-primary" [routerLink]="[...base(), 'checkout']">{{ t().checkout }}</a>
       }
       <a class="shop-text-link" [routerLink]="base()">{{ t().continueShopping }}</a>

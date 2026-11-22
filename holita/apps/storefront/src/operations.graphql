@@ -274,6 +274,12 @@ fragment PublicCartLineFields on CartLine {
 fragment PublicCartFields on Cart {
   itemCount
   subtotal
+  discountedSubtotal
+  discount {
+    code
+    amount
+    issue
+  }
   lines {
     ...PublicCartLineFields
   }
@@ -298,6 +304,16 @@ mutation UpdateCartLine($lineId: ID!, $quantity: Int!) {
 }
 mutation RemoveCartLine($lineId: ID!) {
   removeCartLine(lineId: $lineId) {
+    ...PublicCartFields
+  }
+}
+mutation ApplyCartDiscount($code: String!) {
+  applyCartDiscount(code: $code) {
+    ...PublicCartFields
+  }
+}
+mutation RemoveCartDiscount {
+  removeCartDiscount {
     ...PublicCartFields
   }
 }
@@ -340,6 +356,8 @@ mutation QuoteCheckout($input: CheckoutQuoteInput!) {
     }
     currency
     subtotal
+    discountCode
+    discountAmount
     shippingFee
     total
   }
@@ -374,6 +392,8 @@ fragment OrderConfirmationFields on OrderConfirmation {
   }
   currency
   subtotal
+  discountCode
+  discountAmount
   shippingFee
   total
 }

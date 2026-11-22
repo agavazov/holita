@@ -11,13 +11,14 @@ import {
   type CartContext,
 } from '../cart/cart.service.js';
 import {
-  checkoutCurrency,
   checkoutError,
   CheckoutService,
   invalidValue,
   validateOrderContact,
 } from '../checkout/checkout.service.js';
+import { checkoutCurrency } from '../checkout/currency.js';
 import { ShopperRepository } from '../customers/shopper.repository.js';
+import { DiscountsService } from '../discounts/discounts.service.js';
 import type {
   OrderConfirmation,
   PlaceOrderInput,
@@ -124,6 +125,8 @@ function confirmation(order: Order & { lines: OrderLine[] }) {
     paymentInstructions: order.paymentInstructions,
     lines: order.lines.map(presentLine),
     subtotal: order.subtotal.toFixed(2),
+    discountCode: order.discountCode,
+    discountAmount: order.discountAmount.toFixed(2),
     shippingFee: order.shippingFee.toFixed(2),
   };
 }
@@ -189,6 +192,7 @@ export class OrdersService {
     private readonly carts: CartService,
     private readonly checkout: CheckoutService,
     private readonly customers: ShopperRepository,
+    private readonly discounts: DiscountsService,
   ) {}
 
   async operatorOrders(
@@ -487,7 +491,7 @@ export class OrdersService {
       if (!storedCart) {
         throw cartMissing();
       }
-      const cartId = storedCart.id;
+      const { id: cartId, discountId } = storedCart;
       if (storedCart.consumedAt) {
         const order = await this.orders.findForCart(tx, scope, cartId, customerId ?? null);
         if (!order) {
@@ -497,14 +501,18 @@ export class OrdersService {
       }
 
       await this.orders.lockProducts(tx, scope, cartId);
-      const { cart, variants } = await this.carts.snapshot(tx, scope, cartId);
+      if (discountId) {
+        // The fresh read under this lock serializes the final use across carts and merchant edits.
+        await this.discounts.lock(tx, scope, discountId);
+      }
+      const { cart, variants } = await this.carts.snapshot(tx, scope, storedCart);
       if (cart.lines.some(({ issue }) => issue === 'INSUFFICIENT_STOCK')) {
         throw stockChanged();
       }
       const { quote, contact, shippingAddress } = await this.checkout.quoteCart(
         tx,
         scope,
-        { id: cartId, cart },
+        { ...storedCart, cart },
         input,
       );
       if (input.quoteRevision !== quote.quoteRevision) {
@@ -545,11 +553,16 @@ export class OrdersService {
           shippingMethodLabel: quote.shippingMethod.label,
           currency: quote.currency,
           subtotal: quote.subtotal,
+          discountCode: quote.discountCode ?? null,
+          discountAmount: quote.discountAmount,
           shippingFee: quote.shippingFee,
           total: quote.total,
         },
         lines,
       );
+      if (discountId) {
+        await this.discounts.redeem(tx, scope, discountId);
+      }
       await this.cartRepository.consume(tx, scope, cartId, identity.placedAt);
       return confirmation(order);
     });

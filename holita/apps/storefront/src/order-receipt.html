@@ -44,6 +44,14 @@
         <dt>{{ t().subtotal }}</dt>
         <dd class="app-num">{{ formatPrice(receipt.subtotal) }}</dd>
       </div>
+      @if (receipt.discountCode; as code) {
+      <div>
+        <dt>
+          {{ t().discountAmount }} <span class="checkout-promo-code app-mono">{{ code }}</span>
+        </dt>
+        <dd class="app-num checkout-saving">−{{ formatPrice(receipt.discountAmount) }}</dd>
+      </div>
+      }
       <div>
         <dt>{{ t().shippingFee }}</dt>
         <dd class="app-num">{{ formatPrice(receipt.shippingFee) }}</dd>

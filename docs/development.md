@@ -546,16 +546,29 @@ from the subtotal. Signing in merges eligible guest quantities and shows any ski
 The storefront graph exposes `cart`, `addCartLine`, `updateCartLine` and `removeCartLine`.
 Send the guest credential in `x-cart-token` or use the same-shop shopper bearer after signing in.
 
+In Admin, open Discounts to create or edit a promo code for the selected shop. Set a fixed amount
+or a percentage, enable the code, and optionally set its dates, minimum item subtotal and total
+use limit. The list shows how many orders have used each code. The operator graph exposes
+`discounts`, `discount`, `createDiscount` and `updateDiscount`.
+
+Shoppers can apply or remove one promo code in Cart through `applyCartDiscount` and
+`removeCartDiscount`. The Sofia demo code `HOME10` gives 10% off an item subtotal of at least
+40.00 BGN. `OLD10` has expired.
+
 Open Checkout from a cart with available items, enter contact and delivery details, and choose
-delivery and payment. Review total shows current item prices and the fixed delivery fee from
-Commerce. The Sofia seed enables Наложен платеж and Доставка до адрес with a fee of 6.00 BGN.
+delivery and payment. Review total shows current item prices, any item discount and the fixed
+delivery fee from Commerce. The Sofia seed enables Наложен платеж and Доставка до адрес with a fee
+of 6.00 BGN.
 The storefront graph exposes the checkout options with `checkout` and prices the selected options
 with `quoteCheckout`, using the cart's existing authorization.
 
-After reviewing the total, choose Place order. A change in available stock, prices or selected
-methods prompts you to review the checkout again. The confirmation shows the order's current
-fulfillment and payment status with its saved items and delivery fee. Payment instructions are shown
-while the order is unpaid and active.
+After reviewing the total, choose Place order. A change in available stock, prices, discount or
+selected methods prompts you to review the checkout again. If the promo code is no longer eligible,
+go back to Cart to remove or replace it. When an order commits, Commerce saves the code and the
+discount amount on the order and records the redemption.
+The confirmation shows the order's current fulfillment and payment status with its saved items,
+promo code, discount and delivery fee. Payment instructions are shown while the order is unpaid and
+active.
 Signed-in shoppers can reopen their confirmation in the same shop. Guests can reopen theirs
 in the browser that placed the order.
 The storefront graph uses `placeOrder` with the reviewed cart ID and quote revision, and
@@ -569,15 +582,16 @@ and `shopperOrder` for this history.
 
 In Admin, open Customers and select a customer in the current shop. Use Edit contact to change
 the name or optional phone. The sign-in email is read-only. Add or edit saved addresses from the
-same page, and open any linked order from Order history. Existing orders keep the contact and
+same page, and open any linked order from Order history. The Customers link returns to the list
+with its previous page and page size. Existing orders keep the contact and
 address details recorded on the order. The Sofia demo shop includes a customer with a phone,
 saved address and linked order. The operator graph exposes `customer`, `updateCustomerContact`,
 `createCustomerAddress`, `updateCustomerAddress` and the `customerId` filter on `orders`.
 
 In Admin, open Orders in the selected shop. Search by order number, contact name, email or phone,
 or filter by fulfillment status. The list URL stores search and filter values. Open an order to
-see its saved contact, delivery and payment details, charged fee, items, totals and dated
-fulfillment history. Use Update status to advance from Placed through Confirmed, Processing,
+see its saved contact, delivery and payment details, charged fee, items, promo code, discount,
+totals and dated fulfillment history. Use Update status to advance from Placed through Confirmed, Processing,
 Shipped and Completed. Cancelling before shipment returns the original deductions to any
 surviving variants once. Use Mark as paid to record manual payment. Cancellation preserves a
 recorded payment. The operator graph exposes `orders`, `order`, `updateOrderStatus` and

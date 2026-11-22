@@ -1,6 +1,9 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
+  Injector,
+  afterNextRender,
   computed,
   inject,
   input,
@@ -9,9 +12,17 @@ import {
   viewChild,
   type ElementRef,
 } from '@angular/core';
-import { ReactiveFormsModule, type FormControl } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { CartState, maxCartQuantity, quantityControl, type CartWriteError } from './cart-state';
+import {
+  CartState,
+  maxCartQuantity,
+  promoProblems,
+  quantityControl,
+  type CartWriteError,
+  type PromoWriteError,
+} from './cart-state';
 import { messages, type Language } from './storefront-messages';
 import { formatStorefrontMoney } from './storefront-money';
 import type { PublicCartFieldsFragment, SignInShopperMutation } from './generated/operations';
@@ -37,15 +48,33 @@ export class CartPage {
   readonly language = input.required<Language>();
   readonly priceFormat = input.required<Intl.NumberFormat>();
   readonly mergeNotice = input<CartMergeNotice | null>(null);
+  private readonly destroy = inject(DestroyRef);
+  private readonly injector = inject(Injector);
   private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('heading');
+  private readonly promoInput = viewChild<ElementRef<HTMLInputElement>>('promoInput');
+  private readonly removePromoButton =
+    viewChild<ElementRef<HTMLButtonElement>>('removePromoButton');
   protected readonly state = inject(CartState);
   protected readonly base = () => ['/s', this.state.shopId()];
   protected readonly t = () => messages[this.language()];
   protected readonly maxCartQuantity = maxCartQuantity;
+  protected readonly promoProblems = promoProblems;
   protected readonly canCheckout = computed(() => {
-    const lines = this.state.cart()?.lines;
-    return !!lines?.length && !this.state.locked() && lines.every(({ issue }) => issue === null);
+    const cart = this.state.cart();
+    return (
+      !!cart?.lines.length &&
+      !this.state.locked() &&
+      !cart.discount?.issue &&
+      cart.lines.every(({ issue }) => issue === null)
+    );
   });
+  protected readonly promoCode = new FormControl('', { nonNullable: true });
+  protected readonly promoDraft = toSignal(this.promoCode.valueChanges, { initialValue: '' });
+  protected readonly promoError = linkedSignal({
+    source: this.promoDraft,
+    computation: (): PromoWriteError | null => null,
+  });
+  protected readonly promoStatus = signal<'promoApplied' | 'promoRemoved' | null>(null);
   protected readonly lineError = signal<{ lineId: string; message: CartWriteError } | null>(null);
   protected readonly updated = signal(false);
   protected readonly quantities = linkedSignal<
@@ -64,6 +93,49 @@ export class CartPage {
 
   protected formatPrice(value: string) {
     return formatStorefrontMoney(value, this.priceFormat());
+  }
+
+  protected async applyPromo() {
+    const code = this.promoDraft().trim();
+    if (this.state.locked() || !code) {
+      return;
+    }
+    this.promoError.set(null);
+    this.promoStatus.set(null);
+    const result = await this.state.applyDiscount(code);
+    if (this.destroy.destroyed || result === 'expired') {
+      return;
+    }
+    if (result === 'ok') {
+      this.promoCode.reset();
+      this.promoStatus.set('promoApplied');
+    } else {
+      this.promoError.set(result);
+    }
+    afterNextRender(
+      () => (result === 'ok' ? this.removePromoButton() : this.promoInput())?.nativeElement.focus(),
+      { injector: this.injector },
+    );
+  }
+
+  protected async removePromo() {
+    if (this.state.locked()) {
+      return;
+    }
+    this.promoError.set(null);
+    this.promoStatus.set(null);
+    const result = await this.state.removeDiscount();
+    if (this.destroy.destroyed || result === 'expired') {
+      return;
+    }
+    if (result !== 'ok') {
+      this.promoError.set(result);
+      return;
+    }
+    this.promoStatus.set('promoRemoved');
+    afterNextRender(() => (this.promoInput() ?? this.heading())?.nativeElement.focus(), {
+      injector: this.injector,
+    });
   }
 
   protected async update(line: CartLine) {

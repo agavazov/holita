@@ -207,7 +207,15 @@
           <dt>{{ blocked() ? t().cartSubtotal : t().subtotal }}</dt>
           <dd class="app-num">{{ formatPrice(reviewed?.subtotal ?? state.cart.subtotal) }}</dd>
         </div>
-        @if (reviewed) {
+        @if (discount(); as saving) {
+        <div>
+          <dt>
+            {{ t().discountAmount }}
+            <span class="checkout-promo-code app-mono">{{ saving.code }}</span>
+          </dt>
+          <dd class="app-num checkout-saving">−{{ formatPrice(saving.amount) }}</dd>
+        </div>
+        } @if (reviewed) {
         <div>
           <dt>{{ t().shippingFee }}</dt>
           <dd class="app-num">{{ formatPrice(reviewed.shippingFee) }}</dd>
@@ -218,15 +226,15 @@
         </div>
         }
       </dl>
-      @if (problem(); as failure) {
+      @if (promoProblem() ?? problem(); as failure) {
       <div class="checkout-problem">
         <p #placementProblem role="alert" tabindex="-1">{{ t()[failure] }}</p>
         @if (needsCartReview()) {
         <a class="shop-text-link" [routerLink]="[...base(), 'cart']">{{ t().backToCart }}</a>
         }
       </div>
-      } @if (!blocked() && state.shippingMethods.length && state.paymentMethods.length) { @if
-      (reviewed) {
+      } @if (!blocked() && !promoProblem() && state.shippingMethods.length &&
+      state.paymentMethods.length) { @if (reviewed) {
       <button
         #placeButton
         class="shop-primary"

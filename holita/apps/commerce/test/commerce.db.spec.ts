@@ -149,6 +149,7 @@ beforeAll(async () => {
     '20261122160000_manual_orders',
     '20261122170000_order_line_stock_deductions',
     '20261122180000_customer_detail',
+    '20261122190000_discounts',
   ]) {
     await connection.query(
       await readFile(
@@ -1279,7 +1280,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     shippingMethodId: methodIds.shippingMethodId.available,
   };
   const quoteOperation =
-    'mutation($input:CheckoutQuoteInput!){quoteCheckout(input:$input){cartId quoteRevision subtotal shippingFee total lines{id variantId unitPrice}}}';
+    'mutation($input:CheckoutQuoteInput!){quoteCheckout(input:$input){cartId quoteRevision subtotal discountCode discountAmount shippingFee total lines{id variantId unitPrice}}}';
   const quote = (input = quoteInput) => storefront(publicA, quoteOperation, { input }, token);
   for (const path of ['paymentMethodId', 'shippingMethodId'] as const) {
     for (const key of ['foreign', 'disabled'] as const) {
@@ -1301,12 +1302,103 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
         cartId: accountCart.id,
         quoteRevision: expect.any(String),
         subtotal: '2.00',
+        discountCode: null,
+        discountAmount: '0.00',
         shippingFee: '6.00',
         total: '8.00',
         lines: [{ id: line.id, variantId: variant.id, unitPrice: '1.00' }],
       },
     },
   });
+
+  const createDiscount =
+    'mutation($input:DiscountInput!){createDiscount(input:$input){id code redeemedCount}}';
+  const updateDiscount =
+    'mutation($id:ID!,$input:DiscountInput!){updateDiscount(id:$id,input:$input){code redeemedCount}}';
+  const applyDiscount =
+    'mutation($code:String!){applyCartDiscount(code:$code){discount{code amount issue} discountedSubtotal}}';
+  const promoError = (code: string) => ({
+    data: null,
+    errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'code', code }] } }],
+  });
+  const discountInput = {
+    code: ' before-15 ',
+    type: 'PERCENTAGE',
+    value: '15.00',
+    enabled: true,
+    minSubtotal: '3.00',
+    usageLimit: 1,
+  };
+  expect(
+    await query(tokens.viewer, publicA, createDiscount, { input: discountInput }),
+  ).toHaveProperty('errors');
+  expect(
+    await query(tokens.operator, publicA, createDiscount, { input: discountInput }),
+  ).toMatchObject({
+    data: { createDiscount: { code: 'BEFORE-15', redeemedCount: 0 } },
+  });
+  const discount = await database.discount.findUniqueOrThrow({
+    where: { tenantId_branchId_code: { ...categoryScope, code: 'BEFORE-15' } },
+  });
+  expect(
+    await query(tokens.operator, publicA, createDiscount, {
+      input: { ...discountInput, code: discount.code },
+    }),
+  ).toMatchObject(promoError('DUPLICATE_VALUE'));
+  for (const [credential, branch] of [
+    [tokens.operator, branchB],
+    [tokens.foreign, branchForeign],
+  ] as const) {
+    expect(
+      await query(credential, branch, 'query($id:ID!){discount(id:$id){id} discounts{total}}', {
+        id: discount.id,
+      }),
+    ).toEqual({ data: { discount: null, discounts: { total: 0 } } });
+    expect(
+      await query(credential, branch, updateDiscount, { id: discount.id, input: discountInput }),
+    ).toMatchObject({ errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+  }
+  await database.discount.create({
+    data: {
+      ...categoryScope,
+      code: 'PAST',
+      type: 'PERCENTAGE',
+      value: '10.00',
+      enabled: true,
+      endsAt: new Date(0),
+    },
+  });
+  for (const [code, error] of [
+    [discount.code, 'PROMO_MINIMUM_NOT_MET'],
+    ['PAST', 'PROMO_EXPIRED'],
+  ] as const) {
+    expect(await storefront(publicA, applyDiscount, { code }, token)).toMatchObject(
+      promoError(error),
+    );
+  }
+  const otherShopVariant = await database.product.create({
+    data: {
+      tenantId: tenantA,
+      branchId: publicB,
+      name: 'Other shop item',
+      status: 'ACTIVE',
+      variants: { create: storedVariant('SHOP-ITEM', '10.00') },
+    },
+    select: { variants: { select: { id: true } } },
+  });
+  const otherVariant = otherShopVariant.variants[0];
+  if (!otherVariant) {
+    throw new Error('Missing other shop variant');
+  }
+  expect(
+    await storefront(publicB, add, { id: otherVariant.id, quantity: 1 }, foreignShopBearer),
+  ).toHaveProperty('data.addCartLine.cart');
+  expect(
+    await storefront(publicB, applyDiscount, { code: discount.code }, foreignShopBearer),
+  ).toMatchObject(promoError('PROMO_INVALID'));
+  expect(
+    await storefront(publicA, applyDiscount, { code: discount.code }, foreignOwner),
+  ).toHaveProperty('errors');
 
   const saveProduct =
     'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){variants{id}}}';
@@ -1325,6 +1417,14 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(await saveVariants(variant.id)).toEqual({
     data: { updateProduct: { variants: [{ id: variant.id }] } },
   });
+  expect(await storefront(publicA, applyDiscount, { code: discountInput.code }, token)).toEqual({
+    data: {
+      applyCartDiscount: {
+        discount: { code: discount.code, amount: '1.28', issue: null },
+        discountedSubtotal: '7.22',
+      },
+    },
+  });
   const repricedQuote = await quote();
   const currentReview = reviewedCart(repricedQuote);
   expect(repricedQuote).toEqual({
@@ -1333,15 +1433,17 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
         cartId: accountCart.id,
         quoteRevision: expect.any(String),
         subtotal: '8.50',
+        discountCode: discount.code,
+        discountAmount: '1.28',
         shippingFee: '6.00',
-        total: '14.50',
+        total: '13.22',
         lines: [{ id: line.id, variantId: variant.id, unitPrice: '4.25' }],
       },
     },
   });
 
   const receiptFields =
-    'id number placedAt status paymentStatus paymentMethodLabel paymentInstructions shippingMethodLabel shippingAddress{countryCode city postalCode line1} currency subtotal shippingFee total lines{sku label quantity unitPrice lineTotal}';
+    'id number placedAt status paymentStatus paymentMethodLabel paymentInstructions shippingMethodLabel shippingAddress{countryCode city postalCode line1} currency subtotal discountCode discountAmount shippingFee total lines{sku label quantity unitPrice lineTotal}';
   const placeOperation = `mutation($input:PlaceOrderInput!){placeOrder(input:$input){${receiptFields}}}`;
   const receiptOperation = `query($orderId:ID!){orderConfirmation(orderId:$orderId){${receiptFields}}}`;
   const place = (review: typeof currentReview, bearer = token) =>
@@ -1349,6 +1451,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   const orderScope = { ...categoryScope, cartId: accountCart.id };
   const variantKey = { ...categoryScope, id: variant.id };
   const cartKey = { ...categoryScope, id: accountCart.id };
+  const discountKey = { ...categoryScope, id: discount.id };
   for (const [review, quantity, code] of [
     [firstReview, 2, 'CHECKOUT_QUOTE_CHANGED'],
     [currentReview, 1, 'CHECKOUT_STOCK_CHANGED'],
@@ -1359,6 +1462,12 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'cart', code }] } }],
     });
     expect(await database.order.count({ where: orderScope })).toBe(0);
+    expect(
+      await database.discount.findUniqueOrThrow({
+        where: discountKey,
+        select: { redeemedCount: true },
+      }),
+    ).toEqual({ redeemedCount: 0 });
     expect(
       await database.cart.findUniqueOrThrow({ where: cartKey, select: { consumedAt: true } }),
     ).toEqual({ consumedAt: null });
@@ -1371,6 +1480,25 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   }
 
   await database.productVariant.update({ where: variantKey, data: { quantity: 3 } });
+  const editDiscount = (input: object) =>
+    query(tokens.operator, publicA, updateDiscount, {
+      id: discount.id,
+      input: { ...discountInput, ...input },
+    });
+  expect(await editDiscount({ endsAt: '2000-01-01T00:00:00.000Z' })).toHaveProperty(
+    'data.updateDiscount',
+  );
+  expect(await quote()).toMatchObject(promoError('PROMO_EXPIRED'));
+  expect(await place(currentReview)).toMatchObject(promoError('PROMO_EXPIRED'));
+  expect(await editDiscount({ code: 'AFTER-15' })).toHaveProperty(
+    'data.updateDiscount.code',
+    'AFTER-15',
+  );
+  expect(await quote()).toHaveProperty('data.quoteCheckout.discountCode', 'AFTER-15');
+  expect(await place(currentReview)).toMatchObject({
+    errors: [{ extensions: { fieldErrors: [{ code: 'CHECKOUT_QUOTE_CHANGED' }] } }],
+  });
+  expect(await editDiscount({})).toHaveProperty('data.updateDiscount.redeemedCount', 0);
   const placed = await place(currentReview);
   const order = await database.order.findFirstOrThrow({ where: orderScope });
   const receipt = {
@@ -1385,8 +1513,10 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     shippingAddress: quoteInput.shippingAddress,
     currency: 'BGN',
     subtotal: '8.50',
+    discountCode: discount.code,
+    discountAmount: '1.28',
     shippingFee: '6.00',
-    total: '14.50',
+    total: '13.22',
     lines: [
       { sku: variant.sku, label: 'Visible', quantity: 2, unitPrice: '4.25', lineTotal: '8.50' },
     ],
@@ -1404,6 +1534,9 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   const newLine = await database.cartLine.findFirstOrThrow({
     where: { ...categoryScope, cartId: newCart.id },
   });
+  expect(await storefront(publicA, applyDiscount, { code: discount.code }, token)).toMatchObject(
+    promoError('PROMO_EXHAUSTED'),
+  );
 
   await database.paymentMethod.update({
     where: { ...categoryScope, id: quoteInput.paymentMethodId },
@@ -1414,6 +1547,12 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     data: { label: 'New shipping method', fixedFee: '99.00' },
   });
   expect(await place(currentReview)).toEqual({ data: { placeOrder: receipt } });
+  expect(
+    await database.discount.findUniqueOrThrow({
+      where: discountKey,
+      select: { redeemedCount: true },
+    }),
+  ).toEqual({ redeemedCount: 1 });
   expect(await place(currentReview, foreignOwner)).toHaveProperty('errors');
   expect(await database.order.count({ where: orderScope })).toBe(1);
   expect(
@@ -1804,7 +1943,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       orderRefundSummary: {
         status: 'PARTIAL',
         refundedAmount: '10.00',
-        refundableAmount: '4.50',
+        refundableAmount: '3.22',
         canRecordRefund: true,
         canRestockOnCompletion: true,
       },
@@ -1813,21 +1952,21 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(
     await query(tokens.operator, publicA, recordRefund, {
       ...refundTarget,
-      input: { amount: '4.50', restock: true },
+      input: { amount: '3.22', restock: true },
     }),
   ).toMatchObject({
-    data: { recordOrderRefund: { amount: '4.50', currency: 'BGN', reason: null, restock: true } },
+    data: { recordOrderRefund: { amount: '3.22', currency: 'BGN', reason: null, restock: true } },
   });
   expect(await query(tokens.viewer, publicA, readRefunds, refundTarget)).toMatchObject({
     data: {
       orderRefundSummary: {
         status: 'FULL',
-        refundedAmount: '14.50',
+        refundedAmount: receipt.total,
         refundableAmount: '0.00',
         canRecordRefund: false,
         canRestockOnCompletion: false,
         refunds: [
-          { amount: '4.50', restock: true },
+          { amount: '3.22', restock: true },
           { amount: '10.00', restock: false },
         ],
       },
@@ -2083,6 +2222,102 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       select: { quantity: true },
     }),
   ).toEqual({ quantity: 7 });
+
+  const oneUse = await database.discount.create({
+    data: {
+      ...categoryScope,
+      code: 'LAST-USE',
+      type: 'FIXED',
+      value: '10.00',
+      enabled: true,
+      usageLimit: 1,
+    },
+  });
+  const lastUseShipping = await database.shippingMethod.create({
+    data: { ...categoryScope, label: 'Last-use delivery', fixedFee: '6.00', enabled: true },
+  });
+  const lastUseQuote = { ...quoteInput, shippingMethodId: lastUseShipping.id };
+  const competingCarts: { token: string; review: ReturnType<typeof reviewedCart> }[] = [];
+  for (const sku of ['LAST-USE-A', 'LAST-USE-B']) {
+    // Separate products take different catalogue locks before contending for the discount.
+    const product = await database.product.create({
+      data: {
+        ...categoryScope,
+        name: sku,
+        status: 'ACTIVE',
+        variants: { create: storedVariant(sku, '5.00') },
+      },
+      include: { variants: true },
+    });
+    const [guestVariant] = product.variants;
+    if (!guestVariant) {
+      throw new Error('Missing competing cart variant');
+    }
+    const guestCredential = randomBytes(32).toString('base64url');
+    await database.cart.create({
+      data: {
+        ...categoryScope,
+        guestTokenHash: createHash('sha256').update(guestCredential).digest('hex'),
+      },
+    });
+    expect(
+      await storefront(
+        publicA,
+        add,
+        { id: guestVariant.id, quantity: 1 },
+        undefined,
+        guestCredential,
+      ),
+    ).toHaveProperty('data.addCartLine.cart');
+    expect(
+      await storefront(publicA, applyDiscount, { code: oneUse.code }, undefined, guestCredential),
+    ).toHaveProperty('data.applyCartDiscount.discountedSubtotal', '0.00');
+    const review = reviewedCart(
+      await storefront(
+        publicA,
+        quoteOperation,
+        { input: lastUseQuote },
+        undefined,
+        guestCredential,
+      ),
+    );
+    competingCarts.push({ token: guestCredential, review });
+  }
+  const placedTogether = await Promise.all(
+    competingCarts.map(({ review, token: guestCredential }) =>
+      storefront(
+        publicA,
+        placeOperation,
+        { input: { ...lastUseQuote, ...review } },
+        undefined,
+        guestCredential,
+      ),
+    ),
+  );
+  expect(placedTogether).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        data: null,
+        errors: [
+          expect.objectContaining({
+            extensions: expect.objectContaining({
+              code: 'BAD_USER_INPUT',
+              fieldErrors: [expect.objectContaining({ path: 'code', code: 'PROMO_EXHAUSTED' })],
+            }),
+          }),
+        ],
+      }),
+      expect.objectContaining({
+        data: { placeOrder: expect.objectContaining({ discountAmount: '5.00', total: '6.00' }) },
+      }),
+    ]),
+  );
+  expect(
+    await database.discount.findUniqueOrThrow({
+      where: { ...categoryScope, id: oneUse.id },
+      select: { redeemedCount: true },
+    }),
+  ).toEqual({ redeemedCount: 1 });
 
   await database.shopperSession.update({
     where: { ...categoryScope, tokenHash: createHash('sha256').update(token).digest('hex') },

@@ -46,6 +46,8 @@ fragment OperatorOrderDetail on Order {
     lineTotal
   }
   subtotal
+  discountCode
+  discountAmount
   shippingFee
   total
   currency

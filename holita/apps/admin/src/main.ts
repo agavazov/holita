@@ -14,6 +14,8 @@ import { CustomerAddressEditor } from './customers/customer-address-editor';
 import { CustomerContactEditor } from './customers/customer-contact-editor';
 import { CustomerDetail } from './customers/customer-detail';
 import { CustomersPage } from './customers/customers-page';
+import { DiscountEditor } from './discounts/discount-editor';
+import { DiscountsPage } from './discounts/discounts-page';
 import { InventoryEditor } from './inventory/inventory-editor';
 import { InventoryPage } from './inventory/inventory-page';
 import { OptionEditor } from './options/option-editor';
@@ -214,6 +216,24 @@ void startOperator({
         },
       ],
     },
+    {
+      path: 'discounts',
+      component: DiscountsPage,
+      children: [
+        {
+          path: 'new',
+          component: DiscountEditor,
+          data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: ':recordId',
+          component: DiscountEditor,
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
     { path: 'customers', component: CustomersPage },
     {
       path: 'customers/:recordId',
@@ -255,6 +275,7 @@ void startOperator({
     },
     { id: 'badges', label: 'badges', icon: 'tag', path: 'badges' },
     { id: 'orders', label: 'orders', icon: 'truck', path: 'orders' },
+    { id: 'discounts', label: 'discounts', icon: 'tags', path: 'discounts' },
     { id: 'customers', label: 'customers', icon: 'users', path: 'customers' },
   ],
 }).catch((error: unknown) => {

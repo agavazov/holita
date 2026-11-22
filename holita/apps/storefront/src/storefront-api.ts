@@ -1,9 +1,11 @@
 import { inject, Injectable } from '@angular/core';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import type { TypedDocumentNode } from '@graphql-typed-document-node/core';
 import { Apollo } from 'apollo-angular';
 import { firstValueFrom } from 'rxjs';
 import {
   AddCartLineDocument,
+  ApplyCartDiscountDocument,
   CatalogueBrandIndexDocument,
   CatalogueBrandProductsDocument,
   CatalogueCategoriesDocument,
@@ -21,6 +23,7 @@ import {
   PublicShopDocument,
   QuoteCheckoutDocument,
   RegisterShopperDocument,
+  RemoveCartDiscountDocument,
   RemoveCartLineDocument,
   ShopperMeDocument,
   ShopperOrderDocument,
@@ -52,6 +55,32 @@ export interface BrowseIndex {
 export interface StorefrontCredentials {
   readonly shopperToken?: string | null;
   readonly guestCartToken?: string | null;
+}
+
+export interface StorefrontFieldError {
+  path: string;
+  code: string;
+}
+
+export function storefrontFieldErrors(error: unknown): StorefrontFieldError[] {
+  if (!CombinedGraphQLErrors.is(error)) {
+    return [];
+  }
+  return error.errors.flatMap(({ extensions }) => {
+    const fields = extensions?.['fieldErrors'];
+    if (!Array.isArray(fields)) {
+      return [];
+    }
+    return fields.filter(
+      (field: unknown): field is StorefrontFieldError =>
+        typeof field === 'object' &&
+        field !== null &&
+        'path' in field &&
+        typeof field.path === 'string' &&
+        'code' in field &&
+        typeof field.code === 'string',
+    );
+  });
 }
 
 function requestHeaders(shopId: string, credentials: StorefrontCredentials) {
@@ -216,6 +245,16 @@ export class StorefrontApi {
   async removeCartLine(shopId: string, credentials: StorefrontCredentials, lineId: string) {
     return (await this.write(shopId, RemoveCartLineDocument, { lineId }, credentials))
       .removeCartLine;
+  }
+
+  async applyCartDiscount(shopId: string, credentials: StorefrontCredentials, code: string) {
+    return (await this.write(shopId, ApplyCartDiscountDocument, { code }, credentials))
+      .applyCartDiscount;
+  }
+
+  async removeCartDiscount(shopId: string, credentials: StorefrontCredentials) {
+    return (await this.write(shopId, RemoveCartDiscountDocument, {}, credentials))
+      .removeCartDiscount;
   }
 
   async checkout(shopId: string, credentials: StorefrontCredentials) {

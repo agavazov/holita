@@ -1,0 +1,41 @@
+fragment OperatorDiscountFields on Discount {
+  id
+  code
+  type
+  value
+  currency
+  enabled
+  startsAt
+  endsAt
+  minSubtotal
+  usageLimit
+  redeemedCount
+}
+
+query OperatorDiscounts($offset: Int!, $limit: Int!, $search: String, $sort: DiscountSort) {
+  discounts(offset: $offset, limit: $limit, search: $search, sort: $sort) {
+    items {
+      ...OperatorDiscountFields
+    }
+    total
+    currency
+  }
+}
+
+query OperatorDiscount($id: ID!) {
+  discount(id: $id) {
+    ...OperatorDiscountFields
+  }
+}
+
+mutation OperatorCreateDiscount($input: DiscountInput!) {
+  createDiscount(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateDiscount($id: ID!, $input: DiscountInput!) {
+  updateDiscount(id: $id, input: $input) {
+    id
+  }
+}

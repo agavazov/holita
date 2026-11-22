@@ -18,6 +18,7 @@ export class DatabaseService implements OnModuleDestroy {
       | 'productTagAssignment'
       | 'productCollectionItem'
       | 'cartLine'
+      | 'discount'
       | 'order'
       | 'orderLine',
   ): Prisma.Sql {

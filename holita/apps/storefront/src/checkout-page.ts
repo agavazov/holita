@@ -21,10 +21,20 @@ import {
   type AbstractControl,
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { CartState, rememberGuestReceipt } from './cart-state';
+import {
+  CartState,
+  promoProblems,
+  promoRejection,
+  rememberGuestReceipt,
+  type PromoProblem,
+} from './cart-state';
 import { checkoutCountries, defaultCountryCode } from './checkout-countries';
-import { StorefrontApi, type StorefrontCredentials } from './storefront-api';
+import {
+  StorefrontApi,
+  storefrontFieldErrors,
+  type StorefrontCredentials,
+  type StorefrontFieldError,
+} from './storefront-api';
 import { messages, type Language } from './storefront-messages';
 import { formatStorefrontMoney } from './storefront-money';
 import type { QuoteCheckoutMutation } from './generated/operations';
@@ -41,32 +51,6 @@ const addressFields = [
   { name: 'line1', label: 'addressLine1', autocomplete: 'address-line1' },
   { name: 'line2', label: 'addressLine2', autocomplete: 'address-line2' },
 ] as const;
-
-interface CheckoutFieldError {
-  path: string;
-  code: string;
-}
-
-function checkoutFieldErrors(error: unknown): CheckoutFieldError[] {
-  if (!CombinedGraphQLErrors.is(error)) {
-    return [];
-  }
-  return error.errors.flatMap(({ extensions }) => {
-    const fields = extensions?.['fieldErrors'];
-    if (!Array.isArray(fields)) {
-      return [];
-    }
-    return fields.filter(
-      (field: unknown): field is CheckoutFieldError =>
-        typeof field === 'object' &&
-        field !== null &&
-        'path' in field &&
-        typeof field.path === 'string' &&
-        'code' in field &&
-        typeof field.code === 'string',
-    );
-  });
-}
 
 type CheckoutProblem =
   | 'checkoutEmptyCart'
@@ -147,15 +131,8 @@ export class CheckoutPage {
   private readonly reviewed = signal<ReviewedCheckout | null>(null);
   protected readonly quote = computed(() => this.reviewed()?.quote ?? null);
   protected readonly problem = signal<CheckoutProblem | null>(null);
-  protected readonly needsCartReview = computed(() => {
-    const problem = this.problem();
-    return (
-      problem === 'checkoutCartChanged' ||
-      problem === 'checkoutEmptyCart' ||
-      problem === 'checkoutStockChanged'
-    );
-  });
-  private readonly rejectedFields = signal<readonly CheckoutFieldError[]>([]);
+  private readonly rejectedPromo = signal<PromoProblem | null>(null);
+  private readonly rejectedFields = signal<readonly StorefrontFieldError[]>([]);
   private readonly request = resource({
     params: () => this.cartState.shopId(),
     loader: async ({ params: shopId, abortSignal }) => {
@@ -172,7 +149,7 @@ export class CheckoutPage {
         abortSignal.throwIfAborted();
         if (
           this.cartState.expireSession(shopId, credentials, error) ||
-          checkoutFieldErrors(error).some(({ code }) => code === 'CART_NOT_FOUND')
+          storefrontFieldErrors(error).some(({ code }) => code === 'CART_NOT_FOUND')
         ) {
           return null;
         }
@@ -188,6 +165,26 @@ export class CheckoutPage {
   protected readonly blocked = computed(
     () => !!this.checkout()?.cart.lines.some(({ issue }) => issue !== null),
   );
+  protected readonly promoProblem = computed(() => {
+    const issue = this.checkout()?.cart.discount?.issue;
+    return this.rejectedPromo() ?? (issue ? promoProblems[issue] : null);
+  });
+  protected readonly needsCartReview = computed(() => {
+    const problem = this.problem();
+    return (
+      !!this.promoProblem() ||
+      problem === 'checkoutCartChanged' ||
+      problem === 'checkoutEmptyCart' ||
+      problem === 'checkoutStockChanged'
+    );
+  });
+  protected readonly discount = computed(() => {
+    const quote = this.quote();
+    if (quote) {
+      return quote.discountCode ? { code: quote.discountCode, amount: quote.discountAmount } : null;
+    }
+    return this.promoProblem() ? null : (this.checkout()?.cart.discount ?? null);
+  });
   private readonly paymentId = toSignal(this.form.controls.paymentMethodId.valueChanges);
   protected readonly selectedPayment = computed(
     () =>
@@ -256,7 +253,7 @@ export class CheckoutPage {
   }
 
   protected async review() {
-    if (this.busy() || this.blocked()) {
+    if (this.busy() || this.blocked() || this.promoProblem()) {
       return;
     }
     this.problem.set(null);
@@ -323,12 +320,19 @@ export class CheckoutPage {
   }
 
   private showRejection(error: unknown, fallback: 'checkoutQuoteFailed' | 'orderPlacementFailed') {
-    const errors = checkoutFieldErrors(error);
+    const errors = storefrontFieldErrors(error);
+    const promo = errors.map(({ code }) => promoRejection(code)).find((value) => value !== null);
     const problem = errors.map(({ code }) => cartProblem(code)).find((value) => value !== null);
     const formErrors = errors.filter(({ path }) => this.form.get(path));
-    if (problem) {
+    if (promo) {
+      this.reviewed.set(null);
+      this.rejectedPromo.set(promo);
+    } else if (problem) {
       this.reviewed.set(null);
       this.problem.set(problem);
+      if (problem === 'checkoutQuoteChanged') {
+        this.request.reload();
+      }
     } else if (formErrors.length) {
       this.reviewed.set(null);
       this.rejectedFields.set(formErrors);

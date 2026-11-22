@@ -11,7 +11,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { StorefrontApi, type StorefrontCredentials } from './storefront-api';
+import { StorefrontApi, storefrontFieldErrors, type StorefrontCredentials } from './storefront-api';
 import type { PublicCartFieldsFragment } from './generated/operations';
 
 export const maxCartQuantity = 2_147_483_647;
@@ -57,22 +57,40 @@ export function rememberGuestReceipt(shopId: string, orderId: string, token: str
 }
 
 export type CartWriteError = 'cartUnavailable' | 'cartInsufficientStock' | 'cartUpdateFailed';
-type CartWriteResult = 'ok' | 'expired' | CartWriteError;
+type CartDiscount = NonNullable<PublicCartFieldsFragment['discount']>;
 
-function fieldProblem(error: unknown, code: string): boolean {
+export const promoProblems = {
+  INVALID: 'promoInvalid',
+  NOT_STARTED: 'promoNotStarted',
+  EXPIRED: 'promoExpired',
+  MINIMUM_NOT_MET: 'promoMinimumNotMet',
+  EXHAUSTED: 'promoExhausted',
+} as const satisfies Record<NonNullable<CartDiscount['issue']>, string>;
+export type PromoProblem = (typeof promoProblems)[keyof typeof promoProblems];
+export type PromoWriteError = PromoProblem | 'promoUpdateFailed';
+
+export function promoRejection(code: string): PromoProblem | null {
+  return Object.entries(promoProblems).find(([issue]) => code === `PROMO_${issue}`)?.[1] ?? null;
+}
+
+function cartWriteError(error: unknown): CartWriteError {
+  const fields = storefrontFieldErrors(error);
+  if (fields.some(({ code }) => code === 'INSUFFICIENT_STOCK')) {
+    return 'cartInsufficientStock';
+  }
+  return fields.some(({ code }) => code === 'UNAVAILABLE') ? 'cartUnavailable' : 'cartUpdateFailed';
+}
+
+function promoWriteError(error: unknown): PromoWriteError {
   return (
-    CombinedGraphQLErrors.is(error) &&
-    error.errors.some(({ extensions }) => {
-      const fields = extensions?.['fieldErrors'];
-      return (
-        Array.isArray(fields) &&
-        fields.some(
-          (field: unknown) =>
-            typeof field === 'object' && field !== null && 'code' in field && field.code === code,
-        )
-      );
-    })
+    storefrontFieldErrors(error)
+      .map(({ code }) => promoRejection(code))
+      .find((problem) => problem !== null) ?? 'promoUpdateFailed'
   );
+}
+
+function cartNotFound(error: unknown): boolean {
+  return storefrontFieldErrors(error).some(({ code }) => code === 'CART_NOT_FOUND');
 }
 
 @Injectable()
@@ -101,7 +119,7 @@ export class CartState {
         if (this.expireSession(shopId, credentials, error)) {
           return null;
         }
-        if (credentials.guestCartToken && fieldProblem(error, 'CART_NOT_FOUND')) {
+        if (credentials.guestCartToken && cartNotFound(error)) {
           forgetGuestCart(shopId, credentials.guestCartToken);
           return this.api.cart(shopId, this.credentials(shopId));
         }
@@ -124,21 +142,46 @@ export class CartState {
   }
 
   add(variantId: string, quantity: number) {
-    return this.write((shop, credentials) =>
-      this.api.addCartLine(shop, credentials, variantId, quantity),
+    return this.write(
+      (shop, credentials) => this.api.addCartLine(shop, credentials, variantId, quantity),
+      cartWriteError,
     );
   }
 
   update(lineId: string, quantity: number) {
-    return this.write(async (shop, credentials) => ({
-      cart: await this.api.updateCartLine(shop, credentials, lineId, quantity),
-    }));
+    return this.write(
+      async (shop, credentials) => ({
+        cart: await this.api.updateCartLine(shop, credentials, lineId, quantity),
+      }),
+      cartWriteError,
+    );
   }
 
   remove(lineId: string) {
-    return this.write(async (shop, credentials) => ({
-      cart: await this.api.removeCartLine(shop, credentials, lineId),
-    }));
+    return this.write(
+      async (shop, credentials) => ({
+        cart: await this.api.removeCartLine(shop, credentials, lineId),
+      }),
+      cartWriteError,
+    );
+  }
+
+  applyDiscount(code: string) {
+    return this.write(
+      async (shop, credentials) => ({
+        cart: await this.api.applyCartDiscount(shop, credentials, code),
+      }),
+      promoWriteError,
+    );
+  }
+
+  removeDiscount() {
+    return this.write(
+      async (shop, credentials) => ({
+        cart: await this.api.removeCartDiscount(shop, credentials),
+      }),
+      promoWriteError,
+    );
   }
 
   credentials(shopId: string): StorefrontCredentials {
@@ -165,7 +208,7 @@ export class CartState {
     return true;
   }
 
-  private async write(
+  private async write<Failure extends string>(
     send: (
       shopId: string,
       credentials: StorefrontCredentials,
@@ -173,7 +216,8 @@ export class CartState {
       cart: PublicCartFieldsFragment;
       guestCartToken?: string | null;
     }>,
-  ): Promise<CartWriteResult> {
+    writeError: (error: unknown) => Failure,
+  ): Promise<'ok' | 'expired' | Failure> {
     this.pending.set(true);
     const shop = this.shopId();
     const credentials = this.credentials(shop);
@@ -192,16 +236,13 @@ export class CartState {
         this.request.set(null);
         return 'expired';
       }
-      if (credentials.guestCartToken && fieldProblem(error, 'CART_NOT_FOUND')) {
+      if (credentials.guestCartToken && cartNotFound(error)) {
         forgetGuestCart(shop, credentials.guestCartToken);
         if (active()) {
           this.refreshOwner();
         }
       }
-      if (fieldProblem(error, 'INSUFFICIENT_STOCK')) {
-        return 'cartInsufficientStock';
-      }
-      return fieldProblem(error, 'UNAVAILABLE') ? 'cartUnavailable' : 'cartUpdateFailed';
+      return writeError(error);
     } finally {
       if (active()) {
         this.pending.set(false);

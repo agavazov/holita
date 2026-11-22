@@ -90,6 +90,15 @@
   text-align: end;
 }
 
+.checkout-promo-code {
+  display: block;
+  white-space: normal;
+}
+
+.checkout-saving {
+  color: var(--shop-chip-success-ink);
+}
+
 .checkout-total :is(dt, dd) {
   color: var(--shop-ink);
   font: 600 1.375rem / 1.2 var(--shop-serif);

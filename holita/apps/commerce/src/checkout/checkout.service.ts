@@ -2,7 +2,9 @@ import { BadRequestException, Injectable, UnprocessableEntityException } from '@
 import { normalizedEmail, userName } from '@osnova/auth';
 import { isUUID } from 'class-validator';
 import { hash } from 'node:crypto';
+import type { CartSelection } from '../cart/cart.repository.js';
 import { CartPrice, CartService, type CartContext } from '../cart/cart.service.js';
+import { promoError } from '../discounts/discounts.service.js';
 import type {
   Cart,
   CheckoutQuote,
@@ -12,8 +14,7 @@ import type {
 import type { Prisma } from '../generated/prisma/client.js';
 import type { Scope } from '../scope.js';
 import { CheckoutRepository } from './checkout.repository.js';
-
-export const checkoutCurrency = 'BGN';
+import { checkoutCurrency } from './currency.js';
 
 export function checkoutError(path: string, code: string, message: string) {
   return new UnprocessableEntityException({ message, fieldErrors: [{ path, code, message }] });
@@ -150,7 +151,7 @@ export class CheckoutService {
   async quoteCart(
     tx: Prisma.TransactionClient,
     scope: Scope,
-    { id: cartId, cart }: { id: string; cart: Cart },
+    { id: cartId, discountId, cart }: CartSelection & { cart: Cart },
     input: CheckoutQuoteInput,
   ) {
     if (!cart.lines.length) {
@@ -158,6 +159,9 @@ export class CheckoutService {
     }
     if (cart.lines.some(({ available }) => !available)) {
       throw checkoutError('cart', 'CHECKOUT_CART_CHANGED', 'Review the cart before checkout');
+    }
+    if (cart.discount?.issue) {
+      throw promoError(cart.discount.issue);
     }
     const { contact, shippingAddress } = validateOrderContact(input);
     const paymentMethod = await this.paymentMethod(
@@ -171,6 +175,8 @@ export class CheckoutService {
       this.shippingMethodId(input.shippingMethodId),
     );
     const shippingFee = shippingMethod.fixedFee.toFixed(2);
+    const discountCode = cart.discount?.code ?? null;
+    const discountAmount = cart.discount?.amount ?? '0.00';
     const terms = [
       cartId,
       cart.lines.map(({ variantId, quantity, unitPrice, name, optionLabels }) => [
@@ -182,6 +188,7 @@ export class CheckoutService {
       ]),
       [paymentMethod.id, paymentMethod.label, paymentMethod.instructions],
       [shippingMethod.id, shippingMethod.label, shippingFee],
+      [discountId, discountCode, discountAmount],
       checkoutCurrency,
     ];
     const quote: CheckoutQuote = {
@@ -192,8 +199,10 @@ export class CheckoutService {
       shippingMethod: { ...shippingMethod, fixedFee: shippingFee },
       currency: checkoutCurrency,
       subtotal: cart.subtotal,
+      discountCode,
+      discountAmount,
       shippingFee,
-      total: new CartPrice(cart.subtotal).plus(shippingFee).toFixed(2),
+      total: new CartPrice(cart.discountedSubtotal).plus(shippingFee).toFixed(2),
     };
     return { quote, contact, shippingAddress };
   }

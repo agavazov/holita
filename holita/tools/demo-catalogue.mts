@@ -180,6 +180,11 @@ export const demoPaymentMethod = {
 };
 export const demoShippingMethod = { label: 'Доставка до адрес', fixedFee: '6.00' };
 
+export const demoDiscounts = [
+  { id: 1, code: 'HOME10', value: '10.00', minSubtotal: '40.00', endsAt: null },
+  { id: 2, code: 'OLD10', value: '10.00', minSubtotal: null, endsAt: '2025-01-01T00:00:00Z' },
+] as const;
+
 export const demoManualOrder = {
   id: 6,
   placedAt: '2026-11-22T11:00:00Z',

@@ -11,6 +11,7 @@ import {
   demoCharacteristicGroups,
   demoCollections,
   demoCustomerDetail,
+  demoDiscounts,
   demoInvoice,
   demoManualOrder,
   demoOptions,
@@ -83,6 +84,7 @@ async function seedCatalogue(): Promise<void> {
   let badgesInserted = 0;
   let tagsInserted = 0;
   let markerAssignmentsInserted = 0;
+  let discountsInserted = 0;
   await client.connect();
   try {
     await client.query('BEGIN');
@@ -402,6 +404,14 @@ async function seedCatalogue(): Promise<void> {
         demoShippingMethod.fixedFee,
       ],
     );
+    for (const { id, code, value, minSubtotal, endsAt } of demoDiscounts) {
+      const { rowCount } = await client.query(
+        `INSERT INTO "discount" ("id", "tenantId", "branchId", "code", "type", "value", "enabled", "minSubtotal", "endsAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, 'percentage', $5, true, $6, $7, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
+        [fixtureId('da', id), tenantId, branchId, code, value, minSubtotal, endsAt],
+      );
+      discountsInserted += rowCount ?? 0;
+    }
     for (const order of demoOrders) {
       await seedShopperOrder(client, tenantId, branchId, demoShopper, order);
     }
@@ -415,6 +425,7 @@ async function seedCatalogue(): Promise<void> {
     console.log(
       `Demo product markers inserted ${String(badgesInserted)} badges, ${String(tagsInserted)} tags and ${String(markerAssignmentsInserted)} assignments.`,
     );
+    console.log(`Demo discounts inserted ${String(discountsInserted)} codes.`);
   } finally {
     await client.end();
   }

@@ -456,6 +456,48 @@ type OrderStatusChange {
   toStatus: OrderStatus!
   occurredAt: String!
 }
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+enum DiscountSortField {
+  CODE
+  ENABLED
+}
+input DiscountSort {
+  field: DiscountSortField! = CODE
+  direction: SortDirection! = ASC
+}
+input DiscountInput {
+  code: String!
+  type: DiscountType!
+  value: String!
+  enabled: Boolean!
+  startsAt: String
+  endsAt: String
+  minSubtotal: String
+  usageLimit: Int
+}
+type Discount {
+  id: ID!
+  code: String!
+  type: DiscountType!
+  value: String!
+  enabled: Boolean!
+  startsAt: String
+  endsAt: String
+  minSubtotal: String
+  usageLimit: Int
+  redeemedCount: Int!
+  currency: String!
+}
+type DiscountPage {
+  items: [Discount!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+  currency: String!
+}
 type Order {
   id: ID!
   number: String!
@@ -471,6 +513,8 @@ type Order {
   lines: [OrderLine!]!
   currency: String!
   subtotal: String!
+  discountCode: String
+  discountAmount: String!
   shippingFee: String!
   total: String!
   statusChanges: [OrderStatusChange!]!
@@ -670,6 +714,8 @@ type Query {
   "Shop badges for the product editor, including inactive badges."
   productBadgeChoices: [ProductBadge!]!
   productTags(search: String, limit: Int! = 20): [ProductTag!]!
+  discounts(offset: Int! = 0, limit: Int! = 20, search: String, sort: DiscountSort): DiscountPage!
+  discount(id: ID!): Discount
   orders(
     offset: Int! = 0
     limit: Int! = 20
@@ -708,6 +754,8 @@ type Mutation {
   createProductBadge(input: ProductBadgeInput!): ProductBadge!
   updateProductBadge(id: ID!, input: ProductBadgeInput!): ProductBadge!
   createProductTag(name: String!): ProductTag!
+  createDiscount(input: DiscountInput!): Discount!
+  updateDiscount(id: ID!, input: DiscountInput!): Discount!
   createManualOrder(input: ManualOrderInput!): Order!
   updateManualOrder(id: ID!, input: ManualOrderUpdateInput!): Order!
   updateOrderStatus(id: ID!, status: OrderStatus!): Order!

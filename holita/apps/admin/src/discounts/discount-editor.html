@@ -1,0 +1,192 @@
+<osnova-route-drawer
+  [title]="editing ? text().editDiscount : text().newDiscount"
+  [subtitle]="discount()?.code ?? null"
+  [state]="state()"
+  [errorText]="text().discountsUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="record.reload()"
+>
+  <form id="discount-editor-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
+    <section class="app-form-section">
+      @let codeError = fieldError('code');
+      <osnova-form-field
+        controlId="discount-code"
+        [label]="text().discountCode"
+        [required]="true"
+        [hint]="text().discountCodeHint"
+        [error]="codeError"
+      >
+        <input
+          pInputText
+          id="discount-code"
+          formControlName="code"
+          autocomplete="off"
+          spellcheck="false"
+          aria-required="true"
+          aria-describedby="discount-code-hint discount-code-error"
+          [invalid]="!!codeError"
+          [attr.aria-invalid]="!!codeError"
+          (input)="clearError('code')"
+        />
+      </osnova-form-field>
+      <div class="app-form-grid">
+        @let typeError = fieldError('type');
+        <osnova-form-field
+          controlId="discount-type"
+          [label]="text().discountType"
+          [error]="typeError"
+        >
+          <p-select
+            inputId="discount-type"
+            ariaLabelledBy="discount-type-label"
+            formControlName="type"
+            [options]="typeOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [invalid]="!!typeError"
+            [pt]="{ label: { 'aria-invalid': !!typeError, 'aria-describedby': 'discount-type-error' } }"
+            (onChange)="clearError('type')"
+          />
+        </osnova-form-field>
+        @let valueError = fieldError('value');
+        <osnova-form-field
+          controlId="discount-value"
+          [label]="text().discountValue + ' (' + valueUnit() + ')'"
+          [required]="true"
+          [error]="valueError"
+        >
+          <input
+            pInputText
+            id="discount-value"
+            inputmode="decimal"
+            formControlName="value"
+            aria-required="true"
+            aria-describedby="discount-value-error"
+            [invalid]="!!valueError"
+            [attr.aria-invalid]="!!valueError"
+            (input)="clearError('value')"
+          />
+        </osnova-form-field>
+        @let enabledError = fieldError('enabled');
+        <osnova-form-field
+          controlId="discount-enabled"
+          [label]="text().status"
+          [error]="enabledError"
+        >
+          <p-select
+            inputId="discount-enabled"
+            ariaLabelledBy="discount-enabled-label"
+            formControlName="enabled"
+            [options]="statusOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [invalid]="!!enabledError"
+            [pt]="{ label: { 'aria-invalid': !!enabledError, 'aria-describedby': 'discount-enabled-error' } }"
+            (onChange)="clearError('enabled')"
+          />
+        </osnova-form-field>
+      </div>
+    </section>
+    <section class="app-form-section" aria-labelledby="discount-eligibility">
+      <h3 id="discount-eligibility">{{ text().discountEligibility }}</h3>
+      <div class="app-form-grid">
+        @let startsAtError = fieldError('startsAt');
+        <osnova-form-field
+          controlId="discount-startsAt"
+          [label]="text().discountStartsAt"
+          [hint]="dateHint()"
+          [error]="startsAtError"
+        >
+          <input
+            pInputText
+            id="discount-startsAt"
+            formControlName="startsAt"
+            autocomplete="off"
+            aria-describedby="discount-startsAt-hint discount-startsAt-error"
+            [invalid]="!!startsAtError"
+            [attr.aria-invalid]="!!startsAtError"
+            (input)="clearError('startsAt')"
+          />
+        </osnova-form-field>
+        @let endsAtError = fieldError('endsAt');
+        <osnova-form-field
+          controlId="discount-endsAt"
+          [label]="text().discountEndsAt"
+          [hint]="dateHint()"
+          [error]="endsAtError"
+        >
+          <input
+            pInputText
+            id="discount-endsAt"
+            formControlName="endsAt"
+            autocomplete="off"
+            aria-describedby="discount-endsAt-hint discount-endsAt-error"
+            [invalid]="!!endsAtError"
+            [attr.aria-invalid]="!!endsAtError"
+            (input)="clearError('endsAt')"
+          />
+        </osnova-form-field>
+        @let minSubtotalError = fieldError('minSubtotal');
+        <osnova-form-field
+          controlId="discount-minSubtotal"
+          [label]="text().discountMinSubtotal + ' (' + currency() + ')'"
+          [error]="minSubtotalError"
+        >
+          <input
+            pInputText
+            id="discount-minSubtotal"
+            inputmode="decimal"
+            formControlName="minSubtotal"
+            aria-describedby="discount-minSubtotal-error"
+            [invalid]="!!minSubtotalError"
+            [attr.aria-invalid]="!!minSubtotalError"
+            (input)="clearError('minSubtotal')"
+          />
+        </osnova-form-field>
+        @let usageLimitError = fieldError('usageLimit');
+        <osnova-form-field
+          controlId="discount-usageLimit"
+          [label]="text().discountUsageLimit"
+          [error]="usageLimitError"
+        >
+          <input
+            pInputText
+            id="discount-usageLimit"
+            inputmode="numeric"
+            formControlName="usageLimit"
+            aria-describedby="discount-usageLimit-error"
+            [invalid]="!!usageLimitError"
+            [attr.aria-invalid]="!!usageLimitError"
+            (input)="clearError('usageLimit')"
+          />
+        </osnova-form-field>
+      </div>
+      @if (editing) {
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().discountUses }}</dt>
+          <dd class="app-num">{{ uses() }}</dd>
+        </div>
+      </dl>
+      } @if (saveError()) {
+      <p-message severity="error">{{ text().discountSaveFailed }}</p-message>
+      }
+    </section>
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="discount-editor-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+  </div>
+</osnova-route-drawer>

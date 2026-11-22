@@ -1,6 +1,7 @@
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type {
   MutationAddCartLineArgs,
+  MutationApplyCartDiscountArgs,
   MutationRemoveCartLineArgs,
   MutationUpdateCartLineArgs,
 } from '../generated/graphql/storefront-types.js';
@@ -40,5 +41,18 @@ export class CartResolver {
   @Mutation('removeCartLine')
   async remove(@Context() context: StorefrontContext, @Args() args: MutationRemoveCartLineArgs) {
     return this.carts.remove(await this.storefront.cartContext(context), args.lineId);
+  }
+
+  @Mutation('applyCartDiscount')
+  async applyDiscount(
+    @Context() context: StorefrontContext,
+    @Args() { code }: MutationApplyCartDiscountArgs,
+  ) {
+    return this.carts.applyDiscount(await this.storefront.cartContext(context), code);
+  }
+
+  @Mutation('removeCartDiscount')
+  async removeDiscount(@Context() context: StorefrontContext) {
+    return this.carts.removeDiscount(await this.storefront.cartContext(context));
   }
 }

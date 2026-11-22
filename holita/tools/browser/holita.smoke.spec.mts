@@ -1324,7 +1324,42 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
        VALUES ($1, $2, $3, $4, $5, true, CURRENT_TIMESTAMP)`,
       [shippingId, shopScope.tenantId, shopId, shippingLabel, '6.50'],
     );
-    const reviewCheckout = async (page: Page, subtotal: string, total: string) => {
+    const discountCode = 'SMOKE10';
+    await merchant.getByRole('link', { name: 'Discounts', exact: true }).click();
+    await merchant.getByRole('button', { name: 'New discount', exact: true }).click();
+    await merchant.locator('#discount-code').fill(discountCode.toLowerCase());
+    await merchant.locator('#discount-value').fill('10');
+    await merchant.locator('#discount-enabled').click();
+    await merchant.getByRole('option', { name: 'Enabled', exact: true }).click();
+    await merchant.locator('#discount-usageLimit').fill('1');
+    const createdDiscount = waitForCart(merchant, 'OperatorCreateDiscount');
+    const savedDiscounts = waitForCart(merchant, 'OperatorDiscounts');
+    await merchant.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+    expect(await (await createdDiscount).json()).toMatchObject({
+      data: { createDiscount: { id: expect.any(String) } },
+    });
+    expect(await (await savedDiscounts).json()).toMatchObject({
+      data: {
+        discounts: {
+          items: [{ code: discountCode, enabled: true, usageLimit: 1, redeemedCount: 0 }],
+        },
+      },
+    });
+    const applyPromo = async (page: Page): Promise<unknown> => {
+      await page.getByRole('textbox', { name: 'Promo code', exact: true }).fill(discountCode);
+      const applied = waitForCart(page, 'ApplyCartDiscount');
+      await page.getByRole('button', { name: 'Apply promo code', exact: true }).click();
+      return (await applied).json();
+    };
+    const reviewCheckout = async (
+      page: Page,
+      subtotal: string,
+      total: string,
+      discount: { discountCode: string | null; discountAmount: string } = {
+        discountCode: null,
+        discountAmount: '0.00',
+      },
+    ) => {
       await page.getByRole('link', { name: 'Checkout', exact: true }).click();
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Shopper');
       await page.getByRole('textbox', { name: 'Email', exact: true }).fill(shopperEmail);
@@ -1340,7 +1375,9 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       const quoted = waitForCart(page, 'QuoteCheckout');
       await page.getByRole('button', { name: 'Review total', exact: true }).click();
       expect(await (await quoted).json()).toMatchObject({
-        data: { quoteCheckout: { subtotal, shippingFee: '6.50', total, currency: 'BGN' } },
+        data: {
+          quoteCheckout: { subtotal, shippingFee: '6.50', total, currency: 'BGN', ...discount },
+        },
       });
     };
     await reviewCheckout(shopper, '30.00', '36.50');
@@ -1473,13 +1510,45 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await shopper.goto(configuredProductUrl);
     await addSatin();
     await shopper.getByRole('link', { name: 'Cart, 1 item', exact: true }).click();
-    await reviewCheckout(shopper, '30.00', '36.50');
+    const discountedCart = {
+      discount: { code: discountCode, amount: '3.00', issue: null },
+      discountedSubtotal: '27.00',
+    };
+    expect(await applyPromo(shopper)).toMatchObject({
+      data: { applyCartDiscount: discountedCart },
+    });
+    const removedPromo = waitForCart(shopper, 'RemoveCartDiscount');
+    await shopper.getByRole('button', { name: 'Remove promo code', exact: true }).click();
+    expect(await (await removedPromo).json()).toMatchObject({
+      data: { removeCartDiscount: { discount: null, discountedSubtotal: '30.00' } },
+    });
+    expect(await applyPromo(shopper)).toMatchObject({
+      data: { applyCartDiscount: discountedCart },
+    });
+    const discountedQuote = { discountCode, discountAmount: '3.00' };
+    const chargedTotal = '33.50';
+    await reviewCheckout(shopper, '30.00', chargedTotal, discountedQuote);
+    const placedDiscounted = waitForCart(shopper, 'PlaceOrder');
     await shopper.getByRole('button', { name: 'Place order', exact: true }).click();
     await shopper.waitForURL(`${shopApp.origin}/s/${shopId}/checkout/confirmation/*`);
     const accountOrderId = new URL(shopper.url()).pathname.split('/').at(-1);
     if (!accountOrderId) {
       throw new Error('Missing account order ID in the confirmation route');
     }
+    expect(await (await placedDiscounted).json()).toMatchObject({
+      data: { placeOrder: { id: accountOrderId, total: chargedTotal, ...discountedQuote } },
+    });
+    await guestOrder.goto(cartUrl);
+    expect(await applyPromo(guestOrder)).toMatchObject({
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'code', code: 'PROMO_EXHAUSTED' }],
+          },
+        },
+      ],
+    });
     const orderNumber = `H-${accountOrderId}`;
     await shopper.getByRole('link', { name: 'My account' }).click();
     const orders = waitForCart(shopper, 'ShopperOrders');
@@ -1501,7 +1570,8 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       currency: 'BGN',
       subtotal: '30.00',
       shippingFee: '6.50',
-      total: '36.50',
+      total: chargedTotal,
+      ...discountedQuote,
     };
     expect(await (await detail).json()).toMatchObject({
       data: { shopperOrder: accountOrderSnapshot },
@@ -1509,7 +1579,11 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const accountReceiptUrl = shopper.url();
 
     await merchant.getByRole('link', { name: 'Orders', exact: true }).click();
+    const operatorDiscountedOrder = waitForCart(merchant, 'OperatorOrder');
     await merchant.getByRole('link', { name: `Open order · ${orderNumber}` }).click();
+    expect(await (await operatorDiscountedOrder).json()).toMatchObject({
+      data: { order: { id: accountOrderId, total: chargedTotal, ...discountedQuote } },
+    });
     await merchant.getByRole('button', { name: 'Update status', exact: true }).click();
     await merchant.locator('#order-status').click();
     await merchant.getByRole('option', { name: 'Confirmed', exact: true }).click();
@@ -1559,7 +1633,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
           number: invoiceNumber,
           subtotal: '30.00',
           shippingFee: '6.50',
-          total: '36.50',
+          total: chargedTotal,
           lines: [{ sku: 'CONFIG-Satin', quantity: 1, unitPrice: '30.00', lineTotal: '30.00' }],
         },
       },
@@ -1574,7 +1648,8 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
           status: 'CONFIRMED',
           paymentStatus: 'PAID',
           shippingFee: '6.50',
-          total: '36.50',
+          total: chargedTotal,
+          ...discountedQuote,
         },
       },
     });
@@ -1625,14 +1700,14 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         orderRefundSummary: {
           status: 'PARTIAL',
           refundedAmount: '12.00',
-          refundableAmount: '24.50',
+          refundableAmount: '21.50',
         },
       },
     });
     expect(
       await refundRouter(
         'mutation($orderId:ID!,$input:RecordOrderRefundInput!){recordOrderRefund(orderId:$orderId,input:$input){id}}',
-        { orderId: accountOrderId, input: { amount: '24.51' } },
+        { orderId: accountOrderId, input: { amount: '21.51' } },
       ),
     ).toMatchObject({
       errors: [
@@ -1645,17 +1720,21 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       ],
     });
     await openRefund();
-    await merchant.locator('#refund-amount').fill('24.50');
+    await merchant.locator('#refund-amount').fill('21.50');
     await merchant.locator('#refund-restock').check();
     const full = waitForCart(merchant, 'OperatorOrder').then((response) => response.json());
     expect(await submitRefund()).toMatchObject({
-      data: { recordOrderRefund: { amount: '24.50', currency: 'BGN', restock: true } },
+      data: { recordOrderRefund: { amount: '21.50', currency: 'BGN', restock: true } },
     });
     await merchant.waitForURL((url) => url.pathname.endsWith(accountOrderId));
     expect(await full).toMatchObject({
       data: {
         order: { id: accountOrderId, status: 'CANCELLED', paymentStatus: 'PAID' },
-        orderRefundSummary: { status: 'FULL', refundedAmount: '36.50', refundableAmount: '0.00' },
+        orderRefundSummary: {
+          status: 'FULL',
+          refundedAmount: chargedTotal,
+          refundableAmount: '0.00',
+        },
       },
     });
     expect(await refundRouter(inventoryRead, trackedVariant)).toEqual({
@@ -1780,7 +1859,6 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       .click();
     await customerDialog.getByRole('textbox', { name: /^Street\b/u }).fill(editedStreet);
     await saveCustomer();
-    await expect(merchant.getByRole('cell', { name: editedStreet, exact: true })).toBeVisible();
 
     const [persistedCustomer, linkedOrders] = await Promise.all([
       waitForCart(merchant, 'OperatorCustomer').then<unknown>((response) => response.json()),

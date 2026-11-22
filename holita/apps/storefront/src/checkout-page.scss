@@ -32,27 +32,6 @@
   margin: 0;
 }
 
-.shop-form-field {
-  display: grid;
-  min-inline-size: 0;
-  gap: var(--p-app-space-1);
-  color: var(--shop-muted);
-  font-size: var(--p-app-text-sm);
-  font-weight: 700;
-}
-
-.shop-form-field :is(input, select) {
-  min-inline-size: 0;
-  inline-size: 100%;
-  color: var(--shop-ink);
-  font-size: 1rem;
-  font-weight: 400;
-}
-
-.shop-form-field [aria-invalid='true'] {
-  border-color: var(--shop-chip-danger-ink);
-}
-
 .checkout-field-wide {
   grid-column: 1 / -1;
 }

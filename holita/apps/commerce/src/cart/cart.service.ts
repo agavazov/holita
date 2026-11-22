@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { hash, randomBytes } from 'node:crypto';
 import { isUUID } from 'class-validator';
+import { DiscountsService } from '../discounts/discounts.service.js';
 import type {
   Cart,
   CartAddResult,
+  CartDiscount,
   CartIssue,
   CartLine,
   CartMergeIssue,
@@ -12,13 +14,21 @@ import { Prisma, type CartLine as StoredCartLine } from '../generated/prisma/cli
 import { productImageUrl } from '../products/product-images.js';
 import { catalogueOptionLabels, trackedVariantQuantity } from '../products/product-relations.js';
 import type { Scope } from '../scope.js';
-import { CartRepository, type CartOwner } from './cart.repository.js';
+import { CartRepository, type CartOwner, type CartSelection } from './cart.repository.js';
 
 const MAX_QUANTITY = 2_147_483_647;
 // A full-size price multiplied by an Int quantity can exceed Decimal's default precision.
 export const CartPrice = Prisma.Decimal.clone({ precision: 32 });
 type CartToken = string | string[] | undefined;
 type PublicVariant = Awaited<ReturnType<CartRepository['publicVariants']>>[number];
+type PricedLines = Pick<Cart, 'lines' | 'itemCount' | 'subtotal'>;
+const emptyCart: Cart = {
+  lines: [],
+  itemCount: 0,
+  subtotal: '0.00',
+  discount: null,
+  discountedSubtotal: '0.00',
+};
 
 export interface CartContext {
   scope: Scope;
@@ -112,13 +122,26 @@ function presentLine(line: StoredCartLine, variant: PublicVariant | undefined): 
   };
 }
 
+function presentCart(lines: PricedLines, discount: CartDiscount | null): Cart {
+  return {
+    ...lines,
+    discount,
+    discountedSubtotal: discount
+      ? new CartPrice(lines.subtotal).minus(discount.amount).toFixed(2)
+      : lines.subtotal,
+  };
+}
+
 @Injectable()
 export class CartService {
-  constructor(private readonly carts: CartRepository) {}
+  constructor(
+    private readonly carts: CartRepository,
+    private readonly discounts: DiscountsService,
+  ) {}
 
   async read(context: CartContext): Promise<Cart> {
     const ownedCart = await this.carts.readTransaction((tx) => this.readOwned(tx, context));
-    return ownedCart?.cart ?? { lines: [], itemCount: 0, subtotal: '0.00' };
+    return ownedCart?.cart ?? emptyCart;
   }
 
   async readOwned(tx: Prisma.TransactionClient, context: CartContext) {
@@ -131,7 +154,7 @@ export class CartService {
     if (!cart && 'guestTokenHash' in owner) {
       throw cartMissing();
     }
-    return cart ? { id: cart.id, cart: await this.present(tx, scope, cart.id) } : null;
+    return cart ? { ...cart, cart: await this.present(tx, scope, cart) } : null;
   }
 
   add(context: CartContext, id: string, quantity: number): Promise<CartAddResult> {
@@ -140,7 +163,7 @@ export class CartService {
     validateQuantity(quantity);
     const owner = ownerFor(context);
     return this.carts.transaction(async (tx) => {
-      let cart: { id: string } | undefined;
+      let cart: CartSelection | undefined;
       let guestCartToken: string | null = null;
       if (!owner) {
         guestCartToken = randomBytes(32).toString('base64url');
@@ -159,7 +182,7 @@ export class CartService {
       const [variant] = await this.carts.publicVariants(tx, scope, [variantId]);
       validateVariant(variant, nextQuantity);
       await this.carts.setVariantQuantity(tx, scope, cart.id, variantId, nextQuantity);
-      return { cart: await this.present(tx, scope, cart.id), guestCartToken };
+      return { cart: await this.present(tx, scope, cart), guestCartToken };
     });
   }
 
@@ -176,7 +199,7 @@ export class CartService {
       const [variant] = await this.carts.publicVariants(tx, scope, variantIds([line]));
       validateVariant(variant, quantity);
       await this.carts.setLineQuantity(tx, scope, cart.id, lineId, quantity);
-      return this.present(tx, scope, cart.id);
+      return this.present(tx, scope, cart);
     });
   }
 
@@ -189,7 +212,35 @@ export class CartService {
       if (!removed.count) {
         throw new NotFoundException('Cart line not found');
       }
-      return this.present(tx, scope, cart.id);
+      return this.present(tx, scope, cart);
+    });
+  }
+
+  applyDiscount(context: CartContext, code: string): Promise<Cart> {
+    const { scope } = context;
+    return this.carts.transaction(async (tx) => {
+      const cart = await this.lockOpen(tx, context);
+      if (!cart) {
+        throw cartMissing();
+      }
+      const { priced, subtotal } = await this.priceLines(tx, scope, cart.id);
+      const { id, discount } = await this.discounts.apply(tx, scope, code, subtotal);
+      await this.carts.setDiscount(tx, scope, cart.id, id);
+      return presentCart(priced, discount);
+    });
+  }
+
+  removeDiscount(context: CartContext): Promise<Cart> {
+    const { scope } = context;
+    return this.carts.transaction(async (tx) => {
+      const cart = await this.lockOpen(tx, context);
+      if (!cart) {
+        return emptyCart;
+      }
+      if (cart.discountId) {
+        await this.carts.setDiscount(tx, scope, cart.id, null);
+      }
+      return this.present(tx, scope, { ...cart, discountId: null });
     });
   }
 
@@ -205,7 +256,14 @@ export class CartService {
       return [];
     }
     const lines = await this.carts.lines(tx, scope, guest.id);
-    const issues = lines.length ? await this.mergeLines(tx, scope, customerId, lines) : [];
+    let issues: CartMergeIssue[] = [];
+    if (lines.length || guest.discountId) {
+      const customerCart = await this.carts.lockCustomerCart(tx, scope, customerId);
+      issues = await this.mergeLines(tx, scope, customerCart.id, lines);
+      if (!customerCart.discountId && guest.discountId) {
+        await this.carts.setDiscount(tx, scope, customerCart.id, guest.discountId);
+      }
+    }
     await this.carts.deleteGuestCart(tx, scope, guest.id);
     return issues;
   }
@@ -213,11 +271,10 @@ export class CartService {
   private async mergeLines(
     tx: Prisma.TransactionClient,
     scope: Scope,
-    customerId: string,
+    cartId: string,
     lines: StoredCartLine[],
   ): Promise<CartMergeIssue[]> {
-    const customerCart = await this.carts.lockCustomerCart(tx, scope, customerId);
-    const customerLines = await this.carts.lines(tx, scope, customerCart.id);
+    const customerLines = await this.carts.lines(tx, scope, cartId);
     const quantities = new Map(
       customerLines.map(({ variantId, quantity }) => [variantId, quantity]),
     );
@@ -230,20 +287,25 @@ export class CartService {
       if (reason) {
         issues.push({ name: variant?.product.name ?? null, quantity, reason });
       } else if (variant) {
-        await this.carts.setVariantQuantity(tx, scope, customerCart.id, variant.id, nextQuantity);
+        await this.carts.setVariantQuantity(tx, scope, cartId, variant.id, nextQuantity);
       }
     }
     return issues;
   }
 
   private async lockForLine(tx: Prisma.TransactionClient, context: CartContext) {
+    const cart = await this.lockOpen(tx, context);
+    if (!cart) {
+      throw new NotFoundException('Cart line not found');
+    }
+    return cart;
+  }
+
+  private async lockOpen(tx: Prisma.TransactionClient, context: CartContext) {
     const owner = ownerFor(context);
     const cart = owner && (await this.carts.lock(tx, context.scope, owner));
-    if (!cart) {
-      if (owner && 'guestTokenHash' in owner) {
-        throw cartMissing();
-      }
-      throw new NotFoundException('Cart line not found');
+    if (!cart && owner && 'guestTokenHash' in owner) {
+      throw cartMissing();
     }
     return cart;
   }
@@ -253,7 +315,7 @@ export class CartService {
     return new Map(variants.map((variant) => [variant.id, variant]));
   }
 
-  async snapshot(tx: Prisma.TransactionClient, scope: Scope, cartId: string) {
+  private async priceLines(tx: Prisma.TransactionClient, scope: Scope, cartId: string) {
     const lines = await this.carts.lines(tx, scope, cartId);
     const variants = await this.variantMap(tx, scope, lines);
     let itemCount = 0;
@@ -266,11 +328,26 @@ export class CartService {
       }
       return result;
     });
-    const cart: Cart = { lines: presented, itemCount, subtotal: subtotal.toFixed(2) };
-    return { cart, variants };
+    return {
+      priced: { lines: presented, itemCount, subtotal: subtotal.toFixed(2) },
+      subtotal,
+      variants,
+    };
   }
 
-  private async present(tx: Prisma.TransactionClient, scope: Scope, cartId: string): Promise<Cart> {
-    return (await this.snapshot(tx, scope, cartId)).cart;
+  async snapshot(tx: Prisma.TransactionClient, scope: Scope, { id, discountId }: CartSelection) {
+    const { priced, subtotal, variants } = await this.priceLines(tx, scope, id);
+    const discount = discountId
+      ? await this.discounts.preview(tx, scope, discountId, subtotal)
+      : null;
+    return { cart: presentCart(priced, discount), variants };
+  }
+
+  private async present(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    cart: CartSelection,
+  ): Promise<Cart> {
+    return (await this.snapshot(tx, scope, cart)).cart;
   }
 }

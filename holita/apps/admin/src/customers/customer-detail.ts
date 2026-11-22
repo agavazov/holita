@@ -7,6 +7,7 @@ import {
   linkedSignal,
   resource,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { OperatorLanguage, operatorStrings } from '@holita/operator';
 import {
@@ -101,6 +102,12 @@ export class CustomerDetail {
   protected readonly paymentText = orderPaymentText;
   protected readonly paymentSeverity = orderPaymentSeverity;
   protected readonly trackById = trackById;
+  private readonly queryParams = toSignal(this.route.queryParamMap, { requireSync: true });
+  protected readonly fragment = toSignal(this.route.fragment, { requireSync: true });
+  protected readonly backQuery = computed(() => ({
+    page: this.queryParams().get('customersPage'),
+    pageSize: this.queryParams().get('customersPageSize'),
+  }));
   protected readonly backLink = computed(() => ['/', this.language(), 'customers']);
   protected readonly drawerHost = computed<DrawerHost>(() => {
     const params = this.customerRecord.params();
@@ -261,7 +268,13 @@ export class CustomerDetail {
   constructor() {
     injectPageRecord(
       () => this.profile()?.customer.name ?? null,
-      () => this.router.createUrlTree(this.backLink()),
+      () => {
+        const fragment = this.fragment();
+        return this.router.createUrlTree(this.backLink(), {
+          queryParams: this.backQuery(),
+          ...(fragment === null ? {} : { fragment }),
+        });
+      },
     );
     effect(() => {
       if (this.profile() && this.orders.hasValue() && !this.orders.isLoading()) {

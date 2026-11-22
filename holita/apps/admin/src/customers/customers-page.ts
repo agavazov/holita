@@ -2,19 +2,35 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   linkedSignal,
   resource,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { OperatorLanguage, operatorStrings } from '@holita/operator';
-import { PageHeader, TablePanel, tableView, trackById, type TableColumn } from '@osnova/ui';
+import {
+  PageHeader,
+  TablePanel,
+  UrlListState,
+  tableView,
+  trackById,
+  type ListDefinition,
+  type TableColumn,
+} from '@osnova/ui';
 import { Message } from 'primeng/message';
 import { TableModule } from 'primeng/table';
 import type { OperatorCustomersQuery } from '../generated/customers-operations';
 import { CustomersApi } from './customers-api';
 
 type CustomerRows = OperatorCustomersQuery['customers'];
+const definition: ListDefinition<Record<string, never>, 'NAME'> = {
+  pageSizes: [10, 20, 50, 100],
+  defaultPageSize: 20,
+  sorts: [],
+  defaultSort: { field: 'NAME', direction: 'ASC' },
+  filters: {},
+};
 
 @Component({
   selector: 'holita-customers-page',
@@ -28,6 +44,7 @@ export class CustomersPage {
   protected readonly language = inject(OperatorLanguage).value;
   protected readonly text = computed(() => operatorStrings[this.language()]);
   protected readonly scope = this.api.scope;
+  protected readonly url = new UrlListState(definition, () => !!this.scope());
   protected readonly trackById = trackById;
   protected readonly tableMinWidth = '27rem';
   protected readonly columns = computed<readonly TableColumn[]>(() => [
@@ -60,6 +77,23 @@ export class CustomersPage {
     computation: (current, previous) =>
       current.data ?? (previous?.source.scope === current.scope ? previous.value : null),
   });
+  protected readonly pagination = computed(() => ({
+    page: this.url.state().page,
+    pageSize: this.url.state().pageSize,
+    total: this.rows()?.length ?? 0,
+  }));
+  protected readonly detailQuery = computed(() => {
+    const { page, pageSize } = this.url.state();
+    return {
+      customersPage: page > 1 ? page : null,
+      customersPageSize: pageSize !== definition.defaultPageSize ? pageSize : null,
+    };
+  });
+  protected readonly pageRows = computed(() => {
+    const { page, pageSize } = this.pagination();
+    const offset = (page - 1) * pageSize;
+    return this.rows()?.slice(offset, offset + pageSize) ?? [];
+  });
   protected readonly view = computed(() =>
     tableView({
       loading: this.list.isLoading(),
@@ -68,4 +102,13 @@ export class CustomersPage {
       filtered: false,
     }),
   );
+
+  constructor() {
+    effect(() => {
+      const rows = this.list.hasValue() && !this.list.isLoading() ? this.list.value() : null;
+      if (rows) {
+        this.url.correctPage(Math.ceil(rows.length / this.url.state().pageSize));
+      }
+    });
+  }
 }

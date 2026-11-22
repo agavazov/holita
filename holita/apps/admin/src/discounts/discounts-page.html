@@ -1,0 +1,161 @@
+<osnova-page-header
+  [title]="text().discounts"
+  [moduleInfo]="text().discountsInfo"
+  [actions]="headerActions()"
+  (action)="headerAction($event)"
+/>
+@if (scope()) {
+<osnova-table-panel
+  #panel
+  mobileIdentityLayout="trailing"
+  [heading]="text().shopDiscounts"
+  [mobileFullWidthActions]="true"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
+  [view]="view()"
+  [total]="page()?.total ?? null"
+  [busy]="list.isLoading()"
+  [errorText]="text().discountsUnavailable"
+  [emptyTitle]="text().emptyDiscounts"
+  [page]="pagination()"
+  [actionContext]="params()"
+  [actions]="actions()"
+  (action)="run($event)"
+  (pageChange)="url.setPage($event)"
+  (retry)="list.reload()"
+  (clearFilters)="url.clearFilters()"
+>
+  <osnova-filter-builder
+    panelActions
+    [mobileFullWidth]="true"
+    [searchLabel]="text().searchDiscounts"
+    [search]="url.searchDraft()"
+    [searchError]="url.searchError() ? shared().searchTooManyWords : null"
+    (searchChange)="url.editSearch($event)"
+  >
+    <osnova-list-sort-menu
+      filterActions
+      [fields]="sortFields()"
+      [sort]="sort()"
+      (sortChange)="changeSort($event)"
+    />
+  </osnova-filter-builder>
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="page()?.items ?? []"
+    [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    [sortField]="sort().field"
+    [sortOrder]="sort().direction === 'asc' ? 1 : -1"
+    (onLazyLoad)="tableSort($event)"
+    dataKey="id"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="column.kind === 'identity'
+            ? 'var(--app-table-identity-width, ' + column.width + ')'
+            : column.width"
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity" pSortableColumn="CODE">
+          {{ text().discountCode }} <p-sort-icon field="CODE" />
+        </th>
+        <th scope="col" class="app-table-merged-column" pSortableColumn="ENABLED">
+          {{ text().status }} <p-sort-icon field="ENABLED" />
+        </th>
+        <th scope="col" class="app-cell-number">{{ text().discountValue }}</th>
+        <th scope="col">{{ text().discountValidity }}</th>
+        <th scope="col" class="app-cell-number">{{ text().discountUses }}</th>
+        @if (canWrite()) {
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ shared().pageHeader.actions }}</span>
+        </th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-discount>
+      @let row = record(discount); @let value = rate(discount); @let count = uses(discount);
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-table-identity-layout">
+            <div class="app-cell-identity">
+              @if (canWrite()) {
+              <button
+                type="button"
+                class="app-link app-table-identity-wrap"
+                [title]="discount.code"
+                (click)="panel.run('edit', [row], $event.currentTarget)"
+              >
+                {{ discount.code }}
+              </button>
+              } @else {
+              <span class="app-table-identity-wrap" [title]="discount.code"
+                >{{ discount.code }}</span
+              >
+              }
+              <span class="app-table-mobile-meta app-table-tag-wrap">
+                <p-tag
+                  [severity]="tone(discount.enabled ? 'success' : 'neutral')"
+                  [value]="discount.enabled ? text().discountEnabled : text().discountDisabled"
+                />
+              </span>
+            </div>
+            @if (canWrite()) {
+            <div class="app-table-mobile-actions">
+              <osnova-row-actions
+                [actions]="actions()"
+                [record]="row"
+                (choose)="panel.run($event.action, [row], $event.origin)"
+              />
+            </div>
+            }
+          </div>
+        </td>
+        <td class="app-table-merged-column">
+          <div class="app-cell-status">
+            <p-tag
+              [severity]="tone(discount.enabled ? 'success' : 'neutral')"
+              [value]="discount.enabled ? text().discountEnabled : text().discountDisabled"
+            />
+          </div>
+        </td>
+        <td class="app-cell-number">
+          <span class="app-cell-truncate" [title]="value">{{ value }}</span>
+        </td>
+        <td class="app-cell-date">
+          @let start = discount.startsAt; @let end = discount.endsAt; @if (start) { @if (!end) { {{
+          text().discountFrom }} }
+          <time [dateTime]="start" [title]="format.utc(start)">{{ format.dateTime(start) }}</time>
+          } @if (end) { @if (start) { <span aria-hidden="true"> → </span> } @else { {{
+          text().discountUntil }} }
+          <time [dateTime]="end" [title]="format.utc(end)">{{ format.dateTime(end) }}</time>
+          } @if (!start && !end) { — }
+        </td>
+        <td class="app-cell-number" [title]="count">{{ count }}</td>
+        @if (canWrite()) {
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <osnova-row-actions
+            [actions]="actions()"
+            [record]="row"
+            (choose)="panel.run($event.action, [row], $event.origin)"
+          />
+        </td>
+        }
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+} @else {
+<p-message severity="info">{{ text().noShop }}</p-message>
+}
+<router-outlet [routerOutletData]="drawerHost()" />

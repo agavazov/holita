@@ -23,7 +23,6 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 
 | Ticket                                                                                           | Wave | Status | Depends on           |
 | ------------------------------------------------------------------------------------------------ | ---- | ------ | -------------------- |
-| [121 Discounts and promo codes](121-holita-discounts.md)                                         | 3    | Ready  |                      |
 | [122 Admin manual payment and shipping methods](122-holita-manual-methods.md)                    | 3    | Ready  |                      |
 | [123 Shop content pages](123-holita-pages.md)                                                    | 3    | Ready  |                      |
 | [124 Shop blog](124-holita-blog.md)                                                              | 3    | Ready  |                      |
