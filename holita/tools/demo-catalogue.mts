@@ -237,6 +237,29 @@ export const demoOrders = [
       },
     ],
   },
+  {
+    id: 5,
+    status: 'confirmed',
+    placedAt: '2026-11-21T08:30:00Z',
+    paidAt: '2026-11-21T09:00:00Z',
+    statusChanges: [['placed', 'confirmed', '2026-11-21T08:45:00Z']],
+    phone: '+359 2 555 0100',
+    city: 'София',
+    postalCode: '1000',
+    address: 'ул. „Професор Иван Георгов“ 15',
+    subtotal: '105.80',
+    total: '111.80',
+    lines: [
+      {
+        id: 7,
+        variant: 570,
+        sku: 'DEMO-57',
+        label: 'Керамична касерола „Горска жарава“, 1,5 л',
+        quantity: 2,
+        unitPrice: '52.90',
+      },
+    ],
+  },
 ] as const;
 
 export const demoInvoice = {
@@ -247,6 +270,13 @@ export const demoInvoice = {
   issuerCompanyId: '000000001',
   issuerVatNumber: 'BG000000001',
   issuerAddress: 'ул. „Керамична работилница“ 12, 1000 София',
+} as const;
+
+export const demoRefund = {
+  order: 5,
+  amount: '15.00',
+  reason: 'Частично възстановяване след уговорка с клиента.',
+  createdAt: '2026-11-22T11:30:00Z',
 } as const;
 
 interface DemoBrand {

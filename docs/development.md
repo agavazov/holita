@@ -582,6 +582,14 @@ Open the issued document from its numbered link on the order. Later changes to t
 the invoice intact. The Sofia demo shipped order has an issued invoice. The operator graph
 exposes `orderInvoice` and `issueOrderInvoice`.
 
+After returning money outside Holita, use Record refund on a paid order. Order Detail shows the
+refund history and remaining balance, including the delivery fee in the original paid amount.
+For a refund of the full remaining balance, orders eligible for cancellation offer a restock
+option that cancels the order and restores original stock deductions once. For an order already
+cancelled, the option records the restock choice and leaves stock as it is. The Sofia demo includes
+a partially refunded paid order. The operator graph exposes `orderRefundSummary` and
+`recordOrderRefund`.
+
 The Product drawer's Descriptions section accepts optional Bulgarian and English plain text.
 The storefront product page shows the selected language when available and falls back to the
 other description. The Sofia demo shop includes a bilingual ceramic casserole under Cookware.

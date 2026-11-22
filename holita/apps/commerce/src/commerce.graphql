@@ -497,6 +497,32 @@ input IssueOrderInvoiceInput {
   recipientEmail: String
   recipientPhone: String
 }
+enum OrderRefundStatus {
+  NONE
+  PARTIAL
+  FULL
+}
+type OrderRefund {
+  id: ID!
+  amount: String!
+  currency: String!
+  reason: String
+  restock: Boolean!
+  createdAt: String!
+}
+type OrderRefundSummary {
+  status: OrderRefundStatus!
+  refundedAmount: String!
+  refundableAmount: String!
+  canRecordRefund: Boolean!
+  canRestockOnCompletion: Boolean!
+  refunds: [OrderRefund!]!
+}
+input RecordOrderRefundInput {
+  amount: String!
+  reason: String
+  restock: Boolean! = false
+}
 type Query {
   products(
     offset: Int! = 0
@@ -552,6 +578,7 @@ type Query {
   orders(offset: Int! = 0, limit: Int! = 20, search: String, status: OrderStatus): OrderPage!
   order(id: ID!): Order
   orderInvoice(orderId: ID!): Invoice
+  orderRefundSummary(orderId: ID!): OrderRefundSummary
 }
 type Mutation {
   createProduct(input: ProductInput!): Product!
@@ -575,4 +602,5 @@ type Mutation {
   updateOrderStatus(id: ID!, status: OrderStatus!): Order!
   markOrderPaid(id: ID!): Order!
   issueOrderInvoice(orderId: ID!, input: IssueOrderInvoiceInput!): Invoice!
+  recordOrderRefund(orderId: ID!, input: RecordOrderRefundInput!): OrderRefund!
 }

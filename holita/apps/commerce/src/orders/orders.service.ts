@@ -43,6 +43,10 @@ const nextStatuses: Record<OrderStatus, OrderStatus[]> = {
   CANCELLED: [],
 };
 
+export function canCancelOrder(status: OrderStatus): boolean {
+  return status === 'CANCELLED' || nextStatuses[status].includes('CANCELLED');
+}
+
 function summary(order: OrderSummaryRow) {
   return {
     id: order.id,
@@ -175,22 +179,29 @@ export class OrdersService {
     const scope = await requireScope(context, true);
     return this.orders.transaction(async (tx) => {
       const order = await this.requireLockedOrder(tx, scope, id);
-      if (order.status === status) {
-        return operatorDetail(order);
-      }
-      if (!nextStatuses[order.status].includes(status)) {
-        throw statusRejected();
-      }
-      if (status === 'CANCELLED') {
-        await this.orders.restoreStock(tx, scope, order.id);
-      }
-      return operatorDetail(
-        await this.orders.updateStatus(tx, scope, order.id, {
-          fromStatus: order.status,
-          toStatus: status,
-          occurredAt: new Date(),
-        }),
-      );
+      return operatorDetail(await this.changeLockedStatus(tx, scope, order, status));
+    });
+  }
+
+  async changeLockedStatus(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    order: OrderDetailRow,
+    status: OrderStatus,
+  ) {
+    if (order.status === status) {
+      return order;
+    }
+    if (!nextStatuses[order.status].includes(status)) {
+      throw statusRejected();
+    }
+    if (status === 'CANCELLED') {
+      await this.orders.restoreStock(tx, scope, order.id);
+    }
+    return this.orders.updateStatus(tx, scope, order.id, {
+      fromStatus: order.status,
+      toStatus: status,
+      occurredAt: new Date(),
     });
   }
 
@@ -208,7 +219,7 @@ export class OrdersService {
     });
   }
 
-  private async requireLockedOrder(tx: Prisma.TransactionClient, scope: Scope, id: string) {
+  async requireLockedOrder(tx: Prisma.TransactionClient, scope: Scope, id: string) {
     const order = isUUID(id) ? await this.orders.lockOrder(tx, scope, id.toLowerCase()) : null;
     if (!order) {
       throw new NotFoundException('Order not found');

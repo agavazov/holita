@@ -66,8 +66,10 @@ type OrderDetailParams = { scope: NonNullable<ReturnType<OrdersApi['scope']>>; i
   providers: [ConfirmationService],
   templateUrl: './order-detail.html',
   styles: `
-    .order-payment-instructions {
+    .order-payment-instructions,
+    .order-refund-reason {
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
   `,
   host: { class: 'app-view' },
@@ -138,12 +140,15 @@ export class OrderDetail {
       ...(order.canMarkPaid
         ? [{ id: 'paid', label: this.text().markOrderPaid, primary: !canUpdate, disabled }]
         : []),
+      ...(order.refundSummary?.canRecordRefund
+        ? [{ id: 'record-refund', label: this.text().recordRefund, primary: !canUpdate, disabled }]
+        : []),
       ...(!order.invoice
         ? [
             {
               id: 'create-invoice',
               label: this.text().createInvoice,
-              primary: !canUpdate && !order.canMarkPaid,
+              primary: !canUpdate && !order.canMarkPaid && !order.refundSummary?.canRecordRefund,
               disabled,
             },
           ]
@@ -174,6 +179,36 @@ export class OrderDetail {
       loading: false,
       error: null,
       rows: this.order()?.lines.length ?? 0,
+      filtered: false,
+    }),
+  );
+  protected readonly refundColumns = computed<readonly TableColumn[]>(() => [
+    {
+      id: 'date',
+      label: this.text().refundDate,
+      width: '13rem',
+      kind: 'identity',
+      className: 'app-col-identity',
+    },
+    { id: 'amount', label: this.text().refundAmount, width: '8rem', kind: 'number' },
+    {
+      id: 'reason',
+      label: this.text().refundReason,
+      width: 'auto',
+      className: 'app-table-merged-column',
+    },
+    {
+      id: 'restock',
+      label: this.text().refundRestockRequested,
+      width: '11rem',
+      className: 'app-table-merged-column',
+    },
+  ]);
+  protected readonly refundView = computed(() =>
+    tableView({
+      loading: false,
+      error: null,
+      rows: this.order()?.refundSummary?.refunds.length ?? 0,
       filtered: false,
     }),
   );
@@ -214,7 +249,7 @@ export class OrderDetail {
   }
 
   protected async run({ id }: MenuChoice): Promise<void> {
-    if (id === 'status' || id === 'create-invoice') {
+    if (id === 'status' || id === 'create-invoice' || id === 'record-refund') {
       void this.router.navigate([id === 'status' ? 'fulfillment' : id], {
         relativeTo: this.route,
         queryParamsHandling: 'preserve',
@@ -246,11 +281,11 @@ export class OrderDetail {
         return;
       }
 
-      const updated = await this.api.markPaid(scope, id);
+      await this.api.markPaid(scope, id);
       if (!this.isCurrent(params)) {
         return;
       }
-      this.record.set(updated);
+      this.record.reload();
       this.messages.add({ severity: 'success', summary: this.text().orderPaymentSaved });
     } catch (error: unknown) {
       if (!this.isCurrent(params)) {

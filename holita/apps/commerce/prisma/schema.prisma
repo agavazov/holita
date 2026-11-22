@@ -452,6 +452,7 @@ model Order {
   total Decimal @db.Decimal(32, 2)
   lines OrderLine[]
   invoice Invoice?
+  refunds OrderRefund[]
   statusChanges OrderStatusChange[]
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, cartId])
@@ -538,4 +539,19 @@ model InvoiceLine {
   lineTotal Decimal @db.Decimal(32, 2)
   @@unique([tenantId, branchId, invoiceId, sortOrder])
   @@map("invoiceLine")
+}
+
+model OrderRefund {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  orderId String @db.Uuid
+  order Order @relation(fields: [tenantId, branchId, orderId], references: [tenantId, branchId, id], onDelete: Restrict)
+  amount Decimal @db.Decimal(32, 2)
+  currency String @db.Char(3)
+  reason String? @db.Text
+  restock Boolean @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([tenantId, branchId, orderId, createdAt(sort: Desc), id(sort: Desc)])
+  @@map("orderRefund")
 }

@@ -13,6 +13,8 @@ import { InvoicesResolver } from './invoices/invoices.resolver.js';
 import { OperatorOrdersResolver } from './orders/operator-orders.resolver.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { OrdersResolver } from './orders/orders.resolver.js';
+import { RefundsModule } from './refunds/refunds.module.js';
+import { RefundsResolver } from './refunds/refunds.resolver.js';
 import { CommerceResolver } from './products/commerce.resolver.js';
 import { CatalogueProductResolver, StorefrontResolver } from './storefront.resolver.js';
 import { StorefrontService } from './storefront.service.js';
@@ -53,6 +55,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     CustomersModule,
     OrdersModule,
     InvoicesModule,
+    RefundsModule,
   ],
   providers: [
     CommerceResolver,
@@ -67,6 +70,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     CustomersResolver,
     OperatorOrdersResolver,
     InvoicesResolver,
+    RefundsResolver,
   ],
 })
 class OperatorModule {}

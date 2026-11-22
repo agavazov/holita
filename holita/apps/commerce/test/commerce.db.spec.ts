@@ -145,6 +145,7 @@ beforeAll(async () => {
     '20261122120000_shopper_order_history',
     '20261122130000_order_management',
     '20261122140000_order_invoices',
+    '20261122150000_manual_order_refunds',
   ]) {
     await connection.query(
       await readFile(
@@ -1543,6 +1544,196 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(await storefront(publicA, readOrder, operatorTarget, token)).toEqual({
     data: { shopperOrder: { ...receipt, status: 'CANCELLED', paymentStatus: 'PAID' } },
   });
+  const readRefunds = `query($orderId:ID!){
+    orderRefundSummary(orderId:$orderId){
+      status refundedAmount refundableAmount canRecordRefund canRestockOnCompletion
+      refunds{id amount currency reason restock createdAt}
+    }
+  }`;
+  const recordRefund = `mutation($orderId:ID!,$input:RecordOrderRefundInput!){
+    recordOrderRefund(orderId:$orderId,input:$input){id amount currency reason restock}
+  }`;
+  const refundTarget = { orderId: randomUUID() };
+  const refundPaidAt = new Date();
+  const refundCart = await database.cart.create({
+    data: { ...categoryScope, customerId: order.customerId, consumedAt: refundPaidAt },
+  });
+  await database.order.create({
+    data: {
+      ...order,
+      id: refundTarget.orderId,
+      cartId: refundCart.id,
+      orderNumber: `H-${refundTarget.orderId}`,
+      status: 'PLACED',
+      paymentStatus: 'PAID',
+      paidAt: refundPaidAt,
+    },
+  });
+  const refundVariantKey = { ...categoryScope, id: replacement.id };
+  await database.productVariant.update({
+    where: refundVariantKey,
+    data: { inventoryTracked: true, quantity: 3 },
+  });
+  await database.orderLine.create({
+    data: {
+      ...categoryScope,
+      ...refundTarget,
+      variantId: replacement.id,
+      sortOrder: 0,
+      sku: replacement.sku,
+      label: 'Tracked product',
+      quantity: 2,
+      unitPrice: '4.25',
+      stockDecremented: true,
+    },
+  });
+  expect(
+    await query(tokens.operator, publicA, updateOrder, {
+      id: refundTarget.orderId,
+      status: 'CANCELLED',
+    }),
+  ).toMatchObject({
+    data: { updateOrderStatus: { status: 'CANCELLED', paymentStatus: 'PAID' } },
+  });
+  expect(
+    await database.productVariant.findUniqueOrThrow({
+      where: refundVariantKey,
+      select: { quantity: true },
+    }),
+  ).toEqual({ quantity: 5 });
+  const partialRefund = {
+    ...refundTarget,
+    input: { amount: '10.00', reason: ' Returned externally ' },
+  };
+  expect(await query(tokens.viewer, publicA, readRefunds, { orderId: guestOrder.id })).toEqual({
+    data: {
+      orderRefundSummary: {
+        status: 'NONE',
+        refundedAmount: '0.00',
+        refundableAmount: '0.00',
+        canRecordRefund: false,
+        canRestockOnCompletion: false,
+        refunds: [],
+      },
+    },
+  });
+  expect(
+    await query(tokens.operator, publicA, recordRefund, {
+      ...partialRefund,
+      orderId: guestOrder.id,
+    }),
+  ).toMatchObject({
+    errors: [{ extensions: { fieldErrors: [{ path: 'amount', code: 'REFUND_INELIGIBLE' }] } }],
+  });
+  for (const [credential, branch] of [
+    [tokens.operator, branchB],
+    [tokens.foreign, branchForeign],
+  ] as const) {
+    expect(await query(credential, branch, readRefunds, refundTarget)).toEqual({
+      data: { orderRefundSummary: null },
+    });
+    expect(await query(credential, branch, recordRefund, partialRefund)).toMatchObject({
+      errors: [{ message: 'Order not found' }],
+    });
+  }
+  expect(await query(tokens.viewer, publicA, recordRefund, partialRefund)).toHaveProperty('errors');
+  expect(
+    await query(tokens.operator, publicA, recordRefund, {
+      ...partialRefund,
+      input: { amount: '1.001' },
+    }),
+  ).toMatchObject({
+    errors: [{ extensions: { fieldErrors: [{ code: 'REFUND_AMOUNT_INVALID' }] } }],
+  });
+  expect(
+    await query(tokens.operator, publicA, recordRefund, {
+      ...partialRefund,
+      input: { amount: '10.00', restock: true },
+    }),
+  ).toMatchObject({
+    errors: [{ extensions: { fieldErrors: [{ code: 'REFUND_RESTOCK_UNAVAILABLE' }] } }],
+  });
+
+  const competing = await Promise.all([
+    query(tokens.operator, publicA, recordRefund, partialRefund),
+    query(tokens.operator, publicA, recordRefund, partialRefund),
+  ]);
+  expect(competing).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        data: {
+          recordOrderRefund: {
+            id: expect.any(String),
+            amount: '10.00',
+            currency: 'BGN',
+            restock: false,
+            reason: 'Returned externally',
+          },
+        },
+      }),
+      expect.objectContaining({
+        errors: [
+          expect.objectContaining({
+            extensions: expect.objectContaining({
+              fieldErrors: [expect.objectContaining({ code: 'REFUND_EXCEEDS_BALANCE' })],
+            }),
+          }),
+        ],
+      }),
+    ]),
+  );
+  expect(await query(tokens.viewer, publicA, readRefunds, refundTarget)).toMatchObject({
+    data: {
+      orderRefundSummary: {
+        status: 'PARTIAL',
+        refundedAmount: '10.00',
+        refundableAmount: '4.50',
+        canRecordRefund: true,
+        canRestockOnCompletion: true,
+      },
+    },
+  });
+  expect(
+    await query(tokens.operator, publicA, recordRefund, {
+      ...refundTarget,
+      input: { amount: '4.50', restock: true },
+    }),
+  ).toMatchObject({
+    data: { recordOrderRefund: { amount: '4.50', currency: 'BGN', reason: null, restock: true } },
+  });
+  expect(await query(tokens.viewer, publicA, readRefunds, refundTarget)).toMatchObject({
+    data: {
+      orderRefundSummary: {
+        status: 'FULL',
+        refundedAmount: '14.50',
+        refundableAmount: '0.00',
+        canRecordRefund: false,
+        canRestockOnCompletion: false,
+        refunds: [
+          { amount: '4.50', restock: true },
+          { amount: '10.00', restock: false },
+        ],
+      },
+    },
+  });
+  expect(
+    await database.productVariant.findUniqueOrThrow({
+      where: refundVariantKey,
+      select: { quantity: true },
+    }),
+  ).toEqual({ quantity: 5 });
+  expect(
+    await query(tokens.operator, publicA, markPaid, { id: refundTarget.orderId }),
+  ).toMatchObject({
+    data: {
+      markOrderPaid: {
+        id: refundTarget.orderId,
+        paymentStatus: 'PAID',
+        paidAt: refundPaidAt.toISOString(),
+      },
+    },
+  });
+
   const issueInvoice = `mutation($orderId:ID!,$input:IssueOrderInvoiceInput!){
     issueOrderInvoice(orderId:$orderId,input:$input){id orderId number issueDate recipientName subtotal shippingFee total lines{description sku quantity unitPrice lineTotal}}
   }`;

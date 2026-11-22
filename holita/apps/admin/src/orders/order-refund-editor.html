@@ -1,0 +1,109 @@
+<osnova-route-drawer
+  [title]="text().recordRefund"
+  [subtitle]="order()?.number ?? null"
+  [state]="state()"
+  [errorText]="text().orderUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="record.reload()"
+>
+  @if (canRecord() && order(); as item) {
+  <form id="order-refund-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
+    <section class="app-form-section">
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().refundableAmount }}</dt>
+          <dd class="app-num">
+            <strong
+              >{{ amount(refund()?.refundableAmount ?? '0.00', item.currency, language()) }}</strong
+            >
+          </dd>
+        </div>
+        <div>
+          <dt>{{ text().orderCurrency }}</dt>
+          <dd>{{ item.currency }}</dd>
+        </div>
+      </dl>
+      <p-message severity="info">{{ text().refundRecordOnlyHint }}</p-message>
+    </section>
+    <section class="app-form-section">
+      @let amountMessage = amountError(); @let reasonMessage = fieldError('reason');
+      <osnova-form-field
+        controlId="refund-amount"
+        [label]="text().refundAmount"
+        [required]="true"
+        [error]="amountMessage"
+      >
+        <input
+          pInputText
+          id="refund-amount"
+          formControlName="amount"
+          inputmode="decimal"
+          autocomplete="off"
+          aria-required="true"
+          [invalid]="!!amountMessage"
+          [attr.aria-invalid]="!!amountMessage"
+          [attr.aria-describedby]="amountMessage ? 'refund-amount-error' : null"
+          (input)="clearError('amount')"
+        />
+      </osnova-form-field>
+      <osnova-form-field
+        controlId="refund-reason"
+        [label]="text().refundReason"
+        [error]="reasonMessage"
+      >
+        <textarea
+          pTextarea
+          id="refund-reason"
+          formControlName="reason"
+          rows="3"
+          [invalid]="!!reasonMessage"
+          [attr.aria-invalid]="!!reasonMessage"
+          [attr.aria-describedby]="reasonMessage ? 'refund-reason-error' : null"
+          (input)="clearError('reason')"
+        ></textarea>
+      </osnova-form-field>
+
+      @if (canRestock()) { @let restockMessage = fieldError('restock');
+      <osnova-form-field
+        controlId="refund-restock"
+        [label]="text().refundRestock"
+        [hint]="item.status === 'CANCELLED' ? text().refundAlreadyRestocked : text().refundRestockHint"
+        [error]="restockMessage"
+      >
+        <p-checkbox
+          inputId="refund-restock"
+          formControlName="restock"
+          [binary]="true"
+          [invalid]="!!restockMessage"
+          [pt]="{ input: { 'aria-describedby': 'refund-restock-hint refund-restock-error', 'aria-invalid': restockMessage ? 'true' : undefined } }"
+          (onChange)="clearError('restock')"
+        />
+      </osnova-form-field>
+      } @if (saveError()) {
+      <p-message severity="error">{{ text().refundSaveFailed }}</p-message>
+      }
+    </section>
+  </form>
+  } @else if (order()) {
+  <p-message severity="info">{{ text().refundIneligible }}</p-message>
+  }
+
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ canRecord() ? shared().cancel : shared().close }}
+    </button>
+    @if (canRecord()) {
+    <button pButton type="submit" form="order-refund-form" [disabled]="saving()">
+      {{ text().recordRefund }}
+    </button>
+    }
+  </div>
+</osnova-route-drawer>

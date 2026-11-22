@@ -10,6 +10,8 @@ import {
   type IssueOrderInvoiceInput,
   OperatorOrderDocument,
   OperatorOrdersDocument,
+  OperatorRecordOrderRefundDocument,
+  type RecordOrderRefundInput,
   OperatorUpdateOrderStatusDocument,
   type OperatorOrdersQueryVariables,
   type OrderStatus,
@@ -76,7 +78,7 @@ export class OrdersApi {
       if (!data) {
         throw new Error('Missing order result');
       }
-      return data.order;
+      return data.order ? { ...data.order, refundSummary: data.orderRefundSummary } : null;
     } finally {
       client.stop();
     }
@@ -110,6 +112,22 @@ export class OrdersApi {
         throw new Error('Missing issued invoice result');
       }
       return data.issueOrderInvoice;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async recordRefund(scope: OrdersScope, orderId: string, input: RecordOrderRefundInput) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: OperatorRecordOrderRefundDocument,
+        variables: { orderId, input },
+      });
+      if (!data) {
+        throw new Error('Missing recorded refund result');
+      }
+      return data.recordOrderRefund;
     } finally {
       client.stop();
     }

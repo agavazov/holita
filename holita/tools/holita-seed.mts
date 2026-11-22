@@ -16,6 +16,7 @@ import {
   demoPaymentMethod,
   demoProductCovers,
   demoProductImages,
+  demoRefund,
   demoShippingMethod,
   demoShopper,
   demoTags,
@@ -575,6 +576,23 @@ async function seedShopperOrder(
           line.label,
           line.quantity,
           line.unitPrice,
+        ],
+      );
+    }
+    if (id === demoRefund.order) {
+      await client.query(
+        `INSERT INTO "orderRefund" ("id", "tenantId", "branchId", "orderId", "amount", "currency", "reason", "createdAt")
+         SELECT $1, "tenantId", "branchId", "id", $5, "currency", $6, $7
+         FROM "order" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $4
+         ON CONFLICT DO NOTHING`,
+        [
+          fixtureId('d9', 1),
+          tenantId,
+          branchId,
+          orderId,
+          demoRefund.amount,
+          demoRefund.reason,
+          demoRefund.createdAt,
         ],
       );
     }

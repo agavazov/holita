@@ -68,6 +68,21 @@ query OperatorOrder($id: ID!) {
   order(id: $id) {
     ...OperatorOrderDetail
   }
+  orderRefundSummary(orderId: $id) {
+    status
+    refundedAmount
+    refundableAmount
+    canRecordRefund
+    canRestockOnCompletion
+    refunds {
+      id
+      amount
+      currency
+      reason
+      restock
+      createdAt
+    }
+  }
 }
 
 mutation OperatorUpdateOrderStatus($id: ID!, $status: OrderStatus!) {
@@ -78,7 +93,9 @@ mutation OperatorUpdateOrderStatus($id: ID!, $status: OrderStatus!) {
 
 mutation OperatorMarkOrderPaid($id: ID!) {
   markOrderPaid(id: $id) {
-    ...OperatorOrderDetail
+    id
+    paymentStatus
+    paidAt
   }
 }
 
@@ -119,5 +136,16 @@ mutation OperatorIssueOrderInvoice($orderId: ID!, $input: IssueOrderInvoiceInput
     id
     orderId
     number
+  }
+}
+
+mutation OperatorRecordOrderRefund($orderId: ID!, $input: RecordOrderRefundInput!) {
+  recordOrderRefund(orderId: $orderId, input: $input) {
+    id
+    amount
+    currency
+    reason
+    restock
+    createdAt
   }
 }

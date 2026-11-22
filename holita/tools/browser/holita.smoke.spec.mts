@@ -1460,6 +1460,16 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       expect(await denied.json()).toEqual({ data: { orderConfirmation: null } });
     }
 
+    const {
+      rows: [trackedVariant],
+    } = await commerceDb.client.query<{ id: string }>(
+      `UPDATE "productVariant" SET "inventoryTracked" = true, "quantity" = 5
+       WHERE "tenantId" = $1 AND "branchId" = $2 AND "sku" = $3 RETURNING "id"`,
+      [shopScope.tenantId, shopId, 'CONFIG-Satin'],
+    );
+    if (!trackedVariant) {
+      throw new Error('Missing tracked variant for the refund fixture');
+    }
     await shopper.goto(configuredProductUrl);
     await addSatin();
     await shopper.getByRole('link', { name: 'Cart, 1 item', exact: true }).click();
@@ -1550,6 +1560,91 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
           total: '36.50',
         },
       },
+    });
+
+    const paidRequest = (await paid).request();
+    const { authorization, 'x-branch-id': branchId } = await paidRequest.allHeaders();
+    if (!authorization || branchId !== shopId) {
+      throw new Error('Missing scoped operator request');
+    }
+    const refundRouter = async (
+      query: string,
+      variables: Record<string, unknown>,
+    ): Promise<unknown> => {
+      const response = await merchant.request.post(paidRequest.url(), {
+        headers: { authorization, 'x-branch-id': branchId },
+        data: { query, variables },
+      });
+      return response.json();
+    };
+    const inventoryRead = 'query($id:ID!){inventoryVariant(id:$id){id quantity}}';
+    expect(await refundRouter(inventoryRead, trackedVariant)).toEqual({
+      data: { inventoryVariant: { ...trackedVariant, quantity: 4 } },
+    });
+
+    await merchant.getByRole('link', { name: 'Back to order', exact: true }).click();
+    const openRefund = async () => {
+      await merchant.getByRole('button', { name: 'Page actions', exact: true }).click();
+      await merchant.getByRole('menuitem', { name: 'Record refund', exact: true }).click();
+    };
+    const submitRefund = async (): Promise<unknown> => {
+      const response = waitForCart(merchant, 'OperatorRecordOrderRefund');
+      await merchant
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Record refund', exact: true })
+        .click();
+      return (await response).json();
+    };
+    await openRefund();
+    await merchant.locator('#refund-amount').fill('12.00');
+    await merchant.locator('#refund-reason').fill('Partial refund recorded externally');
+    expect(await submitRefund()).toMatchObject({
+      data: { recordOrderRefund: { amount: '12.00', currency: 'BGN', restock: false } },
+    });
+    await merchant.waitForURL((url) => url.pathname.endsWith(accountOrderId));
+    const partial = waitForCart(merchant, 'OperatorOrder');
+    await merchant.reload();
+    expect(await (await partial).json()).toMatchObject({
+      data: {
+        orderRefundSummary: {
+          status: 'PARTIAL',
+          refundedAmount: '12.00',
+          refundableAmount: '24.50',
+        },
+      },
+    });
+    expect(
+      await refundRouter(
+        'mutation($orderId:ID!,$input:RecordOrderRefundInput!){recordOrderRefund(orderId:$orderId,input:$input){id}}',
+        { orderId: accountOrderId, input: { amount: '24.51' } },
+      ),
+    ).toMatchObject({
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'amount', code: 'REFUND_EXCEEDS_BALANCE' }],
+          },
+        },
+      ],
+    });
+    await openRefund();
+    await merchant.locator('#refund-amount').fill('24.50');
+    await merchant.locator('#refund-restock').check();
+    expect(await submitRefund()).toMatchObject({
+      data: { recordOrderRefund: { amount: '24.50', currency: 'BGN', restock: true } },
+    });
+    await merchant.waitForURL((url) => url.pathname.endsWith(accountOrderId));
+    const full = waitForCart(merchant, 'OperatorOrder');
+    await merchant.reload();
+    expect(await (await full).json()).toMatchObject({
+      data: {
+        order: { id: accountOrderId, status: 'CANCELLED', paymentStatus: 'PAID' },
+        orderRefundSummary: { status: 'FULL', refundedAmount: '36.50', refundableAmount: '0.00' },
+      },
+    });
+    expect(await refundRouter(inventoryRead, trackedVariant)).toEqual({
+      data: { inventoryVariant: { ...trackedVariant, quantity: 5 } },
     });
 
     await merchant.getByRole('link', { name: 'Customers', exact: true }).click();
