@@ -470,6 +470,9 @@ npm run dev:holita
 
 Existing Holita checkouts need `HOLITA_COMMERCE_IMAGE_DIR` in `holita/config/commerce.env`.
 Set it to the absolute path of `.volumes/holita/images` in the checkout before seeding.
+Set a separate generated `HOLITA_DEMO_SHOPPER_PASSWORD` in the ignored
+`holita/config/seed-accounts.env` before reseeding. The Sofia storefront shopper
+`shopper@demo.holita.test` starts with two available variants in the cart.
 Admin uploads brand logos and product photos through the operator graph. Serve
 `/media/brands/` and `/media/products/` from Commerce on both the Admin and storefront origins.
 Direct public product image URLs work only while the product is active and has an active variant.
@@ -536,6 +539,12 @@ merchant's saved order, or the first active variant when all are sold out. Choos
 updates its price and availability. A variant is available when it has stock or sells without
 inventory tracking. The Sofia demo shop includes a configurable product with two differently
 priced combinations, one in stock and one sold out.
+
+Select an available variant and quantity on the product page, then add it to the cart. The cart
+shows current prices and stock, supports quantity changes and removal, and excludes blocked lines
+from the subtotal. Signing in merges eligible guest quantities and shows any skipped items.
+The storefront graph exposes `cart`, `addCartLine`, `updateCartLine` and `removeCartLine`.
+Send the guest credential in `x-cart-token` or use the same-shop shopper bearer after signing in.
 
 The Product drawer's Descriptions section accepts optional Bulgarian and English plain text.
 The storefront product page shows the selected language when available and falls back to the

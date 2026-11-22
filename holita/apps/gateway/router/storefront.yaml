@@ -17,6 +17,10 @@ traffic_shaping:
     timeout: 5s
 override_subgraph_url:
   commerce: '${env.STOREFRONT_COMMERCE_URL:-http://127.0.0.1:12013/storefront/graphql}'
+include_subgraph_errors:
+  all:
+    redact_message: true
+    allow_extensions_keys: [code, fieldErrors]
 headers:
   all:
     request:
@@ -25,8 +29,10 @@ headers:
             named: authorization
         - propagate:
             named: x-branch-id
+        - propagate:
+            named: x-cart-token
 cors:
   policies:
     - origins: ['${env.STOREFRONT_ORIGIN:-http://127.0.0.1:12020}']
       methods: [GET, POST, OPTIONS]
-      allow_headers: [authorization, content-type, x-branch-id]
+      allow_headers: [authorization, content-type, x-branch-id, x-cart-token]

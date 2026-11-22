@@ -112,6 +112,12 @@ export const demoTags = [
   { id: 2, name: 'Ръчна изработка', slug: 'ръчна-изработка', productIds: [11] },
 ] as const;
 
+export const demoShopper = {
+  name: 'Мария Петрова',
+  email: 'shopper@demo.holita.test',
+  cartSkus: ['GUV-2L', 'PAN-28-SAND'],
+};
+
 interface DemoBrand {
   readonly id: number;
   readonly name: string;

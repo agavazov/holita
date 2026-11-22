@@ -184,6 +184,7 @@ async function serve(
           'content-type',
           'authorization',
           'x-branch-id',
+          'x-cart-token',
           'x-request-id',
           'accept-language',
           'origin',
@@ -494,7 +495,9 @@ function pngAtSize(source: Buffer, size: number): Buffer {
   return Buffer.concat([source.subarray(0, -12), chunk, source.subarray(-12)]);
 }
 
-test('staff creates a merchant and its administrator creates a product', async ({ browser }) => {
+test('staff provisions a shop, its merchant publishes a product and a shopper merges a cart', async ({
+  browser,
+}) => {
   const staffEmail = process.env.HOLITA_STAFF_EMAIL;
   const staffPassword = process.env.HOLITA_STAFF_PASSWORD;
   const internal = process.env.CORE_INTERNAL_AUTH_TOKEN;
@@ -619,6 +622,7 @@ test('staff creates a merchant and its administrator creates a product', async (
     await secretFill(staff.locator('#merchant-password'), merchantPassword);
     await staff.getByRole('button', { name: 'Save', exact: true }).click();
     await staff.getByRole('link', { name: merchantName }).click();
+    await expect(staff.getByRole('heading', { name: merchantName, exact: true })).toBeVisible();
     const shopId = await createShop(staff, 'First shop');
     const merchantContext = await browser.newContext();
     cleanup.push(() => merchantContext.close());
@@ -1215,15 +1219,132 @@ test('staff creates a merchant and its administrator creates a product', async (
     await merchant.getByRole('menuitem', { name: 'Delete', exact: true }).click();
     await merchant.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(merchant.getByText('No brands yet', { exact: true })).toBeVisible();
+    await merchant.getByRole('link', { name: 'Products', exact: true }).click();
+    await configuredProduct.click();
+    await merchant.locator('#product-status').click();
+    await merchant.getByRole('option', { name: 'Active', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Product saved.');
+
+    const shopperEmail = `shopper-${randomUUID()}@example.test`;
+    const shopperPassword = `Temporary-${randomUUID()}`;
     await shopper.getByRole('link', { name: 'My account' }).click();
     await shopper.getByRole('link', { name: 'Register', exact: true }).click();
     await shopper.locator('#name').fill('Shopper');
-    await shopper.locator('#email').fill(`shopper-${randomUUID()}@example.test`);
-    await secretFill(shopper.locator('#password'), `Temporary-${randomUUID()}`);
+    await shopper.locator('#email').fill(shopperEmail);
+    await secretFill(shopper.locator('#password'), shopperPassword);
     await shopper.getByRole('button', { name: 'Register', exact: true }).click();
     await expect(shopper.getByText('Shopper', { exact: true })).toBeVisible();
     await shopper.getByRole('link', { name: 'Products', exact: true }).click();
     await expect(shopper.getByRole('link', { name: productName })).toBeVisible();
+    await shopper.getByRole('link', { name: configuredProductName, exact: true }).click();
+    await expect(
+      shopper.getByRole('heading', { name: configuredProductName, exact: true }),
+    ).toBeVisible();
+    const configuredProductUrl = shopper.url();
+    const addSatin = async () => {
+      await shopper.getByRole('radio', { name: 'Gloss', exact: true }).check();
+      await shopper.getByRole('radio', { name: 'Satin', exact: true }).check();
+      await shopper.getByRole('button', { name: 'Add to cart', exact: true }).click();
+      await expect(shopper.getByRole('link', { name: 'Cart, 1 item', exact: true })).toBeVisible();
+    };
+    const expectedSatin = {
+      name: configuredProductName,
+      optionLabels: ['Satin'],
+      unitPrice: '30.00',
+      variantId: expect.any(String),
+    };
+    const singleSatin = {
+      itemCount: 1,
+      subtotal: '30.00',
+      lines: [{ ...expectedSatin, quantity: 1, lineTotal: '30.00' }],
+    };
+    const waitForCart = (page: Page, operation = 'PublicCart') =>
+      page.waitForResponse(
+        (response) =>
+          response.request().postData()?.includes(`"operationName":"${operation}"`) === true,
+      );
+    const accountAdd = waitForCart(shopper, 'AddCartLine');
+    await addSatin();
+    expect(await (await accountAdd).json()).toMatchObject({
+      data: { addCartLine: { guestCartToken: null, cart: singleSatin } },
+    });
+    await shopper.getByRole('link', { name: 'My account' }).click();
+    await shopper.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await expect(shopper.getByRole('link', { name: 'Sign in', exact: true })).toBeVisible();
+    await shopper.goto(configuredProductUrl);
+    await addSatin();
+    await shopper.getByRole('link', { name: 'Cart, 1 item', exact: true }).click();
+    const cartUrl = `${shopApp.origin}/s/${shopId}/cart`;
+    await expect(shopper).toHaveURL(cartUrl);
+    await expect(
+      shopper.getByRole('link', { name: configuredProductName, exact: true }),
+    ).toBeVisible();
+    const guestToken = await shopper.evaluate(
+      (id) => localStorage.getItem(`holita.cart.${id}`),
+      shopId,
+    );
+    if (!guestToken) {
+      throw new Error('The guest cart credential was not stored');
+    }
+    const guestReload = waitForCart(shopper);
+    await shopper.reload();
+    expect(await (await guestReload).json()).toMatchObject({ data: { cart: singleSatin } });
+    const guestTab = await shopperContext.newPage();
+    const tabCart = waitForCart(guestTab);
+    await guestTab.goto(cartUrl);
+    expect(await (await tabCart).json()).toMatchObject({ data: { cart: singleSatin } });
+    await guestTab.close();
+
+    const readWithGuestToken = async (branchId: string): Promise<unknown> => {
+      const response = await shopper.request.post(`${shopApp.origin}/graphql`, {
+        headers: { 'x-branch-id': branchId, 'x-cart-token': guestToken },
+        data: { query: '{cart{itemCount}}' },
+      });
+      return response.json();
+    };
+    const missingCart = {
+      data: null,
+      errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    };
+    expect(await readWithGuestToken(secondShopId)).toMatchObject(missingCart);
+    await shopper.goto(`${shopApp.origin}/s/${shopId}/sign-in`);
+    await shopper.locator('#email').fill(shopperEmail);
+    await secretFill(shopper.locator('#password'), shopperPassword);
+    await shopper.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(shopper).toHaveURL(cartUrl);
+    await expect(shopper.getByRole('link', { name: 'Cart, 2 items', exact: true })).toBeVisible();
+    const signedInReload = waitForCart(shopper);
+    await shopper.reload();
+    expect(await (await signedInReload).json()).toMatchObject({
+      data: {
+        cart: {
+          itemCount: 2,
+          subtotal: '60.00',
+          lines: [{ ...expectedSatin, quantity: 2, lineTotal: '60.00' }],
+        },
+      },
+    });
+    expect(await readWithGuestToken(shopId)).toMatchObject(missingCart);
+
+    await shopper.getByRole('spinbutton', { name: 'Quantity', exact: true }).fill('3');
+    const updated = waitForCart(shopper, 'UpdateCartLine');
+    await shopper.getByRole('button', { name: 'Update', exact: true }).click();
+    expect(await (await updated).json()).toMatchObject({
+      data: {
+        updateCartLine: {
+          itemCount: 3,
+          subtotal: '90.00',
+          lines: [{ ...expectedSatin, quantity: 3, lineTotal: '90.00' }],
+        },
+      },
+    });
+    const removed = waitForCart(shopper, 'RemoveCartLine');
+    await shopper.getByRole('button', { name: 'Remove', exact: true }).click();
+    expect(await (await removed).json()).toMatchObject({
+      data: { removeCartLine: { itemCount: 0, subtotal: '0.00', lines: [] } },
+    });
+
     await merchant.getByRole('link', { name: 'Customers', exact: true }).click();
     await expect(merchant.getByText('Shopper', { exact: true })).toBeVisible();
     await merchant.getByRole('link', { name: 'Products', exact: true }).click();

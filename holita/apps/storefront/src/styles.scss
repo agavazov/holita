@@ -84,6 +84,76 @@ holita-storefront-page .shop-chip {
   }
 }
 
+holita-storefront-page {
+  .shop-primary,
+  .shop-secondary,
+  .shop-quantity-field input {
+    min-block-size: var(--p-app-control-height);
+    padding: var(--p-app-space-2) var(--p-app-space-4);
+    border: 1px solid var(--shop-control-border);
+    border-radius: var(--p-app-radius-control);
+    background: var(--shop-paper);
+    color: inherit;
+    font: inherit;
+  }
+
+  .shop-primary,
+  .shop-secondary {
+    display: inline-block;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .shop-primary {
+    border-color: transparent;
+    background: var(--shop-action);
+    color: var(--shop-action-ink);
+  }
+
+  .shop-primary:is(a, :enabled):hover {
+    border-color: transparent;
+    background: var(--shop-action-hover);
+  }
+
+  .shop-secondary:enabled:hover {
+    border-color: var(--shop-ink);
+  }
+
+  :is(.shop-primary, .shop-secondary):enabled {
+    cursor: pointer;
+  }
+
+  :is(.shop-primary, .shop-secondary):disabled {
+    opacity: 0.6;
+  }
+
+  .shop-text-link {
+    color: var(--shop-link);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .shop-text-link:hover {
+    color: var(--shop-ink);
+  }
+
+  .shop-quantity-field {
+    display: grid;
+    gap: var(--p-app-space-1);
+    color: var(--shop-muted);
+    font-size: var(--p-app-text-sm);
+    font-weight: 700;
+  }
+
+  .shop-quantity-field input {
+    inline-size: 6rem;
+    padding-inline: var(--p-app-space-3);
+    color: var(--shop-ink);
+    font-size: 1rem;
+    font-weight: 400;
+  }
+}
+
 .shop-state {
   margin: 0;
   padding: var(--p-app-space-4);

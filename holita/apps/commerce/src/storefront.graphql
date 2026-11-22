@@ -145,6 +145,41 @@ type ShopperSession {
   token: String!
   shopper: Shopper!
   expiresAt: String!
+  cartMergeIssues: [CartMergeIssue!]!
+}
+enum CartIssue {
+  UNAVAILABLE
+  INSUFFICIENT_STOCK
+}
+type CartLine {
+  id: ID!
+  variantId: ID
+  productId: ID
+  name: String
+  optionLabels: [String!]!
+  quantity: Int!
+  unitPrice: String
+  lineTotal: String
+  "The current stock for a tracked variant, or null for untracked or unavailable variants."
+  availableQuantity: Int
+  issue: CartIssue
+}
+type Cart {
+  lines: [CartLine!]!
+  "Total requested quantity across all lines."
+  itemCount: Float!
+  "Current total for lines that can be fulfilled."
+  subtotal: String!
+}
+type CartAddResult {
+  cart: Cart!
+  "Issued only when a new guest cart is created."
+  guestCartToken: String
+}
+type CartMergeIssue {
+  name: String
+  quantity: Int!
+  reason: CartIssue!
 }
 type CatalogueSpecificationGroup {
   name: String!
@@ -200,9 +235,13 @@ type Query {
     sort: CatalogueSort
   ): CataloguePage
   shopperMe: Shopper
+  cart: Cart!
 }
 type Mutation {
   registerShopper(name: String!, email: String!, password: String!): ShopperSession!
   signInShopper(email: String!, password: String!): ShopperSession!
   signOutShopper: Boolean!
+  addCartLine(variantId: ID!, quantity: Int!): CartAddResult!
+  updateCartLine(lineId: ID!, quantity: Int!): Cart!
+  removeCartLine(lineId: ID!): Cart!
 }

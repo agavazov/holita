@@ -1,4 +1,4 @@
-import type { Prisma } from '../generated/prisma/client.js';
+import type { Option, OptionValue, Prisma, ProductVariant } from '../generated/prisma/client.js';
 import type { Scope } from '../scope.js';
 
 function badgeAssignments(scope: Scope, activeOnly = false) {
@@ -49,4 +49,46 @@ export function catalogueProductRelations(scope: Scope) {
       select: { price: true, quantity: true, inventoryTracked: true },
     },
   } satisfies Prisma.ProductInclude;
+}
+
+export function catalogueVariantValues(scope: Scope) {
+  return {
+    where: {
+      ...scope,
+      optionValue: { ...scope, option: { ...scope, active: true } },
+    },
+    select: {
+      optionValue: {
+        select: {
+          id: true,
+          label: true,
+          sortOrder: true,
+          option: { select: { id: true, name: true } },
+        },
+      },
+    },
+  } satisfies Prisma.ProductVariant$valuesArgs;
+}
+
+type CatalogueOptionValue = Pick<OptionValue, 'id' | 'sortOrder'> & {
+  option: Pick<Option, 'id' | 'name'>;
+};
+
+export function compareCatalogueOptionValues(
+  left: CatalogueOptionValue,
+  right: CatalogueOptionValue,
+) {
+  return (
+    left.option.name.localeCompare(right.option.name) ||
+    left.option.id.localeCompare(right.option.id) ||
+    left.sortOrder - right.sortOrder ||
+    left.id.localeCompare(right.id)
+  );
+}
+
+export function trackedVariantQuantity({
+  inventoryTracked,
+  quantity,
+}: Pick<ProductVariant, 'inventoryTracked' | 'quantity'>): number | null {
+  return inventoryTracked ? quantity : null;
 }

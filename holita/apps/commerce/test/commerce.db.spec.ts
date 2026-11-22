@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { afterAll, beforeAll, expect, it } from '@jest/globals';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import pg from 'pg';
@@ -139,6 +139,7 @@ beforeAll(async () => {
     '20261122060000_product_characteristics',
     '20261122070000_product_markers',
     '20261122080000_inventory_lookup',
+    '20261122090000_shopper_cart',
   ]) {
     await connection.query(
       await readFile(
@@ -192,7 +193,7 @@ beforeAll(async () => {
       const allowed =
         identity &&
         !identity.platform &&
-        ((identity.tenantId === tenantA && (id === branchA || id === branchB)) ||
+        ((identity.tenantId === tenantA && (id === branchA || id === branchB || id === publicA)) ||
           (identity.tenantId === tenantB && id === branchForeign));
       response.writeHead(200, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ data: { branch: allowed ? { id } : null } }));
@@ -904,6 +905,7 @@ async function storefront(
   source: string,
   variables: Record<string, unknown> = {},
   token?: string,
+  guestCartToken?: string,
 ): Promise<unknown> {
   const response = await fetch(publicEndpoint, {
     method: 'POST',
@@ -911,6 +913,7 @@ async function storefront(
       'content-type': 'application/json',
       'x-branch-id': branch,
       ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...(guestCartToken ? { 'x-cart-token': guestCartToken } : {}),
     },
     body: JSON.stringify({ query: source, variables }),
   });
@@ -933,7 +936,7 @@ function registeredToken(value: unknown): string {
   }
   return value.data.registerShopper.token;
 }
-it('isolates shoppers and active catalogue by shop and hides suspended shops', async () => {
+it('isolates shoppers, catalogue and carts by shop and hides suspended shops', async () => {
   if (!database) {
     throw new Error('Missing database');
   }
@@ -967,7 +970,13 @@ it('isolates shoppers and active catalogue by shop and hides suspended shops', a
         tenantId: tenantA,
         branchId: publicA,
         name,
-        variants: { create: storedVariant(name, '1.00', name !== 'No active variant') },
+        variants: {
+          create: {
+            ...storedVariant(name, '1.00', name !== 'No active variant'),
+            inventoryTracked: name === 'Visible',
+            quantity: name === 'Visible' ? 3 : 0,
+          },
+        },
         status,
         brandId: visible.id,
         categoryId: category.id,
@@ -1039,4 +1048,128 @@ it('isolates shoppers and active catalogue by shop and hides suspended shops', a
     errors: expect.any(Array),
   });
   expect(await storefront(publicA, '{products{total}}')).toHaveProperty('errors');
-});
+
+  const variant = await database.productVariant.findFirstOrThrow({
+    where: { ...categoryScope, sku: 'Visible' },
+  });
+  const readCart =
+    '{cart{itemCount subtotal lines{id variantId name quantity unitPrice lineTotal availableQuantity issue}}}';
+  const cart = () => storefront(publicA, readCart, {}, token);
+  expect(await cart()).toEqual({ data: { cart: { itemCount: 0, subtotal: '0.00', lines: [] } } });
+  const add =
+    'mutation($id:ID!,$quantity:Int!){addCartLine(variantId:$id,quantity:$quantity){guestCartToken cart{itemCount subtotal}}}';
+  expect(await storefront(publicA, add, { id: variant.id, quantity: 2 }, token)).toEqual({
+    data: { addCartLine: { guestCartToken: null, cart: { itemCount: 2, subtotal: '2.00' } } },
+  });
+  const accountCart = await database.cart.findFirstOrThrow({
+    where: { ...categoryScope, customerId: { not: null } },
+  });
+  const line = await database.cartLine.findFirstOrThrow({
+    where: { ...categoryScope, cartId: accountCart.id },
+  });
+  const foreignOwner = registeredToken(
+    await storefront(publicA, mutation, { email: 'other@example.test' }),
+  );
+  const remove = 'mutation($id:ID!){removeCartLine(lineId:$id){itemCount}}';
+  for (const [branch, bearer, operation] of [
+    [publicB, token, readCart],
+    [publicA, tokens.operator, readCart],
+    [publicA, foreignOwner, remove],
+    [publicA, undefined, remove],
+  ] as const) {
+    expect(
+      await storefront(branch, operation, operation === remove ? { id: line.id } : {}, bearer),
+    ).toHaveProperty('errors');
+  }
+
+  const adjust = 'mutation($id:ID!){updateInventoryQuantity(id:$id,quantity:1){quantity}}';
+  expect(await query(tokens.operator, publicA, adjust, { id: variant.id })).toEqual({
+    data: { updateInventoryQuantity: { quantity: 1 } },
+  });
+  expect(await cart()).toMatchObject({
+    data: {
+      cart: {
+        itemCount: 2,
+        subtotal: '0.00',
+        lines: [
+          { quantity: 2, lineTotal: '2.00', availableQuantity: 1, issue: 'INSUFFICIENT_STOCK' },
+        ],
+      },
+    },
+  });
+  const setQuantity =
+    'mutation($id:ID!){updateCartLine(lineId:$id,quantity:1){itemCount subtotal}}';
+  expect(await storefront(publicA, setQuantity, { id: line.id }, token)).toEqual({
+    data: { updateCartLine: { itemCount: 1, subtotal: '1.00' } },
+  });
+  const guestToken = randomBytes(32).toString('base64url');
+  await database.cart.create({
+    data: {
+      ...categoryScope,
+      guestTokenHash: createHash('sha256').update(guestToken).digest('hex'),
+    },
+  });
+  expect(
+    await storefront(publicA, add, { id: variant.id, quantity: 1 }, undefined, guestToken),
+  ).toEqual({
+    data: { addCartLine: { guestCartToken: null, cart: { itemCount: 1, subtotal: '1.00' } } },
+  });
+  expect(await storefront(publicB, readCart, {}, undefined, guestToken)).toHaveProperty('errors');
+  expect(await storefront(publicA, remove, { id: line.id }, undefined, guestToken)).toHaveProperty(
+    'errors',
+  );
+  expect(
+    await storefront(
+      publicA,
+      'mutation{signInShopper(email:"same@example.test",password:"temporary-password"){cartMergeIssues{name quantity reason}}}',
+      {},
+      undefined,
+      guestToken,
+    ),
+  ).toEqual({
+    data: {
+      signInShopper: {
+        cartMergeIssues: [{ name: 'Visible', quantity: 1, reason: 'INSUFFICIENT_STOCK' }],
+      },
+    },
+  });
+  expect(await storefront(publicA, readCart, {}, undefined, guestToken)).toHaveProperty('errors');
+
+  const saveProduct =
+    'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){variants{id}}}';
+  const draft = {
+    sku: variant.sku,
+    price: '4.25',
+    active: true,
+    inventoryTracked: false,
+    optionValueIds: [],
+  };
+  const saveVariants = (id?: string) =>
+    query(tokens.operator, publicA, saveProduct, {
+      id: variant.productId,
+      input: { name: 'Visible', status: 'ACTIVE', variants: [{ ...draft, id }] },
+    });
+  expect(await saveVariants(variant.id)).toEqual({
+    data: { updateProduct: { variants: [{ id: variant.id }] } },
+  });
+  expect(await cart()).toMatchObject({
+    data: {
+      cart: {
+        subtotal: '4.25',
+        lines: [{ id: line.id, variantId: variant.id, unitPrice: '4.25', issue: null }],
+      },
+    },
+  });
+  expect(await saveVariants()).toHaveProperty('data.updateProduct');
+  expect(await cart()).toMatchObject({
+    data: {
+      cart: {
+        subtotal: '0.00',
+        lines: [{ id: line.id, variantId: null, name: null, issue: 'UNAVAILABLE' }],
+      },
+    },
+  });
+  expect(await storefront(publicA, remove, { id: line.id }, token)).toEqual({
+    data: { removeCartLine: { itemCount: 0 } },
+  });
+}, 15_000);

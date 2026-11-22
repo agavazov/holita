@@ -22,6 +22,7 @@ import {
 } from './generated/prisma/client.js';
 import { brandLogoUrl } from './brands/brand-images.js';
 import { BrandsRepository } from './brands/brands.repository.js';
+import { CartService, type CartContext } from './cart/cart.service.js';
 import { CategoriesService } from './categories/categories.service.js';
 import { CharacteristicsService } from './characteristics/characteristics.service.js';
 import { CollectionsService } from './collections/collections.service.js';
@@ -33,16 +34,23 @@ import type {
   CatalogueProduct,
   CatalogueVariantSelection,
   QueryCatalogueArgs,
+  Shopper,
+  ShopperSession,
 } from './generated/graphql/storefront-types.js';
 import type { Scope } from './scope.js';
 import { CatalogueRepository, type BrowseCriteria } from './products/catalogue.repository.js';
 import { CommerceRepository } from './products/commerce.repository.js';
 import { productImageUrl } from './products/product-images.js';
+import {
+  compareCatalogueOptionValues,
+  trackedVariantQuantity,
+} from './products/product-relations.js';
 import { ShopperRepository } from './customers/shopper.repository.js';
 
 export interface StorefrontContext {
   branchId: string | undefined;
   authorization: string | undefined;
+  cartToken?: string | string[];
 }
 export interface ShopScope {
   id: string;
@@ -142,11 +150,8 @@ interface VariantSelectionBatch {
   selections: Promise<Map<string, CatalogueVariantSelection>>;
 }
 
-function variantAvailable({
-  inventoryTracked,
-  quantity,
-}: Pick<ProductVariant, 'inventoryTracked' | 'quantity'>): boolean {
-  return !inventoryTracked || quantity > 0;
+function variantAvailable(variant: Pick<ProductVariant, 'inventoryTracked' | 'quantity'>): boolean {
+  return (trackedVariantQuantity(variant) ?? 1) > 0;
 }
 
 function catalogueVariantSelection({ variants }: VariantSelectionRow): CatalogueVariantSelection {
@@ -155,13 +160,7 @@ function catalogueVariantSelection({ variants }: VariantSelectionRow): Catalogue
       values.map(({ optionValue }) => [optionValue.id, optionValue] as const),
     ),
   );
-  const orderedValues = [...distinctValues.values()].sort(
-    (left, right) =>
-      left.option.name.localeCompare(right.option.name) ||
-      left.option.id.localeCompare(right.option.id) ||
-      left.sortOrder - right.sortOrder ||
-      left.id.localeCompare(right.id),
-  );
+  const orderedValues = [...distinctValues.values()].sort(compareCatalogueOptionValues);
   const optionGroups = new Map<string, CatalogueOption>();
   for (const { id, label, option } of orderedValues) {
     const group = optionGroups.get(option.id) ?? { ...option, values: [] };
@@ -225,6 +224,7 @@ export class StorefrontService {
     private readonly products: CommerceRepository,
     private readonly browsing: CatalogueRepository,
     private readonly shoppers: ShopperRepository,
+    private readonly carts: CartService,
     private readonly brands: BrandsRepository,
     private readonly categories: CategoriesService,
     private readonly collections: CollectionsService,
@@ -416,28 +416,26 @@ export class StorefrontService {
       : null;
   }
   private async createSession(
-    shop: ShopScope,
-    shopper: { id: string; name: string; email: string },
-  ) {
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    shopper: Shopper,
+    cartToken: StorefrontContext['cartToken'],
+  ): Promise<ShopperSession> {
     const token = `holita-shopper.${randomBytes(32).toString('base64url')}`;
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await this.shoppers.createSession(
-      { tenantId: shop.tenantId, branchId: shop.id },
-      shopper.id,
-      tokenHash(token),
-      expiresAt,
-    );
-    return { token, shopper, expiresAt: expiresAt.toISOString() };
+    await this.shoppers.createSession(tx, scope, shopper.id, tokenHash(token), expiresAt);
+    const cartMergeIssues = await this.carts.merge(tx, scope, shopper.id, cartToken);
+    return { token, shopper, expiresAt: expiresAt.toISOString(), cartMergeIssues };
   }
   async register(context: StorefrontContext, name: string, email: string, password: string) {
-    const shop = await this.requireShop(context);
+    const scope = await this.publicScope(context);
     const input = credentials(name, email, password);
+    const passwordHash = await hashPassword(password);
     try {
-      const shopper = await this.shoppers.create(
-        { tenantId: shop.tenantId, branchId: shop.id },
-        { ...input, passwordHash: await hashPassword(password) },
-      );
-      return await this.createSession(shop, shopper);
+      return await this.shoppers.transaction(async (tx) => {
+        const shopper = await this.shoppers.create(tx, scope, { ...input, passwordHash });
+        return this.createSession(tx, scope, shopper, context.cartToken);
+      });
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new BadRequestException('Email is already registered');
@@ -446,28 +444,34 @@ export class StorefrontService {
     }
   }
   async signIn(context: StorefrontContext, email: string, password: string) {
-    const shop = await this.requireShop(context);
+    const scope = await this.publicScope(context);
     const address = email.trim().toLowerCase();
-    const shopper = await this.shoppers.findByEmail(
-      { tenantId: shop.tenantId, branchId: shop.id },
-      address,
-    );
+    const shopper = await this.shoppers.findByEmail(scope, address);
     if (!shopper?.passwordHash || !(await verifyPassword(password, shopper.passwordHash))) {
       throw new UnauthorizedException('Invalid email or password');
     }
-    return this.createSession(shop, shopper);
+    return this.shoppers.transaction((tx) =>
+      this.createSession(tx, scope, shopper, context.cartToken),
+    );
   }
-  async me(context: StorefrontContext) {
-    const shop = await this.requireShop(context);
+  private async verifiedShopper(scope: Scope, context: StorefrontContext) {
     const token = bearer(context);
     if (!token) {
       return null;
     }
-    const session = await this.shoppers.findSession(
-      { tenantId: shop.tenantId, branchId: shop.id },
-      tokenHash(token),
-    );
+    const session = await this.shoppers.findSession(scope, tokenHash(token));
     return session?.customer ?? null;
+  }
+  async me(context: StorefrontContext) {
+    return this.verifiedShopper(await this.publicScope(context), context);
+  }
+  async cartContext(context: StorefrontContext): Promise<CartContext> {
+    const scope = await this.publicScope(context);
+    const shopper = await this.verifiedShopper(scope, context);
+    if (context.authorization !== undefined && !shopper) {
+      throw new UnauthorizedException('Sign in to this shop to access your cart');
+    }
+    return { scope, customerId: shopper?.id, cartToken: context.cartToken };
   }
   async signOut(context: StorefrontContext) {
     const shop = await this.requireShop(context);

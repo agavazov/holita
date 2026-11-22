@@ -13,6 +13,7 @@ import {
   demoOptions,
   demoProductCovers,
   demoProductImages,
+  demoShopper,
   demoTags,
 } from './demo-catalogue.mjs';
 
@@ -370,6 +371,7 @@ async function seedCatalogue(): Promise<void> {
         markerAssignmentsInserted += assignments.rowCount ?? 0;
       }
     }
+    await seedShopperCart(client, tenantId, branchId);
     await client.query('COMMIT');
     console.log(
       `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options, ${String(productsInserted)} products, ${String(collectionsInserted)} collections, ${String(characteristicGroupsInserted)} characteristic groups and ${String(imagesInserted)} product images.`,
@@ -379,6 +381,58 @@ async function seedCatalogue(): Promise<void> {
     );
   } finally {
     await client.end();
+  }
+}
+
+async function seedShopperCart(client: pg.Client, tenantId: string, branchId: string) {
+  // The Core seed builds the shared auth package before this import.
+  const { hashPassword, validatePassword } = await import('@osnova/auth');
+  const { email, name, cartSkus } = demoShopper;
+  const password = process.env.HOLITA_DEMO_SHOPPER_PASSWORD;
+  if (!password) {
+    throw new Error('Configure HOLITA_DEMO_SHOPPER_PASSWORD in holita/config/seed-accounts.env');
+  }
+  await client.query(
+    `INSERT INTO "customer" ("id", "tenantId", "branchId", "email", "name", "passwordHash", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
+    [
+      fixtureId('d2', 1),
+      tenantId,
+      branchId,
+      email,
+      name,
+      await hashPassword(validatePassword(password)),
+    ],
+  );
+
+  const { rows: variants } = await client.query<{ id: string }>(
+    `SELECT v."id" FROM "productVariant" v
+     JOIN "product" p ON p."tenantId" = v."tenantId" AND p."branchId" = v."branchId"
+       AND p."id" = v."productId"
+     WHERE v."tenantId" = $1 AND v."branchId" = $2 AND v."sku" = ANY($3::text[])
+       AND v."active" AND p."status" = 'active' AND (NOT v."inventoryTracked" OR v."quantity" > 0)
+     ORDER BY v."sku"`,
+    [tenantId, branchId, cartSkus],
+  );
+  if (variants.length !== cartSkus.length) {
+    return;
+  }
+  const cartId = fixtureId('e2', 1);
+  const cart = await client.query(
+    `INSERT INTO "cart" ("id", "tenantId", "branchId", "customerId", "updatedAt")
+     SELECT $1, "tenantId", "branchId", "id", CURRENT_TIMESTAMP FROM "customer"
+     WHERE "tenantId" = $2 AND "branchId" = $3 AND lower("email") = $4
+     ON CONFLICT DO NOTHING`,
+    [cartId, tenantId, branchId, email],
+  );
+  if (cart.rowCount) {
+    for (const [index, variant] of variants.entries()) {
+      await client.query(
+        `INSERT INTO "cartLine" ("id", "tenantId", "branchId", "cartId", "variantId", "quantity")
+         VALUES ($1, $2, $3, $4, $5, 1)`,
+        [fixtureId('f2', index + 1), tenantId, branchId, cartId, variant.id],
+      );
+    }
   }
 }
 

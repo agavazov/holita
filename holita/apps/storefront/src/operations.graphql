@@ -231,6 +231,11 @@ mutation RegisterShopper($name: String!, $email: String!, $password: String!) {
       name
       email
     }
+    cartMergeIssues {
+      name
+      quantity
+      reason
+    }
   }
 }
 mutation SignInShopper($email: String!, $password: String!) {
@@ -242,8 +247,52 @@ mutation SignInShopper($email: String!, $password: String!) {
       name
       email
     }
+    cartMergeIssues {
+      name
+      quantity
+      reason
+    }
   }
 }
 mutation SignOutShopper {
   signOutShopper
+}
+fragment PublicCartFields on Cart {
+  itemCount
+  subtotal
+  lines {
+    id
+    variantId
+    productId
+    name
+    optionLabels
+    quantity
+    unitPrice
+    lineTotal
+    availableQuantity
+    issue
+  }
+}
+query PublicCart {
+  cart {
+    ...PublicCartFields
+  }
+}
+mutation AddCartLine($variantId: ID!, $quantity: Int!) {
+  addCartLine(variantId: $variantId, quantity: $quantity) {
+    guestCartToken
+    cart {
+      ...PublicCartFields
+    }
+  }
+}
+mutation UpdateCartLine($lineId: ID!, $quantity: Int!) {
+  updateCartLine(lineId: $lineId, quantity: $quantity) {
+    ...PublicCartFields
+  }
+}
+mutation RemoveCartLine($lineId: ID!) {
+  removeCartLine(lineId: $lineId) {
+    ...PublicCartFields
+  }
 }

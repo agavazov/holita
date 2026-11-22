@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
   inject,
   linkedSignal,
@@ -13,7 +14,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet, provideRouter } from '@angular/router';
-import { ApolloLink, InMemoryCache } from '@apollo/client/core';
+import { InMemoryCache } from '@apollo/client/core';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import { loadLocalConfig, readPrimeUiLicense } from '@osnova/ui/app';
@@ -22,6 +23,16 @@ import { messages, type Language } from './storefront-messages';
 import { StorefrontApi } from './storefront-api';
 import { CatalogueBrowse } from './catalogue-browse';
 import { browseSections } from './catalogue-url';
+import {
+  CartState,
+  forgetGuestCart,
+  guestCartToken,
+  maxCartQuantity,
+  quantityControl,
+  shopperStorageKey,
+  type CartWriteError,
+} from './cart-state';
+import { CartMergeNotice, CartPage } from './cart-page';
 import type { CatalogueProductQuery } from './generated/operations';
 
 type VariantSelection = NonNullable<CatalogueProductQuery['catalogueProduct']>['variantSelection'];
@@ -33,7 +44,8 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
 
 @Component({
   selector: 'holita-storefront-page',
-  imports: [RouterLink, ReactiveFormsModule, NgTemplateOutlet, CatalogueBrowse],
+  imports: [RouterLink, ReactiveFormsModule, NgTemplateOutlet, CatalogueBrowse, CartPage],
+  providers: [CartState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="shop-header">
@@ -52,6 +64,20 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         }
       </nav>
       <div class="shop-actions">
+        @let cartCount = cartState.cart()?.itemCount ?? null;
+        <a
+          class="shop-cart-link"
+          [routerLink]="[...base(), 'cart']"
+          [attr.aria-current]="page === 'cart' ? 'page' : null"
+          [attr.aria-label]="cartCount === null ? t().cart : t().cartCount(cartCount)"
+        >
+          <span class="shop-cart-label">{{ t().cart }}</span>
+          @if (cartCount !== null) {
+            <span class="shop-chip app-num" data-tone="ACCENT" aria-hidden="true">{{
+              cartCount
+            }}</span>
+          }
+        </a>
         <a
           [routerLink]="[...base(), 'account']"
           [attr.aria-current]="page === 'account' ? 'page' : null"
@@ -67,6 +93,14 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
       @if (missing()) {
         <p class="shop-state" role="alert">{{ t().shopMissing }}</p>
       } @else {
+        @if (
+          cartState.sessionExpired() && page !== 'cart' && page !== 'sign-in' && page !== 'register'
+        ) {
+          <div class="shop-state">
+            <p role="alert">{{ t().cartSessionExpired }}</p>
+            <a class="shop-primary" [routerLink]="[...base(), 'sign-in']">{{ t().signIn }}</a>
+          </div>
+        }
         @if (browse) {
           @if (shop()) {
             <holita-catalogue-browse
@@ -220,6 +254,39 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                       }
                     </div>
                   }
+                  @let quantity = addQuantity();
+                  <div class="product-cart">
+                    <form class="product-cart-form" (submit)="$event.preventDefault(); addToCart()">
+                      <label class="shop-quantity-field" for="product-quantity">
+                        {{ t().quantity }}
+                        <input
+                          id="product-quantity"
+                          type="number"
+                          min="1"
+                          step="1"
+                          [max]="maxCartQuantity"
+                          [formControl]="quantity"
+                          [readOnly]="!available || cartState.locked()"
+                          [attr.aria-invalid]="quantity.touched && quantity.invalid ? 'true' : null"
+                        />
+                      </label>
+                      <button
+                        class="shop-primary"
+                        type="submit"
+                        [disabled]="!available || quantity.invalid || cartState.locked()"
+                      >
+                        {{ t().addToCart }}
+                      </button>
+                    </form>
+                    @let feedback = added();
+                    @if (feedback === 'ok') {
+                      <p class="product-cart-added" role="status">{{ t().cartAdded }}</p>
+                    } @else if (feedback) {
+                      <p class="product-cart-error" role="alert">{{ t()[feedback] }}</p>
+                    } @else if (quantity.touched && quantity.invalid) {
+                      <p class="product-cart-error">{{ t().cartInvalidQuantity }}</p>
+                    }
+                  </div>
                 }
                 @if (description(); as detail) {
                   <p class="product-description" [attr.lang]="detail.language">{{ detail.text }}</p>
@@ -262,6 +329,13 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             <h1 class="shop-state">{{ t().productMissing }}</h1>
           }
         }
+        @if (page === 'cart') {
+          <holita-shop-cart
+            [language]="language()"
+            [priceFormat]="price()"
+            [mergeNotice]="mergeNotice()"
+          />
+        }
         @if (page === 'register' || page === 'sign-in') {
           @let registering = page === 'register';
           <section class="account-view" aria-labelledby="account-title">
@@ -269,6 +343,9 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
               <h1 id="account-title">{{ registering ? t().register : t().signIn }}</h1>
             </header>
             <div class="account-panel">
+              @if (cartState.sessionExpired()) {
+                <p class="account-error" role="alert">{{ t().cartSessionExpired }}</p>
+              }
               <form [formGroup]="form" (ngSubmit)="submit()">
                 @if (registering) {
                   <label class="account-field" for="name">
@@ -297,7 +374,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                 </button>
               </form>
               <a
-                class="account-link"
+                class="shop-text-link"
                 [routerLink]="[...base(), registering ? 'sign-in' : 'register']"
               >
                 {{ registering ? t().signIn : t().register }}
@@ -321,11 +398,13 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                   <p>{{ person.name }}</p>
                   <p>{{ person.email }}</p>
                 </div>
-                <button type="button" (click)="signOut()">{{ t().signOut }}</button>
+                <button type="button" [disabled]="busy()" (click)="signOut()">
+                  {{ t().signOut }}
+                </button>
               } @else {
                 <div class="account-actions">
                   <a class="shop-primary" [routerLink]="[...base(), 'sign-in']">{{ t().signIn }}</a>
-                  <a class="account-link" [routerLink]="[...base(), 'register']">{{
+                  <a class="shop-text-link" [routerLink]="[...base(), 'register']">{{
                     t().register
                   }}</a>
                 </div>
@@ -348,9 +427,11 @@ class StorefrontPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(StorefrontApi);
+  private readonly destroy = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
   private readonly params = toSignal(this.route.paramMap, { requireSync: true });
-  readonly shopId = computed(() => this.params().get('shopId') ?? '');
+  protected readonly cartState = inject(CartState);
+  readonly shopId = this.cartState.shopId;
   readonly base = computed(() => ['/s', this.shopId()]);
   readonly page = this.route.routeConfig?.path?.split('/').at(2) ?? 'catalogue';
   readonly section = browseSections.find((item) => item === this.page) ?? null;
@@ -368,7 +449,10 @@ class StorefrontPage {
       return {
         shop,
         detail: shop && this.page === 'product' && id ? await this.api.product(shopId, id) : null,
-        shopper: shop && this.page === 'account' ? await this.api.me(shopId) : null,
+        shopper:
+          shop && this.page === 'account'
+            ? await this.api.me(shopId, sessionStorage.getItem(shopperStorageKey(shopId)))
+            : null,
       };
     },
   });
@@ -394,6 +478,20 @@ class StorefrontPage {
   protected readonly sellableVariantId = computed(() => {
     const variant = this.selectedVariant();
     return variant?.available ? variant.id : null;
+  });
+  protected readonly maxCartQuantity = maxCartQuantity;
+  protected readonly addQuantity = linkedSignal({
+    source: this.sellableVariantId,
+    computation: () => quantityControl(1),
+  });
+  protected readonly added = linkedSignal({
+    source: this.sellableVariantId,
+    computation: (): 'ok' | CartWriteError | null => null,
+  });
+  private readonly navigationInfo: unknown = this.router.currentNavigation()?.extras.info;
+  protected readonly mergeNotice = computed(() => {
+    const notice = this.navigationInfo;
+    return notice instanceof CartMergeNotice && notice.shopId === this.shopId() ? notice : null;
   });
   protected readonly variantOptions = computed(() => {
     const selection = this.variantSelection();
@@ -432,7 +530,7 @@ class StorefrontPage {
     return bg ? { text: bg, language: 'bg' } : null;
   });
   readonly shopper = linkedSignal(() => this.view()?.shopper ?? null);
-  private readonly price = computed(
+  protected readonly price = computed(
     () => new Intl.NumberFormat(this.language(), { style: 'currency', currency: 'BGN' }),
   );
   readonly form = new FormGroup({
@@ -484,25 +582,50 @@ class StorefrontPage {
     this.actionError.set(false);
     this.request.reload();
   }
-  async submit() {
-    this.form.markAllAsTouched();
-    if (this.form.invalid || (this.page === 'register' && !this.form.value.name?.trim())) {
+  protected async addToCart() {
+    const variantId = this.sellableVariantId();
+    const control = this.addQuantity();
+    const quantity = control.value;
+    if (!variantId || control.invalid || quantity === null || this.cartState.locked()) {
       return;
     }
+    this.added.set(null);
+    const result = await this.cartState.add(variantId, quantity);
+    if (this.sellableVariantId() === variantId && result !== 'expired') {
+      this.added.set(result);
+    }
+  }
+  async submit() {
+    this.form.markAllAsTouched();
+    if (
+      this.busy() ||
+      this.form.invalid ||
+      (this.page === 'register' && !this.form.value.name?.trim())
+    ) {
+      return;
+    }
+    const shopId = this.shopId();
+    const guestToken = guestCartToken(shopId);
     this.busy.set(true);
     this.actionError.set(false);
     try {
       const input = this.form.getRawValue();
       const result =
         this.page === 'register'
-          ? (await this.api.register(input)).data?.registerShopper
-          : (await this.api.signIn({ email: input.email, password: input.password })).data
-              ?.signInShopper;
-      if (!result) {
-        throw new Error('Missing session');
+          ? await this.api.register(shopId, input, guestToken)
+          : await this.api.signIn(
+              shopId,
+              { email: input.email, password: input.password },
+              guestToken,
+            );
+      sessionStorage.setItem(shopperStorageKey(shopId), result.token);
+      forgetGuestCart(shopId, guestToken);
+      if (!this.destroy.destroyed && this.shopId() === shopId) {
+        const destination = guestToken ? 'cart' : 'account';
+        await this.router.navigate([...this.base(), destination], {
+          info: guestToken ? new CartMergeNotice(shopId, result.cartMergeIssues) : undefined,
+        });
       }
-      sessionStorage.setItem(`holita.shopper.${this.shopId()}`, result.token);
-      await this.router.navigate([...this.base(), 'account']);
     } catch {
       this.actionError.set(true);
     } finally {
@@ -510,12 +633,27 @@ class StorefrontPage {
     }
   }
   async signOut() {
+    if (this.busy()) {
+      return;
+    }
+    const shopId = this.shopId();
+    const key = shopperStorageKey(shopId);
+    const token = sessionStorage.getItem(key);
+    this.busy.set(true);
+    this.actionError.set(false);
     try {
-      await this.api.signOut();
-      sessionStorage.removeItem(`holita.shopper.${this.shopId()}`);
-      this.shopper.set(null);
+      await this.api.signOut(shopId, token);
+      if (sessionStorage.getItem(key) === token) {
+        sessionStorage.removeItem(key);
+      }
+      if (!this.destroy.destroyed && this.shopId() === shopId) {
+        this.shopper.set(null);
+        this.cartState.refreshOwner();
+      }
     } catch {
       this.actionError.set(true);
+    } finally {
+      this.busy.set(false);
     }
   }
 }
@@ -535,6 +673,7 @@ const pages = [
   { path: 's/:shopId/register', component: StorefrontPage },
   { path: 's/:shopId/sign-in', component: StorefrontPage },
   { path: 's/:shopId/account', component: StorefrontPage },
+  { path: 's/:shopId/cart', component: StorefrontPage },
 ];
 // PrimeNG requires its license in the bootstrap providers, before its initializer runs.
 async function start(): Promise<void> {
@@ -544,24 +683,10 @@ async function start(): Promise<void> {
       provideHttpClient(),
       provideRouter(pages),
       provideOsnovaTheme(appTheme, license),
-      provideApollo(() => {
-        const headers = new ApolloLink((operation, forward) => {
-          const { shopId } = operation.getContext();
-          const id =
-            typeof shopId === 'string'
-              ? shopId
-              : (/^\/s\/([^/]+)/.exec(window.location.pathname)?.[1] ?? '');
-          const token = sessionStorage.getItem(`holita.shopper.${id}`);
-          operation.setContext({
-            headers: { 'x-branch-id': id, ...(token ? { authorization: `Bearer ${token}` } : {}) },
-          });
-          return forward(operation);
-        });
-        return {
-          link: ApolloLink.from([headers, inject(HttpLink).create({ uri: '/graphql' })]),
-          cache: new InMemoryCache(),
-        };
-      }),
+      provideApollo(() => ({
+        link: inject(HttpLink).create({ uri: '/graphql' }),
+        cache: new InMemoryCache(),
+      })),
     ],
   });
 }

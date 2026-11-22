@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database.service.js';
+import type { Prisma } from '../generated/prisma/client.js';
 import type { Scope } from '../scope.js';
 
 @Injectable()
@@ -13,8 +14,16 @@ export class ShopperRepository {
     });
   }
 
-  create(scope: Scope, input: { name: string; email: string; passwordHash: string }) {
-    return this.database.client.customer.create({ data: { ...scope, ...input } });
+  transaction<T>(work: (tx: Prisma.TransactionClient) => Promise<T>) {
+    return this.database.client.$transaction(work);
+  }
+
+  create(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    input: { name: string; email: string; passwordHash: string },
+  ) {
+    return tx.customer.create({ data: { ...scope, ...input } });
   }
 
   findByEmail(scope: Scope, email: string) {
@@ -23,8 +32,14 @@ export class ShopperRepository {
     });
   }
 
-  createSession(scope: Scope, customerId: string, tokenHash: string, expiresAt: Date) {
-    return this.database.client.shopperSession.create({
+  createSession(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    customerId: string,
+    tokenHash: string,
+    expiresAt: Date,
+  ) {
+    return tx.shopperSession.create({
       data: { ...scope, customerId, tokenHash, expiresAt },
     });
   }

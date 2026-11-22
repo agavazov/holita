@@ -1,8 +1,11 @@
-import { Module } from '@nestjs/common';
+import { unwrapResolverError } from '@apollo/server/errors';
+import { Module, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage } from 'node:http';
+import { CartModule } from './cart/cart.module.js';
+import { CartResolver } from './cart/cart.resolver.js';
 import { CommerceResolver } from './products/commerce.resolver.js';
 import { CatalogueProductResolver, StorefrontResolver } from './storefront.resolver.js';
 import { StorefrontService } from './storefront.service.js';
@@ -64,9 +67,10 @@ class OperatorModule {}
     CollectionsModule,
     CharacteristicsModule,
     CustomersModule,
+    CartModule,
   ],
   controllers: [BrandImagesController, ProductImagesController],
-  providers: [StorefrontResolver, CatalogueProductResolver, StorefrontService],
+  providers: [StorefrontResolver, CatalogueProductResolver, CartResolver, StorefrontService],
 })
 class StorefrontModule {}
 const context = ({ req }: { req: IncomingMessage }) => ({
@@ -90,7 +94,28 @@ const context = ({ req }: { req: IncomingMessage }) => ({
       typeDefs: readFileSync(new URL('./storefront.graphql', import.meta.url), 'utf8'),
       path: '/storefront/graphql',
       include: [StorefrontModule],
-      context,
+      context: (http: Parameters<typeof context>[0]) => ({
+        ...context(http),
+        cartToken: http.req.headers['x-cart-token'],
+      }),
+      formatError: (formatted, error) => {
+        const cause: unknown = unwrapResolverError(error);
+        if (!(
+          cause instanceof NotFoundException || cause instanceof UnprocessableEntityException
+        )) {
+          return formatted;
+        }
+        const code = cause instanceof NotFoundException ? 'NOT_FOUND' : 'BAD_USER_INPUT';
+        const response = cause.getResponse();
+        const fieldErrors =
+          typeof response === 'object' && 'fieldErrors' in response
+            ? response.fieldErrors
+            : undefined;
+        return {
+          ...formatted,
+          extensions: { code, ...(fieldErrors ? { fieldErrors } : {}) },
+        };
+      },
     }),
   ],
 })

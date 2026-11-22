@@ -1,0 +1,138 @@
+<section class="cart-view" aria-labelledby="cart-title">
+  <header class="shop-page-heading">
+    <h1 #heading id="cart-title" tabindex="-1">{{ t().cart }}</h1>
+  </header>
+  @if (mergeNotice(); as notice) { @if (notice.issues.length) {
+  <div class="cart-merge" role="status">
+    <h2>{{ t().cartMergeTitle }}</h2>
+    <ul>
+      @for (issue of notice.issues; track $index) {
+      <li>
+        {{ t().cartMergeSkipped(issue.name ?? t().unavailableItem, issue.quantity) }}
+        <span
+          class="shop-chip"
+          [attr.data-tone]="issue.reason === 'UNAVAILABLE' ? 'out-of-stock' : 'WARN'"
+        >
+          {{ issue.reason === 'UNAVAILABLE' ? t().cartUnavailable : t().cartInsufficientStock }}
+        </span>
+      </li>
+      }
+    </ul>
+  </div>
+  } } @if (state.sessionExpired()) {
+  <div class="shop-state">
+    <p role="alert">{{ t().cartSessionExpired }}</p>
+    <a class="shop-primary" [routerLink]="[...base(), 'sign-in']">{{ t().signIn }}</a>
+  </div>
+  } @else if (state.loadFailed()) {
+  <div class="shop-state">
+    <p role="alert">{{ t().cartLoadFailed }}</p>
+    <button class="shop-secondary" type="button" (click)="state.refresh()">{{ t().retry }}</button>
+  </div>
+  } @else if (state.cart(); as cart) {
+  <div role="status">
+    @if (updated()) {
+    <p class="cart-updated">{{ t().cartUpdated }}</p>
+    }
+  </div>
+  @if (cart.lines.length) {
+  <div class="cart-layout" [attr.aria-busy]="state.pending()">
+    <ul class="cart-lines" role="list">
+      @for (line of cart.lines; track line.id) { @let error = lineError(); @let control =
+      quantities().get(line.id);
+      <li class="cart-line" [attr.aria-labelledby]="'cart-line-' + line.id">
+        <div class="cart-line-name">
+          <h2 [id]="'cart-line-' + line.id">
+            @if (line.productId && line.name) {
+            <a [routerLink]="[...base(), 'product', line.productId]">{{ line.name }}</a>
+            } @else { {{ line.name ?? t().unavailableItem }} }
+          </h2>
+          @if (line.optionLabels.length) {
+          <p>{{ line.optionLabels.join(' · ') }}</p>
+          } @if (line.issue === 'UNAVAILABLE') {
+          <span class="shop-chip" data-tone="out-of-stock">{{ t().cartUnavailable }}</span>
+          } @else if (line.issue === 'INSUFFICIENT_STOCK') {
+          <span class="shop-chip" data-tone="WARN">
+            {{ line.availableQuantity === null ? t().cartInsufficientStock :
+            t().cartAvailableQuantity(line.availableQuantity) }}
+          </span>
+          }
+        </div>
+        <dl class="cart-line-prices">
+          @if (line.unitPrice !== null) {
+          <div>
+            <dt>{{ t().unitPrice }}</dt>
+            <dd class="app-num">{{ formatPrice(line.unitPrice) }}</dd>
+          </div>
+          } @if (line.lineTotal !== null) {
+          <div>
+            <dt>{{ t().lineTotal }}</dt>
+            <dd class="app-num">{{ formatPrice(line.lineTotal) }}</dd>
+          </div>
+          }
+        </dl>
+        <div class="cart-line-actions">
+          @if (control && line.issue !== 'UNAVAILABLE') {
+          <form class="cart-quantity-form" (submit)="$event.preventDefault(); update(line)">
+            <label class="shop-quantity-field" [for]="'cart-quantity-' + line.id">
+              {{ t().quantity }}
+              <input
+                [id]="'cart-quantity-' + line.id"
+                [formControl]="control"
+                type="number"
+                min="1"
+                step="1"
+                [max]="maxCartQuantity"
+                [readOnly]="state.locked()"
+                [attr.aria-invalid]="control.touched && control.invalid ? 'true' : null"
+              />
+            </label>
+            <button
+              class="shop-secondary"
+              type="submit"
+              [disabled]="state.locked() || control.invalid || control.value === line.quantity"
+            >
+              {{ t().updateQuantity }}
+            </button>
+          </form>
+          } @else {
+          <p class="cart-unavailable-quantity">
+            {{ t().quantity }} <strong class="app-num">{{ line.quantity }}</strong>
+          </p>
+          }
+          <button
+            class="cart-remove"
+            type="button"
+            [disabled]="state.locked()"
+            (click)="remove(line)"
+          >
+            {{ t().removeFromCart }}
+          </button>
+        </div>
+        @if (error && error.lineId === line.id) {
+        <p class="cart-line-error" role="alert">{{ t()[error.message] }}</p>
+        } @else if (control?.touched && control.invalid) {
+        <p class="cart-line-error">{{ t().cartInvalidQuantity }}</p>
+        }
+      </li>
+      }
+    </ul>
+    <aside class="cart-summary" [attr.aria-label]="t().cartSubtotal">
+      <dl>
+        <div>
+          <dt>{{ t().cartSubtotal }}</dt>
+          <dd class="app-num">{{ formatPrice(cart.subtotal) }}</dd>
+        </div>
+      </dl>
+      <a class="shop-text-link" [routerLink]="base()">{{ t().continueShopping }}</a>
+    </aside>
+  </div>
+  } @else {
+  <div class="shop-state">
+    <p>{{ t().cartEmpty }}</p>
+    <a class="shop-primary" [routerLink]="base()">{{ t().continueShopping }}</a>
+  </div>
+  } } @else {
+  <p class="shop-state" role="status">{{ t().loading }}</p>
+  }
+</section>

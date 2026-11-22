@@ -14,6 +14,7 @@ import type { ProductImageWrite } from './product-images.js';
 import {
   catalogueProductRelations,
   catalogueProductWhere,
+  catalogueVariantValues,
   productRelations,
 } from './product-relations.js';
 
@@ -174,22 +175,7 @@ export class CommerceRepository {
                 price: true,
                 quantity: true,
                 inventoryTracked: true,
-                values: {
-                  where: {
-                    ...scope,
-                    optionValue: { ...scope, option: { ...scope, active: true } },
-                  },
-                  select: {
-                    optionValue: {
-                      select: {
-                        id: true,
-                        label: true,
-                        sortOrder: true,
-                        option: { select: { id: true, name: true } },
-                      },
-                    },
-                  },
-                },
+                values: catalogueVariantValues(scope),
               },
             },
           },
@@ -261,6 +247,14 @@ export class CommerceRepository {
       if (conflicting) {
         // Roll back the product write as well.
         throw new DuplicateSkuError(conflicting.sku);
+      }
+      const retainedIds = new Set(replacements.map((variant) => variant.id));
+      const removedIds = current.map((variant) => variant.id).filter((id) => !retainedIds.has(id));
+      if (removedIds.length) {
+        await tx.cartLine.updateMany({
+          where: { ...scope, variantId: { in: removedIds } },
+          data: { variantId: null },
+        });
       }
       // Replace the aggregate atomically, keeping the IDs of retained variants.
       // This also permits exchanging a SKU or combination between rows in one edit.

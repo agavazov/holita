@@ -52,6 +52,7 @@ const content = [
     `HOLITA_SALES_PASSWORD=${secret()}`,
     'HOLITA_MERCHANT_EMAIL=admin@demo.holita.test',
     `HOLITA_MERCHANT_PASSWORD=${secret()}`,
+    `HOLITA_DEMO_SHOPPER_PASSWORD=${secret()}`,
   ].join('\n') + '\n',
 ];
 for (const [index, path] of files.entries()) {
