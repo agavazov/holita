@@ -618,6 +618,49 @@ export const demoPages = [
   },
 ] as const;
 
+export const demoBlogTags = [{ id: 1, name: 'Грижа за съдовете', slug: 'cookware-care' }] as const;
+
+export const demoBlogArticles = [
+  {
+    id: 1,
+    slug: 'care-for-cast-iron',
+    status: 'published',
+    publishedAt: '2026-11-20T09:00:00Z',
+    titleBg: 'Как да се грижим за чугуна',
+    bodyBg:
+      'Оставете тигана да изстине след готвене. Измийте го с топла вода и мека четка, след което го подсушете веднага.\n\nПреди да го приберете, нанесете няколко капки олио с кърпа. Избършете излишното, за да остане само тънък защитен слой.',
+    titleEn: 'How to care for cast iron',
+    bodyEn:
+      'Let the pan cool after cooking. Wash it with warm water and a soft brush, then dry it right away.\n\nBefore putting it away, rub in a few drops of cooking oil with a cloth. Wipe off the excess to leave a thin protective layer.',
+    tagIds: [1],
+  },
+  {
+    id: 2,
+    slug: 'clean-stoneware',
+    status: 'published',
+    publishedAt: '2026-11-17T09:00:00Z',
+    titleBg: 'Почистване на каменинови съдове',
+    bodyBg:
+      'За всекидневно почистване използвайте мека гъба и топла вода. Ако има засъхнали остатъци, оставете съда за кратко да се накисне.\n\nИзбягвайте резките промени в температурата. Оставете съда от фурната да изстине върху дървена дъска, преди да го измиете.',
+    titleEn: 'Cleaning stoneware',
+    bodyEn:
+      'For everyday cleaning, use a soft sponge and warm water. Briefly soak the dish if food has dried onto it.\n\nAvoid sudden temperature changes. Let an oven dish cool on a wooden board before washing it.',
+    tagIds: [1],
+  },
+  {
+    id: 3,
+    slug: 'seasonal-kitchen-notes',
+    status: 'draft',
+    publishedAt: null,
+    titleBg: 'Сезонни бележки от кухнята',
+    bodyBg:
+      'Преди зимата преглеждаме съдовете за печене и отделяме най-удобните за топли вечери у дома.',
+    titleEn: null,
+    bodyEn: null,
+    tagIds: [1],
+  },
+] as const;
+
 export const demoProductCovers: Readonly<Record<number, readonly DemoImage[]>> = {
   15: [[150, 'product-15.webp', 'Сервиз за закуска „Първа светлина“, 6 части']],
   16: [[160, 'product-16.webp', 'Дъбова дъска за сервиране „Рила“, 38 см']],

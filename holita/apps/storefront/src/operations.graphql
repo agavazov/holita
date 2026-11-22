@@ -13,6 +13,39 @@ query PublicShopPage($slug: String!) {
     bodyEn
   }
 }
+fragment PublicBlogTagFields on PublicBlogTag {
+  slug
+  name
+}
+fragment PublicBlogArticleSummary on PublicBlogArticle {
+  slug
+  titleBg
+  titleEn
+  publishedAt
+  tags {
+    ...PublicBlogTagFields
+  }
+}
+query PublicBlogArticles($tagSlug: String, $offset: Int!, $limit: Int!) {
+  blogArticles(tagSlug: $tagSlug, offset: $offset, limit: $limit) {
+    items {
+      ...PublicBlogArticleSummary
+    }
+    total
+    offset
+    limit
+  }
+  blogTags {
+    ...PublicBlogTagFields
+  }
+}
+query PublicBlogArticle($slug: String!) {
+  blogArticle(slug: $slug) {
+    ...PublicBlogArticleSummary
+    bodyBg
+    bodyEn
+  }
+}
 fragment CatalogueBrandFields on CatalogueBrand {
   id
   name

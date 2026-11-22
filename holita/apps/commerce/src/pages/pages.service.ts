@@ -1,59 +1,23 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
+import {
+  contentInputError,
+  contentListCriteria,
+  contentSlug,
+  plainTextTranslations,
+  validContentSlug,
+} from '../content-validation.js';
 import type { PublishedShopPage } from '../generated/graphql/storefront-types.js';
 import type { QueryShopPagesArgs, ShopPage, ShopPageInput } from '../generated/graphql/types.js';
 import { Prisma, type ShopPage as StoredPage } from '../generated/prisma/client.js';
 import { requireScope, type RequestContext, type Scope } from '../scope.js';
 import { PagesRepository } from './pages.repository.js';
 
-function pageError(path: string, code: string, message: string) {
-  return new UnprocessableEntityException({ message, fieldErrors: [{ path, code, message }] });
-}
-
-function validSlug(slug: string): boolean {
-  return slug.length <= 200 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(slug);
-}
-
 function recordId(id: string): string {
   if (!isUUID(id)) {
     throw new BadRequestException('Page ID must be a UUID');
   }
   return id.toLowerCase();
-}
-
-function text(value: string | null | undefined, path: string, limit?: number) {
-  const trimmed = value?.trim();
-  if (trimmed?.includes('\u0000')) {
-    throw pageError(path, 'INVALID_VALUE', 'Text must not contain a null character');
-  }
-  if (trimmed && limit !== undefined && Array.from(trimmed).length > limit) {
-    throw pageError(path, 'INVALID_VALUE', 'Title must contain at most 200 characters');
-  }
-  return trimmed || null;
-}
-
-function fields(input: ShopPageInput): ShopPageInput {
-  const slug = input.slug.trim();
-  if (!validSlug(slug)) {
-    throw pageError('slug', 'INVALID_FORMAT', 'Use lowercase letters, digits and hyphens');
-  }
-  const titleBg = text(input.titleBg, 'titleBg', 200);
-  const titleEn = text(input.titleEn, 'titleEn', 200);
-  const bodyBg = text(input.bodyBg, 'bodyBg');
-  const bodyEn = text(input.bodyEn, 'bodyEn');
-  if (input.status === 'PUBLISHED' && !(titleBg && bodyBg) && !(titleEn && bodyEn)) {
-    throw pageError(
-      'status',
-      'INVALID_VALUE',
-      'Publishing requires a title and body in one language',
-    );
-  }
-  return { slug, status: input.status, titleBg, titleEn, bodyBg, bodyEn };
 }
 
 function present(row: StoredPage): ShopPage {
@@ -77,15 +41,7 @@ export class PagesService {
 
   async list(context: RequestContext, args: QueryShopPagesArgs) {
     const scope = await requireScope(context, false);
-    const { offset = 0, limit = 20 } = args;
-    const search = (args.search ?? '').trim();
-    const words = search.split(/\s+/u).filter(Boolean);
-    if (offset < 0 || limit < 1 || limit > 100) {
-      throw new BadRequestException('Invalid page');
-    }
-    if (Array.from(search).length > 200 || words.length > 5 || search.includes('\u0000')) {
-      throw new BadRequestException('Invalid search');
-    }
+    const { offset, limit, words } = contentListCriteria(args);
     const result = await this.repository.list(scope, offset, limit, words, args.sort, args.filter);
     return { ...result, items: result.items.map(present) };
   }
@@ -96,12 +52,16 @@ export class PagesService {
   }
 
   async published(scope: Scope, slug: string): Promise<PublishedShopPage | null> {
-    return validSlug(slug) ? this.repository.published(scope, slug) : null;
+    return validContentSlug(slug) ? this.repository.published(scope, slug) : null;
   }
 
   async save(context: RequestContext, input: ShopPageInput, id?: string) {
     const scope = await requireScope(context, true);
-    const data = fields(input);
+    const data = {
+      slug: contentSlug(input.slug),
+      status: input.status,
+      ...plainTextTranslations(input),
+    };
     try {
       const row =
         id === undefined
@@ -111,7 +71,7 @@ export class PagesService {
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
-          throw pageError('slug', 'DUPLICATE_VALUE', 'This shop already uses the slug');
+          throw contentInputError('slug', 'DUPLICATE_VALUE', 'This shop already uses the slug');
         }
         if (error.code === 'P2025') {
           throw new NotFoundException('Page not found');

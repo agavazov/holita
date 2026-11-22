@@ -9,6 +9,25 @@ type PublishedShopPage {
   bodyBg: String
   bodyEn: String
 }
+type PublicBlogTag {
+  name: String!
+  slug: String!
+}
+type PublicBlogArticle {
+  slug: String!
+  titleBg: String
+  titleEn: String
+  bodyBg: String
+  bodyEn: String
+  publishedAt: String!
+  tags: [PublicBlogTag!]!
+}
+type PublicBlogArticlePage {
+  items: [PublicBlogArticle!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
 type CatalogueProductImage {
   url: String!
   altText: String
@@ -337,6 +356,11 @@ type Query {
   shop: Shop
   "The published page with this slug in the current shop."
   shopPage(slug: String!): PublishedShopPage
+  "Published articles in descending publication order, optionally filtered by an assigned tag."
+  blogArticles(tagSlug: String, offset: Int! = 0, limit: Int! = 20): PublicBlogArticlePage!
+  blogArticle(slug: String!): PublicBlogArticle
+  "Tags assigned to published articles in the current shop."
+  blogTags: [PublicBlogTag!]!
   catalogue(
     offset: Int! = 0
     limit: Int! = 20

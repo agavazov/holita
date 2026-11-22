@@ -152,6 +152,7 @@ beforeAll(async () => {
     '20261122190000_discounts',
     '20261122200000_invoice_discount',
     '20261122210000_shop_pages',
+    '20261122220000_shop_blog',
   ]) {
     await connection.query(
       await readFile(
@@ -335,6 +336,72 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       { data: null, errors: [{ extensions: { code: 'NOT_FOUND' } }] },
     );
   }
+  const blogScope = { tenantId: tenantA, branchId: branchA };
+  const blogTags = await database.blogTag.createManyAndReturn({
+    data: [
+      blogScope,
+      { tenantId: tenantA, branchId: branchB },
+      { tenantId: tenantB, branchId: branchForeign },
+    ].map((scope) => ({
+      ...scope,
+      slug: 'scoped-blog-tag',
+      name: 'Scoped tag',
+      normalizedName: 'scoped tag',
+    })),
+  });
+  const localBlogTag = blogTags.find((tag) => tag.branchId === branchA);
+  const otherShopBlogTag = blogTags.find((tag) => tag.branchId === branchB);
+  const otherTenantBlogTag = blogTags.find((tag) => tag.branchId === branchForeign);
+  if (!localBlogTag || !otherShopBlogTag || !otherTenantBlogTag) {
+    throw new Error('Missing scoped blog tags');
+  }
+  expect(await query(tokens.viewer, branchA, '{blogTagChoices{id}}')).toEqual({
+    data: { blogTagChoices: [{ id: localBlogTag.id }] },
+  });
+  const createArticle = 'mutation($input:BlogArticleInput!){createBlogArticle(input:$input){slug}}';
+  const scopedArticle = { slug: 'scoped-article', status: 'DRAFT' };
+  for (const [token, branch, tagId] of [
+    [tokens.operator, branchA, localBlogTag.id],
+    [tokens.operator, branchB, otherShopBlogTag.id],
+    [tokens.foreign, branchForeign, otherTenantBlogTag.id],
+  ]) {
+    expect(
+      await query(token, branch, createArticle, {
+        input: { ...scopedArticle, tagIds: [tagId] },
+      }),
+    ).toEqual({ data: { createBlogArticle: { slug: scopedArticle.slug } } });
+  }
+  const localArticle = await database.blogArticle.findFirstOrThrow({
+    where: { ...blogScope, slug: scopedArticle.slug },
+  });
+  const updateArticle =
+    'mutation($id:ID!,$input:BlogArticleInput!){updateBlogArticle(id:$id,input:$input){id}}';
+  for (const tagId of [otherShopBlogTag.id, otherTenantBlogTag.id]) {
+    expect(
+      await query(tokens.operator, branchA, updateArticle, {
+        id: localArticle.id,
+        input: { ...scopedArticle, tagIds: [tagId] },
+      }),
+    ).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'tagIds' }] } }],
+    });
+    await expect(
+      database.blogArticleTag.create({
+        data: { ...blogScope, articleId: localArticle.id, tagId },
+      }),
+    ).rejects.toMatchObject({ code: 'P2003' });
+  }
+  expect(await query(tokens.viewer, branchA, '{blogArticles{total items{slug tags{id}}}}')).toEqual(
+    {
+      data: {
+        blogArticles: {
+          total: 1,
+          items: [{ slug: scopedArticle.slug, tags: [{ id: localBlogTag.id }] }],
+        },
+      },
+    },
+  );
   const rows = await Promise.all([
     database.product.findUniqueOrThrow({ where: { id: legacyProductId } }),
     database.product.create({
@@ -1174,6 +1241,92 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(await storefront(publicA, readPublicPage, { slug: 'foreign-page' })).toEqual({
     data: { shopPage: null },
   });
+  const blogScope = { tenantId: tenantA, branchId: publicA };
+  const tag = await database.blogTag.create({
+    data: { ...blogScope, name: 'Грижа', normalizedName: 'грижа', slug: 'care' },
+  });
+  const draftTag = await database.blogTag.create({
+    data: { ...blogScope, name: 'Бележки', normalizedName: 'бележки', slug: 'notes' },
+  });
+  const article = await database.blogArticle.create({
+    data: {
+      ...blogScope,
+      slug: 'tagged',
+      status: 'PUBLISHED',
+      titleBg: 'Грижа за съдовете',
+      bodyBg: 'Почистете съдовете.',
+      titleEn: 'Incomplete translation',
+      publishedAt: new Date('2026-11-17T12:00:00Z'),
+    },
+  });
+  const draftArticle = await database.blogArticle.create({
+    data: { ...blogScope, slug: 'draft-only' },
+  });
+  await database.blogArticle.createMany({
+    data: [
+      {
+        ...blogScope,
+        slug: 'untagged',
+        status: 'PUBLISHED',
+        titleEn: 'Untitled cookware notes',
+        bodyEn: 'Wash after use.',
+        publishedAt: new Date('2026-11-20T12:00:00Z'),
+      },
+      {
+        tenantId: tenantB,
+        branchId: publicA,
+        slug: 'foreign-article',
+        status: 'PUBLISHED',
+        titleBg: 'Друг магазин',
+        bodyBg: 'Друг магазин.',
+        publishedAt: new Date('2026-11-20T12:00:00Z'),
+      },
+    ],
+  });
+  await database.blogArticleTag.createMany({
+    data: [
+      { ...blogScope, articleId: article.id, tagId: tag.id },
+      { ...blogScope, articleId: draftArticle.id, tagId: draftTag.id },
+    ],
+  });
+  const readBlog =
+    '{all:blogArticles{items{slug} total} filtered:blogArticles(tagSlug:"care"){items{slug titleEn} total} draftFilter:blogArticles(tagSlug:"notes"){items{slug} total} blogArticle(slug:"draft-only"){slug} blogTags{slug}}';
+  expect(await storefront(publicA, readBlog)).toEqual({
+    data: {
+      all: { items: [{ slug: 'untagged' }, { slug: 'tagged' }], total: 2 },
+      filtered: { items: [{ slug: 'tagged', titleEn: null }], total: 1 },
+      draftFilter: { items: [], total: 0 },
+      blogArticle: null,
+      blogTags: [{ slug: 'care' }],
+    },
+  });
+  expect(await storefront(publicB, '{blogArticle(slug:"tagged"){slug} blogTags{slug}}')).toEqual({
+    data: { blogArticle: null, blogTags: [] },
+  });
+  const updateArticle =
+    'mutation($id:ID!,$input:BlogArticleInput!){updateBlogArticle(id:$id,input:$input){publishedAt}}';
+  const input = {
+    slug: article.slug,
+    titleBg: article.titleBg,
+    bodyBg: article.bodyBg,
+    tagIds: [tag.id],
+  };
+  for (const [status, publishedAt] of [
+    ['PUBLISHED', '2026-11-17T12:00:00.000Z'],
+    ['DRAFT', null],
+    ['PUBLISHED', expect.any(String)],
+  ] as const) {
+    expect(
+      await query(tokens.operator, publicA, updateArticle, {
+        id: article.id,
+        input: { ...input, status },
+      }),
+    ).toEqual({ data: { updateBlogArticle: { publishedAt } } });
+  }
+  const republished = await database.blogArticle.findUniqueOrThrow({
+    where: { ...blogScope, id: article.id },
+  });
+  expect(republished.publishedAt).not.toEqual(article.publishedAt);
   const visible = await database.brand.create({
     data: { tenantId: tenantA, branchId: publicA, name: 'Visible Brand', slug: 'visible' },
   });
@@ -2462,4 +2615,4 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       });
     }
   }
-}, 15_000);
+}, 30_000);

@@ -1,0 +1,182 @@
+<osnova-route-drawer
+  [title]="editing ? text().editBlogArticle : text().newBlogArticle"
+  [subtitle]="subtitle()"
+  [errorText]="text().blogArticlesUnavailable"
+  [state]="state()"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="record.reload()"
+>
+  <form
+    id="blog-article-editor-form"
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="app-form-section"
+  >
+    <div class="app-form-grid">
+      @let slugError = error('slug');
+      <osnova-form-field
+        controlId="blog-article-slug"
+        [label]="text().slug"
+        [hint]="text().slugHint"
+        [error]="slugError"
+        [required]="true"
+      >
+        <input
+          pInputText
+          id="blog-article-slug"
+          formControlName="slug"
+          autocomplete="off"
+          aria-required="true"
+          aria-describedby="blog-article-slug-hint blog-article-slug-error"
+          [invalid]="!!slugError"
+          [attr.aria-invalid]="!!slugError"
+          (input)="clearError('slug')"
+        />
+      </osnova-form-field>
+      @let statusError = error('status');
+      <osnova-form-field
+        controlId="blog-article-status"
+        [label]="text().status"
+        [hint]="statusError ? null : text().blogPublishNeedsTranslation"
+        [error]="statusError"
+        [required]="true"
+      >
+        <p-select
+          inputId="blog-article-status"
+          ariaLabelledBy="blog-article-status-label"
+          formControlName="status"
+          [options]="statusOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [invalid]="!!statusError"
+          [pt]="{ label: {
+            'aria-required': 'true',
+            'aria-describedby': 'blog-article-status-hint blog-article-status-error',
+            'aria-invalid': statusError ? 'true' : undefined,
+          } }"
+          (onChange)="clearError('status')"
+        />
+      </osnova-form-field>
+    </div>
+    @if (publication(); as published) {
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().blogPublishedAt }}</dt>
+        <dd>
+          <time class="app-num" [dateTime]="published.value" [title]="published.title"
+            >{{ published.text }}</time
+          >
+        </dd>
+      </div>
+    </dl>
+    } @let tagsError = error('tagIds');
+    <osnova-form-field controlId="blog-article-tags" [label]="text().blogTags" [error]="tagsError">
+      <p-select
+        #tagsPicker
+        inputId="blog-article-tags"
+        ariaLabelledBy="blog-article-tags-label"
+        formControlName="tagIds"
+        [options]="tagOptions()"
+        optionLabel="name"
+        optionValue="id"
+        [multiple]="true"
+        [filter]="true"
+        filterBy="name,slug"
+        [ariaFilterLabel]="text().searchBlogTags"
+        [filterPlaceholder]="text().searchBlogTags"
+        [loading]="tagChoices.isLoading()"
+        [readonly]="!tagChoices.hasValue()"
+        [placeholder]="text().blogChooseTags"
+        [emptyMessage]="text().emptyBlogTags"
+        [emptyFilterMessage]="shared().table.noResultsTitle"
+        [invalid]="!!tagsError"
+        [overlayOptions]="{ style: { width: '100%' } }"
+        [pt]="tagPt()"
+        (onChange)="changeTags(tagsPicker, $event.originalEvent)"
+      />
+      @if (tagChoices.error()) {
+      <div class="app-stack">
+        <p-message id="blog-article-tags-load-error" severity="warn" variant="simple" size="small">
+          {{ text().blogTagChoicesUnavailable }}
+        </p-message>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          [disabled]="saving()"
+          (click)="tagChoices.reload()"
+        >
+          {{ shared().retry }}
+        </button>
+      </div>
+      }
+    </osnova-form-field>
+    <div class="app-form-grid">
+      @for (translation of translations(); track translation.lang) { @let titleId =
+      'blog-article-title-' + translation.lang; @let bodyId = 'blog-article-body-' +
+      translation.lang; @let titleError = error(translation.title); @let bodyError =
+      error(translation.body);
+      <div class="app-form-grid">
+        <osnova-form-field
+          class="app-form-grid--wide"
+          [controlId]="titleId"
+          [label]="translation.titleLabel"
+          [error]="titleError"
+        >
+          <input
+            #titleInput
+            pInputText
+            [id]="titleId"
+            [formControlName]="translation.title"
+            [attr.lang]="translation.lang"
+            [attr.aria-describedby]="titleId + '-error'"
+            [invalid]="!!titleError"
+            [attr.aria-invalid]="!!titleError"
+            (input)="changeTitle(translation.title, titleInput.value)"
+          />
+        </osnova-form-field>
+        <osnova-form-field
+          class="app-form-grid--wide"
+          [controlId]="bodyId"
+          [label]="translation.bodyLabel"
+          [error]="bodyError"
+        >
+          <textarea
+            pTextarea
+            [id]="bodyId"
+            [formControlName]="translation.body"
+            [attr.lang]="translation.lang"
+            rows="6"
+            [attr.aria-describedby]="'blog-article-plain-text-hint ' + bodyId + '-error'"
+            [invalid]="!!bodyError"
+            [attr.aria-invalid]="!!bodyError"
+            (input)="clearError(translation.body)"
+          ></textarea>
+        </osnova-form-field>
+      </div>
+      }
+    </div>
+    <p class="app-muted" id="blog-article-plain-text-hint">{{ text().pagePlainTextHint }}</p>
+    @if (saveError()) {
+    <p-message severity="error">{{ text().blogArticleSaveFailed }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="blog-article-editor-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+  </div>
+</osnova-route-drawer>

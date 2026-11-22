@@ -3,6 +3,8 @@ import type {
   CatalogueProduct,
   MutationRegisterShopperArgs,
   MutationSignInShopperArgs,
+  QueryBlogArticleArgs,
+  QueryBlogArticlesArgs,
   QueryCatalogueArgs,
   QueryCatalogueBrandIndexArgs,
   QueryCatalogueBrandProductsArgs,
@@ -42,6 +44,21 @@ export class StorefrontResolver {
     @Args() args: QueryShopPageArgs,
   ) {
     return this.service.shopPage(context, args.slug);
+  }
+  @Query('blogArticles') blogArticles(
+    @Context() context: StorefrontContext,
+    @Args() args: QueryBlogArticlesArgs,
+  ) {
+    return this.service.blogArticles(context, args);
+  }
+  @Query('blogArticle') blogArticle(
+    @Context() context: StorefrontContext,
+    @Args() args: QueryBlogArticleArgs,
+  ) {
+    return this.service.blogArticle(context, args.slug);
+  }
+  @Query('blogTags') blogTags(@Context() context: StorefrontContext) {
+    return this.service.blogTags(context);
   }
   @Query('catalogue') catalogue(
     @Context() context: StorefrontContext,

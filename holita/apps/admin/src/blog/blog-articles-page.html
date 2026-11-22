@@ -1,0 +1,168 @@
+<osnova-page-header
+  [title]="text().blogArticles"
+  [moduleInfo]="text().blogArticlesInfo"
+  [actions]="headerActions()"
+  (action)="open('new')"
+/>
+@if (scope()) {
+<osnova-table-panel
+  #panel
+  [heading]="text().shopBlogArticles"
+  mobileIdentityLayout="trailing"
+  [mobileFullWidthActions]="true"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
+  [view]="view()"
+  [total]="page()?.total ?? null"
+  [busy]="list.isLoading()"
+  [errorText]="text().blogArticlesUnavailable"
+  [emptyTitle]="text().emptyBlogArticles"
+  [emptyDescription]="text().emptyBlogArticlesDescription"
+  [page]="pagination()"
+  [actionContext]="params()"
+  [actions]="actions()"
+  (action)="run($event)"
+  (pageChange)="url.setPage($event)"
+  (retry)="list.reload()"
+  (clearFilters)="url.clearFilters()"
+>
+  <osnova-filter-builder
+    panelActions
+    [mobileFullWidth]="true"
+    [searchLabel]="text().searchBlogArticles"
+    [search]="url.searchDraft()"
+    [searchError]="url.searchError() ? shared().searchTooManyWords : null"
+    [fields]="filterFields()"
+    [conditions]="conditions()"
+    [maxConditions]="1"
+    (searchChange)="url.editSearch($event)"
+    (conditionsChange)="changeConditions($event)"
+  >
+    <osnova-list-sort-menu
+      filterActions
+      [fields]="sortFields()"
+      [sort]="sort()"
+      (sortChange)="changeSort($event)"
+    />
+  </osnova-filter-builder>
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="page()?.items ?? []"
+    [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    [sortField]="sort().field"
+    [sortOrder]="sort().direction === 'asc' ? 1 : -1"
+    (onLazyLoad)="tableSort($event)"
+    dataKey="id"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="
+                column.kind === 'identity'
+                  ? 'var(--app-table-identity-width, ' + column.width + ')'
+                  : column.width
+              "
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity">{{ text().blogArticleTitle }}</th>
+        <th scope="col" pSortableColumn="STATUS">
+          {{ text().status }} <p-sort-icon field="STATUS" />
+        </th>
+        <th scope="col" class="app-col-secondary">{{ text().blogTags }}</th>
+        <th scope="col" class="app-col-secondary">{{ text().blogPublishedAt }}</th>
+        @if (canWrite()) {
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ shared().pageHeader.actions }}</span>
+        </th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-article>
+      @let row = record(article); @let label = title(article); @let tags = tagNames(article); @let
+      published = publishedAt(article.publishedAt);
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-table-identity-layout">
+            <div class="app-cell-identity">
+              @if (canWrite()) {
+              <button
+                type="button"
+                class="app-link app-table-identity-wrap"
+                [title]="label"
+                (click)="panel.run('edit', [row], $event.currentTarget)"
+              >
+                {{ label }}
+              </button>
+              } @else {
+              <span class="app-table-identity-wrap" [title]="label">{{ label }}</span>
+              }
+              <span class="app-table-identity-wrap app-mono" [title]="article.slug"
+                >{{ article.slug }}</span
+              >
+              @if (tags) {
+              <span class="app-table-mobile-meta" [title]="tags">{{ tags }}</span>
+              } @if (article.publishedAt) {
+              <time
+                class="app-table-mobile-meta app-num"
+                [dateTime]="article.publishedAt"
+                [title]="published.title"
+                >{{ published.text }}</time
+              >
+              }
+            </div>
+            @if (canWrite()) {
+            <div class="app-table-mobile-actions">
+              <osnova-row-actions
+                [actions]="actions()"
+                [record]="row"
+                (choose)="panel.run($event.action, [row], $event.origin)"
+              />
+            </div>
+            }
+          </div>
+        </td>
+        <td>
+          <div class="app-cell-status">
+            <p-tag
+              [severity]="tone(article.status === 'PUBLISHED' ? 'success' : 'neutral')"
+              [value]="statusLabel(article.status)"
+            />
+          </div>
+        </td>
+        <td class="app-col-secondary">
+          <div class="app-cell-identity"><span [title]="tags">{{ tags || '—' }}</span></div>
+        </td>
+        <td class="app-col-secondary">
+          @if (article.publishedAt) {
+          <time class="app-num" [dateTime]="article.publishedAt" [title]="published.title"
+            >{{ published.text }}</time
+          >
+          } @else { — }
+        </td>
+        @if (canWrite()) {
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <osnova-row-actions
+            [actions]="actions()"
+            [record]="row"
+            (choose)="panel.run($event.action, [row], $event.origin)"
+          />
+        </td>
+        }
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+} @else {
+<p-message severity="info">{{ text().noShop }}</p-message>
+}
+<router-outlet [routerOutletData]="drawerHost" />

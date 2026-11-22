@@ -246,6 +246,74 @@ type ShopPageList {
   offset: Int!
   limit: Int!
 }
+enum BlogArticleStatus {
+  DRAFT
+  PUBLISHED
+}
+enum BlogArticleSortField {
+  UPDATED_AT
+  SLUG
+  STATUS
+}
+input BlogArticleSort {
+  field: BlogArticleSortField! = UPDATED_AT
+  direction: SortDirection! = DESC
+}
+enum BlogTagSortField {
+  NAME
+  SLUG
+}
+input BlogTagSort {
+  field: BlogTagSortField! = NAME
+  direction: SortDirection! = ASC
+}
+"""
+Plain text translations and tags replace the saved values. Omitted, null and blank translations
+clear a field. Publishing requires a title and body in at least one language.
+"""
+input BlogArticleInput {
+  slug: String!
+  status: BlogArticleStatus!
+  titleBg: String
+  titleEn: String
+  bodyBg: String
+  bodyEn: String
+  tagIds: [ID!]!
+}
+type BlogArticle {
+  id: ID!
+  slug: String!
+  status: BlogArticleStatus!
+  titleBg: String
+  titleEn: String
+  bodyBg: String
+  bodyEn: String
+  publishedAt: String
+  createdAt: String!
+  updatedAt: String!
+  tags: [BlogTag!]!
+}
+type BlogArticlePage {
+  items: [BlogArticle!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+input BlogTagInput {
+  name: String!
+  slug: String!
+}
+type BlogTag {
+  id: ID!
+  name: String!
+  slug: String!
+}
+type BlogTagPage {
+  items: [BlogTag!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
 input CategoryInput {
   name: String!
   slug: String!
@@ -780,6 +848,18 @@ type Query {
     filter: ShopPageFilter
   ): ShopPageList!
   shopPage(id: ID!): ShopPage
+  blogArticles(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    status: BlogArticleStatus
+    sort: BlogArticleSort
+  ): BlogArticlePage!
+  blogArticle(id: ID!): BlogArticle
+  blogTags(offset: Int! = 0, limit: Int! = 20, search: String, sort: BlogTagSort): BlogTagPage!
+  blogTag(id: ID!): BlogTag
+  "Shop tags for the blog article editor."
+  blogTagChoices: [BlogTag!]!
   "Shop categories in tree order. A null parentId denotes a root."
   categories: [Category!]!
   category(id: ID!): Category
@@ -846,6 +926,10 @@ type Mutation {
   deleteBrand(id: ID!): Boolean!
   createShopPage(input: ShopPageInput!): ShopPage!
   updateShopPage(id: ID!, input: ShopPageInput!): ShopPage!
+  createBlogArticle(input: BlogArticleInput!): BlogArticle!
+  updateBlogArticle(id: ID!, input: BlogArticleInput!): BlogArticle!
+  createBlogTag(input: BlogTagInput!): BlogTag!
+  updateBlogTag(id: ID!, input: BlogTagInput!): BlogTag!
   createCategory(input: CategoryInput!): Category!
   updateCategory(id: ID!, input: CategoryInput!): Category!
   deleteCategory(id: ID!): Boolean!

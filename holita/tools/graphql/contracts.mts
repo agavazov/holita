@@ -17,6 +17,7 @@ export const operationPaths = [
   'osnova/packages/ui/src/app/branches/operations.graphql',
   'holita/packages/operator/src/operations.graphql',
   'holita/apps/admin/src/badges/operations.graphql',
+  'holita/apps/admin/src/blog/operations.graphql',
   'holita/apps/admin/src/brands/operations.graphql',
   'holita/apps/admin/src/categories/operations.graphql',
   'holita/apps/admin/src/collections/operations.graphql',
@@ -49,6 +50,10 @@ export const targets = {
       {
         path: 'holita/apps/admin/src/generated/badges-operations.ts',
         operations: ['holita/apps/admin/src/badges/operations.graphql'],
+      },
+      {
+        path: 'holita/apps/admin/src/generated/blog-operations.ts',
+        operations: ['holita/apps/admin/src/blog/operations.graphql'],
       },
       {
         path: 'holita/apps/admin/src/generated/characteristics-operations.ts',

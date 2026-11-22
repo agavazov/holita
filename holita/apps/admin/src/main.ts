@@ -5,6 +5,10 @@ import { leaveDrawer } from '@osnova/ui';
 import { DemoSession } from '@osnova/ui/app';
 import { BadgeEditor } from './badges/badge-editor';
 import { BadgesPage } from './badges/badges-page';
+import { BlogArticleEditor } from './blog/blog-article-editor';
+import { BlogArticlesPage } from './blog/blog-articles-page';
+import { BlogTagEditor } from './blog/blog-tag-editor';
+import { BlogTagsPage } from './blog/blog-tags-page';
 import { BrandEditor } from './brands/brand-editor';
 import { BrandsPage } from './brands/brands-page';
 import { CategoriesPage } from './categories/categories-page';
@@ -210,6 +214,46 @@ void startOperator({
       ],
     },
     {
+      path: 'blog-articles',
+      component: BlogArticlesPage,
+      children: [
+        {
+          path: 'new',
+          component: BlogArticleEditor,
+          canActivate: [canEditShopContent],
+          data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: ':recordId',
+          component: BlogArticleEditor,
+          canActivate: [canEditShopContent],
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
+    {
+      path: 'blog-tags',
+      component: BlogTagsPage,
+      children: [
+        {
+          path: 'new',
+          component: BlogTagEditor,
+          canActivate: [canEditShopContent],
+          data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: ':recordId',
+          component: BlogTagEditor,
+          canActivate: [canEditShopContent],
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
+    {
       path: 'orders',
       component: OrdersPage,
       children: [
@@ -347,6 +391,8 @@ void startOperator({
     },
     { id: 'badges', label: 'badges', icon: 'tag', path: 'badges' },
     { id: 'pages', label: 'pages', icon: 'clone', path: 'pages' },
+    { id: 'blog-articles', label: 'blogArticles', icon: 'list-check', path: 'blog-articles' },
+    { id: 'blog-tags', label: 'blogTags', icon: 'tags', path: 'blog-tags' },
     { id: 'orders', label: 'orders', icon: 'truck', path: 'orders' },
     { id: 'discounts', label: 'discounts', icon: 'tags', path: 'discounts' },
     { id: 'customers', label: 'customers', icon: 'users', path: 'customers' },

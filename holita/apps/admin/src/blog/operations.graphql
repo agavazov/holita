@@ -1,0 +1,85 @@
+fragment OperatorBlogTagFields on BlogTag {
+  id
+  name
+  slug
+}
+
+fragment OperatorBlogArticleListFields on BlogArticle {
+  id
+  slug
+  titleBg
+  titleEn
+  status
+  publishedAt
+  tags {
+    ...OperatorBlogTagFields
+  }
+}
+
+query OperatorBlogArticles(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $status: BlogArticleStatus
+  $sort: BlogArticleSort
+) {
+  blogArticles(offset: $offset, limit: $limit, search: $search, status: $status, sort: $sort) {
+    items {
+      ...OperatorBlogArticleListFields
+    }
+    total
+  }
+}
+
+query OperatorBlogArticle($id: ID!) {
+  blogArticle(id: $id) {
+    ...OperatorBlogArticleListFields
+    bodyBg
+    bodyEn
+  }
+}
+
+query OperatorBlogTags($offset: Int!, $limit: Int!, $search: String, $sort: BlogTagSort) {
+  blogTags(offset: $offset, limit: $limit, search: $search, sort: $sort) {
+    items {
+      ...OperatorBlogTagFields
+    }
+    total
+  }
+}
+
+query OperatorBlogTag($id: ID!) {
+  blogTag(id: $id) {
+    ...OperatorBlogTagFields
+  }
+}
+
+query OperatorBlogTagChoices {
+  blogTagChoices {
+    ...OperatorBlogTagFields
+  }
+}
+
+mutation OperatorCreateBlogArticle($input: BlogArticleInput!) {
+  createBlogArticle(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateBlogArticle($id: ID!, $input: BlogArticleInput!) {
+  updateBlogArticle(id: $id, input: $input) {
+    id
+  }
+}
+
+mutation OperatorCreateBlogTag($input: BlogTagInput!) {
+  createBlogTag(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateBlogTag($id: ID!, $input: BlogTagInput!) {
+  updateBlogTag(id: $id, input: $input) {
+    id
+  }
+}

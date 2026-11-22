@@ -4,6 +4,8 @@ import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nest
 import { GraphQLModule } from '@nestjs/graphql';
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage } from 'node:http';
+import { BlogModule } from './blog/blog.module.js';
+import { BlogResolver } from './blog/blog.resolver.js';
 import { CartModule } from './cart/cart.module.js';
 import { CartResolver } from './cart/cart.resolver.js';
 import { CheckoutModule } from './checkout/checkout.module.js';
@@ -65,6 +67,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     InvoicesModule,
     RefundsModule,
     PagesModule,
+    BlogModule,
   ],
   providers: [
     CommerceResolver,
@@ -83,6 +86,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     InvoicesResolver,
     RefundsResolver,
     PagesResolver,
+    BlogResolver,
   ],
 })
 class OperatorModule {}
@@ -98,6 +102,7 @@ class OperatorModule {}
     CheckoutModule,
     OrdersModule,
     PagesModule,
+    BlogModule,
   ],
   controllers: [BrandImagesController, ProductImagesController],
   providers: [

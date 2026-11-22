@@ -113,6 +113,23 @@ holita-storefront-page {
     padding: 0;
   }
 
+  .content-article {
+    max-inline-size: 52rem;
+
+    h1 {
+      margin: 0;
+      font: var(--shop-title);
+      letter-spacing: var(--shop-title-tracking);
+    }
+
+    p {
+      max-inline-size: 68ch;
+      margin: var(--p-app-space-5) 0 0;
+      line-height: 1.65;
+      white-space: pre-wrap;
+    }
+  }
+
   .shop-panel-section {
     padding: var(--shop-panel-padding);
   }

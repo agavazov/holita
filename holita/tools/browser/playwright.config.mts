@@ -3,7 +3,7 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: '.',
   testMatch: 'holita.smoke.spec.mts',
-  timeout: 360_000,
+  timeout: 600_000,
   use: {
     browserName: 'chromium',
     headless: true,

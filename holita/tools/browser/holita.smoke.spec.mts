@@ -675,6 +675,80 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await expect(content.getByText(pageBody, { exact: true })).toBeVisible();
     await setPageStatus('Draft');
     expect(await publicPage()).toEqual({ data: { shopPage: null } });
+
+    const blogTag = 'Cookware care';
+    const blogTagSlug = 'cookware-care';
+    const blogSlug = 'cast-iron-care';
+    const blogTitle = 'Грижа за чугунения тиган';
+    const blogBody = 'Измийте с топла вода.\n\nПодсушете тигана преди да го приберете.';
+    await merchant.getByRole('link', { name: 'Blog Tags', exact: true }).click();
+    await merchant.getByRole('button', { name: 'New blog tag', exact: true }).click();
+    await merchant.locator('#blog-tag-name').fill(blogTag);
+    await merchant.locator('#blog-tag-slug').fill(blogTagSlug);
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Blog tag saved.');
+    await merchant.getByRole('link', { name: 'Blog Articles', exact: true }).click();
+    await merchant.getByRole('button', { name: 'New article', exact: true }).click();
+    await merchant.locator('#blog-article-slug').fill(blogSlug);
+    await merchant.locator('#blog-article-title-bg').fill(blogTitle);
+    await merchant.locator('#blog-article-body-bg').fill(blogBody);
+    await expect(
+      merchant.locator('p-select:has(#blog-article-tags) .p-select-loading-icon'),
+    ).toBeHidden();
+    await merchant.locator('#blog-article-tags').click();
+    await merchant.getByRole('option', { name: blogTag, exact: true }).click();
+    await merchant.getByRole('heading', { name: 'New article', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Article saved.');
+    const publicBlog = async (): Promise<unknown> => {
+      const response = await contentShopper.request.post(`${shopApp.origin}/graphql`, {
+        headers: { 'x-branch-id': shopId },
+        data: {
+          query: `query($article: String!, $tag: String!) {
+            all: blogArticles { items { slug } total }
+            filtered: blogArticles(tagSlug: $tag) { items { slug } total }
+            blogArticle(slug: $article) { slug }
+            blogTags { slug }
+          }`,
+          variables: { article: blogSlug, tag: blogTagSlug },
+        },
+      });
+      expect(response.status()).toBe(200);
+      return response.json();
+    };
+    const emptyBlog = {
+      data: {
+        all: { items: [], total: 0 },
+        filtered: { items: [], total: 0 },
+        blogArticle: null,
+        blogTags: [],
+      },
+    };
+    expect(await publicBlog()).toEqual(emptyBlog);
+    const articleRow = merchant.getByRole('button', { name: blogTitle, exact: true });
+    const setArticleStatus = async (status: 'Draft' | 'Published') => {
+      await articleRow.click();
+      await merchant.locator('#blog-article-status').click();
+      await merchant.getByRole('option', { name: status, exact: true }).click();
+      await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+      await dismissSuccess(merchant, 'Article saved.');
+    };
+    await setArticleStatus('Published');
+    expect(await publicBlog()).toEqual({
+      data: {
+        all: { items: [{ slug: blogSlug }], total: 1 },
+        filtered: { items: [{ slug: blogSlug }], total: 1 },
+        blogArticle: { slug: blogSlug },
+        blogTags: [{ slug: blogTagSlug }],
+      },
+    });
+    await contentShopper.goto(`${shopApp.origin}/s/${shopId}/blog?tag=${blogTagSlug}`);
+    await contentShopper.getByRole('link', { name: blogTitle, exact: true }).click();
+    await expect(
+      contentShopper.getByRole('article').filter({ hasText: blogTitle }).getByText(blogBody),
+    ).toBeVisible();
+    await setArticleStatus('Draft');
+    expect(await publicBlog()).toEqual(emptyBlog);
     await contentShopper.close();
 
     await merchant.getByRole('link', { name: 'Brands', exact: true }).click();
@@ -724,11 +798,8 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await expect(
       merchant.locator('p-select:has(#product-badges) .p-select-loading-icon'),
     ).toBeHidden();
-    const badges = merchant.locator('#product-badges');
-    await badges.press('Space');
-    await expect(merchant.getByRole('option', { name: badgeName, exact: true })).toBeVisible();
-    await badges.press('ArrowDown');
-    await badges.press('Enter');
+    await merchant.locator('#product-badges').click();
+    await merchant.getByRole('option', { name: badgeName, exact: true }).click();
     await merchant.getByRole('heading', { name: 'Badges and tags', exact: true }).click();
     await merchant.locator('#product-tag-search').fill(tagName);
     const tagCreated = merchant.waitForResponse(

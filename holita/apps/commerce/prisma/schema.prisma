@@ -68,6 +68,12 @@ enum ShopPageStatus {
   @@map("shopPageStatus")
 }
 
+enum BlogArticleStatus {
+  DRAFT @map("draft")
+  PUBLISHED @map("published")
+  @@map("blogArticleStatus")
+}
+
 model ShopPage {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
@@ -84,6 +90,54 @@ model ShopPage {
   @@unique([tenantId, branchId, slug])
   @@index([tenantId, branchId, updatedAt(sort: Desc), id])
   @@map("shopPage")
+}
+
+model BlogArticle {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  slug String @db.VarChar(200)
+  titleBg String? @db.VarChar(200)
+  titleEn String? @db.VarChar(200)
+  bodyBg String? @db.Text
+  bodyEn String? @db.Text
+  status BlogArticleStatus @default(DRAFT)
+  publishedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  tagAssignments BlogArticleTag[]
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, slug])
+  @@index([tenantId, branchId, status, publishedAt(sort: Desc), id])
+  @@map("blogArticle")
+}
+
+model BlogTag {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  name String @db.VarChar(200)
+  normalizedName String @db.Text
+  slug String @db.VarChar(200)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  assignments BlogArticleTag[]
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, normalizedName])
+  @@unique([tenantId, branchId, slug])
+  @@map("blogTag")
+}
+
+model BlogArticleTag {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  articleId String @db.Uuid
+  tagId String @db.Uuid
+  article BlogArticle @relation(fields: [tenantId, branchId, articleId], references: [tenantId, branchId, id], onDelete: Cascade)
+  tag BlogTag @relation(fields: [tenantId, branchId, tagId], references: [tenantId, branchId, id], onDelete: Restrict)
+  @@id([tenantId, branchId, articleId, tagId])
+  @@index([tenantId, branchId, tagId])
+  @@map("blogArticleTag")
 }
 
 model Brand {

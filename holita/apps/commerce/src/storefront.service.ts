@@ -22,6 +22,7 @@ import {
 } from './generated/prisma/client.js';
 import { brandLogoUrl } from './brands/brand-images.js';
 import { BrandsRepository } from './brands/brands.repository.js';
+import { BlogService } from './blog/blog.service.js';
 import { CartService, type CartContext } from './cart/cart.service.js';
 import { CategoriesService } from './categories/categories.service.js';
 import { CharacteristicsService } from './characteristics/characteristics.service.js';
@@ -33,6 +34,7 @@ import type {
   CataloguePage,
   CatalogueProduct,
   CatalogueVariantSelection,
+  QueryBlogArticlesArgs,
   QueryCatalogueArgs,
   Shopper,
   ShopperSession,
@@ -231,6 +233,7 @@ export class StorefrontService {
     private readonly collections: CollectionsService,
     private readonly characteristics: CharacteristicsService,
     private readonly pages: PagesService,
+    private readonly blog: BlogService,
   ) {}
   async shop(context: StorefrontContext): Promise<ShopScope | null> {
     if (!context.branchId || !isUUID(context.branchId)) {
@@ -286,6 +289,18 @@ export class StorefrontService {
   }
   async shopPage(context: StorefrontContext, slug: string) {
     return this.pages.published(await this.publicScope(context), slug);
+  }
+  async blogArticles(context: StorefrontContext, args: QueryBlogArticlesArgs) {
+    const scope = await this.publicScope(context);
+    const { offset = 0, limit = 20 } = args;
+    validatePage(offset, limit);
+    return this.blog.publicArticles(scope, offset, limit, args.tagSlug);
+  }
+  async blogArticle(context: StorefrontContext, slug: string) {
+    return this.blog.publicArticle(await this.publicScope(context), slug);
+  }
+  async blogTags(context: StorefrontContext) {
+    return this.blog.publicTags(await this.publicScope(context));
   }
   async catalogue(
     context: StorefrontContext,

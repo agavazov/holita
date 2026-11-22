@@ -19,6 +19,8 @@ import {
   CheckoutDocument,
   OrderConfirmationDocument,
   PlaceOrderDocument,
+  PublicBlogArticleDocument,
+  PublicBlogArticlesDocument,
   PublicCartDocument,
   PublicShopDocument,
   PublicShopPageDocument,
@@ -37,6 +39,7 @@ import {
   type CatalogueQueryVariables,
   type CheckoutQuoteInput,
   type PlaceOrderInput,
+  type PublicBlogArticlesQueryVariables,
 } from './generated/operations';
 import type { BrowseSection } from './catalogue-url';
 
@@ -188,6 +191,12 @@ export class StorefrontApi {
   }
   async shopPage(shopId: string, slug: string) {
     return (await this.read(shopId, PublicShopPageDocument, { slug })).shopPage;
+  }
+  blogArticles(shopId: string, variables: PublicBlogArticlesQueryVariables) {
+    return this.read(shopId, PublicBlogArticlesDocument, variables);
+  }
+  async blogArticle(shopId: string, slug: string) {
+    return (await this.read(shopId, PublicBlogArticleDocument, { slug })).blogArticle;
   }
   product(shopId: string, id: string) {
     return this.read(shopId, CatalogueProductDocument, { id });

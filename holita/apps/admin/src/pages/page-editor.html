@@ -69,8 +69,9 @@
       @for (translation of translations(); track translation.lang) { @let titleId = 'page-title-' +
       translation.lang; @let bodyId = 'page-body-' + translation.lang; @let titleError =
       error(translation.title); @let bodyError = error(translation.body);
-      <div class="app-form-section">
+      <div class="app-form-grid">
         <osnova-form-field
+          class="app-form-grid--wide"
           [controlId]="titleId"
           [label]="translation.titleLabel"
           [error]="titleError"
@@ -86,7 +87,12 @@
             (input)="clearError(translation.title)"
           />
         </osnova-form-field>
-        <osnova-form-field [controlId]="bodyId" [label]="translation.bodyLabel" [error]="bodyError">
+        <osnova-form-field
+          class="app-form-grid--wide"
+          [controlId]="bodyId"
+          [label]="translation.bodyLabel"
+          [error]="bodyError"
+        >
           <textarea
             pTextarea
             [id]="bodyId"

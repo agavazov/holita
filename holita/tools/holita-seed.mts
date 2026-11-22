@@ -7,6 +7,8 @@ import pg from 'pg';
 import {
   demoBadges,
   demoBankTransfer,
+  demoBlogArticles,
+  demoBlogTags,
   demoCatalogue,
   demoCategories,
   demoCharacteristicGroups,
@@ -89,6 +91,8 @@ async function seedCatalogue(): Promise<void> {
   let markerAssignmentsInserted = 0;
   let discountsInserted = 0;
   let pagesInserted = 0;
+  let blogTagsInserted = 0;
+  let blogArticlesInserted = 0;
   await client.connect();
   try {
     await client.query('BEGIN');
@@ -404,6 +408,44 @@ async function seedCatalogue(): Promise<void> {
       );
       pagesInserted += rowCount ?? 0;
     }
+    for (const tag of demoBlogTags) {
+      const { rowCount } = await client.query(
+        `INSERT INTO "blogTag" ("id", "tenantId", "branchId", "name", "normalizedName", "slug", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
+        [fixtureId('db', tag.id), tenantId, branchId, tag.name, tag.name.toLowerCase(), tag.slug],
+      );
+      blogTagsInserted += rowCount ?? 0;
+    }
+    for (const article of demoBlogArticles) {
+      const articleId = fixtureId('e3', article.id);
+      const { rowCount } = await client.query(
+        `INSERT INTO "blogArticle" ("id", "tenantId", "branchId", "slug", "status", "publishedAt",
+                                    "titleBg", "bodyBg", "titleEn", "bodyEn", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
+        [
+          articleId,
+          tenantId,
+          branchId,
+          article.slug,
+          article.status,
+          article.publishedAt,
+          article.titleBg,
+          article.bodyBg,
+          article.titleEn,
+          article.bodyEn,
+        ],
+      );
+      if (rowCount) {
+        blogArticlesInserted += rowCount;
+        await client.query(
+          `INSERT INTO "blogArticleTag" ("tenantId", "branchId", "articleId", "tagId")
+           SELECT "tenantId", "branchId", $1, "id" FROM "blogTag"
+           WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = ANY($4::uuid[])
+           ON CONFLICT DO NOTHING`,
+          [articleId, tenantId, branchId, article.tagIds.map((id) => fixtureId('db', id))],
+        );
+      }
+    }
     await seedShopperCart(client, tenantId, branchId);
     for (const [id, method, sortOrder] of [
       [1, demoPaymentMethod, 0],
@@ -456,6 +498,9 @@ async function seedCatalogue(): Promise<void> {
     );
     console.log(`Demo discounts inserted ${String(discountsInserted)} codes.`);
     console.log(`Demo content inserted ${String(pagesInserted)} pages.`);
+    console.log(
+      `Demo blog inserted ${String(blogTagsInserted)} tags and ${String(blogArticlesInserted)} articles.`,
+    );
   } finally {
     await client.end();
   }

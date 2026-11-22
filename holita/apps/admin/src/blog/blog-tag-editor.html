@@ -1,0 +1,75 @@
+<osnova-route-drawer
+  [title]="editing ? text().editBlogTag : text().newBlogTag"
+  [subtitle]="subtitle()"
+  [state]="state()"
+  [errorText]="text().blogTagsUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  <form
+    id="blog-tag-editor-form"
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="app-form-section"
+  >
+    <osnova-form-field
+      controlId="blog-tag-name"
+      [label]="text().name"
+      [required]="true"
+      [error]="error('name')"
+    >
+      <input
+        #name
+        pInputText
+        id="blog-tag-name"
+        formControlName="name"
+        autocomplete="off"
+        aria-required="true"
+        aria-describedby="blog-tag-name-error"
+        [invalid]="!!error('name')"
+        [attr.aria-invalid]="!!error('name')"
+        (input)="changeName(name.value)"
+      />
+    </osnova-form-field>
+    <osnova-form-field
+      controlId="blog-tag-slug"
+      [label]="text().slug"
+      [hint]="text().slugHint"
+      [required]="true"
+      [error]="error('slug')"
+    >
+      <input
+        pInputText
+        id="blog-tag-slug"
+        formControlName="slug"
+        autocomplete="off"
+        spellcheck="false"
+        aria-required="true"
+        aria-describedby="blog-tag-slug-hint blog-tag-slug-error"
+        [invalid]="!!error('slug')"
+        [attr.aria-invalid]="!!error('slug')"
+        (input)="clearError('slug')"
+      />
+    </osnova-form-field>
+    @if (saveError()) {
+    <p-message severity="error">{{ text().blogTagSaveFailed }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="blog-tag-editor-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+  </div>
+</osnova-route-drawer>

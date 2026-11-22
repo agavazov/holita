@@ -645,6 +645,16 @@ back to the other language as a pair. Returning the page to Draft removes it fro
 The operator graph exposes `shopPages`, `shopPage`, `createShopPage` and `updateShopPage`.
 The storefront graph exposes `shopPage(slug: ...)` for published pages in the current shop.
 
+In Admin, open Blog Tags to create reusable names and shop-unique slugs. In Blog Articles,
+write Bulgarian and English plain-text content and choose tags for the article. Publishing
+requires a title and body in at least one language. The publication time is set when an article
+goes live. Returning it to Draft removes it from the public blog and clears its publication time.
+Shoppers can open Blog at `/s/<branchId>/blog` and share a tag filter using `?tag=<tagSlug>`.
+Published articles appear newest first, and each detail page lives at `/s/<branchId>/blog/<slug>`.
+The storefront graph exposes `blogArticles`, `blogArticle` and `blogTags` for published content.
+The operator graph also provides article and tag creation and updates, plus `blogTagChoices` for
+article assignments.
+
 `npm run dev` starts both products. `npm run kill` stops their development applications while
 leaving PostgreSQL and the ERM units running. Discocan Core reads `discocan/config/core.env`;
 Holita Core reads `holita/config/core.env`. Their watch outputs are `dist-discocan` and

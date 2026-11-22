@@ -36,6 +36,8 @@ import { CartMergeNotice, CartPage } from './cart-page';
 import { CheckoutPage } from './checkout-page';
 import { OrderConfirmationPage } from './order-confirmation-page';
 import { ShopperOrdersPage } from './shopper-orders-page';
+import { StorefrontBlog } from './storefront-blog';
+import { localizedContent } from './storefront-content';
 import type { CatalogueProductQuery } from './generated/operations';
 
 type VariantSelection = NonNullable<CatalogueProductQuery['catalogueProduct']>['variantSelection'];
@@ -56,6 +58,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
     CheckoutPage,
     OrderConfirmationPage,
     ShopperOrdersPage,
+    StorefrontBlog,
   ],
   providers: [CartState],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,6 +77,12 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             {{ t()[section] }}
           </a>
         }
+        <a
+          [routerLink]="[...base(), 'blog']"
+          [attr.aria-current]="page === 'blog' ? (slug() ? 'true' : 'page') : null"
+        >
+          {{ t().blog }}
+        </a>
       </nav>
       <div class="shop-actions">
         @let cartCount = cartState.cart()?.itemCount ?? null;
@@ -148,6 +157,15 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             </article>
           } @else {
             <h1 class="shop-state">{{ t().pageMissing }}</h1>
+          }
+        }
+        @if (page === 'blog') {
+          @if (shop()) {
+            <holita-storefront-blog [language]="language()" [shopId]="shopId()" [slug]="slug()" />
+          } @else if (error()) {
+            <ng-container [ngTemplateOutlet]="requestError" />
+          } @else {
+            <p class="shop-state" role="status">{{ t().loading }}</p>
           }
         }
         @if (page === 'product') {
@@ -499,6 +517,7 @@ class StorefrontPage {
   private readonly document = inject(DOCUMENT);
   private readonly params = toSignal(this.route.paramMap, { requireSync: true });
   protected readonly orderId = computed(() => this.params().get('orderId'));
+  protected readonly slug = computed(() => this.params().get('slug'));
   protected readonly cartState = inject(CartState);
   readonly shopId = this.cartState.shopId;
   readonly base = computed(() => ['/s', this.shopId()]);
@@ -515,8 +534,8 @@ class StorefrontPage {
   private readonly request = resource({
     params: () => ({
       shopId: this.shopId(),
-      id: this.params().get('id'),
-      slug: this.params().get('slug'),
+      id: this.page === 'product' ? this.params().get('id') : null,
+      slug: this.page === 'pages' ? this.slug() : null,
     }),
     loader: async ({ params: { shopId, id, slug }, abortSignal }) => {
       const shop = await this.api.shop(shopId);
@@ -541,16 +560,7 @@ class StorefrontPage {
   readonly error = computed(() => this.actionError() || this.request.status() === 'error');
   readonly loading = this.request.isLoading;
   readonly busy = signal(false);
-  protected readonly content = computed(() => {
-    const page = this.view()?.page;
-    if (!page) {
-      return null;
-    }
-    const { titleBg, titleEn, bodyBg, bodyEn } = page;
-    const bg = titleBg && bodyBg ? { title: titleBg, body: bodyBg, language: 'bg' } : null;
-    const en = titleEn && bodyEn ? { title: titleEn, body: bodyEn, language: 'en' } : null;
-    return this.language() === 'bg' ? (bg ?? en) : (en ?? bg);
-  });
+  protected readonly content = computed(() => localizedContent(this.view()?.page, this.language()));
   private readonly productDetail = computed(() => this.view()?.detail ?? null);
   readonly product = computed(() => this.productDetail()?.catalogueProduct ?? null);
   readonly specifications = computed(
@@ -753,6 +763,8 @@ const pages = [
   { path: 's/:shopId', component: StorefrontPage },
   { path: 's/:shopId/product/:id', component: StorefrontPage },
   { path: 's/:shopId/pages/:slug', component: StorefrontPage },
+  { path: 's/:shopId/blog', component: StorefrontPage },
+  { path: 's/:shopId/blog/:slug', component: StorefrontPage },
   ...browseSections.flatMap((section) => [
     { path: `s/:shopId/${section}`, component: StorefrontPage },
     { path: `s/:shopId/${section}/:slug`, component: StorefrontPage },
