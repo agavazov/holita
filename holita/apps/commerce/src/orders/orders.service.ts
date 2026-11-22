@@ -475,6 +475,19 @@ export class OrdersService {
     return order ? confirmation(order) : null;
   }
 
+  async guestConfirmation(context: CartContext, cartId: string): Promise<OrderConfirmation | null> {
+    const owner = cartOwner(context);
+    if (!owner || !('guestTokenHash' in owner) || !isUUID(cartId)) {
+      return null;
+    }
+    const order = await this.orders.findGuestConfirmationForCart(
+      context.scope,
+      cartId.toLowerCase(),
+      owner.guestTokenHash,
+    );
+    return order ? confirmation(order) : null;
+  }
+
   place(context: CartContext, input: PlaceOrderInput): Promise<OrderConfirmation> {
     const { scope, customerId } = context;
     const owner = cartOwner(context);

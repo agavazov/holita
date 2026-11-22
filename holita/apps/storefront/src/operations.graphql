@@ -470,6 +470,11 @@ query OrderConfirmation($orderId: ID!) {
     ...OrderConfirmationFields
   }
 }
+query GuestOrderConfirmation($cartId: ID!) {
+  guestOrderConfirmation(cartId: $cartId) {
+    id
+  }
+}
 query ShopperOrders($offset: Int!, $limit: Int!) {
   shopperOrders(offset: $offset, limit: $limit) {
     items {

@@ -19,6 +19,13 @@ function orderDetail(scope: Scope) {
   } satisfies Prisma.OrderInclude;
 }
 
+function guestOrderOwnership(scope: Scope, guestTokenHash: string) {
+  return {
+    customerId: null,
+    cart: { ...scope, guestTokenHash, consumedAt: { not: null } },
+  } satisfies Prisma.OrderWhereInput;
+}
+
 @Injectable()
 export class OrdersRepository {
   constructor(private readonly database: DatabaseService) {}
@@ -199,13 +206,19 @@ export class OrdersRepository {
     const ownership =
       'customerId' in owner
         ? { customerId: owner.customerId }
-        : {
-            customerId: null,
-            cartId: { not: null },
-            cart: { ...scope, ...owner, consumedAt: { not: null } },
-          };
+        : guestOrderOwnership(scope, owner.guestTokenHash);
     return this.database.client.order.findUnique({
       where: { ...scope, id, ...ownership },
+      include: { lines: orderLines(scope) },
+    });
+  }
+
+  findGuestConfirmationForCart(scope: Scope, cartId: string, guestTokenHash: string) {
+    return this.database.client.order.findUnique({
+      where: {
+        tenantId_branchId_cartId: { ...scope, cartId },
+        ...guestOrderOwnership(scope, guestTokenHash),
+      },
       include: { lines: orderLines(scope) },
     });
   }

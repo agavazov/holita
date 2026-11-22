@@ -23,9 +23,15 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import {
   CartState,
+  cartNotFound,
+  forgetGuestCart,
+  forgetPendingGuestCheckout,
+  pendingGuestCheckout,
   promoProblems,
   promoRejection,
   rememberGuestReceipt,
+  rememberPendingGuestCheckout,
+  type GuestCheckoutAttempt,
   type PromoProblem,
 } from './cart-state';
 import { checkoutCountries, defaultCountryCode } from './checkout-countries';
@@ -136,7 +142,7 @@ export class CheckoutPage {
   private readonly request = resource({
     params: () => this.cartState.shopId(),
     loader: async ({ params: shopId, abortSignal }) => {
-      const credentials = this.cartState.credentials(shopId);
+      const { credentials, pending } = this.checkoutOwner(shopId);
       try {
         const checkout = await this.api.checkout(shopId, credentials);
         abortSignal.throwIfAborted();
@@ -147,13 +153,24 @@ export class CheckoutPage {
         return { checkout, shopper };
       } catch (error) {
         abortSignal.throwIfAborted();
-        if (
-          this.cartState.expireSession(shopId, credentials, error) ||
-          storefrontFieldErrors(error).some(({ code }) => code === 'CART_NOT_FOUND')
-        ) {
-          return null;
+        if (!this.cartState.expireSession(shopId, credentials, error) && !cartNotFound(error)) {
+          throw error;
         }
-        throw error;
+        if (pending) {
+          const order = await this.api.guestOrderConfirmation(
+            shopId,
+            pending.cartId,
+            pending.token,
+          );
+          abortSignal.throwIfAborted();
+          if (order) {
+            await this.finishCheckout(shopId, order.id, pending);
+          } else {
+            forgetPendingGuestCheckout(shopId, pending);
+            forgetGuestCart(shopId, pending.token);
+          }
+        }
+        return null;
       }
     },
   });
@@ -268,7 +285,7 @@ export class CheckoutPage {
       return;
     }
     const shopId = this.cartState.shopId();
-    const credentials = this.cartState.credentials(shopId);
+    const { credentials } = this.checkoutOwner(shopId);
     this.reviewed.set(null);
     this.reviewing.set(true);
     try {
@@ -301,25 +318,46 @@ export class CheckoutPage {
     this.problem.set(null);
     this.placing.set(true);
     try {
+      const pending = credentials.guestCartToken
+        ? { cartId, token: credentials.guestCartToken }
+        : null;
+      if (pending) {
+        rememberPendingGuestCheckout(shopId, pending);
+      }
       const order = await this.api.placeOrder(shopId, credentials, {
         ...this.form.getRawValue(),
         cartId,
         quoteRevision,
       });
-      if (credentials.guestCartToken) {
-        rememberGuestReceipt(shopId, order.id, credentials.guestCartToken);
-      }
-      if (!this.destroy.destroyed) {
-        await this.router.navigate(['/s', shopId, 'checkout', 'confirmation', order.id], {
-          replaceUrl: true,
-        });
-      }
+      await this.finishCheckout(shopId, order.id, pending);
     } catch (error) {
       if (!this.destroy.destroyed && !this.cartState.expireSession(shopId, credentials, error)) {
         this.showRejection(error, 'orderPlacementFailed');
       }
     } finally {
       this.placing.set(false);
+    }
+  }
+
+  private checkoutOwner(shopId: string) {
+    const credentials = this.cartState.credentials(shopId);
+    const pending = credentials.shopperToken ? null : pendingGuestCheckout(shopId);
+    return { credentials: pending ? { guestCartToken: pending.token } : credentials, pending };
+  }
+
+  private async finishCheckout(
+    shopId: string,
+    orderId: string,
+    pending: GuestCheckoutAttempt | null,
+  ) {
+    if (pending) {
+      rememberGuestReceipt(shopId, orderId, pending.token);
+      forgetPendingGuestCheckout(shopId, pending);
+    }
+    if (!this.destroy.destroyed && this.cartState.shopId() === shopId) {
+      await this.router.navigate(['/s', shopId, 'checkout', 'confirmation', orderId], {
+        replaceUrl: true,
+      });
     }
   }
 

@@ -1,6 +1,7 @@
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type {
   MutationPlaceOrderArgs,
+  QueryGuestOrderConfirmationArgs,
   QueryOrderConfirmationArgs,
   QueryShopperOrderArgs,
   QueryShopperOrdersArgs,
@@ -31,6 +32,14 @@ export class OrdersResolver {
     @Args() { orderId }: QueryOrderConfirmationArgs,
   ) {
     return this.orders.confirmation(await this.storefront.cartContext(context), orderId);
+  }
+
+  @Query('guestOrderConfirmation')
+  async guestConfirmation(
+    @Context() context: StorefrontContext,
+    @Args() { cartId }: QueryGuestOrderConfirmationArgs,
+  ) {
+    return this.orders.guestConfirmation(await this.storefront.cartContext(context), cartId);
   }
 
   @Mutation('placeOrder')

@@ -428,6 +428,7 @@ type Query {
   cart: Cart!
   checkout: CheckoutState
   orderConfirmation(orderId: ID!): OrderConfirmation
+  guestOrderConfirmation(cartId: ID!): OrderConfirmation
 }
 type Mutation {
   registerShopper(name: String!, email: String!, password: String!): ShopperSession!

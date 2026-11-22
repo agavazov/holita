@@ -40,7 +40,6 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 | [144 Hand off a won lead to an existing merchant](144-holita-sales-existing-merchant-handoff.md)         | 4    | Ready       | 141                |
 | [145 Manage prospect online stores](145-holita-sales-online-stores.md)                                   | 4    | Ready       | 131                |
 | [142 Show the daily sales dashboard](142-holita-sales-dashboard.md)                                      | 4    | Ready       | 137, 138, 140, 144 |
-| [150 Recover guest orders after an interrupted checkout](150-holita-guest-checkout-recovery.md)          | 5    | Ready       |                    |
 | [151 Preserve sold variant links for stock restoration](151-holita-order-stock-deductions.md)            | 5    | Ready       |                    |
 | [252 Preserve stock deductions on manual order edits](252-holita-manual-order-stock-deltas.md)           | 5    | Ready       |                    |
 | [152 Use the maintained phone in new manual orders](152-holita-manual-order-customer-phone.md)           | 5    | Ready       |                    |

@@ -17,6 +17,7 @@ import {
   CatalogueTagProductsDocument,
   CatalogueTagsDocument,
   CheckoutDocument,
+  GuestOrderConfirmationDocument,
   OrderConfirmationDocument,
   PlaceOrderDocument,
   PublicBlogArticleDocument,
@@ -293,5 +294,10 @@ export class StorefrontApi {
   async orderConfirmation(shopId: string, credentials: StorefrontCredentials, orderId: string) {
     return (await this.read(shopId, OrderConfirmationDocument, { orderId }, credentials))
       .orderConfirmation;
+  }
+
+  async guestOrderConfirmation(shopId: string, cartId: string, guestCartToken: string) {
+    return (await this.read(shopId, GuestOrderConfirmationDocument, { cartId }, { guestCartToken }))
+      .guestOrderConfirmation;
   }
 }

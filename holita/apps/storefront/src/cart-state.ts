@@ -43,6 +43,52 @@ export function forgetGuestCart(shopId: string, token: string | null) {
   }
 }
 
+export interface GuestCheckoutAttempt {
+  readonly cartId: string;
+  readonly token: string;
+}
+
+function pendingGuestCheckoutKey(shopId: string) {
+  return `holita.checkout.${shopId}`;
+}
+
+export function pendingGuestCheckout(shopId: string): GuestCheckoutAttempt | null {
+  const stored = localStorage.getItem(pendingGuestCheckoutKey(shopId));
+  if (!stored) {
+    return null;
+  }
+  try {
+    const attempt: unknown = JSON.parse(stored);
+    if (
+      attempt &&
+      typeof attempt === 'object' &&
+      'cartId' in attempt &&
+      typeof attempt.cartId === 'string' &&
+      'token' in attempt &&
+      typeof attempt.token === 'string'
+    ) {
+      return { cartId: attempt.cartId, token: attempt.token };
+    }
+  } catch {
+    // An unreadable checkout attempt has no credentials to restore.
+  }
+  return null;
+}
+
+export function rememberPendingGuestCheckout(shopId: string, attempt: GuestCheckoutAttempt) {
+  localStorage.setItem(pendingGuestCheckoutKey(shopId), JSON.stringify(attempt));
+}
+
+export function forgetPendingGuestCheckout(
+  shopId: string,
+  { cartId, token }: GuestCheckoutAttempt,
+) {
+  const pending = pendingGuestCheckout(shopId);
+  if (pending?.cartId === cartId && pending.token === token) {
+    localStorage.removeItem(pendingGuestCheckoutKey(shopId));
+  }
+}
+
 function guestReceiptStorageKey(shopId: string, orderId: string) {
   return `holita.receipt.${shopId}.${orderId}`;
 }
@@ -89,7 +135,7 @@ function promoWriteError(error: unknown): PromoWriteError {
   );
 }
 
-function cartNotFound(error: unknown): boolean {
+export function cartNotFound(error: unknown): boolean {
   return storefrontFieldErrors(error).some(({ code }) => code === 'CART_NOT_FOUND');
 }
 
@@ -120,6 +166,9 @@ export class CartState {
           return null;
         }
         if (credentials.guestCartToken && cartNotFound(error)) {
+          if (pendingGuestCheckout(shopId)?.token === credentials.guestCartToken) {
+            return null;
+          }
           forgetGuestCart(shopId, credentials.guestCartToken);
           return this.api.cart(shopId, this.credentials(shopId));
         }
@@ -236,7 +285,11 @@ export class CartState {
         this.request.set(null);
         return 'expired';
       }
-      if (credentials.guestCartToken && cartNotFound(error)) {
+      if (
+        credentials.guestCartToken &&
+        cartNotFound(error) &&
+        pendingGuestCheckout(shop)?.token !== credentials.guestCartToken
+      ) {
         forgetGuestCart(shop, credentials.guestCartToken);
         if (active()) {
           this.refreshOwner();

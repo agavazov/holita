@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page, type Response } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { hash, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -1628,7 +1628,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       await page.getByRole('button', { name: 'Apply promo code', exact: true }).click();
       return (await applied).json();
     };
-    const reviewCheckout = async (
+    const quoteCheckout = async (
       page: Page,
       subtotal: string,
       total: string,
@@ -1638,9 +1638,6 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       },
       shippingFee = '6.50',
     ) => {
-      const checkoutRead = waitForCart(page, 'Checkout');
-      await page.getByRole('link', { name: 'Checkout', exact: true }).click();
-      const checkoutResult: unknown = await (await checkoutRead).json();
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Shopper');
       await page.getByRole('textbox', { name: 'Email', exact: true }).fill(shopperEmail);
       await page.getByRole('textbox', { name: 'Phone', exact: true }).fill('+359 2 555 0100');
@@ -1661,6 +1658,13 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
           quoteCheckout: { subtotal, shippingFee, total, currency: 'BGN', ...discount },
         },
       });
+    };
+    const reviewCheckout = async (...args: Parameters<typeof quoteCheckout>) => {
+      const [page] = args;
+      const checkoutRead = waitForCart(page, 'Checkout');
+      await page.getByRole('link', { name: 'Checkout', exact: true }).click();
+      const checkoutResult: unknown = await (await checkoutRead).json();
+      await quoteCheckout(...args);
       return checkoutResult;
     };
     expect(await reviewCheckout(shopper, '30.00', '36.50')).toMatchObject({
@@ -1741,10 +1745,54 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     if (!orderCartToken) {
       throw new Error('Missing guest authorization for checkout');
     }
+    const {
+      rows: [orderCart],
+    } = await commerceDb.client.query<{ id: string }>(
+      'SELECT "id" FROM "cart" WHERE "tenantId" = $1 AND "branchId" = $2 AND "guestTokenHash" = $3',
+      [shopScope.tenantId, shopId, hash('sha256', orderCartToken, 'hex')],
+    );
+    if (!orderCart) {
+      throw new Error('Missing scoped guest cart for checkout');
+    }
     await reviewCheckout(guestOrder, '25.50', '32.00');
-    const placed = waitForCart(guestOrder, 'PlaceOrder');
-    await guestOrder.getByRole('button', { name: 'Place order', exact: true }).click();
-    await guestOrder.waitForURL(`${shopApp.origin}/s/${shopId}/checkout/confirmation/*`);
+    const placementRoute = '**/graphql';
+    const isPlacement = (body: string | null) =>
+      body?.includes('"operationName":"PlaceOrder"') === true;
+    let placeRequests = 0;
+    let committedPlacement: unknown;
+    await guestOrder.route(placementRoute, async (route) => {
+      if (!isPlacement(route.request().postData())) {
+        return route.continue();
+      }
+      placeRequests += 1;
+      if (placeRequests === 2) {
+        committedPlacement = await (await route.fetch()).json();
+      }
+      await route.abort();
+    });
+    const interruptPlacement = async () => {
+      const interrupted = guestOrder.waitForEvent('requestfailed', (request) =>
+        isPlacement(request.postData()),
+      );
+      await guestOrder.getByRole('button', { name: 'Place order', exact: true }).click();
+      await interrupted;
+    };
+    await interruptPlacement();
+    const activeCheckout = waitForCart(guestOrder, 'Checkout');
+    await guestOrder.reload();
+    expect(await (await activeCheckout).json()).toMatchObject({
+      data: { checkout: { cart: { itemCount: 1 } } },
+    });
+    await quoteCheckout(guestOrder, '25.50', '32.00');
+    expect(placeRequests).toBe(1);
+
+    await interruptPlacement();
+    expect(committedPlacement).toMatchObject({ data: { placeOrder: { id: expect.any(String) } } });
+    const [recovered] = await Promise.all([
+      waitForCart(guestOrder, 'GuestOrderConfirmation'),
+      guestOrder.reload(),
+    ]);
+    await expect(guestOrder).toHaveURL(/\/checkout\/confirmation\/[^/]+$/);
     const confirmationUrl = guestOrder.url();
     const orderId = new URL(confirmationUrl).pathname.split('/').at(-1);
     if (!orderId) {
@@ -1759,7 +1807,23 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       total: '32.00',
       paymentInstructions,
     };
-    expect(await (await placed).json()).toMatchObject({ data: { placeOrder: expectedOrder } });
+    expect(committedPlacement).toMatchObject({ data: { placeOrder: expectedOrder } });
+    expect(await recovered.json()).toMatchObject({
+      data: { guestOrderConfirmation: { id: orderId } },
+    });
+    expect(placeRequests).toBe(2);
+    await guestOrder.unroute(placementRoute);
+    const { rows: cartOrders } = await commerceDb.client.query(
+      'SELECT "id" FROM "order" WHERE "tenantId" = $1 AND "branchId" = $2 AND "cartId" = $3',
+      [shopScope.tenantId, shopId, orderCart.id],
+    );
+    expect(cartOrders).toEqual([{ id: orderId }]);
+    const { rows: remainingStock } = await commerceDb.client.query(
+      `SELECT "quantity" FROM "productVariant"
+       WHERE "tenantId" = $1 AND "branchId" = $2 AND "productId" = $3 AND "sku" = 'SMOKE-001'`,
+      [shopScope.tenantId, shopId, productId],
+    );
+    expect(remainingStock).toEqual([{ quantity: 0 }]);
     const receipt = waitForCart(guestOrder, 'OrderConfirmation');
     await guestOrder.reload();
     expect(await (await receipt).json()).toMatchObject({
@@ -1779,11 +1843,16 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       const denied = await guestOrder.request.post(`${shopApp.origin}/graphql`, {
         headers: { 'x-branch-id': branchId, 'x-cart-token': credential },
         data: {
-          query: 'query($id:ID!){orderConfirmation(orderId:$id){id}}',
-          variables: { id: orderId },
+          query: `query($orderId: ID!, $cartId: ID!) {
+            orderConfirmation(orderId: $orderId) { id }
+            guestOrderConfirmation(cartId: $cartId) { id }
+          }`,
+          variables: { orderId, cartId: orderCart.id },
         },
       });
-      expect(await denied.json()).toEqual({ data: { orderConfirmation: null } });
+      expect(await denied.json()).toEqual({
+        data: { orderConfirmation: null, guestOrderConfirmation: null },
+      });
     }
 
     const {
@@ -2041,7 +2110,13 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.getByRole('button', { name: 'Create manual order', exact: true }).click();
     const selectCustomer = async (label: string) => {
       await merchant.locator('#manual-customerId').click();
-      await merchant.getByRole('option', { name: label, exact: true }).click();
+      const option = merchant.getByRole('option', {
+        name: label,
+        exact: true,
+        includeHidden: true,
+      });
+      await option.click();
+      await expect(option).toHaveCount(0);
     };
     const originalCustomer = `Shopper · ${shopperEmail}`;
     const contactName = merchant.locator('[id="manual-contact.name"]');
@@ -2149,6 +2224,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       .click();
     await customerDialog.getByRole('textbox', { name: /^Street\b/u }).fill(editedStreet);
     await saveCustomer();
+    await expect(merchant.getByRole('cell', { name: editedStreet, exact: true })).toBeVisible();
 
     const [persistedCustomer, linkedOrders] = await Promise.all([
       waitForCart(merchant, 'OperatorCustomer').then<unknown>((response) => response.json()),
