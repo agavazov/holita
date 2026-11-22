@@ -479,6 +479,11 @@ storefront shows each product's active category path in its breadcrumbs. A hidde
 suppresses the whole subtree. The Sofia demo shop includes Kitchen and Home trees with products in
 their child categories.
 
+In Admin, use Options to define reusable options for the selected shop. The drawer lets you set
+the option's status and filter visibility, edit its text values and move them into order. The Sofia
+demo shop includes Colour and Size. The operator graph exposes `options`, `option`, `createOption`
+and `updateOption`.
+
 `npm run dev` starts both products. `npm run kill` stops their development applications while
 leaving PostgreSQL and the ERM units running. Discocan Core reads `discocan/config/core.env`;
 Holita Core reads `holita/config/core.env`. Their watch outputs are `dist-discocan` and

@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 import { config } from 'dotenv';
 import pg from 'pg';
-import { demoCatalogue, demoCategories } from './demo-catalogue.mjs';
+import { demoCatalogue, demoCategories, demoOptions } from './demo-catalogue.mjs';
 
 config({
   path: ['holita/config/commerce.env', 'holita/config/core.env', 'holita/config/seed-accounts.env'],
@@ -55,10 +55,29 @@ async function seedCatalogue(): Promise<void> {
   const client = new pg.Client({ connectionString: database });
   let brandsInserted = 0;
   let categoriesInserted = 0;
+  let optionsInserted = 0;
   let productsInserted = 0;
   await client.connect();
   try {
     await client.query('BEGIN');
+    for (const [id, name, values] of demoOptions) {
+      const optionId = fixtureId('72', id);
+      const { rowCount } = await client.query(
+        `INSERT INTO "option" ("id", "tenantId", "branchId", "name", "active", "showInFilters")
+         VALUES ($1, $2, $3, $4, true, true) ON CONFLICT DO NOTHING`,
+        [optionId, tenantId, branchId, name],
+      );
+      if (rowCount) {
+        optionsInserted += rowCount;
+        for (const [sortOrder, [valueId, label]] of values.entries()) {
+          await client.query(
+            `INSERT INTO "optionValue" ("id", "tenantId", "branchId", "optionId", "label", "sortOrder")
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [fixtureId('82', valueId), tenantId, branchId, optionId, label, sortOrder],
+          );
+        }
+      }
+    }
     for (const [id, name, slug, parent, sortOrder] of demoCategories) {
       const category = await client.query(
         `INSERT INTO "category" ("id", "tenantId", "branchId", "name", "slug", "parentId", "sortOrder")
@@ -124,7 +143,7 @@ async function seedCatalogue(): Promise<void> {
     }
     await client.query('COMMIT');
     console.log(
-      `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories and ${String(productsInserted)} products.`,
+      `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options and ${String(productsInserted)} products.`,
     );
   } finally {
     await client.end();

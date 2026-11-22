@@ -1,6 +1,6 @@
 # 105 Product variants
 
-**Status:** Ready after [104](104-holita-options.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

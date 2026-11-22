@@ -100,6 +100,44 @@ type Category {
   sortOrder: Int!
   active: Boolean!
 }
+enum OptionSortField {
+  NAME
+  ACTIVE
+  SHOW_IN_FILTERS
+}
+input OptionSort {
+  field: OptionSortField! = NAME
+  direction: SortDirection! = ASC
+}
+input OptionValueInput {
+  "Retain a value's ID when editing or moving it. Omit the ID to add a value."
+  id: ID
+  label: String!
+}
+input OptionInput {
+  name: String!
+  active: Boolean!
+  showInFilters: Boolean!
+  "All values in display order. Existing values omitted from this list are removed."
+  values: [OptionValueInput!]!
+}
+type OptionValue {
+  id: ID!
+  label: String!
+}
+type Option {
+  id: ID!
+  name: String!
+  active: Boolean!
+  showInFilters: Boolean!
+  values: [OptionValue!]!
+}
+type OptionPage {
+  items: [Option!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
 type Query {
   products(
     offset: Int! = 0
@@ -115,6 +153,8 @@ type Query {
   "Shop categories in tree order. A null parentId denotes a root."
   categories: [Category!]!
   category(id: ID!): Category
+  options(offset: Int! = 0, limit: Int! = 20, search: String, sort: OptionSort): OptionPage!
+  option(id: ID!): Option
 }
 type Mutation {
   createProduct(input: ProductInput!): Product!
@@ -125,4 +165,6 @@ type Mutation {
   createCategory(input: CategoryInput!): Category!
   updateCategory(id: ID!, input: CategoryInput!): Category!
   deleteCategory(id: ID!): Boolean!
+  createOption(input: OptionInput!): Option!
+  updateOption(id: ID!, input: OptionInput!): Option!
 }

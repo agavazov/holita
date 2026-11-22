@@ -1,0 +1,15 @@
+.option-value-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--p-app-space-2);
+
+  input {
+    inline-size: 100%;
+    min-inline-size: 0;
+  }
+}
+
+.option-value-actions {
+  display: flex;
+}

@@ -20,8 +20,7 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 
 | Ticket                                                                           | Wave | Status | Depends on         |
 | -------------------------------------------------------------------------------- | ---- | ------ | ------------------ |
-| [104 Product options](104-holita-options.md)                                     | 1    | Ready  |                    |
-| [105 Product variants](105-holita-variants.md)                                   | 1    | Ready  | 104                |
+| [105 Product variants](105-holita-variants.md)                                   | 1    | Ready  |                    |
 | [106 Product editor and descriptions](106-holita-product-editor.md)              | 1    | Ready  | 105                |
 | [107 Product image gallery](107-holita-product-images.md)                        | 1    | Ready  | 106                |
 | [108 Product collections](108-holita-collections.md)                             | 1    | Ready  |                    |

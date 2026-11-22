@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page, type Response } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
@@ -319,7 +319,100 @@ async function addCategory(page: Page, name: string, parent?: string): Promise<v
     await page.getByRole('option', { name: parent, exact: true }).click();
   }
   await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await dismissSuccess(page, 'Category saved.');
   await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
+}
+
+async function dismissSuccess(page: Page, message: string): Promise<void> {
+  await page
+    .locator('osnova-operation-toast')
+    .getByRole('status')
+    .filter({ hasText: message })
+    .getByRole('button', { name: 'Close', exact: true })
+    .click();
+}
+
+async function editOption(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'Options', exact: true }).click();
+  await page.getByRole('button', { name: 'Add option', exact: true }).click();
+  await page.locator('#option-name').fill('Finish');
+  const addValue = page.getByRole('button', { name: 'Add value', exact: true });
+  await addValue.click();
+  await page.locator('#option-value-0').fill('Matt');
+  await addValue.click();
+  await page.locator('#option-value-1').fill('Gloss');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await dismissSuccess(page, 'Option saved.');
+  const firstRead = page.waitForResponse(optionRead);
+  await page.getByRole('button', { name: 'Finish', exact: true }).click();
+  const created = readOption(await (await firstRead).json());
+  expect(created.values.map((value) => value.label)).toEqual(['Matt', 'Gloss']);
+  await page.locator('#option-name').fill('Surface finish');
+  await page.locator('#option-value-0').fill('Satin');
+  await page.getByRole('button', { name: 'Move value 1 down', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await dismissSuccess(page, 'Option saved.');
+  const secondRead = page.waitForResponse(optionRead);
+  await page.getByRole('button', { name: 'Surface finish', exact: true }).click();
+  const updated = readOption(await (await secondRead).json());
+  expect(updated).toEqual({
+    id: created.id,
+    values: [
+      { id: created.values[1]?.id, label: 'Gloss' },
+      { id: created.values[0]?.id, label: 'Satin' },
+    ],
+  });
+  await expect(page.locator('#option-value-0')).toHaveValue('Gloss');
+  await expect(page.locator('#option-value-1')).toHaveValue('Satin');
+  await page
+    .getByRole('dialog', { name: 'Edit option' })
+    .getByRole('button', { name: 'Close', exact: true })
+    .click();
+}
+
+function optionRead(response: Response): boolean {
+  return response.request().postData()?.includes('"operationName":"OperatorOption"') === true;
+}
+
+function readOption(value: unknown) {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('data' in value) ||
+    typeof value.data !== 'object' ||
+    value.data === null ||
+    !('option' in value.data)
+  ) {
+    throw new Error('Option query did not return data');
+  }
+  const option = value.data.option;
+  if (
+    typeof option !== 'object' ||
+    option === null ||
+    !('id' in option) ||
+    typeof option.id !== 'string' ||
+    !('values' in option) ||
+    !Array.isArray(option.values)
+  ) {
+    throw new Error('Option query did not return a record');
+  }
+  const values: readonly unknown[] = option.values;
+  return {
+    id: option.id,
+    values: values.map((item) => {
+      if (
+        typeof item !== 'object' ||
+        item === null ||
+        !('id' in item) ||
+        typeof item.id !== 'string' ||
+        !('label' in item) ||
+        typeof item.label !== 'string'
+      ) {
+        throw new Error('Option query did not return a value');
+      }
+      return { id: item.id, label: item.label };
+    }),
+  };
 }
 
 test('staff creates a merchant and its administrator creates a product', async ({ browser }) => {
@@ -460,11 +553,13 @@ test('staff creates a merchant and its administrator creates a product', async (
       .locator('input[type=file]')
       .setInputFiles(join(root, 'holita/config/demo/northline.png'));
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Brand saved.');
     await expect(merchant.getByRole('button', { name: 'Smoke Brand', exact: true })).toBeVisible();
     await merchant.getByRole('link', { name: 'Categories', exact: true }).click();
     await addCategory(merchant, 'Kitchen');
     await addCategory(merchant, 'Home');
     await addCategory(merchant, 'Cookware', 'Kitchen');
+    await editOption(merchant);
     await merchant.getByRole('link', { name: 'Products', exact: true }).click();
     await merchant.getByRole('button', { name: 'Create product', exact: true }).click();
     const productName = `Product ${randomUUID()}`;

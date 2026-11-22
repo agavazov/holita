@@ -90,6 +90,12 @@ beforeAll(async () => {
       'utf8',
     ),
   );
+  await connection.query(
+    await readFile(
+      new URL('../prisma/migrations/20261122010000_options/migration.sql', import.meta.url),
+      'utf8',
+    ),
+  );
   database = new PrismaClient({
     adapter: new PrismaPg({ connectionString: configured }, { schema }),
   });
@@ -449,6 +455,78 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
   ).toEqual({ data: { updateProduct: { categoryId: null } } });
   expect(await query(tokens.operator, branchA, deleteCategory, { id: child.id })).toEqual({
     data: { deleteCategory: true },
+  });
+
+  const optionScope = { tenantId: tenantA, branchId: branchA };
+  const scopedOption = await client.option.create({
+    data: {
+      ...optionScope,
+      name: 'Scoped Option',
+      values: {
+        create: [
+          { label: 'First', sortOrder: 0 },
+          { label: 'Second', sortOrder: 1 },
+        ],
+      },
+    },
+    include: { values: { orderBy: { sortOrder: 'asc' } } },
+  });
+  const [first, second] = scopedOption.values;
+  if (!first || !second) {
+    throw new Error('Missing scoped option values');
+  }
+  const updateOption =
+    'mutation($id:ID!,$values:[OptionValueInput!]!){updateOption(id:$id,input:{name:"Renamed",active:false,showInFilters:true,values:$values}){id name active showInFilters values{id label}}}';
+  for (const scope of [
+    { tenantId: tenantA, branchId: branchB },
+    { tenantId: tenantB, branchId: branchForeign },
+  ]) {
+    const outside = await client.option.create({ data: { ...scope, name: scopedOption.name } });
+    await expect(
+      client.optionValue.create({
+        data: { ...scope, optionId: scopedOption.id, label: 'Outside', sortOrder: 0 },
+      }),
+    ).rejects.toMatchObject({ code: 'P2003' });
+    const outsideValue = await client.optionValue.create({
+      data: { ...scope, optionId: outside.id, label: 'Outside', sortOrder: 0 },
+    });
+    expect(
+      await query(tokens.viewer, branchA, 'query($id:ID!){option(id:$id){id}}', { id: outside.id }),
+    ).toEqual({ data: { option: null } });
+    expect(
+      await query(tokens.operator, branchA, updateOption, { id: outside.id, values: [] }),
+    ).toHaveProperty('errors');
+    expect(
+      await query(tokens.operator, branchA, updateOption, {
+        id: scopedOption.id,
+        values: [{ id: outsideValue.id, label: 'Rejected' }],
+      }),
+    ).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path: 'values.0.id' }] } }],
+    });
+  }
+  expect(
+    await query(tokens.viewer, branchA, '{options(search:"Scoped"){total items{id}}}'),
+  ).toEqual({
+    data: { options: { total: 1, items: [{ id: scopedOption.id }] } },
+  });
+  const values = [
+    { id: second.id, label: 'Second renamed' },
+    { id: first.id, label: 'First' },
+  ];
+  expect(
+    await query(tokens.operator, branchA, updateOption, { id: scopedOption.id, values }),
+  ).toEqual({
+    data: {
+      updateOption: {
+        id: scopedOption.id,
+        name: 'Renamed',
+        active: false,
+        showInFilters: true,
+        values,
+      },
+    },
   });
 });
 

@@ -1,0 +1,150 @@
+<osnova-route-drawer
+  [title]="editing ? text().editOption : text().newOption"
+  [subtitle]="subtitle()"
+  [state]="state()"
+  [errorText]="text().optionsUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="record.reload()"
+>
+  <form id="option-editor-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
+    <section class="app-form-section">
+      <osnova-form-field
+        controlId="option-name"
+        [label]="text().name"
+        [required]="true"
+        [error]="nameError()"
+      >
+        <input
+          pInputText
+          id="option-name"
+          formControlName="name"
+          autocomplete="off"
+          aria-required="true"
+          aria-describedby="option-name-error"
+          [invalid]="!!nameError()"
+          [attr.aria-invalid]="!!nameError()"
+          (input)="clearError('name')"
+        />
+      </osnova-form-field>
+      <div class="app-form-grid">
+        <osnova-form-field controlId="option-active" [label]="text().status">
+          <p-select
+            inputId="option-active"
+            ariaLabelledBy="option-active-label"
+            formControlName="active"
+            [options]="statusOptions()"
+            optionLabel="label"
+            optionValue="value"
+          />
+        </osnova-form-field>
+        <osnova-form-field
+          controlId="option-show-in-filters"
+          [label]="text().optionFilterVisibility"
+        >
+          <p-select
+            inputId="option-show-in-filters"
+            ariaLabelledBy="option-show-in-filters-label"
+            formControlName="showInFilters"
+            [options]="visibilityOptions()"
+            optionLabel="label"
+            optionValue="value"
+          />
+        </osnova-form-field>
+      </div>
+    </section>
+    <section class="app-form-section" aria-labelledby="option-values-title">
+      <h3 id="option-values-title">{{ text().optionValues }}</h3>
+      @for (value of values.controls; track value; let index = $index; let first = $first; let last
+      = $last) { @let controlId = 'option-value-' + index; @let error = valueError(index);
+      <osnova-form-field
+        [controlId]="controlId"
+        [label]="indexedLabel(text().optionValueLabel, index)"
+        [required]="true"
+        [error]="error"
+      >
+        <div class="option-value-editor">
+          <input
+            pInputText
+            [id]="controlId"
+            [formControl]="value.controls.label"
+            autocomplete="off"
+            aria-required="true"
+            [attr.aria-describedby]="controlId + '-error'"
+            [invalid]="!!error"
+            [attr.aria-invalid]="!!error"
+            (input)="clearError('values.' + index + '.label')"
+          />
+          <div class="option-value-actions">
+            <button
+              type="button"
+              class="app-icon-button"
+              [attr.aria-label]="indexedLabel(text().optionMoveValueUp, index)"
+              [title]="indexedLabel(text().optionMoveValueUp, index)"
+              [disabled]="first || saving()"
+              (click)="moveValue(index, -1)"
+            >
+              <svg data-p-icon="arrow-up" aria-hidden="true"></svg>
+            </button>
+            <button
+              type="button"
+              class="app-icon-button"
+              [attr.aria-label]="indexedLabel(text().optionMoveValueDown, index)"
+              [title]="indexedLabel(text().optionMoveValueDown, index)"
+              [disabled]="last || saving()"
+              (click)="moveValue(index, 1)"
+            >
+              <svg data-p-icon="arrow-down" aria-hidden="true"></svg>
+            </button>
+            <button
+              type="button"
+              class="app-icon-button"
+              [attr.aria-label]="indexedLabel(text().optionRemoveValue, index)"
+              [title]="indexedLabel(text().optionRemoveValue, index)"
+              [disabled]="saving()"
+              (click)="removeValue(index)"
+            >
+              <svg data-p-icon="trash" aria-hidden="true"></svg>
+            </button>
+          </div>
+        </div>
+      </osnova-form-field>
+      } @empty {
+      <p>{{ text().optionNoValues }}</p>
+      } @if (errors()['values']; as error) {
+      <p-message severity="error">{{ error }}</p-message>
+      }
+      <div>
+        <button
+          pButton
+          id="option-add-value"
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving()"
+          (click)="addValue()"
+        >
+          {{ text().optionAddValue }}
+        </button>
+      </div>
+      @if (saveError()) {
+      <p-message severity="error">{{ text().optionSaveFailed }}</p-message>
+      }
+    </section>
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="option-editor-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+  </div>
+</osnova-route-drawer>

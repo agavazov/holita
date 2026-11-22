@@ -1,0 +1,37 @@
+fragment OperatorOptionFields on Option {
+  id
+  name
+  active
+  showInFilters
+  values {
+    id
+    label
+  }
+}
+
+query OperatorOptions($offset: Int!, $limit: Int!, $search: String, $sort: OptionSort) {
+  options(offset: $offset, limit: $limit, search: $search, sort: $sort) {
+    items {
+      ...OperatorOptionFields
+    }
+    total
+  }
+}
+
+query OperatorOption($id: ID!) {
+  option(id: $id) {
+    ...OperatorOptionFields
+  }
+}
+
+mutation OperatorCreateOption($input: OptionInput!) {
+  createOption(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateOption($id: ID!, $input: OptionInput!) {
+  updateOption(id: $id, input: $input) {
+    id
+  }
+}

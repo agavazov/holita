@@ -14,6 +14,31 @@ type DemoCategory = readonly [
   sortOrder: number,
 ];
 
+type DemoOption = readonly [
+  id: number,
+  name: string,
+  values: readonly (readonly [id: number, label: string])[],
+];
+
+export const demoOptions: readonly DemoOption[] = [
+  [
+    1,
+    'Цвят',
+    [
+      [1, 'Пясък'],
+      [2, 'Графит'],
+    ],
+  ],
+  [
+    2,
+    'Размер',
+    [
+      [3, 'Малък'],
+      [4, 'Голям'],
+    ],
+  ],
+];
+
 // Parents precede their children so the seed can insert the tree in one pass.
 export const demoCategories: readonly DemoCategory[] = [
   [1, 'Кухня', 'kitchen', null, 10],

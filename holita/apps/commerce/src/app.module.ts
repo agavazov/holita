@@ -16,15 +16,18 @@ import { BrandsModule } from './brands/brands.module.js';
 import { BrandsResolver } from './brands/brands.resolver.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { CategoriesResolver } from './categories/categories.resolver.js';
+import { OptionsModule } from './options/options.module.js';
+import { OptionsResolver } from './options/options.resolver.js';
 
 @Module({
-  imports: [DatabaseModule, BrandsModule, CategoriesModule],
+  imports: [DatabaseModule, BrandsModule, CategoriesModule, OptionsModule],
   providers: [
     CommerceRepository,
     CommerceResolver,
     CommerceService,
     BrandsResolver,
     CategoriesResolver,
+    OptionsResolver,
   ],
 })
 class OperatorModule {}

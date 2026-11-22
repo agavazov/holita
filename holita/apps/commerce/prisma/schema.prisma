@@ -58,6 +58,31 @@ model Category {
   @@map("category")
 }
 
+model Option {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  name String @db.VarChar(200)
+  active Boolean @default(true)
+  showInFilters Boolean @default(false)
+  values OptionValue[]
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, name])
+  @@map("option")
+}
+
+model OptionValue {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  optionId String @db.Uuid
+  option Option @relation(fields: [tenantId, branchId, optionId], references: [tenantId, branchId, id], onDelete: Cascade)
+  label String @db.VarChar(200)
+  sortOrder Int
+  @@index([tenantId, branchId, optionId, sortOrder])
+  @@map("optionValue")
+}
+
 model Product {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
