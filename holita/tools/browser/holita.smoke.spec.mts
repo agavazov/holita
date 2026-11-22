@@ -992,9 +992,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     };
     await merchant.getByRole('link', { name: 'Collections', exact: true }).click();
     await newCollection(merchant, manualName, manualSlug);
+    const collectionSearch = merchant.locator('#collection-products');
     for (const name of [productName, configuredProductName]) {
-      await merchant.locator('#collection-products').fill(name);
+      await collectionSearch.fill(name);
       await merchant.getByRole('option', { name, exact: true }).click();
+      await expect(collectionSearch).toHaveAttribute('aria-expanded', 'false');
+      await expect(collectionSearch).toHaveValue('');
     }
     await merchant
       .getByRole('button', { name: `Move ${configuredProductName} up`, exact: true })
@@ -1478,10 +1481,41 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const detail = waitForCart(shopper, 'ShopperOrder');
     await shopper.getByRole('link', { name: orderNumber, exact: true }).click();
     await detail;
+
+    await merchant.getByRole('link', { name: 'Orders', exact: true }).click();
+    await merchant.getByRole('link', { name: `Open order · ${orderNumber}` }).click();
+    await merchant.getByRole('button', { name: 'Update status', exact: true }).click();
+    await merchant.locator('#order-status').click();
+    await merchant.getByRole('option', { name: 'Confirmed', exact: true }).click();
+    const confirmed = waitForCart(merchant, 'OperatorUpdateOrderStatus');
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    expect(await (await confirmed).json()).toMatchObject({
+      data: { updateOrderStatus: { id: accountOrderId } },
+    });
+    await merchant.waitForURL((url) => !url.pathname.endsWith('/fulfillment'));
+    await merchant.getByRole('button', { name: 'Page actions', exact: true }).click();
+    await merchant.getByRole('menuitem', { name: 'Mark as paid', exact: true }).click();
+    const paid = waitForCart(merchant, 'OperatorMarkOrderPaid');
+    await merchant
+      .getByRole('alertdialog')
+      .getByRole('button', { name: 'Mark as paid', exact: true })
+      .click();
+    expect(await (await paid).json()).toMatchObject({
+      data: { markOrderPaid: { id: accountOrderId, paymentStatus: 'PAID' } },
+    });
+
     const reloadedOrder = waitForCart(shopper, 'ShopperOrder');
     await shopper.reload();
     expect(await (await reloadedOrder).json()).toMatchObject({
-      data: { shopperOrder: { number: orderNumber, shippingFee: '6.50', total: '36.50' } },
+      data: {
+        shopperOrder: {
+          number: orderNumber,
+          status: 'CONFIRMED',
+          paymentStatus: 'PAID',
+          shippingFee: '6.50',
+          total: '36.50',
+        },
+      },
     });
 
     await merchant.getByRole('link', { name: 'Customers', exact: true }).click();

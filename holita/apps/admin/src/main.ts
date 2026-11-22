@@ -15,6 +15,9 @@ import { InventoryEditor } from './inventory/inventory-editor';
 import { InventoryPage } from './inventory/inventory-page';
 import { OptionEditor } from './options/option-editor';
 import { OptionsPage } from './options/options-page';
+import { OrderDetail } from './orders/order-detail';
+import { OrderStatusEditor } from './orders/order-status-editor';
+import { OrdersPage } from './orders/orders-page';
 import { ProductEditor } from './products/product-editor';
 import { ProductsPage } from './products/products-page';
 
@@ -161,6 +164,19 @@ void startOperator({
         },
       ],
     },
+    { path: 'orders', component: OrdersPage },
+    {
+      path: 'orders/:recordId',
+      component: OrderDetail,
+      children: [
+        {
+          path: 'fulfillment',
+          component: OrderStatusEditor,
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
     { path: 'customers', component: CustomersPage },
   ],
   navigation: [
@@ -177,6 +193,7 @@ void startOperator({
       path: 'characteristic-groups',
     },
     { id: 'badges', label: 'badges', icon: 'tag', path: 'badges' },
+    { id: 'orders', label: 'orders', icon: 'truck', path: 'orders' },
     { id: 'customers', label: 'customers', icon: 'users', path: 'customers' },
   ],
 }).catch((error: unknown) => {

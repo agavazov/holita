@@ -1,8 +1,12 @@
 :host {
   display: block;
 }
-#mobile-listing {
+.design-page,
+.design-page section,
+.scheme {
   grid-template-columns: minmax(0, 1fr);
+}
+#mobile-listing {
   max-inline-size: calc(100vw - 2 * var(--p-app-space-6));
 }
 .design-page {

@@ -14,6 +14,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CartState } from './cart-state';
 import { OrderReceipt } from './order-receipt';
+import { orderStatuses, paymentStatuses } from './order-status';
 import { StorefrontApi } from './storefront-api';
 import { messages, type Language } from './storefront-messages';
 import { formatStorefrontMoney } from './storefront-money';
@@ -40,6 +41,8 @@ export class ShopperOrdersPage {
   private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('heading');
 
   protected readonly t = computed(() => messages[this.language()]);
+  protected readonly orderStatuses = orderStatuses;
+  protected readonly paymentStatuses = paymentStatuses;
   protected readonly base = computed(() => ['/s', this.cartState.shopId()]);
   protected readonly ordersLink = computed(() => [...this.base(), 'account', 'orders']);
   protected readonly signedOut = computed(() => this.cartState.shopperToken() === null);

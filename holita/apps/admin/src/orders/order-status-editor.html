@@ -1,0 +1,91 @@
+<osnova-route-drawer
+  [title]="text().updateOrderStatus"
+  [subtitle]="order()?.number ?? null"
+  [state]="state()"
+  [errorText]="text().orderUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  @if (order(); as item) {
+  <div class="app-form-section">
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().orderCurrentStatus }}</dt>
+        <dd>
+          <p-tag
+            [severity]="statusSeverity(item.status)"
+            [value]="currentStatusText(item.status)"
+          />
+        </dd>
+      </div>
+    </dl>
+  </div>
+  } @if (canUpdate()) {
+  <form
+    id="order-status-form"
+    #editorForm
+    class="app-form-section"
+    [formGroup]="form"
+    (ngSubmit)="save()"
+  >
+    <osnova-form-field
+      controlId="order-status"
+      [label]="text().orderStatus"
+      [required]="true"
+      [error]="statusError()"
+    >
+      <p-select
+        inputId="order-status"
+        ariaLabelledBy="order-status-label"
+        optionLabel="label"
+        optionValue="value"
+        formControlName="status"
+        [options]="statusOptions()"
+        [placeholder]="text().orderChooseStatus"
+        [invalid]="!!statusError()"
+        [pt]="{ label: { 'aria-required': 'true', 'aria-invalid': statusError() ? 'true' : undefined, 'aria-describedby': 'order-status-error' } }"
+        (onChange)="clearError()"
+      />
+    </osnova-form-field>
+    @if (saveError()) {
+    <p-message severity="error">{{ text().orderStatusSaveFailed }}</p-message>
+    }
+  </form>
+  } @else if (order()) {
+  <p-message severity="info">{{ text().orderStatusUnavailable }}</p-message>
+  }
+
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ canUpdate() ? shared().cancel : shared().close }}
+    </button>
+    @if (canUpdate()) {
+    <button pButton type="submit" form="order-status-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+    }
+  </div>
+</osnova-route-drawer>
+<p-confirmdialog
+  appendTo="body"
+  [pt]="confirmPt()"
+  [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }"
+>
+  <ng-template #message>
+    <div id="cancel-order-message" class="app-stack">
+      <strong>{{ order()?.number }}</strong>
+      <p>{{ text().cancelOrderConfirm }}</p>
+      @if (order()?.paymentStatus === 'PAID') {
+      <p>{{ text().cancelPaidOrderHint }}</p>
+      }
+    </div>
+  </ng-template>
+</p-confirmdialog>

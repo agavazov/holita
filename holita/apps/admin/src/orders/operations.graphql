@@ -1,0 +1,79 @@
+fragment OperatorOrderSummary on OrderSummary {
+  id
+  number
+  placedAt
+  status
+  paymentStatus
+  contactName
+  total
+  currency
+}
+
+fragment OperatorOrderDetail on Order {
+  id
+  number
+  placedAt
+  status
+  paymentStatus
+  paidAt
+  contact {
+    name
+    email
+    phone
+  }
+  shippingAddress {
+    countryCode
+    city
+    postalCode
+    line1
+    line2
+  }
+  paymentMethodLabel
+  paymentInstructions
+  shippingMethodLabel
+  lines {
+    sku
+    label
+    quantity
+    unitPrice
+    lineTotal
+  }
+  subtotal
+  shippingFee
+  total
+  currency
+  statusChanges {
+    fromStatus
+    toStatus
+    occurredAt
+  }
+  nextStatuses
+  canMarkPaid
+}
+
+query OperatorOrders($offset: Int!, $limit: Int!, $search: String, $status: OrderStatus) {
+  orders(offset: $offset, limit: $limit, search: $search, status: $status) {
+    items {
+      ...OperatorOrderSummary
+    }
+    total
+  }
+}
+
+query OperatorOrder($id: ID!) {
+  order(id: $id) {
+    ...OperatorOrderDetail
+  }
+}
+
+mutation OperatorUpdateOrderStatus($id: ID!, $status: OrderStatus!) {
+  updateOrderStatus(id: $id, status: $status) {
+    id
+  }
+}
+
+mutation OperatorMarkOrderPaid($id: ID!) {
+  markOrderPaid(id: $id) {
+    ...OperatorOrderDetail
+  }
+}

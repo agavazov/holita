@@ -143,6 +143,7 @@ beforeAll(async () => {
     '20261122100000_checkout_methods',
     '20261122110000_order_placement',
     '20261122120000_shopper_order_history',
+    '20261122130000_order_management',
   ]) {
     await connection.query(
       await readFile(
@@ -1346,6 +1347,95 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     where: { ...categoryScope, cartId: guestReview.cartId, customerId: null },
   });
 
+  const adminOrders = `query($search:String,$status:OrderStatus){
+    orders(search:$search,status:$status,limit:1){items{id number status} total offset limit}
+  }`;
+  const adminDetail = `query($id:ID!){order(id:$id){id status paymentStatus}}`;
+  const updateOrder = `mutation($id:ID!,$status:OrderStatus!){
+    updateOrderStatus(id:$id,status:$status){id status paymentStatus statusChanges{fromStatus toStatus}}
+  }`;
+  const markPaid = `mutation($id:ID!){markOrderPaid(id:$id){id paymentStatus paidAt}}`;
+  const operatorTarget = { id: order.id };
+  const search = `${order.orderNumber.toUpperCase()} SAME@EXAMPLE.TEST`;
+  expect(await query(tokens.viewer, publicA, adminOrders, { search, status: 'PLACED' })).toEqual({
+    data: {
+      orders: {
+        items: [{ id: order.id, number: order.orderNumber, status: 'PLACED' }],
+        total: 1,
+        offset: 0,
+        limit: 1,
+      },
+    },
+  });
+  for (const [credential, branch] of [
+    [tokens.operator, branchB],
+    [tokens.foreign, branchForeign],
+  ] as const) {
+    expect(await query(credential, branch, adminOrders, { search })).toMatchObject({
+      data: { orders: { items: [], total: 0 } },
+    });
+    expect(await query(credential, branch, adminDetail, operatorTarget)).toEqual({
+      data: { order: null },
+    });
+    expect(
+      await query(credential, branch, updateOrder, { ...operatorTarget, status: 'CONFIRMED' }),
+    ).toHaveProperty('errors');
+    expect(await query(credential, branch, markPaid, operatorTarget)).toHaveProperty('errors');
+  }
+  expect(await query(tokens.viewer, publicA, adminDetail, operatorTarget)).toEqual({
+    data: { order: { ...operatorTarget, status: 'PLACED', paymentStatus: 'UNPAID' } },
+  });
+  expect(
+    await query(tokens.viewer, publicA, updateOrder, { ...operatorTarget, status: 'CONFIRMED' }),
+  ).toHaveProperty('errors');
+  expect(await query(tokens.viewer, publicA, markPaid, operatorTarget)).toHaveProperty('errors');
+  expect(
+    await query(tokens.operator, publicA, updateOrder, { ...operatorTarget, status: 'SHIPPED' }),
+  ).toMatchObject({
+    errors: [
+      { extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ code: 'ORDER_STATUS_REJECTED' }] } },
+    ],
+  });
+
+  await database.productVariant.update({
+    where: variantKey,
+    data: { active: false, inventoryTracked: false },
+  });
+  expect(
+    await database.productVariant.findUniqueOrThrow({
+      where: variantKey,
+      select: { quantity: true },
+    }),
+  ).toEqual({ quantity: 0 });
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    expect(
+      await query(tokens.operator, publicA, updateOrder, {
+        id: guestOrder.id,
+        status: 'CANCELLED',
+      }),
+    ).toEqual({
+      data: {
+        updateOrderStatus: {
+          id: guestOrder.id,
+          status: 'CANCELLED',
+          paymentStatus: 'UNPAID',
+          statusChanges: [{ fromStatus: 'PLACED', toStatus: 'CANCELLED' }],
+        },
+      },
+    });
+    expect(
+      await database.productVariant.findUniqueOrThrow({
+        where: variantKey,
+        select: { quantity: true },
+      }),
+    ).toEqual({ quantity: 1 });
+  }
+  expect(await query(tokens.operator, publicA, markPaid, { id: guestOrder.id })).toMatchObject({
+    errors: [
+      { extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ code: 'ORDER_PAYMENT_REJECTED' }] } },
+    ],
+  });
+
   expect(await saveVariants(variant.id, '5.00')).toEqual({
     data: { updateProduct: { variants: [{ id: variant.id }] } },
   });
@@ -1377,13 +1467,14 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   });
 
   const readOrders =
-    'query($offset:Int! = 0,$limit:Int! = 20){shopperOrders(offset:$offset,limit:$limit){items{id number placedAt status paymentMethodLabel shippingMethodLabel currency total} total offset limit}}';
+    'query($offset:Int! = 0,$limit:Int! = 20){shopperOrders(offset:$offset,limit:$limit){items{id number placedAt status paymentStatus paymentMethodLabel shippingMethodLabel currency total} total offset limit}}';
   const readOrder = `query($id:ID!){shopperOrder(id:$id){${receiptFields}}}`;
   const orderSummary = {
     id: receipt.id,
     number: receipt.number,
     placedAt: receipt.placedAt,
     status: receipt.status,
+    paymentStatus: receipt.paymentStatus,
     paymentMethodLabel: receipt.paymentMethodLabel,
     shippingMethodLabel: receipt.shippingMethodLabel,
     currency: receipt.currency,
@@ -1413,7 +1504,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       undefined,
       guestCheckoutToken,
     ),
-  ).toMatchObject({ data: { orderConfirmation: { id: guestOrder.id } } });
+  ).toMatchObject({ data: { orderConfirmation: { id: guestOrder.id, status: 'CANCELLED' } } });
   for (const [branch, bearer] of [
     [publicA, foreignOwner],
     [publicB, foreignShopBearer],
@@ -1425,6 +1516,32 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       data: { shopperOrder: null },
     });
   }
+  const replacement = await database.productVariant.findFirstOrThrow({
+    where: {
+      ...categoryScope,
+      productId: variant.productId,
+    },
+  });
+  expect(replacement.id).not.toBe(variant.id);
+  const paidOrder = await query(tokens.operator, publicA, markPaid, operatorTarget);
+  expect(paidOrder).toMatchObject({
+    data: {
+      markOrderPaid: { ...operatorTarget, paymentStatus: 'PAID', paidAt: expect.any(String) },
+    },
+  });
+  expect(await query(tokens.operator, publicA, markPaid, operatorTarget)).toEqual(paidOrder);
+  expect(
+    await query(tokens.operator, publicA, updateOrder, { ...operatorTarget, status: 'CANCELLED' }),
+  ).toMatchObject({ data: { updateOrderStatus: { status: 'CANCELLED', paymentStatus: 'PAID' } } });
+  expect(
+    await database.productVariant.findUniqueOrThrow({
+      where: { ...categoryScope, id: replacement.id },
+      select: { quantity: true },
+    }),
+  ).toEqual({ quantity: replacement.quantity });
+  expect(await storefront(publicA, readOrder, operatorTarget, token)).toEqual({
+    data: { shopperOrder: { ...receipt, status: 'CANCELLED', paymentStatus: 'PAID' } },
+  });
   await database.shopperSession.update({
     where: { ...categoryScope, tokenHash: createHash('sha256').update(token).digest('hex') },
     data: { expiresAt: new Date(0) },

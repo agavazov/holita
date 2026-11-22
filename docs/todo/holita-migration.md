@@ -23,18 +23,17 @@ Work top to bottom; a ticket starts only when the tickets it depends on are done
 
 | Ticket                                                                                           | Wave | Status | Depends on           |
 | ------------------------------------------------------------------------------------------------ | ---- | ------ | -------------------- |
-| [118 Admin order management](118-holita-admin-order-management.md)                               | 3    | Ready  |                      |
-| [128 Order invoices](128-holita-order-invoices.md)                                               | 3    | Ready  | 118                  |
-| [129 Manual order refunds](129-holita-manual-refunds.md)                                         | 3    | Ready  | 118                  |
-| [119 Manual orders in Admin](119-holita-admin-manual-orders.md)                                  | 3    | Ready  | 118                  |
-| [120 Admin customer detail](120-holita-customer-detail.md)                                       | 3    | Ready  | 118                  |
-| [121 Discounts and promo codes](121-holita-discounts.md)                                         | 3    | Ready  | 118                  |
-| [122 Admin manual payment and shipping methods](122-holita-manual-methods.md)                    | 3    | Ready  | 118                  |
+| [128 Order invoices](128-holita-order-invoices.md)                                               | 3    | Ready  |                      |
+| [129 Manual order refunds](129-holita-manual-refunds.md)                                         | 3    | Ready  |                      |
+| [119 Manual orders in Admin](119-holita-admin-manual-orders.md)                                  | 3    | Ready  |                      |
+| [120 Admin customer detail](120-holita-customer-detail.md)                                       | 3    | Ready  |                      |
+| [121 Discounts and promo codes](121-holita-discounts.md)                                         | 3    | Ready  |                      |
+| [122 Admin manual payment and shipping methods](122-holita-manual-methods.md)                    | 3    | Ready  |                      |
 | [123 Shop content pages](123-holita-pages.md)                                                    | 3    | Ready  |                      |
 | [124 Shop blog](124-holita-blog.md)                                                              | 3    | Ready  |                      |
 | [125 Shop navigation menus](125-holita-navigation.md)                                            | 3    | Ready  | 123, 124             |
 | [126 General shop settings](126-holita-general-settings.md)                                      | 3    | Ready  |                      |
-| [127 Admin shop dashboard](127-holita-dashboard.md)                                              | 3    | Ready  | 118, 120             |
+| [127 Admin shop dashboard](127-holita-dashboard.md)                                              | 3    | Ready  | 120                  |
 | [131 Establish the Sales subgraph](131-holita-sales-sales-service.md)                            | 4    | Ready  |                      |
 | [132 Manage prospect records](132-holita-sales-leads.md)                                         | 4    | Ready  | 131                  |
 | [133 Manage lead contacts](133-holita-sales-contacts.md)                                         | 4    | Ready  | 132                  |

@@ -394,6 +394,7 @@ query ShopperOrders($offset: Int!, $limit: Int!) {
       number
       placedAt
       status
+      paymentStatus
       shippingMethodLabel
       paymentMethodLabel
       total

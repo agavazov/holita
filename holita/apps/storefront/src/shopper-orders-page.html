@@ -28,12 +28,13 @@
     <button class="shop-secondary" type="button" (click)="retry()">{{ t().retry }}</button>
   </div>
   } @else if (order(); as receipt) {
-  <holita-order-receipt [order]="receipt" [language]="language()" [showPlacement]="true" />
+  <holita-order-receipt [order]="receipt" [language]="language()" />
   } @else if (detail) {
   <p class="shop-state" role="alert">{{ t().orderUnavailable }}</p>
   } @else if (list(); as result) { @if (result.items.length) {
   <ul class="shop-panel shop-panel--sections order-list" role="list">
-    @for (item of result.items; track item.id) { @let completed = item.status === 'COMPLETED';
+    @for (item of result.items; track item.id) { @let status = orderStatuses[item.status]; @let
+    payment = paymentStatuses[item.paymentStatus];
     <li class="shop-panel-section order-list-row">
       <div class="order-list-identity">
         <h2>
@@ -48,9 +49,8 @@
         <time [attr.datetime]="item.placedAt">{{ formatDate(item.placedAt) }}</time>
       </div>
       <div class="order-list-status">
-        <span class="shop-chip" [attr.data-tone]="completed ? 'SUCCESS' : 'INFO'">
-          {{ completed ? t().orderStatusCompleted : t().orderStatusPlaced }}
-        </span>
+        <span class="shop-chip" [attr.data-tone]="status.tone">{{ t()[status.label] }}</span>
+        <span class="shop-chip" [attr.data-tone]="payment.tone">{{ t()[payment.label] }}</span>
       </div>
       <dl class="order-list-facts">
         <div>

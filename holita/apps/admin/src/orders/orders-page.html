@@ -1,0 +1,137 @@
+<osnova-page-header [title]="text().orders" [moduleInfo]="text().ordersInfo" />
+@if (scope()) {
+<osnova-table-panel
+  #panel
+  [heading]="text().shopOrders"
+  mobileIdentityLayout="trailing"
+  [mobileFullWidthActions]="true"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
+  [view]="view()"
+  [total]="page()?.total ?? null"
+  [busy]="list.isLoading()"
+  [errorText]="text().ordersUnavailable"
+  [emptyTitle]="text().ordersEmpty"
+  [page]="pagination()"
+  [actionContext]="params()"
+  [actions]="actions()"
+  (action)="run($event)"
+  (pageChange)="url.setPage($event)"
+  (retry)="list.reload()"
+  (clearFilters)="url.clearFilters()"
+>
+  <osnova-filter-builder
+    panelActions
+    [mobileFullWidth]="true"
+    [searchLabel]="text().searchOrders"
+    [search]="url.searchDraft()"
+    [searchError]="url.searchError() ? shared().searchTooManyWords : null"
+    [fields]="filterFields()"
+    [conditions]="conditions()"
+    [maxConditions]="1"
+    (searchChange)="url.editSearch($event)"
+    (conditionsChange)="changeConditions($event)"
+  />
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="page()?.items ?? []"
+    [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    dataKey="id"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="
+            column.kind === 'identity'
+              ? 'var(--app-table-identity-width, ' + column.width + ')'
+              : column.width
+          "
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity">{{ text().order }}</th>
+        <th scope="col" class="app-col-secondary">{{ text().orderDate }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().orderStatus }}</th>
+        <th scope="col">{{ text().orderPayment }}</th>
+        <th scope="col" class="app-cell-number">{{ text().orderTotal }}</th>
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ shared().pageHeader.actions }}</span>
+        </th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-order>
+      @let row = record(order); @let status = statusText(order.status, language()); @let severity =
+      statusSeverity(order.status); @let total = amount(order.total, order.currency, language());
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-table-identity-layout">
+            <div class="app-cell-identity">
+              <a
+                class="app-link app-table-identity-wrap"
+                [routerLink]="[order.id]"
+                queryParamsHandling="preserve"
+                [preserveFragment]="true"
+                [title]="order.contactName"
+                [attr.aria-label]="text().openOrder + ' · ' + row.label + ' · ' + order.contactName"
+                (click)="url.cancelPending()"
+              >
+                {{ order.contactName }}
+              </a>
+              <span [title]="order.number">{{ order.number }}</span>
+              <div class="app-table-mobile-meta app-cell-status app-table-tag-wrap">
+                <p-tag [severity]="severity" [value]="status" />
+              </div>
+            </div>
+            <div class="app-table-mobile-actions">
+              <osnova-row-actions
+                [actions]="actions()"
+                [record]="row"
+                (choose)="panel.run($event.action, [row], $event.origin)"
+              />
+            </div>
+          </div>
+        </td>
+        <td class="app-col-secondary">
+          <time
+            class="app-cell-date"
+            [dateTime]="order.placedAt"
+            [title]="format.utc(order.placedAt)"
+          >
+            {{ format.dateTime(order.placedAt) }}
+          </time>
+        </td>
+        <td class="app-table-merged-column">
+          <span class="app-cell-status"><p-tag [severity]="severity" [value]="status" /></span>
+        </td>
+        <td>
+          <span class="app-cell-status">
+            <p-tag
+              [severity]="paymentSeverity(order.paymentStatus)"
+              [value]="paymentText(order.paymentStatus, language())"
+            />
+          </span>
+        </td>
+        <td class="app-cell-number" [title]="total">{{ total }}</td>
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <osnova-row-actions
+            [actions]="actions()"
+            [record]="row"
+            (choose)="panel.run($event.action, [row], $event.origin)"
+          />
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+} @else {
+<p-message severity="info">{{ text().noShop }}</p-message>
+}

@@ -553,17 +553,27 @@ The storefront graph exposes the checkout options with `checkout` and prices the
 with `quoteCheckout`, using the cart's existing authorization.
 
 After reviewing the total, choose Place order. A change in available stock, prices or selected
-methods prompts you to review the checkout again. The confirmation shows the placed, unpaid order
-with its saved items, delivery fee and payment instructions. Signed-in shoppers can reopen their
-confirmation when signed in to the same shop. Guest confirmations can be reopened in the browser
-that placed the order.
+methods prompts you to review the checkout again. The confirmation shows the order's current
+fulfillment and payment status with its saved items, delivery fee and payment instructions.
+Signed-in shoppers can reopen their confirmation in the same shop. Guests can reopen theirs
+in the browser that placed the order.
 The storefront graph uses `placeOrder` with the reviewed cart ID and quote revision, and
 `orderConfirmation` with the order ID and the placing shopper's authorization.
 
 Sign in to the shop and open Account → My orders. The list and detail show orders linked to that
-shopper at placement, with the saved items, delivery and payment details, charged fee and totals.
-Use Back to orders to return to the same list page. The Sofia demo shopper has a placed and a
-completed order. The storefront graph exposes `shopperOrders` and `shopperOrder` for this history.
+shopper at placement, with the current statuses and saved checkout details. Use Back to orders
+to return to the same list page. The Sofia demo shopper has placed, confirmed, shipped and
+completed orders. The shipped example is marked paid. The storefront graph exposes `shopperOrders`
+and `shopperOrder` for this history.
+
+In Admin, open Orders in the selected shop. Search by order number, contact name, email or phone,
+or filter by fulfillment status. The list URL stores search and filter values. Open an order to
+see its saved contact, delivery and payment details, charged fee, items, totals and dated
+fulfillment history. Use Update status to advance from Placed through Confirmed, Processing,
+Shipped and Completed. Cancelling before shipment returns the original deductions to any
+surviving variants once. Use Mark as paid to record manual payment. Cancellation preserves a
+recorded payment. The operator graph exposes `orders`, `order`, `updateOrderStatus` and
+`markOrderPaid`.
 
 The Product drawer's Descriptions section accepts optional Bulgarian and English plain text.
 The storefront product page shows the selected language when available and falls back to the

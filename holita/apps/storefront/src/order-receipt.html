@@ -7,7 +7,6 @@
           <dt>{{ t().orderNumber }}</dt>
           <dd class="app-num">{{ receipt.number }}</dd>
         </div>
-        @if (showPlacement()) {
         <div>
           <dt>{{ t().orderDate }}</dt>
           <dd>
@@ -16,21 +15,16 @@
         </div>
         <div>
           <dt>{{ t().orderStatus }}</dt>
-          <dd>
-            <span
-              class="shop-chip"
-              [attr.data-tone]="receipt.status === 'COMPLETED' ? 'SUCCESS' : 'INFO'"
-            >
-              {{ receipt.status === 'COMPLETED' ? t().orderStatusCompleted : t().orderStatusPlaced
-              }}
+          <dd class="receipt-statuses">
+            <span class="shop-chip" [attr.data-tone]="status().tone">
+              {{ t()[status().label] }}
+            </span>
+            <span class="shop-chip" [attr.data-tone]="payment().tone">
+              {{ t()[payment().label] }}
             </span>
           </dd>
         </div>
-        }
       </dl>
-      @if (receipt.paymentStatus === 'UNPAID') {
-      <span class="shop-chip" data-tone="WARN">{{ t().paymentUnpaid }}</span>
-      }
     </div>
     <h2 id="receipt-summary-heading">{{ t().orderSummary }}</h2>
     <ul class="checkout-lines" role="list">

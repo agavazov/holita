@@ -12,7 +12,7 @@
   gap: var(--p-app-space-4);
 
   @include bp.from(md) {
-    grid-template-columns: minmax(0, 2.1fr) minmax(0, 0.65fr) minmax(0, 2.7fr);
+    grid-template-columns: minmax(0, 2.1fr) minmax(0, 0.95fr) minmax(0, 2.7fr);
   }
 }
 
@@ -34,6 +34,9 @@
 }
 
 .order-list-status {
+  display: grid;
+  justify-items: start;
+  gap: var(--shop-chip-gap);
   min-inline-size: 0;
 }
 

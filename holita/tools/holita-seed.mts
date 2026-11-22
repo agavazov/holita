@@ -470,8 +470,20 @@ async function seedShopperOrder(
   branchId: string,
   fixture: (typeof demoOrders)[number],
 ) {
-  const { id, status, placedAt, phone, city, postalCode, address, subtotal, total, lines } =
-    fixture;
+  const {
+    id,
+    status,
+    placedAt,
+    paidAt,
+    statusChanges,
+    phone,
+    city,
+    postalCode,
+    address,
+    subtotal,
+    total,
+    lines,
+  } = fixture;
   const cartId = fixtureId('e2', id + 1);
   const orderId = fixtureId('d5', id);
   const variantIds = lines.map(({ variant }) => fixtureId('92', variant));
@@ -493,11 +505,11 @@ async function seedShopperOrder(
   }
   const order = await client.query(
     `INSERT INTO "order" ("id", "tenantId", "branchId", "cartId", "customerId", "orderNumber",
-       "status", "paymentStatus", "placedAt", "contactName", "contactEmail", "contactPhone",
+       "status", "paymentStatus", "placedAt", "paidAt", "contactName", "contactEmail", "contactPhone",
        "shippingCountryCode", "shippingCity", "shippingPostalCode", "shippingLine1",
        "paymentMethodLabel", "paymentInstructions", "shippingMethodLabel", "currency", "subtotal", "shippingFee", "total")
-     VALUES ($1, $2, $3, $4, $5, $6, $7, 'unpaid', $8, $9, $10, $11, 'BG', $12, $13, $14, $15, $16, $17,
-       'BGN', $18, $19, $20) ON CONFLICT DO NOTHING`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'BG', $14, $15, $16, $17, $18, $19,
+       'BGN', $20, $21, $22) ON CONFLICT DO NOTHING`,
     [
       orderId,
       tenantId,
@@ -506,7 +518,9 @@ async function seedShopperOrder(
       cart.customerId,
       `H-${orderId}`,
       status,
+      paidAt ? 'paid' : 'unpaid',
       placedAt,
+      paidAt,
       demoShopper.name,
       demoShopper.email,
       phone,
@@ -522,6 +536,13 @@ async function seedShopperOrder(
     ],
   );
   if (order.rowCount) {
+    for (const [fromStatus, toStatus, occurredAt] of statusChanges) {
+      await client.query(
+        `INSERT INTO "orderStatusChange" ("tenantId", "branchId", "orderId", "fromStatus", "toStatus", "occurredAt")
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [tenantId, branchId, orderId, fromStatus, toStatus, occurredAt],
+      );
+    }
     for (const [sortOrder, line] of lines.entries()) {
       const variantId = fixtureId('92', line.variant);
       await client.query(

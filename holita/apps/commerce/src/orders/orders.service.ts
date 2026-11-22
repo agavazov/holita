@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
+import { GraphQLError } from 'graphql';
 import { randomUUID } from 'node:crypto';
 import { CartRepository } from '../cart/cart.repository.js';
 import {
@@ -16,29 +17,55 @@ import type {
   QueryShopperOrdersArgs,
   ShopperOrderPage,
 } from '../generated/graphql/storefront-types.js';
-import type { Order, OrderLine, Prisma } from '../generated/prisma/client.js';
-import type { ShopperScope } from '../scope.js';
+import type {
+  MutationUpdateOrderStatusArgs,
+  Order as OperatorOrder,
+  OrderPage,
+  QueryOrdersArgs,
+} from '../generated/graphql/types.js';
+import type { Order, OrderLine, OrderStatus, Prisma } from '../generated/prisma/client.js';
+import { requireScope, type RequestContext, type Scope, type ShopperScope } from '../scope.js';
 import { OrdersRepository } from './orders.repository.js';
 
-type OrderSummaryRow = Awaited<ReturnType<OrdersRepository['shopperOrders']>>['items'][number];
+type ShopperOrderRow = Awaited<ReturnType<OrdersRepository['shopperOrders']>>['items'][number];
+type OrderSummaryRow = Pick<
+  Order,
+  'id' | 'orderNumber' | 'status' | 'paymentStatus' | 'placedAt' | 'currency' | 'total'
+>;
+type OrderDetailRow = NonNullable<Awaited<ReturnType<OrdersRepository['operatorOrder']>>>;
+
+const nextStatuses: Record<OrderStatus, OrderStatus[]> = {
+  PLACED: ['CONFIRMED', 'CANCELLED'],
+  CONFIRMED: ['PROCESSING', 'CANCELLED'],
+  PROCESSING: ['SHIPPED', 'CANCELLED'],
+  SHIPPED: ['COMPLETED'],
+  COMPLETED: [],
+  CANCELLED: [],
+};
 
 function summary(order: OrderSummaryRow) {
   return {
     id: order.id,
     number: order.orderNumber,
     status: order.status,
+    paymentStatus: order.paymentStatus,
     placedAt: order.placedAt.toISOString(),
-    paymentMethodLabel: order.paymentMethodLabel,
-    shippingMethodLabel: order.shippingMethodLabel,
     currency: order.currency,
     total: order.total.toFixed(2),
   };
 }
 
-function confirmation(order: Order & { lines: OrderLine[] }): OrderConfirmation {
+function shopperSummary(order: ShopperOrderRow) {
   return {
     ...summary(order),
-    paymentStatus: order.paymentStatus,
+    paymentMethodLabel: order.paymentMethodLabel,
+    shippingMethodLabel: order.shippingMethodLabel,
+  };
+}
+
+function confirmation(order: Order & { lines: OrderLine[] }) {
+  return {
+    ...shopperSummary(order),
     contact: { name: order.contactName, email: order.contactEmail, phone: order.contactPhone },
     shippingAddress: {
       countryCode: order.shippingCountryCode,
@@ -60,6 +87,44 @@ function confirmation(order: Order & { lines: OrderLine[] }): OrderConfirmation 
   };
 }
 
+function canMarkPaid(order: Order): boolean {
+  return order.status !== 'CANCELLED' && order.paymentStatus === 'UNPAID';
+}
+
+function operatorDetail(order: OrderDetailRow): OperatorOrder {
+  return {
+    ...confirmation(order),
+    paidAt: order.paidAt?.toISOString() ?? null,
+    statusChanges: order.statusChanges.map(({ fromStatus, toStatus, occurredAt }) => ({
+      fromStatus,
+      toStatus,
+      occurredAt: occurredAt.toISOString(),
+    })),
+    nextStatuses: nextStatuses[order.status],
+    canMarkPaid: canMarkPaid(order),
+  };
+}
+
+function statusRejected() {
+  const message = 'This order cannot move to the selected status';
+  return new GraphQLError(message, {
+    extensions: {
+      code: 'BAD_USER_INPUT',
+      fieldErrors: [{ path: 'status', code: 'ORDER_STATUS_REJECTED', message }],
+    },
+  });
+}
+
+function paymentRejected() {
+  const message = 'Payment cannot be recorded for this order';
+  return new GraphQLError(message, {
+    extensions: {
+      code: 'BAD_USER_INPUT',
+      fieldErrors: [{ path: 'paymentStatus', code: 'ORDER_PAYMENT_REJECTED', message }],
+    },
+  });
+}
+
 function stockChanged() {
   return checkoutError('cart', 'CHECKOUT_STOCK_CHANGED', 'Requested stock is no longer available');
 }
@@ -73,6 +138,83 @@ export class OrdersService {
     private readonly checkout: CheckoutService,
   ) {}
 
+  async operatorOrders(
+    context: RequestContext,
+    { offset = 0, limit = 20, search: rawSearch, status }: QueryOrdersArgs,
+  ): Promise<OrderPage> {
+    const scope = await requireScope(context, false);
+    if (offset < 0 || limit < 1 || limit > 100) {
+      throw new BadRequestException('Invalid page');
+    }
+    const search = (rawSearch ?? '').trim();
+    const words = search.split(/\s+/u).filter(Boolean);
+    if (Array.from(search).length > 200 || words.length > 5 || search.includes('\u0000')) {
+      throw new BadRequestException('Invalid search');
+    }
+    const page = await this.orders.operatorOrders(scope, offset, limit, words, status);
+    return {
+      ...page,
+      items: page.items.map((order) => ({ ...summary(order), contactName: order.contactName })),
+    };
+  }
+
+  async operatorOrder(context: RequestContext, id: string): Promise<OperatorOrder | null> {
+    const scope = await requireScope(context, false);
+    if (!isUUID(id)) {
+      return null;
+    }
+    const order = await this.orders.operatorOrder(scope, id.toLowerCase());
+    return order ? operatorDetail(order) : null;
+  }
+
+  async updateStatus(
+    context: RequestContext,
+    { id, status }: MutationUpdateOrderStatusArgs,
+  ): Promise<OperatorOrder> {
+    const scope = await requireScope(context, true);
+    return this.orders.transaction(async (tx) => {
+      const order = await this.requireLockedOrder(tx, scope, id);
+      if (order.status === status) {
+        return operatorDetail(order);
+      }
+      if (!nextStatuses[order.status].includes(status)) {
+        throw statusRejected();
+      }
+      if (status === 'CANCELLED') {
+        await this.orders.restoreStock(tx, scope, order.id);
+      }
+      return operatorDetail(
+        await this.orders.updateStatus(tx, scope, order.id, {
+          fromStatus: order.status,
+          toStatus: status,
+          occurredAt: new Date(),
+        }),
+      );
+    });
+  }
+
+  async markPaid(context: RequestContext, id: string): Promise<OperatorOrder> {
+    const scope = await requireScope(context, true);
+    return this.orders.transaction(async (tx) => {
+      const order = await this.requireLockedOrder(tx, scope, id);
+      if (order.paymentStatus === 'PAID') {
+        return operatorDetail(order);
+      }
+      if (!canMarkPaid(order)) {
+        throw paymentRejected();
+      }
+      return operatorDetail(await this.orders.markPaid(tx, scope, order.id, new Date()));
+    });
+  }
+
+  private async requireLockedOrder(tx: Prisma.TransactionClient, scope: Scope, id: string) {
+    const order = isUUID(id) ? await this.orders.lockOrder(tx, scope, id.toLowerCase()) : null;
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+    return order;
+  }
+
   async shopperOrders(
     scope: ShopperScope,
     { offset = 0, limit = 20 }: QueryShopperOrdersArgs,
@@ -81,7 +223,7 @@ export class OrdersService {
       throw new BadRequestException('Invalid page');
     }
     const page = await this.orders.shopperOrders(scope, offset, limit);
-    return { ...page, items: page.items.map(summary) };
+    return { ...page, items: page.items.map(shopperSummary) };
   }
 
   async shopperOrder(scope: ShopperScope, id: string): Promise<OrderConfirmation | null> {

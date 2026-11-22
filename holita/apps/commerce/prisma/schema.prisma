@@ -42,12 +42,17 @@ enum ProductBadgeColor {
 
 enum OrderStatus {
   PLACED @map("placed")
+  CONFIRMED @map("confirmed")
+  PROCESSING @map("processing")
+  SHIPPED @map("shipped")
   COMPLETED @map("completed")
+  CANCELLED @map("cancelled")
   @@map("orderStatus")
 }
 
 enum OrderPaymentStatus {
   UNPAID @map("unpaid")
+  PAID @map("paid")
   @@map("orderPaymentStatus")
 }
 
@@ -428,6 +433,7 @@ model Order {
   orderNumber String @db.VarChar(38)
   status OrderStatus @default(PLACED)
   paymentStatus OrderPaymentStatus @default(UNPAID)
+  paidAt DateTime? @db.Timestamptz(3)
   placedAt DateTime @db.Timestamptz(3)
   contactName String @db.VarChar(200)
   contactEmail String @db.VarChar(254)
@@ -445,11 +451,13 @@ model Order {
   shippingFee Decimal @db.Decimal(12, 2)
   total Decimal @db.Decimal(32, 2)
   lines OrderLine[]
+  statusChanges OrderStatusChange[]
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, cartId])
   @@unique([tenantId, branchId, orderNumber])
   @@index([tenantId, branchId, customerId])
   @@index([tenantId, branchId, customerId, placedAt(sort: Desc), id(sort: Desc)])
+  @@index([tenantId, branchId, placedAt(sort: Desc), id(sort: Desc)])
   @@map("order")
 }
 
@@ -470,4 +478,17 @@ model OrderLine {
   @@unique([tenantId, branchId, orderId, sortOrder])
   @@index([tenantId, branchId, variantId])
   @@map("orderLine")
+}
+
+model OrderStatusChange {
+  id Int @id @default(autoincrement())
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  orderId String @db.Uuid
+  order Order @relation(fields: [tenantId, branchId, orderId], references: [tenantId, branchId, id], onDelete: Cascade)
+  fromStatus OrderStatus
+  toStatus OrderStatus
+  occurredAt DateTime @db.Timestamptz(3)
+  @@index([tenantId, branchId, orderId, id])
+  @@map("orderStatusChange")
 }

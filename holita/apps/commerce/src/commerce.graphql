@@ -375,6 +375,79 @@ type ProductTag {
   name: String!
   slug: String!
 }
+enum OrderStatus {
+  PLACED
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+enum OrderPaymentStatus {
+  UNPAID
+  PAID
+}
+type OrderSummary {
+  id: ID!
+  number: String!
+  status: OrderStatus!
+  paymentStatus: OrderPaymentStatus!
+  placedAt: String!
+  contactName: String!
+  currency: String!
+  total: String!
+}
+type OrderPage {
+  items: [OrderSummary!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+type OrderContact {
+  name: String!
+  email: String!
+  phone: String!
+}
+type OrderShippingAddress {
+  countryCode: String!
+  city: String!
+  postalCode: String!
+  line1: String!
+  line2: String
+}
+type OrderLine {
+  sku: String!
+  label: String!
+  quantity: Int!
+  unitPrice: String!
+  lineTotal: String!
+}
+type OrderStatusChange {
+  fromStatus: OrderStatus!
+  toStatus: OrderStatus!
+  occurredAt: String!
+}
+type Order {
+  id: ID!
+  number: String!
+  status: OrderStatus!
+  paymentStatus: OrderPaymentStatus!
+  placedAt: String!
+  paidAt: String
+  contact: OrderContact!
+  shippingAddress: OrderShippingAddress!
+  paymentMethodLabel: String!
+  paymentInstructions: String!
+  shippingMethodLabel: String!
+  lines: [OrderLine!]!
+  currency: String!
+  subtotal: String!
+  shippingFee: String!
+  total: String!
+  statusChanges: [OrderStatusChange!]!
+  nextStatuses: [OrderStatus!]!
+  canMarkPaid: Boolean!
+}
 type Query {
   products(
     offset: Int! = 0
@@ -427,6 +500,8 @@ type Query {
   "Shop badges for the product editor, including inactive badges."
   productBadgeChoices: [ProductBadge!]!
   productTags(search: String, limit: Int! = 20): [ProductTag!]!
+  orders(offset: Int! = 0, limit: Int! = 20, search: String, status: OrderStatus): OrderPage!
+  order(id: ID!): Order
 }
 type Mutation {
   createProduct(input: ProductInput!): Product!
@@ -447,4 +522,6 @@ type Mutation {
   createProductBadge(input: ProductBadgeInput!): ProductBadge!
   updateProductBadge(id: ID!, input: ProductBadgeInput!): ProductBadge!
   createProductTag(name: String!): ProductTag!
+  updateOrderStatus(id: ID!, status: OrderStatus!): Order!
+  markOrderPaid(id: ID!): Order!
 }

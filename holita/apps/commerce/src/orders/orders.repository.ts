@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { CartOwner } from '../cart/cart.repository.js';
 import { DatabaseService } from '../database.service.js';
-import { Prisma } from '../generated/prisma/client.js';
+import { Prisma, type OrderStatus } from '../generated/prisma/client.js';
 import type { Scope, ShopperScope } from '../scope.js';
 
 function orderLines(scope: Scope) {
@@ -9,6 +9,13 @@ function orderLines(scope: Scope) {
     where: scope,
     orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
   } satisfies Prisma.Order$linesArgs;
+}
+
+function orderDetail(scope: Scope) {
+  return {
+    lines: orderLines(scope),
+    statusChanges: { where: scope, orderBy: { id: 'asc' } },
+  } satisfies Prisma.OrderInclude;
 }
 
 @Injectable()
@@ -19,6 +26,124 @@ export class OrdersRepository {
     return this.database.client.$transaction(work, {
       isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
     });
+  }
+
+  async operatorOrders(
+    scope: Scope,
+    offset: number,
+    limit: number,
+    words: string[],
+    status?: OrderStatus | null,
+  ) {
+    const where: Prisma.OrderWhereInput = {
+      ...scope,
+      ...(status ? { status } : {}),
+      AND: words.map((word) => {
+        const match = { contains: word.replace(/[\\%_]/gu, '\\$&'), mode: 'insensitive' } as const;
+        return {
+          OR: [
+            { orderNumber: match },
+            { contactName: match },
+            { contactEmail: match },
+            { contactPhone: match },
+          ],
+        };
+      }),
+    };
+    const order = this.database.client.order;
+    const [items, total] = await this.database.client.$transaction(
+      [
+        order.findMany({
+          where,
+          skip: offset,
+          take: limit,
+          orderBy: [{ placedAt: 'desc' }, { id: 'desc' }],
+          select: {
+            id: true,
+            orderNumber: true,
+            placedAt: true,
+            status: true,
+            paymentStatus: true,
+            contactName: true,
+            total: true,
+            currency: true,
+          },
+        }),
+        order.count({ where }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return { items, total, offset, limit };
+  }
+
+  operatorOrder(scope: Scope, id: string) {
+    return this.database.client.$transaction(
+      (tx) => tx.order.findUnique({ where: { ...scope, id }, include: orderDetail(scope) }),
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+  }
+
+  async lockOrder(tx: Prisma.TransactionClient, scope: Scope, id: string) {
+    await tx.$queryRaw`
+      SELECT "id" FROM ${this.database.table('order')}
+      WHERE "tenantId" = ${scope.tenantId}::uuid AND "branchId" = ${scope.branchId}::uuid
+        AND "id" = ${id}::uuid
+      FOR UPDATE
+    `;
+    return tx.order.findUnique({ where: { ...scope, id }, include: orderDetail(scope) });
+  }
+
+  updateStatus(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    id: string,
+    change: Prisma.OrderStatusChangeCreateWithoutOrderInput,
+  ) {
+    return tx.order.update({
+      where: { ...scope, id },
+      data: { status: change.toStatus, statusChanges: { create: change } },
+      include: orderDetail(scope),
+    });
+  }
+
+  markPaid(tx: Prisma.TransactionClient, scope: Scope, id: string, paidAt: Date) {
+    return tx.order.update({
+      where: { ...scope, id },
+      data: { paymentStatus: 'PAID', paidAt },
+      include: orderDetail(scope),
+    });
+  }
+
+  async restoreStock(tx: Prisma.TransactionClient, scope: Scope, orderId: string) {
+    // Product saves may replace retained variants or detach removed ones under this parent lock.
+    await tx.$queryRaw`
+      SELECT p."id" FROM ${this.database.table('product')} AS p
+      WHERE p."tenantId" = ${scope.tenantId}::uuid AND p."branchId" = ${scope.branchId}::uuid
+        AND EXISTS (
+          SELECT 1 FROM ${this.database.table('orderLine')} AS line
+          JOIN ${this.database.table('productVariant')} AS v
+            ON v."tenantId" = line."tenantId" AND v."branchId" = line."branchId"
+            AND v."id" = line."variantId"
+          WHERE line."tenantId" = p."tenantId" AND line."branchId" = p."branchId"
+            AND line."orderId" = ${orderId}::uuid AND line."stockDecremented"
+            AND v."productId" = p."id"
+        )
+      ORDER BY p."id"
+      FOR UPDATE
+    `;
+    const deductions = await tx.orderLine.groupBy({
+      by: ['variantId'],
+      where: { ...scope, orderId, stockDecremented: true, variantId: { not: null } },
+      _sum: { quantity: true },
+    });
+    for (const { variantId, _sum } of deductions) {
+      if (variantId !== null && _sum.quantity !== null) {
+        await tx.productVariant.updateMany({
+          where: { ...scope, id: variantId },
+          data: { quantity: { increment: _sum.quantity } },
+        });
+      }
+    }
   }
 
   async shopperOrders(scope: ShopperScope, offset: number, limit: number) {
@@ -35,6 +160,7 @@ export class OrdersRepository {
             orderNumber: true,
             placedAt: true,
             status: true,
+            paymentStatus: true,
             shippingMethodLabel: true,
             paymentMethodLabel: true,
             total: true,

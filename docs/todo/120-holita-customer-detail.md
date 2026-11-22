@@ -1,6 +1,6 @@
 # 120 Admin customer detail
 
-**Status:** Ready after [118](118-holita-admin-order-management.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

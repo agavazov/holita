@@ -1,6 +1,6 @@
 # 121 Discounts and promo codes
 
-**Status:** Ready after [118](118-holita-admin-order-management.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

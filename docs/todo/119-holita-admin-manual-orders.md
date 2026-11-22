@@ -1,6 +1,6 @@
 # 119 Manual orders in Admin
 
-**Status:** Ready after [118](118-holita-admin-order-management.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

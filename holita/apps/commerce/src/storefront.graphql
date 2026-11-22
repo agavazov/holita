@@ -237,10 +237,15 @@ input PlaceOrderInput {
 }
 enum OrderStatus {
   PLACED
+  CONFIRMED
+  PROCESSING
+  SHIPPED
   COMPLETED
+  CANCELLED
 }
 enum OrderPaymentStatus {
   UNPAID
+  PAID
 }
 type OrderContact {
   name: String!
@@ -282,6 +287,7 @@ type ShopperOrderSummary {
   id: ID!
   number: String!
   status: OrderStatus!
+  paymentStatus: OrderPaymentStatus!
   placedAt: String!
   paymentMethodLabel: String!
   shippingMethodLabel: String!

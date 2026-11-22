@@ -1,0 +1,239 @@
+<osnova-page-header
+  [title]="title()"
+  [moduleInfo]="text().orderDetailInfo"
+  [moduleInfoTitle]="text().order"
+  [backLink]="['/', language(), 'orders']"
+  [backLabel]="text().backToOrders"
+  [backQueryParams]="queryParams()"
+  [backFragment]="fragment()"
+  [actions]="actions()"
+  (action)="run($event)"
+/>
+@if (paymentError(); as error) {
+<p-message severity="error">{{ error }}</p-message>
+} @if (!scope()) {
+<p-message severity="info">{{ text().noShop }}</p-message>
+} @else if (order(); as item) {
+<section class="app-card" aria-labelledby="order-summary">
+  <h2 id="order-summary" class="app-card__title">{{ text().orderSummary }}</h2>
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().orderDate }}</dt>
+      <dd>
+        <time [dateTime]="item.placedAt" [title]="format.utc(item.placedAt)">
+          {{ format.dateTime(item.placedAt) }}
+        </time>
+      </dd>
+    </div>
+    <div>
+      <dt>{{ text().orderStatus }}</dt>
+      <dd>
+        <p-tag
+          [severity]="statusSeverity(item.status)"
+          [value]="statusText(item.status, language())"
+        />
+      </dd>
+    </div>
+    <div>
+      <dt>{{ text().orderSubtotal }}</dt>
+      <dd class="app-num">{{ amount(item.subtotal, item.currency, language()) }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().orderShippingFee }}</dt>
+      <dd class="app-num">{{ amount(item.shippingFee, item.currency, language()) }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().orderTotal }}</dt>
+      <dd class="app-num"><strong>{{ amount(item.total, item.currency, language()) }}</strong></dd>
+    </div>
+  </dl>
+</section>
+<div class="app-card-grid">
+  <section class="app-card" aria-labelledby="order-contact">
+    <h2 id="order-contact" class="app-card__title">{{ text().orderContact }}</h2>
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().name }}</dt>
+        <dd>{{ item.contact.name }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().email }}</dt>
+        <dd>{{ item.contact.email }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().orderPhone }}</dt>
+        <dd>{{ item.contact.phone }}</dd>
+      </div>
+    </dl>
+  </section>
+  <section class="app-card" aria-labelledby="order-delivery">
+    <h2 id="order-delivery" class="app-card__title">{{ text().orderDelivery }}</h2>
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().orderShippingMethod }}</dt>
+        <dd>{{ item.shippingMethodLabel }}</dd>
+      </div>
+      <div class="app-facts--wide">
+        <dt>{{ text().orderShippingAddress }}</dt>
+        <dd>
+          {{ item.shippingAddress.line1 }}<br />
+          @if (item.shippingAddress.line2; as line2) { {{ line2 }}<br />
+          } {{ item.shippingAddress.postalCode }} {{ item.shippingAddress.city }}<br />
+          {{ item.shippingAddress.countryCode }}
+        </dd>
+      </div>
+    </dl>
+  </section>
+  <section class="app-card" aria-labelledby="order-payment">
+    <h2 id="order-payment" class="app-card__title">{{ text().orderPayment }}</h2>
+    <dl class="app-facts">
+      <div>
+        <dt>{{ text().orderPaymentMethod }}</dt>
+        <dd>{{ item.paymentMethodLabel }}</dd>
+      </div>
+      <div>
+        <dt>{{ text().orderPaymentStatus }}</dt>
+        <dd>
+          <p-tag
+            [severity]="paymentSeverity(item.paymentStatus)"
+            [value]="paymentText(item.paymentStatus, language())"
+          />
+        </dd>
+      </div>
+      @if (item.paidAt; as paidAt) {
+      <div>
+        <dt>{{ text().orderPaidAt }}</dt>
+        <dd>
+          <time [dateTime]="paidAt" [title]="format.utc(paidAt)"
+            >{{ format.dateTime(paidAt) }}</time
+          >
+        </dd>
+      </div>
+      } @if (item.paymentInstructions) {
+      <div class="app-facts--wide">
+        <dt>{{ text().orderPaymentInstructions }}</dt>
+        <dd class="order-payment-instructions">{{ item.paymentInstructions }}</dd>
+      </div>
+      }
+    </dl>
+  </section>
+</div>
+<osnova-table-panel
+  mode="local"
+  mobileIdentityLayout="trailing"
+  [heading]="text().orderItems"
+  [columns]="lineColumns()"
+  [tableMinWidth]="linesMinWidth"
+  [view]="lineView()"
+  [total]="item.lines.length"
+>
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="item.lines"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of lineColumns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="
+            column.kind === 'identity'
+              ? 'var(--app-table-identity-width, ' + column.width + ')'
+              : column.width
+          "
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        @for (column of lineColumns(); track column.id) {
+        <th
+          scope="col"
+          [class]="column.className ?? ''"
+          [class.app-cell-number]="column.kind === 'number'"
+        >
+          {{ column.label }}
+        </th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-line>
+      @let unitPrice = amount(line.unitPrice, item.currency, language()); @let total =
+      amount(line.lineTotal, item.currency, language());
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-cell-identity">
+            <span class="app-table-identity-wrap" [title]="line.label">{{ line.label }}</span>
+            <span [title]="line.sku">{{ line.sku }}</span>
+            <span class="app-table-mobile-meta app-table-tag-wrap">
+              {{ text().orderUnitPrice }} {{ unitPrice }}
+            </span>
+          </div>
+        </td>
+        <td class="app-cell-number">{{ quantity(line.quantity, language()) }}</td>
+        <td class="app-cell-number app-table-merged-column" [title]="unitPrice">{{ unitPrice }}</td>
+        <td class="app-cell-number" [title]="total">{{ total }}</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+<section class="app-card" aria-labelledby="order-fulfillment-history">
+  <h2 id="order-fulfillment-history" class="app-card__title">{{ text().orderStatusHistory }}</h2>
+  <p-timeline [value]="history()" [pt]="{ eventOpposite: { style: { display: 'none' } } }">
+    <ng-template #content let-event>
+      <div class="app-timeline-event">
+        <span class="app-timeline-event__title">
+          @if (event.fromStatus) { {{ statusText(event.fromStatus, language()) }}
+          <span aria-hidden="true">→</span>
+          <span class="app-visually-hidden">{{ text().orderStatusChangedTo }}</span>
+          } {{ statusText(event.toStatus, language()) }}
+        </span>
+        <time
+          class="app-timeline-event__meta"
+          [dateTime]="event.occurredAt"
+          [title]="format.utc(event.occurredAt)"
+        >
+          {{ format.dateTime(event.occurredAt) }}
+        </time>
+      </div>
+    </ng-template>
+  </p-timeline>
+</section>
+} @else if (record.isLoading()) {
+<div class="app-card" role="status" [attr.aria-label]="shared().loading">
+  <p-skeleton width="40%" />
+  <p-skeleton height="var(--p-app-control-height)" />
+</div>
+} @else if (record.error()) {
+<section class="app-card">
+  <osnova-empty-state kind="error" [title]="text().orderUnavailable">
+    <button pButton emptyActions type="button" (click)="record.reload()">
+      {{ shared().retry }}
+    </button>
+  </osnova-empty-state>
+</section>
+} @else {
+<section class="app-card">
+  <osnova-empty-state
+    kind="not-found"
+    [title]="validId() ? shared().drawer.notFoundTitle : shared().drawer.invalidIdTitle"
+    [description]="validId() ? shared().drawer.notFoundDescription : shared().drawer.invalidIdDescription"
+  />
+</section>
+}
+<router-outlet [routerOutletData]="drawerHost" />
+<p-confirmdialog
+  appendTo="body"
+  [pt]="confirmPt()"
+  [style]="{ width: 'min(28rem, calc(100vw - 2rem))' }"
+>
+  <ng-template #message>
+    <div id="mark-order-paid-message" class="app-stack">
+      <strong>{{ order()?.number }}</strong>
+      <p>{{ text().markOrderPaidConfirm }}</p>
+    </div>
+  </ng-template>
+</p-confirmdialog>

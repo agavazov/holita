@@ -17,7 +17,9 @@ export class DatabaseService implements OnModuleDestroy {
       | 'productVariantValue'
       | 'productTagAssignment'
       | 'productCollectionItem'
-      | 'cartLine',
+      | 'cartLine'
+      | 'order'
+      | 'orderLine',
   ): Prisma.Sql {
     return Prisma.raw(`"${this.schema.replaceAll('"', '""')}"."${name}"`);
   }
