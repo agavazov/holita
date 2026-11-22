@@ -122,7 +122,7 @@ export class InventoryEditor {
     return !this.saving() && this.drawer().confirmLeave(this.form.dirty);
   }
 
-  protected quantityText(value: number): string {
+  protected quantityText(value: number | null): string {
     return formatNumber(value, this.language.value());
   }
 

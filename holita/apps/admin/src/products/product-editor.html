@@ -600,7 +600,7 @@
             <input
               pInputText
               [id]="quantityId"
-              [value]="quantityText(variant.controls.quantity.value)"
+              [value]="quantityText(variant.controls.inventoryTracked.value ? variant.controls.quantity.value : null)"
               [attr.aria-describedby]="variant.controls.inventoryTracked.value ? quantityId + '-hint' : null"
               readonly
             />

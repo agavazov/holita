@@ -25,6 +25,7 @@
   "inventoryItems": "Shop variants",
   "inventoryProduct": "Product",
   "inventoryVariant": "Variant",
+  "inventoryOpenVariant": "Open variant",
   "inventorySearch": "Search by product or SKU",
   "inventoryTracking": "Tracking",
   "inventoryOutOfStock": "Out of stock",

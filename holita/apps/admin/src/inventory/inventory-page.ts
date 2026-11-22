@@ -47,7 +47,7 @@ import type {
 import { InventoryApi } from './inventory-api';
 import { variantLabel } from './variant-label';
 
-type InventoryAction = 'adjust';
+type InventoryAction = 'open';
 type InventoryListPage = OperatorInventoryQuery['inventory'];
 type InventoryFilters = { inventoryTracked: boolean | undefined; outOfStock: boolean | undefined };
 const definition: ListDefinition<InventoryFilters, InventorySortField> = {
@@ -96,22 +96,12 @@ export class InventoryPage {
   protected readonly text = computed(() => operatorStrings[this.language.value()]);
   protected readonly shared = computed(() => uiMessages[this.language.value()]);
   protected readonly canWrite = computed(() => this.session.hasRole('OPERATOR') && !!this.scope());
-  protected readonly tableMinWidth = '40.5rem';
+  protected readonly tableMinWidth = '42.5rem';
   protected readonly trackById = trackById;
   protected readonly tone = toneSeverity;
   protected readonly actions = computed<
     readonly ListAction<InventoryAction, OperatorInventoryVariantFieldsFragment>[]
-  >(() =>
-    this.canWrite()
-      ? [
-          {
-            id: 'adjust',
-            label: this.text().inventoryAdjust,
-            appliesTo: (row) => row.inventoryTracked,
-          },
-        ]
-      : [],
-  );
+  >(() => [{ id: 'open', label: this.text().inventoryOpenVariant }]);
   protected readonly columns = computed<readonly TableColumn[]>(() => [
     {
       id: 'PRODUCT_NAME',
@@ -121,19 +111,15 @@ export class InventoryPage {
       className: 'app-col-identity',
     },
     { id: 'QUANTITY', label: this.text().variantQuantity, width: '8rem', kind: 'number' },
-    { id: 'tracking', label: this.text().inventoryTracking, width: '8rem', kind: 'status' },
+    { id: 'tracking', label: this.text().inventoryTracking, width: '10rem', kind: 'status' },
     { id: 'SKU', label: this.text().variantSku, width: '11.5rem', kind: 'text' },
-    ...(this.canWrite()
-      ? [
-          {
-            id: 'actions',
-            label: this.shared().pageHeader.actions,
-            width: '3.25rem',
-            kind: 'actions' as const,
-            className: 'app-col-actions',
-          },
-        ]
-      : []),
+    {
+      id: 'actions',
+      label: this.shared().pageHeader.actions,
+      width: '3.25rem',
+      kind: 'actions',
+      className: 'app-col-actions',
+    },
   ]);
   protected readonly sortFields = computed(() => [
     { field: 'PRODUCT_NAME', label: this.text().inventoryProduct },
@@ -255,7 +241,7 @@ export class InventoryPage {
     return variantLabel(variant, this.text().defaultVariant);
   }
 
-  protected quantity(value: number): string {
+  protected quantity(value: number | null): string {
     return formatNumber(value, this.language.value());
   }
 

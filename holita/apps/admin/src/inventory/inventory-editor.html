@@ -30,7 +30,7 @@
       @if (!canAdjust()) {
       <div>
         <dt>{{ text().variantQuantity }}</dt>
-        <dd>{{ quantityText(item.quantity) }}</dd>
+        <dd>{{ quantityText(item.inventoryTracked ? item.quantity : null) }}</dd>
       </div>
       }
     </dl>

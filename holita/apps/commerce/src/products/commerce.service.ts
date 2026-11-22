@@ -7,6 +7,7 @@ import { InvalidCharacteristicIdError } from '../characteristics/characteristics
 import { Prisma } from '../generated/prisma/client.js';
 import {
   CommerceRepository,
+  ConflictingVariantQuantityError,
   DuplicateSkuError,
   InvalidImageIdError,
   InvalidMarkerIdError,
@@ -273,6 +274,9 @@ export class CommerceService {
       if (error instanceof InvalidVariantIdError) {
         throw variantError(error.index, 'id', 'INVALID_VALUE', error.message);
       }
+      if (error instanceof ConflictingVariantQuantityError) {
+        throw variantError(error.index, 'quantity', 'INVENTORY_QUANTITY_CONFLICT', error.message);
+      }
       if (error instanceof DuplicateSkuError) {
         const index = variants.findIndex((variant) => variant.sku === error.sku);
         throw variantError(index, 'sku', 'DUPLICATE_SKU', error.message);
@@ -350,8 +354,11 @@ export class CommerceService {
             'Enter a non-negative price with up to two decimal places',
           );
         }
-        const quantity = initialQuantity ?? 0;
-        if (!Number.isInteger(quantity) || quantity < 0 || quantity > 2_147_483_647) {
+        const quantity = initialQuantity ?? undefined;
+        if (
+          quantity !== undefined &&
+          (!Number.isInteger(quantity) || quantity < 0 || quantity > 2_147_483_647)
+        ) {
           throw variantError(
             index,
             'quantity',
@@ -359,7 +366,7 @@ export class CommerceService {
             'Enter a non-negative whole quantity',
           );
         }
-        if (!id && !inventoryTracked && quantity !== 0) {
+        if (!id && !inventoryTracked && (quantity ?? 0) !== 0) {
           throw variantError(
             index,
             'quantity',

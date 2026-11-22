@@ -514,8 +514,11 @@ In Admin, open a product and edit its Variants section. Leave option values empt
 default variant of a simple product. For a configurable product, add one row per combination
 and choose one value from each of the same options in every row. Each variant has a shop-unique
 SKU, price, inventory tracking and status. Set an initial quantity when adding a tracked variant.
-For a saved variant, open Inventory, search by product name or SKU, and choose Adjust quantity
-to set its stock count. Filter by tracking status or show only tracked variants with zero stock.
+For a saved variant, search Inventory by product name or SKU, then open the variant to view its
+details or set its tracked stock count. Filter by tracking status or show only tracked variants
+with zero stock.
+Omit quantity for saved variants in `updateProduct`. The mutation rejects a supplied quantity
+that differs from the saved stock count.
 
 The storefront lists active products with an active variant and uses the lowest active variant
 price on cards and detail pages. The public `CatalogueProduct.available` field is true when

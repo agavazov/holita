@@ -165,7 +165,7 @@ void startOperator({
   ],
   navigation: [
     { id: 'products', label: 'products', icon: 'tags', path: 'products' },
-    { id: 'inventory', label: 'inventory', icon: 'folder', path: 'inventory' },
+    { id: 'inventory', label: 'inventory', icon: 'truck', path: 'inventory' },
     { id: 'categories', label: 'categories', icon: 'th-large', path: 'categories' },
     { id: 'brands', label: 'brands', icon: 'folder', path: 'brands' },
     { id: 'collections', label: 'collections', icon: 'directions', path: 'collections' },

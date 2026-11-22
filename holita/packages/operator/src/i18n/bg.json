@@ -25,6 +25,7 @@
   "inventoryItems": "Варианти в магазина",
   "inventoryProduct": "Продукт",
   "inventoryVariant": "Вариант",
+  "inventoryOpenVariant": "Отваряне на вариант",
   "inventorySearch": "Търсене по продукт или SKU",
   "inventoryTracking": "Проследяване",
   "inventoryOutOfStock": "Няма наличност",

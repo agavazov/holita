@@ -684,23 +684,47 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
   expect(await query(tokens.operator, branchA, adjustQuantity, stock)).toEqual({
     data: { updateInventoryQuantity: { quantity: 3 } },
   });
+  const updateConfigured =
+    'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){variants{id quantity inventoryTracked}}}';
+  const retainedVariants = configured.variants.map((draft) =>
+    draft.sku === configuredVariant.sku
+      ? { ...draft, id: configuredVariant.id }
+      : { ...draft, id: alternative.id },
+  );
   expect(
-    await query(
-      tokens.operator,
-      branchA,
-      'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){variants{id quantity inventoryTracked}}}',
+    await query(tokens.operator, branchA, updateConfigured, {
+      id: configuredVariant.productId,
+      input: { ...configured, variants: retainedVariants },
+    }),
+  ).toMatchObject({
+    data: null,
+    errors: [
       {
-        id: configuredVariant.productId,
-        input: {
-          ...configured,
-          variants: configured.variants.map((draft) =>
-            draft.sku === configuredVariant.sku
-              ? { ...draft, id: configuredVariant.id, inventoryTracked: false }
-              : { ...draft, id: alternative.id },
-          ),
+        extensions: {
+          code: 'BAD_USER_INPUT',
+          fieldErrors: [
+            {
+              path: 'variants.0.quantity',
+              code: 'INVENTORY_QUANTITY_CONFLICT',
+              message: 'Use Inventory to adjust quantities for tracked variants',
+            },
+          ],
         },
       },
-    ),
+    ],
+  });
+  expect(
+    await query(tokens.operator, branchA, updateConfigured, {
+      id: configuredVariant.productId,
+      input: {
+        ...configured,
+        variants: retainedVariants.map((draft) =>
+          draft.id === configuredVariant.id
+            ? { ...draft, inventoryTracked: false, quantity: undefined }
+            : draft,
+        ),
+      },
+    }),
   ).toEqual({
     data: {
       updateProduct: {

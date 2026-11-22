@@ -29,7 +29,7 @@ interface VariantWrite {
   id?: string;
   sku: string;
   price: string;
-  quantity: number;
+  quantity: number | undefined;
   inventoryTracked: boolean;
   active: boolean;
   combinationKey: string;
@@ -216,9 +216,15 @@ export class CommerceRepository {
         : [];
       const quantities = new Map(current.map((variant) => [variant.id, variant.quantity]));
       const replacements = variants.map((variant, index) => {
-        const quantity = variant.id ? quantities.get(variant.id) : variant.quantity;
+        if (!variant.id) {
+          return { ...variant, quantity: variant.quantity ?? 0 };
+        }
+        const quantity = quantities.get(variant.id);
         if (quantity === undefined) {
           throw new InvalidVariantIdError(index);
+        }
+        if (variant.quantity !== undefined && variant.quantity !== quantity) {
+          throw new ConflictingVariantQuantityError(index);
         }
         return { ...variant, quantity };
       });
@@ -345,6 +351,12 @@ export class DuplicateSkuError extends Error {
 export class InvalidVariantIdError extends Error {
   constructor(readonly index: number) {
     super('Choose a variant from this product');
+  }
+}
+
+export class ConflictingVariantQuantityError extends Error {
+  constructor(readonly index: number) {
+    super('Use Inventory to adjust quantities for tracked variants');
   }
 }
 
