@@ -1632,6 +1632,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
           orderId: accountOrderId,
           number: invoiceNumber,
           subtotal: '30.00',
+          discountAmount: discountedQuote.discountAmount,
           shippingFee: '6.50',
           total: chargedTotal,
           lines: [{ sku: 'CONFIG-Satin', quantity: 1, unitPrice: '30.00', lineTotal: '30.00' }],

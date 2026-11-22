@@ -29,6 +29,12 @@ import { OrdersApi, orderIdPattern } from './orders-api';
     .invoice-address {
       white-space: pre-wrap;
     }
+
+    @media print {
+      .invoice-amounts {
+        break-inside: avoid;
+      }
+    }
   `,
   host: { class: 'app-view' },
   changeDetection: ChangeDetectionStrategy.OnPush,

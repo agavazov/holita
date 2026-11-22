@@ -145,13 +145,19 @@
     </ng-template>
   </p-table>
 </osnova-table-panel>
-<section class="app-card" aria-labelledby="invoice-amounts">
+<section class="app-card invoice-amounts" aria-labelledby="invoice-amounts">
   <h2 id="invoice-amounts" class="app-card__title">{{ text().invoiceAmounts }}</h2>
   <dl class="app-facts">
     <div>
       <dt>{{ text().orderSubtotal }}</dt>
       <dd class="app-num">{{ amount(item.subtotal, item.currency, language()) }}</dd>
     </div>
+    @if (item.discountAmount !== '0.00') {
+    <div>
+      <dt>{{ text().discountAmount }}</dt>
+      <dd class="app-num">{{ amount('-' + item.discountAmount, item.currency, language()) }}</dd>
+    </div>
+    }
     <div>
       <dt>{{ text().orderShippingFee }}</dt>
       <dd class="app-num">{{ amount(item.shippingFee, item.currency, language()) }}</dd>

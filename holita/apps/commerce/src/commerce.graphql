@@ -617,6 +617,7 @@ type Invoice {
   recipientPhone: String
   currency: String!
   subtotal: String!
+  discountAmount: String!
   shippingFee: String!
   total: String!
   lines: [InvoiceLine!]!

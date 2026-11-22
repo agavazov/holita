@@ -57,6 +57,7 @@ export class InvoicesRepository {
           orderNumber: order.orderNumber,
           currency: order.currency,
           subtotal: order.subtotal,
+          discountAmount: order.discountAmount,
           shippingFee: order.shippingFee,
           total: order.total,
         },

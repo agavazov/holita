@@ -62,6 +62,7 @@ function present(row: InvoiceRow): Invoice {
     ...row,
     issueDate: row.issueDate.toISOString().slice(0, 10),
     subtotal: row.subtotal.toFixed(2),
+    discountAmount: row.discountAmount.toFixed(2),
     shippingFee: row.shippingFee.toFixed(2),
     total: row.total.toFixed(2),
     lines: row.lines.map((line) => ({

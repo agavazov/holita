@@ -150,6 +150,7 @@ beforeAll(async () => {
     '20261122170000_order_line_stock_deductions',
     '20261122180000_customer_detail',
     '20261122190000_discounts',
+    '20261122200000_invoice_discount',
   ]) {
     await connection.query(
       await readFile(
@@ -1991,10 +1992,10 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   });
 
   const issueInvoice = `mutation($orderId:ID!,$input:IssueOrderInvoiceInput!){
-    issueOrderInvoice(orderId:$orderId,input:$input){id orderId number issueDate recipientName subtotal shippingFee total lines{description sku quantity unitPrice lineTotal}}
+    issueOrderInvoice(orderId:$orderId,input:$input){id orderId number issueDate recipientName subtotal discountAmount shippingFee total lines{description sku quantity unitPrice lineTotal}}
   }`;
   const readInvoice = `query($orderId:ID!){
-    orderInvoice(orderId:$orderId){id orderId number issueDate recipientName subtotal shippingFee total lines{description sku quantity unitPrice lineTotal}}
+    orderInvoice(orderId:$orderId){id orderId number issueDate recipientName subtotal discountAmount shippingFee total lines{description sku quantity unitPrice lineTotal}}
   }`;
   const invoiceInput = {
     number: 'TEST-0001',
@@ -2017,6 +2018,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
         issueDate: invoiceInput.issueDate,
         recipientName: order.contactName,
         subtotal: receipt.subtotal,
+        discountAmount: receipt.discountAmount,
         shippingFee: receipt.shippingFee,
         total: receipt.total,
         lines: [{ description: expect.any(String), quantity: expect.any(Number) }],
@@ -2025,7 +2027,13 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   });
   const savedInvoice = await query(tokens.viewer, publicA, readInvoice, invoiceTarget);
   expect(savedInvoice).toMatchObject({
-    data: { orderInvoice: { ...invoiceTarget, number: invoiceInput.number } },
+    data: {
+      orderInvoice: {
+        ...invoiceTarget,
+        number: invoiceInput.number,
+        discountAmount: receipt.discountAmount,
+      },
+    },
   });
   for (const [credential, branch] of [
     [tokens.operator, branchB],
@@ -2056,7 +2064,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   await database.$transaction([
     database.order.update({
       where: { ...categoryScope, id: order.id },
-      data: { contactName: 'Changed order contact', total: '999.00' },
+      data: { contactName: 'Changed order contact', discountAmount: '0.00', total: '999.00' },
     }),
     database.orderLine.updateMany({
       where: { ...categoryScope, orderId: order.id },

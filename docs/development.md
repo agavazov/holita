@@ -610,9 +610,9 @@ phone order. The operator graph exposes `manualOrderMethods`, `createManualOrder
 
 On Order Detail, choose Create invoice, enter the invoice number and issuer details, and
 review the recipient and amounts copied from the order. Each shop uses unique invoice numbers.
-Open the issued document from its numbered link on the order. Later changes to the order leave
-the invoice intact. The Sofia demo shipped order has an issued invoice. The operator graph
-exposes `orderInvoice` and `issueOrderInvoice`.
+Open the issued document from its numbered link on the order. Its totals include any saved
+discount deduction. Later changes to the order leave the invoice intact. The Sofia demo shipped
+order has an issued invoice. The operator graph exposes `orderInvoice` and `issueOrderInvoice`.
 
 After returning money outside Holita, use Record refund on a paid order. Order Detail shows the
 refund history and remaining balance, including the delivery fee in the original paid amount.

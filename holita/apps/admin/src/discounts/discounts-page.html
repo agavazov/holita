@@ -92,16 +92,14 @@
               @if (canWrite()) {
               <button
                 type="button"
-                class="app-link app-table-identity-wrap"
+                class="app-link"
                 [title]="discount.code"
                 (click)="panel.run('edit', [row], $event.currentTarget)"
               >
                 {{ discount.code }}
               </button>
               } @else {
-              <span class="app-table-identity-wrap" [title]="discount.code"
-                >{{ discount.code }}</span
-              >
+              <span [title]="discount.code">{{ discount.code }}</span>
               }
               <span class="app-table-mobile-meta app-table-tag-wrap">
                 <p-tag

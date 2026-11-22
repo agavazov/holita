@@ -127,6 +127,7 @@ query OperatorOrderInvoice($orderId: ID!) {
     recipientPhone
     currency
     subtotal
+    discountAmount
     shippingFee
     total
     lines {

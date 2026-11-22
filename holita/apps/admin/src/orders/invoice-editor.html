@@ -70,6 +70,14 @@
           <dt>{{ text().orderSubtotal }}</dt>
           <dd class="app-num">{{ amount(item.subtotal, item.currency, language()) }}</dd>
         </div>
+        @if (item.discountAmount !== '0.00') {
+        <div>
+          <dt>{{ text().discountAmount }}</dt>
+          <dd class="app-num">
+            {{ amount('-' + item.discountAmount, item.currency, language()) }}
+          </dd>
+        </div>
+        }
         <div>
           <dt>{{ text().orderShippingFee }}</dt>
           <dd class="app-num">{{ amount(item.shippingFee, item.currency, language()) }}</dd>
