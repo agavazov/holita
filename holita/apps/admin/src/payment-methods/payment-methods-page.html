@@ -1,0 +1,134 @@
+<osnova-page-header
+  [title]="text().paymentMethods"
+  [moduleInfo]="text().paymentMethodsInfo"
+  [actions]="headerActions()"
+  (action)="open('new')"
+/>
+@if (scope()) {
+<osnova-table-panel
+  #panel
+  [heading]="text().shopPaymentMethods"
+  mobileIdentityLayout="trailing"
+  [mobileFullWidthActions]="true"
+  [columns]="columns()"
+  [tableMinWidth]="tableMinWidth"
+  [view]="view()"
+  [total]="page()?.total ?? null"
+  [busy]="list.isLoading()"
+  [errorText]="text().paymentMethodsUnavailable"
+  [emptyTitle]="text().emptyPaymentMethods"
+  [emptyDescription]="text().emptyPaymentMethodsDescription"
+  [page]="pagination()"
+  [actionContext]="params()"
+  [actions]="actions()"
+  (action)="run($event)"
+  (pageChange)="url.setPage($event)"
+  (retry)="list.reload()"
+  (clearFilters)="url.clearFilters()"
+>
+  <osnova-filter-builder
+    panelActions
+    [mobileFullWidth]="true"
+    [searchLabel]="text().searchMethodLabels"
+    [search]="url.searchDraft()"
+    [searchError]="url.searchError() ? shared().searchTooManyWords : null"
+    (searchChange)="url.editSearch($event)"
+  />
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="page()?.items ?? []"
+    [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    dataKey="id"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="
+                column.kind === 'identity'
+                  ? 'var(--app-table-identity-width, ' + column.width + ')'
+                  : column.width
+              "
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity">{{ text().methodLabel }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().status }}</th>
+        <th scope="col" class="app-table-merged-column app-cell-number">
+          {{ text().categorySortOrder }}
+        </th>
+        @if (canWrite()) {
+        <th scope="col" class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <span class="app-visually-hidden">{{ shared().pageHeader.actions }}</span>
+        </th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-method>
+      @let row = record(method); @let status = method.enabled ? text().methodEnabled :
+      text().methodDisabled; @let severity = tone(method.enabled ? 'success' : 'neutral');
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-table-identity-layout">
+            <div class="app-cell-identity">
+              @if (canWrite()) {
+              <button
+                type="button"
+                class="app-link app-table-identity-wrap"
+                [title]="method.label"
+                (click)="panel.run('edit', [row], $event.currentTarget)"
+              >
+                {{ method.label }}
+              </button>
+              } @else {
+              <span class="app-table-identity-wrap" [title]="method.label">{{ method.label }}</span>
+              }
+              <div class="app-table-mobile-meta app-cell-status app-table-tag-wrap">
+                <p-tag [severity]="severity" [value]="status" />
+              </div>
+              <div class="app-table-mobile-meta">
+                {{ text().categorySortOrder }} · <span class="app-num">{{ method.sortOrder }}</span>
+              </div>
+            </div>
+            @if (canWrite()) {
+            <div class="app-table-mobile-actions">
+              <osnova-row-actions
+                [actions]="actions()"
+                [record]="row"
+                (choose)="panel.run($event.action, [row], $event.origin)"
+              />
+            </div>
+            }
+          </div>
+        </td>
+        <td class="app-table-merged-column">
+          <span class="app-cell-status app-table-tag-wrap">
+            <p-tag [severity]="severity" [value]="status" />
+          </span>
+        </td>
+        <td class="app-table-merged-column app-cell-number">{{ method.sortOrder }}</td>
+        @if (canWrite()) {
+        <td class="app-col-actions" pFrozenColumn alignFrozen="right">
+          <osnova-row-actions
+            [actions]="actions()"
+            [record]="row"
+            (choose)="panel.run($event.action, [row], $event.origin)"
+          />
+        </td>
+        }
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+} @else {
+<p-message severity="info">{{ text().noShop }}</p-message>
+}
+<router-outlet [routerOutletData]="drawerHost" />

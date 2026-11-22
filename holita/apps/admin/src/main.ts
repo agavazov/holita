@@ -27,6 +27,10 @@ import { OrderDetail } from './orders/order-detail';
 import { OrderRefundEditor } from './orders/order-refund-editor';
 import { OrderStatusEditor } from './orders/order-status-editor';
 import { OrdersPage } from './orders/orders-page';
+import { PaymentMethodEditor } from './payment-methods/payment-method-editor';
+import { PaymentMethodsPage } from './payment-methods/payment-methods-page';
+import { ShippingMethodEditor } from './shipping-methods/shipping-method-editor';
+import { ShippingMethodsPage } from './shipping-methods/shipping-methods-page';
 import { ProductEditor } from './products/product-editor';
 import { ProductsPage } from './products/products-page';
 
@@ -234,6 +238,42 @@ void startOperator({
         },
       ],
     },
+    {
+      path: 'payment-methods',
+      component: PaymentMethodsPage,
+      children: [
+        {
+          path: 'new',
+          component: PaymentMethodEditor,
+          data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: ':recordId',
+          component: PaymentMethodEditor,
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
+    {
+      path: 'shipping-methods',
+      component: ShippingMethodsPage,
+      children: [
+        {
+          path: 'new',
+          component: ShippingMethodEditor,
+          data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: ':recordId',
+          component: ShippingMethodEditor,
+          data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
     { path: 'customers', component: CustomersPage },
     {
       path: 'customers/:recordId',
@@ -277,6 +317,8 @@ void startOperator({
     { id: 'orders', label: 'orders', icon: 'truck', path: 'orders' },
     { id: 'discounts', label: 'discounts', icon: 'tags', path: 'discounts' },
     { id: 'customers', label: 'customers', icon: 'users', path: 'customers' },
+    { id: 'payment-methods', label: 'paymentMethods', icon: 'cog', path: 'payment-methods' },
+    { id: 'shipping-methods', label: 'shippingMethods', icon: 'truck', path: 'shipping-methods' },
   ],
 }).catch((error: unknown) => {
   console.error(error);

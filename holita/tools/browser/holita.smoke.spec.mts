@@ -1311,19 +1311,37 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       throw new Error('Missing scope for the checkout fixture');
     }
     const paymentLabel = 'Cash on delivery';
+    const paymentInstructions = 'Pay when the parcel arrives.';
+    const alternativePaymentLabel = 'Bank transfer';
     const shippingLabel = 'Home delivery';
-    const paymentId = randomUUID();
-    const shippingId = randomUUID();
-    await commerceDb.client.query(
-      `INSERT INTO "paymentMethod" ("id", "tenantId", "branchId", "label", "instructions", "enabled", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, true, CURRENT_TIMESTAMP)`,
-      [paymentId, shopScope.tenantId, shopId, paymentLabel, 'Pay when the parcel arrives.'],
-    );
-    await commerceDb.client.query(
-      `INSERT INTO "shippingMethod" ("id", "tenantId", "branchId", "label", "fixedFee", "enabled", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, true, CURRENT_TIMESTAMP)`,
-      [shippingId, shopScope.tenantId, shopId, shippingLabel, '6.50'],
-    );
+    const saveMethod = async (operation: string, field: string): Promise<void> => {
+      const saved = waitForCart(merchant, operation);
+      const dialog = merchant.getByRole('dialog');
+      await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+      expect(await (await saved).json()).toMatchObject({
+        data: { [field]: { id: expect.any(String) } },
+      });
+      await expect(dialog).toBeHidden();
+    };
+    const createPayment = async (label: string, instructions: string, sortOrder: string) => {
+      await merchant.getByRole('button', { name: 'New payment method', exact: true }).click();
+      await merchant.locator('#payment-method-label').fill(label);
+      await merchant.locator('#payment-method-instructions').fill(instructions);
+      await merchant.locator('#payment-method-sort-order').fill(sortOrder);
+      await merchant.locator('#payment-method-enabled').click();
+      await merchant.getByRole('option', { name: 'Enabled', exact: true }).click();
+      return saveMethod('OperatorCreatePaymentMethod', 'createPaymentMethod');
+    };
+    await merchant.getByRole('link', { name: 'Payment methods', exact: true }).click();
+    await createPayment(paymentLabel, paymentInstructions, '0');
+    await createPayment(alternativePaymentLabel, 'Follow the bank transfer instructions.', '10');
+    await merchant.getByRole('link', { name: 'Shipping methods', exact: true }).click();
+    await merchant.getByRole('button', { name: 'New shipping method', exact: true }).click();
+    await merchant.locator('#shipping-method-label').fill(shippingLabel);
+    await merchant.locator('#shipping-method-fixed-fee').fill('6,50');
+    await merchant.locator('#shipping-method-enabled').click();
+    await merchant.getByRole('option', { name: 'Enabled', exact: true }).click();
+    await saveMethod('OperatorCreateShippingMethod', 'createShippingMethod');
     const discountCode = 'SMOKE10';
     await merchant.getByRole('link', { name: 'Discounts', exact: true }).click();
     await merchant.getByRole('button', { name: 'New discount', exact: true }).click();
@@ -1359,8 +1377,11 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         discountCode: null,
         discountAmount: '0.00',
       },
+      shippingFee = '6.50',
     ) => {
+      const checkoutRead = waitForCart(page, 'Checkout');
       await page.getByRole('link', { name: 'Checkout', exact: true }).click();
+      const checkoutResult: unknown = await (await checkoutRead).json();
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Shopper');
       await page.getByRole('textbox', { name: 'Email', exact: true }).fill(shopperEmail);
       await page.getByRole('textbox', { name: 'Phone', exact: true }).fill('+359 2 555 0100');
@@ -1370,17 +1391,26 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       await page
         .getByRole('textbox', { name: 'Address line 1', exact: true })
         .fill('12 Demo Street');
-      await page.getByLabel('Delivery method', { exact: true }).selectOption(shippingId);
-      await page.getByLabel('Payment method', { exact: true }).selectOption(paymentId);
+      await page.getByLabel('Delivery method', { exact: true }).selectOption({ index: 1 });
+      await page
+        .getByLabel('Payment method', { exact: true })
+        .selectOption({ label: paymentLabel });
       const quoted = waitForCart(page, 'QuoteCheckout');
       await page.getByRole('button', { name: 'Review total', exact: true }).click();
       expect(await (await quoted).json()).toMatchObject({
         data: {
-          quoteCheckout: { subtotal, shippingFee: '6.50', total, currency: 'BGN', ...discount },
+          quoteCheckout: { subtotal, shippingFee, total, currency: 'BGN', ...discount },
         },
       });
+      return checkoutResult;
     };
-    await reviewCheckout(shopper, '30.00', '36.50');
+    expect(await reviewCheckout(shopper, '30.00', '36.50')).toMatchObject({
+      data: {
+        checkout: {
+          paymentMethods: [{ label: paymentLabel }, { label: alternativePaymentLabel }],
+        },
+      },
+    });
 
     const readWithGuestToken = async (branchId: string): Promise<unknown> => {
       const response = await shopper.request.post(`${shopApp.origin}/graphql`, {
@@ -1468,7 +1498,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       subtotal: '25.50',
       shippingFee: '6.50',
       total: '32.00',
-      paymentInstructions: 'Pay when the parcel arrives.',
+      paymentInstructions,
     };
     expect(await (await placed).json()).toMatchObject({ data: { placeOrder: expectedOrder } });
     const receipt = waitForCart(guestOrder, 'OrderConfirmation');
@@ -1892,6 +1922,67 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await shopper.reload();
     expect(await (await persistedReceipt).json()).toMatchObject({
       data: { shopperOrder: accountOrderSnapshot },
+    });
+
+    await guestOrder.goto(cartUrl);
+    await reviewCheckout(guestOrder, '30.00', '36.50');
+    const updatedInstructions = 'Pay when the parcel arrives.\nHave the exact amount ready.';
+    await merchant.getByRole('link', { name: 'Payment methods', exact: true }).click();
+    await merchant.getByRole('button', { name: paymentLabel, exact: true }).click();
+    await merchant.locator('#payment-method-instructions').fill(updatedInstructions);
+    await saveMethod('OperatorUpdatePaymentMethod', 'updatePaymentMethod');
+    await merchant.getByRole('link', { name: 'Shipping methods', exact: true }).click();
+    await merchant.getByRole('button', { name: shippingLabel, exact: true }).click();
+    await merchant.locator('#shipping-method-fixed-fee').fill('0');
+    await saveMethod('OperatorUpdateShippingMethod', 'updateShippingMethod');
+
+    const placeReviewedOrder = async (): Promise<unknown> => {
+      const response = waitForCart(guestOrder, 'PlaceOrder');
+      await guestOrder.getByRole('button', { name: 'Place order', exact: true }).click();
+      return (await response).json();
+    };
+    expect(await placeReviewedOrder()).toMatchObject({
+      errors: [{ extensions: { fieldErrors: [{ code: 'CHECKOUT_QUOTE_CHANGED' }] } }],
+    });
+    const paymentChoice = guestOrder.locator('#paymentMethodId');
+    await expect(guestOrder.getByRole('textbox', { name: 'Name', exact: true })).toHaveValue(
+      'Shopper',
+    );
+    await paymentChoice.selectOption({ label: alternativePaymentLabel });
+    const requoted = waitForCart(guestOrder, 'QuoteCheckout');
+    await guestOrder.getByRole('button', { name: 'Review total', exact: true }).click();
+    expect(await (await requoted).json()).toMatchObject({
+      data: { quoteCheckout: { shippingFee: '0.00', total: '30.00' } },
+    });
+
+    await merchant.getByRole('link', { name: 'Payment methods', exact: true }).click();
+    await merchant.getByRole('button', { name: alternativePaymentLabel, exact: true }).click();
+    await merchant.locator('#payment-method-enabled').click();
+    await merchant.getByRole('option', { name: 'Disabled', exact: true }).click();
+    await saveMethod('OperatorUpdatePaymentMethod', 'updatePaymentMethod');
+    expect(await placeReviewedOrder()).toMatchObject({
+      errors: [
+        { extensions: { fieldErrors: [{ path: 'paymentMethodId', code: 'INVALID_METHOD' }] } },
+      ],
+    });
+    await expect(paymentChoice).toHaveValue('');
+    await expect(
+      guestOrder.getByRole('button', { name: 'Review total', exact: true }),
+    ).toBeVisible();
+
+    await guestOrder.getByRole('link', { name: 'Back to cart', exact: true }).click();
+    expect(await reviewCheckout(guestOrder, '30.00', '30.00', undefined, '0.00')).toMatchObject({
+      data: {
+        checkout: {
+          paymentMethods: [{ label: paymentLabel, instructions: updatedInstructions }],
+          shippingMethods: [{ label: shippingLabel, fixedFee: '0.00' }],
+        },
+      },
+    });
+    const reloadedReceipt = waitForCart(guestOrder, 'OrderConfirmation');
+    await guestOrder.goto(confirmationUrl);
+    expect(await (await reloadedReceipt).json()).toMatchObject({
+      data: { orderConfirmation: expectedOrder },
     });
 
     await merchant.getByRole('link', { name: 'Products', exact: true }).click();

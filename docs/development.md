@@ -555,10 +555,16 @@ Shoppers can apply or remove one promo code in Cart through `applyCartDiscount` 
 `removeCartDiscount`. The Sofia demo code `HOME10` gives 10% off an item subtotal of at least
 40.00 BGN. `OLD10` has expired.
 
+In Admin, open Payment methods or Shipping methods for the selected shop. Add or edit a method,
+enter its label and sort order, and set payment instructions or a fixed delivery fee in BGN.
+Enable the method to offer it at checkout, or disable it to take it out of the available choices.
+Lower sort orders appear first. Existing orders retain the method names, instructions and delivery
+fee recorded when they were placed.
+
 Open Checkout from a cart with available items, enter contact and delivery details, and choose
 delivery and payment. Review total shows current item prices, any item discount and the fixed
-delivery fee from Commerce. The Sofia seed enables Наложен платеж and Доставка до адрес with a fee
-of 6.00 BGN.
+delivery fee from Commerce. The Sofia seed enables Наложен платеж, Банков превод and
+Доставка до адрес (6.00 BGN). Доставка в събота (9.50 BGN) starts disabled.
 The storefront graph exposes the checkout options with `checkout` and prices the selected options
 with `quoteCheckout`, using the cart's existing authorization.
 
@@ -567,8 +573,7 @@ selected methods prompts you to review the checkout again. If the promo code is 
 go back to Cart to remove or replace it. When an order commits, Commerce saves the code and the
 discount amount on the order and records the redemption.
 The confirmation shows the order's current fulfillment and payment status with its saved items,
-promo code, discount and delivery fee. Payment instructions are shown while the order is unpaid and
-active.
+promo code, discount, payment instructions and delivery fee.
 Signed-in shoppers can reopen their confirmation in the same shop. Guests can reopen theirs
 in the browser that placed the order.
 The storefront graph uses `placeOrder` with the reviewed cart ID and quote revision, and

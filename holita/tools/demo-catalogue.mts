@@ -180,6 +180,12 @@ export const demoPaymentMethod = {
 };
 export const demoShippingMethod = { label: 'Доставка до адрес', fixedFee: '6.00' };
 
+export const demoBankTransfer = {
+  label: 'Банков превод',
+  instructions: 'Ще получите указания за банков превод след потвърждение.',
+};
+export const demoSaturdayShipping = { label: 'Доставка в събота', fixedFee: '9.50' };
+
 export const demoDiscounts = [
   { id: 1, code: 'HOME10', value: '10.00', minSubtotal: '40.00', endsAt: null },
   { id: 2, code: 'OLD10', value: '10.00', minSubtotal: null, endsAt: '2025-01-01T00:00:00Z' },

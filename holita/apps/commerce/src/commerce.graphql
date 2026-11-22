@@ -662,7 +662,51 @@ input RecordOrderRefundInput {
   reason: String
   restock: Boolean! = false
 }
+type PaymentMethod {
+  id: ID!
+  label: String!
+  enabled: Boolean!
+  sortOrder: Int!
+  instructions: String!
+}
+type PaymentMethodPage {
+  items: [PaymentMethod!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+input PaymentMethodInput {
+  label: String!
+  enabled: Boolean!
+  sortOrder: Int!
+  instructions: String!
+}
+
+type ShippingMethod {
+  id: ID!
+  label: String!
+  enabled: Boolean!
+  sortOrder: Int!
+  fixedFee: String!
+}
+type ShippingMethodPage {
+  items: [ShippingMethod!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+input ShippingMethodInput {
+  label: String!
+  enabled: Boolean!
+  sortOrder: Int!
+  fixedFee: String!
+}
+
 type Query {
+  paymentMethods(offset: Int! = 0, limit: Int! = 20, search: String): PaymentMethodPage!
+  paymentMethod(id: ID!): PaymentMethod
+  shippingMethods(offset: Int! = 0, limit: Int! = 20, search: String): ShippingMethodPage!
+  shippingMethod(id: ID!): ShippingMethod
   products(
     offset: Int! = 0
     limit: Int! = 20
@@ -730,6 +774,10 @@ type Query {
   orderRefundSummary(orderId: ID!): OrderRefundSummary
 }
 type Mutation {
+  createPaymentMethod(input: PaymentMethodInput!): PaymentMethod!
+  updatePaymentMethod(id: ID!, input: PaymentMethodInput!): PaymentMethod!
+  createShippingMethod(input: ShippingMethodInput!): ShippingMethod!
+  updateShippingMethod(id: ID!, input: ShippingMethodInput!): ShippingMethod!
   createProduct(input: ProductInput!): Product!
   updateProduct(id: ID!, input: ProductInput!): Product!
   updateInventoryQuantity(id: ID!, quantity: Int!): InventoryVariant!

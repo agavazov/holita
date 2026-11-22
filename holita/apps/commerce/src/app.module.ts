@@ -12,6 +12,8 @@ import { DiscountsModule } from './discounts/discounts.module.js';
 import { DiscountsResolver } from './discounts/discounts.resolver.js';
 import { InvoicesModule } from './invoices/invoices.module.js';
 import { InvoicesResolver } from './invoices/invoices.resolver.js';
+import { ManualMethodsModule } from './manual-methods/manual-methods.module.js';
+import { ManualMethodsResolver } from './manual-methods/manual-methods.resolver.js';
 import { OperatorOrdersResolver } from './orders/operator-orders.resolver.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { OrdersResolver } from './orders/orders.resolver.js';
@@ -56,6 +58,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     TagsModule,
     CustomersModule,
     DiscountsModule,
+    ManualMethodsModule,
     OrdersModule,
     InvoicesModule,
     RefundsModule,
@@ -72,6 +75,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     TagsResolver,
     CustomersResolver,
     DiscountsResolver,
+    ManualMethodsResolver,
     OperatorOrdersResolver,
     InvoicesResolver,
     RefundsResolver,

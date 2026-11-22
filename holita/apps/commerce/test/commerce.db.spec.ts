@@ -320,6 +320,50 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     quantity: 0,
     inventoryTracked: false,
   });
+  for (const [method, type, fields] of [
+    ['paymentMethod', 'PaymentMethod', { instructions: 'Pay in person.' }],
+    ['shippingMethod', 'ShippingMethod', { fixedFee: '0' }],
+  ] as const) {
+    const create = `mutation($input:${type}Input!){create${type}(input:$input){id}}`;
+    const update = `mutation($id:ID!,$input:${type}Input!){update${type}(id:$id,input:$input){id}}`;
+    const detail = `query($id:ID!){${method}(id:$id){id enabled}}`;
+    const list = `{${method}s{items{id} total}}`;
+    const input = { label: 'Scoped method', enabled: false, sortOrder: 10, ...fields };
+    const result = await query(tokens.operator, branchA, create, { input });
+    const where = { tenantId: tenantA, branchId: branchA, label: input.label };
+    const { id } =
+      method === 'paymentMethod'
+        ? await database.paymentMethod.findFirstOrThrow({ where })
+        : await database.shippingMethod.findFirstOrThrow({ where });
+    expect(result).toEqual({ data: { [`create${type}`]: { id } } });
+    for (const [bearer, branch] of [
+      [tokens.operator, branchB],
+      [tokens.foreign, branchForeign],
+    ] as const) {
+      expect(await query(bearer, branch, list)).toEqual({
+        data: { [`${method}s`]: { items: [], total: 0 } },
+      });
+      expect(await query(bearer, branch, detail, { id })).toEqual({ data: { [method]: null } });
+      expect(
+        await query(bearer, branch, update, { id, input: { ...input, enabled: true } }),
+      ).toMatchObject({
+        data: null,
+        errors: [{ extensions: { code: 'NOT_FOUND' } }],
+      });
+    }
+    expect(await query(tokens.viewer, branchA, detail, { id })).toEqual({
+      data: { [method]: { id, enabled: false } },
+    });
+    for (const [operation, variables] of [
+      [create, { input }],
+      [update, { id, input }],
+    ] as const) {
+      expect(await query(tokens.viewer, branchA, operation, variables)).toMatchObject({
+        data: null,
+        errors: expect.any(Array),
+      });
+    }
+  }
   const customerScope = { tenantId: tenantA, branchId: branchA };
   const customer = await database.customer.create({
     data: { ...customerScope, name: 'Customer', email: 'Person@example.test' },

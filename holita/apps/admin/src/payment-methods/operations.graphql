@@ -1,0 +1,39 @@
+fragment OperatorPaymentMethodFields on PaymentMethod {
+  id
+  label
+  enabled
+  sortOrder
+  instructions
+}
+
+query OperatorPaymentMethods($offset: Int! = 0, $limit: Int! = 20, $search: String) {
+  paymentMethods(offset: $offset, limit: $limit, search: $search) {
+    items {
+      id
+      label
+      enabled
+      sortOrder
+    }
+    total
+    offset
+    limit
+  }
+}
+
+query OperatorPaymentMethod($id: ID!) {
+  paymentMethod(id: $id) {
+    ...OperatorPaymentMethodFields
+  }
+}
+
+mutation OperatorCreatePaymentMethod($input: PaymentMethodInput!) {
+  createPaymentMethod(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdatePaymentMethod($id: ID!, $input: PaymentMethodInput!) {
+  updatePaymentMethod(id: $id, input: $input) {
+    id
+  }
+}

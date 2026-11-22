@@ -223,14 +223,18 @@ export class CheckoutPage {
       }
       const { shippingMethodId, paymentMethodId } = this.form.controls;
       const { shippingMethods, paymentMethods } = data.checkout;
-      const [shipping] = shippingMethods;
-      const [payment] = paymentMethods;
-      if (!shippingMethodId.value && shipping && shippingMethods.length === 1) {
-        shippingMethodId.setValue(shipping.id);
+      // Refresh the controls without discarding the checkout rejection or the contact draft.
+      for (const [control, methods] of [
+        [shippingMethodId, shippingMethods],
+        [paymentMethodId, paymentMethods],
+      ] as const) {
+        if (control.value && !methods.some(({ id }) => id === control.value)) {
+          control.setValue('', { onlySelf: true });
+        } else if (!control.value && methods.length === 1 && methods[0]) {
+          control.setValue(methods[0].id, { onlySelf: true });
+        }
       }
-      if (!paymentMethodId.value && payment && paymentMethods.length === 1) {
-        paymentMethodId.setValue(payment.id);
-      }
+      this.form.updateValueAndValidity({ emitEvent: false });
     });
   }
 

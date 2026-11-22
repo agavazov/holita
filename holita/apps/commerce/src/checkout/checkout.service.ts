@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, UnprocessableEntityException } from '@
 import { normalizedEmail, userName } from '@osnova/auth';
 import { isUUID } from 'class-validator';
 import { hash } from 'node:crypto';
-import type { CartSelection } from '../cart/cart.repository.js';
+import { CartRepository, type CartSelection } from '../cart/cart.repository.js';
 import { CartPrice, CartService, type CartContext } from '../cart/cart.service.js';
 import { promoError } from '../discounts/discounts.service.js';
 import type {
@@ -12,8 +12,8 @@ import type {
   CheckoutState,
 } from '../generated/graphql/storefront-types.js';
 import type { Prisma } from '../generated/prisma/client.js';
+import { ManualMethodsRepository } from '../manual-methods/manual-methods.repository.js';
 import type { Scope } from '../scope.js';
-import { CheckoutRepository } from './checkout.repository.js';
 import { checkoutCurrency } from './currency.js';
 
 export function checkoutError(path: string, code: string, message: string) {
@@ -86,12 +86,13 @@ export function validateOrderContact(
 @Injectable()
 export class CheckoutService {
   constructor(
-    private readonly methods: CheckoutRepository,
+    private readonly methods: ManualMethodsRepository,
+    private readonly cartRepository: CartRepository,
     private readonly carts: CartService,
   ) {}
 
   read(context: CartContext): Promise<CheckoutState | null> {
-    return this.methods.readTransaction(async (tx) => {
+    return this.cartRepository.readTransaction(async (tx) => {
       const ownedCart = await this.carts.readOwned(tx, context);
       if (!ownedCart?.cart.lines.length) {
         return null;
@@ -138,7 +139,7 @@ export class CheckoutService {
   }
 
   quote(context: CartContext, input: CheckoutQuoteInput): Promise<CheckoutQuote> {
-    return this.methods.readTransaction(async (tx) => {
+    return this.cartRepository.readTransaction(async (tx) => {
       const ownedCart = await this.carts.readOwned(tx, context);
       if (!ownedCart) {
         throw checkoutError('cart', 'CHECKOUT_EMPTY_CART', 'The cart is empty');

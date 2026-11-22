@@ -31,6 +31,7 @@
 .checkout-note p {
   margin: var(--p-app-space-1) 0 0;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .checkout-lines,

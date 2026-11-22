@@ -1,0 +1,40 @@
+fragment OperatorShippingMethodFields on ShippingMethod {
+  id
+  label
+  enabled
+  sortOrder
+  fixedFee
+}
+
+query OperatorShippingMethods($offset: Int! = 0, $limit: Int! = 20, $search: String) {
+  shippingMethods(offset: $offset, limit: $limit, search: $search) {
+    items {
+      id
+      label
+      enabled
+      sortOrder
+      fixedFee
+    }
+    total
+    offset
+    limit
+  }
+}
+
+query OperatorShippingMethod($id: ID!) {
+  shippingMethod(id: $id) {
+    ...OperatorShippingMethodFields
+  }
+}
+
+mutation OperatorCreateShippingMethod($input: ShippingMethodInput!) {
+  createShippingMethod(input: $input) {
+    id
+  }
+}
+
+mutation OperatorUpdateShippingMethod($id: ID!, $input: ShippingMethodInput!) {
+  updateShippingMethod(id: $id, input: $input) {
+    id
+  }
+}

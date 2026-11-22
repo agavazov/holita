@@ -1,0 +1,120 @@
+<osnova-route-drawer
+  [title]="editing ? text().editShippingMethod : text().newShippingMethod"
+  [subtitle]="subtitle()"
+  [state]="state()"
+  [errorText]="text().shippingMethodsUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  <form
+    id="shipping-method-editor-form"
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="app-form-section"
+  >
+    <osnova-form-field
+      controlId="shipping-method-label"
+      [label]="text().methodLabel"
+      [required]="true"
+      [error]="error('label')"
+    >
+      <input
+        pInputText
+        id="shipping-method-label"
+        formControlName="label"
+        autocomplete="off"
+        aria-required="true"
+        aria-describedby="shipping-method-label-error"
+        [invalid]="!!error('label')"
+        [attr.aria-invalid]="!!error('label')"
+        (input)="clearError('label')"
+      />
+    </osnova-form-field>
+    <div class="app-form-grid">
+      <osnova-form-field
+        controlId="shipping-method-enabled"
+        [label]="text().status"
+        [required]="true"
+        [error]="error('enabled')"
+      >
+        <p-select
+          inputId="shipping-method-enabled"
+          ariaLabelledBy="shipping-method-enabled-label"
+          formControlName="enabled"
+          [options]="statusOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [invalid]="!!error('enabled')"
+          [pt]="{
+            label: {
+              'aria-required': 'true',
+              'aria-describedby': 'shipping-method-enabled-error',
+              'aria-invalid': error('enabled') ? 'true' : undefined,
+            },
+          }"
+          (onChange)="clearError('enabled')"
+        />
+      </osnova-form-field>
+      <osnova-form-field
+        controlId="shipping-method-sort-order"
+        [label]="text().categorySortOrder"
+        [required]="true"
+        [error]="error('sortOrder')"
+      >
+        <input
+          pInputText
+          id="shipping-method-sort-order"
+          type="number"
+          inputmode="numeric"
+          min="0"
+          max="2147483647"
+          step="1"
+          formControlName="sortOrder"
+          aria-required="true"
+          aria-describedby="shipping-method-sort-order-error"
+          [invalid]="!!error('sortOrder')"
+          [attr.aria-invalid]="!!error('sortOrder')"
+          (input)="clearError('sortOrder')"
+        />
+      </osnova-form-field>
+    </div>
+    <osnova-form-field
+      controlId="shipping-method-fixed-fee"
+      [label]="text().orderShippingFee + ' (' + feeCurrency + ')'"
+      [required]="true"
+      [error]="error('fixedFee')"
+    >
+      <input
+        pInputText
+        id="shipping-method-fixed-fee"
+        inputmode="decimal"
+        formControlName="fixedFee"
+        aria-required="true"
+        aria-describedby="shipping-method-fixed-fee-error"
+        [invalid]="!!error('fixedFee')"
+        [attr.aria-invalid]="!!error('fixedFee')"
+        (input)="clearError('fixedFee')"
+      />
+    </osnova-form-field>
+    @if (saveError()) {
+    <p-message severity="error">{{ text().shippingMethodSaveFailed }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="shipping-method-editor-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+  </div>
+</osnova-route-drawer>

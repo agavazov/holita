@@ -1,0 +1,120 @@
+<osnova-route-drawer
+  [title]="editing ? text().editPaymentMethod : text().newPaymentMethod"
+  [subtitle]="subtitle()"
+  [state]="state()"
+  [errorText]="text().paymentMethodsUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  <form
+    id="payment-method-editor-form"
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="app-form-section"
+  >
+    <osnova-form-field
+      controlId="payment-method-label"
+      [label]="text().methodLabel"
+      [required]="true"
+      [error]="error('label')"
+    >
+      <input
+        pInputText
+        id="payment-method-label"
+        formControlName="label"
+        autocomplete="off"
+        aria-required="true"
+        aria-describedby="payment-method-label-error"
+        [invalid]="!!error('label')"
+        [attr.aria-invalid]="!!error('label')"
+        (input)="clearError('label')"
+      />
+    </osnova-form-field>
+    <div class="app-form-grid">
+      <osnova-form-field
+        controlId="payment-method-enabled"
+        [label]="text().status"
+        [required]="true"
+        [error]="error('enabled')"
+      >
+        <p-select
+          inputId="payment-method-enabled"
+          ariaLabelledBy="payment-method-enabled-label"
+          formControlName="enabled"
+          [options]="statusOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [invalid]="!!error('enabled')"
+          [pt]="{
+            label: {
+              'aria-required': 'true',
+              'aria-describedby': 'payment-method-enabled-error',
+              'aria-invalid': error('enabled') ? 'true' : undefined,
+            },
+          }"
+          (onChange)="clearError('enabled')"
+        />
+      </osnova-form-field>
+      <osnova-form-field
+        controlId="payment-method-sort-order"
+        [label]="text().categorySortOrder"
+        [required]="true"
+        [error]="error('sortOrder')"
+      >
+        <input
+          pInputText
+          id="payment-method-sort-order"
+          type="number"
+          inputmode="numeric"
+          min="0"
+          max="2147483647"
+          step="1"
+          formControlName="sortOrder"
+          aria-required="true"
+          aria-describedby="payment-method-sort-order-error"
+          [invalid]="!!error('sortOrder')"
+          [attr.aria-invalid]="!!error('sortOrder')"
+          (input)="clearError('sortOrder')"
+        />
+      </osnova-form-field>
+    </div>
+    <osnova-form-field
+      controlId="payment-method-instructions"
+      [label]="text().orderPaymentInstructions"
+      [required]="true"
+      [error]="error('instructions')"
+    >
+      <textarea
+        pTextarea
+        id="payment-method-instructions"
+        rows="4"
+        formControlName="instructions"
+        aria-required="true"
+        aria-describedby="payment-method-instructions-error"
+        [invalid]="!!error('instructions')"
+        [attr.aria-invalid]="!!error('instructions')"
+        (input)="clearError('instructions')"
+      ></textarea>
+    </osnova-form-field>
+    @if (saveError()) {
+    <p-message severity="error">{{ text().paymentMethodSaveFailed }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="payment-method-editor-form" [disabled]="saving()">
+      {{ text().save }}
+    </button>
+  </div>
+</osnova-route-drawer>

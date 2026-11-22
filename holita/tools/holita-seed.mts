@@ -6,6 +6,7 @@ import { config } from 'dotenv';
 import pg from 'pg';
 import {
   demoBadges,
+  demoBankTransfer,
   demoCatalogue,
   demoCategories,
   demoCharacteristicGroups,
@@ -20,6 +21,7 @@ import {
   demoProductCovers,
   demoProductImages,
   demoRefund,
+  demoSaturdayShipping,
   demoShippingMethod,
   demoShopper,
   demoTags,
@@ -382,28 +384,34 @@ async function seedCatalogue(): Promise<void> {
       }
     }
     await seedShopperCart(client, tenantId, branchId);
-    await client.query(
-      `INSERT INTO "paymentMethod" ("id", "tenantId", "branchId", "label", "instructions", "enabled", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, true, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
-      [
-        fixtureId('d3', 1),
-        tenantId,
-        branchId,
-        demoPaymentMethod.label,
-        demoPaymentMethod.instructions,
-      ],
-    );
-    await client.query(
-      `INSERT INTO "shippingMethod" ("id", "tenantId", "branchId", "label", "fixedFee", "enabled", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, true, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
-      [
-        fixtureId('d4', 1),
-        tenantId,
-        branchId,
-        demoShippingMethod.label,
-        demoShippingMethod.fixedFee,
-      ],
-    );
+    for (const [id, method, sortOrder] of [
+      [1, demoPaymentMethod, 0],
+      [2, demoBankTransfer, 10],
+    ] as const) {
+      await client.query(
+        `INSERT INTO "paymentMethod" ("id", "tenantId", "branchId", "label", "instructions", "enabled", "sortOrder", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, true, $6, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
+        [fixtureId('d3', id), tenantId, branchId, method.label, method.instructions, sortOrder],
+      );
+    }
+    for (const [id, method, enabled, sortOrder] of [
+      [1, demoShippingMethod, true, 0],
+      [2, demoSaturdayShipping, false, 10],
+    ] as const) {
+      await client.query(
+        `INSERT INTO "shippingMethod" ("id", "tenantId", "branchId", "label", "fixedFee", "enabled", "sortOrder", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
+        [
+          fixtureId('d4', id),
+          tenantId,
+          branchId,
+          method.label,
+          method.fixedFee,
+          enabled,
+          sortOrder,
+        ],
+      );
+    }
     for (const { id, code, value, minSubtotal, endsAt } of demoDiscounts) {
       const { rowCount } = await client.query(
         `INSERT INTO "discount" ("id", "tenantId", "branchId", "code", "type", "value", "enabled", "minSubtotal", "endsAt", "updatedAt")
