@@ -160,6 +160,13 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                   </a>
                 }
                 <h1>{{ item.name }}</h1>
+                @if (item.badges.length) {
+                  <div class="shop-badge-list">
+                    @for (badge of item.badges; track badge.id) {
+                      <span class="shop-chip" [attr.data-tone]="badge.color">{{ badge.name }}</span>
+                    }
+                  </div>
+                }
                 @if (selectedVariant(); as variant) {
                   @let available = sellableVariantId() !== null;
                   <div class="product-offer" role="status" aria-atomic="true">
@@ -258,7 +265,9 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         @if (page === 'register' || page === 'sign-in') {
           @let registering = page === 'register';
           <section class="account-view" aria-labelledby="account-title">
-            <h1 id="account-title">{{ registering ? t().register : t().signIn }}</h1>
+            <header class="shop-page-heading">
+              <h1 id="account-title">{{ registering ? t().register : t().signIn }}</h1>
+            </header>
             <div class="account-panel">
               <form [formGroup]="form" (ngSubmit)="submit()">
                 @if (registering) {
@@ -298,7 +307,9 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         }
         @if (page === 'account') {
           <section class="account-view" aria-labelledby="account-title">
-            <h1 id="account-title">{{ t().account }}</h1>
+            <header class="shop-page-heading">
+              <h1 id="account-title">{{ t().account }}</h1>
+            </header>
             <div class="account-panel">
               @if (error()) {
                 <p class="account-error" role="alert">{{ t().error }}</p>

@@ -23,7 +23,6 @@ import {
   validCatalogueFilters,
   type BrowseSection,
 } from './catalogue-url';
-import { hasLongBadge } from './product-display';
 import { StorefrontApi } from './storefront-api';
 import { messages, type Language } from './storefront-messages';
 
@@ -53,7 +52,6 @@ export class CatalogueBrowse {
   protected readonly filtersOpen = signal(false);
   protected readonly sortChoices = sortChoices;
   protected readonly t = computed(() => messages[this.language()]);
-  protected readonly hasLongBadge = hasLongBadge;
   protected readonly format = computed(
     () => new Intl.NumberFormat(this.language(), { style: 'currency', currency: 'BGN' }),
   );

@@ -8,7 +8,7 @@ listing.categoryPath.length > 1) {
   }
 </nav>
 }
-<div class="catalogue-heading">
+<div class="shop-page-heading catalogue-heading">
   <h1 id="catalogue-title">
     @if (result() === null) { {{ t().browseMissing }} } @else if (section(); as currentSection) { {{
     listing?.name ?? t()[currentSection] }} } @else { {{ t().products }} }
@@ -182,7 +182,7 @@ listing.categoryPath.length > 1) {
     } @if (result(); as page) { @if (page.items.length) {
     <ul class="catalogue-grid" role="list">
       @for (item of page.items; track item.id) {
-      <li class="catalogue-card" [class.catalogue-card--wide]="hasLongBadge(item.badges)">
+      <li class="catalogue-card">
         <a
           class="product-link"
           [routerLink]="[...base(), 'product', item.id]"
@@ -209,9 +209,11 @@ listing.categoryPath.length > 1) {
           <h2 [id]="'product-' + item.id" [title]="item.name">{{ item.name }}</h2>
           <span class="catalogue-offer">
             @if (item.badges.length) {
-            <span class="catalogue-badges" [id]="'badges-' + item.id">
+            <span class="shop-badge-list" [id]="'badges-' + item.id">
               @for (badge of item.badges; track badge.id) {
-              <span class="shop-chip" [attr.data-tone]="badge.color">{{ badge.name }}</span>
+              <span class="shop-chip" [attr.data-tone]="badge.color" [title]="badge.name">
+                <span class="catalogue-badge-label">{{ badge.name }}</span>
+              </span>
               }
             </span>
             }

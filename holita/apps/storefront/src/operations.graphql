@@ -16,6 +16,11 @@ fragment CatalogueCategoryFields on CatalogueCategory {
   slug
   parentId
 }
+fragment CatalogueBadgeFields on CatalogueBadge {
+  id
+  name
+  color
+}
 fragment CatalogueBrowsePage on CataloguePage {
   items {
     id
@@ -30,9 +35,7 @@ fragment CatalogueBrowsePage on CataloguePage {
       ...CatalogueBrandFields
     }
     badges {
-      id
-      name
-      color
+      ...CatalogueBadgeFields
     }
   }
   listing {
@@ -194,6 +197,9 @@ query CatalogueProduct($id: ID!) {
     }
     categoryPath {
       ...CatalogueCategoryFields
+    }
+    badges {
+      ...CatalogueBadgeFields
     }
     tags {
       id

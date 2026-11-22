@@ -405,18 +405,13 @@ main {
 }
 
 .account-view {
-  max-inline-size: 28rem;
-  margin-inline: auto;
-  padding-block-start: clamp(1rem, 3vw, 2rem);
-  border-block-start: 1px solid var(--shop-border);
   overflow-wrap: anywhere;
 }
 
-.account-view h1 {
-  margin: 0 0 var(--p-app-space-5);
-  color: inherit;
-  font: var(--shop-title);
-  letter-spacing: var(--shop-title-tracking);
+.account-view h1,
+.account-panel {
+  max-inline-size: 28rem;
+  margin-inline: auto;
 }
 
 .account-panel,
@@ -427,10 +422,18 @@ main {
 }
 
 .account-panel {
-  padding: clamp(1rem, 4vw, 1.75rem);
+  padding: var(--p-app-space-4);
   border: 1px solid var(--shop-border);
   border-radius: var(--p-app-radius-panel);
   background: var(--shop-paper);
+
+  @include bp.from(md) {
+    padding: var(--p-app-space-5);
+  }
+
+  @include bp.from(lg) {
+    padding: var(--p-app-space-6);
+  }
 }
 
 .account-panel form,
