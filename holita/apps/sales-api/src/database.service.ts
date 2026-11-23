@@ -4,11 +4,17 @@ import { PrismaClient } from './generated/prisma/client.js';
 
 @Injectable()
 export class DatabaseService implements OnModuleDestroy {
-  private readonly connectionString = process.env.SALES_DATABASE_URL ?? '';
-  private readonly schema = new URL(this.connectionString).searchParams.get('schema') ?? 'public';
-  readonly client = new PrismaClient({
-    adapter: new PrismaPg({ connectionString: this.connectionString }, { schema: this.schema }),
-  });
+  readonly client: PrismaClient;
+
+  constructor() {
+    const connectionString = process.env.SALES_DATABASE_URL ?? '';
+    const database = URL.parse(connectionString);
+    if (!database) {
+      throw new Error('SALES_DATABASE_URL must be a valid URL');
+    }
+    const schema = database.searchParams.get('schema') ?? 'public';
+    this.client = new PrismaClient({ adapter: new PrismaPg({ connectionString }, { schema }) });
+  }
 
   async onModuleDestroy(): Promise<void> {
     await this.client.$disconnect();

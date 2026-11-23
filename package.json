@@ -61,7 +61,7 @@
     "db:down": "docker compose down",
     "db:setup": "tsx discocan/tools/database/setup.mts",
     "db:test:setup": "tsx discocan/tools/database/setup.mts --test",
-    "db:generate": "nx run-many -t db-generate --projects=osnova-core,fleet,erm-server",
+    "db:generate": "nx run-many -t db-generate --projects=osnova-core,fleet,erm-server,holita-sales-api",
     "db:validate": "DOTENV_CONFIG_PATH=../../../discocan/config/core.env npm run db:validate --workspace @osnova/core && npm run db:validate --workspace @discocan/fleet && npm run db:validate --workspace @discocan/erm-server",
     "db:migrate": "DOTENV_CONFIG_PATH=../../../discocan/config/core.env npm run db:migrate --workspace @osnova/core && npm run db:migrate --workspace @discocan/fleet && npm run db:migrate --workspace @discocan/erm-server",
     "db:seed": "DOTENV_CONFIG_PATH=../../../discocan/config/core.env CORE_SEED_FILE=../../../discocan/config/core-seed.json npm run db:seed --workspace @osnova/core && npm run db:seed --workspace @discocan/fleet",

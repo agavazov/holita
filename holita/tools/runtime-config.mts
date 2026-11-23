@@ -10,12 +10,22 @@ const url = (name: string, password: string, port: string) =>
   `postgresql://${name}:${password}@127.0.0.1:${port}/${name}`;
 
 function salesConfig(port: string, internalToken: string): string {
+  const tokenAssignment = ['"', "'", '`', '']
+    .map((quote) => {
+      const token = quote === '"' ? internalToken.replace(/\r/g, '\\r') : internalToken;
+      return `CORE_INTERNAL_AUTH_TOKEN=${quote}${token}${quote}`;
+    })
+    .find((assignment) => parse(assignment)['CORE_INTERNAL_AUTH_TOKEN'] === internalToken);
+  if (tokenAssignment === undefined) {
+    throw new Error('Cannot preserve CORE_INTERNAL_AUTH_TOKEN in Holita Sales configuration');
+  }
+
   return [
     'PORT=12015',
     `SALES_DATABASE_URL=${url('holita_sales', secret(), port)}`,
     `SALES_TEST_DATABASE_URL=${url('holita_sales_test', secret(), port)}`,
     'CORE_AUTH_VERIFY_URL=http://127.0.0.1:12011/internal/auth/verify',
-    `CORE_INTERNAL_AUTH_TOKEN=${JSON.stringify(internalToken)}`,
+    tokenAssignment,
     '',
   ].join('\n');
 }
