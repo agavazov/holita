@@ -3,8 +3,11 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
+  type ElementRef,
   InjectionToken,
   Injectable,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -149,7 +152,7 @@ export class OperatorLanguage {
               @switch (discovery.kind) {
                 @case ('error') {
                   <osnova-empty-state kind="error" [title]="text().shopsUnavailable">
-                    <button emptyActions pButton type="button" (click)="retryShops()">
+                    <button #retryButton emptyActions pButton type="button" (click)="retryShops()">
                       {{ shared().retry }}
                     </button>
                   </osnova-empty-state>
@@ -180,6 +183,9 @@ export class OperatorApplication {
   protected readonly shared = computed(() => uiMessages[this.language.value()]);
   private readonly tenantId = computed(() => this.session.current()?.tenant.id);
   private readonly token = computed(() => this.session.current()?.token);
+  private readonly injector = inject(Injector);
+  private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
+  private retryFocusScope: ShopScope | null = null;
   private readonly shopAttempt = signal(0);
   private readonly shopScope = computed<ShopScope | null>(() => {
     const tenantId = this.tenantId();
@@ -266,6 +272,20 @@ export class OperatorApplication {
       });
       const publish = (state: ShopDiscovery) => {
         this.shopResult.set({ scope, state });
+        if (this.retryFocusScope === scope && state.kind !== 'loading') {
+          this.retryFocusScope = null;
+          if (state.kind === 'error') {
+            afterNextRender(
+              () => {
+                const button = this.retryButton()?.nativeElement;
+                if (button && button.ownerDocument.activeElement === button.ownerDocument.body) {
+                  button.focus();
+                }
+              },
+              { injector: this.injector },
+            );
+          }
+        }
       };
       const subscription = query.valueChanges.subscribe({
         next: (result) => {
@@ -312,7 +332,10 @@ export class OperatorApplication {
   }
 
   protected retryShops(): void {
+    const button = this.retryButton()?.nativeElement;
     this.shopAttempt.update((attempt) => attempt + 1);
+    this.retryFocusScope =
+      button && button.ownerDocument.activeElement === button ? this.shopScope() : null;
   }
 
   async selectBranch(branchId: string): Promise<void> {
