@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [263](263-holita-customer-list-pagination.md).
-
 ## Background
 
 The red.bg coverage report marks OR02 as P2. The Admin order list has general search and a single status filter. Merchants need to narrow a busy shop's order list by several fields together.
@@ -14,7 +12,7 @@ Combine order filters in the Admin list.
 
 ## Steps
 
-1. Extend the existing paginated order list and generated operations with date range, multiple statuses, shipping and payment methods, customer type and selected customer. Reuse the bounded customer lookup from 263.
+1. Extend the existing paginated order list and generated operations with date range, multiple statuses, shipping and payment methods, customer type and selected customer. Reuse the bounded customer lookup from the manual-order picker.
 
 ## Done when
 

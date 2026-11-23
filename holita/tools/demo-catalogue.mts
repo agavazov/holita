@@ -118,6 +118,35 @@ export const demoShopper = {
   cartSkus: ['GUV-2L', 'PAN-28-SAND'],
 };
 
+export const demoCustomers = [
+  [4, 'Александра Василева', 'aleksandra.vasileva'],
+  [5, 'Антон Маринов', 'anton.marinov'],
+  [6, 'Борислава Кръстева', 'borislava.krasteva'],
+  [7, 'Васил Георгиев', 'vasil.georgiev'],
+  [8, 'Виктория Андреева', 'viktoria.andreeva'],
+  [9, 'Георги Тодоров', 'georgi.todorov'],
+  [10, 'Десислава Костова', 'desislava.kostova'],
+  [11, 'Елена Николова', 'elena.nikolova'],
+  [12, 'Емил Димитров', 'emil.dimitrov'],
+  [13, 'Зорница Симеонова', 'zornitsa.simeonova'],
+  [14, 'Иванка Илиева', 'ivanka.ilieva'],
+  [15, 'Калина Ангелова', 'kalina.angelova'],
+  [16, 'Любомир Стефанов', 'lyubomir.stefanov'],
+  [17, 'Милена Йорданова', 'milena.yordanova'],
+  [18, 'Николай Иванов', 'nikolay.ivanov'],
+  [19, 'Петя Алексиева', 'petya.aleksieva'],
+  [20, 'Ралица Христова', 'ralitsa.hristova'],
+  [21, 'Силвия Павлова', 'silvia.pavlova'],
+  [22, 'Стефан Попов', 'stefan.popov'],
+  [23, 'Теодора Донева', 'teodora.doneva'],
+  [24, 'Цветан Русев', 'tsvetan.rusev'],
+  [
+    25,
+    'Яна Александрова-Димитрова Стоянова-Великова',
+    'yana.aleksandrova-dimitrova.stoyanova-velikova',
+  ],
+] as const;
+
 export interface DemoShopperOrder {
   readonly id: number;
   readonly status: string;

@@ -4,6 +4,8 @@ import type {
   MutationUpdateCustomerAddressArgs,
   MutationUpdateCustomerContactArgs,
   QueryCustomerArgs,
+  QueryCustomerContactArgs,
+  QueryCustomersArgs,
 } from '../generated/graphql/types.js';
 import type { RequestContext } from '../scope.js';
 import { CustomersService } from './customers.service.js';
@@ -13,8 +15,13 @@ export class CustomersResolver {
   constructor(private readonly service: CustomersService) {}
 
   @Query('customers')
-  customers(@Context() context: RequestContext) {
-    return this.service.list(context);
+  customers(@Args() args: QueryCustomersArgs, @Context() context: RequestContext) {
+    return this.service.list(context, args);
+  }
+
+  @Query('customerContact')
+  contact(@Args() { id }: QueryCustomerContactArgs, @Context() context: RequestContext) {
+    return this.service.contact(context, id);
   }
 
   @Query('customer')

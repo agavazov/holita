@@ -6,6 +6,7 @@ import { HttpLink } from 'apollo-angular/http';
 import {
   OperatorCreateManualOrderDocument,
   OperatorManualOrderChoicesDocument,
+  OperatorManualOrderCustomersDocument,
   OperatorManualOrderProductsDocument,
   OperatorUpdateManualOrderDocument,
   type ManualOrderInput,
@@ -90,17 +91,36 @@ export class OrdersApi {
     }
   }
 
-  async manualChoices(scope: OrdersScope) {
+  async manualChoices(scope: OrdersScope, customerId: string | null) {
     const client = this.client(scope);
     try {
       const { data } = await client.query({
         query: OperatorManualOrderChoicesDocument,
+        variables: { customerId: customerId ?? '', includeCustomer: !!customerId },
         fetchPolicy: 'no-cache',
       });
       if (!data) {
         throw new Error('Missing manual order choices');
       }
       return data;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async manualCustomers(scope: OrdersScope, search: string, signal: AbortSignal) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorManualOrderCustomersDocument,
+        variables: { search },
+        context: { fetchOptions: { signal } },
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing manual order customers');
+      }
+      return data.customers.items;
     } finally {
       client.stop();
     }

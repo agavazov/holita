@@ -1,6 +1,6 @@
 # 269 Filter Admin customers by email verification
 
-**Status:** Blocked. Waits for [263](263-holita-customer-list-pagination.md) and [279](279-holita-shopper-email-verification.md). **Product:** Holita.
+**Status:** Blocked. Waits for [279](279-holita-shopper-email-verification.md). **Product:** Holita.
 
 ## Background
 
@@ -12,7 +12,7 @@ Let a merchant narrow the paginated Customers list by saved email verification s
 
 ## Steps
 
-1. Reuse 279's saved verification state in the scoped server list from 263. Add an optional all, confirmed or unconfirmed filter, with an account lacking a confirmation recorded as unconfirmed.
+1. Reuse 279's saved verification state in the scoped Customers list. Add an optional all, confirmed or unconfirmed filter, with an account lacking a confirmation recorded as unconfirmed.
 2. Add the localized selector to Admin Customers and preserve name and email search when it changes. Regenerate and check the GraphQL contracts.
 
 ## Done when

@@ -1,14 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database.service.js';
-import type { Prisma } from '../generated/prisma/client.js';
+import { Prisma } from '../generated/prisma/client.js';
 import type { Scope } from '../scope.js';
+
+const customerContactFields = {
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
+} satisfies Prisma.CustomerSelect;
 
 function customerFields(scope: Scope) {
   return {
-    id: true,
-    name: true,
-    email: true,
-    phone: true,
+    ...customerContactFields,
     createdAt: true,
     updatedAt: true,
     orders: {
@@ -38,11 +42,35 @@ type AddressData = Pick<
 export class ShopperRepository {
   constructor(private readonly database: DatabaseService) {}
 
-  customers(scope: Scope) {
-    return this.database.client.customer.findMany({
-      where: scope,
-      orderBy: [{ name: 'asc' }, { id: 'desc' }],
-      select: customerFields(scope),
+  async customers(scope: Scope, offset: number, limit: number, words: string[]) {
+    const where: Prisma.CustomerWhereInput = {
+      ...scope,
+      AND: words.map((word) => {
+        const match = { contains: word.replace(/[\\%_]/gu, '\\$&'), mode: 'insensitive' } as const;
+        return { OR: [{ name: match }, { email: match }] };
+      }),
+    };
+    const customer = this.database.client.customer;
+    const [items, total] = await this.database.client.$transaction(
+      [
+        customer.findMany({
+          where,
+          skip: offset,
+          take: limit,
+          orderBy: [{ name: 'asc' }, { id: 'desc' }],
+          select: customerContactFields,
+        }),
+        customer.count({ where }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return { items, total, offset, limit };
+  }
+
+  customerContact(scope: Scope, id: string) {
+    return this.database.client.customer.findUnique({
+      where: { ...scope, id },
+      select: customerContactFields,
     });
   }
 

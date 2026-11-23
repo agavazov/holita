@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { invalidValue, normalizedCountryCode } from '../checkout/checkout.service.js';
 import type {
@@ -7,12 +7,14 @@ import type {
   CustomerAddressInput,
   CustomerContactInput,
   CustomerDetail,
+  CustomerPage,
+  QueryCustomersArgs,
 } from '../generated/graphql/types.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { requireScope, type RequestContext } from '../scope.js';
 import { ShopperRepository } from './shopper.repository.js';
 
-type CustomerRow = Awaited<ReturnType<ShopperRepository['customers']>>[number];
+type CustomerRow = Awaited<ReturnType<ShopperRepository['updateContact']>>;
 
 function present({
   id,
@@ -73,9 +75,25 @@ function missingRecord(error: unknown, message: string): never {
 export class CustomersService {
   constructor(private readonly shoppers: ShopperRepository) {}
 
-  async list(context: RequestContext): Promise<Customer[]> {
+  async list(
+    context: RequestContext,
+    { offset = 0, limit = 20, search: rawSearch }: QueryCustomersArgs,
+  ): Promise<CustomerPage> {
     const scope = await requireScope(context, false);
-    return (await this.shoppers.customers(scope)).map(present);
+    if (offset < 0 || limit < 1 || limit > 100) {
+      throw new BadRequestException('Invalid page');
+    }
+    const search = (rawSearch ?? '').trim();
+    const words = search.split(/\s+/u).filter(Boolean);
+    if (Array.from(search).length > 200 || words.length > 5 || search.includes('\u0000')) {
+      throw new BadRequestException('Invalid search');
+    }
+    return this.shoppers.customers(scope, offset, limit, words);
+  }
+
+  async contact(context: RequestContext, id: string) {
+    const scope = await requireScope(context, false);
+    return isUUID(id) ? this.shoppers.customerContact(scope, id.toLowerCase()) : null;
   }
 
   async find(context: RequestContext, id: string): Promise<CustomerDetail | null> {

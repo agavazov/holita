@@ -7,11 +7,14 @@ fragment OperatorCustomerAddress on CustomerAddress {
   countryCode
 }
 
-query OperatorCustomers {
-  customers {
-    id
-    name
-    email
+query OperatorCustomers($offset: Int!, $limit: Int!, $search: String) {
+  customers(offset: $offset, limit: $limit, search: $search) {
+    items {
+      id
+      name
+      email
+    }
+    total
   }
 }
 

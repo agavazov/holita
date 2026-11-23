@@ -135,6 +135,18 @@ type InventoryPage {
   offset: Int!
   limit: Int!
 }
+type CustomerListItem {
+  id: ID!
+  name: String!
+  email: String!
+  phone: String
+}
+type CustomerPage {
+  items: [CustomerListItem!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
 type Customer {
   id: ID!
   name: String!
@@ -949,7 +961,8 @@ type Query {
     sort: InventorySort
   ): InventoryPage!
   inventoryVariant(id: ID!): InventoryVariant
-  customers: [Customer!]!
+  customers(offset: Int! = 0, limit: Int! = 20, search: String): CustomerPage!
+  customerContact(id: ID!): CustomerListItem
   customer(id: ID!): CustomerDetail
   brands(offset: Int! = 0, limit: Int! = 20, search: String, sort: BrandSort): BrandPage!
   brand(id: ID!): Brand

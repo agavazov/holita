@@ -13,6 +13,7 @@ import {
   type CustomerAddressInput,
   type CustomerContactInput,
   type OperatorCustomerOrdersQueryVariables,
+  type OperatorCustomersQueryVariables,
 } from '../generated/customers-operations';
 
 interface CustomersScope {
@@ -46,11 +47,12 @@ export class CustomersApi {
     return new ApolloClient(graphqlOptions(this.link, this.config.graphqlUrl, scope, scope));
   }
 
-  async list(scope: CustomersScope) {
+  async list(scope: CustomersScope, variables: OperatorCustomersQueryVariables) {
     const client = this.client(scope);
     try {
       const { data } = await client.query({
         query: OperatorCustomersDocument,
+        variables,
         fetchPolicy: 'no-cache',
       });
       if (!data) {

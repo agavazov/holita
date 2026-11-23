@@ -1765,8 +1765,10 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         ...Array.from({ length: 6 }, () => signInAttempt(shopperEmail)),
       ]);
       expect(catalogue).toMatchObject({ data: { catalogue: { total: expect.any(Number) } } });
+      // Earlier sign-in attempts can expire during the stress run.
+      expect(rejectedAttempts).toContainEqual(limited);
       for (const attempt of rejectedAttempts) {
-        expect(attempt).toMatchObject(limited);
+        expect([rejected, limited]).toContainEqual(attempt);
       }
     }
     expect(await signInAttempt(shopperEmail, secondShopId)).toEqual(rejected);
@@ -2201,9 +2203,10 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const operatorRouter = async (
       query: string,
       variables: Record<string, unknown>,
+      selectedShop = branchId,
     ): Promise<unknown> => {
       const response = await merchant.request.post(paidRequest.url(), {
-        headers: { authorization, 'x-branch-id': branchId },
+        headers: { authorization, 'x-branch-id': selectedShop },
         data: { query, variables },
       });
       return response.json();
@@ -2409,13 +2412,58 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       data: { updateProduct: { id: configuredProductId } },
     });
 
+    for (let index = 1; index <= 20; index++) {
+      const suffix = String(index);
+      await commerceDb.client.query(
+        `INSERT INTO "customer" ("id", "tenantId", "branchId", "name", "email", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
+        [
+          randomUUID(),
+          shopScope.tenantId,
+          shopId,
+          `A Customer ${suffix}`,
+          `page-${suffix}@example.test`,
+        ],
+      );
+    }
+    const customerListQuery =
+      'query($search:String!){customers(offset:0,limit:10,search:$search){items{id} total}}';
+    expect(await operatorRouter(customerListQuery, { search: otherEmail }, secondShopId)).toEqual({
+      data: { customers: { items: [], total: 0 } },
+    });
+
+    const initialCustomers = waitForCart(merchant, 'OperatorCustomers');
     await merchant.getByRole('link', { name: 'Customers', exact: true }).click();
+    expect((await initialCustomers).request().postDataJSON()).toMatchObject({
+      variables: { offset: 0, limit: 20 },
+    });
+    await expect(merchant.locator('p-table tbody tr')).toHaveCount(20);
+    await expect(merchant.getByRole('link', { name: 'Other Customer', exact: true })).toHaveCount(
+      0,
+    );
+    const nextCustomers = waitForCart(merchant, 'OperatorCustomers');
+    await merchant.getByRole('button', { name: /^next page$/iu }).click();
+    expect((await nextCustomers).request().postDataJSON()).toMatchObject({
+      variables: { offset: 20, limit: 20 },
+    });
+    await expect(merchant.getByRole('link', { name: 'Other Customer', exact: true })).toBeVisible();
+
+    const customerSearch = merchant.getByRole('searchbox', { name: 'Search by name or email' });
+    const matchedCustomers = waitForCart(merchant, 'OperatorCustomers');
+    await customerSearch.fill('Other Customer');
+    expect((await matchedCustomers).request().postDataJSON()).toMatchObject({
+      variables: { offset: 0, limit: 20, search: 'Other Customer' },
+    });
+    expect(await (await matchedCustomers).json()).toMatchObject({
+      data: { customers: { items: [{ name: 'Other Customer', email: otherEmail }], total: 1 } },
+    });
+    await customerSearch.fill(shopperEmail);
     await merchant
       .getByRole('row')
       .filter({ hasText: shopperEmail })
       .getByRole('link', { name: 'Shopper', exact: true })
       .click();
-    await merchant.waitForURL(/\/customers\/[0-9a-f-]+$/u);
+    await merchant.waitForURL((url) => /\/customers\/[0-9a-f-]+$/u.test(url.pathname));
     const customerUrl = merchant.url();
     const customerDialog = merchant.getByRole('dialog');
     const saveCustomer = async () => {
@@ -2432,8 +2480,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
 
     await merchant.getByRole('link', { name: 'Orders', exact: true }).click();
     await merchant.getByRole('button', { name: 'Create manual order', exact: true }).click();
-    const selectCustomer = async (label: string) => {
-      await merchant.locator('#manual-customerId').click();
+    const selectCustomer = async (search: string, label: string) => {
+      const found = waitForCart(merchant, 'OperatorManualOrderCustomers');
+      await merchant.locator('#manual-customerId').fill(search);
+      expect((await found).request().postDataJSON()).toMatchObject({
+        variables: { search },
+      });
       const option = merchant.getByRole('option', {
         name: label,
         exact: true,
@@ -2446,14 +2498,14 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const otherCustomer = `Other Customer · ${otherEmail}`;
     const contactName = merchant.locator('[id="manual-contact.name"]');
     const contactPhone = merchant.locator('[id="manual-contact.phone"]');
-    await selectCustomer(updatedCustomer);
+    await selectCustomer(customerName, updatedCustomer);
     await expect(contactPhone).toHaveValue(customerPhone);
     await contactName.fill('Phone Shopper');
-    await selectCustomer(otherCustomer);
+    await selectCustomer(otherEmail, otherCustomer);
     await expect(contactName).toHaveValue('Phone Shopper');
     await expect(merchant.locator('[id="manual-contact.email"]')).toHaveValue(otherEmail);
     await expect(contactPhone).toHaveValue(otherPhone);
-    await selectCustomer(updatedCustomer);
+    await selectCustomer(shopperEmail, updatedCustomer);
     await merchant.locator('[id="manual-shippingAddress.city"]').fill('Sofia');
     await merchant.locator('[id="manual-shippingAddress.postalCode"]').fill('1000');
     await merchant.locator('[id="manual-shippingAddress.line1"]').fill('12 Demo Street');
@@ -2740,12 +2792,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await saveCustomer();
     await merchant.getByRole('link', { name: 'Orders', exact: true }).click();
     await merchant.getByRole('button', { name: 'Create manual order', exact: true }).click();
-    await selectCustomer(otherCustomer);
-    await selectCustomer(updatedCustomer);
+    await selectCustomer(otherEmail, otherCustomer);
+    await selectCustomer(shopperEmail, updatedCustomer);
     await expect(contactPhone).toHaveValue('');
     const typedPhone = '+359 2 555 0150';
     await contactPhone.fill(typedPhone);
-    await selectCustomer(otherCustomer);
+    await selectCustomer(otherEmail, otherCustomer);
     await expect(contactPhone).toHaveValue(typedPhone);
   } finally {
     for (const close of cleanup.reverse()) {

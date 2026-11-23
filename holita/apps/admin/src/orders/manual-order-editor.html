@@ -23,31 +23,49 @@
           class="app-form-grid--wide"
           controlId="manual-customerId"
           [label]="text().chooseCustomer"
+          [hint]="text().searchCustomerAccounts"
           [error]="customerError"
         >
-          <p-select
+          <p-autocomplete
             inputId="manual-customerId"
             ariaLabelledBy="manual-customerId-label"
-            formControlName="customerId"
-            [options]="customerOptions()"
+            [formControl]="customerPicker"
+            [suggestions]="customerOptions()"
             optionLabel="label"
-            optionValue="id"
-            [filter]="true"
-            filterBy="label"
-            [ariaFilterLabel]="text().chooseCustomer"
-            [emptyFilterMessage]="shared().table.noResultsTitle"
+            dataKey="id"
+            [dropdown]="true"
+            [dropdownAriaLabel]="text().chooseCustomer"
+            [placeholder]="text().guestOrder"
+            [delay]="300"
+            autocomplete="off"
+            fluid
             [invalid]="!!customerError"
+            [emptyMessage]="customerEmptyMessage()"
             [pt]="{
-              label: {
-                'aria-invalid': customerError ? 'true' : undefined,
-                'aria-describedby': customerError ? 'manual-customerId-error' : undefined,
-              },
+              ...pickerPt('manual-customerId', !!customerError),
               option: { style: { whiteSpace: 'normal', overflowWrap: 'anywhere' } },
             }"
-            (onChange)="customerChanged()"
+            (completeMethod)="searchCustomers($event.query)"
+            (onSelect)="customerChanged($event.value)"
+            (onClear)="clearCustomerSearch()"
+            (onBlur)="restoreCustomerSelection()"
           />
         </osnova-form-field>
-        @for (field of contactFields(); track field.key) {
+        @if (customers.error()) {
+        <div class="app-stack app-form-grid--wide">
+          <p-message severity="error">{{ text().manualOrderCustomersUnavailable }}</p-message>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="saving()"
+            (click)="customers.reload()"
+          >
+            {{ shared().retry }}
+          </button>
+        </div>
+        } @for (field of contactFields(); track field.key) {
         <ng-container
           *ngTemplateOutlet="manualInput; context: {
           $implicit: { path: 'contact.' + field.key, control: form.controls.contact.controls[field.key], label: field.label, type: field.type, required: true },

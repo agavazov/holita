@@ -14,6 +14,7 @@ import {
   demoCharacteristicGroups,
   demoCollections,
   demoCustomerDetail,
+  demoCustomers,
   demoDashboardCustomer,
   demoDashboardOrders,
   demoDiscounts,
@@ -515,6 +516,7 @@ async function seedCatalogue(): Promise<void> {
       await seedOrderInvoice(client, tenantId, branchId, invoice);
     }
     await seedCustomerDetail(client, tenantId, branchId);
+    await seedCustomers(client, tenantId, branchId);
     await seedDashboard(client, tenantId, branchId);
     await client.query('COMMIT');
     console.log(
@@ -667,6 +669,26 @@ async function seedCustomerDetail(client: pg.Client, tenantId: string, branchId:
     { name: fixture.name, email: fixture.email, customerId },
     { ...fixture.order, phone: fixture.phone, city, postalCode, address: line1 },
   );
+}
+
+async function seedCustomers(client: pg.Client, tenantId: string, branchId: string) {
+  // Keep the listing fixtures outside the demo dashboard's reporting window.
+  const createdAt = '2026-10-01T09:00:00Z';
+  for (const [id, name, emailName] of demoCustomers) {
+    await client.query(
+      `INSERT INTO "customer" ("id", "tenantId", "branchId", "name", "email", "phone", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $7) ON CONFLICT DO NOTHING`,
+      [
+        fixtureId('d2', id),
+        tenantId,
+        branchId,
+        name,
+        `${emailName}@demo.holita.test`,
+        `+359 2 555 02${String(id).padStart(2, '0')}`,
+        createdAt,
+      ],
+    );
+  }
 }
 
 async function seedDashboard(client: pg.Client, tenantId: string, branchId: string) {

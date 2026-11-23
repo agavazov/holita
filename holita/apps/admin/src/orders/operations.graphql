@@ -160,7 +160,14 @@ mutation OperatorRecordOrderRefund($orderId: ID!, $input: RecordOrderRefundInput
   }
 }
 
-query OperatorManualOrderChoices {
+fragment OperatorManualOrderCustomer on CustomerListItem {
+  id
+  name
+  email
+  phone
+}
+
+query OperatorManualOrderChoices($customerId: ID!, $includeCustomer: Boolean!) {
   manualOrderMethods {
     currency
     paymentMethods {
@@ -173,17 +180,22 @@ query OperatorManualOrderChoices {
       fixedFee
     }
   }
-  customers {
-    id
-    name
-    email
-    phone
+  customerContact(id: $customerId) @include(if: $includeCustomer) {
+    ...OperatorManualOrderCustomer
   }
   productOptions {
     active
     values {
       id
       label
+    }
+  }
+}
+
+query OperatorManualOrderCustomers($search: String) {
+  customers(limit: 10, search: $search) {
+    items {
+      ...OperatorManualOrderCustomer
     }
   }
 }

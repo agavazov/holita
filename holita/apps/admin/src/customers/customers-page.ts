@@ -10,11 +10,13 @@ import {
 import { RouterLink } from '@angular/router';
 import { OperatorLanguage, operatorStrings } from '@holita/operator';
 import {
+  FilterBuilder,
   PageHeader,
   TablePanel,
   UrlListState,
   tableView,
   trackById,
+  uiMessages,
   type ListDefinition,
   type TableColumn,
 } from '@osnova/ui';
@@ -23,7 +25,7 @@ import { TableModule } from 'primeng/table';
 import type { OperatorCustomersQuery } from '../generated/customers-operations';
 import { CustomersApi } from './customers-api';
 
-type CustomerRows = OperatorCustomersQuery['customers'];
+type CustomerPage = OperatorCustomersQuery['customers'];
 const definition: ListDefinition<Record<string, never>, 'NAME'> = {
   pageSizes: [10, 20, 50, 100],
   defaultPageSize: 20,
@@ -34,7 +36,7 @@ const definition: ListDefinition<Record<string, never>, 'NAME'> = {
 
 @Component({
   selector: 'holita-customers-page',
-  imports: [Message, PageHeader, RouterLink, TableModule, TablePanel],
+  imports: [FilterBuilder, Message, PageHeader, RouterLink, TableModule, TablePanel],
   templateUrl: './customers-page.html',
   host: { class: 'app-view' },
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +45,7 @@ export class CustomersPage {
   private readonly api = inject(CustomersApi);
   protected readonly language = inject(OperatorLanguage).value;
   protected readonly text = computed(() => operatorStrings[this.language()]);
+  protected readonly shared = computed(() => uiMessages[this.language()]);
   protected readonly scope = this.api.scope;
   protected readonly url = new UrlListState(definition, () => !!this.scope());
   protected readonly trackById = trackById;
@@ -62,13 +65,20 @@ export class CustomersPage {
       className: 'app-table-merged-column',
     },
   ]);
-  protected readonly list = resource({
-    params: () => this.scope() ?? undefined,
-    loader: ({ params }) => this.api.list(params),
+  private readonly params = computed(() => {
+    const scope = this.scope();
+    const { search, page, pageSize } = this.url.state();
+    return scope
+      ? { scope, variables: { offset: (page - 1) * pageSize, limit: pageSize, search } }
+      : undefined;
   });
-  protected readonly rows = linkedSignal<
-    { scope: ReturnType<CustomersApi['scope']>; data: CustomerRows | undefined },
-    CustomerRows | null
+  protected readonly list = resource({
+    params: this.params,
+    loader: ({ params }) => this.api.list(params.scope, params.variables),
+  });
+  protected readonly page = linkedSignal<
+    { scope: ReturnType<CustomersApi['scope']>; data: CustomerPage | undefined },
+    CustomerPage | null
   >({
     source: () => ({
       scope: this.scope(),
@@ -80,34 +90,29 @@ export class CustomersPage {
   protected readonly pagination = computed(() => ({
     page: this.url.state().page,
     pageSize: this.url.state().pageSize,
-    total: this.rows()?.length ?? 0,
+    total: this.page()?.total ?? 0,
   }));
   protected readonly detailQuery = computed(() => {
-    const { page, pageSize } = this.url.state();
+    const { search, page, pageSize } = this.url.state();
     return {
+      customersSearch: search || null,
       customersPage: page > 1 ? page : null,
       customersPageSize: pageSize !== definition.defaultPageSize ? pageSize : null,
     };
-  });
-  protected readonly pageRows = computed(() => {
-    const { page, pageSize } = this.pagination();
-    const offset = (page - 1) * pageSize;
-    return this.rows()?.slice(offset, offset + pageSize) ?? [];
   });
   protected readonly view = computed(() =>
     tableView({
       loading: this.list.isLoading(),
       error: this.list.error(),
-      rows: this.rows()?.length ?? null,
-      filtered: false,
+      rows: this.page()?.items.length ?? null,
+      filtered: !!this.url.state().search,
     }),
   );
 
   constructor() {
     effect(() => {
-      const rows = this.list.hasValue() && !this.list.isLoading() ? this.list.value() : null;
-      if (rows) {
-        this.url.correctPage(Math.ceil(rows.length / this.url.state().pageSize));
+      if (this.list.hasValue() && !this.list.isLoading()) {
+        this.url.correctPage(Math.ceil(this.list.value().total / this.url.state().pageSize));
       }
     });
   }

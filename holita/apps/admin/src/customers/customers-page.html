@@ -1,24 +1,35 @@
 <osnova-page-header [title]="text().customers" [moduleInfo]="text().customersInfo" />
 @if (scope()) {
 <osnova-table-panel
-  mode="local"
   mobileIdentityLayout="trailing"
+  [mobileFullWidthActions]="true"
   [heading]="text().shopCustomers"
   [columns]="columns()"
   [tableMinWidth]="tableMinWidth"
   [view]="view()"
   [busy]="list.isLoading()"
-  [total]="rows()?.length ?? null"
+  [total]="page()?.total ?? null"
   [page]="pagination()"
   [emptyTitle]="text().noCustomers"
   [errorText]="text().unavailable"
   (pageChange)="url.setPage($event)"
   (retry)="list.reload()"
+  (clearFilters)="url.clearFilters()"
 >
+  <osnova-filter-builder
+    panelActions
+    [mobileFullWidth]="true"
+    [searchLabel]="text().searchCustomers"
+    [search]="url.searchDraft()"
+    [searchError]="url.searchError() ? shared().searchTooManyWords : null"
+    (searchChange)="url.editSearch($event)"
+  />
   <p-table
     class="app-responsive-table app-table-fixed"
-    [value]="pageRows()"
+    [value]="page()?.items ?? []"
     [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
     [scrollable]="true"
     [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
     dataKey="id"
@@ -52,6 +63,7 @@
                 [queryParams]="detailQuery()"
                 [preserveFragment]="true"
                 [title]="customer.name"
+                (click)="url.cancelPending()"
                 >{{ customer.name }}</a
               >
               <span class="app-table-mobile-meta" [title]="customer.email">

@@ -105,6 +105,7 @@ export class CustomerDetail {
   private readonly queryParams = toSignal(this.route.queryParamMap, { requireSync: true });
   protected readonly fragment = toSignal(this.route.fragment, { requireSync: true });
   protected readonly backQuery = computed(() => ({
+    search: this.queryParams().get('customersSearch'),
     page: this.queryParams().get('customersPage'),
     pageSize: this.queryParams().get('customersPageSize'),
   }));

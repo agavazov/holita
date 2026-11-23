@@ -612,12 +612,13 @@ to return to the same list page. The Sofia demo shopper has placed, confirmed, s
 completed orders. The shipped example is marked paid. The storefront graph exposes `shopperOrders`
 and `shopperOrder` for this history.
 
-In Admin, open Customers and select a customer in the current shop. Use Edit contact to change
-the name or optional phone. The sign-in email is read-only. Add or edit saved addresses from the
-same page, and open any linked order from Order history. The Customers link returns to the list
-with its previous page and page size. Existing orders keep the contact and
-address details recorded on the order. The Sofia demo shop includes a customer with a phone,
-saved address and linked order. The operator graph exposes `customer`, `updateCustomerContact`,
+In Admin, open Customers to page through the current shop's customers or search by name or email.
+Use Edit contact to change a customer's name or optional phone. The sign-in email is read-only.
+Add or edit saved addresses from the same page, and open any linked order from Order history.
+The Customers link restores the previous search, page and page size. Existing orders keep the
+contact and address details recorded on the order. The Sofia demo shop includes enough customers
+for two pages, including a customer with a phone, saved address and linked order.
+The operator graph exposes `customers`, `customer`, `updateCustomerContact`,
 `createCustomerAddress`, `updateCustomerAddress` and the `customerId` filter on `orders`.
 
 In Admin, open Orders in the selected shop. Search by order number, contact name, email or phone,
@@ -629,10 +630,10 @@ surviving variants once. Use Mark as paid to record manual payment. Cancellation
 recorded payment. The operator graph exposes `orders`, `order`, `updateOrderStatus` and
 `markOrderPaid`.
 
-Choose Create manual order to record a phone order. Select a customer to link it to their
-shop order history or leave it as a guest order. Customer selection fills untouched contact
-fields using the account name and email, and the phone from its latest linked order when the email
-matches. Enter delivery details, add variants, select enabled payment and shipping methods, and
+Choose Create manual order to record a phone order. Search by customer name or email to link it to
+their shop order history, or leave the customer field empty for a guest order. Customer selection
+fills untouched contact fields using the account's current name, email and phone. Enter delivery
+details, add variants, select enabled payment and shipping methods, and
 optionally enter a private merchant note.
 Open a placed, unpaid manual order and choose Edit manual order to revise it. Commerce derives
 totals and adjusts stock by the change in held quantities. Existing lines retain their booked

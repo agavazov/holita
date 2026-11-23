@@ -47,7 +47,10 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
-import type { OperatorOrderDetailFragment } from '../generated/orders-operations';
+import type {
+  OperatorManualOrderCustomerFragment,
+  OperatorOrderDetailFragment,
+} from '../generated/orders-operations';
 import { orderAmount } from './order-format';
 import { OrdersApi, orderIdPattern } from './orders-api';
 
@@ -55,6 +58,8 @@ interface VariantChoice {
   id: string;
   label: string;
 }
+
+type CustomerChoice = OperatorManualOrderCustomerFragment & { label: string };
 
 interface LineChoice {
   lineId?: string;
@@ -81,6 +86,10 @@ const addressPaths = [
 
 function operatorFieldPath(path: string): string {
   return path.replace(/\.([a-z0-9])/gu, (_, initial: string) => initial.toUpperCase());
+}
+
+function customerChoice(customer: OperatorManualOrderCustomerFragment): CustomerChoice {
+  return { ...customer, label: `${customer.name} · ${customer.email}` };
 }
 
 @Component({
@@ -145,7 +154,10 @@ export class ManualOrderEditor {
     params: this.params,
     loader: async ({ params: { scope, id } }) => {
       const order = id ? await this.api.find(scope, id) : null;
-      const choices = !id || order?.canEditManualOrder ? await this.api.manualChoices(scope) : null;
+      const choices =
+        !id || order?.canEditManualOrder
+          ? await this.api.manualChoices(scope, order?.customerId ?? null)
+          : null;
       return { order, choices };
     },
   });
@@ -176,16 +188,44 @@ export class ManualOrderEditor {
     () =>
       this.canWrite() && !!this.choices() && (!this.editing || this.order()?.canEditManualOrder),
   );
-  protected readonly customerOptions = computed(() => [
-    { id: '', label: this.text().guestOrder, name: '', email: '', phone: '' },
-    ...(this.choices()?.customers ?? []).map(({ id, name, email, phone }) => ({
-      id,
-      name,
-      email,
-      phone: phone ?? '',
-      label: `${name} · ${email}`,
-    })),
-  ]);
+  private readonly customerSearch = signal<string | null>(null);
+  private readonly customerSearchInvalid = computed(
+    () => !searchApplies(this.customerSearch() ?? ''),
+  );
+  protected readonly customers = resource({
+    params: () => {
+      const scope = this.api.scope();
+      const search = this.customerSearch();
+      return scope && this.canEdit() && search !== null && !this.customerSearchInvalid()
+        ? { scope, search }
+        : undefined;
+    },
+    loader: ({ params, abortSignal }) =>
+      this.api.manualCustomers(params.scope, params.search, abortSignal),
+  });
+  protected readonly customerOptions = computed<CustomerChoice[]>(() => {
+    if (this.customers.isLoading()) {
+      return [];
+    }
+    return [
+      ...(this.customerSearch() === ''
+        ? [{ id: '', label: this.text().guestOrder, name: '', email: '', phone: null }]
+        : []),
+      ...(this.customers.hasValue() ? this.customers.value().map(customerChoice) : []),
+    ];
+  });
+  protected readonly customerEmptyMessage = computed(() => {
+    if (this.customers.isLoading()) {
+      return this.shared().loading;
+    }
+    if (this.customerSearchInvalid()) {
+      return this.shared().searchTooManyWords;
+    }
+    if (this.customers.error()) {
+      return this.text().manualOrderCustomersUnavailable;
+    }
+    return this.shared().table.noResultsTitle;
+  });
   protected readonly paymentOptions = computed(() => {
     const options = this.choices()?.manualOrderMethods.paymentMethods ?? [];
     const order = this.order();
@@ -215,6 +255,8 @@ export class ManualOrderEditor {
   protected readonly saveError = signal<string | null>(null);
   private readonly errors = signal<Partial<Record<string, string>>>({});
   private readonly autofilledContact = new Set<(typeof contactKeys)[number]>();
+  private selectedCustomer: CustomerChoice | null = null;
+  protected readonly customerPicker = new FormControl<CustomerChoice | string | null>(null);
   protected readonly form = this.builder.group({
     customerId: '',
     contact: this.builder.group({
@@ -322,6 +364,9 @@ export class ManualOrderEditor {
     effect(() => {
       this.params();
       const order = this.loadedOrder();
+      const customer = this.choices()?.customerContact;
+      this.selectedCustomer = customer ? customerChoice(customer) : null;
+      this.customerPicker.reset(this.selectedCustomer);
       this.autofilledContact.clear();
       this.form.reset({
         customerId: order?.customerId ?? '',
@@ -334,9 +379,17 @@ export class ManualOrderEditor {
         shippingMethodId: order?.shippingMethodId ?? '',
       });
       this.resetLines(order?.lines ?? []);
+      this.customerSearch.set(null);
       this.search.set(null);
       this.errors.set({});
       this.saveError.set(null);
+    });
+    effect(() => {
+      if (this.saving()) {
+        this.customerPicker.disable();
+      } else {
+        this.customerPicker.enable();
+      }
     });
     lockWhileSaving(this.form, this.saving, () => {
       this.focusError();
@@ -347,19 +400,43 @@ export class ManualOrderEditor {
     return !this.saving() && this.drawer().confirmLeave(this.form.dirty);
   }
 
-  protected customerChanged(): void {
-    this.clearError('customerId');
-    const selected = this.customerOptions().find(
-      ({ id }) => id === this.form.controls.customerId.value,
-    );
-    if (!selected) {
+  protected searchCustomers(query: string): void {
+    this.customerSearch.set(normalizeSearch(query));
+  }
+
+  protected clearCustomerSearch(): void {
+    this.customerSearch.set(null);
+  }
+
+  protected restoreCustomerSelection(): void {
+    if (this.customerPicker.value !== this.selectedCustomer) {
+      this.customerPicker.setValue(this.selectedCustomer);
+    }
+  }
+
+  protected customerChanged(value: unknown): void {
+    const selected = this.customerOptions().find((option) => option === value);
+    if (!selected || this.saving()) {
       return;
     }
+    const customerId = this.form.controls.customerId;
+    if (customerId.value !== selected.id) {
+      customerId.setValue(selected.id);
+      customerId.markAsDirty();
+    }
+    this.selectedCustomer = selected.id ? selected : null;
+    this.restoreCustomerSelection();
+    this.clearCustomerSearch();
+    this.clearError('customerId');
     const contact = this.form.controls.contact.controls;
     for (const key of contactKeys) {
       const field = contact[key];
       if (field.pristine && (this.autofilledContact.has(key) || !field.value.trim())) {
-        field.setValue(selected[key]);
+        const contactValue = selected[key] ?? '';
+        if (field.value !== contactValue) {
+          field.setValue(contactValue);
+          this.form.markAsDirty();
+        }
         this.autofilledContact.add(key);
         this.clearError(`contact.${key}`);
       }
