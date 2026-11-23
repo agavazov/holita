@@ -14,19 +14,19 @@ import {
   CommerceRepository,
   ConflictingVariantQuantityError,
   DuplicateSkuError,
-  ImmutableVariantCombinationError,
   InvalidImageIdError,
   InvalidMarkerIdError,
   InvalidVariantIdError,
   VariantOutstandingDeductionsError,
 } from './commerce.repository.js';
-import { requireScope, type RequestContext, type Scope } from '../scope.js';
+import { requireScope, type RequestContext } from '../scope.js';
 import {
   ProductImages,
   productImageUrl,
   validateProductImages,
   type ProductImageWrite,
 } from './product-images.js';
+import { VariantOptionValuesError } from './product-variant-options.js';
 
 type ProductRow = Awaited<ReturnType<CommerceRepository['save']>>['row'];
 
@@ -242,7 +242,7 @@ export class CommerceService {
       tagIds: markerIds(requestedTagIds, 'tagIds'),
     };
     const data = productFields(fields);
-    const variants = await this.variants(scope, requested, id !== undefined);
+    const variants = this.variants(requested, id !== undefined);
     const drafts = validateProductImages(requestedImages, id !== undefined);
     const newKeys: string[] = [];
     let saved: Awaited<ReturnType<CommerceRepository['save']>>;
@@ -281,13 +281,13 @@ export class CommerceService {
       if (error instanceof InvalidVariantIdError) {
         throw variantError(error.index, 'id', 'INVALID_VALUE', error.message);
       }
-      if (error instanceof ImmutableVariantCombinationError) {
+      if (error instanceof VariantOptionValuesError) {
         throw new UnprocessableEntityException({
           message: error.message,
           fieldErrors: [
             {
               path: `variants.${String(error.index)}.optionValueIds`,
-              code: 'VARIANT_COMBINATION_IMMUTABLE',
+              code: error.code,
               message: error.message,
             },
           ],
@@ -342,14 +342,13 @@ export class CommerceService {
     return product(saved.row);
   }
 
-  private async variants(scope: Scope, input: ProductInput['variants'], updating: boolean) {
+  private variants(input: ProductInput['variants'], updating: boolean) {
     if (input.length === 0) {
       throw fieldError('variants', 'REQUIRED', 'Add a product variant');
     }
     const ids = new Set<string>();
     const skus = new Set<string>();
-    const combinations = new Set<string>();
-    const variants = input.map(
+    return input.map(
       (
         {
           id: rawId,
@@ -414,16 +413,6 @@ export class CommerceService {
             'Choose values from this shop',
           );
         }
-        const key = optionValueIds.join(',');
-        if (combinations.has(key)) {
-          throw variantError(
-            index,
-            'optionValueIds',
-            'DUPLICATE_COMBINATION',
-            'This product already has this combination',
-          );
-        }
-        combinations.add(key);
         return {
           ...(id ? { id } : {}),
           sku,
@@ -432,39 +421,10 @@ export class CommerceService {
           inventoryTracked,
           active,
           optionValueIds,
-          combinationKey: createHash('sha256').update(key).digest('hex'),
+          combinationKey: createHash('sha256').update(optionValueIds.join(',')).digest('hex'),
           sortOrder: index,
         };
       },
     );
-    const valueIds = [...new Set(variants.flatMap((variant) => variant.optionValueIds))];
-    if (!valueIds.length) {
-      return variants;
-    }
-    const values = await this.repository.optionValues(scope, valueIds);
-    const optionsByValue = new Map(values.map(({ id, optionId }) => [id, optionId]));
-    let expectedOptions: string | undefined;
-    for (const [index, variant] of variants.entries()) {
-      const optionIds = variant.optionValueIds.map((id) => optionsByValue.get(id));
-      if (optionIds.includes(undefined) || new Set(optionIds).size !== optionIds.length) {
-        throw variantError(
-          index,
-          'optionValueIds',
-          'INVALID_OPTION_VALUES',
-          'Choose one value per option from this shop',
-        );
-      }
-      const options = optionIds.sort().join(',');
-      expectedOptions ??= options;
-      if (options !== expectedOptions) {
-        throw variantError(
-          index,
-          'optionValueIds',
-          'MISMATCHED_OPTIONS',
-          'Use the same options in each variant',
-        );
-      }
-    }
-    return variants;
   }
 }

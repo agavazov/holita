@@ -524,10 +524,11 @@ that value. Variants with stock still eligible for restoration can be deactivate
 
 In Admin, open a product and edit its Variants section. Leave option values empty for the
 default variant of a simple product. For a configurable product, add one row per combination
-and choose one value from each of the same options in every row. Each variant has a shop-unique
+and choose one value from each of the same options in every active row. Each variant has a shop-unique
 SKU, price, inventory tracking and status. A saved variant keeps its combination. To offer a
 different combination, add a new variant and set its own initial quantity if tracked. Set the
-original variant to Inactive to stop selling it.
+original variant to Inactive to stop selling it. When a simple product gains options, set its
+original variant to Inactive and keep it for any stock that may still need to be restored.
 For a saved variant, search Inventory by product name or SKU, then open the variant to view its
 details or set its tracked stock count. Filter by tracking status or show only tracked variants
 with zero stock.

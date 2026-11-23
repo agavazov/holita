@@ -548,7 +548,7 @@
   "productImageIdInvalid": "This photo is no longer attached to the product.",
   "brandUnavailable": "Choose a brand from this shop.",
   "variants": "Variants",
-  "variantOptionsHint": "For a simple product, leave the option values empty. For combinations, select one value from the same options in each variant.",
+  "variantOptionsHint": "For a simple product, leave the option values empty. For combinations, select one value from the same options in each active variant.",
   "variantSavedOptionsHint": "Add a variant for a different combination.",
   "variantNoOptions": "Add values under Options to create combinations.",
   "defaultVariant": "Default variant",
@@ -571,8 +571,8 @@
   "variantDuplicateCombination": "This product already has this combination.",
   "variantCombinationImmutable": "The saved combination is fixed. Use Add variant to choose different option values.",
   "variantInvalidValues": "Choose one value per option from this shop.",
-  "variantMismatchedOptions": "Use the same options in every variant.",
+  "variantMismatchedOptions": "Use the same options in every active variant.",
   "variantUnavailable": "This variant changed. Reopen the product to refresh it.",
   "variantOutstandingDeductionRemoval": "This variant still has stock to restore. Reopen the product and set the variant to Inactive.",
-  "optionValueInUse": "Product variants use the removed value. Cancel and reopen the option, or remove the value from the affected variants first."
+  "optionValueInUse": "Product variants use this option value. Remove those variants once their stock no longer needs to be restored, then delete the value."
 }

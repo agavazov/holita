@@ -18,6 +18,7 @@ import {
   catalogueVariantValues,
   productRelations,
 } from './product-relations.js';
+import { validateVariantOptions, VariantOptionValuesError } from './product-variant-options.js';
 
 type ProductFields = Omit<
   ProductInput,
@@ -196,13 +197,6 @@ export class CommerceRepository {
     });
   }
 
-  optionValues(scope: Scope, ids: string[]) {
-    return this.database.client.optionValue.findMany({
-      where: { ...scope, id: { in: ids } },
-      select: { id: true, optionId: true },
-    });
-  }
-
   save(
     scope: Scope,
     id: string | undefined,
@@ -233,13 +227,25 @@ export class CommerceRepository {
           throw new InvalidVariantIdError(index);
         }
         if (variant.combinationKey !== existing.combinationKey) {
-          throw new ImmutableVariantCombinationError(index);
+          throw new VariantOptionValuesError(
+            index,
+            'VARIANT_COMBINATION_IMMUTABLE',
+            'Add a new variant for a different combination',
+          );
         }
         if (variant.quantity !== undefined && variant.quantity !== existing.quantity) {
           throw new ConflictingVariantQuantityError(index);
         }
         return { ...variant, quantity: existing.quantity };
       });
+      const valueIds = [...new Set(replacements.flatMap((variant) => variant.optionValueIds))];
+      const optionValues = valueIds.length
+        ? await tx.optionValue.findMany({
+            where: { ...scope, id: { in: valueIds } },
+            select: { id: true, optionId: true },
+          })
+        : [];
+      validateVariantOptions(replacements, optionValues);
       const conflicting = await tx.productVariant.findFirst({
         where: {
           ...scope,
@@ -412,12 +418,6 @@ export class DuplicateSkuError extends Error {
 export class InvalidVariantIdError extends Error {
   constructor(readonly index: number) {
     super('Choose a variant from this product');
-  }
-}
-
-export class ImmutableVariantCombinationError extends Error {
-  constructor(readonly index: number) {
-    super('Add a new variant for a different combination');
   }
 }
 

@@ -1007,7 +1007,7 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
         {
           extensions: {
             code: 'BAD_USER_INPUT',
-            fieldErrors: [{ path: 'variants.0.optionValueIds' }],
+            fieldErrors: [{ path: 'variants0OptionValueIds', code: 'INVALID_OPTION_VALUES' }],
           },
         },
       ],
@@ -1839,6 +1839,53 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
 
   const saveProduct =
     'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){variants{id quantity optionValueIds}}}';
+  const simple = await database.productVariant.findFirstOrThrow({
+    where: { ...categoryScope, sku: 'Draft' },
+  });
+  const simpleDraft = {
+    id: simple.id,
+    sku: simple.sku,
+    price: '1.00',
+    inventoryTracked: false,
+    optionValueIds: [],
+  };
+  const configureSimple = (active: boolean) =>
+    query(tokens.operator, publicA, saveProduct, {
+      id: simple.productId,
+      input: {
+        name: 'Draft',
+        status: 'DRAFT',
+        variants: [
+          { ...simpleDraft, active },
+          {
+            sku: 'Draft-Blue',
+            price: '1.50',
+            inventoryTracked: false,
+            active: true,
+            optionValueIds: [blue.id],
+          },
+        ],
+      },
+    });
+  expect(await configureSimple(false)).toEqual({
+    data: {
+      updateProduct: {
+        variants: [
+          { id: simple.id, quantity: simple.quantity, optionValueIds: [] },
+          { id: expect.any(String), quantity: 0, optionValueIds: [blue.id] },
+        ],
+      },
+    },
+  });
+  expect(await configureSimple(true)).toMatchObject({
+    errors: [
+      {
+        extensions: {
+          fieldErrors: [{ path: 'variants1OptionValueIds', code: 'MISMATCHED_OPTIONS' }],
+        },
+      },
+    ],
+  });
   const redDraft = {
     id: variant.id,
     sku: variant.sku,
@@ -2144,7 +2191,22 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   const replacement = await database.productVariant.findFirstOrThrow({
     where: { ...categoryScope, productId: variant.productId, sku: blueDraft.sku },
   });
+  const savedBlue = { ...blueDraft, id: replacement.id };
   expect(replacement.id).not.toBe(variant.id);
+  expect(await saveVariants([{ ...redDraft, optionValueIds: [blue.id] }, savedBlue])).toMatchObject(
+    {
+      data: null,
+      errors: [
+        {
+          extensions: {
+            fieldErrors: [
+              { path: 'variants0OptionValueIds', code: 'VARIANT_COMBINATION_IMMUTABLE' },
+            ],
+          },
+        },
+      ],
+    },
+  );
   expect(await cart()).toMatchObject({
     data: {
       cart: {
@@ -2187,7 +2249,6 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     ],
   });
 
-  const savedBlue = { ...blueDraft, id: replacement.id };
   expect(await saveVariants([{ ...redDraft, price: '5.00' }, savedBlue])).toEqual({
     data: {
       updateProduct: {
