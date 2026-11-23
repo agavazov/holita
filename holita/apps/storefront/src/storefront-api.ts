@@ -31,6 +31,7 @@ import {
   RemoveCartDiscountDocument,
   RemoveCartLineDocument,
   ShopperMeDocument,
+  ShopperOrderConfirmationDocument,
   ShopperOrderDocument,
   ShopperOrdersDocument,
   SignInShopperDocument,
@@ -299,5 +300,10 @@ export class StorefrontApi {
   async guestOrderConfirmation(shopId: string, cartId: string, guestCartToken: string) {
     return (await this.read(shopId, GuestOrderConfirmationDocument, { cartId }, { guestCartToken }))
       .guestOrderConfirmation;
+  }
+
+  async shopperOrderConfirmation(shopId: string, cartId: string, shopperToken: string) {
+    return (await this.read(shopId, ShopperOrderConfirmationDocument, { cartId }, { shopperToken }))
+      .shopperOrderConfirmation;
   }
 }

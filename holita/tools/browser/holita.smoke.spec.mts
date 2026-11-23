@@ -1774,35 +1774,42 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const placementRoute = '**/graphql';
     const isPlacement = (body: string | null) =>
       body?.includes('"operationName":"PlaceOrder"') === true;
-    let placeRequests = 0;
-    let committedPlacement: unknown;
-    await guestOrder.route(placementRoute, async (route) => {
-      if (!isPlacement(route.request().postData())) {
-        return route.continue();
-      }
-      placeRequests += 1;
-      if (placeRequests === 2) {
-        committedPlacement = await (await route.fetch()).json();
-      }
-      await route.abort();
-    });
-    const interruptPlacement = async () => {
-      const interrupted = guestOrder.waitForEvent('requestfailed', (request) =>
-        isPlacement(request.postData()),
-      );
-      await guestOrder.getByRole('button', { name: 'Place order', exact: true }).click();
-      await interrupted;
+    const interruptCheckout = async (page: Page) => {
+      let placementCount = 0;
+      let committedPlacement: unknown;
+      await page.route(placementRoute, async (route) => {
+        if (!isPlacement(route.request().postData())) {
+          return route.continue();
+        }
+        placementCount += 1;
+        if (placementCount === 2) {
+          committedPlacement = await (await route.fetch()).json();
+        }
+        await route.abort();
+      });
+      return {
+        place: async () => {
+          const interrupted = page.waitForEvent('requestfailed', (request) =>
+            isPlacement(request.postData()),
+          );
+          await page.getByRole('button', { name: 'Place order', exact: true }).click();
+          await interrupted;
+          return committedPlacement;
+        },
+        requestCount: () => placementCount,
+      };
     };
-    await interruptPlacement();
+    const interruptedGuestCheckout = await interruptCheckout(guestOrder);
+    await interruptedGuestCheckout.place();
     const activeCheckout = waitForCart(guestOrder, 'Checkout');
     await guestOrder.reload();
     expect(await (await activeCheckout).json()).toMatchObject({
       data: { checkout: { cart: { itemCount: 1 } } },
     });
     await quoteCheckout(guestOrder, '25.50', '32.00');
-    expect(placeRequests).toBe(1);
+    expect(interruptedGuestCheckout.requestCount()).toBe(1);
 
-    await interruptPlacement();
+    const committedPlacement = await interruptedGuestCheckout.place();
     expect(committedPlacement).toMatchObject({ data: { placeOrder: { id: expect.any(String) } } });
     const shoppingTab = await guestOrderContext.newPage();
     await shoppingTab.goto(configuredProductUrl);
@@ -1835,7 +1842,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     expect(await recovered.json()).toMatchObject({
       data: { guestOrderConfirmation: { id: orderId } },
     });
-    expect(placeRequests).toBe(2);
+    expect(interruptedGuestCheckout.requestCount()).toBe(2);
     await guestOrder.unroute(placementRoute);
     const { rows: cartOrders } = await commerceDb.client.query(
       'SELECT "id" FROM "order" WHERE "tenantId" = $1 AND "branchId" = $2 AND "cartId" = $3',
@@ -1913,16 +1920,88 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const discountedQuote = { discountCode, discountAmount: '3.00' };
     const chargedTotal = '33.50';
     await reviewCheckout(shopper, '30.00', chargedTotal, discountedQuote);
-    const placedDiscounted = waitForCart(shopper, 'PlaceOrder');
-    await shopper.getByRole('button', { name: 'Place order', exact: true }).click();
-    await shopper.waitForURL(`${shopApp.origin}/s/${shopId}/checkout/confirmation/*`);
+    const interruptedAccountCheckout = await interruptCheckout(shopper);
+    const pendingAccountCart = () =>
+      shopper.evaluate((id) => sessionStorage.getItem(`holita.shopper-checkout.${id}`), shopId);
+    await interruptedAccountCheckout.place();
+    const accountCartId = await pendingAccountCart();
+    if (!accountCartId) {
+      throw new Error('Missing pending checkout cart for the signed-in shopper');
+    }
+    const [uncommittedAccount, activeAccountCheckout] = await Promise.all([
+      waitForCart(shopper, 'ShopperOrderConfirmation'),
+      waitForCart(shopper, 'Checkout'),
+      shopper.reload(),
+    ]);
+    expect(await uncommittedAccount.json()).toEqual({ data: { shopperOrderConfirmation: null } });
+    expect(await activeAccountCheckout.json()).toMatchObject({
+      data: { checkout: { cart: { itemCount: 1 } } },
+    });
+    await expect.poll(pendingAccountCart).toBeNull();
+    await quoteCheckout(shopper, '30.00', chargedTotal, discountedQuote);
+
+    const committedAccountPlacement = await interruptedAccountCheckout.place();
+    const [recoveredAccount, accountReceipt] = await Promise.all([
+      waitForCart(shopper, 'ShopperOrderConfirmation'),
+      waitForCart(shopper, 'OrderConfirmation'),
+      shopper.reload(),
+    ]);
+    await expect(shopper).toHaveURL(/\/checkout\/confirmation\/[^/]+$/);
     const accountOrderId = new URL(shopper.url()).pathname.split('/').at(-1);
     if (!accountOrderId) {
       throw new Error('Missing account order ID in the confirmation route');
     }
-    expect(await (await placedDiscounted).json()).toMatchObject({
-      data: { placeOrder: { id: accountOrderId, total: chargedTotal, ...discountedQuote } },
+    const expectedAccountOrder = { id: accountOrderId, total: chargedTotal, ...discountedQuote };
+    expect(committedAccountPlacement).toMatchObject({ data: { placeOrder: expectedAccountOrder } });
+    expect(await recoveredAccount.json()).toMatchObject({
+      data: { shopperOrderConfirmation: { id: accountOrderId } },
     });
+    expect(await accountReceipt.json()).toMatchObject({
+      data: { orderConfirmation: expectedAccountOrder },
+    });
+    await expect(shopper.getByRole('heading', { name: 'Order placed', exact: true })).toBeVisible();
+    await expect.poll(pendingAccountCart).toBeNull();
+    expect(interruptedAccountCheckout.requestCount()).toBe(2);
+    await shopper.unroute(placementRoute);
+
+    const otherShopper = await shopperContext.newPage();
+    await otherShopper.addInitScript(() => {
+      sessionStorage.setItem('holita.storefront.language', 'en');
+    });
+    await otherShopper.goto(`${shopApp.origin}/s/${shopId}/register`);
+    await otherShopper.locator('#name').fill('Unrelated shopper');
+    await otherShopper.locator('#email').fill(`unrelated-${randomUUID()}@example.test`);
+    await secretFill(otherShopper.locator('#password'), `Temporary-${randomUUID()}`);
+    await otherShopper.getByRole('button', { name: 'Register', exact: true }).click();
+    await expect(otherShopper).toHaveURL(`${shopApp.origin}/s/${shopId}/account`);
+    const otherToken = await otherShopper.evaluate(
+      (id) => sessionStorage.getItem(`holita.shopper.${id}`),
+      shopId,
+    );
+    await otherShopper.close();
+    const ownerAuthorization = await recoveredAccount.request().headerValue('authorization');
+    if (!otherToken || !ownerAuthorization) {
+      throw new Error('Missing shopper authorization for the checkout isolation checks');
+    }
+    const missingAccountOrder = { data: { shopperOrderConfirmation: null } };
+    const unauthorizedOrder = {
+      ...missingAccountOrder,
+      errors: [{ path: ['shopperOrderConfirmation'] }],
+    };
+    for (const [branchId, authorization, expected] of [
+      [shopId, `Bearer ${otherToken}`, missingAccountOrder],
+      [secondShopId, ownerAuthorization, unauthorizedOrder],
+      [shopId, null, unauthorizedOrder],
+    ] as const) {
+      const denied = await shopper.request.post(`${shopApp.origin}/graphql`, {
+        headers: { 'x-branch-id': branchId, ...(authorization ? { authorization } : {}) },
+        data: {
+          query: 'query($cartId: ID!) { shopperOrderConfirmation(cartId: $cartId) { id } }',
+          variables: { cartId: accountCartId },
+        },
+      });
+      expect(await denied.json()).toMatchObject(expected);
+    }
     await guestOrder.goto(cartUrl);
     expect(await applyPromo(guestOrder)).toMatchObject({
       errors: [

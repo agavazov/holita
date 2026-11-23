@@ -429,6 +429,7 @@ type Query {
   checkout: CheckoutState
   orderConfirmation(orderId: ID!): OrderConfirmation
   guestOrderConfirmation(cartId: ID!): OrderConfirmation
+  shopperOrderConfirmation(cartId: ID!): OrderConfirmation
 }
 type Mutation {
   registerShopper(name: String!, email: String!, password: String!): ShopperSession!

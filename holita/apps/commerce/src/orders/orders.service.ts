@@ -506,6 +506,21 @@ export class OrdersService {
     return order ? confirmation(order) : null;
   }
 
+  async shopperConfirmation(
+    { tenantId, branchId, customerId }: ShopperScope,
+    cartId: string,
+  ): Promise<OrderConfirmation | null> {
+    if (!isUUID(cartId)) {
+      return null;
+    }
+    const order = await this.orders.findConfirmationForCart(
+      { tenantId, branchId },
+      cartId.toLowerCase(),
+      { customerId },
+    );
+    return order ? confirmation(order) : null;
+  }
+
   place(context: CartContext, input: PlaceOrderInput): Promise<OrderConfirmation> {
     const { scope, customerId } = context;
     const owner = cartOwner(context);

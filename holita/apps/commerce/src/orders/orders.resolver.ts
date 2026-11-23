@@ -4,6 +4,7 @@ import type {
   QueryGuestOrderConfirmationArgs,
   QueryOrderConfirmationArgs,
   QueryShopperOrderArgs,
+  QueryShopperOrderConfirmationArgs,
   QueryShopperOrdersArgs,
 } from '../generated/graphql/storefront-types.js';
 import { StorefrontService, type StorefrontContext } from '../storefront.service.js';
@@ -40,6 +41,14 @@ export class OrdersResolver {
     @Args() { cartId }: QueryGuestOrderConfirmationArgs,
   ) {
     return this.orders.guestConfirmation(await this.storefront.cartContext(context), cartId);
+  }
+
+  @Query('shopperOrderConfirmation')
+  async shopperConfirmation(
+    @Context() context: StorefrontContext,
+    @Args() { cartId }: QueryShopperOrderConfirmationArgs,
+  ) {
+    return this.orders.shopperConfirmation(await this.storefront.requireShopper(context), cartId);
   }
 
   @Mutation('placeOrder')

@@ -29,6 +29,36 @@ export function shopperStorageKey(shopId: string) {
   return `holita.shopper.${shopId}`;
 }
 
+export function setShopperSession(shopId: string, token: string | null) {
+  const key = shopperStorageKey(shopId);
+  if (sessionStorage.getItem(key) !== token) {
+    sessionStorage.removeItem(pendingShopperCheckoutKey(shopId));
+  }
+  if (token) {
+    sessionStorage.setItem(key, token);
+  } else {
+    sessionStorage.removeItem(key);
+  }
+}
+
+function pendingShopperCheckoutKey(shopId: string) {
+  return `holita.shopper-checkout.${shopId}`;
+}
+
+export function pendingShopperCheckout(shopId: string) {
+  return sessionStorage.getItem(pendingShopperCheckoutKey(shopId));
+}
+
+export function rememberPendingShopperCheckout(shopId: string, cartId: string) {
+  sessionStorage.setItem(pendingShopperCheckoutKey(shopId), cartId);
+}
+
+export function forgetPendingShopperCheckout(shopId: string, cartId: string) {
+  if (pendingShopperCheckout(shopId) === cartId) {
+    sessionStorage.removeItem(pendingShopperCheckoutKey(shopId));
+  }
+}
+
 function guestCartStorageKey(shopId: string) {
   return `holita.cart.${shopId}`;
 }
@@ -259,7 +289,7 @@ export class CartState {
     if (shopId !== this.shopId() || sessionStorage.getItem(key) !== shopperToken) {
       return false;
     }
-    sessionStorage.removeItem(key);
+    setShopperSession(shopId, null);
     this.sessionExpired.set(true);
     return true;
   }

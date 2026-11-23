@@ -36,6 +36,7 @@ import {
   guestCartToken,
   maxCartQuantity,
   quantityControl,
+  setShopperSession,
   shopperStorageKey,
   type CartWriteError,
 } from './cart-state';
@@ -870,7 +871,7 @@ class StorefrontPage {
               { email: input.email, password: input.password },
               guestToken,
             );
-      sessionStorage.setItem(shopperStorageKey(shopId), result.token);
+      setShopperSession(shopId, result.token);
       forgetGuestCart(shopId, guestToken);
       if (!this.destroy.destroyed && this.shopId() === shopId) {
         const destination = guestToken ? 'cart' : 'account';
@@ -896,7 +897,7 @@ class StorefrontPage {
     try {
       await this.api.signOut(shopId, token);
       if (sessionStorage.getItem(key) === token) {
-        sessionStorage.removeItem(key);
+        setShopperSession(shopId, null);
       }
       if (!this.destroy.destroyed && this.shopId() === shopId) {
         this.shopper.set(null);

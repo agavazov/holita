@@ -35,7 +35,7 @@
           formGroupName="contact"
         >
           <h2 id="contact-heading">{{ t().contactDetails }}</h2>
-          <div class="checkout-fields">
+          <div class="checkout-fields checkout-contact-fields">
             @for (field of contactFields; track field.name) { @let control =
             form.controls.contact.controls[field.name]; @let error = fieldError('contact.' +
             field.name, control);

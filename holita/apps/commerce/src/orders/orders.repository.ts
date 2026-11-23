@@ -224,10 +224,14 @@ export class OrdersRepository {
     owner: CartOwner,
     tx: Prisma.TransactionClient = this.database.client,
   ) {
+    const ownership =
+      'customerId' in owner
+        ? { ...owner, cart: { ...scope, ...owner, consumedAt: { not: null } } }
+        : confirmationOwnership(scope, owner);
     return tx.order.findUnique({
       where: {
         tenantId_branchId_cartId: { ...scope, cartId },
-        ...confirmationOwnership(scope, owner),
+        ...ownership,
       },
       include: { lines: orderLines(scope) },
     });

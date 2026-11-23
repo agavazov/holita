@@ -26,12 +26,14 @@ import {
   cartNotFound,
   forgetGuestCart,
   forgetPendingGuestCheckout,
+  forgetPendingShopperCheckout,
   pendingGuestCheckout,
+  pendingShopperCheckout,
   promoProblems,
   promoRejection,
   rememberGuestReceipt,
   rememberPendingGuestCheckout,
-  type GuestCheckoutAttempt,
+  rememberPendingShopperCheckout,
   type PromoProblem,
 } from './cart-state';
 import { checkoutCountries, defaultCountryCode } from './checkout-countries';
@@ -143,6 +145,9 @@ export class CheckoutPage {
     params: () => this.cartState.shopId(),
     loader: async ({ params: shopId, abortSignal }) => {
       const { credentials, pending } = this.checkoutOwner(shopId);
+      if (credentials.shopperToken) {
+        return this.readShopperCheckout(shopId, credentials.shopperToken, abortSignal);
+      }
       if (!pending) {
         return this.readCheckout(shopId, credentials, abortSignal);
       }
@@ -157,7 +162,7 @@ export class CheckoutPage {
       const order = await this.api.guestOrderConfirmation(shopId, pending.cartId, pending.token);
       abortSignal.throwIfAborted();
       if (order) {
-        await this.finishCheckout(shopId, order.id, pending);
+        await this.finishCheckout(shopId, order.id, pending.cartId, credentials);
         return null;
       }
       forgetPendingGuestCheckout(shopId, pending);
@@ -308,23 +313,24 @@ export class CheckoutPage {
     } = reviewed;
     this.problem.set(null);
     this.placing.set(true);
-    const pending = credentials.guestCartToken
-      ? { cartId, token: credentials.guestCartToken }
-      : null;
+    const { shopperToken, guestCartToken } = credentials;
+    const guestAttempt = guestCartToken ? { cartId, token: guestCartToken } : null;
     try {
-      if (pending) {
-        rememberPendingGuestCheckout(shopId, pending);
+      if (shopperToken) {
+        rememberPendingShopperCheckout(shopId, cartId);
+      } else if (guestAttempt) {
+        rememberPendingGuestCheckout(shopId, guestAttempt);
       }
       const order = await this.api.placeOrder(shopId, credentials, {
         ...this.form.getRawValue(),
         cartId,
         quoteRevision,
       });
-      await this.finishCheckout(shopId, order.id, pending);
+      await this.finishCheckout(shopId, order.id, cartId, credentials);
     } catch (error) {
-      if (pending && cartNotFound(error)) {
-        forgetPendingGuestCheckout(shopId, pending);
-        forgetGuestCart(shopId, pending.token);
+      if (guestAttempt && cartNotFound(error)) {
+        forgetPendingGuestCheckout(shopId, guestAttempt);
+        forgetGuestCart(shopId, guestAttempt.token);
       }
       if (!this.destroy.destroyed && !this.cartState.expireSession(shopId, credentials, error)) {
         this.showRejection(error, 'orderPlacementFailed');
@@ -338,6 +344,33 @@ export class CheckoutPage {
     const credentials = this.cartState.credentials(shopId);
     const pending = credentials.shopperToken ? null : pendingGuestCheckout(shopId);
     return { credentials: pending ? { guestCartToken: pending.token } : credentials, pending };
+  }
+
+  private async readShopperCheckout(
+    shopId: string,
+    shopperToken: string,
+    abortSignal: AbortSignal,
+  ) {
+    const credentials = { shopperToken };
+    const cartId = pendingShopperCheckout(shopId);
+    if (cartId) {
+      try {
+        const order = await this.api.shopperOrderConfirmation(shopId, cartId, shopperToken);
+        abortSignal.throwIfAborted();
+        if (order) {
+          await this.finishCheckout(shopId, order.id, cartId, credentials);
+          return null;
+        }
+        forgetPendingShopperCheckout(shopId, cartId);
+      } catch (error) {
+        abortSignal.throwIfAborted();
+        if (this.cartState.expireSession(shopId, credentials, error)) {
+          return null;
+        }
+        throw error;
+      }
+    }
+    return this.readCheckout(shopId, credentials, abortSignal);
   }
 
   private async readCheckout(
@@ -365,16 +398,27 @@ export class CheckoutPage {
   private async finishCheckout(
     shopId: string,
     orderId: string,
-    pending: GuestCheckoutAttempt | null,
+    cartId: string,
+    { guestCartToken, shopperToken }: StorefrontCredentials,
   ) {
-    if (pending) {
-      rememberGuestReceipt(shopId, orderId, pending.token);
-      forgetPendingGuestCheckout(shopId, pending);
+    if (guestCartToken) {
+      rememberGuestReceipt(shopId, orderId, guestCartToken);
+      forgetPendingGuestCheckout(shopId, { cartId, token: guestCartToken });
     }
-    if (!this.destroy.destroyed && this.cartState.shopId() === shopId) {
-      await this.router.navigate(['/s', shopId, 'checkout', 'confirmation', orderId], {
-        replaceUrl: true,
-      });
+    if (
+      !this.destroy.destroyed &&
+      this.cartState.shopId() === shopId &&
+      (!shopperToken || this.cartState.credentials(shopId).shopperToken === shopperToken)
+    ) {
+      const opened = await this.router.navigate(
+        ['/s', shopId, 'checkout', 'confirmation', orderId],
+        {
+          replaceUrl: true,
+        },
+      );
+      if (opened && shopperToken) {
+        forgetPendingShopperCheckout(shopId, cartId);
+      }
     }
   }
 
