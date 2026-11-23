@@ -2497,14 +2497,19 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     expect(await setOrderStatus(accountOrderId, 'COMPLETED')).toEqual({
       data: { updateOrderStatus: { id: accountOrderId, status: 'COMPLETED' } },
     });
-    await commerceDb.client.query(
-      `UPDATE "order" SET "placedAt" = CURRENT_TIMESTAMP - INTERVAL '10 days'
-       WHERE "tenantId" = $1 AND "branchId" = $2 AND "id" = $3`,
-      [shopScope.tenantId, shopId, accountOrderId],
-    );
+    const dateDashboardOrder = (daysFromNow: number) =>
+      commerceDb.client.query(
+        `UPDATE "order" SET "placedAt" = CURRENT_TIMESTAMP + $4::integer * INTERVAL '1 day'
+         WHERE "tenantId" = $1 AND "branchId" = $2 AND "id" = $3`,
+        [shopScope.tenantId, shopId, accountOrderId, daysFromNow],
+      );
+    await dateDashboardOrder(10);
     const defaultDashboard = waitForCart(merchant, 'OperatorShopDashboard');
     await merchant.getByRole('link', { name: 'Dashboard', exact: true }).click();
-    await defaultDashboard;
+    expect(await (await defaultDashboard).json()).toMatchObject({
+      data: { shopDashboard: { recentOrders: [{ id: manualId }, { id: orderId }] } },
+    });
+    await dateDashboardOrder(-10);
     for (const [days, period, orderCount, completedRevenue] of [
       ['7', 'DAYS_7', 2, '0.00'],
       ['14', 'DAYS_14', 3, chargedTotal],
@@ -2527,6 +2532,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
                 placedAt: expect.any(String),
                 total: '66.50',
               }),
+              expect.objectContaining({ id: accountOrderId }),
             ]),
           },
         },
@@ -2534,7 +2540,6 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     }
     const linkedOrder = waitForCart(merchant, 'OperatorOrder');
     await merchant.getByRole('link', { name: `H-${manualId}`, exact: true }).click();
-    await merchant.waitForURL((url) => url.pathname.endsWith(`/orders/${manualId}`));
     expect(await (await linkedOrder).json()).toMatchObject({ data: { order: { id: manualId } } });
 
     await merchant.getByRole('link', { name: 'Dashboard', exact: true }).click();

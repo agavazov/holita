@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  linkedSignal,
+  resource,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -24,7 +31,10 @@ import { Message } from 'primeng/message';
 import { SelectButton } from 'primeng/selectbutton';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
-import type { DashboardPeriod } from '../generated/dashboard-operations';
+import type {
+  DashboardPeriod,
+  OperatorShopDashboardQuery,
+} from '../generated/dashboard-operations';
 import { orderAmount, orderStatusSeverity, orderStatusText } from '../orders/order-format';
 import { DashboardApi } from './dashboard-api';
 
@@ -33,6 +43,8 @@ const periods = [
   { days: '14', period: 'DAYS_14' },
   { days: '30', period: 'DAYS_30' },
 ] as const satisfies readonly { days: string; period: DashboardPeriod }[];
+
+type RecentOrders = OperatorShopDashboardQuery['shopDashboard']['recentOrders'];
 
 @Component({
   selector: 'holita-dashboard-page',
@@ -81,9 +93,6 @@ export class DashboardPage {
   });
   protected readonly data = computed(() =>
     this.dashboard.hasValue() ? this.dashboard.value() : null,
-  );
-  protected readonly error = computed(() =>
-    this.dashboard.error() ? this.text().dashboardUnavailable : null,
   );
   protected readonly range = computed(() => {
     const data = this.data();
@@ -161,12 +170,20 @@ export class DashboardPage {
     },
     { id: 'total', label: this.text().orderTotal, width: '9rem', kind: 'number' },
   ]);
-  protected readonly recent = computed(() => this.data()?.recentOrders ?? []);
+  protected readonly recent = linkedSignal<
+    { scope: ReturnType<DashboardApi['scope']>; orders: RecentOrders | undefined },
+    RecentOrders | null
+  >({
+    source: () => ({ scope: this.scope(), orders: this.data()?.recentOrders }),
+    computation: (current, previous) =>
+      current.orders ?? (previous?.source.scope === current.scope ? previous.value : null),
+  });
+  protected readonly recentTotal = computed(() => this.recent()?.length ?? null);
   protected readonly view = computed(() =>
     tableView({
-      loading: this.dashboard.isLoading(),
+      loading: this.dashboard.isLoading() && this.recentTotal() === null,
       error: this.dashboard.error(),
-      rows: this.data()?.recentOrders.length ?? null,
+      rows: this.recentTotal(),
       filtered: false,
     }),
   );

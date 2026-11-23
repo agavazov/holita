@@ -21,7 +21,7 @@ export class DashboardRepository {
             where: { ...scope, inventoryTracked: true, quantity: 0 },
           }),
           this.database.client.order.findMany({
-            where: scope,
+            where: { ...scope, placedAt: { lt: asOf } },
             select: {
               id: true,
               orderNumber: true,
