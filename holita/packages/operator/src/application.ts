@@ -12,7 +12,14 @@ import {
   untracked,
 } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { provideRouter, Router, RouterOutlet, type Routes } from '@angular/router';
+import {
+  PRIMARY_OUTLET,
+  provideRouter,
+  Router,
+  RouterOutlet,
+  UrlSegment,
+  type Routes,
+} from '@angular/router';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import {
@@ -57,6 +64,7 @@ interface OperatorOptions {
     path: string;
   }[];
   selectBranch: boolean;
+  retainRouteContext?: boolean;
 }
 const OPERATOR_OPTIONS = new InjectionToken<OperatorOptions>('operator application');
 
@@ -219,7 +227,9 @@ export class OperatorApplication {
         this.language.value(),
       );
       this.session.start(session);
-      await this.router.navigate(this.homeLink());
+      if (!this.options.retainRouteContext) {
+        await this.router.navigate(this.homeLink());
+      }
     } catch (error: unknown) {
       this.error.set(
         requestError(
@@ -232,6 +242,16 @@ export class OperatorApplication {
     }
   }
   changeLanguage(language: Language): void {
+    if (this.options.retainRouteContext) {
+      const url = this.router.parseUrl(this.router.url);
+      const primary = url.root.children[PRIMARY_OUTLET];
+      const current = primary?.segments[0];
+      if (primary && current) {
+        primary.segments[0] = new UrlSegment(language, current.parameters);
+        void this.router.navigateByUrl(url);
+        return;
+      }
+    }
     void this.router.navigate([
       '/',
       language,

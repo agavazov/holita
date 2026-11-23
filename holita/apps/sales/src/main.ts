@@ -9,6 +9,7 @@ void startOperator({
   name: 'sales',
   defaultPage: 'merchants',
   selectBranch: false,
+  retainRouteContext: true,
   routes: [
     {
       path: '',
@@ -16,32 +17,34 @@ void startOperator({
       children: [
         { path: 'merchants', component: MerchantsPage },
         { path: 'merchants/:id', component: MerchantDetailPage },
+      ],
+    },
+    {
+      path: 'leads',
+      component: SalesWorkspaceStatus,
+      data: { requireSalesAccess: true },
+      children: [
         {
-          path: 'leads',
+          path: '',
+          component: LeadsPage,
           children: [
             {
-              path: '',
-              component: LeadsPage,
-              children: [
-                {
-                  path: 'new',
-                  component: LeadEditor,
-                  data: { drawer: true, mode: 'create' },
-                  canDeactivate: [leaveDrawer],
-                },
-              ],
+              path: 'new',
+              component: LeadEditor,
+              data: { drawer: true, mode: 'create' },
+              canDeactivate: [leaveDrawer],
             },
+          ],
+        },
+        {
+          path: ':recordId',
+          component: LeadDetailPage,
+          children: [
             {
-              path: ':recordId',
-              component: LeadDetailPage,
-              children: [
-                {
-                  path: 'edit',
-                  component: LeadEditor,
-                  data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
-                  canDeactivate: [leaveDrawer],
-                },
-              ],
+              path: 'edit',
+              component: LeadEditor,
+              data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+              canDeactivate: [leaveDrawer],
             },
           ],
         },

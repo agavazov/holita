@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
-import { PRIMARY_OUTLET, Router, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { UI_LANGUAGE, uiMessages } from '@osnova/ui';
 import { ButtonDirective } from 'primeng/button';
@@ -29,12 +29,10 @@ const messages = { bg, en };
           </button>
         </div>
       }
-    } @else if (access.hasValue()) {
-      @if (onMerchants()) {
-        <p-message severity="success" [pt]="statusMessage">{{
-          text().salesAccessGranted
-        }}</p-message>
-      }
+    } @else if (!requireSalesAccess && access.hasValue()) {
+      <p-message severity="success" [pt]="statusMessage">{{ text().salesAccessGranted }}</p-message>
+    }
+    @if (!requireSalesAccess || (!access.isLoading() && access.hasValue())) {
       <router-outlet hidden />
     }
   `,
@@ -42,12 +40,8 @@ const messages = { bg, en };
 export class SalesWorkspaceStatus {
   private readonly api = inject(SalesWorkspaceApi);
   private readonly language = inject(UI_LANGUAGE);
-  private readonly router = inject(Router);
-  protected readonly onMerchants = computed(
-    () =>
-      this.router.lastSuccessfulNavigation()?.finalUrl?.root.children[PRIMARY_OUTLET]?.segments[1]
-        ?.path === 'merchants',
-  );
+  protected readonly requireSalesAccess =
+    inject(ActivatedRoute).snapshot.data['requireSalesAccess'] === true;
   protected readonly text = computed(() => messages[this.language()]);
   protected readonly retryLabel = computed(() => uiMessages[this.language()].retry);
   protected readonly statusMessage = { root: { role: 'status', 'aria-live': 'polite' } };

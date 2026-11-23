@@ -66,32 +66,27 @@
         </th>
         <th scope="col" class="app-table-merged-column">{{ text().leadWebsiteUrl }}</th>
         <th scope="col" class="app-table-merged-column">{{ text().leadSourceName }}</th>
-        <th scope="col" class="app-num" pSortableColumn="CREATED_AT">
+        <th scope="col" pSortableColumn="CREATED_AT">
           {{ text().leadCreatedAt }} <p-sort-icon field="CREATED_AT" />
         </th>
       </tr>
     </ng-template>
     <ng-template #body let-lead>
-      @let label = leadLabel(lead);
+      @let label = leadLabel(lead); @let secondary = lead.sourceName ?? (lead.displayName ?
+      lead.websiteUrl : null);
       <tr>
         <td class="app-col-identity">
           <div class="app-cell-identity">
             <a
-              class="app-link app-table-identity-wrap"
+              class="app-link app-cell-truncate"
               [routerLink]="[lead.id]"
               queryParamsHandling="preserve"
               [preserveFragment]="true"
               [title]="label"
               >{{ label }}</a
             >
-            @if (lead.displayName && lead.websiteUrl) {
-            <span class="app-table-mobile-meta" [title]="lead.websiteUrl ?? ''"
-              >{{ lead.websiteUrl }}</span
-            >
-            } @if (lead.sourceName) {
-            <span class="app-table-mobile-meta" [title]="lead.sourceName"
-              >{{ lead.sourceName }}</span
-            >
+            @if (secondary) {
+            <span class="app-table-mobile-meta" [title]="secondary">{{ secondary }}</span>
             }
           </div>
         </td>
@@ -105,7 +100,7 @@
             >{{ lead.sourceName ?? '—' }}</span
           >
         </td>
-        <td class="app-num">
+        <td class="app-cell-date">
           <time [attr.datetime]="lead.createdAt" [title]="format.utc(lead.createdAt)"
             >{{ format.dateTime(lead.createdAt) }}</time
           >

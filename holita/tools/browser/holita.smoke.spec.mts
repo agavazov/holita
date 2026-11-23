@@ -831,8 +831,10 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const leadId = new URL(leadUrl).pathname.split('/').pop();
     expect(leadId).toBeTruthy();
 
-    await sales.goto(new URL('/en/leads', leadUrl).href);
-    await expect(sales.getByRole('link', { name: website, exact: true })).toBeVisible();
+    await Promise.all([
+      waitForOperation(sales, salesEndpoint, 'SalesLeads'),
+      sales.goto(new URL('/en/leads#prospects', leadUrl).href),
+    ]);
     const listRequest = waitForOperation(sales, salesEndpoint, 'SalesLeads');
     await sales.getByRole('searchbox').fill('ръчна smoke-studio');
     const listResponse = await listRequest;
@@ -852,14 +854,25 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await sales.getByRole('button', { name: 'Edit lead', exact: true }).click();
     const updatedName = 'Ателие за тестова керамика';
     await sales.locator('#lead-displayName').fill(updatedName);
-    await sales.getByRole('button', { name: 'Save', exact: true }).click();
-    await dismissSuccess(sales, 'Lead saved.');
+    await Promise.all([
+      waitForOperation(sales, salesEndpoint, 'SalesUpdateLead'),
+      sales.getByRole('button', { name: 'Save', exact: true }).click(),
+    ]);
     await sales.waitForURL(
       (url) => url.pathname === new URL(leadUrl).pathname && url.searchParams.has('search'),
     );
-    const readRequest = waitForOperation(sales, salesEndpoint, 'SalesLead');
-    await sales.goto(leadUrl);
-    const readResult: unknown = await (await readRequest).json();
+    const detailUrl = new URL(sales.url());
+    const bulgarianUrl = new URL(detailUrl);
+    bulgarianUrl.pathname = detailUrl.pathname.replace('/en/', '/bg/');
+    const resumedSales = await browser.newPage();
+    cleanup.push(() => resumedSales.close());
+    await resumedSales.goto(bulgarianUrl.href);
+    const [leadRead] = await Promise.all([
+      waitForOperation(resumedSales, salesEndpoint, 'SalesLead'),
+      signIn(resumedSales, salesEmail, salesPassword),
+    ]);
+    await resumedSales.waitForURL(detailUrl.href);
+    const readResult: unknown = await leadRead.json();
     expect(readResult).toMatchObject({
       data: {
         lead: {
@@ -870,6 +883,9 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         },
       },
     });
+    await resumedSales.getByRole('button', { name: /^Language:/u }).click();
+    await resumedSales.getByText('Български', { exact: true }).click();
+    await resumedSales.waitForURL(bulgarianUrl.href);
 
     const referralName = 'Ателие за тестови свещи';
     const referralSource = 'Препоръка';

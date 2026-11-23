@@ -481,7 +481,8 @@ accounts with the `SALES` role. The IDs identify the verified platform tenant an
 Core user. CRM scope comes from that platform tenant, independent of Branch selection. In Sales,
 open **Leads** to find prospects by name, website or source. **New lead** requires a name or
 an HTTP(S) website and opens the saved prospect at its own address. Use **Edit lead** on the
-prospect page to update it. The operator graph provides `leads`, `lead`, `createLead` and
+prospect page to update it. Sales preserves the current list or record URL through sign-in and
+language changes. The operator graph provides `leads`, `lead`, `createLead` and
 `updateLead` to authorized Sales accounts. The Holita demo seed inserts two fictional prospects.
 
 Existing Holita checkouts need `HOLITA_COMMERCE_IMAGE_DIR` in `holita/config/commerce.env`.
