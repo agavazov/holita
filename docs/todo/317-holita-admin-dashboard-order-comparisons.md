@@ -1,10 +1,10 @@
 # 317 Compare order activity with the previous dashboard period
 
-**Status:** Ready after [127](127-holita-dashboard.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-red.bg's merchant dashboard compares order activity with a preceding period and breaks it down by order status. Holita has a basic shop dashboard in 127 and a separate sales report in 221 with its own order population.
+red.bg's merchant dashboard compares order activity with a preceding period and breaks it down by order status. Holita has a basic shop dashboard and a separate sales report in 221 with its own order population.
 
 ## Goal
 

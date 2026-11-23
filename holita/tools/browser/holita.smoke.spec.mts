@@ -1809,6 +1809,9 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await shoppingTab.getByRole('button', { name: 'EN', exact: true }).click();
     await addSatin(shoppingTab);
     await shoppingTab.close();
+    const recoveredReceipt = waitForCart(guestOrder, 'OrderConfirmation').then((response) =>
+      response.json(),
+    );
     const [recovered] = await Promise.all([
       waitForCart(guestOrder, 'GuestOrderConfirmation'),
       guestOrder.reload(),
@@ -1850,9 +1853,14 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       throw new Error('Missing tracked variant for the guest order');
     }
     expect(simpleVariant.quantity).toBe(0);
-    const receipt = waitForCart(guestOrder, 'OrderConfirmation');
+    expect(await recoveredReceipt).toMatchObject({
+      data: { orderConfirmation: expectedOrder },
+    });
+    const receipt = waitForCart(guestOrder, 'OrderConfirmation').then((response) =>
+      response.json(),
+    );
     await guestOrder.reload();
-    expect(await (await receipt).json()).toMatchObject({
+    expect(await receipt).toMatchObject({
       data: { orderConfirmation: expectedOrder },
     });
     for (const [branchId, credential] of [
@@ -2060,7 +2068,10 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     expect(await operatorRouter(inventoryRead, trackedVariant)).toEqual({
       data: { inventoryVariant: { ...trackedVariant, quantity: 4 } },
     });
-    const setOrderStatus = (id: string, status: 'PROCESSING' | 'SHIPPED' | 'CANCELLED') =>
+    const setOrderStatus = (
+      id: string,
+      status: 'PROCESSING' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED',
+    ) =>
       operatorRouter(
         'mutation($id:ID!,$status:OrderStatus!){updateOrderStatus(id:$id,status:$status){id status}}',
         { id, status },
@@ -2483,6 +2494,77 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     expect(await operatorRouter(inventoryRead, simpleVariantId)).toEqual({
       data: { inventoryVariant: { ...simpleVariantId, quantity: 0 } },
     });
+    expect(await setOrderStatus(accountOrderId, 'COMPLETED')).toEqual({
+      data: { updateOrderStatus: { id: accountOrderId, status: 'COMPLETED' } },
+    });
+    await commerceDb.client.query(
+      `UPDATE "order" SET "placedAt" = CURRENT_TIMESTAMP - INTERVAL '10 days'
+       WHERE "tenantId" = $1 AND "branchId" = $2 AND "id" = $3`,
+      [shopScope.tenantId, shopId, accountOrderId],
+    );
+    const defaultDashboard = waitForCart(merchant, 'OperatorShopDashboard');
+    await merchant.getByRole('link', { name: 'Dashboard', exact: true }).click();
+    await defaultDashboard;
+    for (const [days, period, orderCount, completedRevenue] of [
+      ['7', 'DAYS_7', 2, '0.00'],
+      ['14', 'DAYS_14', 3, chargedTotal],
+    ] as const) {
+      const dashboardRead = waitForCart(merchant, 'OperatorShopDashboard');
+      await merchant.getByRole('button', { name: `${days} days`, exact: true }).click();
+      expect(await (await dashboardRead).json()).toMatchObject({
+        data: {
+          shopDashboard: {
+            period,
+            orderCount,
+            completedRevenue,
+            outOfStockVariantCount: 2,
+            recentOrders: expect.arrayContaining([
+              expect.objectContaining({
+                id: manualId,
+                status: 'PLACED',
+                number: `H-${manualId}`,
+                currency: 'BGN',
+                placedAt: expect.any(String),
+                total: '66.50',
+              }),
+            ]),
+          },
+        },
+      });
+    }
+    const linkedOrder = waitForCart(merchant, 'OperatorOrder');
+    await merchant.getByRole('link', { name: `H-${manualId}`, exact: true }).click();
+    await merchant.waitForURL((url) => url.pathname.endsWith(`/orders/${manualId}`));
+    expect(await (await linkedOrder).json()).toMatchObject({ data: { order: { id: manualId } } });
+
+    await merchant.getByRole('link', { name: 'Dashboard', exact: true }).click();
+    const shopPicker = merchant.locator('.app-topbar__branch').getByRole('button');
+    const switchDashboardShop = async (name: string, id: string): Promise<unknown> => {
+      await shopPicker.click();
+      const read = merchant.waitForResponse((response) => {
+        const request = response.request();
+        return (
+          request.headers()['x-branch-id'] === id &&
+          request.postData()?.includes('"operationName":"OperatorShopDashboard"') === true
+        );
+      });
+      await merchant.getByRole('menuitem', { name, exact: true }).click();
+      return (await read).json();
+    };
+    expect(await switchDashboardShop('Second shop', secondShopId)).toMatchObject({
+      data: {
+        shopDashboard: {
+          orderCount: 0,
+          completedRevenue: '0.00',
+          newCustomerCount: 0,
+          outOfStockVariantCount: 0,
+          recentOrders: [],
+        },
+      },
+    });
+    await switchDashboardShop('First shop', shopId);
+    await merchant.getByRole('link', { name: 'Products', exact: true }).click();
+
     for (const status of ['CANCELLED', 'CANCELLED'] as const) {
       expect(await setOrderStatus(orderId, status)).toEqual({
         data: { updateOrderStatus: { id: orderId, status } },

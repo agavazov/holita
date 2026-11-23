@@ -22,6 +22,7 @@ export const operationPaths = [
   'holita/apps/admin/src/categories/operations.graphql',
   'holita/apps/admin/src/collections/operations.graphql',
   'holita/apps/admin/src/customers/operations.graphql',
+  'holita/apps/admin/src/dashboard/operations.graphql',
   'holita/apps/admin/src/discounts/operations.graphql',
   'holita/apps/admin/src/inventory/operations.graphql',
   'holita/apps/admin/src/navigation/operations.graphql',
@@ -80,6 +81,10 @@ export const targets = {
       {
         path: 'holita/apps/admin/src/generated/customers-operations.ts',
         operations: ['holita/apps/admin/src/customers/operations.graphql'],
+      },
+      {
+        path: 'holita/apps/admin/src/generated/dashboard-operations.ts',
+        operations: ['holita/apps/admin/src/dashboard/operations.graphql'],
       },
       {
         path: 'holita/apps/admin/src/generated/discounts-operations.ts',

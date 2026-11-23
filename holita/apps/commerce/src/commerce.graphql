@@ -891,7 +891,44 @@ input ShippingMethodInput {
   fixedFee: String!
 }
 
+enum DashboardPeriod {
+  DAYS_7
+  DAYS_14
+  DAYS_30
+}
+
+type DashboardDay {
+  date: String!
+  orderCount: Int!
+  completedRevenue: String!
+}
+
+type DashboardOrder {
+  id: ID!
+  number: String!
+  placedAt: String!
+  status: OrderStatus!
+  total: String!
+  currency: String!
+}
+
+type ShopDashboard {
+  period: DashboardPeriod!
+  startDate: String!
+  endDate: String!
+  asOf: String!
+  timeZone: String!
+  currency: String!
+  orderCount: Int!
+  completedRevenue: String!
+  newCustomerCount: Int!
+  outOfStockVariantCount: Int!
+  daily: [DashboardDay!]!
+  recentOrders: [DashboardOrder!]!
+}
+
 type Query {
+  shopDashboard(period: DashboardPeriod! = DAYS_30): ShopDashboard!
   paymentMethods(offset: Int! = 0, limit: Int! = 20, search: String): PaymentMethodPage!
   paymentMethod(id: ID!): PaymentMethod
   shippingMethods(offset: Int! = 0, limit: Int! = 20, search: String): ShippingMethodPage!

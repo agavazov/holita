@@ -21,6 +21,7 @@ import { CustomerAddressEditor } from './customers/customer-address-editor';
 import { CustomerContactEditor } from './customers/customer-contact-editor';
 import { CustomerDetail } from './customers/customer-detail';
 import { CustomersPage } from './customers/customers-page';
+import { DashboardPage } from './dashboard/dashboard-page';
 import { DiscountEditor } from './discounts/discount-editor';
 import { DiscountsPage } from './discounts/discounts-page';
 import { InventoryEditor } from './inventory/inventory-editor';
@@ -58,6 +59,7 @@ void startOperator({
   defaultPage: 'products',
   selectBranch: true,
   routes: [
+    { path: 'dashboard', component: DashboardPage },
     {
       path: 'products',
       component: ProductsPage,
@@ -405,6 +407,7 @@ void startOperator({
     },
   ],
   navigation: [
+    { id: 'dashboard', label: 'dashboard', icon: 'th-large', path: 'dashboard' },
     { id: 'products', label: 'products', icon: 'box', path: 'products' },
     { id: 'inventory', label: 'inventory', icon: 'warehouse', path: 'inventory' },
     { id: 'categories', label: 'categories', icon: 'th-large', path: 'categories' },

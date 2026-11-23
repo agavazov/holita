@@ -1,0 +1,7 @@
+.dashboard-period {
+  flex-wrap: wrap;
+}
+
+.dashboard-charts {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+}

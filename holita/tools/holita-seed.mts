@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { extname, isAbsolute, join, resolve } from 'node:path';
 import { config } from 'dotenv';
@@ -14,6 +14,8 @@ import {
   demoCharacteristicGroups,
   demoCollections,
   demoCustomerDetail,
+  demoDashboardCustomer,
+  demoDashboardOrders,
   demoDiscounts,
   demoInvoice,
   demoInvoicedManualOrder,
@@ -513,6 +515,7 @@ async function seedCatalogue(): Promise<void> {
       await seedOrderInvoice(client, tenantId, branchId, invoice);
     }
     await seedCustomerDetail(client, tenantId, branchId);
+    await seedDashboard(client, tenantId, branchId);
     await client.query('COMMIT');
     console.log(
       `Demo catalogue inserted ${String(brandsInserted)} brands, ${String(categoriesInserted)} categories, ${String(optionsInserted)} options, ${String(productsInserted)} products, ${String(collectionsInserted)} collections, ${String(characteristicGroupsInserted)} characteristic groups and ${String(imagesInserted)} product images.`,
@@ -666,11 +669,81 @@ async function seedCustomerDetail(client: pg.Client, tenantId: string, branchId:
   );
 }
 
+async function seedDashboard(client: pg.Client, tenantId: string, branchId: string) {
+  const { rows } = await client.query<{ daysAgo: number; noon: Date }>(
+    `SELECT days AS "daysAgo",
+       (date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Sofia') -
+        days * INTERVAL '1 day' + INTERVAL '12 hours') AT TIME ZONE 'Europe/Sofia' AS noon
+     FROM unnest($1::integer[]) AS offsets(days)`,
+    [demoDashboardOrders.map(({ daysAgo }) => daysAgo)],
+  );
+  const noons = new Map(rows.map(({ daysAgo, noon }) => [daysAgo, noon]));
+  const customer = demoDashboardCustomer;
+  const customerId = fixtureId('d2', customer.id);
+  const customerNoon = noons.get(customer.daysAgo);
+  if (!customerNoon) {
+    throw new Error('Missing demo dashboard customer date');
+  }
+  await client.query(
+    `INSERT INTO "customer" ("id", "tenantId", "branchId", "name", "email", "phone", "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING`,
+    [
+      customerId,
+      tenantId,
+      branchId,
+      customer.name,
+      customer.email,
+      customer.phone,
+      new Date(customerNoon.getTime() - 3_600_000),
+    ],
+  );
+  for (const { id, lineId, daysAgo, quantity, status, subtotal, total } of demoDashboardOrders) {
+    const noon = noons.get(daysAgo);
+    if (!noon) {
+      throw new Error('Missing demo dashboard order date');
+    }
+    const placedAt = noon.toISOString();
+    const contact =
+      daysAgo <= customer.daysAgo
+        ? { ...customer, customerId }
+        : { name: 'Виктория Илиева', email: 'viktoria-127@example.test', guest: true };
+    const fulfillment = ['placed', 'confirmed', 'processing', 'shipped', 'completed'];
+    await seedShopperOrder(client, tenantId, branchId, contact, {
+      id,
+      status,
+      subtotal,
+      total,
+      placedAt,
+      paidAt: null,
+      statusChanges:
+        status === 'completed'
+          ? fulfillment
+              .slice(1)
+              .map((to, index) => [
+                fulfillment[index],
+                to,
+                new Date(noon.getTime() + (index + 1) * 3_600_000).toISOString(),
+              ])
+          : [],
+      phone: customer.phone,
+      city: 'София',
+      postalCode: '1000',
+      address: 'ул. „Шипка“ 27',
+      lines: [{ ...demoManualOrder.line, id: lineId, quantity }],
+    });
+  }
+}
+
 async function seedShopperOrder(
   client: pg.Client,
   tenantId: string,
   branchId: string,
-  contact: { readonly name: string; readonly email: string; readonly customerId?: string },
+  contact: {
+    readonly name: string;
+    readonly email: string;
+    readonly customerId?: string;
+    readonly guest?: boolean;
+  },
   fixture: DemoShopperOrder,
 ) {
   const {
@@ -690,19 +763,33 @@ async function seedShopperOrder(
   const cartId = fixtureId('e2', id + 1);
   const orderId = fixtureId('d5', id);
   const variantIds = lines.map(({ variant }) => fixtureId('92', variant));
+  const guestTokenHash = contact.guest ? randomBytes(32).toString('hex') : null;
   const {
     rows: [cart],
-  } = await client.query<{ customerId: string }>(
-    `INSERT INTO "cart" ("id", "tenantId", "branchId", "customerId", "createdAt", "updatedAt", "consumedAt")
-     SELECT $1, "tenantId", "branchId", "id", $5, $5, $5 FROM "customer"
-     WHERE "tenantId" = $2 AND "branchId" = $3 AND lower("email") = $4
-       AND ($7::uuid IS NULL OR "id" = $7)
-       AND (SELECT COUNT(*) FROM "productVariant"
+  } = await client.query<{ customerId: string | null }>(
+    `INSERT INTO "cart" ("id", "tenantId", "branchId", "customerId", "guestTokenHash", "createdAt", "updatedAt", "consumedAt")
+     SELECT $1, $2, $3, owner."id", $8, $5, $5, $5
+     FROM (
+       SELECT "id" FROM "customer"
+       WHERE "tenantId" = $2 AND "branchId" = $3 AND lower("email") = $4
+         AND ($7::uuid IS NULL OR "id" = $7) AND $8::text IS NULL
+       UNION ALL SELECT NULL::uuid WHERE $8::text IS NOT NULL
+     ) AS owner
+     WHERE (SELECT COUNT(*) FROM "productVariant"
          WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = ANY($6::uuid[])
            AND NOT "inventoryTracked"
        ) = cardinality($6::uuid[])
      ON CONFLICT DO NOTHING RETURNING "customerId"`,
-    [cartId, tenantId, branchId, contact.email, placedAt, variantIds, contact.customerId ?? null],
+    [
+      cartId,
+      tenantId,
+      branchId,
+      contact.email,
+      placedAt,
+      variantIds,
+      contact.customerId ?? null,
+      guestTokenHash,
+    ],
   );
   if (!cart) {
     return;

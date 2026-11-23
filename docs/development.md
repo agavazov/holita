@@ -484,6 +484,16 @@ before saving. The operator graph reports individual photo errors with flat keys
 `image0Upload`, `image0Id` and `image0AltText`. Indexes start at zero. The demo catalogue includes
 covers and a three-photo gallery for the „Орех“ baking pot.
 
+Open **Dashboard** in Admin for the selected shop's order count, completed order revenue, new
+customers and tracked variants at zero stock. Choose 7, 14 or 30 days (the default). The date window
+includes today in Europe/Sofia and groups orders by placement day. Revenue sums the saved BGN
+totals of completed orders, including delivery. Current stock and the eight latest orders stay
+independent of the period. An order number opens its Order Detail page.
+
+The operator graph exposes this read as `shopDashboard(period: DashboardPeriod! = DAYS_30)`.
+The period covers the date range, dated totals and daily chart values. It also returns the current
+stock count and recent orders. The selected shop comes from the verified operator scope.
+
 In Admin, use Categories to create, move and reorder shop categories. The Product drawer assigns
 one category per product. The public `catalogueCategories` query returns the active tree, and the
 storefront shows each product's active category path in its breadcrumbs. A hidden ancestor

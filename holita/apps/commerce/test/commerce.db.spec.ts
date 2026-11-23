@@ -155,6 +155,7 @@ beforeAll(async () => {
     '20261122220000_shop_blog',
     '20261122230000_shop_navigation',
     '20261123000000_shop_settings',
+    '20261123010000_dashboard_customer_created_at',
   ]) {
     await connection.query(
       await readFile(
@@ -616,6 +617,38 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
   ).resolves.toBeDefined();
   const otherCustomer = await database.customer.create({
     data: { ...customerScope, name: 'Other customer', email: 'other@example.test' },
+  });
+  await database.customer.create({
+    data: {
+      tenantId: tenantB,
+      branchId: branchA,
+      name: 'Foreign customer',
+      email: 'foreign@example.test',
+    },
+  });
+  const dashboard =
+    '{shopDashboard{period orderCount completedRevenue newCustomerCount outOfStockVariantCount recentOrders{id}}}';
+  const emptyDashboard = {
+    period: 'DAYS_30',
+    orderCount: 0,
+    completedRevenue: '0.00',
+    newCustomerCount: 0,
+    outOfStockVariantCount: 0,
+    recentOrders: [],
+  };
+  for (const [token, branch, newCustomerCount, outOfStockVariantCount] of [
+    [tokens.viewer, branchA, 2, 0],
+    [tokens.viewer, branchB, 1, 1],
+    [tokens.viewer, publicA, 0, 0],
+    [tokens.foreign, branchForeign, 0, 1],
+  ] as const) {
+    expect(await query(token, branch, dashboard)).toEqual({
+      data: { shopDashboard: { ...emptyDashboard, newCustomerCount, outOfStockVariantCount } },
+    });
+  }
+  expect(await query(tokens.foreign, branchA, dashboard)).toMatchObject({
+    data: null,
+    errors: [{ message: 'Branch is unavailable' }],
   });
   const contact = { name: 'Updated customer', phone: '+359 200 000' };
   const address = {

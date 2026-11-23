@@ -1,0 +1,130 @@
+<osnova-page-header [title]="text().dashboard" [moduleInfo]="text().dashboardInfo" />
+
+@if (scope()) {
+<div class="app-card">
+  <div class="app-card__header dashboard-period">
+    <div class="app-page-actions">
+      <strong id="dashboard-period">{{ text().dashboardPeriod }}</strong>
+      <p-selectbutton
+        [options]="periodOptions()"
+        [ngModel]="selectedPeriod().days"
+        (ngModelChange)="changeDays($event)"
+        optionLabel="label"
+        optionValue="value"
+        ariaLabelledBy="dashboard-period"
+        [allowEmpty]="false"
+      />
+    </div>
+    @if (range(); as dates) {
+    <span class="app-muted">{{ dates }} · {{ asOf() }}</span>
+    }
+  </div>
+</div>
+
+<osnova-kpi-strip
+  [label]="text().dashboard"
+  [loading]="dashboard.isLoading()"
+  [error]="error()"
+  (retry)="dashboard.reload()"
+>
+  <osnova-kpi-tile [label]="text().orders" [value]="orderCount()" />
+  <osnova-kpi-tile [label]="text().dashboardCompletedRevenue" [value]="completedRevenue()" />
+  <osnova-kpi-tile [label]="text().dashboardNewCustomers" [value]="newCustomers()" />
+  <osnova-kpi-tile
+    [label]="text().dashboardOutOfStockVariants"
+    [value]="outOfStock()"
+    [footnote]="text().dashboardCurrentStock"
+  />
+</osnova-kpi-strip>
+
+@if (series(); as points) {
+<div class="app-card-grid dashboard-charts">
+  <section class="app-card">
+    <h2 class="app-card__title">{{ text().dashboardDailyOrders }}</h2>
+    <osnova-column-series
+      [label]="text().dashboardDailyOrders"
+      [points]="points.orders"
+      [highlightLast]="false"
+    />
+  </section>
+  <section class="app-card">
+    <h2 class="app-card__title">{{ text().dashboardDailyRevenue }}</h2>
+    <osnova-column-series
+      [label]="text().dashboardDailyRevenue"
+      [points]="points.revenue"
+      [highlightLast]="false"
+    />
+  </section>
+</div>
+} @if (!error()) {
+<osnova-table-panel
+  mode="local"
+  mobileIdentityLayout="trailing"
+  [heading]="text().dashboardRecentOrders"
+  [columns]="columns()"
+  [view]="view()"
+  [total]="data()?.recentOrders.length ?? null"
+  [busy]="dashboard.isLoading()"
+  [emptyTitle]="text().ordersEmpty"
+  [skeletonRows]="3"
+  tableMinWidth="36rem"
+>
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="recent()"
+    [rowTrackBy]="trackById"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    dataKey="id"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+        <col [class]="column.className ?? ''" [style.width]="column.width" />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity">{{ text().order }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().orderDate }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().orderStatus }}</th>
+        <th scope="col" class="app-cell-number">{{ text().orderTotal }}</th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-order>
+      @let status = statusText(order.status, language()); @let severity =
+      statusSeverity(order.status); @let total = amount(order.total, order.currency, language());
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-cell-identity">
+            <a
+              class="app-link app-table-identity-wrap"
+              [routerLink]="['/', language(), 'orders', order.id]"
+            >
+              {{ order.number }}
+            </a>
+            <div class="app-table-mobile-meta app-table-tag-wrap">
+              <time class="app-cell-date" [dateTime]="order.placedAt" [title]="utc(order.placedAt)">
+                {{ dateTime(order.placedAt) }}
+              </time>
+              <p-tag [severity]="severity" [value]="status" />
+            </div>
+          </div>
+        </td>
+        <td class="app-table-merged-column">
+          <time class="app-cell-date" [dateTime]="order.placedAt" [title]="utc(order.placedAt)">
+            {{ dateTime(order.placedAt) }}
+          </time>
+        </td>
+        <td class="app-table-merged-column">
+          <span class="app-cell-status"><p-tag [severity]="severity" [value]="status" /></span>
+        </td>
+        <td class="app-cell-number" [title]="total">{{ total }}</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+} } @else {
+<p-message severity="info">{{ text().noShop }}</p-message>
+}

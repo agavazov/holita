@@ -1,0 +1,27 @@
+query OperatorShopDashboard($period: DashboardPeriod!) {
+  shopDashboard(period: $period) {
+    period
+    startDate
+    endDate
+    asOf
+    timeZone
+    currency
+    orderCount
+    completedRevenue
+    newCustomerCount
+    outOfStockVariantCount
+    daily {
+      date
+      orderCount
+      completedRevenue
+    }
+    recentOrders {
+      id
+      number
+      placedAt
+      status
+      total
+      currency
+    }
+  }
+}

@@ -192,6 +192,53 @@ export const demoDiscounts = [
   { id: 2, code: 'OLD10', value: '10.00', minSubtotal: null, endsAt: '2025-01-01T00:00:00Z' },
 ] as const;
 
+export const demoDashboardCustomer = {
+  id: 3,
+  daysAgo: 10,
+  name: 'Надежда Колева',
+  email: 'nadezhda-127@example.test',
+  phone: '+359 2 555 0127',
+};
+
+export const demoDashboardOrders = [
+  {
+    id: 9,
+    lineId: 11,
+    daysAgo: 2,
+    quantity: 1,
+    status: 'completed',
+    subtotal: '52.90',
+    total: '58.90',
+  },
+  {
+    id: 10,
+    lineId: 12,
+    daysAgo: 10,
+    quantity: 2,
+    status: 'completed',
+    subtotal: '105.80',
+    total: '111.80',
+  },
+  {
+    id: 11,
+    lineId: 13,
+    daysAgo: 20,
+    quantity: 3,
+    status: 'completed',
+    subtotal: '158.70',
+    total: '164.70',
+  },
+  {
+    id: 12,
+    lineId: 14,
+    daysAgo: 1,
+    quantity: 4,
+    status: 'placed',
+    subtotal: '211.60',
+    total: '217.60',
+  },
+] as const;
+
 export const demoManualOrder = {
   id: 6,
   placedAt: '2026-11-22T11:00:00Z',

@@ -10,6 +10,8 @@ import { CartModule } from './cart/cart.module.js';
 import { CartResolver } from './cart/cart.resolver.js';
 import { CheckoutModule } from './checkout/checkout.module.js';
 import { CheckoutResolver } from './checkout/checkout.resolver.js';
+import { DashboardModule } from './dashboard/dashboard.module.js';
+import { DashboardResolver } from './dashboard/dashboard.resolver.js';
 import { DiscountsModule } from './discounts/discounts.module.js';
 import { DiscountsResolver } from './discounts/discounts.resolver.js';
 import { InvoicesModule } from './invoices/invoices.module.js';
@@ -65,6 +67,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     BadgesModule,
     TagsModule,
     CustomersModule,
+    DashboardModule,
     DiscountsModule,
     ManualMethodsModule,
     OrdersModule,
@@ -86,6 +89,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     BadgesResolver,
     TagsResolver,
     CustomersResolver,
+    DashboardResolver,
     DiscountsResolver,
     ManualMethodsResolver,
     OperatorOrdersResolver,

@@ -1,10 +1,10 @@
 # 320 Show order methods and low stock on the shop dashboard
 
-**Status:** Ready after [127](127-holita-dashboard.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-red.bg shows breakdowns by payment and delivery method and highlights active products and variants low in stock. Ticket 127 adds order totals and an out-of-stock count.
+red.bg shows breakdowns by payment and delivery method and highlights active products and variants low in stock. Holita's shop dashboard shows order totals and an out-of-stock count.
 
 ## Goal
 
