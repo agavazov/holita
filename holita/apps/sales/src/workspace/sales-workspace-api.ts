@@ -29,7 +29,9 @@ export class SalesWorkspaceApi {
     const client = new ApolloClient(
       graphqlOptions(this.link, this.config.graphqlUrl, undefined, scope),
     );
-    const stop = () => client.stop();
+    const stop = () => {
+      client.stop();
+    };
     abortSignal.addEventListener('abort', stop, { once: true });
     try {
       const { data } = await client.query({
