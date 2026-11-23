@@ -51,12 +51,27 @@
             optionValue="value"
           />
         </osnova-form-field>
+        <osnova-form-field
+          controlId="option-show-in-listing"
+          [label]="text().optionListingVisibility"
+        >
+          <p-select
+            inputId="option-show-in-listing"
+            ariaLabelledBy="option-show-in-listing-label"
+            formControlName="showInListing"
+            [options]="visibilityOptions()"
+            optionLabel="label"
+            optionValue="value"
+          />
+        </osnova-form-field>
       </div>
     </section>
     <section class="app-form-section" aria-labelledby="option-values-title">
       <h3 id="option-values-title">{{ text().optionValues }}</h3>
       @for (value of values.controls; track value; let index = $index; let first = $first; let last
-      = $last) { @let controlId = 'option-value-' + index; @let error = valueError(index);
+      = $last) { @let controlId = 'option-value-' + index; @let error = valueError(index); @let
+      swatchId = 'option-swatch-' + index; @let colorError = swatchError(index); @let swatchColor =
+      value.controls.swatchColor.value.trim();
       <osnova-form-field
         [controlId]="controlId"
         [label]="indexedLabel(text().optionValueLabel, index)"
@@ -107,6 +122,33 @@
               <svg data-p-icon="trash" aria-hidden="true"></svg>
             </button>
           </div>
+        </div>
+      </osnova-form-field>
+      <osnova-form-field
+        [controlId]="swatchId"
+        [label]="indexedLabel(text().optionSwatchColor, index)"
+        [error]="colorError"
+      >
+        <div class="option-value-editor">
+          <input
+            pInputText
+            [id]="swatchId"
+            [formControl]="value.controls.swatchColor"
+            placeholder="#RRGGBB"
+            autocomplete="off"
+            spellcheck="false"
+            [attr.aria-describedby]="swatchId + '-error'"
+            [invalid]="!!colorError"
+            [attr.aria-invalid]="!!colorError"
+            (input)="clearError('values.' + index + '.swatchColor')"
+          />
+          @if (swatchColor && !value.controls.swatchColor.invalid) {
+          <span
+            class="option-swatch-preview"
+            [style.background-color]="swatchColor"
+            aria-hidden="true"
+          ></span>
+          }
         </div>
       </osnova-form-field>
       } @empty {

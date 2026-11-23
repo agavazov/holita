@@ -27,6 +27,7 @@ import {
   injectDrawerHost,
   interpolate,
   lockWhileSaving,
+  patternValidator,
   textValidator,
   uiMessages,
   validationMessage,
@@ -43,17 +44,23 @@ import { Select } from 'primeng/select';
 import { OptionsApi } from './options-api';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-type ValueForm = FormGroup<{ id: FormControl<string | null>; label: FormControl<string> }>;
+const swatchPattern = /^#[0-9a-f]{6}$/i;
 
-function valueForm(id: string | null, label: string): ValueForm {
+function valueForm(id: string | null, label: string, swatchColor = '') {
   return new FormGroup({
     id: new FormControl(id),
     label: new FormControl(label, {
       nonNullable: true,
       validators: [textValidator(200, { required: true })],
     }),
+    swatchColor: new FormControl(swatchColor, {
+      nonNullable: true,
+      validators: [patternValidator(swatchPattern)],
+    }),
   });
 }
+
+type ValueForm = ReturnType<typeof valueForm>;
 
 @Component({
   selector: 'holita-option-editor',
@@ -134,6 +141,7 @@ export class OptionEditor {
     }),
     active: new FormControl(true, { nonNullable: true }),
     showInFilters: new FormControl(false, { nonNullable: true }),
+    showInListing: new FormControl(false, { nonNullable: true }),
     values: this.values,
   });
 
@@ -141,10 +149,14 @@ export class OptionEditor {
     effect(() => {
       this.api.scope();
       const option = this.record.hasValue() ? this.record.value() : null;
-      const values = option?.values ?? [];
+      const values = (option?.values ?? []).map(({ id, label, swatchColor }) => ({
+        id,
+        label,
+        swatchColor: swatchColor ?? '',
+      }));
       this.values.clear({ emitEvent: false });
       this.values.push(
-        values.map(({ id, label }) => valueForm(id, label)),
+        values.map(({ id, label, swatchColor }) => valueForm(id, label, swatchColor)),
         { emitEvent: false },
       );
       this.form.reset(
@@ -152,6 +164,7 @@ export class OptionEditor {
           name: option?.name ?? '',
           active: option?.active ?? true,
           showInFilters: option?.showInFilters ?? false,
+          showInListing: option?.showInListing ?? false,
           values,
         },
         { emitEvent: false },
@@ -180,6 +193,14 @@ export class OptionEditor {
     return (
       this.errors()[`values.${String(index)}.id`] ??
       this.controlError(this.values.at(index).controls.label, `values.${String(index)}.label`)
+    );
+  }
+
+  protected swatchError(index: number): string | null {
+    const control = this.values.at(index).controls.swatchColor;
+    return (
+      this.errors()[`values.${String(index)}.swatchColor`] ??
+      (control.touched && control.invalid ? this.text().optionSwatchInvalid : null)
     );
   }
 
@@ -233,7 +254,14 @@ export class OptionEditor {
     try {
       const id = await this.api.save(
         scope,
-        { ...draft, values: values.map(({ id, label }) => (id ? { id, label } : { label })) },
+        {
+          ...draft,
+          values: values.map(({ id, label, swatchColor }) => ({
+            ...(id ? { id } : {}),
+            label,
+            swatchColor: swatchColor.trim() || null,
+          })),
+        },
         this.id(),
       );
       if (this.destroyRef.destroyed || this.api.scope() !== scope) {
@@ -253,11 +281,15 @@ export class OptionEditor {
         ...values.flatMap((_, index) => [
           `values.${String(index)}.id`,
           `values.${String(index)}.label`,
+          `values.${String(index)}.swatchColor`,
         ]),
       ];
-      const errors = fieldErrors(error, fields, scope.language, (_code, path) =>
-        path.endsWith('.id') ? this.text().optionValueUnavailable : undefined,
-      );
+      const errors = fieldErrors(error, fields, scope.language, (_code, path) => {
+        if (path.endsWith('.id')) {
+          return this.text().optionValueUnavailable;
+        }
+        return path.endsWith('.swatchColor') ? this.text().optionSwatchInvalid : undefined;
+      });
       this.errors.set(errors);
       this.saveError.set(
         Object.keys(errors).length
@@ -292,7 +324,12 @@ export class OptionEditor {
 
   private focusError(): void {
     const form = this.formElement()?.nativeElement;
-    const order = ['name', ...this.values.controls.map((_, index) => `value-${String(index)}`)];
+    const order = [
+      'name',
+      ...this.values.controls.flatMap((_, index) =>
+        ['value', 'swatch'].map((field) => `${field}-${String(index)}`),
+      ),
+    ];
     if (!form || !focusFirstInvalid(form, order, 'option-')) {
       this.drawer().focusTitle();
     }

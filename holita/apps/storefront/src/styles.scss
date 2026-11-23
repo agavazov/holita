@@ -26,6 +26,16 @@ holita-storefront-page {
     white-space: nowrap;
   }
 
+  .shop-option-swatch {
+    display: inline-block;
+    flex: none;
+    width: 0.875rem;
+    height: 0.875rem;
+    border: 1px solid var(--shop-control-border);
+    border-radius: 50%;
+    forced-color-adjust: none;
+  }
+
   a {
     color: var(--shop-link);
   }

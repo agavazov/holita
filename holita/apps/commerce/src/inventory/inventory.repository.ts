@@ -20,29 +20,114 @@ function variantFields(scope: Scope) {
   } satisfies Prisma.ProductVariantSelect;
 }
 
+async function categoryTreeIds(tx: Prisma.TransactionClient, scope: Scope, id: string) {
+  const categories = await tx.category.findMany({
+    where: scope,
+    select: { id: true, parentId: true },
+  });
+  const children = new Map<string | null, string[]>();
+  for (const category of categories) {
+    const siblings = children.get(category.parentId) ?? [];
+    siblings.push(category.id);
+    children.set(category.parentId, siblings);
+  }
+  const ids = new Set([id]);
+  for (const parentId of ids) {
+    for (const childId of children.get(parentId) ?? []) {
+      ids.add(childId);
+    }
+  }
+  return [...ids];
+}
+
+async function characteristicFilters(
+  tx: Prisma.TransactionClient,
+  scope: Scope,
+  ids: string[],
+): Promise<Prisma.ProductWhereInput[]> {
+  const choices = { ...scope, id: { in: ids } };
+  const fields = await tx.characteristic.findMany({
+    where: {
+      ...scope,
+      active: true,
+      kind: { not: 'TEXT' },
+      group: { ...scope, active: true },
+      choices: { some: choices },
+    },
+    select: {
+      id: true,
+      choices: { where: choices, select: { id: true } },
+      group: { select: { categories: { where: scope, select: { categoryId: true } } } },
+    },
+  });
+  if (fields.flatMap((field) => field.choices).length !== ids.length) {
+    return [{ id: { in: [] } }];
+  }
+  return fields.map((field) => ({
+    ...(field.group.categories.length
+      ? { categoryId: { in: field.group.categories.map(({ categoryId }) => categoryId) } }
+      : {}),
+    characteristicChoices: {
+      some: {
+        ...scope,
+        characteristicId: field.id,
+        choiceId: { in: field.choices.map(({ id }) => id) },
+      },
+    },
+  }));
+}
+
+function escapePattern(value: string): string {
+  return value.replace(/[\\%_]/gu, '\\$&');
+}
+
+function exactBarcode(value: string): Prisma.ProductVariantWhereInput {
+  return { barcode: { equals: escapePattern(value), mode: 'insensitive' } };
+}
+
 @Injectable()
 export class InventoryRepository {
   constructor(private readonly database: DatabaseService) {}
 
-  async list(
+  list(
     scope: Scope,
     offset: number,
     limit: number,
-    words: string[],
-    filter?: InventoryFilter | null,
+    search: string,
+    filter: InventoryFilter,
     sort?: InventorySort | null,
   ) {
-    const terms = words.map((word): Prisma.ProductVariantWhereInput => {
-      const match = { contains: word.replace(/[\\%_]/gu, '\\$&'), mode: 'insensitive' } as const;
-      return { OR: [{ product: { name: match } }, { sku: match }] };
-    });
-    const tracking = filter?.inventoryTracked;
-    const where: Prisma.ProductVariantWhereInput = {
-      ...scope,
-      product: scope,
-      ...(tracking == null ? {} : { inventoryTracked: tracking }),
-      AND: [...terms, ...(filter?.outOfStock ? [{ inventoryTracked: true, quantity: 0 }] : [])],
-    };
+    const words = search.split(/\s+/u).filter(Boolean);
+    const terms =
+      Array.from(search).length > 200 || words.length > 5
+        ? [exactBarcode(search)]
+        : words.map((word): Prisma.ProductVariantWhereInput => {
+            const match = { contains: escapePattern(word), mode: 'insensitive' } as const;
+            return { OR: [{ product: { name: match } }, { sku: match }, { barcode: match }] };
+          });
+    const {
+      inventoryTracked,
+      outOfStock,
+      brandId,
+      categoryId,
+      productActive,
+      variantActive,
+      barcode,
+      stockStatus,
+      characteristicChoiceIds,
+    } = filter;
+    if (barcode) {
+      terms.push(exactBarcode(barcode));
+    }
+    if (outOfStock) {
+      terms.push({ inventoryTracked: true, quantity: 0 });
+    }
+    if (stockStatus) {
+      terms.push({
+        inventoryTracked: true,
+        quantity: stockStatus === 'IN_STOCK' ? { gt: 0 } : { lte: 0 },
+      });
+    }
     const direction = sort?.direction === 'DESC' ? 'desc' : 'asc';
     const order: Prisma.ProductVariantOrderByWithRelationInput =
       sort?.field === 'SKU'
@@ -50,20 +135,39 @@ export class InventoryRepository {
         : sort?.field === 'QUANTITY'
           ? { quantity: direction }
           : { product: { name: direction } };
-    const [items, total] = await this.database.client.$transaction(
-      [
-        this.database.client.productVariant.findMany({
+    return this.database.client.$transaction(
+      async (tx) => {
+        const categoryIds = categoryId ? await categoryTreeIds(tx, scope, categoryId) : undefined;
+        const specifications = characteristicChoiceIds?.length
+          ? await characteristicFilters(tx, scope, characteristicChoiceIds)
+          : [];
+        const where: Prisma.ProductVariantWhereInput = {
+          ...scope,
+          product: {
+            ...scope,
+            ...(brandId ? { brandId } : {}),
+            ...(categoryIds ? { categoryId: { in: categoryIds } } : {}),
+            ...(productActive == null
+              ? {}
+              : { status: productActive ? 'ACTIVE' : { not: 'ACTIVE' } }),
+            AND: specifications,
+          },
+          ...(inventoryTracked == null ? {} : { inventoryTracked }),
+          ...(variantActive == null ? {} : { active: variantActive }),
+          AND: terms,
+        };
+        const items = await tx.productVariant.findMany({
           where,
           skip: offset,
           take: limit,
           orderBy: [order, { id: 'asc' }],
           select: variantFields(scope),
-        }),
-        this.database.client.productVariant.count({ where }),
-      ],
+        });
+        const total = await tx.productVariant.count({ where });
+        return { items, total, offset, limit };
+      },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
-    return { items, total, offset, limit };
   }
 
   find(scope: Scope, id: string) {

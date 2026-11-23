@@ -100,6 +100,16 @@ fragment CatalogueBrowsePage on CataloguePage {
     badges {
       ...CatalogueBadgeFields
     }
+    optionPreviews {
+      id
+      name
+      values {
+        id
+        label
+        swatchColor
+        inStock
+      }
+    }
   }
   listing {
     id
@@ -112,8 +122,25 @@ fragment CatalogueBrowsePage on CataloguePage {
     }
   }
   facets {
+    characteristicFacets {
+      id
+      name
+      characteristics {
+        id
+        name
+        choices {
+          id
+          name
+          count
+        }
+      }
+    }
     brands {
       ...CatalogueBrandFields
+    }
+    tags {
+      id
+      name
     }
     options {
       id
@@ -131,6 +158,14 @@ fragment CatalogueBrowsePage on CataloguePage {
 query Catalogue($offset: Int!, $limit: Int!, $filter: CatalogueBrowseFilter, $sort: CatalogueSort) {
   catalogue(offset: $offset, limit: $limit, filter: $filter, sort: $sort) {
     ...CatalogueBrowsePage
+  }
+}
+query CatalogueSuggestions($search: String!) {
+  catalogue(offset: 0, limit: 8, filter: { search: $search }) {
+    items {
+      id
+      name
+    }
   }
 }
 query CatalogueCategoryProducts(
@@ -241,6 +276,7 @@ query CatalogueProduct($id: ID!) {
         values {
           id
           label
+          swatchColor
         }
       }
       variants {
@@ -248,10 +284,14 @@ query CatalogueProduct($id: ID!) {
         sku
         price
         available
+        availableQuantity
+        imageId
+        minimumQuantity
         optionValueIds
       }
     }
     images {
+      id
       url
       altText
     }
@@ -327,6 +367,7 @@ fragment PublicCartLineFields on CartLine {
   name
   optionLabels
   quantity
+  minimumQuantity
   unitPrice
   lineTotal
   issue

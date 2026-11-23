@@ -86,6 +86,9 @@ function issueFor(variant: PublicVariant | undefined, quantity: number): CartIss
   if (!variant) {
     return 'UNAVAILABLE';
   }
+  if (quantity < variant.minimumQuantity) {
+    return 'MINIMUM_QUANTITY_NOT_MET';
+  }
   const available = trackedVariantQuantity(variant);
   return quantity > (available ?? MAX_QUANTITY) ? 'INSUFFICIENT_STOCK' : null;
 }
@@ -97,6 +100,9 @@ function validateVariant(variant: PublicVariant | undefined, quantity: number): 
   }
   if (issue === 'INSUFFICIENT_STOCK') {
     throw inputIssue('quantity', issue, 'Requested quantity is unavailable');
+  }
+  if (issue === 'MINIMUM_QUANTITY_NOT_MET') {
+    throw inputIssue('quantity', issue, 'Quantity is below the minimum for this variant');
   }
 }
 
@@ -112,9 +118,12 @@ function presentLine(line: StoredCartLine, variant: PublicVariant | undefined): 
     variantId: variant?.id ?? null,
     productId: variant?.product.id ?? null,
     name: variant?.product.name ?? null,
-    coverImage: image ? { url: productImageUrl(image), altText: image.altText } : null,
+    coverImage: image
+      ? { id: image.id, url: productImageUrl(image), altText: image.altText }
+      : null,
     optionLabels: variant ? catalogueOptionLabels(variant.values) : [],
     quantity: line.quantity,
+    minimumQuantity: variant?.minimumQuantity ?? null,
     unitPrice: variant?.price.toFixed(2) ?? null,
     lineTotal: variant ? new CartPrice(variant.price).mul(line.quantity).toFixed(2) : null,
     available: issue === null,

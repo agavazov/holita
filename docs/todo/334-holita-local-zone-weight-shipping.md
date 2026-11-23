@@ -2,8 +2,6 @@
 
 **Status:** Needs owner. May Holita add local API-only zone and weight rules for manual shipping, and which areas and missing-weight behavior should it support? **Product:** Holita.
 
-**Depends on** [315](315-holita-variant-package-measurements.md).
-
 ## Background
 
 The red.bg coverage report marks SH02 as P2. Holita quotes the configured fixed manual rate. The source contains working built-in address-zone and weight pricing without provider calls.
@@ -23,7 +21,7 @@ A cart with a supported address and weight receives the configured manual rate i
 
 ## Limits
 
-No shipping-zone editor or courier API. Reuse variant weights from ticket 315.
+No shipping-zone editor or courier API. Reuse recorded variant weights.
 
 ## References
 

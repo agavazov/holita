@@ -23,7 +23,7 @@
           class="shop-chip"
           [attr.data-tone]="issue.reason === 'UNAVAILABLE' ? 'out-of-stock' : 'WARN'"
         >
-          {{ issue.reason === 'UNAVAILABLE' ? t().cartUnavailable : t().cartInsufficientStock }}
+          {{ t()[cartProblems[issue.reason]] }}
         </span>
       </li>
       }
@@ -32,7 +32,9 @@
   } } @if (state.sessionExpired()) {
   <div class="basic-state">
     <p role="alert">{{ t().cartSessionExpired }}</p>
-    <a class="basic-button basic-button--primary" [routerLink]="[...base(), 'sign-in']">{{ t().signIn }}</a>
+    <a class="basic-button basic-button--primary" [routerLink]="[...base(), 'sign-in']"
+      >{{ t().signIn }}</a
+    >
   </div>
   } @else if (state.loadFailed()) {
   <div class="basic-state">
@@ -54,9 +56,8 @@
     <section aria-labelledby="cart-items-heading">
       <h2 id="cart-items-heading" class="app-visually-hidden">{{ t().cart }}</h2>
       <ul class="cart-lines" role="list">
-        @for (line of cart.lines; track line.id) {
-        @let error = lineError();
-        @let control = quantities().get(line.id);
+        @for (line of cart.lines; track line.id) { @let error = lineError(); @let control =
+        quantities().get(line.id); @let minimum = line.minimumQuantity ?? 1;
         <li class="cart-line" [attr.aria-labelledby]="'cart-line-' + line.id">
           @if (line.coverImage; as photo) {
           <img class="cart-photo" [src]="photo.url" alt="" />
@@ -102,11 +103,15 @@
                   [id]="'cart-quantity-' + line.id"
                   [formControl]="control"
                   type="number"
-                  min="1"
+                  [attr.min]="minimum"
                   step="1"
                   [max]="maxCartQuantity"
                   [readOnly]="state.locked()"
-                  [attr.aria-invalid]="control.touched && control.invalid ? 'true' : null"
+                  [attr.aria-invalid]="
+                    control.invalid && (control.touched || line.issue === 'MINIMUM_QUANTITY_NOT_MET')
+                      ? 'true' : null
+                  "
+                  [attr.aria-describedby]="minimum > 1 ? 'cart-minimum-' + line.id : null"
                 />
                 <button
                   class="basic-button"
@@ -128,22 +133,37 @@
                 (click)="remove(line)"
               >
                 <span class="app-visually-hidden">{{ t().removeFromCart }}</span>
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  aria-hidden="true"
+                >
                   <path d="m6 6 8 8m0-8-8 8" stroke-linecap="round" />
                 </svg>
               </button>
             </div>
-            @if (line.issue) {
+            @if (minimum > 1) {
+            <p class="cart-unavailable-quantity" [id]="'cart-minimum-' + line.id">
+              {{ t().minimumQuantity(minimum) }}
+            </p>
+            } @if (line.issue) {
             <p class="cart-stock-status">
-              <span class="shop-chip" [attr.data-tone]="line.issue === 'UNAVAILABLE' ? 'out-of-stock' : 'WARN'">
-                {{ line.issue === 'UNAVAILABLE' ? t().cartUnavailable : t().cartInsufficientStock }}
+              <span
+                class="shop-chip"
+                [attr.data-tone]="line.issue === 'UNAVAILABLE' ? 'out-of-stock' : 'WARN'"
+              >
+                {{ t()[cartProblems[line.issue]] }}
               </span>
             </p>
-            }
-            @if (error && error.lineId === line.id) {
+            } @if (error && error.lineId === line.id) {
             <p class="cart-line-error" role="alert">{{ t()[error.message] }}</p>
             } @else if (control?.touched && control.invalid) {
-            <p class="cart-line-error">{{ t().cartInvalidQuantity }}</p>
+            <p class="cart-line-error">
+              {{ control.hasError('min') && minimum > 1 ? t().cartMinimumNotMet :
+              t().cartInvalidQuantity }}
+            </p>
             }
           </div>
         </li>
@@ -226,7 +246,10 @@
         {{ t()[promoProblems[issue]] }}
       </p>
       } @if (canCheckout()) {
-      <a class="basic-button basic-button--primary cart-checkout" [routerLink]="[...base(), 'checkout']">
+      <a
+        class="basic-button basic-button--primary cart-checkout"
+        [routerLink]="[...base(), 'checkout']"
+      >
         {{ t().checkout }}
       </a>
       }
@@ -235,11 +258,23 @@
   </div>
   } @else {
   <div class="basic-state basic-empty">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-      <path d="M3 4h2l2.7 11h11.6L22 7H6m4 13h.01M18 20h.01" stroke-linecap="round" stroke-linejoin="round" />
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      aria-hidden="true"
+    >
+      <path
+        d="M3 4h2l2.7 11h11.6L22 7H6m4 13h.01M18 20h.01"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
     </svg>
     <p>{{ t().cartEmpty }}</p>
-    <a class="basic-button basic-button--primary" [routerLink]="[...base(), 'products']">{{ t().continueShopping }}</a>
+    <a class="basic-button basic-button--primary" [routerLink]="[...base(), 'products']"
+      >{{ t().continueShopping }}</a
+    >
   </div>
   } } @else {
   <p class="basic-state" role="status">{{ t().loading }}</p>

@@ -1,5 +1,7 @@
 <osnova-page-header [title]="text().inventory" [moduleInfo]="text().inventoryInfo" />
-@if (scope()) {
+@if (scope()) { @for (error of filterLoadErrors(); track error) {
+<p-message severity="warn">{{ error }}</p-message>
+}
 <osnova-table-panel
   #panel
   [heading]="text().inventoryItems"

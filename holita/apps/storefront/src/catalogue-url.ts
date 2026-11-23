@@ -21,13 +21,25 @@ export interface CatalogueFilters {
   minPrice: string;
   maxPrice: string;
   brand: string[];
+  characteristic: string[];
   option: string[];
+  tag: string[];
   inStock: boolean;
   sort: string;
 }
 
 export function emptyFilters(): CatalogueFilters {
-  return { q: '', minPrice: '', maxPrice: '', brand: [], option: [], inStock: false, sort: '' };
+  return {
+    q: '',
+    minPrice: '',
+    maxPrice: '',
+    brand: [],
+    characteristic: [],
+    option: [],
+    tag: [],
+    inStock: false,
+    sort: '',
+  };
 }
 
 function canonicalIds(ids: string[]): string[] {
@@ -43,7 +55,9 @@ export function parseCatalogueUrl(params: ParamMap) {
     minPrice: params.get('minPrice') ?? '',
     maxPrice: params.get('maxPrice') ?? '',
     brand: canonicalIds(params.getAll('brand')),
+    characteristic: canonicalIds(params.getAll('characteristic')),
     option: canonicalIds(params.getAll('option')),
+    tag: canonicalIds(params.getAll('tag')),
     inStock: stock === '1',
     sort: params.get('sort') ?? '',
   };
@@ -69,13 +83,33 @@ export function validCatalogueFilters(filters: CatalogueFilters): boolean {
     (!filters.minPrice ||
       !filters.maxPrice ||
       Number(filters.minPrice) <= Number(filters.maxPrice)) &&
-    [...filters.brand, ...filters.option].every((value) => id.test(value)) &&
+    [...filters.brand, ...filters.characteristic, ...filters.option, ...filters.tag].every(
+      (value) => id.test(value),
+    ) &&
     sortChoices.some(({ value }) => value === filters.sort)
   );
 }
 
-export function hasFilters({ q, minPrice, maxPrice, brand, option, inStock }: CatalogueFilters) {
-  return Boolean(q || minPrice || maxPrice || brand.length || option.length || inStock);
+export function hasFilters({
+  q,
+  minPrice,
+  maxPrice,
+  brand,
+  characteristic,
+  option,
+  tag,
+  inStock,
+}: CatalogueFilters) {
+  return Boolean(
+    q ||
+    minPrice ||
+    maxPrice ||
+    brand.length ||
+    characteristic.length ||
+    option.length ||
+    tag.length ||
+    inStock,
+  );
 }
 
 export function catalogueParams(filters: CatalogueFilters, page: number): Params {
@@ -85,7 +119,9 @@ export function catalogueParams(filters: CatalogueFilters, page: number): Params
     minPrice: filters.minPrice || null,
     maxPrice: filters.maxPrice || null,
     brand: filters.brand.length ? canonicalIds(filters.brand) : null,
+    characteristic: filters.characteristic.length ? canonicalIds(filters.characteristic) : null,
     option: filters.option.length ? canonicalIds(filters.option) : null,
+    tag: filters.tag.length ? canonicalIds(filters.tag) : null,
     inStock: filters.inStock ? '1' : null,
     page: page > 1 ? page : null,
   };
@@ -104,7 +140,9 @@ export function catalogueVariables(
           minPrice: filters.minPrice || null,
           maxPrice: filters.maxPrice || null,
           brandIds: filters.brand,
+          characteristicChoiceIds: filters.characteristic,
           optionValueIds: filters.option,
+          tagIds: filters.tag,
           inStock: filters.inStock,
         }
       : null,

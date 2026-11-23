@@ -1,9 +1,14 @@
-type DemoVariant = readonly [
+export type DemoVariant = readonly [
   sku: string,
   price: string,
   quantity: number,
   optionValues?: readonly number[],
   inventoryTracked?: boolean,
+  purchase?: Readonly<{
+    minimumQuantity: number;
+    imageId: number;
+    barcode: string;
+  }>,
 ];
 
 type DemoProduct = readonly [
@@ -27,7 +32,8 @@ type DemoCategory = readonly [
 type DemoOption = readonly [
   id: number,
   name: string,
-  values: readonly (readonly [id: number, label: string])[],
+  values: readonly (readonly [id: number, label: string, swatchColor?: string])[],
+  showInListing?: boolean,
 ];
 
 export const demoOptions: readonly DemoOption[] = [
@@ -46,6 +52,16 @@ export const demoOptions: readonly DemoOption[] = [
       [3, 'Малък'],
       [4, 'Голям'],
     ],
+  ],
+  [
+    3,
+    'Глазура',
+    [
+      [5, 'Орех', '#735143'],
+      [6, 'Мед', '#B8753D'],
+      [7, 'Тъмна глина', '#44302B'],
+    ],
+    true,
   ],
 ];
 
@@ -85,7 +101,27 @@ export const demoCollections: readonly DemoCollection[] = [
   },
 ];
 
-export const demoCharacteristicGroups = [
+type DemoCharacteristicGroup = {
+  id: number;
+  name: string;
+  sortOrder: number;
+  categoryId?: number;
+  characteristics: readonly {
+    id: number;
+    name: string;
+    sortOrder: number;
+    kind?: 'singleChoice' | 'multipleChoice';
+    choices?: readonly (readonly [id: number, name: string])[];
+  }[];
+  values: readonly (readonly [productId: number, characteristicId: number, value: string])[];
+  choiceAssignments?: readonly (readonly [
+    productId: number,
+    characteristicId: number,
+    choiceId: number,
+  ])[];
+};
+
+export const demoCharacteristicGroups: readonly DemoCharacteristicGroup[] = [
   {
     id: 1,
     name: 'Materials',
@@ -99,7 +135,32 @@ export const demoCharacteristicGroups = [
       [51, 2, 'Matte glaze'],
       [52, 1, 'Oak'],
       [52, 2, 'Food-safe oil'],
-    ] as const,
+    ],
+  },
+  {
+    id: 2,
+    name: 'Модели и версии',
+    sortOrder: 20,
+    categoryId: 3,
+    characteristics: [
+      {
+        id: 3,
+        name: 'Модел / версия',
+        sortOrder: 10,
+        kind: 'singleChoice',
+        choices: [
+          [1, 'Terra V1'],
+          [2, 'Terra V2'],
+          [3, 'Terra V3'],
+        ],
+      },
+    ],
+    values: [],
+    choiceAssignments: [
+      [51, 3, 1],
+      [55, 3, 2],
+      [73, 3, 3],
+    ],
   },
 ];
 
@@ -577,6 +638,43 @@ export const demoCatalogue: readonly DemoBrand[] = [
         4,
         [['KUPA-DUNA-18-PYASAK', '16.82', 8, [1]]],
       ],
+      [
+        73,
+        'Керамичен съд с капак „Орехова жарава“, 2 л',
+        '28.70',
+        'active',
+        3,
+        [
+          [
+            'TERRA-OR-2',
+            '28.70',
+            8,
+            [5],
+            true,
+            { minimumQuantity: 2, imageId: 730, barcode: '0012345678905' },
+          ],
+          [
+            'TERRA-MED-2',
+            '30.20',
+            9,
+            [6],
+            true,
+            { minimumQuantity: 3, imageId: 731, barcode: '0012345678912' },
+          ],
+          [
+            'TERRA-GLINA-2',
+            '29.60',
+            1,
+            [7],
+            true,
+            { minimumQuantity: 2, imageId: 732, barcode: '0012345678929' },
+          ],
+        ],
+        {
+          bg: 'Керамичен съд с капак за бавно печене. Изберете глазурата за вашата трапеза.',
+          en: 'A ceramic pot with a lid for slow baking. Choose a glaze for your table.',
+        },
+      ],
     ],
   },
   {
@@ -689,6 +787,11 @@ export const demoProductImages: Readonly<Record<number, readonly DemoImage[]>> =
     [580, 'product-58-front.png', 'Глинен съд „Орех“ с капак, изглед отпред'],
     [581, 'product-58-angle.png', 'Глинен съд „Орех“ с капак, изглед под ъгъл'],
     [582, 'product-58-inside.png', 'Глазираната вътрешност на съда „Орех“ и капакът отстрани'],
+  ],
+  73: [
+    [730, 'product-58-front.png', 'Керамичен съд с капак, изглед отпред'],
+    [731, 'product-58-angle.png', 'Керамичен съд, изглед под ъгъл'],
+    [732, 'product-58-inside.png', 'Глазирана вътрешност на керамичния съд'],
   ],
 };
 

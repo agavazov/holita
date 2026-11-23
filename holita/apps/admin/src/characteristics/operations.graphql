@@ -22,11 +22,17 @@ query OperatorCharacteristicGroups(
 query OperatorCharacteristicGroup($id: ID!) {
   characteristicGroup(id: $id) {
     ...OperatorCharacteristicGroupSummary
+    categoryIds
     characteristics {
       id
       name
       sortOrder
       active
+      kind
+      choices {
+        id
+        name
+      }
     }
   }
 }

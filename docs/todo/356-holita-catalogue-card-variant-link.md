@@ -2,11 +2,11 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [173](173-holita-catalogue-option-preview.md), [314](314-holita-variant-default-links.md).
+**Depends on** [314](314-holita-variant-default-links.md).
 
 ## Background
 
-The red.bg coverage report marks PRD-12 as P3. Ticket 173 shows options on cards. The source also distinguishes unavailable options and links eligible options to the variant selection.
+The red.bg coverage report marks PRD-12 as P3. Holita shows enabled options on catalogue cards. The source also distinguishes unavailable options and links eligible options to the variant selection.
 
 ## Goal
 

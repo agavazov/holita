@@ -13,3 +13,10 @@
 .option-value-actions {
   display: flex;
 }
+
+.option-swatch-preview {
+  inline-size: var(--p-app-space-5);
+  aspect-ratio: 1;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-app-radius-control);
+}

@@ -31,8 +31,15 @@ interface ProductMarkerIds {
 interface VariantWrite {
   id?: string;
   sku: string;
+  barcode: string | null | undefined;
   price: string;
+  weight: number | null | undefined;
+  width: number | null | undefined;
+  height: number | null | undefined;
+  depth: number | null | undefined;
   quantity: number | undefined;
+  minimumQuantity: number | undefined;
+  imageId: string | null | undefined;
   inventoryTracked: boolean;
   active: boolean;
   combinationKey: string;
@@ -175,7 +182,13 @@ export class CommerceRepository {
                 id: true,
                 sku: true,
                 price: true,
+                weight: true,
+                width: true,
+                height: true,
+                depth: true,
                 quantity: true,
+                minimumQuantity: true,
+                imageId: true,
                 inventoryTracked: true,
                 values: catalogueVariantValues(scope),
               },
@@ -214,13 +227,33 @@ export class CommerceRepository {
       const current = id
         ? await tx.productVariant.findMany({
             where: productScope,
-            select: { id: true, quantity: true, combinationKey: true },
+            select: {
+              id: true,
+              barcode: true,
+              weight: true,
+              width: true,
+              height: true,
+              depth: true,
+              quantity: true,
+              minimumQuantity: true,
+              imageId: true,
+              combinationKey: true,
+            },
           })
         : [];
       const currentById = new Map(current.map((variant) => [variant.id, variant]));
       const replacements = variants.map((variant, index) => {
         if (!variant.id) {
-          return { ...variant, quantity: variant.quantity ?? 0 };
+          return {
+            ...variant,
+            barcode: variant.barcode ?? null,
+            weight: variant.weight ?? null,
+            width: variant.width ?? null,
+            height: variant.height ?? null,
+            depth: variant.depth ?? null,
+            quantity: variant.quantity ?? 0,
+            minimumQuantity: variant.minimumQuantity ?? 1,
+          };
         }
         const existing = currentById.get(variant.id);
         if (!existing) {
@@ -236,7 +269,17 @@ export class CommerceRepository {
         if (variant.quantity !== undefined && variant.quantity !== existing.quantity) {
           throw new ConflictingVariantQuantityError(index);
         }
-        return { ...variant, quantity: existing.quantity };
+        return {
+          ...variant,
+          barcode: variant.barcode === undefined ? existing.barcode : variant.barcode,
+          weight: variant.weight === undefined ? existing.weight : variant.weight,
+          width: variant.width === undefined ? existing.width : variant.width,
+          height: variant.height === undefined ? existing.height : variant.height,
+          depth: variant.depth === undefined ? existing.depth : variant.depth,
+          quantity: existing.quantity,
+          minimumQuantity: variant.minimumQuantity ?? existing.minimumQuantity,
+          imageId: variant.imageId === undefined ? existing.imageId : variant.imageId,
+        };
       });
       const valueIds = [...new Set(replacements.flatMap((variant) => variant.optionValueIds))];
       const optionValues = valueIds.length
@@ -277,17 +320,50 @@ export class CommerceRepository {
       // Replace the aggregate atomically, keeping the IDs of retained variants.
       // This also permits exchanging SKUs between rows in one edit.
       await tx.productVariant.deleteMany({ where: productScope });
-      for (const { optionValueIds, ...variant } of replacements) {
-        await tx.productVariant.create({
-          data: {
-            ...productScope,
-            ...variant,
-            values: { create: optionValueIds.map((optionValueId) => ({ optionValueId })) },
-          },
-        });
+      const retiredKeys = images ? await this.replaceImages(tx, productScope, images) : [];
+      const referencedImageIds = replacements.flatMap(({ imageId }) => (imageId ? [imageId] : []));
+      const retainedImages = new Set(
+        referencedImageIds.length
+          ? (
+              await tx.productImage.findMany({
+                where: { ...productScope, id: { in: referencedImageIds } },
+                select: { id: true },
+              })
+            ).map(({ id }) => id)
+          : [],
+      );
+      for (const [index, { optionValueIds, imageId, ...variant }] of replacements.entries()) {
+        const retainedImageId = imageId && retainedImages.has(imageId) ? imageId : null;
+        if (variants[index]?.imageId && !retainedImageId) {
+          throw new InvalidVariantImageIdError(index);
+        }
+        try {
+          await tx.productVariant.create({
+            data: {
+              ...productScope,
+              ...variant,
+              imageId: retainedImageId,
+              values: { create: optionValueIds.map((optionValueId) => ({ optionValueId })) },
+            },
+          });
+        } catch (error: unknown) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === 'P2002' &&
+            error.message.includes('productVariant_shop_barcode_lower_key')
+          ) {
+            throw new DuplicateBarcodeError(index);
+          }
+          throw error;
+        }
       }
       if (characteristicValues.length) {
-        await this.characteristics.patchProductValues(tx, productScope, characteristicValues);
+        await this.characteristics.patchProductValues(
+          tx,
+          productScope,
+          product.categoryId,
+          characteristicValues,
+        );
       }
       if (badgeIds) {
         await this.replaceBadgeAssignments(tx, productScope, badgeIds);
@@ -295,7 +371,6 @@ export class CommerceRepository {
       if (tagIds) {
         await this.replaceTagAssignments(tx, productScope, tagIds);
       }
-      const retiredKeys = images ? await this.replaceImages(tx, productScope, images) : [];
       const row = await tx.product.findUniqueOrThrow({
         where: { ...scope, id: product.id },
         include: productRelations(scope),
@@ -415,6 +490,12 @@ export class DuplicateSkuError extends Error {
   }
 }
 
+export class DuplicateBarcodeError extends Error {
+  constructor(readonly index: number) {
+    super('This shop already uses the barcode');
+  }
+}
+
 export class InvalidVariantIdError extends Error {
   constructor(readonly index: number) {
     super('Choose a variant from this product');
@@ -436,6 +517,12 @@ export class VariantOutstandingDeductionsError extends Error {
 export class InvalidImageIdError extends Error {
   constructor(readonly index: number) {
     super('Choose an image from this product');
+  }
+}
+
+export class InvalidVariantImageIdError extends Error {
+  constructor(readonly index: number) {
+    super('Choose an image retained in this product gallery');
   }
 }
 

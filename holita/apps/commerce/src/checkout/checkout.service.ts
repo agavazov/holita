@@ -158,6 +158,13 @@ export class CheckoutService {
     if (!cart.lines.length) {
       throw checkoutError('cart', 'CHECKOUT_EMPTY_CART', 'The cart is empty');
     }
+    if (cart.lines.some(({ issue }) => issue === 'MINIMUM_QUANTITY_NOT_MET')) {
+      throw checkoutError(
+        'cart',
+        'MINIMUM_QUANTITY_NOT_MET',
+        'A cart line is below the minimum quantity for its variant',
+      );
+    }
     if (cart.lines.some(({ available }) => !available)) {
       throw checkoutError('cart', 'CHECKOUT_CART_CHANGED', 'Review the cart before checkout');
     }

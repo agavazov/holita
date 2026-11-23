@@ -85,6 +85,13 @@ export function reviseOrderLines(
       if ((!retained || quantity > retained.quantity) && !variant) {
         throw checkoutError(path, 'ORDER_VARIANT_UNAVAILABLE', 'Choose an available variant');
       }
+      if (variant && quantity !== retained?.quantity && quantity < variant.minimumQuantity) {
+        throw checkoutError(
+          `lines.${String(sortOrder)}.quantity`,
+          'MINIMUM_QUANTITY_NOT_MET',
+          'Quantity is below the minimum for this variant',
+        );
+      }
       if (id && seenVariants.has(id)) {
         throw checkoutError(path, 'ORDER_VARIANT_DUPLICATE', 'Choose each variant only once');
       }

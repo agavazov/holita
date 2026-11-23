@@ -28,6 +28,52 @@
           (input)="clearError('name')"
         />
       </osnova-form-field>
+      @let categoryError = errors()['categoryIds'] ?? null;
+      <osnova-form-field
+        controlId="characteristic-group-categories"
+        [label]="text().categories"
+        [hint]="text().characteristicGroupCategoriesHint"
+        [error]="categoryError"
+      >
+        <p-select
+          inputId="characteristic-group-categories"
+          ariaLabelledBy="characteristic-group-categories-label"
+          formControlName="categoryIds"
+          [options]="categoryOptions()"
+          optionLabel="path"
+          optionValue="id"
+          [multiple]="true"
+          [showClear]="true"
+          [loading]="categories.isLoading()"
+          [readonly]="!categories.hasValue()"
+          [filter]="true"
+          [ariaFilterLabel]="text().searchCategories"
+          [filterPlaceholder]="text().searchCategories"
+          [emptyMessage]="shared().table.noResultsTitle"
+          [emptyFilterMessage]="shared().table.noResultsTitle"
+          [placeholder]="categories.hasValue() ? text().characteristicGroupAllCategories : '—'"
+          [invalid]="!!categoryError"
+          [pt]="selectPt(categoryError, 'characteristic-group-categories', true)"
+          (onChange)="clearError('categoryIds')"
+        />
+        @if (categories.error()) {
+        <div class="app-stack">
+          <p-message severity="warn" variant="simple" size="small">
+            {{ text().categoriesUnavailable }}
+          </p-message>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            [text]="true"
+            [disabled]="saving()"
+            (click)="categories.reload()"
+          >
+            {{ shared().retry }}
+          </button>
+        </div>
+        }
+      </osnova-form-field>
       <div class="app-form-grid">
         @let orderError = controlError(form.controls.sortOrder, 'sortOrder');
         <osnova-form-field
@@ -66,6 +112,8 @@
       'characteristic-group-sort-order-' + index; @let activeId = 'characteristic-group-active-' +
       index; @let itemNameError = errors()[path + '.id'] ?? controlError(item.controls.name, path +
       '.name'); @let itemOrderError = controlError(item.controls.sortOrder, path + '.sortOrder');
+      @let kindId = 'characteristic-group-kind-' + index; @let kindError = errors()[path + '.kind']
+      ?? null;
       <div class="app-card" [formGroup]="item">
         <osnova-form-field
           [controlId]="nameId"
@@ -114,7 +162,80 @@
             />
           </osnova-form-field>
         </div>
-        @if (!item.controls.id.value) {
+        <osnova-form-field
+          [controlId]="kindId"
+          [label]="text().characteristicKind"
+          [error]="kindError"
+        >
+          <p-select
+            [inputId]="kindId"
+            [ariaLabelledBy]="kindId + '-label'"
+            formControlName="kind"
+            [options]="kinds()"
+            optionLabel="label"
+            optionValue="value"
+            [readonly]="!!item.controls.id.value"
+            [invalid]="!!kindError"
+            [pt]="selectPt(kindError, kindId)"
+            (onChange)="changeKind(item, index)"
+          />
+        </osnova-form-field>
+        @if (item.controls.kind.value !== 'TEXT') { @if (errors()[path + '.choices']; as
+        choicesError) {
+        <p-message severity="error">{{ choicesError }}</p-message>
+        } @for (choice of item.controls.choices.controls; track choice; let choiceIndex = $index) {
+        @let choiceId = 'characteristic-group-choice-' + index + '-' + choiceIndex; @let choicePath
+        = path + '.choices.' + choiceIndex; @let choiceError = errors()[choicePath + '.id'] ??
+        controlError(choice.controls.name, choicePath + '.name');
+        <div class="app-card__body" [formGroup]="choice">
+          <osnova-form-field
+            [controlId]="choiceId"
+            [label]="text().characteristicChoice"
+            [required]="true"
+            [error]="choiceError"
+          >
+            <input
+              pInputText
+              [id]="choiceId"
+              formControlName="name"
+              autocomplete="off"
+              aria-required="true"
+              [attr.aria-describedby]="choiceId + '-error'"
+              [invalid]="!!choiceError"
+              [attr.aria-invalid]="!!choiceError"
+              (input)="clearError(choicePath + '.name')"
+            />
+          </osnova-form-field>
+          @if (!choice.controls.id.value) {
+          <div>
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [text]="true"
+              [disabled]="saving()"
+              (click)="removeChoice(item, index, choiceIndex)"
+            >
+              {{ text().removeCharacteristicChoice }}
+            </button>
+          </div>
+          }
+        </div>
+        }
+        <div>
+          <button
+            pButton
+            [id]="'characteristic-group-choice-add-' + index"
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="saving()"
+            (click)="addChoice(item, index)"
+          >
+            {{ text().addCharacteristicChoice }}
+          </button>
+        </div>
+        } @if (!item.controls.id.value) {
         <div>
           <button
             pButton

@@ -4,11 +4,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  type ElementRef,
   computed,
   inject,
   linkedSignal,
   resource,
   signal,
+  viewChildren,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -211,6 +213,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
       class="shop-dialog shop-search-dialog"
       aria-labelledby="shop-search-title"
       closedby="any"
+      (close)="searchOpen.set(false)"
     >
       <div class="shop-search-heading">
         <h2 id="shop-search-title">{{ t().search }}</h2>
@@ -219,7 +222,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
           [ngTemplateOutletContext]="{ $implicit: shopSearch }"
         />
       </div>
-      <form (submit)="$event.preventDefault(); search(searchInput.value, shopSearch)">
+      <form (submit)="$event.preventDefault(); search(shopSearch)">
         <label class="shop-form-field" for="shop-search-input">
           {{ t().searchProducts }}
           <input
@@ -227,11 +230,48 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             id="shop-search-input"
             type="search"
             maxlength="200"
+            autocomplete="off"
+            enterkeyhint="search"
             [value]="searchTerm()"
+            (input)="searchTerm.set(searchInput.value)"
+            (keydown.arrowdown)="moveSuggestionFocus($event, searchInput, 1)"
+            (keydown.arrowup)="moveSuggestionFocus($event, searchInput, -1)"
           />
         </label>
         <button class="shop-primary" type="submit">{{ t().search }}</button>
       </form>
+      @let suggestionItems = suggestedProducts();
+      <div class="shop-search-status" role="status">
+        @if (suggestions.isLoading()) {
+          {{ t().searchSuggestionsLoading }}
+        } @else if (suggestions.status() === 'error') {
+          {{ t().searchSuggestionsFailed }}
+        } @else if (suggestionItems && !suggestionItems.length) {
+          {{ t().searchSuggestionsEmpty }}
+        }
+      </div>
+      @if (suggestions.status() === 'error') {
+        <button class="shop-secondary" type="button" (click)="retrySuggestions(searchInput)">
+          {{ t().retry }}
+        </button>
+      }
+      @if (suggestionItems?.length) {
+        <ul class="shop-search-results" role="list" [attr.aria-label]="t().searchSuggestions">
+          @for (product of suggestionItems; track product.id) {
+            <li>
+              <a
+                #suggestionLink
+                [routerLink]="[...base(), 'product', product.id]"
+                (click)="shopSearch.close()"
+                (keydown.arrowdown)="moveSuggestionFocus($event, searchInput, 1)"
+                (keydown.arrowup)="moveSuggestionFocus($event, searchInput, -1)"
+              >
+                {{ product.name }}
+              </a>
+            </li>
+          }
+        </ul>
+      }
     </dialog>
 
     <ng-template #searchButton>
@@ -241,7 +281,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         [attr.aria-label]="t().search"
         aria-haspopup="dialog"
         aria-controls="shop-search"
-        (click)="shopSearch.showModal(); searchInput.focus()"
+        (click)="openSearch(shopSearch, searchInput)"
       >
         <svg
           viewBox="0 0 24 24"
@@ -437,7 +477,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                   />
                   @if (item.images.length > 1) {
                     <ul class="detail-thumbnails">
-                      @for (image of item.images; track image.url; let index = $index) {
+                      @for (image of item.images; track image.id; let index = $index) {
                         <li>
                           <button
                             type="button"
@@ -492,16 +532,37 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                           <legend>{{ option.name }}</legend>
                           <div class="variant-choices">
                             @for (value of option.values; track value.id) {
-                              <label class="variant-choice">
+                              @let choice = variantForChoice(index, value.id);
+                              <label
+                                class="variant-choice"
+                                [class.unavailable]="!choice?.available"
+                              >
                                 <input
                                   type="radio"
                                   [name]="option.id"
                                   [value]="value.id"
                                   [checked]="variant.optionValueIds[index] === value.id"
-                                  [disabled]="!matchingVariants(index, value.id).length"
-                                  (change)="chooseOption(index, value.id)"
+                                  [disabled]="choice === null"
+                                  [attr.aria-describedby]="
+                                    !choice?.available ? 'variant-stock-' + value.id : null
+                                  "
+                                  (change)="choice && selectedVariant.set(choice)"
                                 />
-                                <span>{{ value.label }}</span>
+                                <span class="variant-choice-label">
+                                  @if (value.swatchColor; as color) {
+                                    <span
+                                      class="shop-option-swatch"
+                                      aria-hidden="true"
+                                      [style.background-color]="color"
+                                    ></span>
+                                  }
+                                  <span>{{ value.label }}</span>
+                                </span>
+                                @if (!choice?.available) {
+                                  <span [id]="'variant-stock-' + value.id" hidden>{{
+                                    t().outOfStock
+                                  }}</span>
+                                }
                               </label>
                             }
                           </div>
@@ -511,15 +572,28 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                           <legend>{{ t().variant }}</legend>
                           <div class="variant-choices">
                             @for (choice of variantChoices(); track choice.variant.id) {
-                              <label class="variant-choice">
+                              <label
+                                class="variant-choice"
+                                [class.unavailable]="!choice.variant.available"
+                              >
                                 <input
                                   type="radio"
                                   name="variant"
                                   [value]="choice.variant.id"
                                   [checked]="variant.id === choice.variant.id"
+                                  [attr.aria-describedby]="
+                                    !choice.variant.available
+                                      ? 'variant-stock-' + choice.variant.id
+                                      : null
+                                  "
                                   (change)="selectedVariant.set(choice.variant)"
                                 />
                                 <span>{{ choice.label }}</span>
+                                @if (!choice.variant.available) {
+                                  <span [id]="'variant-stock-' + choice.variant.id" hidden>{{
+                                    t().outOfStock
+                                  }}</span>
+                                }
                               </label>
                             }
                           </div>
@@ -535,12 +609,15 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                         <input
                           id="product-quantity"
                           type="number"
-                          min="1"
+                          [min]="variant.minimumQuantity"
                           step="1"
-                          [max]="maxCartQuantity"
+                          [max]="maximumQuantity()"
                           [formControl]="quantity"
                           [readOnly]="!available || cartState.locked()"
                           [attr.aria-invalid]="quantity.touched && quantity.invalid ? 'true' : null"
+                          [attr.aria-describedby]="
+                            variant.minimumQuantity > 1 ? 'product-minimum-quantity' : null
+                          "
                         />
                       </label>
                       <button
@@ -551,13 +628,26 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                         {{ t().addToCart }}
                       </button>
                     </form>
+                    @if (variant.minimumQuantity > 1) {
+                      <p class="product-minimum-quantity" id="product-minimum-quantity">
+                        {{ t().minimumQuantity(variant.minimumQuantity) }}
+                      </p>
+                    }
                     @let feedback = added();
                     @if (feedback === 'ok') {
                       <p class="product-cart-added" role="status">{{ t().cartAdded }}</p>
                     } @else if (feedback) {
                       <p class="product-cart-error" role="alert">{{ t()[feedback] }}</p>
                     } @else if (quantity.touched && quantity.invalid) {
-                      <p class="product-cart-error">{{ t().cartInvalidQuantity }}</p>
+                      <p class="product-cart-error" role="alert">
+                        @if (variant.minimumQuantity > 1 && quantity.hasError('min')) {
+                          {{ t().cartMinimumNotMet }}
+                        } @else if (variant.availableQuantity != null && quantity.hasError('max')) {
+                          {{ t().cartInsufficientStock }}
+                        } @else {
+                          {{ t().cartInvalidQuantity }}
+                        }
+                      </p>
                     }
                   </div>
                 }
@@ -876,12 +966,34 @@ class StorefrontPage {
   private readonly document = inject(DOCUMENT);
   private readonly params = toSignal(this.route.paramMap, { requireSync: true });
   private readonly query = toSignal(this.route.queryParamMap, { requireSync: true });
-  protected readonly searchTerm = computed(() => this.query().get('q') ?? '');
+  protected readonly searchTerm = linkedSignal(() => this.query().get('q') ?? '');
+  protected readonly searchOpen = signal(false);
+  private readonly suggestionLinks = viewChildren<ElementRef<HTMLAnchorElement>>('suggestionLink');
   protected readonly orderId = computed(() => this.params().get('orderId'));
   protected readonly slug = computed(() => this.params().get('slug'));
   protected readonly cartState = inject(CartState);
   readonly shopId = this.cartState.shopId;
   readonly base = computed(() => ['/s', this.shopId()]);
+  protected readonly suggestions = resource({
+    params: () => {
+      if (!this.searchOpen()) {
+        return undefined;
+      }
+      const search = this.searchTerm().trim();
+      const length = Array.from(search).length;
+      return length >= 2 && length <= 200 && !search.includes('\u0000')
+        ? { shopId: this.shopId(), search }
+        : undefined;
+    },
+    loader: async ({ params, abortSignal }) => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 300));
+      abortSignal.throwIfAborted();
+      return this.api.suggestions(params.shopId, params.search);
+    },
+  });
+  protected readonly suggestedProducts = computed(() =>
+    this.suggestions.hasValue() ? this.suggestions.value() : undefined,
+  );
   readonly page = this.route.routeConfig?.data?.['orderHistory']
     ? 'orders'
     : (this.route.routeConfig?.path?.split('/').at(2) ?? 'catalogue');
@@ -958,19 +1070,28 @@ class StorefrontPage {
   readonly specifications = computed(
     () => this.productDetail()?.catalogueProductSpecifications ?? [],
   );
-  readonly photoIndex = linkedSignal({ source: () => this.product()?.id, computation: () => 0 });
   private readonly variantSelection = computed(() => this.product()?.variantSelection ?? null);
   protected readonly selectedVariant = linkedSignal(() =>
     preferredVariant(this.variantSelection()?.variants ?? []),
   );
+  protected readonly photoIndex = linkedSignal(() => {
+    const imageId = this.selectedVariant()?.imageId;
+    return Math.max(0, this.product()?.images.findIndex((image) => image.id === imageId) ?? -1);
+  });
   protected readonly sellableVariantId = computed(() => {
     const variant = this.selectedVariant();
     return variant?.available ? variant.id : null;
   });
-  protected readonly maxCartQuantity = maxCartQuantity;
-  protected readonly addQuantity = linkedSignal({
-    source: this.sellableVariantId,
-    computation: () => quantityControl(1),
+  protected readonly maximumQuantity = computed(() => {
+    const variant = this.selectedVariant();
+    return Math.max(
+      variant?.minimumQuantity ?? 1,
+      Math.min(variant?.availableQuantity ?? maxCartQuantity, maxCartQuantity),
+    );
+  });
+  protected readonly addQuantity = linkedSignal(() => {
+    const minimum = this.selectedVariant()?.minimumQuantity ?? 1;
+    return quantityControl(minimum, minimum, this.maximumQuantity());
   });
   protected readonly added = linkedSignal({
     source: this.sellableVariantId,
@@ -1052,26 +1173,23 @@ class StorefrontPage {
   formatPrice(value: string): string {
     return this.price().format(Number(value));
   }
-  protected matchingVariants(optionIndex: number, valueId: string) {
-    const preceding = this.selectedVariant()?.optionValueIds.slice(0, optionIndex) ?? [];
-    return (this.variantSelection()?.variants ?? []).filter(
+  protected variantForChoice(optionIndex: number, valueId: string) {
+    const current = this.selectedVariant();
+    if (!current) {
+      return null;
+    }
+    const preceding = current.optionValueIds.slice(0, optionIndex);
+    const variants = (this.variantSelection()?.variants ?? []).filter(
       ({ optionValueIds }) =>
         optionValueIds[optionIndex] === valueId &&
         preceding.every((id, index) => optionValueIds[index] === id),
     );
-  }
-  protected chooseOption(optionIndex: number, valueId: string): void {
-    const current = this.selectedVariant();
-    if (!current) {
-      return;
-    }
-    const variants = this.matchingVariants(optionIndex, valueId);
     const exact = variants.find(({ optionValueIds }) =>
       optionValueIds.every(
         (id, index) => index === optionIndex || id === current.optionValueIds[index],
       ),
     );
-    this.selectedVariant.set(exact ?? preferredVariant(variants));
+    return exact ?? preferredVariant(variants);
   }
   toggleLanguage() {
     this.setLanguage(this.language() === 'bg' ? 'en' : 'bg');
@@ -1081,10 +1199,31 @@ class StorefrontPage {
     this.document.documentElement.lang = language;
     sessionStorage.setItem('holita.storefront.language', language);
   }
-  protected search(term: string, dialog: HTMLDialogElement) {
+  protected openSearch(dialog: HTMLDialogElement, input: HTMLInputElement) {
+    dialog.showModal();
+    this.searchOpen.set(true);
+    input.focus();
+    input.select();
+  }
+  protected moveSuggestionFocus(event: Event, input: HTMLInputElement, step: 1 | -1) {
+    const links = this.suggestionLinks();
+    if (!links.length) {
+      return;
+    }
+    event.preventDefault();
+    const index = links.findIndex(({ nativeElement }) => nativeElement === event.currentTarget);
+    const first = step === 1 ? 0 : links.length - 1;
+    const next = index === -1 ? first : index + step;
+    (links[next]?.nativeElement ?? input).focus();
+  }
+  protected retrySuggestions(input: HTMLInputElement) {
+    input.focus();
+    this.suggestions.reload();
+  }
+  protected search(dialog: HTMLDialogElement) {
     dialog.close();
     void this.router.navigate([...this.base(), 'products'], {
-      queryParams: { q: term.trim() || null },
+      queryParams: { q: this.searchTerm().trim() || null },
     });
   }
   retry() {

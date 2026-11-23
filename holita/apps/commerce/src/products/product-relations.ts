@@ -46,7 +46,7 @@ export function catalogueProductRelations(scope: Scope) {
     variants: {
       where: { ...scope, active: true },
       orderBy: { price: 'asc' },
-      select: { price: true, quantity: true, inventoryTracked: true },
+      select: { price: true, quantity: true, minimumQuantity: true, inventoryTracked: true },
     },
   } satisfies Prisma.ProductInclude;
 }
@@ -62,8 +62,9 @@ export function catalogueVariantValues(scope: Scope) {
         select: {
           id: true,
           label: true,
+          swatchColor: true,
           sortOrder: true,
-          option: { select: { id: true, name: true } },
+          option: { select: { id: true, name: true, showInListing: true } },
         },
       },
     },

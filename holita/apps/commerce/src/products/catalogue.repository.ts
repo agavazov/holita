@@ -1,7 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { DatabaseService } from '../database.service.js';
-import type { CatalogueSort } from '../generated/graphql/storefront-types.js';
+import type {
+  CatalogueCharacteristicGroupFacet,
+  CatalogueSort,
+} from '../generated/graphql/storefront-types.js';
 import { Prisma } from '../generated/prisma/client.js';
 import type { Scope } from '../scope.js';
 import { catalogueProductRelations, catalogueProductWhere } from './product-relations.js';
@@ -18,9 +21,11 @@ export interface BrowseCriteria {
   minPrice: string | null;
   maxPrice: string | null;
   brandIds: string[];
+  tagIds: string[];
   optionValueIds: string[];
   inStock: boolean;
   sort: CatalogueSort | null;
+  characteristicChoiceIds: string[];
 }
 
 const identity = { id: true, name: true, slug: true };
@@ -42,6 +47,10 @@ function resultId(id: unknown): string {
     throw new Error('Invalid catalogue ID');
   }
   return id;
+}
+
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, '\\$&');
 }
 
 function tagWhere(scope: Scope) {
@@ -157,24 +166,214 @@ export class CatalogueRepository {
     }
   }
 
+  private searchCandidates(
+    scope: Scope,
+    base: Prisma.Sql,
+    words: string[],
+    matchingVariant: Prisma.Sql,
+  ) {
+    if (!words.length) {
+      return base;
+    }
+    const phrase = escapeLike(words.join(' '));
+    const prefix = phrase + '%';
+    const contains = '%' + phrase + '%';
+    // Each word may match a different public field when there is no phrase match.
+    const tokenMatches = words.map(
+      (word) => Prisma.sql`BOOL_OR(field.value ILIKE ${'%' + escapeLike(word) + '%'})`,
+    );
+    const categories = this.database.table('category');
+    return Prisma.sql`
+      WITH RECURSIVE public_categories AS (
+        SELECT "tenantId", "branchId", "id", "name"
+        FROM ${categories}
+        WHERE "tenantId" = ${scope.tenantId}::uuid AND "branchId" = ${scope.branchId}::uuid
+          AND "active" AND "parentId" IS NULL
+        UNION ALL
+        SELECT child."tenantId", child."branchId", child."id", child."name"
+        FROM ${categories} child
+        JOIN public_categories parent ON child."tenantId" = parent."tenantId"
+          AND child."branchId" = parent."branchId" AND child."parentId" = parent."id"
+        WHERE child."active"
+      )
+      SELECT p.*, matches."searchRank"
+      FROM (${base}) p
+      LEFT JOIN ${this.database.table('brand')} b ON b."tenantId" = p."tenantId"
+        AND b."branchId" = p."branchId" AND b."id" = p."brandId" AND b."status" = 'active'
+      LEFT JOIN public_categories c ON c."tenantId" = p."tenantId"
+        AND c."branchId" = p."branchId" AND c."id" = p."categoryId"
+      CROSS JOIN LATERAL (
+        SELECT COALESCE(
+          MIN(CASE
+            WHEN field.priority = 0 AND field.value ILIKE ${phrase} THEN 1
+            WHEN field.priority = 1 AND field.value ILIKE ${phrase} THEN 2
+            WHEN field.priority = 0 AND field.value ILIKE ${prefix} THEN 3
+            WHEN field.value ILIKE ${contains} THEN 4 + field.priority
+          END),
+          CASE WHEN ${Prisma.join(tokenMatches, ' AND ')} THEN 7 END
+        ) AS "searchRank"
+        FROM (
+          VALUES (p."name", 0), (b."name", 1), (c."name", 1),
+            (p."descriptionBg", 2), (p."descriptionEn", 2)
+          UNION ALL
+          SELECT v."sku", 0 FROM ${this.database.table('productVariant')} v
+          WHERE ${matchingVariant}
+          UNION ALL
+          SELECT t."name", 1 FROM ${this.database.table('productTagAssignment')} a
+          JOIN ${this.database.table('productTag')} t ON t."tenantId" = a."tenantId"
+            AND t."branchId" = a."branchId" AND t."id" = a."tagId"
+          WHERE a."tenantId" = p."tenantId" AND a."branchId" = p."branchId"
+            AND a."productId" = p."id"
+        ) field(value, priority)
+      ) matches
+      WHERE matches."searchRank" IS NOT NULL
+    `;
+  }
+
+  // Both the listing predicate and the facet counts use the same applicable product choices.
+  private applicableCharacteristicChoices() {
+    const products = this.database.table('product');
+    const groupCategory = this.database.table('characteristicGroupCategory');
+    const groupCategories = Prisma.sql`FROM ${groupCategory} gc
+      WHERE gc."tenantId" = p."tenantId" AND gc."branchId" = p."branchId"
+        AND gc."groupId" = g."id"`;
+    return Prisma.sql`
+      FROM ${this.database.table('productCharacteristicChoice')} f
+      JOIN ${products} assigned
+        ON assigned."tenantId" = f."tenantId" AND assigned."branchId" = f."branchId"
+          AND assigned."id" = f."productId"
+      JOIN ${this.database.table('characteristic')} c
+        ON c."tenantId" = f."tenantId" AND c."branchId" = f."branchId"
+          AND c."id" = f."characteristicId" AND c."active"
+      JOIN ${this.database.table('characteristicGroup')} g
+        ON g."tenantId" = c."tenantId" AND g."branchId" = c."branchId"
+          AND g."id" = c."groupId" AND g."active"
+      WHERE f."tenantId" = p."tenantId" AND f."branchId" = p."branchId" AND f."productId" = p."id"
+        AND (
+          NOT EXISTS (SELECT 1 ${groupCategories})
+          OR EXISTS (SELECT 1 ${groupCategories} AND gc."categoryId" = assigned."categoryId")
+        )`;
+  }
+
+  private async characteristicFilters(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    selectedIds: string[],
+    base: Prisma.Sql,
+    conditions: Prisma.Sql[],
+  ) {
+    const definitionOrder = [{ sortOrder: 'asc' }, { name: 'asc' }, { id: 'asc' }] as const;
+    const groups = await tx.characteristicGroup.findMany({
+      where: { ...scope, active: true },
+      orderBy: [...definitionOrder],
+      select: {
+        id: true,
+        name: true,
+        characteristics: {
+          where: { ...scope, active: true, kind: { not: 'TEXT' }, choices: { some: scope } },
+          orderBy: [...definitionOrder],
+          select: {
+            id: true,
+            name: true,
+            choices: { where: scope, orderBy: defaultOrder, select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+    const choiceFields = new Map(
+      groups.flatMap(({ characteristics }) =>
+        characteristics.flatMap(({ id, choices }) =>
+          choices.map((choice) => [choice.id, id] as const),
+        ),
+      ),
+    );
+    const selections = new Map<string, string[]>();
+    let valid = true;
+    for (const id of selectedIds) {
+      const field = choiceFields.get(id);
+      if (field) {
+        const selection = selections.get(field) ?? [];
+        selection.push(id);
+        selections.set(field, selection);
+      } else {
+        valid = false;
+      }
+    }
+    const facets: CatalogueCharacteristicGroupFacet[] = [];
+    if (!choiceFields.size) {
+      return { predicates: [], facets, valid };
+    }
+    const applicable = this.applicableCharacteristicChoices();
+    const filters = [...selections].map(([id, ids]) => ({
+      id,
+      matches: Prisma.sql`EXISTS (
+        SELECT 1 ${applicable} AND f."choiceId" = ANY(${ids}::uuid[])
+      )`,
+    }));
+    const countWhere = Prisma.join(
+      [
+        ...conditions,
+        ...filters.map(
+          ({ id, matches }) => Prisma.sql`(choice."characteristicId" = ${id}::uuid OR ${matches})`,
+        ),
+        ...(valid ? [] : [Prisma.sql`FALSE`]),
+      ],
+      ' AND ',
+    );
+    const counted = await tx.$queryRaw<{ id: unknown; count: number }[]>(Prisma.sql`
+      SELECT choice."choiceId" AS id, COUNT(*) FILTER (WHERE ${countWhere})::int AS count
+      FROM (${base}) p
+      CROSS JOIN LATERAL (SELECT f."choiceId", f."characteristicId" ${applicable}) choice
+      GROUP BY choice."choiceId"
+    `);
+    const counts = new Map(counted.map(({ id, count }) => [resultId(id), count]));
+    for (const group of groups) {
+      const characteristics = group.characteristics.flatMap(({ choices, ...field }) => {
+        const countedChoices = choices.flatMap((choice) => {
+          const count = counts.get(choice.id);
+          return count === undefined ? [] : [{ ...choice, count }];
+        });
+        return countedChoices.length ? [{ ...field, choices: countedChoices }] : [];
+      });
+      if (characteristics.length) {
+        facets.push({ id: group.id, name: group.name, characteristics });
+      }
+    }
+    return { predicates: filters.map(({ matches }) => matches), facets, valid };
+  }
+
   async page(scope: Scope, route: CatalogueRoute, criteria: BrowseCriteria) {
     return this.database.client.$transaction(async (tx) => {
       const membership = await this.membership(tx, scope, route);
       if (!membership) {
         return null;
       }
-      const { offset, limit, words, minPrice, maxPrice, brandIds, optionValueIds, inStock, sort } =
-        criteria;
+      const {
+        offset,
+        limit,
+        words,
+        minPrice,
+        maxPrice,
+        brandIds,
+        tagIds,
+        optionValueIds,
+        inStock,
+        sort,
+      } = criteria;
       const variants = this.database.table('productVariant');
       const links = this.database.table('productVariantValue');
+      const tagAssignments = this.database.table('productTagAssignment');
       const activeVariant = Prisma.sql`v."productId" = p."id" AND v."tenantId" = p."tenantId"
         AND v."branchId" = p."branchId" AND v."active"`;
       const products = Prisma.sql`FROM ${this.database.table('product')} p ${membership.join}`;
       const publicProduct = Prisma.sql`p."tenantId" = ${scope.tenantId}::uuid
         AND p."branchId" = ${scope.branchId}::uuid AND p."status" = 'active'
         AND ${membership.condition}`;
+      const searchColumns = words.length
+        ? Prisma.sql`, p."categoryId", p."descriptionBg", p."descriptionEn"`
+        : Prisma.empty;
       const base = Prisma.sql`SELECT p."tenantId", p."branchId", p."id", p."name", p."brandId",
-          p."createdAt", ${membership.order} AS "sortOrder", offer.price
+          p."createdAt", ${membership.order} AS "sortOrder", offer.price${searchColumns}
         ${products}
         CROSS JOIN LATERAL (SELECT MIN(v."price") AS price FROM ${variants} v WHERE ${activeVariant}) offer
         WHERE ${publicProduct} AND offer.price IS NOT NULL`;
@@ -182,6 +381,11 @@ export class CatalogueRepository {
       const brands = await tx.brand.findMany({
         where: { ...scope, status: 'ACTIVE' },
         orderBy: defaultOrder,
+      });
+      const tags = await tx.productTag.findMany({
+        where: tagWhere(scope),
+        orderBy: defaultOrder,
+        select: identity,
       });
       const choices = await tx.optionValue.findMany({
         where: { ...scope, option: visibleOption },
@@ -208,10 +412,15 @@ export class CatalogueRepository {
           FROM candidates p JOIN ${variants} v ON ${activeVariant}
           JOIN ${links} l ON l."tenantId" = v."tenantId" AND l."branchId" = v."branchId"
             AND l."variantId" = v."id"
+          UNION ALL
+          SELECT DISTINCT 'tag' AS kind, a."tagId" AS id
+          FROM candidates p
+          JOIN ${tagAssignments} a ON a."tenantId" = p."tenantId" AND a."branchId" = p."branchId"
+            AND a."productId" = p."id"
         `
         : Prisma.sql`
           WITH offers AS (
-            SELECT v."tenantId", v."branchId", v."id", p."brandId"
+            SELECT v."tenantId", v."branchId", v."id", v."productId", p."brandId"
             ${products}
             JOIN ${variants} v ON ${activeVariant}
             WHERE ${publicProduct}
@@ -223,6 +432,11 @@ export class CatalogueRepository {
           FROM offers v
           JOIN ${links} l ON l."tenantId" = v."tenantId" AND l."branchId" = v."branchId"
             AND l."variantId" = v."id"
+          UNION ALL
+          SELECT DISTINCT 'tag' AS kind, a."tagId" AS id
+          FROM offers v
+          JOIN ${tagAssignments} a ON a."tenantId" = v."tenantId" AND a."branchId" = v."branchId"
+            AND a."productId" = v."productId"
         `;
       const facets = await tx.$queryRaw<{ kind: string; id: unknown }[]>(facetQuery);
       const brandFacets = new Set(
@@ -230,6 +444,9 @@ export class CatalogueRepository {
       );
       const optionFacets = new Set(
         facets.filter(({ kind }) => kind === 'option').map(({ id }) => resultId(id)),
+      );
+      const tagFacets = new Set(
+        facets.filter(({ kind }) => kind === 'tag').map(({ id }) => resultId(id)),
       );
       const optionGroups = new Map<
         string,
@@ -243,29 +460,29 @@ export class CatalogueRepository {
         group.values.push({ id, label });
         optionGroups.set(option.id, group);
       }
+      const characteristicFacets: CatalogueCharacteristicGroupFacet[] = [];
       const page = {
         listing: membership.listing,
         facets: {
           brands: brands.filter(({ id }) => brandFacets.has(id)),
+          tags: tags.filter(({ id }) => tagFacets.has(id)),
           options: [...optionGroups.values()],
+          characteristicFacets,
         },
         offset,
         limit,
       };
       const publicBrandIds = new Set(brands.map(({ id }) => id));
+      const publicTagIds = new Set(tags.map(({ id }) => id));
       if (
         brandIds.some((id) => !publicBrandIds.has(id)) ||
+        tagIds.some((id) => !publicTagIds.has(id)) ||
         selectedOptions.length !== optionValueIds.length
       ) {
         return { ...page, items: [], total: 0 };
       }
 
-      const conditions = [
-        Prisma.sql`TRUE`,
-        ...words.map(
-          (word) => Prisma.sql`p."name" ILIKE ${'%' + word.replace(/[\\%_]/g, '\\$&') + '%'}`,
-        ),
-      ];
+      const conditions = [Prisma.sql`TRUE`];
       if (minPrice !== null) {
         conditions.push(Prisma.sql`p.price >= ${minPrice}::numeric`);
       }
@@ -275,28 +492,51 @@ export class CatalogueRepository {
       if (brandIds.length) {
         conditions.push(Prisma.sql`p."brandId" = ANY(${brandIds}::uuid[])`);
       }
-      if (inStock || optionValueIds.length) {
-        const stock = inStock
-          ? Prisma.sql`AND (NOT v."inventoryTracked" OR v."quantity" > 0)`
-          : Prisma.empty;
-        const options = optionValueIds.map(
-          (id) => Prisma.sql`AND EXISTS (
+      if (tagIds.length) {
+        conditions.push(Prisma.sql`EXISTS (
+          SELECT 1 FROM ${tagAssignments} a
+          WHERE a."tenantId" = p."tenantId" AND a."branchId" = p."branchId"
+            AND a."productId" = p."id" AND a."tagId" = ANY(${tagIds}::uuid[])
+        )`);
+      }
+      const stock = inStock
+        ? Prisma.sql`AND (NOT v."inventoryTracked" OR v."quantity" >= v."minimumQuantity")`
+        : Prisma.empty;
+      const options = optionValueIds.map(
+        (id) => Prisma.sql`AND EXISTS (
           SELECT 1 FROM ${links} l
           WHERE l."tenantId" = v."tenantId" AND l."branchId" = v."branchId"
             AND l."variantId" = v."id" AND l."optionValueId" = ${id}::uuid
         )`,
-        );
-        const choicePredicates = options.length ? Prisma.join(options, ' ') : Prisma.empty;
+      );
+      const optionMatches = options.length ? Prisma.join(options, ' ') : Prisma.empty;
+      const matchingVariant = Prisma.sql`${activeVariant} ${stock} ${optionMatches}`;
+      if (inStock || optionValueIds.length) {
         conditions.push(Prisma.sql`EXISTS (
-          SELECT 1 FROM ${variants} v WHERE ${activeVariant} ${stock} ${choicePredicates}
+          SELECT 1 FROM ${variants} v WHERE ${matchingVariant}
         )`);
       }
-      const filtered = Prisma.sql`FROM (${base}) p WHERE ${Prisma.join(conditions, ' AND ')}`;
+      const candidates = this.searchCandidates(scope, base, words, matchingVariant);
+      const characteristics = await this.characteristicFilters(
+        tx,
+        scope,
+        criteria.characteristicChoiceIds,
+        candidates,
+        conditions,
+      );
+      page.facets.characteristicFacets = characteristics.facets;
+      if (!characteristics.valid) {
+        return { ...page, items: [], total: 0 };
+      }
+      const filtered = Prisma.sql`FROM (${candidates}) p
+        WHERE ${Prisma.join([...conditions, ...characteristics.predicates], ' AND ')}`;
       const order = sort
         ? sortOrder[sort]
-        : route.kind === 'all'
-          ? Prisma.sql`"name" ASC, "id" DESC`
-          : Prisma.sql`"sortOrder" ASC NULLS LAST, "name" ASC, "id" ASC`;
+        : words.length
+          ? Prisma.sql`"searchRank" ASC, "name" ASC, "id" ASC`
+          : route.kind === 'all'
+            ? Prisma.sql`"name" ASC, "id" DESC`
+            : Prisma.sql`"sortOrder" ASC NULLS LAST, "name" ASC, "id" ASC`;
       const [count] = await tx.$queryRaw<{ total: number }[]>(
         Prisma.sql`SELECT COUNT(*)::int AS total ${filtered}`,
       );

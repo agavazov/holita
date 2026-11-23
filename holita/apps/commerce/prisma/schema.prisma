@@ -240,6 +240,7 @@ model Category {
   parentId String? @db.Uuid
   parent Category? @relation("CategoryTree", fields: [tenantId, branchId, parentId], references: [tenantId, branchId, id], onDelete: NoAction)
   children Category[] @relation("CategoryTree")
+  characteristicGroups CharacteristicGroupCategory[]
   sortOrder Int @default(0)
   active Boolean @default(true)
   products Product[]
@@ -258,6 +259,7 @@ model Option {
   name String @db.VarChar(200)
   active Boolean @default(true)
   showInFilters Boolean @default(false)
+  showInListing Boolean @default(false)
   values OptionValue[]
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, name])
@@ -271,11 +273,19 @@ model OptionValue {
   optionId String @db.Uuid
   option Option @relation(fields: [tenantId, branchId, optionId], references: [tenantId, branchId, id], onDelete: Cascade)
   label String @db.VarChar(200)
+  swatchColor String? @db.VarChar(7)
   sortOrder Int
   variantLinks ProductVariantValue[]
   @@unique([tenantId, branchId, id])
   @@index([tenantId, branchId, optionId, sortOrder])
   @@map("optionValue")
+}
+
+enum CharacteristicKind {
+  TEXT @map("text")
+  SINGLE_CHOICE @map("singleChoice")
+  MULTIPLE_CHOICE @map("multipleChoice")
+  @@map("characteristicKind")
 }
 
 model CharacteristicGroup {
@@ -286,10 +296,23 @@ model CharacteristicGroup {
   sortOrder Int @default(0)
   active Boolean @default(true)
   characteristics Characteristic[]
+  categories CharacteristicGroupCategory[]
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, name])
   @@index([tenantId, branchId, sortOrder, id])
   @@map("characteristicGroup")
+}
+
+model CharacteristicGroupCategory {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  groupId String @db.Uuid
+  categoryId String @db.Uuid
+  group CharacteristicGroup @relation(fields: [tenantId, branchId, groupId], references: [tenantId, branchId, id], onDelete: Cascade)
+  category Category @relation(fields: [tenantId, branchId, categoryId], references: [tenantId, branchId, id], onDelete: Restrict)
+  @@id([tenantId, branchId, groupId, categoryId])
+  @@index([tenantId, branchId, categoryId])
+  @@map("characteristicGroupCategory")
 }
 
 model Characteristic {
@@ -302,9 +325,36 @@ model Characteristic {
   sortOrder Int @default(0)
   active Boolean @default(true)
   productValues ProductCharacteristicValue[]
+  kind CharacteristicKind @default(TEXT)
+  choices CharacteristicChoice[]
   @@unique([tenantId, branchId, id])
   @@index([tenantId, branchId, groupId, sortOrder, id])
   @@map("characteristic")
+}
+
+model CharacteristicChoice {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  characteristicId String @db.Uuid
+  characteristic Characteristic @relation(fields: [tenantId, branchId, characteristicId], references: [tenantId, branchId, id], onDelete: Restrict)
+  name String @db.VarChar(200)
+  productAssignments ProductCharacteristicChoice[]
+  @@unique([tenantId, branchId, characteristicId, id])
+  @@map("characteristicChoice")
+}
+
+model ProductCharacteristicChoice {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  productId String @db.Uuid
+  characteristicId String @db.Uuid
+  choiceId String @db.Uuid
+  product Product @relation(fields: [tenantId, branchId, productId], references: [tenantId, branchId, id], onDelete: Cascade)
+  choice CharacteristicChoice @relation(fields: [tenantId, branchId, characteristicId, choiceId], references: [tenantId, branchId, characteristicId, id], onDelete: Restrict)
+  @@id([tenantId, branchId, productId, characteristicId, choiceId])
+  @@index([tenantId, branchId, choiceId])
+  @@map("productCharacteristicChoice")
 }
 
 model ProductCharacteristicValue {
@@ -335,6 +385,7 @@ model Product {
   images ProductImage[]
   collectionItems ProductCollectionItem[]
   characteristicValues ProductCharacteristicValue[]
+  characteristicChoices ProductCharacteristicChoice[]
   badgeAssignments ProductBadgeAssignment[]
   tagAssignments ProductTagAssignment[]
   legacyPrice Decimal? @map("price") @db.Decimal(12, 2)
@@ -446,6 +497,8 @@ model ProductImage {
   storageKey String @db.VarChar(41)
   altText String? @db.Text
   sortOrder Int
+  variants ProductVariant[]
+  @@unique([tenantId, branchId, productId, id])
   @@unique([tenantId, branchId, storageKey])
   @@index([tenantId, branchId, productId, sortOrder, id])
   @@map("productImage")
@@ -457,9 +510,17 @@ model ProductVariant {
   branchId String @db.Uuid
   productId String @db.Uuid
   product Product @relation(fields: [tenantId, branchId, productId], references: [tenantId, branchId, id], onDelete: Cascade)
+  imageId String? @db.Uuid
+  image ProductImage? @relation(fields: [tenantId, branchId, productId, imageId], references: [tenantId, branchId, productId, id], onDelete: NoAction, map: "product_variant_gallery_image_fkey")
   sku String @db.VarChar(100)
+  barcode String? @db.VarChar(255)
   price Decimal @db.Decimal(12, 2)
+  weight Decimal? @db.Decimal(12, 3)
+  width Decimal? @db.Decimal(12, 3)
+  height Decimal? @db.Decimal(12, 3)
+  depth Decimal? @db.Decimal(12, 3)
   quantity Int @default(0)
+  minimumQuantity Int @default(1)
   inventoryTracked Boolean @default(false)
   active Boolean @default(true)
   combinationKey String @db.Char(64)
@@ -471,6 +532,7 @@ model ProductVariant {
   @@unique([tenantId, branchId, sku])
   @@unique([tenantId, branchId, productId, combinationKey], map: "productVariant_product_combination_key")
   @@index([tenantId, branchId, productId, active, price])
+  @@index([tenantId, branchId, productId, imageId])
   @@index([tenantId, branchId, inventoryTracked, quantity])
   @@map("productVariant")
 }

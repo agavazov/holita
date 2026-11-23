@@ -60,8 +60,15 @@ query OperatorProduct($id: ID!) {
     variants {
       id
       sku
+      barcode
       price
+      weight
+      width
+      height
+      depth
       quantity
+      minimumQuantity
+      imageId
       inventoryTracked
       active
       optionValueIds
@@ -114,14 +121,21 @@ query OperatorProductCharacteristics($productId: ID) {
     groups {
       id
       name
+      categoryIds
       characteristics {
         id
         name
+        kind
+        choices {
+          id
+          name
+        }
       }
     }
     values {
       characteristicId
       value
+      choiceIds
     }
   }
 }

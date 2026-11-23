@@ -12,6 +12,13 @@ function recordId(id: string): string {
   return id.toLowerCase();
 }
 
+function filterId(id: string): string {
+  if (!isUUID(id)) {
+    throw new BadRequestException('Invalid filter ID');
+  }
+  return id.toLowerCase();
+}
+
 function quantityError(code: 'INVALID_VALUE' | 'INVENTORY_TRACKING_REQUIRED', message: string) {
   return new GraphQLError(message, {
     extensions: {
@@ -45,11 +52,28 @@ export class InventoryService {
       throw new BadRequestException('Invalid page');
     }
     const search = (args.search ?? '').trim();
-    const words = search.split(/\s+/u).filter(Boolean);
-    if (Array.from(search).length > 200 || words.length > 5 || search.includes('\u0000')) {
+    if (Array.from(search).length > 255 || search.includes('\u0000')) {
       throw new BadRequestException('Invalid search');
     }
-    const result = await this.repository.list(scope, offset, limit, words, args.filter, args.sort);
+    const { brandId, categoryId, characteristicChoiceIds, ...filter } = args.filter ?? {};
+    const barcode = filter.barcode?.trim();
+    if (barcode && (Array.from(barcode).length > 255 || barcode.includes('\u0000'))) {
+      throw new BadRequestException('Invalid barcode filter');
+    }
+    const result = await this.repository.list(
+      scope,
+      offset,
+      limit,
+      search,
+      {
+        ...filter,
+        barcode: barcode ?? null,
+        brandId: brandId == null ? null : filterId(brandId),
+        categoryId: categoryId == null ? null : filterId(categoryId),
+        characteristicChoiceIds: [...new Set(characteristicChoiceIds?.map(filterId))],
+      },
+      args.sort,
+    );
     return { ...result, items: result.items.map(present) };
   }
 

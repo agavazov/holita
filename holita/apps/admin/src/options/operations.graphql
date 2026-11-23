@@ -3,9 +3,11 @@ fragment OperatorOptionFields on Option {
   name
   active
   showInFilters
+  showInListing
   values {
     id
     label
+    swatchColor
   }
 }
 

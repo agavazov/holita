@@ -55,6 +55,17 @@
   object-fit: cover;
 }
 
+.variant-image-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--p-app-space-2);
+}
+
+.variant-image-choice .product-image-preview {
+  flex: none;
+  inline-size: var(--p-app-space-6);
+}
+
 .product-image-actions {
   display: flex;
 }

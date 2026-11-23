@@ -142,7 +142,7 @@ export class CategoriesService {
         }
         if (error.code === 'P2003') {
           throw conflict(
-            'Move subcategories, remove product assignments and change collection rules before deleting this category',
+            'Move subcategories, remove product and characteristic group assignments, and change collection rules before deleting this category',
           );
         }
       }

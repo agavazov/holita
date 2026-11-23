@@ -1,3 +1,18 @@
+@if (relation() === 'brand') {
+<holita-brand-editor
+  [createInProduct]="true"
+  [productDirty]="form.dirty"
+  (created)="selectCreatedRelation('brand', $event)"
+  (createClosed)="closeRelation()"
+/>
+} @else if (relation() === 'category') {
+<holita-category-editor
+  [createInProduct]="true"
+  [productDirty]="form.dirty"
+  (created)="selectCreatedRelation('category', $event)"
+  (createClosed)="closeRelation()"
+/>
+} @else {
 <osnova-route-drawer
   [title]="editing ? text().editProduct : text().createProduct"
   [subtitle]="subtitle()"
@@ -60,6 +75,17 @@
             [pt]="selectPt(brandError, 'product-brand')"
             (onChange)="clearError('brandId')"
           />
+          <button
+            id="product-create-brand"
+            [pButton]="{ size: 'small' }"
+            type="button"
+            severity="secondary"
+            [text]="true"
+            [disabled]="saving() || creatingTag() || brands.status() === 'loading'"
+            (click)="openRelation('brand')"
+          >
+            {{ text().newBrand }}
+          </button>
           @if (brands.error()) {
           <div class="product-field-feedback">
             <p-message id="product-brand-load-error" severity="warn" variant="simple" size="small">
@@ -103,6 +129,17 @@
             [pt]="selectPt(categoryError, 'product-category')"
             (onChange)="clearError('categoryId')"
           />
+          <button
+            id="product-create-category"
+            [pButton]="{ size: 'small' }"
+            type="button"
+            severity="secondary"
+            [text]="true"
+            [disabled]="saving() || creatingTag() || categories.status() === 'loading'"
+            (click)="openRelation('category')"
+          >
+            {{ text().newCategory }}
+          </button>
           @if (categories.error()) {
           <div class="product-field-feedback">
             <p-message
@@ -310,6 +347,7 @@
           'product-specification-' + characteristic.id; @let error = errors()[characteristic.id] ??
           null;
           <osnova-form-field [controlId]="id" [label]="characteristic.name" [error]="error">
+            @if (characteristic.kind === 'TEXT') {
             <textarea
               pTextarea
               [id]="id"
@@ -320,6 +358,23 @@
               [attr.aria-invalid]="!!error"
               (input)="clearError(characteristic.id)"
             ></textarea>
+            } @else { @let multiple = characteristic.kind === 'MULTIPLE_CHOICE';
+            <p-select
+              [inputId]="id"
+              [ariaLabelledBy]="id + '-label'"
+              [formControlName]="characteristic.id"
+              [options]="characteristic.choices"
+              optionLabel="name"
+              optionValue="id"
+              [multiple]="multiple"
+              [showClear]="true"
+              [placeholder]="text().chooseCharacteristicValue"
+              [emptyMessage]="shared().table.noResultsTitle"
+              [invalid]="!!error"
+              [pt]="selectPt(error, id, multiple)"
+              (onChange)="clearError(characteristic.id)"
+            />
+            }
           </osnova-form-field>
           }
         </div>
@@ -536,13 +591,18 @@
       </div>
       } @if (errors()['variants']; as message) {
       <p-message id="product-variants-error" severity="error">{{ message }}</p-message>
-      } @for (variant of variants.controls; track variant; let index = $index) { @let valuesId =
-      'product-variant-values-' + index; @let skuId = 'product-variant-sku-' + index; @let priceId =
-      'product-variant-price-' + index; @let quantityId = 'product-variant-quantity-' + index; @let
-      trackingId = 'product-variant-tracking-' + index; @let activeId = 'product-variant-active-' +
-      index; @let valuesError = variantError(index, 'optionValueIds'); @let skuError =
-      variantError(index, 'sku'); @let priceError = variantError(index, 'price'); @let quantityError
-      = variantError(index, 'quantity'); @let retained = !!variant.controls.id.value;
+      } @let galleryChoices = variantImageChoices(); @for (variant of variants.controls; track
+      variant; let index = $index) { @let valuesId = 'product-variant-values-' + index; @let skuId =
+      'product-variant-sku-' + index; @let barcodeId = 'product-variant-barcode-' + index; @let
+      priceId = 'product-variant-price-' + index; @let quantityId = 'product-variant-quantity-' +
+      index; @let minimumId = 'product-variant-minimum-quantity-' + index; @let imageId =
+      'product-variant-image-' + index; @let trackingId = 'product-variant-tracking-' + index; @let
+      activeId = 'product-variant-active-' + index; @let valuesError = variantError(index,
+      'optionValueIds'); @let skuError = variantError(index, 'sku'); @let barcodeError =
+      variantError(index, 'barcode'); @let priceError = variantError(index, 'price'); @let
+      quantityError = variantError(index, 'quantity'); @let minimumError = variantError(index,
+      'minimumQuantity'); @let imageError = variantError(index, 'imageId'); @let retained =
+      !!variant.controls.id.value;
       <div
         class="app-card"
         role="group"
@@ -638,6 +698,22 @@
             />
           </osnova-form-field>
           <osnova-form-field
+            [controlId]="barcodeId"
+            [label]="text().variantBarcode"
+            [error]="barcodeError"
+          >
+            <input
+              pInputText
+              [id]="barcodeId"
+              formControlName="barcode"
+              autocomplete="off"
+              [attr.aria-describedby]="barcodeId + '-error'"
+              [invalid]="!!barcodeError"
+              [attr.aria-invalid]="!!barcodeError"
+              (input)="clearError(path(index, 'barcode'))"
+            />
+          </osnova-form-field>
+          <osnova-form-field
             [controlId]="priceId"
             [label]="text().price + ' (' + priceCurrency + ')'"
             [required]="true"
@@ -653,6 +729,28 @@
               [invalid]="!!priceError"
               [attr.aria-invalid]="!!priceError"
               (input)="clearError(path(index, 'price'))"
+            />
+          </osnova-form-field>
+          <osnova-form-field
+            [controlId]="minimumId"
+            [label]="text().variantMinimumQuantity"
+            [required]="true"
+            [error]="minimumError"
+          >
+            <input
+              pInputText
+              [id]="minimumId"
+              formControlName="minimumQuantity"
+              type="number"
+              min="1"
+              max="2147483647"
+              step="1"
+              inputmode="numeric"
+              aria-required="true"
+              [attr.aria-describedby]="minimumId + '-error'"
+              [invalid]="!!minimumError"
+              [attr.aria-invalid]="!!minimumError"
+              (input)="clearError(path(index, 'minimumQuantity'))"
             />
           </osnova-form-field>
           <osnova-form-field [controlId]="trackingId" [label]="text().variantInventory">
@@ -713,6 +811,63 @@
               optionValue="value"
             />
           </osnova-form-field>
+          <osnova-form-field
+            [controlId]="imageId"
+            [label]="text().variantImage"
+            [error]="imageError"
+          >
+            <p-select
+              [inputId]="imageId"
+              [ariaLabelledBy]="imageId + '-label'"
+              formControlName="imageId"
+              [options]="galleryChoices"
+              optionLabel="label"
+              optionValue="id"
+              [placeholder]="text().variantNoImage"
+              [invalid]="!!imageError"
+              [pt]="selectPt(imageError, imageId)"
+              (onChange)="clearError(path(index, 'imageId'))"
+            >
+              <ng-template #item let-choice>
+                <span class="variant-image-choice">
+                  @if (choice.preview) {
+                  <span class="product-image-preview"><img [src]="choice.preview" alt="" /></span>
+                  } {{ choice.label }}
+                </span>
+              </ng-template>
+              <ng-template #selectedItem let-choice>
+                <span class="variant-image-choice">
+                  @if (choice.preview) {
+                  <span class="product-image-preview"><img [src]="choice.preview" alt="" /></span>
+                  } {{ choice.label }}
+                </span>
+              </ng-template>
+            </p-select>
+          </osnova-form-field>
+          @for (measurement of measurements; track measurement.field) { @let measurementId =
+          'product-variant-' + measurement.field + '-' + index; @let measurementError =
+          variantError(index, measurement.field);
+          <osnova-form-field
+            [controlId]="measurementId"
+            [label]="text()[measurement.label]"
+            [error]="measurementError"
+          >
+            <input
+              pInputText
+              [id]="measurementId"
+              [formControlName]="measurement.field"
+              type="number"
+              min="0"
+              [attr.max]="measurementMax"
+              [attr.step]="measurementStep"
+              inputmode="decimal"
+              [attr.aria-describedby]="measurementId + '-error'"
+              [invalid]="!!measurementError"
+              [attr.aria-invalid]="!!measurementError"
+              (input)="clearError(path(index, measurement.field))"
+            />
+          </osnova-form-field>
+          }
         </div>
       </div>
       } @if (optionGroups().length) {
@@ -741,7 +896,7 @@
       severity="secondary"
       [outlined]="true"
       [disabled]="saving() || creatingTag()"
-      (click)="drawer().close()"
+      (click)="drawer()?.close()"
     >
       {{ shared().cancel }}
     </button>
@@ -755,3 +910,4 @@
     </button>
   </div>
 </osnova-route-drawer>
+}

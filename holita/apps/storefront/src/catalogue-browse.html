@@ -1,391 +1,437 @@
 @let listing = result()?.listing; @let indexKind = indexSection(); @let sectionName = section();
-@let title =
-  result() === null
-    ? t().browseMissing
-    : (listing?.name ?? (sectionName ? t()[sectionName] : t().products));
-@if (home()) {
-  <holita-storefront-home
-    [shopId]="shopId()"
-    [language]="language()"
-    [catalogue]="result()"
-    [loading]="isLoading()"
-    [failed]="failed()"
-  />
-  @if (failed()) {
-    <div class="shop-width">
-      <ng-container [ngTemplateOutlet]="listingError" />
+@let title = result() === null ? t().browseMissing : (listing?.name ?? (sectionName ?
+t()[sectionName] : t().products)); @if (home()) {
+<holita-storefront-home
+  [shopId]="shopId()"
+  [language]="language()"
+  [catalogue]="result()"
+  [loading]="isLoading()"
+  [failed]="failed()"
+/>
+@if (failed()) {
+<div class="shop-width">
+  <ng-container [ngTemplateOutlet]="listingError" />
+</div>
+} } @else {
+<div class="shop-width catalogue" id="products">
+  <header class="catalogue-heading">
+    <nav class="browse-path" [attr.aria-label]="t().browsePath">
+      <ol role="list">
+        <li>
+          <a [routerLink]="base()">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <path
+                d="m3 10 9-7 9 7M5 9v11h5v-5h4v5h5V9"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span class="shop-visually-hidden">{{ t().home }}</span>
+          </a>
+        </li>
+        @if (slug() && section(); as currentSection) {
+        <li>
+          <span aria-hidden="true">›</span
+          ><a [routerLink]="[...base(), currentSection]">{{ t()[currentSection] }}</a>
+        </li>
+        } @for (category of listing?.categoryPath?.slice(0, -1); track category.id) {
+        <li>
+          <span aria-hidden="true">›</span
+          ><a [routerLink]="[...base(), 'categories', category.slug]">{{ category.name }}</a>
+        </li>
+        }
+        <li><span aria-hidden="true">›</span><span aria-current="page">{{ title }}</span></li>
+      </ol>
+    </nav>
+    <div class="catalogue-title-row">
+      <div>
+        <h1 id="catalogue-title">{{ title }}</h1>
+        @if (result(); as page) {
+        <p role="status">{{ t().count(page.total) }}</p>
+        }
+      </div>
+      @if (!indexKind && result() !== null && !failed()) {
+      <div class="catalogue-toolbar">
+        <label class="shop-visually-hidden" for="catalogue-sort">{{ t().sort }}</label>
+        <select #sort id="catalogue-sort" [disabled]="!url().valid" (change)="sortBy(sort.value)">
+          @for (choice of sortChoices; track choice.value) {
+          <option [value]="choice.value" [selected]="draft().sort === choice.value">
+            {{ !choice.value && url().filters.q ? t().sortRelevance : t()[choice.label] }}
+          </option>
+          }
+        </select>
+        <button
+          class="filters-toggle"
+          type="button"
+          aria-haspopup="dialog"
+          aria-controls="mobile-filters"
+          (click)="openFilters(mobileFilters)"
+        >
+          {{ t().filters }}{{ selectedCount() ? ' (' + selectedCount() + ')' : '' }}
+        </button>
+      </div>
+      }
     </div>
-  }
-} @else {
-  <div class="shop-width catalogue" id="products">
-    <header class="catalogue-heading">
-      <nav class="browse-path" [attr.aria-label]="t().browsePath">
-        <ol role="list">
-          <li>
-            <a [routerLink]="base()">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                aria-hidden="true"
-              >
-                <path
-                  d="m3 10 9-7 9 7M5 9v11h5v-5h4v5h5V9"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <span class="shop-visually-hidden">{{ t().home }}</span>
-            </a>
-          </li>
-          @if (slug() && section(); as currentSection) {
-            <li>
-              <span aria-hidden="true">›</span
-              ><a [routerLink]="[...base(), currentSection]">{{ t()[currentSection] }}</a>
-            </li>
-          }
-          @for (category of listing?.categoryPath?.slice(0, -1); track category.id) {
-            <li>
-              <span aria-hidden="true">›</span
-              ><a [routerLink]="[...base(), 'categories', category.slug]">{{ category.name }}</a>
-            </li>
-          }
-          <li>
-            <span aria-hidden="true">›</span><span aria-current="page">{{ title }}</span>
-          </li>
-        </ol>
-      </nav>
-      <div class="catalogue-title-row">
-        <div>
-          <h1 id="catalogue-title">{{ title }}</h1>
-          @if (result(); as page) {
-            <p role="status">{{ t().count(page.total) }}</p>
-          }
-        </div>
-        @if (!indexKind && result() !== null && !failed()) {
-          <div class="catalogue-toolbar">
-            <label class="shop-visually-hidden" for="catalogue-sort">{{ t().sort }}</label>
-            <select
-              #sort
-              id="catalogue-sort"
-              [disabled]="!url().valid"
-              (change)="sortBy(sort.value)"
-            >
-              @for (choice of sortChoices; track choice.value) {
-                <option [value]="choice.value" [selected]="draft().sort === choice.value">
-                  {{ t()[choice.label] }}
-                </option>
-              }
-            </select>
-            <button
-              class="filters-toggle"
-              type="button"
-              aria-haspopup="dialog"
-              aria-controls="mobile-filters"
-              (click)="openFilters(mobileFilters)"
-            >
-              {{ t().filters }}{{ selectedCount() ? ' (' + selectedCount() + ')' : '' }}
-            </button>
-          </div>
-        }
-      </div>
-    </header>
+  </header>
 
-    @if (failed()) {
-      <ng-container [ngTemplateOutlet]="listingError" />
-    } @else if (indexKind) {
-      @if (index(); as entries) {
-        @if (entries.items.length) {
-          <ul class="directory-grid" role="list" aria-labelledby="catalogue-title">
-            @for (entry of entries.items; track entry.id) {
-              <li>
-                <a class="directory-link" [routerLink]="[...base(), indexKind, entry.slug]">
-                  @if (entry.logoUrl) {
-                    <img [src]="entry.logoUrl" alt="" width="48" height="48" loading="lazy" />
-                  }
-                  <strong>{{ entry.name }}</strong>
-                  <span class="directory-arrow" aria-hidden="true">→</span>
-                </a>
-                @if (categoryChildren().get(entry.id); as children) {
-                  <ul class="directory-children">
-                    @for (child of children; track child.id) {
-                      <li>
-                        <a [routerLink]="[...base(), indexKind, child.slug]">{{ child.name }}</a>
-                      </li>
-                    }
-                  </ul>
-                }
-              </li>
-            }
-          </ul>
-          @if (indexKind !== 'categories') {
-            <ng-container [ngTemplateOutlet]="pagination" />
-          }
-        } @else if (!entries.total) {
-          <p class="browse-empty">{{ t().noBrowseEntries }}</p>
+  @if (failed()) {
+  <ng-container [ngTemplateOutlet]="listingError" />
+  } @else if (indexKind) { @if (index(); as entries) { @if (entries.items.length) {
+  <ul class="directory-grid" role="list" aria-labelledby="catalogue-title">
+    @for (entry of entries.items; track entry.id) {
+    <li>
+      <a class="directory-link" [routerLink]="[...base(), indexKind, entry.slug]">
+        @if (entry.logoUrl) {
+        <img [src]="entry.logoUrl" alt="" width="48" height="48" loading="lazy" />
         }
-      } @else if (isLoading()) {
-        <p class="browse-empty" role="status">{{ t().loading }}</p>
+        <strong>{{ entry.name }}</strong>
+        <span class="directory-arrow" aria-hidden="true">→</span>
+      </a>
+      @if (categoryChildren().get(entry.id); as children) {
+      <ul class="directory-children">
+        @for (child of children; track child.id) {
+        <li>
+          <a [routerLink]="[...base(), indexKind, child.slug]">{{ child.name }}</a>
+        </li>
+        }
+      </ul>
       }
-    } @else if (result() !== null) {
-      @if (filtered() && url().valid) {
-        <div class="filter-summary">
-          <span>{{ t().filters }} ({{ selectedCount() }})</span>
-          @if (url().filters.q; as query) {
-            <span class="filter-query">{{ query }}</span>
-          }
-          <button type="button" (click)="clear()">{{ t().clearFilters }}</button>
-        </div>
-      }
-      <div class="browse-layout">
-        <aside class="browse-sidebar" [attr.aria-label]="t().filters">
-          @if (!filtersOpen()) {
-            <ng-container [ngTemplateOutlet]="filterForm" />
-          }
-        </aside>
-        <section
-          class="browse-results"
-          aria-labelledby="catalogue-title"
-          [attr.aria-busy]="isLoading() || null"
-        >
-          @if (!url().valid || staleChoices()) {
-            <div class="shop-state">
-              <p role="alert">{{ url().valid ? t().staleFilters : t().invalidFilters }}</p>
-              <button class="shop-secondary" type="button" (click)="clear()">
-                {{ t().clearFilters }}
-              </button>
-            </div>
-          }
-          @if (result(); as page) {
-            @if (page.items.length) {
-              <ul class="catalogue-grid" role="list">
-                @for (item of page.items; track item.id) {
-                  <li class="catalogue-card">
-                    <a
-                      class="product-link"
-                      [routerLink]="[...base(), 'product', item.id]"
-                      [attr.aria-labelledby]="'product-' + item.id"
-                      [attr.aria-describedby]="
-                        'availability-' + item.id + (item.badges.length ? ' badges-' + item.id : '')
-                      "
-                    >
-                      @if (item.coverImage; as cover) {
-                        <img
-                          class="catalogue-cover"
-                          [src]="cover.url"
-                          [alt]="cover.altText ?? ''"
-                          loading="lazy"
-                        />
-                      } @else {
-                        <span class="catalogue-cover cover-placeholder">{{ t().noPhoto }}</span>
-                      }
-                      <h2 [id]="'product-' + item.id">{{ item.name }}</h2>
-                      <p class="catalogue-price app-num">{{ format().format(+item.price) }}</p>
-                      <div class="catalogue-meta">
-                        @if (item.brand; as brand) {
-                          <span class="product-brand">{{ brand.name }}</span>
-                        }
-                        <span
-                          class="product-availability"
-                          [id]="'availability-' + item.id"
-                          [class.available]="item.available"
-                        >
-                          {{ item.available ? t().inStock : t().outOfStock }}
-                        </span>
-                      </div>
-                      @if (item.badges.length) {
-                        <span class="shop-badge-list" [id]="'badges-' + item.id">
-                          @for (badge of item.badges; track badge.id) {
-                            <span class="shop-chip" [attr.data-tone]="badge.color">{{
-                              badge.name
-                            }}</span>
-                          }
-                        </span>
-                      }
-                    </a>
-                  </li>
-                }
-              </ul>
-              <ng-container [ngTemplateOutlet]="pagination" />
-            } @else if (!page.total && !staleChoices()) {
-              <div class="browse-empty">
-                <p>{{ filtered() ? t().noFilterMatches : t().empty }}</p>
-                @if (filtered()) {
-                  <button type="button" (click)="clear()">{{ t().clearFilters }}</button>
-                }
-              </div>
-            }
-          } @else if (isLoading()) {
-            <p class="browse-empty" role="status">{{ t().loading }}</p>
-          }
-        </section>
-      </div>
+    </li>
     }
+  </ul>
+  @if (indexKind !== 'categories') {
+  <ng-container [ngTemplateOutlet]="pagination" />
+  } } @else if (!entries.total) {
+  <p class="browse-empty">{{ t().noBrowseEntries }}</p>
+  } } @else if (isLoading()) {
+  <p class="browse-empty" role="status">{{ t().loading }}</p>
+  } } @else if (result() !== null) { @if (filtered() && url().valid) {
+  <div class="filter-summary">
+    <span>{{ t().filters }} ({{ selectedCount() }})</span>
+    @if (url().filters.q; as query) {
+    <span class="filter-query">{{ query }}</span>
+    }
+    <button type="button" (click)="clear()">{{ t().clearFilters }}</button>
   </div>
-
-  <dialog
-    #mobileFilters
-    id="mobile-filters"
-    class="filter-dialog"
-    aria-labelledby="mobile-filters-title"
-    closedby="any"
-    (close)="filtersOpen.set(false)"
-  >
-    <header>
-      <h2 id="mobile-filters-title">{{ t().filters }}</h2>
-      <button type="button" [attr.aria-label]="t().close" (click)="mobileFilters.close()">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          aria-hidden="true"
-        >
-          <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
-        </svg>
-      </button>
-    </header>
-    @if (filtersOpen()) {
+  }
+  <div class="browse-layout">
+    <aside class="browse-sidebar" [attr.aria-label]="t().filters">
+      @if (!filtersOpen()) {
       <ng-container [ngTemplateOutlet]="filterForm" />
-    }
-  </dialog>
-
-  <ng-template #filterForm>
-    <form id="filters" (submit)="apply($event, mobileFilters)" novalidate>
-      <div class="filter-group">
-        <label for="catalogue-search">{{ t().searchProducts }}</label>
-        <input
-          #search
-          id="catalogue-search"
-          type="search"
-          [value]="draft().q"
-          (input)="update('q', search.value)"
-        />
-      </div>
-      <div class="filter-group price-fields">
-        <div>
-          <label for="catalogue-min">{{ t().minPrice }}</label>
-          <input
-            #min
-            id="catalogue-min"
-            inputmode="decimal"
-            [value]="draft().minPrice"
-            (input)="update('minPrice', min.value.replace(',', '.'))"
-          />
-        </div>
-        <div>
-          <label for="catalogue-max">{{ t().maxPrice }}</label>
-          <input
-            #max
-            id="catalogue-max"
-            inputmode="decimal"
-            [value]="draft().maxPrice"
-            (input)="update('maxPrice', max.value.replace(',', '.'))"
-          />
-        </div>
-      </div>
-      @if (listing && listing.subcategories.length) {
-        <nav class="filter-group subcategory-links" [attr.aria-label]="t().subcategories">
-          <h2>{{ t().subcategories }}</h2>
-          @for (child of listing.subcategories; track child.id) {
-            <a
-              [routerLink]="[...base(), 'categories', child.slug]"
-              (click)="mobileFilters.close()"
-              >{{ child.name }}</a
-            >
-          }
-        </nav>
       }
-      @if (result()?.facets?.brands?.length) {
-        <div class="filter-group">
-          <fieldset>
-            <legend>{{ t().brands }}</legend>
-            <div class="brand-choices">
-              @for (brand of result()?.facets?.brands; track brand.id) {
-                <label class="check">
-                  <input
-                    #check
-                    type="checkbox"
-                    [checked]="draft().brand.includes(brand.id)"
-                    (change)="changeBrand(brand.id, check.checked)"
-                  />
-                  <span>{{ brand.name }}</span>
-                </label>
-              }
-            </div>
-          </fieldset>
-        </div>
-      }
-      @for (option of result()?.facets?.options; track option.id) {
-        <div class="filter-group">
-          <label [for]="'catalogue-option-' + option.id">{{ option.name }}</label>
-          <select
-            #value
-            [id]="'catalogue-option-' + option.id"
-            (change)="changeOption(value.value, option.values)"
-          >
-            <option value="" [selected]="!isSelected(option.values)">{{ t().any }}</option>
-            @for (choice of option.values; track choice.id) {
-              <option [value]="choice.id" [selected]="draft().option.includes(choice.id)">
-                {{ choice.label }}
-              </option>
-            }
-          </select>
-        </div>
-      }
-      <div class="filter-group">
-        <label class="check">
-          <input
-            #stock
-            type="checkbox"
-            [checked]="draft().inStock"
-            (change)="changeStock(stock.checked)"
-          />
-          <span>{{ t().inStockOnly }}</span>
-        </label>
-      </div>
-      @if (invalidDraft()) {
-        <p class="filter-error" role="alert">{{ t().invalidFilters }}</p>
-      }
-      <div class="filter-actions">
-        <button class="shop-primary apply-filters" type="submit">{{ t().applyFilters }}</button>
-        <button class="shop-secondary" type="button" (click)="closeFilters(mobileFilters); clear()">
+    </aside>
+    <section
+      class="browse-results"
+      aria-labelledby="catalogue-title"
+      [attr.aria-busy]="isLoading() || null"
+    >
+      @if (!url().valid || staleChoices()) {
+      <div class="shop-state">
+        <p role="alert">{{ url().valid ? t().staleFilters : t().invalidFilters }}</p>
+        <button class="shop-secondary" type="button" (click)="clear()">
           {{ t().clearFilters }}
         </button>
       </div>
-    </form>
-  </ng-template>
+      } @if (result(); as page) { @if (page.items.length) {
+      <ul class="catalogue-grid" role="list">
+        @for (item of page.items; track item.id) {
+        <li class="catalogue-card">
+          <a
+            class="product-link"
+            [routerLink]="[...base(), 'product', item.id]"
+            [attr.aria-labelledby]="'product-' + item.id"
+            [attr.aria-describedby]="
+                        'availability-' + item.id + (item.badges.length ? ' badges-' + item.id : '')
+                      "
+          >
+            @if (item.coverImage; as cover) {
+            <img
+              class="catalogue-cover"
+              [src]="cover.url"
+              [alt]="cover.altText ?? ''"
+              loading="lazy"
+            />
+            } @else {
+            <span class="catalogue-cover cover-placeholder">{{ t().noPhoto }}</span>
+            }
+            <h2 [id]="'product-' + item.id">{{ item.name }}</h2>
+            <p class="catalogue-price app-num">{{ format().format(+item.price) }}</p>
+            <div class="catalogue-meta">
+              @if (item.brand; as brand) {
+              <span class="product-brand">{{ brand.name }}</span>
+              }
+              <span
+                class="product-availability"
+                [id]="'availability-' + item.id"
+                [class.available]="item.available"
+              >
+                {{ item.available ? t().inStock : t().outOfStock }}
+              </span>
+            </div>
+            @if (item.badges.length) {
+            <span class="shop-badge-list" [id]="'badges-' + item.id">
+              @for (badge of item.badges; track badge.id) {
+              <span class="shop-chip" [attr.data-tone]="badge.color">{{ badge.name }}</span>
+              }
+            </span>
+            }
+          </a>
+          @if (item.optionPreviews.length) {
+          <dl class="catalogue-option-previews">
+            @for (option of item.optionPreviews; track option.id) {
+            <div>
+              <dt>{{ option.name }}</dt>
+              <dd>
+                @for (value of option.values; track value.id) {
+                <span class="catalogue-option-value" [class.unavailable]="!value.inStock">
+                  @if (value.swatchColor; as color) {
+                  <span
+                    class="shop-option-swatch"
+                    aria-hidden="true"
+                    [style.background-color]="color"
+                  ></span>
+                  }
+                  <span class="catalogue-option-label">{{ value.label }}</span>
+                  @if (!value.inStock) {
+                  <span class="shop-visually-hidden">{{ t().outOfStock }}</span>
+                  }
+                </span>
+                }
+              </dd>
+            </div>
+            }
+          </dl>
+          }
+        </li>
+        }
+      </ul>
+      <ng-container [ngTemplateOutlet]="pagination" />
+      } @else if (!page.total && !staleChoices()) {
+      <div class="browse-empty">
+        <p>{{ filtered() ? t().noFilterMatches : t().empty }}</p>
+        @if (filtered()) {
+        <button type="button" (click)="clear()">{{ t().clearFilters }}</button>
+        }
+      </div>
+      } } @else if (isLoading()) {
+      <p class="browse-empty" role="status">{{ t().loading }}</p>
+      }
+    </section>
+  </div>
+  }
+</div>
 
-  <ng-template #pagination>
-    @if (pageCount() > 1) {
-      <nav class="catalogue-pagination" [attr.aria-label]="t().pagination">
-        <div>
-          @if (url().page > 1) {
-            <a [routerLink]="[]" [queryParams]="paging(url().page - 1)">{{ t().previous }}</a>
+<dialog
+  #mobileFilters
+  id="mobile-filters"
+  class="filter-dialog"
+  aria-labelledby="mobile-filters-title"
+  closedby="any"
+  (close)="filtersOpen.set(false)"
+>
+  <header>
+    <h2 id="mobile-filters-title">{{ t().filters }}</h2>
+    <button type="button" [attr.aria-label]="t().close" (click)="mobileFilters.close()">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        aria-hidden="true"
+      >
+        <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
+      </svg>
+    </button>
+  </header>
+  @if (filtersOpen()) {
+  <ng-container [ngTemplateOutlet]="filterForm" />
+  }
+</dialog>
+
+<ng-template #filterForm>
+  <form id="filters" (submit)="apply($event, mobileFilters)" novalidate>
+    <div class="filter-group">
+      <label for="catalogue-search">{{ t().searchProducts }}</label>
+      <input
+        #search
+        id="catalogue-search"
+        type="search"
+        [value]="draft().q"
+        (input)="update('q', search.value)"
+      />
+    </div>
+    <div class="filter-group price-fields">
+      <div>
+        <label for="catalogue-min">{{ t().minPrice }}</label>
+        <input
+          #min
+          id="catalogue-min"
+          inputmode="decimal"
+          [value]="draft().minPrice"
+          (input)="update('minPrice', min.value.replace(',', '.'))"
+        />
+      </div>
+      <div>
+        <label for="catalogue-max">{{ t().maxPrice }}</label>
+        <input
+          #max
+          id="catalogue-max"
+          inputmode="decimal"
+          [value]="draft().maxPrice"
+          (input)="update('maxPrice', max.value.replace(',', '.'))"
+        />
+      </div>
+    </div>
+    @if (listing && listing.subcategories.length) {
+    <nav class="filter-group subcategory-links" [attr.aria-label]="t().subcategories">
+      <h2>{{ t().subcategories }}</h2>
+      @for (child of listing.subcategories; track child.id) {
+      <a [routerLink]="[...base(), 'categories', child.slug]" (click)="mobileFilters.close()"
+        >{{ child.name }}</a
+      >
+      }
+    </nav>
+    } @if (result()?.facets?.brands?.length) {
+    <div class="filter-group">
+      <fieldset>
+        <legend>{{ t().brands }}</legend>
+        <div class="facet-choices">
+          @for (brand of result()?.facets?.brands; track brand.id) {
+          <label class="check">
+            <input
+              #check
+              type="checkbox"
+              [checked]="draft().brand.includes(brand.id)"
+              (change)="changeBrand(brand.id, check.checked)"
+            />
+            <span>{{ brand.name }}</span>
+          </label>
           }
         </div>
-        <div class="catalogue-page-numbers">
-          @for (page of visiblePages(); track page) {
-            <a
-              [routerLink]="[]"
-              [queryParams]="paging(page)"
-              [attr.aria-current]="url().page === page ? 'page' : null"
-              >{{ page }}</a
-            >
+      </fieldset>
+    </div>
+    } @let tags = result()?.facets.tags; @if (tags?.length) {
+    <div class="filter-group">
+      <fieldset>
+        <legend>{{ t().tags }}</legend>
+        <div class="facet-choices">
+          @for (tag of tags; track tag.id) {
+          <label class="check">
+            <input
+              #check
+              type="checkbox"
+              [checked]="draft().tag.includes(tag.id)"
+              (change)="changeTag(tag.id, check.checked)"
+            />
+            <span>{{ tag.name }}</span>
+          </label>
           }
         </div>
-        <span class="shop-visually-hidden app-num" aria-live="polite">
-          {{ (url().page - 1) * pageSize + 1 }}–{{ minEnd() }} / {{ total() }}
-        </span>
-        <div>
-          @if (url().page < pageCount()) {
-            <a [routerLink]="[]" [queryParams]="paging(url().page + 1)">{{ t().next }}</a>
-          }
-        </div>
-      </nav>
+      </fieldset>
+    </div>
+    } @for (option of result()?.facets?.options; track option.id) {
+    <div class="filter-group">
+      <label [for]="'catalogue-option-' + option.id">{{ option.name }}</label>
+      <select
+        #value
+        [id]="'catalogue-option-' + option.id"
+        (change)="changeOption(value.value, option.values)"
+      >
+        <option value="" [selected]="!isSelected(option.values)">{{ t().any }}</option>
+        @for (choice of option.values; track choice.id) {
+        <option [value]="choice.id" [selected]="draft().option.includes(choice.id)">
+          {{ choice.label }}
+        </option>
+        }
+      </select>
+    </div>
     }
-  </ng-template>
+    <div class="filter-group">
+      <label class="check">
+        <input
+          #stock
+          type="checkbox"
+          [checked]="draft().inStock"
+          (change)="changeStock(stock.checked)"
+        />
+        <span>{{ t().inStockOnly }}</span>
+      </label>
+    </div>
+    @let characteristicFacets = result()?.facets.characteristicFacets; @if
+    (characteristicFacets?.length) {
+    <section class="filter-group" aria-labelledby="catalogue-characteristics">
+      <h2 id="catalogue-characteristics">{{ t().specifications }}</h2>
+      @for (group of characteristicFacets; track group.id) {
+      <div class="characteristic-facet-group">
+        <h3>{{ group.name }}</h3>
+        @for (field of group.characteristics; track field.id) {
+        <fieldset>
+          <legend>{{ field.name }}</legend>
+          <div class="characteristic-choices">
+            @for (choice of field.choices; track choice.id) {
+            <label class="check">
+              <input
+                #check
+                type="checkbox"
+                [checked]="draft().characteristic.includes(choice.id)"
+                (change)="changeCharacteristic(choice.id, check.checked)"
+              />
+              <span>{{ choice.name }} ({{ t().count(choice.count) }})</span>
+            </label>
+            }
+          </div>
+        </fieldset>
+        }
+      </div>
+      }
+    </section>
+    } @if (invalidDraft()) {
+    <p class="filter-error" role="alert">{{ t().invalidFilters }}</p>
+    }
+    <div class="filter-actions">
+      <button class="shop-primary apply-filters" type="submit">{{ t().applyFilters }}</button>
+      <button class="shop-secondary" type="button" (click)="closeFilters(mobileFilters); clear()">
+        {{ t().clearFilters }}
+      </button>
+    </div>
+  </form>
+</ng-template>
+
+<ng-template #pagination>
+  @if (pageCount() > 1) {
+  <nav class="catalogue-pagination" [attr.aria-label]="t().pagination">
+    <div>
+      @if (url().page > 1) {
+      <a [routerLink]="[]" [queryParams]="paging(url().page - 1)">{{ t().previous }}</a>
+      }
+    </div>
+    <div class="catalogue-page-numbers">
+      @for (page of visiblePages(); track page) {
+      <a
+        [routerLink]="[]"
+        [queryParams]="paging(page)"
+        [attr.aria-current]="url().page === page ? 'page' : null"
+        >{{ page }}</a
+      >
+      }
+    </div>
+    <span class="shop-visually-hidden app-num" aria-live="polite">
+      {{ (url().page - 1) * pageSize + 1 }}–{{ minEnd() }} / {{ total() }}
+    </span>
+    <div>
+      @if (url().page < pageCount()) {
+      <a [routerLink]="[]" [queryParams]="paging(url().page + 1)">{{ t().next }}</a>
+      }
+    </div>
+  </nav>
+  }
+</ng-template>
 }
 
 <ng-template #listingError>
@@ -394,9 +440,7 @@
     <div class="filter-actions">
       <button type="button" class="shop-secondary" (click)="retry()">{{ t().retry }}</button>
       @if (canClear() && !indexKind) {
-        <button type="button" class="shop-secondary" (click)="clear()">
-          {{ t().clearFilters }}
-        </button>
+      <button type="button" class="shop-secondary" (click)="clear()">{{ t().clearFilters }}</button>
       }
     </div>
   </div>

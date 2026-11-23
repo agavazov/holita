@@ -1,11 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database.service.js';
-import type { OptionInput, OptionSort } from '../generated/graphql/types.js';
+import type { OptionSort } from '../generated/graphql/types.js';
 import { Prisma } from '../generated/prisma/client.js';
 import type { Scope } from '../scope.js';
 
-type OptionFields = Omit<OptionInput, 'values'>;
-type ValueFields = Pick<Prisma.OptionValueCreateWithoutOptionInput, 'label' | 'sortOrder'>;
+type OptionFields = Pick<
+  Prisma.OptionUncheckedCreateInput,
+  'name' | 'active' | 'showInFilters' | 'showInListing'
+>;
+type ValueFields = Pick<
+  Prisma.OptionValueCreateWithoutOptionInput,
+  'label' | 'sortOrder' | 'swatchColor'
+>;
 
 function orderedValues(scope: Scope) {
   return {

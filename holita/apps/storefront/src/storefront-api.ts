@@ -14,6 +14,7 @@ import {
   CatalogueCollectionsDocument,
   CatalogueDocument,
   CatalogueProductDocument,
+  CatalogueSuggestionsDocument,
   CatalogueTagProductsDocument,
   CatalogueTagsDocument,
   CheckoutDocument,
@@ -165,6 +166,10 @@ export class StorefrontApi {
       case 'tags':
         return (await this.read(shopId, CatalogueTagProductsDocument, args)).catalogueTagProducts;
     }
+  }
+
+  async suggestions(shopId: string, search: string) {
+    return (await this.read(shopId, CatalogueSuggestionsDocument, { search })).catalogue.items;
   }
 
   async index(

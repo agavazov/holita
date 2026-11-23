@@ -16,11 +16,15 @@ import type { PublicCartFieldsFragment } from './generated/operations';
 
 export const maxCartQuantity = 2_147_483_647;
 
-export function quantityControl(quantity: number) {
+export function quantityControl(
+  quantity: number,
+  minimumQuantity = 1,
+  maximumQuantity = maxCartQuantity,
+) {
   return new FormControl<number | null>(quantity, [
     (control) => Validators.required(control),
-    Validators.min(1),
-    Validators.max(maxCartQuantity),
+    Validators.min(minimumQuantity),
+    Validators.max(maximumQuantity),
     (control) => (Number.isInteger(control.value) ? null : { integer: true }),
   ]);
 }
@@ -142,7 +146,13 @@ export function rememberGuestReceipt(shopId: string, orderId: string, token: str
   forgetGuestCart(shopId, token);
 }
 
-export type CartWriteError = 'cartUnavailable' | 'cartInsufficientStock' | 'cartUpdateFailed';
+type CartIssue = NonNullable<PublicCartFieldsFragment['lines'][number]['issue']>;
+export const cartProblems = {
+  UNAVAILABLE: 'cartUnavailable',
+  INSUFFICIENT_STOCK: 'cartInsufficientStock',
+  MINIMUM_QUANTITY_NOT_MET: 'cartMinimumNotMet',
+} as const satisfies Record<CartIssue, string>;
+export type CartWriteError = (typeof cartProblems)[CartIssue] | 'cartUpdateFailed';
 type CartDiscount = NonNullable<PublicCartFieldsFragment['discount']>;
 
 export const promoProblems = {
@@ -163,6 +173,9 @@ function cartWriteError(error: unknown): CartWriteError {
   const fields = storefrontFieldErrors(error);
   if (fields.some(({ code }) => code === 'INSUFFICIENT_STOCK')) {
     return 'cartInsufficientStock';
+  }
+  if (fields.some(({ code }) => code === 'MINIMUM_QUANTITY_NOT_MET')) {
+    return 'cartMinimumNotMet';
   }
   return fields.some(({ code }) => code === 'UNAVAILABLE') ? 'cartUnavailable' : 'cartUpdateFailed';
 }

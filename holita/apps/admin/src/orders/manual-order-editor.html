@@ -131,7 +131,8 @@
         </button>
       </div>
       } } @for (line of lines.controls; track line; let index = $index) { @let path = 'lines.' +
-      index + '.quantity'; @let id = 'manual-' + path; @let message = lineError(index);
+      index + '.quantity'; @let id = 'manual-' + path; @let message = lineError(index); @let minimum
+      = line.controls.choice.value.minimumQuantity; @let hint = minimumHint(minimum);
       <div
         class="app-form-grid manual-order-line"
         role="group"
@@ -153,6 +154,7 @@
           [controlId]="id"
           [label]="text().orderQuantity"
           [required]="true"
+          [hint]="hint"
           [error]="message"
         >
           <div class="app-inline manual-order-quantity">
@@ -160,13 +162,13 @@
               pInputText
               [id]="id"
               type="number"
-              min="1"
+              [attr.min]="minimum"
               step="1"
               [formControl]="line.controls.quantity"
               [invalid]="!!message"
               aria-required="true"
               [attr.aria-invalid]="message ? 'true' : null"
-              [attr.aria-describedby]="message ? id + '-error' : null"
+              [attr.aria-describedby]="(hint ? id + '-hint ' : '') + (message ? id + '-error' : '')"
               (input)="lineChanged(index)"
             />
             <button

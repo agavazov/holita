@@ -12,7 +12,10 @@ import type {
 } from '../generated/graphql/types.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { requireScope, type RequestContext, type Scope } from '../scope.js';
-import { CharacteristicsRepository } from './characteristics.repository.js';
+import {
+  CharacteristicsRepository,
+  InvalidCharacteristicDefinitionError,
+} from './characteristics.repository.js';
 
 function fieldError(path: string, code: string, message: string) {
   return new GraphQLError(message, {
@@ -36,18 +39,22 @@ function duplicateName(index: number) {
   );
 }
 
-function definition(
-  { name, sortOrder, active }: Omit<CharacteristicGroupInput, 'characteristics'>,
-  prefix = '',
-) {
+function definitionName(name: string, path: string) {
   const text = name.trim();
   if (!text || Array.from(text).length > 200 || text.includes('\u0000')) {
-    throw fieldError(`${prefix}name`, 'INVALID_VALUE', 'Name must contain 1 to 200 characters');
+    throw fieldError(path, 'INVALID_VALUE', 'Name must contain 1 to 200 characters');
   }
+  return text;
+}
+
+function definition(
+  { name, sortOrder, active }: Pick<CharacteristicGroupInput, 'name' | 'sortOrder' | 'active'>,
+  prefix = '',
+) {
   if (sortOrder < 0) {
     throw fieldError(`${prefix}sortOrder`, 'INVALID_VALUE', 'Sort order must be nonnegative');
   }
-  return { name: text, sortOrder, active };
+  return { name: definitionName(name, `${prefix}name`), sortOrder, active };
 }
 
 function groupId(id: string) {
@@ -94,39 +101,60 @@ export class CharacteristicsService {
   async save(context: RequestContext, input: CharacteristicGroupInput, rawId?: string) {
     const scope = await requireScope(context, true);
     const id = rawId === undefined ? undefined : groupId(rawId);
-    const data = definition(input);
+    const categoryIds = input.categoryIds?.map((categoryId) => categoryId.toLowerCase());
+    if (categoryIds?.some((categoryId) => !isUUID(categoryId))) {
+      throw fieldError('categoryIds', 'INVALID_VALUE', 'Choose categories from this shop');
+    }
+    const data = {
+      ...definition(input),
+      categoryIds: categoryIds ? [...new Set(categoryIds)] : null,
+    };
     const names = new Set<string>();
     const ids = new Set<string>();
     const characteristics = input.characteristics.map((item, index) => {
-      const fields = definition(item, `characteristics.${String(index)}.`);
+      const path = `characteristics.${String(index)}.`;
+      const fields = definition(item, path);
       const normalized = fields.name.toLowerCase();
       if (names.has(normalized)) {
         throw duplicateName(index);
       }
       names.add(normalized);
-      if (item.id == null) {
-        return fields;
+      const characteristicId = item.id?.toLowerCase();
+      if (characteristicId !== undefined) {
+        if (!id || !isUUID(characteristicId) || ids.has(characteristicId)) {
+          throw invalidId(index);
+        }
+        ids.add(characteristicId);
       }
-      const characteristicId = item.id.toLowerCase();
-      if (!id || !isUUID(characteristicId) || ids.has(characteristicId)) {
-        throw invalidId(index);
-      }
-      ids.add(characteristicId);
-      return { ...fields, id: characteristicId };
+      const choiceIds = new Set<string>();
+      const choices = item.choices?.map((choice, choiceIndex) => {
+        const choicePath = `${path}choices.${String(choiceIndex)}`;
+        const choiceId = choice.id?.toLowerCase();
+        if (choiceId !== undefined) {
+          if (!characteristicId || !isUUID(choiceId) || choiceIds.has(choiceId)) {
+            throw fieldError(
+              `${choicePath}.id`,
+              'INVALID_VALUE',
+              'Choose a value from this characteristic',
+            );
+          }
+          choiceIds.add(choiceId);
+        }
+        return { id: choiceId ?? null, name: definitionName(choice.name, `${choicePath}.name`) };
+      });
+      return {
+        ...fields,
+        id: characteristicId ?? null,
+        kind: item.kind ?? null,
+        choices: choices ?? null,
+      };
     });
     try {
-      if (id === undefined) {
-        return await this.repository.create(scope, data, characteristics);
-      }
-      const result = await this.repository.update(scope, id, data, characteristics);
-      if (result.invalidIdIndex !== undefined) {
-        throw invalidId(result.invalidIdIndex);
-      }
-      if (result.duplicateNameIndex !== undefined) {
-        throw duplicateName(result.duplicateNameIndex);
-      }
-      return result.row;
+      return await this.repository.save(scope, id, data, characteristics);
     } catch (error: unknown) {
+      if (error instanceof InvalidCharacteristicDefinitionError) {
+        throw fieldError(error.path, error.code, error.message);
+      }
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           throw fieldError('name', 'DUPLICATE_VALUE', 'This shop already uses the group name');

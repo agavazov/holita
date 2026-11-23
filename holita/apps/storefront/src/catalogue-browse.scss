@@ -281,7 +281,22 @@
   min-width: 0;
 }
 
-.brand-choices,
+.characteristic-facet-group {
+  margin-top: 0.75rem;
+
+  h3 {
+    margin: 0 0 0.75rem;
+    font-size: inherit;
+    font-weight: 600;
+  }
+
+  fieldset + fieldset {
+    margin-top: 0.75rem;
+  }
+}
+
+.facet-choices,
+.characteristic-choices,
 .subcategory-links {
   display: grid;
   gap: 0.75rem;
@@ -406,6 +421,44 @@
 
   .shop-badge-list {
     margin-top: 0.5rem;
+  }
+}
+
+.catalogue-option-previews {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+
+  dt {
+    font-weight: 600;
+  }
+
+  dd {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin: 0.125rem 0 0;
+  }
+}
+
+.catalogue-option-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.125rem 0.375rem;
+  border: 1px solid var(--shop-border);
+  border-radius: 0.375rem;
+
+  &.unavailable {
+    color: var(--shop-muted);
+
+    .catalogue-option-label {
+      text-decoration: line-through;
+    }
   }
 }
 

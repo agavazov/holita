@@ -27,9 +27,23 @@ input ProductVariantInput {
   """
   id: ID
   sku: String!
+  "Optional barcode, case-insensitively unique in the shop. Omit to keep it, or pass null or blank to clear it."
+  barcode: String
   price: String!
+  "Weight in kilograms. Omit a measurement to keep it on update, or pass null to clear it."
+  weight: Float
+  "Package width in centimetres."
+  width: Float
+  "Package height in centimetres."
+  height: Float
+  "Package depth in centimetres."
+  depth: Float
   "Initial quantity for a new tracked variant. Existing stock is adjusted through Inventory."
   quantity: Int
+  "Minimum units per order line. Omit to keep the current minimum, or use one for a new variant."
+  minimumQuantity: Int
+  "An existing image retained in this product's gallery. Omit to keep it, or pass null to clear it."
+  imageId: ID
   inventoryTracked: Boolean!
   active: Boolean!
   "One value from each option used by this product. Leave empty for a simple product."
@@ -38,8 +52,19 @@ input ProductVariantInput {
 type ProductVariant {
   id: ID!
   sku: String!
+  barcode: String
   price: String!
+  "Weight in kilograms."
+  weight: Float
+  "Package width in centimetres."
+  width: Float
+  "Package height in centimetres."
+  height: Float
+  "Package depth in centimetres."
+  depth: Float
   quantity: Int!
+  minimumQuantity: Int!
+  imageId: ID
   inventoryTracked: Boolean!
   active: Boolean!
   optionValueIds: [ID!]!
@@ -67,8 +92,9 @@ input ProductInput {
   """
   images: [ProductImageInput!]
   """
-  Patches the listed characteristic values. Blank text clears a value.
-  Omitted IDs and an omitted, null or empty list preserve existing values.
+  Patches the listed applicable characteristic values. Blank text or an empty choice ID list
+  clears that value. Omitted IDs and an omitted, null or empty list preserve existing values,
+  including those from groups that no longer apply to the product's category.
   """
   characteristicValues: [ProductCharacteristicValueInput!]
   "Replaces the assigned badges. Omit or pass null to keep them on update, or use an empty list to clear them."
@@ -111,10 +137,26 @@ input InventorySort {
   field: InventorySortField! = PRODUCT_NAME
   direction: SortDirection! = ASC
 }
+enum InventoryStockStatus {
+  IN_STOCK
+  OUT_OF_STOCK
+}
 input InventoryFilter {
   inventoryTracked: Boolean
   "True restricts results to tracked variants with zero stock."
   outOfStock: Boolean
+  brandId: ID
+  "Includes the selected category and its descendants."
+  categoryId: ID
+  "False includes draft and archived products."
+  productActive: Boolean
+  variantActive: Boolean
+  "Stock status applies only to tracked variants."
+  stockStatus: InventoryStockStatus
+  "Matches the variant barcode exactly, without considering case."
+  barcode: String
+  "Combines choices within a characteristic with OR, and across characteristics with AND."
+  characteristicChoiceIds: [ID!]
 }
 type InventoryOptionValue {
   optionName: String!
@@ -430,23 +472,29 @@ input OptionValueInput {
   "Retain a value's ID when editing or moving it. Omit the ID to add a value."
   id: ID
   label: String!
+  "An optional #RRGGBB colour. Null clears the swatch."
+  swatchColor: String
 }
 input OptionInput {
   name: String!
   active: Boolean!
   showInFilters: Boolean!
+  "Show this option on storefront product cards."
+  showInListing: Boolean
   "All values in display order. Existing values omitted from this list are removed."
   values: [OptionValueInput!]!
 }
 type OptionValue {
   id: ID!
   label: String!
+  swatchColor: String
 }
 type Option {
   id: ID!
   name: String!
   active: Boolean!
   showInFilters: Boolean!
+  showInListing: Boolean!
   values: [OptionValue!]!
 }
 type OptionPage {
@@ -463,30 +511,52 @@ input CharacteristicGroupSort {
   field: CharacteristicGroupSortField! = SORT_ORDER
   direction: SortDirection! = ASC
 }
+enum CharacteristicKind {
+  TEXT
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+}
+input CharacteristicChoiceInput {
+  id: ID
+  name: String!
+}
 input CharacteristicInput {
   id: ID
   name: String!
   sortOrder: Int!
   active: Boolean!
+  "Defaults to TEXT for new fields. The kind of an existing field is fixed."
+  kind: CharacteristicKind
+  "Existing choices omitted from this list are retained."
+  choices: [CharacteristicChoiceInput!]
 }
 input CharacteristicGroupInput {
   name: String!
   sortOrder: Int!
   active: Boolean!
+  "Exact categories. Empty applies to all products. Omit or pass null to retain assignments."
+  categoryIds: [ID!]
   "Existing characteristics omitted from this list are retained."
   characteristics: [CharacteristicInput!]!
+}
+type CharacteristicChoice {
+  id: ID!
+  name: String!
 }
 type Characteristic {
   id: ID!
   name: String!
   sortOrder: Int!
   active: Boolean!
+  kind: CharacteristicKind!
+  choices: [CharacteristicChoice!]!
 }
 type CharacteristicGroup {
   id: ID!
   name: String!
   sortOrder: Int!
   active: Boolean!
+  categoryIds: [ID!]!
   characteristics: [Characteristic!]!
 }
 type CharacteristicGroupPage {
@@ -497,11 +567,16 @@ type CharacteristicGroupPage {
 }
 input ProductCharacteristicValueInput {
   characteristicId: ID!
-  value: String!
+  "Text fields accept a string, with blank text clearing the value."
+  value: String
+  "Choice fields accept IDs, with an empty list clearing the selections."
+  choiceIds: [ID!]
 }
 type ProductCharacteristicValue {
   characteristicId: ID!
+  "Empty for choice fields."
   value: String!
+  choiceIds: [ID!]!
 }
 type ProductCharacteristics {
   groups: [CharacteristicGroup!]!

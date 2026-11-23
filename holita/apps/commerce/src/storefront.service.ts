@@ -32,6 +32,7 @@ import type {
   CatalogueCategory,
   CatalogueListing,
   CatalogueOption,
+  CatalogueOptionPreview,
   CataloguePage,
   CatalogueProduct,
   CatalogueVariantSelection,
@@ -155,52 +156,83 @@ function browseCriteria({
     maxPrice,
     sort: sort ?? null,
     brandIds: filterIds(filter?.brandIds ?? []),
+    tagIds: filterIds(filter?.tagIds ?? []),
     optionValueIds: filterIds(filter?.optionValueIds ?? []),
     inStock: filter?.inStock === true,
+    characteristicChoiceIds: filterIds(filter?.characteristicChoiceIds ?? []),
   };
 }
 
 type CatalogueProductRow = NonNullable<Awaited<ReturnType<CommerceRepository['publicProduct']>>>;
-type CatalogueProductSummary = Omit<CatalogueProduct, 'variantSelection'>;
+type CatalogueProductSummary = Omit<CatalogueProduct, 'variantSelection' | 'optionPreviews'>;
 type CataloguePageSummary = Omit<CataloguePage, 'items'> & { items: CatalogueProductSummary[] };
 type VariantSelectionRow = Awaited<
   ReturnType<CommerceRepository['publicProductVariantSelections']>
 >[number];
-interface VariantSelectionBatch {
+interface CatalogueProductChoices {
+  variantSelection: CatalogueVariantSelection;
+  optionPreviews: CatalogueOptionPreview[];
+}
+interface ProductChoiceBatch {
   ids: Set<string>;
-  selections: Promise<Map<string, CatalogueVariantSelection>>;
+  choices: Promise<Map<string, CatalogueProductChoices>>;
 }
 
-function variantAvailable(variant: Pick<ProductVariant, 'inventoryTracked' | 'quantity'>): boolean {
-  return (trackedVariantQuantity(variant) ?? 1) > 0;
+function variantAvailable(
+  variant: Pick<ProductVariant, 'inventoryTracked' | 'quantity' | 'minimumQuantity'>,
+): boolean {
+  return !variant.inventoryTracked || variant.quantity >= variant.minimumQuantity;
 }
 
-function catalogueVariantSelection({ variants }: VariantSelectionRow): CatalogueVariantSelection {
+function catalogueProductChoices({ variants }: VariantSelectionRow): CatalogueProductChoices {
   const distinctValues = new Map(
     variants.flatMap(({ values }) =>
       values.map(({ optionValue }) => [optionValue.id, optionValue] as const),
     ),
   );
+  const availableValues = new Set(
+    variants
+      .filter(variantAvailable)
+      .flatMap(({ values }) => values.map(({ optionValue }) => optionValue.id)),
+  );
   const orderedValues = [...distinctValues.values()].sort(compareCatalogueOptionValues);
   const optionGroups = new Map<string, CatalogueOption>();
-  for (const { id, label, option } of orderedValues) {
-    const group = optionGroups.get(option.id) ?? { ...option, values: [] };
-    group.values.push({ id, label });
-    optionGroups.set(option.id, group);
+  const previewGroups = new Map<string, CatalogueOptionPreview>();
+  for (const { id, label, swatchColor, option } of orderedValues) {
+    const identity = { id: option.id, name: option.name };
+    const value = { id, label, swatchColor };
+    const group = optionGroups.get(identity.id) ?? { ...identity, values: [] };
+    group.values.push(value);
+    optionGroups.set(identity.id, group);
+    if (option.showInListing) {
+      const preview = previewGroups.get(identity.id) ?? { ...identity, values: [] };
+      preview.values.push({ ...value, inStock: availableValues.has(id) });
+      previewGroups.set(identity.id, preview);
+    }
   }
   const orderedValueIds = orderedValues.map(({ id }) => id);
   return {
-    options: [...optionGroups.values()],
-    variants: variants.map((variant) => {
-      const valueIds = new Set(variant.values.map(({ optionValue }) => optionValue.id));
-      return {
-        id: variant.id,
-        sku: variant.sku,
-        price: variant.price.toFixed(2),
-        available: variantAvailable(variant),
-        optionValueIds: orderedValueIds.filter((id) => valueIds.has(id)),
-      };
-    }),
+    optionPreviews: [...previewGroups.values()],
+    variantSelection: {
+      options: [...optionGroups.values()],
+      variants: variants.map((variant) => {
+        const valueIds = new Set(variant.values.map(({ optionValue }) => optionValue.id));
+        return {
+          id: variant.id,
+          sku: variant.sku,
+          price: variant.price.toFixed(2),
+          weight: variant.weight?.toNumber() ?? null,
+          width: variant.width?.toNumber() ?? null,
+          height: variant.height?.toNumber() ?? null,
+          depth: variant.depth?.toNumber() ?? null,
+          available: variantAvailable(variant),
+          minimumQuantity: variant.minimumQuantity,
+          availableQuantity: trackedVariantQuantity(variant),
+          imageId: variant.imageId,
+          optionValueIds: orderedValueIds.filter((id) => valueIds.has(id)),
+        };
+      }),
+    },
   };
 }
 
@@ -214,6 +246,7 @@ function catalogueProduct(
   }
   const category = item.categoryId ? categories.get(item.categoryId) : undefined;
   const images = item.images.map((image) => ({
+    id: image.id,
     url: productImageUrl(image),
     altText: image.altText,
   }));
@@ -238,10 +271,7 @@ function catalogueProduct(
 export class StorefrontService implements OnModuleInit {
   private readonly fallbackPasswordHash = hashPassword(randomBytes(32).toString('base64url'));
   private signInAttempts: { shop: string; time: number; count: number }[] = [];
-  private readonly variantSelectionBatches = new WeakMap<
-    StorefrontContext,
-    VariantSelectionBatch
-  >();
+  private readonly productChoiceBatches = new WeakMap<StorefrontContext, ProductChoiceBatch>();
 
   constructor(
     private readonly products: CommerceRepository,
@@ -389,26 +419,24 @@ export class StorefrontService implements OnModuleInit {
     const item = await this.products.publicProduct(scope, id.toLowerCase());
     return item ? catalogueProduct(item, await this.productCategories(scope, [item])) : null;
   }
-  productVariantSelection(
-    context: StorefrontContext,
-    id: string,
-  ): Promise<CatalogueVariantSelection> {
-    let batch = this.variantSelectionBatches.get(context);
+  productChoices(context: StorefrontContext, id: string): Promise<CatalogueProductChoices> {
+    let batch = this.productChoiceBatches.get(context);
     if (!batch) {
       const ids = new Set<string>();
       // GraphQL resolves sibling catalogue items with the same request context.
-      const selections = new Promise<void>((resolve) => setImmediate(resolve)).then(async () => {
-        this.variantSelectionBatches.delete(context);
+      const choices = new Promise<void>((resolve) => setImmediate(resolve)).then(async () => {
+        this.productChoiceBatches.delete(context);
         const scope = await this.publicScope(context);
         const rows = await this.products.publicProductVariantSelections(scope, [...ids]);
-        return new Map(rows.map((row) => [row.id, catalogueVariantSelection(row)]));
+        return new Map(rows.map((row) => [row.id, catalogueProductChoices(row)]));
       });
-      batch = { ids, selections };
-      this.variantSelectionBatches.set(context, batch);
+      batch = { ids, choices };
+      this.productChoiceBatches.set(context, batch);
     }
     batch.ids.add(id);
-    return batch.selections.then(
-      (selections) => selections.get(id) ?? { options: [], variants: [] },
+    return batch.choices.then(
+      (choices) =>
+        choices.get(id) ?? { variantSelection: { options: [], variants: [] }, optionPreviews: [] },
     );
   }
   async productSpecifications(context: StorefrontContext, id: string) {

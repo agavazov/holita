@@ -45,6 +45,7 @@ type PublicBlogArticlePage {
   limit: Int!
 }
 type CatalogueProductImage {
+  id: ID!
   url: String!
   altText: String
 }
@@ -78,6 +79,7 @@ type CatalogueProduct {
   "Whether at least one active variant can be sold."
   available: Boolean!
   variantSelection: CatalogueVariantSelection!
+  optionPreviews: [CatalogueOptionPreview!]!
   brand: CatalogueBrand
   category: CatalogueCategory
   "The visible categories from the root through the product's category."
@@ -103,8 +105,12 @@ input CatalogueBrowseFilter {
   minPrice: String
   maxPrice: String
   brandIds: [ID!]
+  "Matches any selected tag in the current shop, combined with the other filters."
+  tagIds: [ID!]
   optionValueIds: [ID!]
   inStock: Boolean
+  "Combines choices within a characteristic with OR, and across characteristics with AND."
+  characteristicChoiceIds: [ID!]
 }
 enum CatalogueSort {
   NAME_ASC
@@ -123,11 +129,24 @@ type CatalogueListing {
 type CatalogueOptionValue {
   id: ID!
   label: String!
+  swatchColor: String
 }
 type CatalogueOption {
   id: ID!
   name: String!
   values: [CatalogueOptionValue!]!
+}
+type CatalogueOptionPreview {
+  id: ID!
+  name: String!
+  values: [CatalogueOptionPreviewValue!]!
+}
+type CatalogueOptionPreviewValue {
+  id: ID!
+  label: String!
+  swatchColor: String
+  "Whether an active variant with this value can meet its minimum purchase quantity."
+  inStock: Boolean!
 }
 type CatalogueVariantSelection {
   "Active option groups and their values used by these variants."
@@ -139,17 +158,47 @@ type CatalogueVariant {
   id: ID!
   sku: String!
   price: String!
+  "Weight in kilograms."
+  weight: Float
+  "Package width in centimetres."
+  width: Float
+  "Package height in centimetres."
+  height: Float
+  "Package depth in centimetres."
+  depth: Float
   available: Boolean!
+  minimumQuantity: Int!
+  "Null when stock is not tracked."
+  availableQuantity: Int
+  imageId: ID
   "Visible values in option group order."
   optionValueIds: [ID!]!
 }
+type CatalogueCharacteristicChoice {
+  id: ID!
+  name: String!
+  count: Int!
+}
+type CatalogueCharacteristicFacet {
+  id: ID!
+  name: String!
+  choices: [CatalogueCharacteristicChoice!]!
+}
+type CatalogueCharacteristicGroupFacet {
+  id: ID!
+  name: String!
+  characteristics: [CatalogueCharacteristicFacet!]!
+}
 type CatalogueFacets {
   brands: [CatalogueBrand!]!
+  tags: [CatalogueTag!]!
   options: [CatalogueOption!]!
+  "Counts include other active filters and exclude the choice filter for the counted characteristic."
+  characteristicFacets: [CatalogueCharacteristicGroupFacet!]!
 }
 type CataloguePage {
   listing: CatalogueListing
-  "Choices from the listing before shopper filters are applied."
+  "Available filter choices for the listing."
   facets: CatalogueFacets!
   items: [CatalogueProduct!]!
   total: Int!
@@ -193,6 +242,7 @@ type ShopperSession {
 enum CartIssue {
   UNAVAILABLE
   INSUFFICIENT_STOCK
+  MINIMUM_QUANTITY_NOT_MET
 }
 type CartLine {
   id: ID!
@@ -202,6 +252,7 @@ type CartLine {
   coverImage: CatalogueProductImage
   optionLabels: [String!]!
   quantity: Int!
+  minimumQuantity: Int
   unitPrice: String
   lineTotal: String
   "Whether the requested quantity can be fulfilled."
@@ -380,6 +431,7 @@ type Query {
   blogArticle(slug: String!): PublicBlogArticle
   "Tags assigned to published articles in the current shop."
   blogTags: [PublicBlogTag!]!
+  "Uses search relevance when a search is supplied without an explicit sort."
   catalogue(
     offset: Int! = 0
     limit: Int! = 20
@@ -408,7 +460,7 @@ type Query {
     filter: CatalogueBrowseFilter
     sort: CatalogueSort
   ): CataloguePage
-  "Active members in collection order by default, or null for a missing or inactive collection."
+  "Active members in collection order by default, or by relevance for a search without an explicit sort. Returns null for a missing or inactive collection."
   catalogueCollectionProducts(
     slug: String!
     offset: Int! = 0

@@ -1,10 +1,12 @@
 <osnova-route-drawer
-  [title]="editing ? text().editCategory : text().newCategory"
+  [title]="editing() ? text().editCategory : text().newCategory"
   [subtitle]="subtitle()"
   [state]="state()"
   [errorText]="text().categoriesUnavailable"
   [saving]="saving()"
-  [dirty]="form.dirty"
+  [dirty]="form.dirty || productDirty()"
+  [closeLink]="createInProduct() ? null : ['..']"
+  (closeRequest)="closeCreate()"
   (retry)="retry()"
 >
   <form
@@ -131,7 +133,7 @@
       </osnova-form-field>
     </div>
     @if (saveError()) {
-      <p-message severity="error">{{ text().categorySaveFailed }}</p-message>
+    <p-message severity="error">{{ text().categorySaveFailed }}</p-message>
     }
   </form>
   <div drawerFooter class="app-drawer-actions">

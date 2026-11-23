@@ -8,15 +8,17 @@ import { isUUID } from 'class-validator';
 import { GraphQLError } from 'graphql';
 import { createHash } from 'node:crypto';
 import type { Product, ProductInput, QueryProductsArgs } from '../generated/graphql/types.js';
-import { InvalidCharacteristicIdError } from '../characteristics/characteristics.repository.js';
+import { InvalidCharacteristicValueError } from '../characteristics/characteristics.repository.js';
 import { Prisma } from '../generated/prisma/client.js';
 import {
   CommerceRepository,
   ConflictingVariantQuantityError,
+  DuplicateBarcodeError,
   DuplicateSkuError,
   InvalidImageIdError,
   InvalidMarkerIdError,
   InvalidVariantIdError,
+  InvalidVariantImageIdError,
   VariantOutstandingDeductionsError,
 } from './commerce.repository.js';
 import { requireScope, type RequestContext } from '../scope.js';
@@ -56,11 +58,33 @@ function product(row: ProductRow): Product {
     badges: row.badgeAssignments.map(({ badge }) => badge),
     tags: row.tagAssignments.map(({ tag }) => tag),
     variants: row.variants.map(
-      ({ id, sku, price, quantity, inventoryTracked, active, values }) => ({
+      ({
         id,
         sku,
-        price: price.toFixed(2),
+        barcode,
+        price,
+        weight,
+        width,
+        height,
+        depth,
         quantity,
+        minimumQuantity,
+        imageId,
+        inventoryTracked,
+        active,
+        values,
+      }) => ({
+        id,
+        sku,
+        barcode,
+        price: price.toFixed(2),
+        weight: weight?.toNumber() ?? null,
+        width: width?.toNumber() ?? null,
+        height: height?.toNumber() ?? null,
+        depth: depth?.toNumber() ?? null,
+        quantity,
+        minimumQuantity,
+        imageId,
         inventoryTracked,
         active,
         optionValueIds: values.map(({ optionValueId }) => optionValueId),
@@ -77,6 +101,22 @@ function fieldError(path: string, code: string, message: string): GraphQLError {
 
 function variantError(index: number, field: string, code: string, message: string) {
   return fieldError(`variants.${String(index)}.${field}`, code, message);
+}
+
+function measurement(
+  index: number,
+  field: 'weight' | 'width' | 'height' | 'depth',
+  value: number | null | undefined,
+) {
+  if (value != null && !/^\d{1,9}(?:\.\d{1,3})?$/.test(String(value))) {
+    throw variantError(
+      index,
+      field,
+      'INVALID_MEASUREMENT',
+      'Enter a non-negative measurement with up to nine whole digits and three decimal places',
+    );
+  }
+  return value;
 }
 
 function description(value: string | null, path: 'descriptionBg' | 'descriptionEn'): string | null {
@@ -139,33 +179,41 @@ function markerIds(input: string[] | null | undefined, field: 'badgeIds' | 'tagI
   return ids && [...new Set(ids)];
 }
 
-function invalidCharacteristicId(
-  index: number,
-  message = 'Choose a characteristic from this shop',
-) {
-  return fieldError(
-    `characteristicValues.${String(index)}.characteristicId`,
-    'INVALID_VALUE',
-    message,
-  );
+function invalidCharacteristicValue(index: number, field: string, message: string) {
+  return fieldError(`characteristicValues.${String(index)}.${field}`, 'INVALID_VALUE', message);
 }
 
 function characteristicValues(input: ProductInput['characteristicValues']) {
   const ids = new Set<string>();
-  return (input ?? []).map(({ characteristicId: rawId, value }, index) => {
+  return (input ?? []).map(({ characteristicId: rawId, value, choiceIds: submittedIds }, index) => {
     const characteristicId = rawId.toLowerCase();
     if (!isUUID(characteristicId) || ids.has(characteristicId)) {
-      throw invalidCharacteristicId(index, 'Choose a distinct characteristic from this shop');
+      throw invalidCharacteristicValue(
+        index,
+        'characteristicId',
+        'Choose a distinct characteristic from this shop',
+      );
     }
-    if (value.includes('\u0000')) {
-      throw fieldError(
-        `characteristicValues.${String(index)}.value`,
-        'INVALID_VALUE',
+    if (value?.includes('\u0000')) {
+      throw invalidCharacteristicValue(
+        index,
+        'value',
         'Characteristic value contains a null character',
       );
     }
+    const choiceIds = submittedIds?.map((id) => id.toLowerCase());
+    if (
+      choiceIds &&
+      (choiceIds.some((id) => !isUUID(id)) || new Set(choiceIds).size !== choiceIds.length)
+    ) {
+      throw invalidCharacteristicValue(
+        index,
+        'choiceIds',
+        'Choose distinct values for this characteristic',
+      );
+    }
     ids.add(characteristicId);
-    return { characteristicId, value: value.trim() };
+    return { characteristicId, value: value?.trim() ?? null, choiceIds: choiceIds ?? null };
   });
 }
 
@@ -269,14 +317,17 @@ export class CommerceService {
       );
     } catch (error: unknown) {
       await this.imageFiles.remove(scope, newKeys);
-      if (error instanceof InvalidCharacteristicIdError) {
-        throw invalidCharacteristicId(error.index, error.message);
+      if (error instanceof InvalidCharacteristicValueError) {
+        throw invalidCharacteristicValue(error.index, error.field, error.message);
       }
       if (error instanceof InvalidMarkerIdError) {
         throw invalidMarkerIds(error.field);
       }
       if (error instanceof InvalidImageIdError) {
         throw fieldError(`image${String(error.index)}Id`, 'INVALID_IMAGE_ID', error.message);
+      }
+      if (error instanceof InvalidVariantImageIdError) {
+        throw variantError(error.index, 'imageId', 'INVALID_IMAGE_ID', error.message);
       }
       if (error instanceof InvalidVariantIdError) {
         throw variantError(error.index, 'id', 'INVALID_VALUE', error.message);
@@ -307,6 +358,9 @@ export class CommerceService {
             },
           ],
         });
+      }
+      if (error instanceof DuplicateBarcodeError) {
+        throw variantError(error.index, 'barcode', 'DUPLICATE_BARCODE', error.message);
       }
       if (error instanceof DuplicateSkuError) {
         const index = variants.findIndex((variant) => variant.sku === error.sku);
@@ -353,8 +407,15 @@ export class CommerceService {
         {
           id: rawId,
           sku: rawSku,
+          barcode: rawBarcode,
           price,
+          weight,
+          width,
+          height,
+          depth,
           quantity: initialQuantity,
+          minimumQuantity,
+          imageId: rawImageId,
           inventoryTracked,
           active,
           optionValueIds: values,
@@ -368,6 +429,29 @@ export class CommerceService {
         if (id) {
           ids.add(id);
         }
+        const imageId = typeof rawImageId === 'string' ? rawImageId.toLowerCase() : rawImageId;
+        if (typeof imageId === 'string' && (!updating || !isUUID(imageId))) {
+          throw variantError(
+            index,
+            'imageId',
+            'INVALID_IMAGE_ID',
+            'Choose an image from this product',
+          );
+        }
+        if (
+          minimumQuantity !== undefined &&
+          (minimumQuantity === null ||
+            !Number.isInteger(minimumQuantity) ||
+            minimumQuantity < 1 ||
+            minimumQuantity > 2_147_483_647)
+        ) {
+          throw variantError(
+            index,
+            'minimumQuantity',
+            'INVALID_VALUE',
+            'Enter a positive whole quantity',
+          );
+        }
         const sku = rawSku.trim();
         if (!sku || Array.from(sku).length > 100 || sku.includes('\u0000')) {
           throw variantError(index, 'sku', 'INVALID_VALUE', 'SKU must contain 1 to 100 characters');
@@ -376,6 +460,15 @@ export class CommerceService {
           throw variantError(index, 'sku', 'DUPLICATE_SKU', 'This shop already uses the SKU');
         }
         skus.add(sku);
+        const barcode = rawBarcode === undefined ? undefined : rawBarcode?.trim() || null;
+        if (barcode && (Array.from(barcode).length > 255 || barcode.includes('\u0000'))) {
+          throw variantError(
+            index,
+            'barcode',
+            'INVALID_BARCODE',
+            'Enter a barcode of up to 255 characters',
+          );
+        }
         if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(price)) {
           throw variantError(
             index,
@@ -416,8 +509,15 @@ export class CommerceService {
         return {
           ...(id ? { id } : {}),
           sku,
+          barcode,
           price,
+          weight: measurement(index, 'weight', weight),
+          width: measurement(index, 'width', width),
+          height: measurement(index, 'height', height),
+          depth: measurement(index, 'depth', depth),
           quantity,
+          minimumQuantity,
+          imageId,
           inventoryTracked,
           active,
           optionValueIds,

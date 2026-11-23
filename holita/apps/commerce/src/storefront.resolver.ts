@@ -25,11 +25,19 @@ export class CatalogueProductResolver {
   constructor(private readonly service: StorefrontService) {}
 
   @ResolveField('variantSelection')
-  variantSelection(
+  async variantSelection(
     @Parent() product: Pick<CatalogueProduct, 'id'>,
     @Context() context: StorefrontContext,
   ) {
-    return this.service.productVariantSelection(context, product.id);
+    return (await this.service.productChoices(context, product.id)).variantSelection;
+  }
+
+  @ResolveField('optionPreviews')
+  async optionPreviews(
+    @Parent() product: Pick<CatalogueProduct, 'id'>,
+    @Context() context: StorefrontContext,
+  ) {
+    return (await this.service.productChoices(context, product.id)).optionPreviews;
   }
 }
 

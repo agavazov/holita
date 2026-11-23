@@ -31,6 +31,7 @@ import {
   injectDrawerHost,
   integerValidator,
   lockWhileSaving,
+  selectMultiplePt,
   textValidator,
   uiMessages,
   validationMessage,
@@ -40,8 +41,14 @@ import { DemoSession } from '@osnova/ui/app';
 import { ButtonDirective } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
+import { Select } from 'primeng/select';
 import { ToggleSwitch } from 'primeng/toggleswitch';
-import type { OperatorCharacteristicGroupQuery } from '../generated/characteristics-operations';
+import { CategoriesApi } from '../categories/categories-api';
+import { categoryRows } from '../categories/category-tree';
+import type {
+  CharacteristicKind,
+  OperatorCharacteristicGroupQuery,
+} from '../generated/characteristics-operations';
 import { CharacteristicsApi } from './characteristics-api';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -60,10 +67,22 @@ function definitionFields(definition?: Pick<Group, 'name' | 'sortOrder' | 'activ
   };
 }
 
+function choiceForm(choice?: Group['characteristics'][number]['choices'][number]) {
+  return new FormGroup({
+    id: new FormControl(choice?.id ?? null),
+    name: new FormControl(choice?.name ?? '', {
+      nonNullable: true,
+      validators: [textValidator(200, { required: true })],
+    }),
+  });
+}
+
 function characteristicForm(definition?: Group['characteristics'][number]) {
   return new FormGroup({
     ...definitionFields(definition),
     id: new FormControl(definition?.id ?? null),
+    kind: new FormControl<CharacteristicKind>(definition?.kind ?? 'TEXT', { nonNullable: true }),
+    choices: new FormArray((definition?.choices ?? []).map(choiceForm)),
   });
 }
 
@@ -78,6 +97,7 @@ type CharacteristicForm = ReturnType<typeof characteristicForm>;
     Message,
     ReactiveFormsModule,
     RouteDrawer,
+    Select,
     ToggleSwitch,
   ],
   templateUrl: './characteristic-group-editor.html',
@@ -85,6 +105,7 @@ type CharacteristicForm = ReturnType<typeof characteristicForm>;
 })
 export class CharacteristicGroupEditor {
   private readonly api = inject(CharacteristicsApi);
+  private readonly categoriesApi = inject(CategoriesApi);
   private readonly session = inject(DemoSession);
   private readonly route = inject(ActivatedRoute);
   private readonly language = inject(OperatorLanguage);
@@ -105,6 +126,13 @@ export class CharacteristicGroupEditor {
     },
     loader: ({ params }) => this.api.find(params.scope, params.id),
   });
+  protected readonly categories = resource({
+    params: () => this.api.scope() ?? undefined,
+    loader: ({ params }) => this.categoriesApi.list(params),
+  });
+  protected readonly categoryOptions = computed(() =>
+    categoryRows(this.categories.hasValue() ? this.categories.value() : []),
+  );
   protected readonly state = computed<RouteDrawerState>(() => {
     if (!this.api.scope() || !this.session.hasRole('OPERATOR')) {
       return 'error';
@@ -122,6 +150,11 @@ export class CharacteristicGroupEditor {
   });
   protected readonly text = computed(() => operatorStrings[this.language.value()]);
   protected readonly shared = computed(() => uiMessages[this.language.value()]);
+  protected readonly kinds = computed(() => [
+    { value: 'TEXT', label: this.text().characteristicKindText },
+    { value: 'SINGLE_CHOICE', label: this.text().characteristicKindSingle },
+    { value: 'MULTIPLE_CHOICE', label: this.text().characteristicKindMultiple },
+  ]);
   protected readonly subtitle = computed(() =>
     this.record.hasValue() ? (this.record.value()?.name ?? null) : null,
   );
@@ -131,6 +164,7 @@ export class CharacteristicGroupEditor {
   protected readonly characteristics = new FormArray<CharacteristicForm>([]);
   protected readonly form = new FormGroup({
     ...definitionFields(),
+    categoryIds: new FormControl<string[]>([], { nonNullable: true }),
     characteristics: this.characteristics,
   });
 
@@ -147,6 +181,7 @@ export class CharacteristicGroupEditor {
           name: group?.name ?? '',
           sortOrder: group?.sortOrder ?? 0,
           active: group?.active ?? true,
+          categoryIds: group?.categoryIds ?? [],
           characteristics: this.characteristics.getRawValue(),
         },
         { emitEvent: false },
@@ -161,6 +196,16 @@ export class CharacteristicGroupEditor {
         this.focusError();
       },
     );
+  }
+
+  protected selectPt(error: string | null, id: string, multiple = false) {
+    return {
+      label: {
+        ...(multiple ? selectMultiplePt.label : {}),
+        'aria-describedby': multiple ? id + '-hint ' + id + '-error' : id + '-error',
+        'aria-invalid': error ? 'true' : undefined,
+      },
+    };
   }
 
   canLeave(): boolean | Promise<boolean> {
@@ -190,8 +235,37 @@ export class CharacteristicGroupEditor {
     }
     this.characteristics.removeAt(index);
     this.characteristics.markAsDirty();
-    this.errors.update(({ name, sortOrder }) => ({ name, sortOrder }));
+    this.clearCharacteristicErrors();
     this.focusControl('characteristic-group-add');
+  }
+
+  protected changeKind(item: CharacteristicForm, index: number): void {
+    if (item.controls.kind.value === 'TEXT') {
+      item.controls.choices.clear();
+    }
+    this.clearError(`characteristics.${String(index)}.kind`);
+  }
+
+  protected addChoice(item: CharacteristicForm, index: number): void {
+    const choices = item.controls.choices;
+    choices.push(choiceForm());
+    choices.markAsDirty();
+    this.focusControl(`characteristic-group-choice-${String(index)}-${String(choices.length - 1)}`);
+  }
+
+  protected removeChoice(item: CharacteristicForm, index: number, choiceIndex: number): void {
+    const choices = item.controls.choices;
+    if (choices.at(choiceIndex).controls.id.value) {
+      return;
+    }
+    choices.removeAt(choiceIndex);
+    choices.markAsDirty();
+    this.clearCharacteristicErrors();
+    this.focusControl(`characteristic-group-choice-add-${String(index)}`);
+  }
+
+  private clearCharacteristicErrors(): void {
+    this.errors.update(({ name, sortOrder, categoryIds }) => ({ name, sortOrder, categoryIds }));
   }
 
   protected async save(): Promise<void> {
@@ -211,7 +285,7 @@ export class CharacteristicGroupEditor {
       );
       return;
     }
-    const { characteristics, sortOrder, ...draft } = this.form.getRawValue();
+    const { characteristics, sortOrder, categoryIds, ...draft } = this.form.getRawValue();
     this.saving.set(true);
     try {
       const id = await this.api.save(
@@ -219,10 +293,12 @@ export class CharacteristicGroupEditor {
         {
           ...draft,
           sortOrder: sortOrder ?? 0,
-          characteristics: characteristics.map(({ id, sortOrder, ...item }) => ({
+          ...(this.form.controls.categoryIds.dirty ? { categoryIds } : {}),
+          characteristics: characteristics.map(({ id, sortOrder, choices, ...item }) => ({
             ...item,
             ...(id ? { id } : {}),
             sortOrder: sortOrder ?? 0,
+            ...(item.kind === 'TEXT' ? {} : { choices }),
           })),
         },
         this.id(),
@@ -241,11 +317,29 @@ export class CharacteristicGroupEditor {
       const fields = [
         'name',
         'sortOrder',
-        ...characteristics.flatMap((_, index) =>
-          ['id', 'name', 'sortOrder'].map((field) => `characteristics.${String(index)}.${field}`),
-        ),
+        'categoryIds',
+        ...characteristics.flatMap(({ choices }, index) => {
+          const path = `characteristics.${String(index)}`;
+          return [
+            ...['id', 'name', 'sortOrder', 'kind', 'choices'].map((field) => `${path}.${field}`),
+            ...choices.flatMap((_, choiceIndex) =>
+              ['id', 'name'].map((field) => `${path}.choices.${String(choiceIndex)}.${field}`),
+            ),
+          ];
+        }),
       ];
       const errors = fieldErrors(error, fields, scope.language, (code, path) => {
+        if (path === 'categoryIds') {
+          return this.text().categoryUnavailable;
+        }
+        if (path.includes('.choices.')) {
+          if (path.endsWith('.id')) {
+            return this.text().characteristicChoiceUnavailable;
+          }
+          if (code === 'DUPLICATE_VALUE') {
+            return this.text().characteristicChoiceDuplicate;
+          }
+        }
         if (path.endsWith('.id')) {
           return this.text().characteristicUnavailable;
         }
@@ -274,10 +368,15 @@ export class CharacteristicGroupEditor {
     const form = this.formElement()?.nativeElement;
     const order = [
       'name',
+      'categories',
       'sort-order',
-      ...this.characteristics.controls.flatMap((_, index) => [
+      ...this.characteristics.controls.flatMap(({ controls: { choices } }, index) => [
         `name-${String(index)}`,
         `sort-order-${String(index)}`,
+        `kind-${String(index)}`,
+        ...choices.controls.map(
+          (_, choiceIndex) => `choice-${String(index)}-${String(choiceIndex)}`,
+        ),
       ]),
     ];
     if (!form || !focusFirstInvalid(form, order, 'characteristic-group-')) {

@@ -407,11 +407,14 @@ async function editOption(page: Page) {
   await page.locator('#option-name').fill('Finish');
   await page.locator('#option-show-in-filters').click();
   await page.getByRole('option', { name: 'Shown', exact: true }).click();
+  await page.locator('#option-show-in-listing').click();
+  await page.getByRole('option', { name: 'Shown', exact: true }).click();
   const addValue = page.getByRole('button', { name: 'Add value', exact: true });
   await addValue.click();
   await page.locator('#option-value-0').fill('Matt');
   await addValue.click();
   await page.locator('#option-value-1').fill('Gloss');
+  await page.locator('#option-swatch-1').fill('#735143');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await dismissSuccess(page, 'Option saved.');
   const firstRead = page.waitForResponse(optionRead);
@@ -1218,6 +1221,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.getByRole('textbox', { name: 'Finish', exact: true }).fill('Matte glaze');
     await merchant.getByRole('textbox', { name: 'Material', exact: true }).fill('Ceramic');
     await merchant.locator('#product-variant-sku-0').fill('SMOKE-001');
+    await merchant.locator('#product-variant-barcode-0').fill('0012345678905');
     await merchant.locator('#product-variant-price-0').fill('25.50');
     await merchant.locator('#product-variant-tracking-0').click();
     await merchant.getByRole('option', { name: 'Tracked', exact: true }).click();
@@ -1266,6 +1270,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.getByRole('button', { name: 'Create product', exact: true }).click();
     const configuredProductName = 'Stoneware cookware';
     await merchant.locator('#product-name').fill(configuredProductName);
+    await merchant.locator('#product-create-brand').click();
+    await merchant.locator('#brand-name').fill('Inline Smoke Brand');
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Brand saved.');
+    await expect(merchant.locator('#product-name')).toHaveValue(configuredProductName);
+    await expect(merchant.locator('#product-brand')).toHaveText('Inline Smoke Brand');
     await merchant.locator('#product-variant-generation-values').click();
     for (const finish of ['Gloss', 'Satin']) {
       await merchant
@@ -1281,6 +1291,18 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       await merchant.locator(`#product-variant-sku-${String(index)}`).fill(`CONFIG-${label}`);
       await merchant.locator(`#product-variant-price-${String(index)}`).fill(price);
     }
+    await merchant.locator('input[type=file]').setInputFiles(angledFile);
+    await merchant.locator('#product-image-alt-0').fill('Inline gallery draft');
+    await merchant.locator('#product-create-category').click();
+    await merchant.locator('#category-name').fill('Inline Smoke Category');
+    await merchant.locator('#category-active').click();
+    await merchant.getByRole('option', { name: 'Hidden', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Category saved.');
+    await expect(merchant.locator('#product-name')).toHaveValue(configuredProductName);
+    await expect(merchant.locator('#product-category')).toHaveText('Inline Smoke Category');
+    await expect(merchant.locator('#product-variant-sku-0')).toHaveValue('CONFIG-Gloss');
+    await expect(merchant.locator('#product-image-alt-0')).toHaveValue('Inline gallery draft');
     await merchant.locator('#product-variant-tracking-0').click();
     await merchant.getByRole('option', { name: 'Tracked', exact: true }).click();
     await merchant.locator('#product-status').click();
@@ -1306,6 +1328,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       has: shopper.getByRole('link', { name: configuredProductName, exact: true }),
     });
     await expect(untrackedCard.getByText('In stock', { exact: true })).toBeVisible();
+    await expect(untrackedCard.locator('.catalogue-option-previews')).toContainText('Gloss');
     await productLink.click();
     await expect(shopper.getByText('Smoke Brand', { exact: true })).toBeVisible();
     await expect(shopper.getByText(tagName, { exact: true })).toBeVisible();
@@ -1396,6 +1419,8 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await expect(description).toHaveText(descriptionBg);
     await shopper.getByRole('button', { name: 'EN', exact: true }).click();
     await merchant.getByRole('link', { name: 'Inventory', exact: true }).click();
+    await merchant.getByRole('searchbox').fill('0012345678905');
+    await expect(merchant.locator('tbody tr')).toHaveCount(1);
     await merchant
       .getByRole('button', { name: `Adjust quantity · ${productName} · SMOKE-001`, exact: true })
       .click();
@@ -1410,11 +1435,14 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await expect(merchant.locator('#product-description-en')).toHaveValue(descriptionEn);
     await merchant.locator('#product-description-en').clear();
     await merchant.getByRole('textbox', { name: 'Finish', exact: true }).clear();
+    await merchant.locator('#product-variant-image-0').click();
+    await merchant.getByRole('option', { name: /Front view/u }).click();
     await merchant.getByRole('button', { name: 'Move photo 2 up', exact: true }).press('Enter');
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Product saved.');
     await shopper.reload();
     await expect(description).toHaveText(descriptionBg);
+    await expect(shopper.locator('img.detail-photo')).toHaveAttribute('src', front);
     expect(await specificationsQuery()).toEqual({
       data: {
         catalogueProductSpecifications: [
@@ -1480,6 +1508,8 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     expect(await publicProductsQuery()).toMatchObject({
       data: { catalogueProduct: { coverImage: angledPhoto, images: [angledPhoto] } },
     });
+    await shopper.reload();
+    await expect(shopper.locator('img.detail-photo')).toHaveAttribute('src', angled);
     expect((await shopper.request.get(new URL(front, shopApp.origin).href)).status()).toBe(404);
 
     await merchant.getByRole('link', { name: 'Badges', exact: true }).click();
@@ -1750,6 +1780,14 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       404,
     );
     await merchant.getByRole('link', { name: 'Brands', exact: true }).click();
+    await merchant
+      .getByRole('button', { name: 'Actions for Inline Smoke Brand', exact: true })
+      .click();
+    await merchant.getByRole('menuitem', { name: 'Delete', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(
+      merchant.getByRole('button', { name: 'Inline Smoke Brand', exact: true }),
+    ).toHaveCount(0);
     await merchant.getByRole('button', { name: 'Smoke Brand', exact: true }).click();
     await expect(merchant.getByRole('img', { name: 'Logo', exact: true })).toBeVisible();
     await merchant.locator('#brand-name').fill('Smoke Brand revised');

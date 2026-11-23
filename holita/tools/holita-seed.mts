@@ -37,6 +37,7 @@ import {
   demoShopper,
   demoTags,
   type DemoShopperOrder,
+  type DemoVariant,
 } from './demo-catalogue.mjs';
 
 const demoHistoricalOrderMoney = { currency: 'BGN', shippingFee: '6.00' } as const;
@@ -169,23 +170,53 @@ async function seedCatalogue(): Promise<void> {
   let pagesInserted = 0;
   let blogTagsInserted = 0;
   let blogArticlesInserted = 0;
+  const saveGallery = async (productId: string, photos: (typeof demoProductImages)[number]) => {
+    const productDirectory = join(directory, 'products');
+    await mkdir(productDirectory, { recursive: true });
+    for (const [sortOrder, [number, file, altText]] of photos.entries()) {
+      const imageId = fixtureId('93', number);
+      const key = `${imageId}${extname(file)}`;
+      await client.query(
+        `INSERT INTO "productImage" ("id", "tenantId", "branchId", "productId", "storageKey", "altText", "sortOrder")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [imageId, tenantId, branchId, productId, key, altText, sortOrder],
+      );
+      const bytes = await readFile(new URL(`../config/demo/${file}`, import.meta.url));
+      try {
+        await writeFile(join(productDirectory, key), bytes, { flag: 'wx' });
+      } catch (error: unknown) {
+        if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) {
+          throw error;
+        }
+      }
+      imagesInserted++;
+    }
+  };
   await client.connect();
   try {
     await client.query('BEGIN');
-    for (const [id, name, values] of demoOptions) {
+    for (const [id, name, values, showInListing = false] of demoOptions) {
       const optionId = fixtureId('72', id);
       const { rowCount } = await client.query(
-        `INSERT INTO "option" ("id", "tenantId", "branchId", "name", "active", "showInFilters")
-         VALUES ($1, $2, $3, $4, true, true) ON CONFLICT DO NOTHING`,
-        [optionId, tenantId, branchId, name],
+        `INSERT INTO "option" ("id", "tenantId", "branchId", "name", "active", "showInFilters", "showInListing")
+         VALUES ($1, $2, $3, $4, true, true, $5) ON CONFLICT DO NOTHING`,
+        [optionId, tenantId, branchId, name, showInListing],
       );
       if (rowCount) {
         optionsInserted += rowCount;
-        for (const [sortOrder, [valueId, label]] of values.entries()) {
+        for (const [sortOrder, [valueId, label, swatchColor]] of values.entries()) {
           await client.query(
-            `INSERT INTO "optionValue" ("id", "tenantId", "branchId", "optionId", "label", "sortOrder")
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [fixtureId('82', valueId), tenantId, branchId, optionId, label, sortOrder],
+            `INSERT INTO "optionValue" ("id", "tenantId", "branchId", "optionId", "label", "sortOrder", "swatchColor")
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [
+              fixtureId('82', valueId),
+              tenantId,
+              branchId,
+              optionId,
+              label,
+              sortOrder,
+              swatchColor ?? null,
+            ],
           );
         }
       }
@@ -240,7 +271,9 @@ async function seedCatalogue(): Promise<void> {
         descriptions,
       ] of brand.products) {
         const productId = fixtureId('52', id);
-        const variants = configuredVariants ?? [[`DEMO-${String(id)}`, price, 0] as const];
+        const variants: readonly DemoVariant[] = configuredVariants ?? [
+          [`DEMO-${String(id)}`, price, 0],
+        ];
         const valueIds = [
           ...new Set(
             variants.flatMap(([, , , values = []]) =>
@@ -277,17 +310,20 @@ async function seedCatalogue(): Promise<void> {
           continue;
         }
         productsInserted += product.rowCount;
+        if (variants.some(([, , , , , purchase]) => purchase)) {
+          await saveGallery(productId, demoProductImages[id]);
+        }
         for (const [
           sortOrder,
-          [sku, variantPrice, quantity, values = [], inventoryTracked],
+          [sku, variantPrice, quantity, values = [], inventoryTracked, purchase],
         ] of variants.entries()) {
           const variantId = fixtureId('92', id * 10 + sortOrder);
           const optionValueIds = values.map((value) => fixtureId('82', value)).sort();
           const key = createHash('sha256').update(optionValueIds.join(',')).digest('hex');
           await client.query(
             `INSERT INTO "productVariant" ("id", "tenantId", "branchId", "productId", "sku", "price",
-                "quantity", "inventoryTracked", "combinationKey", "sortOrder")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                "quantity", "inventoryTracked", "combinationKey", "sortOrder", "minimumQuantity", "imageId", "barcode")
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
             [
               variantId,
               tenantId,
@@ -299,6 +335,9 @@ async function seedCatalogue(): Promise<void> {
               inventoryTracked ?? !!configuredVariants,
               key,
               sortOrder,
+              purchase?.minimumQuantity ?? 1,
+              purchase ? fixtureId('93', purchase.imageId) : null,
+              purchase?.barcode ?? null,
             ],
           );
           for (const optionValueId of optionValueIds) {
@@ -351,26 +390,45 @@ async function seedCatalogue(): Promise<void> {
     }
     for (const group of demoCharacteristicGroups) {
       const groupId = fixtureId('93', group.id);
+      const categoryId = group.categoryId ? fixtureId('62', group.categoryId) : null;
       const { rowCount } = await client.query(
         `INSERT INTO "characteristicGroup" ("id", "tenantId", "branchId", "name", "sortOrder")
-         VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
-        [groupId, tenantId, branchId, group.name, group.sortOrder],
+         SELECT $1, $2, $3, $4, $5 WHERE $6::uuid IS NULL OR EXISTS (
+           SELECT 1 FROM "category" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $6
+         ) ON CONFLICT DO NOTHING`,
+        [groupId, tenantId, branchId, group.name, group.sortOrder, categoryId],
       );
       if (rowCount) {
         characteristicGroupsInserted += rowCount;
-        for (const characteristic of group.characteristics) {
+        if (categoryId) {
           await client.query(
-            `INSERT INTO "characteristic" ("id", "tenantId", "branchId", "groupId", "name", "sortOrder")
-             VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING`,
+            `INSERT INTO "characteristicGroupCategory" ("tenantId", "branchId", "groupId", "categoryId")
+             VALUES ($1, $2, $3, $4)`,
+            [tenantId, branchId, groupId, categoryId],
+          );
+        }
+        for (const characteristic of group.characteristics) {
+          const characteristicId = fixtureId('94', characteristic.id);
+          await client.query(
+            `INSERT INTO "characteristic" ("id", "tenantId", "branchId", "groupId", "name", "sortOrder", "kind")
+             VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT DO NOTHING`,
             [
-              fixtureId('94', characteristic.id),
+              characteristicId,
               tenantId,
               branchId,
               groupId,
               characteristic.name,
               characteristic.sortOrder,
+              characteristic.kind ?? 'text',
             ],
           );
+          for (const [id, name] of characteristic.choices ?? []) {
+            await client.query(
+              `INSERT INTO "characteristicChoice" ("id", "tenantId", "branchId", "characteristicId", "name")
+               VALUES ($1, $2, $3, $4, $5)`,
+              [fixtureId('95', id), tenantId, branchId, characteristicId, name],
+            );
+          }
         }
         for (const [product, characteristic, value] of group.values) {
           await client.query(
@@ -380,6 +438,23 @@ async function seedCatalogue(): Promise<void> {
              )
              ON CONFLICT DO NOTHING`,
             [tenantId, branchId, fixtureId('52', product), fixtureId('94', characteristic), value],
+          );
+        }
+        for (const [product, characteristic, choice] of group.choiceAssignments ?? []) {
+          await client.query(
+            `INSERT INTO "productCharacteristicChoice" ("tenantId", "branchId", "productId", "characteristicId", "choiceId")
+             SELECT $1, $2, $3, $4, $5 WHERE EXISTS (
+               SELECT 1 FROM "product" WHERE "tenantId" = $1 AND "branchId" = $2 AND "id" = $3
+                 AND ($6::uuid IS NULL OR "categoryId" = $6)
+             ) ON CONFLICT DO NOTHING`,
+            [
+              tenantId,
+              branchId,
+              fixtureId('52', product),
+              fixtureId('94', characteristic),
+              fixtureId('95', choice),
+              categoryId,
+            ],
           );
         }
       }
@@ -399,26 +474,7 @@ async function seedCatalogue(): Promise<void> {
         [tenantId, branchId, productId],
       );
       if (available.rowCount) {
-        const productDirectory = join(directory, 'products');
-        await mkdir(productDirectory, { recursive: true });
-        for (const [sortOrder, [number, file, altText]] of photos.entries()) {
-          const imageId = fixtureId('93', number);
-          const key = `${imageId}${extname(file)}`;
-          await client.query(
-            `INSERT INTO "productImage" ("id", "tenantId", "branchId", "productId", "storageKey", "altText", "sortOrder")
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [imageId, tenantId, branchId, productId, key, altText, sortOrder],
-          );
-          const bytes = await readFile(new URL(`../config/demo/${file}`, import.meta.url));
-          try {
-            await writeFile(join(productDirectory, key), bytes, { flag: 'wx' });
-          } catch (error: unknown) {
-            if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) {
-              throw error;
-            }
-          }
-          imagesInserted++;
-        }
+        await saveGallery(productId, photos);
       }
     }
     for (const badge of demoBadges) {

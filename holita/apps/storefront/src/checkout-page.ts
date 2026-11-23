@@ -63,6 +63,7 @@ const addressFields = [
 type CheckoutProblem =
   | 'checkoutEmptyCart'
   | 'checkoutCartChanged'
+  | 'cartMinimumNotMet'
   | 'checkoutQuoteFailed'
   | 'checkoutQuoteChanged'
   | 'checkoutStockChanged'
@@ -81,6 +82,8 @@ function cartProblem(code: string): CheckoutProblem | null {
       return 'checkoutEmptyCart';
     case 'CHECKOUT_CART_CHANGED':
       return 'checkoutCartChanged';
+    case 'MINIMUM_QUANTITY_NOT_MET':
+      return 'cartMinimumNotMet';
     case 'CHECKOUT_QUOTE_CHANGED':
       return 'checkoutQuoteChanged';
     case 'CHECKOUT_STOCK_CHANGED':
@@ -186,6 +189,7 @@ export class CheckoutPage {
     const problem = this.problem();
     return (
       !!this.promoProblem() ||
+      problem === 'cartMinimumNotMet' ||
       problem === 'checkoutCartChanged' ||
       problem === 'checkoutEmptyCart' ||
       problem === 'checkoutStockChanged'
@@ -435,6 +439,8 @@ export class CheckoutPage {
       this.problem.set(problem);
       if (problem === 'checkoutQuoteChanged') {
         this.request.reload();
+      } else if (problem === 'cartMinimumNotMet') {
+        this.cartState.refresh();
       }
     } else if (formErrors.length) {
       this.reviewed.set(null);

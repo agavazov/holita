@@ -17,6 +17,7 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
   CartState,
+  cartProblems,
   maxCartQuantity,
   promoProblems,
   quantityControl,
@@ -58,6 +59,7 @@ export class CartPage {
   protected readonly base = () => ['/s', this.state.shopId()];
   protected readonly t = () => messages[this.language()];
   protected readonly maxCartQuantity = maxCartQuantity;
+  protected readonly cartProblems = cartProblems;
   protected readonly promoProblems = promoProblems;
   protected readonly canCheckout = computed(() => {
     const cart = this.state.cart();
@@ -82,13 +84,15 @@ export class CartPage {
     Map<string, FormControl<number | null>>
   >({
     source: () => this.state.cart()?.lines ?? [],
-    computation: (lines, previous) =>
-      new Map(
-        lines.map((line) => [
-          line.id,
-          previous?.value.get(line.id) ?? quantityControl(line.quantity),
-        ]),
-      ),
+    computation: (lines, previous) => {
+      const priorMinima = new Map(previous?.source.map((line) => [line.id, line.minimumQuantity]));
+      return new Map(
+        lines.map(({ id, quantity, minimumQuantity }) => {
+          const prior = priorMinima.get(id) === minimumQuantity ? previous?.value.get(id) : null;
+          return [id, prior ?? quantityControl(quantity, minimumQuantity ?? 1)];
+        }),
+      );
+    },
   });
 
   protected formatPrice(value: string) {
@@ -151,6 +155,9 @@ export class CartPage {
       this.updated.set(true);
     } else if (result !== 'expired') {
       this.lineError.set({ lineId: line.id, message: result });
+      if (result === 'cartMinimumNotMet') {
+        this.state.refresh();
+      }
     }
   }
 

@@ -12,14 +12,18 @@
         <span aria-hidden="true">›</span>
         <a [routerLink]="[...base(), 'cart']">{{ t().backToCart }}</a>
       </li>
-      <li><span aria-hidden="true">›</span><span aria-current="page">{{ t().checkoutTitle }}</span></li>
+      <li>
+        <span aria-hidden="true">›</span><span aria-current="page">{{ t().checkoutTitle }}</span>
+      </li>
     </ol>
   </nav>
   <h1 id="checkout-title" class="basic-page-title">{{ t().checkoutTitle }}</h1>
   @if (cartState.sessionExpired()) {
   <div class="basic-state">
     <p role="alert">{{ t().cartSessionExpired }}</p>
-    <a class="basic-button basic-button--primary" [routerLink]="[...base(), 'sign-in']">{{ t().signIn }}</a>
+    <a class="basic-button basic-button--primary" [routerLink]="[...base(), 'sign-in']"
+      >{{ t().signIn }}</a
+    >
   </div>
   } @else if (loadFailed()) {
   <div class="basic-state">
@@ -31,7 +35,9 @@
     @if (blocked()) {
     <div class="checkout-warning">
       <p role="alert">{{ t().checkoutCartChanged }}</p>
-      <a class="basic-button basic-button--primary" [routerLink]="[...base(), 'cart']">{{ t().backToCart }}</a>
+      <a class="basic-button basic-button--primary" [routerLink]="[...base(), 'cart']"
+        >{{ t().backToCart }}</a
+      >
     </div>
     } @else {
     <form #checkoutForm id="checkout-form" [formGroup]="form" (ngSubmit)="review()">
@@ -50,11 +56,7 @@
       </div>
       }
       <fieldset class="checkout-form-content" [disabled]="busy()">
-        <section
-          class="checkout-section"
-          aria-labelledby="contact-heading"
-          formGroupName="contact"
-        >
+        <section class="checkout-section" aria-labelledby="contact-heading" formGroupName="contact">
           <h2 id="contact-heading">{{ t().contactDetails }}</h2>
           <div class="checkout-fields">
             @for (field of contactFields; track field.name) { @let control =
@@ -139,31 +141,31 @@
               <label for="shippingMethodId">{{ t().shippingMethod }}</label>
               } @else { {{ t().shippingMethod }} }
             </h3>
-            @let shippingError = fieldError('shippingMethodId', form.controls.shippingMethodId);
-            @if (state.shippingMethods.length) {
-              <div class="basic-field">
-                <select
-                  class="basic-input"
-                  id="shippingMethodId"
-                  formControlName="shippingMethodId"
-                  required
-                  [attr.aria-invalid]="shippingError ? 'true' : null"
-                  [attr.aria-describedby]="shippingError ? 'shipping-method-error' : null"
-                >
-                  <option value="">{{ t().selectMethod }}</option>
-                  @for (method of state.shippingMethods; track method.id) { @let quoted = reviewed &&
-                  reviewed.shippingMethod.id === method.id ? reviewed : null; @let fee =
-                  quoted?.shippingFee ?? (reviewed ? null : method.fixedFee);
-                  <option [value]="method.id">
-                    {{ quoted?.shippingMethod.label ?? method.label }}{{ fee === null ? '' : ' · ' +
-                    formatPrice(fee) }}
-                  </option>
-                  }
-                </select>
-                @if (shippingError) {
-                <span class="field-error" id="shipping-method-error">{{ shippingError }}</span>
+            @let shippingError = fieldError('shippingMethodId', form.controls.shippingMethodId); @if
+            (state.shippingMethods.length) {
+            <div class="basic-field">
+              <select
+                class="basic-input"
+                id="shippingMethodId"
+                formControlName="shippingMethodId"
+                required
+                [attr.aria-invalid]="shippingError ? 'true' : null"
+                [attr.aria-describedby]="shippingError ? 'shipping-method-error' : null"
+              >
+                <option value="">{{ t().selectMethod }}</option>
+                @for (method of state.shippingMethods; track method.id) { @let quoted = reviewed &&
+                reviewed.shippingMethod.id === method.id ? reviewed : null; @let fee =
+                quoted?.shippingFee ?? (reviewed ? null : method.fixedFee);
+                <option [value]="method.id">
+                  {{ quoted?.shippingMethod.label ?? method.label }}{{ fee === null ? '' : ' · ' +
+                  formatPrice(fee) }}
+                </option>
                 }
-              </div>
+              </select>
+              @if (shippingError) {
+              <span class="field-error" id="shipping-method-error">{{ shippingError }}</span>
+              }
+            </div>
             } @else {
             <p class="checkout-warning">{{ t().noShippingMethods }}</p>
             }
@@ -174,33 +176,32 @@
               <label for="paymentMethodId">{{ t().paymentMethod }}</label>
               } @else { {{ t().paymentMethod }} }
             </h3>
-            @let paymentError = fieldError('paymentMethodId', form.controls.paymentMethodId);
-            @if (state.paymentMethods.length) {
-              <div class="basic-field">
-                <select
-                  class="basic-input"
-                  id="paymentMethodId"
-                  formControlName="paymentMethodId"
-                  required
-                  [attr.aria-invalid]="paymentError ? 'true' : null"
-                  [attr.aria-describedby]="paymentError ? 'payment-method-error' : null"
-                >
-                  <option value="">{{ t().selectMethod }}</option>
-                  @for (method of state.paymentMethods; track method.id) {
-                  <option [value]="method.id">
-                    {{ reviewed && reviewed.paymentMethod.id === method.id ?
-                    reviewed.paymentMethod.label : method.label }}
-                  </option>
-                  }
-                </select>
-                @if (paymentError) {
-                <span class="field-error" id="payment-method-error">{{ paymentError }}</span>
+            @let paymentError = fieldError('paymentMethodId', form.controls.paymentMethodId); @if
+            (state.paymentMethods.length) {
+            <div class="basic-field">
+              <select
+                class="basic-input"
+                id="paymentMethodId"
+                formControlName="paymentMethodId"
+                required
+                [attr.aria-invalid]="paymentError ? 'true' : null"
+                [attr.aria-describedby]="paymentError ? 'payment-method-error' : null"
+              >
+                <option value="">{{ t().selectMethod }}</option>
+                @for (method of state.paymentMethods; track method.id) {
+                <option [value]="method.id">
+                  {{ reviewed && reviewed.paymentMethod.id === method.id ?
+                  reviewed.paymentMethod.label : method.label }}
+                </option>
                 }
-              </div>
+              </select>
+              @if (paymentError) {
+              <span class="field-error" id="payment-method-error">{{ paymentError }}</span>
+              }
+            </div>
             } @else {
             <p class="checkout-warning">{{ t().noPaymentMethods }}</p>
-            }
-            @if (selectedPayment()?.instructions; as instructions) {
+            } @if (selectedPayment()?.instructions; as instructions) {
             <div class="checkout-note">
               <strong>{{ t().paymentInstructions }}</strong>
               <p>{{ instructions }}</p>
@@ -220,7 +221,9 @@
             @if (line.coverImage; as photo) {
             <img class="checkout-photo" [src]="photo.url" alt="" />
             } @else {
-            <span class="checkout-photo checkout-photo--empty" aria-hidden="true">{{ t().noPhoto }}</span>
+            <span class="checkout-photo checkout-photo--empty" aria-hidden="true"
+              >{{ t().noPhoto }}</span
+            >
             }
             <div class="checkout-line-details">
               <h3>
@@ -233,13 +236,17 @@
               }
               <span>
                 <span class="app-visually-hidden">{{ t().quantity }}</span>
-                {{ line.quantity }}
-                @if (line.unitPrice !== null) { × {{ formatPrice(line.unitPrice) }} }
+                {{ line.quantity }} @if (line.unitPrice !== null) { × {{ formatPrice(line.unitPrice)
+                }} }
               </span>
               @if (line.issue === 'UNAVAILABLE') {
               <span class="shop-chip" data-tone="out-of-stock">{{ t().cartUnavailable }}</span>
               } @else if (line.issue === 'INSUFFICIENT_STOCK') {
               <span class="shop-chip" data-tone="WARN">{{ t().cartInsufficientStock }}</span>
+              } @else if (line.issue === 'MINIMUM_QUANTITY_NOT_MET') {
+              <span class="shop-chip" data-tone="WARN">
+                {{ t().minimumQuantity(line.minimumQuantity ?? 1) }}
+              </span>
               }
             </div>
             @if (line.lineTotal !== null) {
@@ -293,7 +300,12 @@
             {{ placing() ? t().placingOrder : t().placeOrder }}
           </button>
           } @else {
-          <button class="basic-button basic-button--primary" type="submit" form="checkout-form" [disabled]="reviewing()">
+          <button
+            class="basic-button basic-button--primary"
+            type="submit"
+            form="checkout-form"
+            [disabled]="reviewing()"
+          >
             {{ reviewing() ? t().loading : t().reviewTotal }}
           </button>
           }

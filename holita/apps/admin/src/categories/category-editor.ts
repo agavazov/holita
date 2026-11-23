@@ -7,6 +7,8 @@ import {
   computed,
   effect,
   inject,
+  input,
+  output,
   resource,
   signal,
   viewChild,
@@ -29,6 +31,7 @@ import {
   textValidator,
   uiMessages,
   validationMessage,
+  type DrawerSaved,
   type RouteDrawerState,
 } from '@osnova/ui';
 import { DemoSession } from '@osnova/ui/app';
@@ -67,12 +70,20 @@ export class CategoryEditor {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly drawerHost = injectDrawerHost();
+  readonly createInProduct = input(false);
+  readonly productDirty = input(false);
+  readonly created = output<DrawerSaved>();
+  readonly createClosed = output();
   protected readonly drawer = viewChild.required(RouteDrawer);
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('editorForm');
-  private readonly routeData = drawerRouteData(this.route);
+  private readonly routeData = computed(() => drawerRouteData(this.route));
   private readonly params = toSignal(this.route.paramMap, { requireSync: true });
-  protected readonly editing = this.routeData.mode === 'edit';
-  private readonly id = computed(() => this.params().get(this.routeData.recordParam ?? 'recordId'));
+  protected readonly editing = computed(
+    () => !this.createInProduct() && this.routeData().mode === 'edit',
+  );
+  private readonly id = computed(() =>
+    this.editing() ? this.params().get(this.routeData().recordParam ?? 'recordId') : null,
+  );
   private readonly record = resource({
     params: () => {
       const scope = this.api.scope();
@@ -89,7 +100,7 @@ export class CategoryEditor {
     if (!this.api.scope() || !this.session.hasRole('OPERATOR')) {
       return 'error';
     }
-    if (this.editing && !uuid.test(this.id() ?? '')) {
+    if (this.editing() && !uuid.test(this.id() ?? '')) {
       return 'invalid-id';
     }
     if (this.record.isLoading() || this.tree.isLoading()) {
@@ -98,7 +109,9 @@ export class CategoryEditor {
     if (this.record.error() || this.tree.error()) {
       return 'error';
     }
-    return !this.editing || (this.record.hasValue() && this.record.value()) ? 'ready' : 'not-found';
+    return !this.editing() || (this.record.hasValue() && this.record.value())
+      ? 'ready'
+      : 'not-found';
   });
   protected readonly text = computed(() => operatorStrings[this.language.value()]);
   protected readonly shared = computed(() => uiMessages[this.language.value()]);
@@ -161,8 +174,14 @@ export class CategoryEditor {
     );
   }
 
-  canLeave(): boolean | Promise<boolean> {
-    return !this.saving() && this.drawer().confirmLeave(this.form.dirty);
+  canLeave(productDirty = false): boolean | Promise<boolean> {
+    return !this.saving() && this.drawer().confirmLeave(this.form.dirty || productDirty);
+  }
+
+  protected async closeCreate(): Promise<void> {
+    if (await this.canLeave()) {
+      this.createClosed.emit();
+    }
   }
 
   protected error(field: Field): string | null {
@@ -179,7 +198,7 @@ export class CategoryEditor {
 
   protected changeName(name: string): void {
     this.clearError('name');
-    if (!this.editing && this.form.controls.slug.pristine) {
+    if (!this.editing() && this.form.controls.slug.pristine) {
       this.form.controls.slug.setValue(slugFromName(name));
       this.clearError('slug');
     }
@@ -219,8 +238,13 @@ export class CategoryEditor {
       }
       this.form.markAsPristine();
       this.saving.set(false);
-      this.drawerHost.saved({ message: this.text().categorySaved, recordId: id });
-      this.drawer().close();
+      const event = { message: this.text().categorySaved, recordId: id };
+      if (this.createInProduct()) {
+        this.created.emit(event);
+      } else {
+        this.drawerHost.saved(event);
+        this.drawer().close();
+      }
     } catch (error: unknown) {
       if (this.destroyRef.destroyed || this.api.scope() !== scope) {
         return;

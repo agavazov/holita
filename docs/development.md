@@ -519,7 +519,9 @@ The period covers the date range, dated totals and daily chart values. It also r
 stock count and recent orders. The selected shop comes from the verified operator scope.
 
 In Admin, use Categories to create, move and reorder shop categories. The Product drawer assigns
-one category per product. The public `catalogueCategories` query returns the active tree, and the
+one category per product. Use **Add brand** or **Add category** in the Product drawer to open
+the existing creation form for the selected shop. Saving selects the new record and returns to
+the product draft. The public `catalogueCategories` query returns the active tree, and the
 storefront shows each product's active category path in its breadcrumbs. A hidden ancestor
 suppresses the whole subtree. The Sofia demo shop includes Kitchen and Home trees with products in
 their child categories.
@@ -531,8 +533,9 @@ its active status. A category or brand used in a rule can be deleted after the r
 The Sofia demo shop includes the curated Kitchen Essentials collection and a Cookware collection.
 
 Open `/s/<branchId>` for the shop home with its hero, editorial tiles and product shelves.
-Choose **Products** to browse the full catalogue at `/s/<branchId>/products`. Shop search opens
-that listing with the search term applied. Shop navigation also links to category, brand,
+Choose **Products** to browse the full catalogue at `/s/<branchId>/products`. Shop search suggests
+products as you type. Open a suggestion to view that product, or submit the search to open the
+catalogue with the search term applied. Shop navigation also links to category, brand,
 collection and tag indexes beneath `/s/<branchId>`. Open an index entry to browse products by
 its slug. Category listings include visible descendants and link to direct subcategories. Tags
 appear in the index while assigned to a public product. Manual collections preserve the saved
@@ -540,24 +543,42 @@ order by default, and rule-based collections sort by name.
 
 The public `catalogue` and `catalogueCategoryProducts`, `catalogueBrandProducts`,
 `catalogueCollectionProducts` and `catalogueTagProducts` queries accept filters, sorting and paging.
+Search matches product names, Bulgarian and English descriptions, active variant SKUs, and
+public brand, category and tag names. Searches use relevance unless a sort is selected.
+`tagIds` matches any selected tag and combines with the other filters. Catalogue pages expose
+the tag choices under `facets.tags`.
 The storefront stores browsing state in the URL with `q`, `sort`, `minPrice`, `maxPrice`,
-repeated `brand` and `option` IDs, `inStock=1` and one-based `page`. The sort values are
+repeated `brand`, `tag`, `option` and `characteristic` IDs, `inStock=1` and one-based `page`.
+The sort values are
 `name-asc`, `name-desc`, `price-asc`, `price-desc` and `newest`. The home page **New arrivals**
 tile opens `/s/<branchId>/products?sort=newest`. The public `NEWEST` sort orders products by
 creation time and then by product ID, both descending. Copy the URL after applying filters to
 share the same view. Price bounds use the displayed price, and selected option values and
 the in-stock filter must match the same active variant.
 
-In Admin, open Characteristic groups to define product specifications and set the display order
-and active status of each group and characteristic. In the Product drawer, enter text in
-Specifications. Clearing a value removes it. Deactivating a group or characteristic hides its
-specifications and preserves the saved values. Shoppers see populated groups in the saved order
-on the product detail page. The public graph exposes `catalogueProductSpecifications(productId)`.
-The Sofia demo shop includes Material and Finish values on a ceramic baking dish and an oak bowl.
+Use **Characteristic groups** in Admin to define product specifications. Choose the exact
+categories where a group applies, or leave the category selection empty to use it throughout
+the shop. A new characteristic can accept free text, one reusable choice or multiple choices.
+In the Product drawer, use **Specifications** to assign values. A category change or deactivation
+hides inapplicable values and preserves them for later use.
+
+Basic shows saved text and choice labels on the product page. In catalogue filters, multiple
+choices from one characteristic match any of those choices. Selections across different
+characteristics must all match. Counts reflect the current listing and other filters, excluding
+the counted characteristic's own selection. Filter links carry repeated `characteristic` choice
+IDs in the URL. The public graph exposes `catalogueProductSpecifications(productId)` and
+`facets.characteristicFacets` on catalogue listings.
+
+The Sofia demo shop's Cookware category includes **Модел / версия** with **Terra V1** on a
+ceramic baking dish and **Terra V2** on a ceramic casserole. The baking dish also displays its
+existing Material and Finish text. The ceramic pot “Орехова жарава” has a descriptive
+**Terra V3** specification and separately purchasable glaze options with their own SKUs, gallery
+photos, stock and minimum quantities.
 
 In Admin, use Options to define reusable options for the selected shop. The drawer lets you set
-the option's status and filter visibility, edit its text values and move them into order. The Sofia
-demo shop includes Colour and Size. The operator graph exposes `options`, `option`, `createOption`
+the option's status, filter visibility and whether to show it on product cards. Add a
+`#RRGGBB` swatch to any value with a colour, and keep its text label. The Sofia demo shop
+includes Colour and Size. The operator graph exposes `options`, `option`, `createOption`
 and `updateOption`. To delete a value used by a product variant, first remove the variants using
 that value. Variants with stock still eligible for restoration can be deactivated until then.
 
@@ -570,9 +591,18 @@ has its own inventory tracking and status. A saved variant keeps its combination
 different combination, add a new variant and set its own initial quantity if tracked. Set the
 original variant to Inactive to stop selling it. When a simple product gains options, set its
 original variant to Inactive and keep it for any stock that may still need to be restored.
-For a saved variant, search Inventory by product name or SKU, then open the variant to view its
-details or set its tracked stock count. Filter by tracking status or show only tracked variants
-with zero stock.
+Set a minimum purchase quantity per variant. Existing variants start at one unit. Save photos
+in Gallery before choosing one for a variant. Clearing the assignment or removing the photo
+from the gallery returns the variant to the cover.
+A variant can also have a barcode, a weight in kilograms, and width, height and depth in
+centimetres. Barcodes are case-insensitively unique within the shop. Blank clears a barcode or
+measurement. In the operator API, omit a field to keep the saved value or pass null to clear it.
+The catalogue API returns the measurements on active variants of public products.
+
+Search Inventory by product name, SKU or barcode, then open a variant to view its details or set
+its tracked stock count. Use the **Barcode** filter for an exact match. Combine tracking,
+availability, brand, category, product activity and variant activity filters. A category includes
+its descendants. Choice filters use the product characteristics defined for the shop.
 Omit quantity for saved variants in `updateProduct`. The mutation rejects a supplied quantity
 that differs from the saved stock count.
 
@@ -581,13 +611,17 @@ price on catalogue cards. The public `CatalogueProduct.available` field reports 
 variant is available. On a product page, `CatalogueProduct.variantSelection` supplies the active
 variants and their public option labels. The page starts with the first available variant in the
 merchant's saved order, or the first active variant when all are sold out. Choosing a combination
-updates its price and availability. A variant is available when it has stock or sells without
-inventory tracking. The Sofia demo shop includes a configurable product with two differently
-priced combinations, one in stock and one sold out.
+updates its price, photo, availability and quantity. A tracked variant is available when its
+stock meets its minimum. Catalogue cards show each flagged option's distinct values from active
+variants. The Sofia demo shop includes a configurable product with two differently priced
+combinations, one in stock and one sold out.
 
 Select an available variant and quantity on the product page, then add it to the cart. The cart
 shows product thumbnails, current prices and availability, supports quantity changes and removal, and excludes blocked lines
 from the subtotal. Signing in merges eligible guest quantities and shows any skipped items.
+Cart changes, checkout and manual orders enforce the variant minimum. If a merchant raises the
+minimum while a shopper has the item in their cart, the shopper can increase the quantity or
+remove the line before checkout.
 The storefront graph exposes `cart`, `addCartLine`, `updateCartLine` and `removeCartLine`.
 Send the guest credential in `x-cart-token` or use the same-shop shopper bearer after signing in.
 

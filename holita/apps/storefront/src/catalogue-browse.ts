@@ -123,21 +123,31 @@ export class CatalogueBrowse {
     () => this.filtered() || Boolean(this.url().filters.sort) || !this.url().valid,
   );
   protected readonly selectedCount = computed(() => {
-    const { q, minPrice, maxPrice, brand, option, inStock } = this.url().filters;
+    const { q, minPrice, maxPrice, brand, characteristic, option, tag, inStock } =
+      this.url().filters;
     return (
       Number(Boolean(q)) +
       Number(Boolean(minPrice || maxPrice)) +
       brand.length +
+      characteristic.length +
       option.length +
+      tag.length +
       Number(inStock)
     );
   });
   protected readonly staleChoices = computed(() => {
     const facets = this.result()?.facets;
-    const { brand, option } = this.url().filters;
+    const { brand, characteristic, option, tag } = this.url().filters;
     return Boolean(
       facets &&
       (brand.some((id) => !facets.brands.some((entry) => entry.id === id)) ||
+        characteristic.some(
+          (id) =>
+            !facets.characteristicFacets.some((group) =>
+              group.characteristics.some((field) => field.choices.some((entry) => entry.id === id)),
+            ),
+        ) ||
+        tag.some((id) => !facets.tags.some((entry) => entry.id === id)) ||
         option.some(
           (id) => !facets.options.some((group) => group.values.some((entry) => entry.id === id)),
         )),
@@ -213,6 +223,13 @@ export class CatalogueBrowse {
     }));
   }
 
+  protected changeTag(id: string, checked: boolean) {
+    this.draft.update((filters) => ({
+      ...filters,
+      tag: checked ? [...filters.tag, id] : filters.tag.filter((item) => item !== id),
+    }));
+  }
+
   protected changeOption(value: string, group: readonly { id: string }[]) {
     this.draft.update((filters) => ({
       ...filters,
@@ -225,6 +242,15 @@ export class CatalogueBrowse {
 
   protected changeStock(inStock: boolean) {
     this.draft.update((filters) => ({ ...filters, inStock }));
+  }
+
+  protected changeCharacteristic(id: string, checked: boolean) {
+    this.draft.update((filters) => ({
+      ...filters,
+      characteristic: checked
+        ? [...filters.characteristic, id]
+        : filters.characteristic.filter((item) => item !== id),
+    }));
   }
 
   protected apply(event: Event, dialog: HTMLDialogElement) {

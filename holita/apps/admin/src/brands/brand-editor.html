@@ -1,10 +1,12 @@
 <osnova-route-drawer
-  [title]="editing ? text().editBrand : text().newBrand"
+  [title]="editing() ? text().editBrand : text().newBrand"
   [subtitle]="subtitle()"
   [state]="state()"
   [errorText]="text().brandsUnavailable"
   [saving]="saving()"
-  [dirty]="form.dirty"
+  [dirty]="form.dirty || productDirty()"
+  [closeLink]="createInProduct() ? null : ['..']"
+  (closeRequest)="closeCreate()"
   (retry)="retry()"
 >
   <form

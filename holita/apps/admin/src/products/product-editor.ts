@@ -27,6 +27,7 @@ import { OperatorLanguage, operatorStrings } from '@holita/operator';
 import {
   FormField,
   RouteDrawer,
+  decimalValidator,
   drawerRouteData,
   fieldErrors,
   focusFirstInvalid,
@@ -42,9 +43,11 @@ import {
   textValidator,
   uiMessages,
   validationMessage,
+  type DrawerSaved,
   type RouteDrawerState,
 } from '@osnova/ui';
 import { DemoSession } from '@osnova/ui/app';
+import { MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { ArrowDownIcon } from 'primeng/icons/arrowdown';
 import { ArrowUpIcon } from 'primeng/icons/arrowup';
@@ -57,8 +60,10 @@ import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
 import type { SelectPassThrough } from 'primeng/types/select';
 import { debounceTime, distinctUntilChanged, map } from 'rxjs';
+import { BrandEditor } from '../brands/brand-editor';
 import { BrandsApi } from '../brands/brands-api';
 import { CategoriesApi } from '../categories/categories-api';
+import { CategoryEditor } from '../categories/category-editor';
 import { categoryOptions } from '../categories/category-tree';
 import type {
   OperatorProductQuery,
@@ -83,7 +88,19 @@ const productFields = [
   'badgeIds',
   'tagIds',
 ] as const;
-const variantFields = ['optionValueIds', 'sku', 'price', 'quantity'] as const;
+const variantFields = [
+  'optionValueIds',
+  'sku',
+  'barcode',
+  'price',
+  'weight',
+  'width',
+  'height',
+  'depth',
+  'quantity',
+  'minimumQuantity',
+  'imageId',
+] as const;
 type VariantField = (typeof variantFields)[number];
 type Variant = NonNullable<OperatorProductQuery['product']>['variants'][number];
 
@@ -103,19 +120,40 @@ function imageForm(image: ProductImage | null, file: File | null = null) {
 
 type ImageForm = ReturnType<typeof imageForm>;
 
+const measurementMax = 999_999_999.999;
+const measurementStep = 0.001;
+
+function measurementControl(value: number | null | undefined) {
+  return new FormControl(value ?? null, {
+    validators: [decimalValidator(0, measurementMax, measurementStep)],
+  });
+}
+
 function variantForm(variant?: Variant) {
   return new FormGroup({
     id: new FormControl<string | null>(variant?.id ?? null),
+    imageId: new FormControl<string | null>(variant?.imageId ?? null),
     sku: new FormControl(variant?.sku ?? '', {
       nonNullable: true,
       validators: [textValidator(100, { required: true })],
     }),
+    barcode: new FormControl(variant?.barcode ?? '', {
+      nonNullable: true,
+      validators: [textValidator(255)],
+    }),
+    weight: measurementControl(variant?.weight),
+    width: measurementControl(variant?.width),
+    height: measurementControl(variant?.height),
+    depth: measurementControl(variant?.depth),
     price: new FormControl(variant?.price ?? '', {
       nonNullable: true,
       validators: [textValidator(13, { required: true }), patternValidator(pricePattern)],
     }),
     quantity: new FormControl<number | null>(variant?.quantity ?? 0, {
       validators: variant ? [] : [integerValidator(0, 2_147_483_647, { required: true })],
+    }),
+    minimumQuantity: new FormControl<number | null>(variant?.minimumQuantity ?? 1, {
+      validators: [integerValidator(1, 2_147_483_647, { required: true })],
     }),
     inventoryTracked: new FormControl(variant?.inventoryTracked ?? false, { nonNullable: true }),
     active: new FormControl(variant?.active ?? true, { nonNullable: true }),
@@ -132,7 +170,9 @@ function variantCombinationKey(ids: readonly string[]): string {
   imports: [
     ArrowDownIcon,
     ArrowUpIcon,
+    BrandEditor,
     ButtonDirective,
+    CategoryEditor,
     ExclamationTriangleIcon,
     FormField,
     InputText,
@@ -158,7 +198,11 @@ export class ProductEditor {
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = injectDrawerHost();
-  protected readonly drawer = viewChild.required(RouteDrawer);
+  private readonly messages = inject(MessageService);
+  protected readonly drawer = viewChild(RouteDrawer);
+  private readonly brandEditor = viewChild(BrandEditor);
+  private readonly categoryEditor = viewChild(CategoryEditor);
+  protected readonly relation = signal<'brand' | 'category' | null>(null);
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('editorForm');
   private readonly routeData = drawerRouteData(this.route);
   private readonly params = toSignal(this.route.paramMap, { requireSync: true });
@@ -194,9 +238,6 @@ export class ProductEditor {
     },
     loader: ({ params }) => this.api.characteristics(params.scope, params.productId),
   });
-  protected readonly specificationGroups = computed(() =>
-    this.specifications.hasValue() ? this.specifications.value().groups : [],
-  );
   protected readonly state = computed<RouteDrawerState>(() => {
     if (!this.api.scope() || !this.session.hasRole('OPERATOR')) {
       return 'error';
@@ -213,6 +254,14 @@ export class ProductEditor {
     return !this.editing || (this.record.hasValue() && this.record.value()) ? 'ready' : 'not-found';
   });
   protected readonly text = computed(() => operatorStrings[this.language.value()]);
+  protected readonly measurementMax = measurementMax;
+  protected readonly measurementStep = measurementStep;
+  protected readonly measurements = [
+    { field: 'weight', label: 'variantWeight' },
+    { field: 'width', label: 'variantWidth' },
+    { field: 'height', label: 'variantHeight' },
+    { field: 'depth', label: 'variantDepth' },
+  ] as const;
   protected readonly priceCurrency = shopCurrency;
   protected readonly shared = computed(() => uiMessages[this.language.value()]);
   protected readonly subtitle = computed(() =>
@@ -298,7 +347,9 @@ export class ProductEditor {
     }
     return [...options.values()];
   });
-  protected readonly characteristicValues = new FormRecord<FormControl<string>>({});
+  protected readonly characteristicValues = new FormRecord<FormControl<string | string[] | null>>(
+    {},
+  );
   protected readonly variants = new FormArray([variantForm()]);
   protected readonly generationValues = new FormControl<string[]>([], { nonNullable: true });
   protected readonly images = new FormArray<ImageForm>([]);
@@ -322,11 +373,23 @@ export class ProductEditor {
     variants: this.variants,
     images: this.images,
   });
+  private readonly categoryId = toSignal(this.form.controls.categoryId.valueChanges, {
+    initialValue: null,
+  });
+  protected readonly specificationGroups = computed(() => {
+    const categoryId = this.categoryId();
+    const groups = this.specifications.hasValue() ? this.specifications.value().groups : [];
+    return groups.filter(
+      ({ categoryIds }) =>
+        !categoryIds.length || (categoryId !== null && categoryIds.includes(categoryId)),
+    );
+  });
 
   constructor() {
     effect(() => {
       const scope = this.api.scope();
       const product = this.record.hasValue() ? this.record.value() : null;
+      this.relation.set(null);
       untracked(() => {
         this.releasePreviews();
         this.uploadError.set(null);
@@ -357,7 +420,7 @@ export class ProductEditor {
           variants: this.variants.getRawValue(),
           images: this.images.getRawValue(),
         },
-        { emitEvent: false },
+        { emitEvent: true },
       );
       this.generationValues.reset();
       this.selectedTags.set(product?.tags ?? []);
@@ -369,18 +432,23 @@ export class ProductEditor {
     effect(() => {
       const specifications = this.specifications.hasValue() ? this.specifications.value() : null;
       const values = new Map(
-        specifications?.values.map(({ characteristicId, value }) => [characteristicId, value]),
+        specifications?.values.map((value) => [value.characteristicId, value]),
       );
       for (const id of Object.keys(this.characteristicValues.controls)) {
         this.characteristicValues.removeControl(id, { emitEvent: false });
       }
       for (const group of specifications?.groups ?? []) {
-        for (const { id } of group.characteristics) {
+        for (const { id, kind } of group.characteristics) {
+          const saved = values.get(id);
+          const value =
+            kind === 'TEXT'
+              ? (saved?.value ?? '')
+              : kind === 'SINGLE_CHOICE'
+                ? (saved?.choiceIds[0] ?? null)
+                : (saved?.choiceIds ?? []);
           this.characteristicValues.addControl(
             id,
-            new FormControl(values.get(id) ?? '', {
-              nonNullable: true,
-            }),
+            new FormControl<string | string[] | null>(value),
             { emitEvent: false },
           );
         }
@@ -400,7 +468,39 @@ export class ProductEditor {
   }
 
   canLeave(): boolean | Promise<boolean> {
-    return !this.saving() && !this.creatingTag() && this.drawer().confirmLeave(this.form.dirty);
+    if (this.saving() || this.creatingTag()) {
+      return false;
+    }
+    const relationEditor = this.brandEditor() ?? this.categoryEditor();
+    return relationEditor
+      ? relationEditor.canLeave(this.form.dirty)
+      : (this.drawer()?.confirmLeave(this.form.dirty) ?? true);
+  }
+
+  protected openRelation(relation: 'brand' | 'category'): void {
+    if (this.state() === 'ready' && !this.saving() && !this.creatingTag()) {
+      this.relation.set(relation);
+    }
+  }
+
+  protected closeRelation(): void {
+    const relation = this.relation();
+    this.relation.set(null);
+    if (relation) {
+      this.focusControl(`product-create-${relation}`);
+    }
+  }
+
+  protected selectCreatedRelation(relation: 'brand' | 'category', event: DrawerSaved): void {
+    const field = relation === 'brand' ? 'brandId' : 'categoryId';
+    const choices = relation === 'brand' ? this.brands : this.categories;
+    const control = this.form.controls[field];
+    control.setValue(event.recordId);
+    control.markAsDirty();
+    this.clearError(field);
+    choices.reload();
+    this.messages.add({ severity: 'success', summary: event.message });
+    this.closeRelation();
   }
 
   protected retry(): void {
@@ -654,6 +754,31 @@ export class ProductEditor {
     return errors[this.imageErrorPath(index, 'Upload')] ?? errors[this.imageErrorPath(index, 'Id')];
   }
 
+  protected variantImageChoices() {
+    const previews = this.previews();
+    return [
+      { id: null, label: this.text().variantNoImage, preview: null },
+      ...this.images.controls.flatMap((image, index) => {
+        const id = image.controls.id.value;
+        if (!id) {
+          return [];
+        }
+        const photoLabel =
+          index === 0
+            ? this.text().productImageCover
+            : this.indexedLabel(this.text().productImageNumber, index);
+        const altText = image.controls.altText.value.trim();
+        return [
+          {
+            id,
+            label: altText ? `${photoLabel} · ${altText}` : photoLabel,
+            preview: previews.get(image) ?? null,
+          },
+        ];
+      }),
+    ];
+  }
+
   protected moveImage(index: number, direction: -1 | 1): void {
     const target = index + direction;
     const row = this.images.at(index);
@@ -667,8 +792,20 @@ export class ProductEditor {
   }
 
   protected removeImage(index: number): void {
-    this.releasePreview(this.images.at(index));
+    const image = this.images.at(index);
+    const id = image.controls.id.value;
+    this.releasePreview(image);
     this.images.removeAt(index);
+    if (id) {
+      for (const [variantIndex, variant] of this.variants.controls.entries()) {
+        const control = variant.controls.imageId;
+        if (control.value === id) {
+          control.setValue(null);
+          control.markAsDirty();
+          this.clearError(this.path(variantIndex, 'imageId'));
+        }
+      }
+    }
     this.imagesChanged();
     this.focusControl('product-image-add');
   }
@@ -796,9 +933,15 @@ export class ProductEditor {
       return;
     }
     const { variants, images, characteristicValues, ...draft } = this.form.getRawValue();
-    const specifications = Object.entries(characteristicValues)
-      .filter(([id]) => this.characteristicValues.controls[id]?.dirty)
-      .map(([characteristicId, value]) => ({ characteristicId, value }));
+    const specifications = this.specificationGroups()
+      .flatMap(({ characteristics }) => characteristics)
+      .filter(({ id }) => this.characteristicValues.controls[id]?.dirty)
+      .map(({ id: characteristicId, kind }) => {
+        const value = characteristicValues[characteristicId];
+        return kind === 'TEXT'
+          ? { characteristicId, value: typeof value === 'string' ? value : '' }
+          : { characteristicId, choiceIds: Array.isArray(value) ? value : value ? [value] : [] };
+      });
     const recordId = this.id();
     const galleryChanged = this.images.dirty;
     const input: ProductVariantInput[] = variants.map(({ id, quantity, price, ...variant }) => ({
@@ -833,7 +976,7 @@ export class ProductEditor {
       this.form.markAsPristine();
       this.saving.set(false);
       this.host.saved({ message: this.text().productSaved, recordId: id });
-      this.drawer().close();
+      this.drawer()?.close();
     } catch (error: unknown) {
       if (this.destroyRef.destroyed || this.api.scope() !== scope) {
         return;
@@ -848,7 +991,7 @@ export class ProductEditor {
           imageErrorFields.map((field) => this.imageErrorPath(index, field)),
         ),
         ...specifications.flatMap((_, index) =>
-          ['characteristicId', 'value'].map(
+          ['characteristicId', 'value', 'choiceIds'].map(
             (field) => `characteristicValues.${String(index)}.${field}`,
           ),
         ),
@@ -860,6 +1003,9 @@ export class ProductEditor {
       ];
       const messages: Record<string, string> = {
         DUPLICATE_SKU: this.text().variantDuplicateSku,
+        DUPLICATE_BARCODE: this.text().variantDuplicateBarcode,
+        INVALID_BARCODE: this.text().variantBarcodeInvalid,
+        INVALID_MEASUREMENT: this.text().variantMeasurementInvalid,
         DUPLICATE_COMBINATION: this.text().variantDuplicateCombination,
         VARIANT_COMBINATION_IMMUTABLE: this.text().variantCombinationImmutable,
         INVALID_OPTION_VALUES: this.text().variantInvalidValues,
@@ -888,18 +1034,30 @@ export class ProductEditor {
           return this.text().productTagUnavailable;
         }
         if (path.startsWith('characteristicValues.')) {
-          return path.endsWith('.characteristicId')
-            ? this.text().characteristicUnavailable
+          if (path.endsWith('.characteristicId')) {
+            return this.text().characteristicUnavailable;
+          }
+          return path.endsWith('.choiceIds')
+            ? this.text().characteristicChoiceUnavailable
             : this.text().characteristicValueInvalid;
         }
         if (path.startsWith('variants.') && path.endsWith('.id')) {
           return this.text().variantUnavailable;
         }
+        if (path.startsWith('variants.') && path.endsWith('.imageId')) {
+          return this.text().productImageIdInvalid;
+        }
+        if (path.startsWith('variants.') && path.endsWith('.minimumQuantity')) {
+          return this.text().variantMinimumQuantityInvalid;
+        }
         return messages[code];
       });
       for (const [index, { characteristicId }] of specifications.entries()) {
         const path = `characteristicValues.${String(index)}`;
-        const message = errors[`${path}.characteristicId`] ?? errors[`${path}.value`];
+        const message =
+          errors[`${path}.characteristicId`] ??
+          errors[`${path}.value`] ??
+          errors[`${path}.choiceIds`];
         if (message) {
           errors[characteristicId] = message;
         }
@@ -942,7 +1100,16 @@ export class ProductEditor {
       'image-add',
       ...this.images.controls.map((_, index) => `image-alt-${String(index)}`),
       ...this.variants.controls.flatMap((_, index) =>
-        ['values', 'sku', 'price', 'quantity'].map((field) => `variant-${field}-${String(index)}`),
+        [
+          'values',
+          'sku',
+          'barcode',
+          'price',
+          'minimum-quantity',
+          'quantity',
+          'image',
+          ...this.measurements.map(({ field }) => field),
+        ].map((field) => `variant-${field}-${String(index)}`),
       ),
     ];
     if (form && focusFirstInvalid(form, order, 'product-')) {
@@ -952,7 +1119,7 @@ export class ProductEditor {
     } else if (form && this.errors()['variants']) {
       form.querySelector<HTMLElement>('#product-variants-title')?.focus();
     } else {
-      this.drawer().focusTitle();
+      this.drawer()?.focusTitle();
     }
   }
 }

@@ -223,6 +223,7 @@ query OperatorManualOrderProducts($search: String) {
         id
         active
         sku
+        minimumQuantity
         optionValueIds
       }
     }

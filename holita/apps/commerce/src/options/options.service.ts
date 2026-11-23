@@ -52,17 +52,38 @@ function fields(input: OptionInput, updating: boolean) {
       throw optionError(path, 'DUPLICATE_VALUE', 'This option already contains the label');
     }
     labels.add(normalized);
+    const swatchColor = value.swatchColor?.trim().toUpperCase() ?? value.swatchColor;
+    if (typeof swatchColor === 'string' && !/^#[0-9A-F]{6}$/.test(swatchColor)) {
+      throw optionError(
+        `values.${String(sortOrder)}.swatchColor`,
+        'INVALID_VALUE',
+        'Enter a colour in #RRGGBB format',
+      );
+    }
+    const fields = {
+      label: text,
+      sortOrder,
+      ...(swatchColor === undefined ? {} : { swatchColor }),
+    };
     if (value.id == null) {
-      return { label: text, sortOrder };
+      return fields;
     }
     const id = value.id.toLowerCase();
     if (!updating || !isUUID(id) || ids.has(id)) {
       throw invalidValueId(sortOrder);
     }
     ids.add(id);
-    return { id, label: text, sortOrder };
+    return { id, ...fields };
   });
-  return { data: { name, active: input.active, showInFilters: input.showInFilters }, values };
+  return {
+    data: {
+      name,
+      active: input.active,
+      showInFilters: input.showInFilters,
+      ...(input.showInListing == null ? {} : { showInListing: input.showInListing }),
+    },
+    values,
+  };
 }
 
 function present(row: Prisma.OptionGetPayload<{ include: { values: true } }>): Option {
@@ -71,7 +92,8 @@ function present(row: Prisma.OptionGetPayload<{ include: { values: true } }>): O
     name: row.name,
     active: row.active,
     showInFilters: row.showInFilters,
-    values: row.values.map(({ id, label }) => ({ id, label })),
+    showInListing: row.showInListing,
+    values: row.values.map(({ id, label, swatchColor }) => ({ id, label, swatchColor })),
   };
 }
 

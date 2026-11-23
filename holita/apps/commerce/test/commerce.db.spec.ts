@@ -254,6 +254,18 @@ beforeAll(async () => {
       'utf8',
     ),
   );
+  for (const migration of [
+    '20261123020100_characteristic_choices',
+    '20261123020200_variant_purchase_options',
+    '20261123030000_variant_barcode_measurements',
+  ]) {
+    await connection.query(
+      await readFile(
+        new URL(`../prisma/migrations/${migration}/migration.sql`, import.meta.url),
+        'utf8',
+      ),
+    );
+  }
   url.searchParams.set('schema', schema);
   process.env.COMMERCE_DATABASE_URL = url.toString();
   const coreServer = createServer((request, response) => {
@@ -1321,6 +1333,92 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       ? { ...draft, id: configuredVariant.id }
       : { ...draft, id: alternative.id },
   );
+  const catalogueVariant = {
+    id: configuredVariant.id,
+    sku: configuredVariant.sku,
+    price: '8.95',
+    inventoryTracked: true,
+    active: true,
+    optionValueIds: [first.id],
+  };
+  const inventoryCategory = await client.category.create({
+    data: {
+      ...optionScope,
+      name: 'Inventory child',
+      slug: 'inventory-child',
+      parentId: category.id,
+    },
+  });
+  const updateMeasurements = (fields: Record<string, string | number | null>) =>
+    query(
+      tokens.operator,
+      branchA,
+      'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){variants{id barcode weight width height depth}}}',
+      {
+        id: configuredVariant.productId,
+        input: {
+          ...configured,
+          categoryId: inventoryCategory.id,
+          variants: [
+            { ...catalogueVariant, ...fields },
+            { ...retainedVariants[1], quantity: undefined },
+          ],
+        },
+      },
+    );
+  const measurements = { weight: 0.35, width: 34, height: 2, depth: 25 };
+  expect(await updateMeasurements({ ...measurements, barcode: '  0012345678905  ' })).toMatchObject(
+    {
+      data: {
+        updateProduct: {
+          variants: [
+            { id: catalogueVariant.id, ...measurements, barcode: '0012345678905' },
+            { id: alternative.id },
+          ],
+        },
+      },
+    },
+  );
+  expect(await updateMeasurements({})).toHaveProperty(
+    'data.updateProduct.variants.0.weight',
+    measurements.weight,
+  );
+  expect(await updateMeasurements({ weight: -1 })).toHaveProperty('errors');
+  const inventoryQuery = `query($category:ID!,$search:String!,$active:Boolean!) {
+    inventory(limit:1,search:$search,filter:{categoryId:$category,productActive:true,variantActive:$active,stockStatus:IN_STOCK,inventoryTracked:true}) {
+      total items{id sku}
+    }
+  }`;
+  for (const [branch, search, active, total] of [
+    [branchA, '0012345678905', true, 1],
+    [branchA, 'COMBO-1', true, 1],
+    [branchA, '0012345678905', false, 0],
+    [branchB, '0012345678905', true, 0],
+  ] as const) {
+    expect(
+      await query(tokens.operator, branch, inventoryQuery, {
+        category: category.id,
+        search,
+        active,
+      }),
+    ).toEqual({
+      data: {
+        inventory: { total, items: total ? [{ id: catalogueVariant.id, sku: 'COMBO-1' }] : [] },
+      },
+    });
+  }
+  expect(
+    await updateMeasurements({ weight: null, width: null, height: null, depth: null }),
+  ).toMatchObject({
+    data: {
+      updateProduct: {
+        variants: [
+          { id: catalogueVariant.id, weight: null, width: null, height: null, depth: null },
+          { id: alternative.id },
+        ],
+      },
+    },
+  });
   expect(
     await query(tokens.operator, branchA, updateConfigured, {
       id: configuredVariant.productId,
@@ -1622,6 +1720,145 @@ async function verifyPublicShopCache(service: StorefrontService): Promise<void> 
   }
 }
 
+async function verifyCharacteristicFacets(db: PrismaClient, categoryId: string, parentId: string) {
+  const scope = { tenantId: tenantA, branchId: publicA };
+  const modelId = randomUUID();
+  const finishId = randomUUID();
+  const v1 = { id: randomUUID(), name: 'Terra V1' };
+  const v2 = { id: randomUUID(), name: 'Terra V2' };
+  const glaze = { id: randomUUID(), name: 'Glazed' };
+  const group = await db.characteristicGroup.create({
+    data: {
+      ...scope,
+      name: 'Models',
+      categories: { create: { categoryId } },
+      characteristics: {
+        create: [
+          { id: modelId, name: 'Model', kind: 'SINGLE_CHOICE', choices: { create: [v1, v2] } },
+          { id: finishId, name: 'Finish', kind: 'MULTIPLE_CHOICE', choices: { create: glaze } },
+        ],
+      },
+    },
+  });
+  const product = await db.product.findFirstOrThrow({ where: { ...scope, name: 'Visible' } });
+  const bowl = await db.product.findFirstOrThrow({ where: { ...scope, name: 'Visible bowl' } });
+  const draft = await db.product.findFirstOrThrow({ where: { ...scope, name: 'Draft' } });
+  await db.productCharacteristicChoice.createMany({
+    data: (
+      [
+        [product.id, modelId, v1.id],
+        [bowl.id, modelId, v2.id],
+        [bowl.id, finishId, glaze.id],
+        [draft.id, modelId, v1.id],
+      ] as const
+    ).map(([productId, characteristicId, choiceId]) => ({
+      ...scope,
+      productId,
+      characteristicId,
+      choiceId,
+    })),
+  });
+  const browse = `query($ids:[ID!]!, $offset:Int!) {
+    catalogueCategoryProducts(slug:"parent", limit:1, offset:$offset, sort:NAME_ASC, filter:{characteristicChoiceIds:$ids}) {
+      items{name} total facets{characteristicFacets{id characteristics{id choices{id count}}}}
+    }
+  }`;
+  for (const [ids, offset, names, total, v1Count, v2Count] of [
+    [[v1.id, v2.id], 1, ['Visible bowl'], 2, 1, 1],
+    [[v1.id, v2.id, glaze.id], 0, ['Visible bowl'], 1, 0, 1],
+    [[v1.id, glaze.id], 0, [], 0, 0, 1],
+  ] as const) {
+    expect(await storefront(publicA, browse, { ids, offset })).toMatchObject({
+      data: {
+        catalogueCategoryProducts: {
+          items: names.map((name) => ({ name })),
+          total,
+          facets: {
+            characteristicFacets: [
+              {
+                id: group.id,
+                characteristics: expect.arrayContaining([
+                  {
+                    id: modelId,
+                    choices: [
+                      { id: v1.id, count: v1Count },
+                      { id: v2.id, count: v2Count },
+                    ],
+                  },
+                ]),
+              },
+            ],
+          },
+        },
+      },
+    });
+  }
+  expect(
+    await storefront(
+      publicB,
+      `query($ids:[ID!]!){
+    catalogue(filter:{characteristicChoiceIds:$ids}){total facets{characteristicFacets{id}}}
+  }`,
+      { ids: [v1.id] },
+    ),
+  ).toEqual({
+    data: { catalogue: { total: 0, facets: { characteristicFacets: [] } } },
+  });
+  const specifications = `query($product:ID!){
+    catalogueProductSpecifications(productId:$product){name values{name value}}
+  }`;
+  const variants = await db.productVariant.findMany({
+    where: { ...scope, productId: product.id },
+    include: { values: true },
+  });
+  const update = (category: string, choiceIds?: string[]) =>
+    query(
+      tokens.operator,
+      publicA,
+      'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){id categoryId}}',
+      {
+        id: product.id,
+        input: {
+          name: product.name,
+          status: product.status,
+          brandId: product.brandId,
+          categoryId: category,
+          variants: variants.map(({ id, sku, price, inventoryTracked, active, values }) => ({
+            id,
+            sku,
+            price: price.toFixed(2),
+            inventoryTracked,
+            active,
+            optionValueIds: values.map(({ optionValueId }) => optionValueId),
+          })),
+          ...(choiceIds
+            ? { characteristicValues: [{ characteristicId: modelId, choiceIds }] }
+            : {}),
+        },
+      },
+    );
+  for (const invalid of [[v1.id, v2.id], [glaze.id]]) {
+    expect(await update(categoryId, invalid)).toHaveProperty('errors');
+  }
+  expect(await update(categoryId, [v1.id])).toEqual({
+    data: { updateProduct: { id: product.id, categoryId } },
+  });
+  for (const [category, expected] of [
+    [parentId, []],
+    [categoryId, [{ name: group.name, values: [{ name: 'Model', value: v1.name }] }]],
+  ] as const) {
+    expect(await update(category)).toEqual({
+      data: { updateProduct: { id: product.id, categoryId: category } },
+    });
+    expect(await storefront(publicA, specifications, { product: product.id })).toEqual({
+      data: { catalogueProductSpecifications: expected },
+    });
+    expect(await storefront(publicA, browse, { ids: [v1.id], offset: 0 })).toMatchObject({
+      data: { catalogueCategoryProducts: { total: expected.length } },
+    });
+  }
+}
+
 it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () => {
   if (!database || !app) {
     throw new Error('Missing database');
@@ -1847,6 +2084,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       variants: { create: storedVariant('FOREIGN-BOWL', '1.00') },
     },
   });
+  await verifyCharacteristicFacets(database, category.id, parent.id);
   const mutation =
     'mutation($email:String!){registerShopper(name:"Person",email:$email,password:"temporary-password"){token shopper{email}}}';
   const token = registeredToken(
@@ -2324,6 +2562,32 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   const variantKey = { ...categoryScope, id: variant.id };
   const cartKey = { ...categoryScope, id: accountCart.id };
   const discountKey = { ...categoryScope, id: discount.id };
+  await database.productVariant.update({ where: variantKey, data: { minimumQuantity: 4 } });
+  const minimumError = (path: string) => ({
+    data: null,
+    errors: [
+      {
+        extensions: {
+          code: 'BAD_USER_INPUT',
+          fieldErrors: [{ path, code: 'MINIMUM_QUANTITY_NOT_MET' }],
+        },
+      },
+    ],
+  });
+  expect(await storefront(publicA, add, { id: variant.id, quantity: 1 }, token)).toMatchObject(
+    minimumError('quantity'),
+  );
+  expect(
+    await storefront(
+      publicA,
+      'mutation($id:ID!){updateCartLine(lineId:$id,quantity:1){itemCount}}',
+      { id: line.id },
+      token,
+    ),
+  ).toMatchObject(minimumError('quantity'));
+  expect(await quote()).toMatchObject(minimumError('cart'));
+  expect(await place(currentReview)).toMatchObject(minimumError('cart'));
+  await database.productVariant.update({ where: variantKey, data: { minimumQuantity: 1 } });
   for (const [review, quantity, code] of [
     [firstReview, 2, 'CHECKOUT_QUOTE_CHANGED'],
     [currentReview, 1, 'CHECKOUT_STOCK_CHANGED'],
@@ -3100,7 +3364,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     });
   await database.productVariant.update({
     where: variantIdentity,
-    data: { active: true, inventoryTracked: true, price: '8.00', quantity: 7 },
+    data: { active: true, inventoryTracked: true, price: '8.00', quantity: 7, minimumQuantity: 2 },
   });
   const { contact, shippingAddress, paymentMethodId, shippingMethodId } = quoteInput;
   const manualInput = {
@@ -3117,6 +3381,11 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(
     await query(tokens.operator, branchB, createManual, { input: manualInput }),
   ).toHaveProperty('errors');
+  expect(
+    await query(tokens.operator, publicA, createManual, {
+      input: { ...manualInput, lines: [{ variantId: replacement.id, quantity: 1 }] },
+    }),
+  ).toMatchObject(minimumError('lines0Quantity'));
 
   const created = await query(tokens.operator, publicA, createManual, { input: manualInput });
   expect(created).toMatchObject({
@@ -3130,6 +3399,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       },
     },
   });
+  await database.productVariant.update({ where: variantIdentity, data: { minimumQuantity: 1 } });
   const manual = await database.order.findFirstOrThrow({
     where: { ...categoryScope, cartId: null, merchantNote: 'Private note' },
     include: { lines: true },

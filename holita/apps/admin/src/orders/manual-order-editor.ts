@@ -32,6 +32,7 @@ import {
   drawerRouteData,
   fieldErrors,
   focusFirstInvalid,
+  formatNumber,
   injectDrawerHost,
   innerInputPt,
   lockWhileSaving,
@@ -58,6 +59,7 @@ import { OrdersApi, orderIdPattern } from './orders-api';
 interface VariantChoice {
   id: string;
   label: string;
+  minimumQuantity: number;
 }
 
 type CustomerChoice = OperatorManualOrderCustomerFragment & { label: string };
@@ -66,6 +68,7 @@ interface LineChoice {
   lineId?: string;
   variantId: string | null;
   label: string;
+  minimumQuantity: number;
 }
 
 type LineForm = FormGroup<{
@@ -328,8 +331,9 @@ export class ManualOrderEditor {
     return this.products.value().items.flatMap(({ name, variants }) =>
       variants
         .filter(({ active }) => active)
-        .map(({ id, sku, optionValueIds }) => ({
+        .map(({ id, sku, minimumQuantity, optionValueIds }) => ({
           id,
+          minimumQuantity,
           label: [
             name,
             ...optionValueIds.flatMap((valueId) => labels.get(valueId) ?? []),
@@ -457,6 +461,12 @@ export class ManualOrderEditor {
     this.search.set(normalizeSearch(value));
   }
 
+  protected minimumHint(minimumQuantity: number): string | null {
+    return minimumQuantity > 1
+      ? `${this.text().variantMinimumQuantity} · ${formatNumber(minimumQuantity, this.language())}`
+      : null;
+  }
+
   protected addLine(value: unknown): void {
     const variant = this.suggestions().find((item) => item === value);
     this.form.controls.variantPicker.reset();
@@ -468,7 +478,8 @@ export class ManualOrderEditor {
       this.errors.update((errors) => ({ ...errors, lines: this.text().orderVariantDuplicate }));
       return;
     }
-    this.lines.push(this.lineForm({ variantId: variant.id, label: variant.label }, 1));
+    const { id: variantId, label, minimumQuantity } = variant;
+    this.lines.push(this.lineForm({ variantId, label, minimumQuantity }, minimumQuantity));
     this.form.markAsDirty();
   }
 
@@ -592,6 +603,7 @@ export class ManualOrderEditor {
         MANUAL_ORDER_AMOUNTS_LOCKED: text.manualOrderAmountsLocked,
         MANUAL_ORDER_LEGACY_AMOUNTS_LOCKED: text.manualOrderLegacyAmountsLocked,
         MANUAL_ORDER_NOT_EDITABLE: text.manualOrderNotEditable,
+        MINIMUM_QUANTITY_NOT_MET: text.orderMinimumNotMet,
         ORDER_CUSTOMER_UNAVAILABLE: text.orderCustomerUnavailable,
         ORDER_STOCK_SHORT: text.orderStockShort,
         ORDER_VARIANT_DUPLICATE: text.orderVariantDuplicate,
@@ -644,7 +656,10 @@ export class ManualOrderEditor {
     this.lines.clear();
     for (const { id, variantId, label, sku, quantity } of lines) {
       this.lines.push(
-        this.lineForm({ lineId: id, variantId, label: `${label} · ${sku}` }, quantity),
+        this.lineForm(
+          { lineId: id, variantId, label: `${label} · ${sku}`, minimumQuantity: 1 },
+          quantity,
+        ),
       );
     }
     this.lines.markAsPristine();
@@ -655,7 +670,7 @@ export class ManualOrderEditor {
       choice,
       quantity: new FormControl<number | null>(quantity, [
         required,
-        Validators.min(1),
+        Validators.min(choice.minimumQuantity),
         Validators.max(2_147_483_647),
         Validators.pattern(/^\d+$/u),
       ]),
