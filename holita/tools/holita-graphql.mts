@@ -2,6 +2,7 @@ import { generate } from '../../osnova/tools/graphql/generate.mjs';
 import { operationPaths, subgraphs, targets } from './graphql/contracts.mjs';
 
 await generate(subgraphs, operationPaths, targets, 'gateway');
+await generate(subgraphs, operationPaths, targets, 'sales');
 await generate(subgraphs, operationPaths, targets, 'operator');
 await generate(subgraphs, operationPaths, targets, 'admin');
 

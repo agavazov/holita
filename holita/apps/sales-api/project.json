@@ -1,0 +1,36 @@
+{
+  "name": "holita-sales-api",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "holita/apps/sales-api/src",
+  "tags": ["type:app", "product:holita"],
+  "targets": {
+    "db-generate": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["{projectRoot}/prisma/schema.prisma", "{workspaceRoot}/package-lock.json"],
+      "outputs": ["{projectRoot}/src/generated/prisma"],
+      "options": {
+        "command": "npm run db:generate",
+        "cwd": "holita/apps/sales-api"
+      }
+    },
+    "build": {
+      "dependsOn": [
+        "db-generate",
+        { "projects": ["holita-gateway"], "target": "graphql-generate" },
+        { "projects": ["osnova-auth"], "target": "build" }
+      ]
+    },
+    "typecheck": {
+      "dependsOn": [
+        "db-generate",
+        { "projects": ["holita-gateway"], "target": "graphql-generate" },
+        { "projects": ["osnova-auth"], "target": "build" }
+      ]
+    },
+    "lint": {
+      "dependsOn": ["db-generate", { "projects": ["holita-gateway"], "target": "graphql-generate" }]
+    }
+  }
+}

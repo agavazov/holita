@@ -1,6 +1,6 @@
 # 143 Provision a merchant and first shop atomically
 
-**Status:** Ready after [131](131-holita-sales-sales-service.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

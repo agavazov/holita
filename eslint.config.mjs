@@ -78,7 +78,7 @@ export default tseslint.config(
     files: [
       'osnova/apps/core/**/*.ts',
       'discocan/apps/{fleet,erm-server,device-server}/**/*.ts',
-      'holita/apps/commerce/**/*.ts',
+      'holita/apps/{commerce,sales-api}/**/*.ts',
     ],
     languageOptions: {
       globals: globals.node,

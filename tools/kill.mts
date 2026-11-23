@@ -15,6 +15,7 @@ await killDevelopment({
     'holita/apps/admin',
     'holita/apps/backoffice',
     'holita/apps/sales',
+    'holita/apps/sales-api',
     'holita/apps/storefront',
     'holita/apps/gateway',
     'holita/apps/commerce',
@@ -23,7 +24,9 @@ await killDevelopment({
   backendEntries: [
     'holita/apps/commerce/dist/main.js',
     'holita/apps/commerce/dist-dev/main.js',
+    'holita/apps/sales-api/dist/main.js',
+    'holita/apps/sales-api/dist-dev/main.js',
     'osnova/apps/core/dist-holita/main.js',
   ],
-  group: 'core,commerce,gateway,admin,backoffice,sales,storefront-router,storefront',
+  group: 'core,commerce,sales-api,gateway,admin,backoffice,sales,storefront-router,storefront',
 });

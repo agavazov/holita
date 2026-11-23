@@ -453,13 +453,13 @@ unavailable business screens. See [testing](testing.md) for guarded fixtures and
 ## Holita
 
 Holita runs its Admin, Backoffice and Sales applications on ports 12000, 12001 and 12002. Its
-operator Router uses 12010 (health 12016), Core uses 12011 and Commerce uses 12013. The
-storefront app uses 12020 and its public GraphQL listener uses 12030. Its private Router uses
-12031 (health 12036). Open a shop at
-`/s/<branchId>`. The first local
-setup creates ignored, private `holita/config/core.env`, `commerce.env` and `seed-accounts.env` with
-`npx tsx holita/tools/runtime-config.mts`; preserve these files on subsequent runs. Provision and
-seed Holita without changing Discocan databases:
+operator Router uses 12010 (health 12016), Core uses 12011, Commerce uses 12013 and Sales API
+uses 12015. The storefront app uses 12020 and its public GraphQL listener uses 12030. Its private
+Router uses 12031 (health 12036). Open a shop at `/s/<branchId>`.
+
+On a fresh checkout, run `npx tsx holita/tools/runtime-config.mts` to create private, ignored
+`core.env`, `commerce.env`, `sales.env` and `seed-accounts.env` under `holita/config/`.
+Preserve these files on subsequent runs. Provision and seed Holita using its own databases:
 
 ```bash
 npm run db:setup:holita
@@ -468,6 +468,17 @@ npm run db:migrate:holita
 npm run db:seed:holita
 npm run dev:holita
 ```
+
+For an existing checkout missing `holita/config/sales.env`, run
+`npx tsx holita/tools/runtime-config.mts --sales-only`. It creates only that private file,
+generates separate credentials for `holita_sales` and `holita_sales_test`, and copies the
+current Core internal token without displaying it. Run both Holita database setup commands and
+the Holita migration command above before restarting Holita. The operator Router reads
+`SALES_GRAPHQL_URL` from its launch environment for a non-default Sales endpoint.
+
+The operator graph exposes `salesWorkspaceAccess { tenantId userId }` to Core platform
+accounts with the `SALES` role. The IDs identify the verified platform tenant and signed-in
+Core user. CRM scope comes from that platform tenant, independent of Branch selection.
 
 Existing Holita checkouts need `HOLITA_COMMERCE_IMAGE_DIR` in `holita/config/commerce.env`.
 Set it to the absolute path of `.volumes/holita/images` in the checkout before seeding.

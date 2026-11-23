@@ -29,6 +29,7 @@ traffic_shaping:
 override_subgraph_url:
   core: '${env.CORE_GRAPHQL_URL:-http://127.0.0.1:12011/graphql}'
   commerce: '${env.COMMERCE_GRAPHQL_URL:-http://127.0.0.1:12013/graphql}'
+  sales: '${env.SALES_GRAPHQL_URL:-http://127.0.0.1:12015/graphql}'
 
 headers:
   all:

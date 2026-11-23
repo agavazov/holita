@@ -7,14 +7,14 @@ if (args.length > 1 || (args.length === 1 && args[0] !== '--test')) {
 }
 config({ path: '.env', quiet: true });
 config({
-  path: ['holita/config/core.env', 'holita/config/commerce.env'],
+  path: ['holita/config/core.env', 'holita/config/commerce.env', 'holita/config/sales.env'],
   quiet: true,
   override: true,
 });
 await setupDatabase(
   {
     name: 'holita',
-    services: ['core', 'commerce'],
+    services: ['core', 'commerce', 'sales'],
     envPaths: [],
     adminUser: process.env.POSTGRES_USER ?? 'discocan_admin',
   },

@@ -11,6 +11,12 @@ export const subgraphs = [
     path: 'holita/apps/commerce/src/commerce.graphql',
     additionalPaths: [],
   },
+  {
+    name: 'sales',
+    url: 'http://127.0.0.1:12015/graphql',
+    path: 'holita/apps/sales-api/src/sales.graphql',
+    additionalPaths: [],
+  },
 ];
 export const operationPaths = [
   'osnova/packages/ui/src/app/auth/operations.graphql',
@@ -39,6 +45,12 @@ export const targets = {
   gateway: {
     supergraph: 'holita/apps/gateway/src/generated/graphql/supergraph.graphql',
     schema: 'holita/apps/gateway/src/generated/graphql/schema.graphql',
+  },
+  sales: {
+    server: {
+      subgraph: 'sales',
+      path: 'holita/apps/sales-api/src/generated/graphql/types.ts',
+    },
   },
   operator: {
     clients: [

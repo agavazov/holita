@@ -37,13 +37,13 @@ The pending steps are in the [backlog](../docs/todo/two-products.md).
   12001; `apps/sales` serves sales agents on 12002.
 - `apps/storefront` serves shoppers on 12020. The operator Router uses 12010 (health 12016),
   and the public storefront GraphQL listener uses 12030. Its private Router uses 12031
-  (health 12036). Shared Core uses 12011 and Commerce 12013.
+  (health 12036). Core uses 12011, Commerce 12013 and the operator-only Sales API 12015.
 - A shop URL is `/s/<branchId>`; the storefront graph uses the `x-branch-id` header and only
   exposes its public catalogue, cart and shop-scoped shopper accounts.
 - `npm run db:setup:holita` and `npm run db:test:setup:holita` provision only Holita roles and
   databases; `npm run db:migrate:holita` and `npm run db:seed:holita` prepare its development data.
   `npm run dev:holita` starts the product, `npm run kill:holita` stops only Holita and `npm run kill`
   stops both products' development apps.
-- Instance settings live in ignored `holita/config/core.env` and `holita/config/commerce.env`;
+- Instance settings live in ignored `holita/config/core.env`, `commerce.env` and `sales.env`;
   insert-only account seeds read ignored `holita/config/seed-accounts.env`. Never commit or print
   their values. `holita/tools/runtime-config.mts` creates them once when none exist.

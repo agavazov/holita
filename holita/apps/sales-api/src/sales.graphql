@@ -1,0 +1,8 @@
+type Query {
+  salesWorkspaceAccess: SalesWorkspaceViewer!
+}
+
+type SalesWorkspaceViewer {
+  tenantId: ID!
+  userId: ID!
+}

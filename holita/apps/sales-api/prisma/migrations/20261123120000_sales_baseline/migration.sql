@@ -1,0 +1,1 @@
+-- Establish the Sales migration history. CRM tables are introduced by later migrations.

@@ -1,11 +1,11 @@
 # 300 Connect Sales workspace access and guarded smoke
 
-**Status:** Ready after [131](131-holita-sales-sales-service.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-Ticket 131 provides the Sales subgraph and a protected workspace query backed by Core Sales
-identity. The existing Angular Sales shell uses the shared operator sign-in and opens Merchants.
+The Sales subgraph provides a protected workspace query backed by Core Sales identity.
+The existing Angular Sales shell uses the shared operator sign-in and opens Merchants.
 
 ## Goal
 
