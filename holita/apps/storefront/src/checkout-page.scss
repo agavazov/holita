@@ -1,7 +1,13 @@
-@use 'breakpoints' as bp;
+@use './basic-secondary';
 
-.checkout-layout > .shop-state + .checkout-summary {
-  margin-block-start: 0;
+:host {
+  background: var(--basic-subtle);
+  border-image: linear-gradient(var(--basic-subtle) 0 0) 0 fill / 1 / 2rem 100vmax 4rem;
+}
+
+.checkout-view {
+  max-inline-size: 42rem;
+  margin-inline: auto;
 }
 
 .checkout-form-content {
@@ -11,47 +17,119 @@
   border: 0;
 }
 
+.checkout-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.checkout-section + .checkout-section,
+.checkout-methods > .checkout-section:first-of-type {
+  margin-block-start: 2.5rem;
+  padding-block-start: 2.5rem;
+  border-block-start: 1px solid var(--basic-border);
+}
+
+.checkout-guest {
+  display: flex;
+  align-items: start;
+  gap: 0.75rem;
+  margin-block-end: 2.5rem;
+  padding: 1rem;
+  border-radius: 0.375rem;
+  background: light-dark(#eef2ff, #252552);
+  font-size: 0.875rem;
+}
+
+.checkout-guest svg {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  flex: none;
+  color: var(--basic-link);
+}
+
+.checkout-guest h2 {
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+}
+
+.checkout-guest-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-block-start: 0.75rem;
+}
+
 .checkout-fields {
   display: grid;
   align-items: start;
-  gap: var(--p-app-space-4);
-
-  @include bp.from(sm) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-.checkout-contact-fields {
-  @include bp.from(sm) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) minmax(0, 1fr);
-  }
-}
-
-.checkout-fields.checkout-methods {
-  @include bp.from(sm) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.checkout-fields p,
-.checkout-problem p {
-  margin: 0;
+  gap: 1.5rem 1rem;
 }
 
 .checkout-field-wide {
   grid-column: 1 / -1;
 }
 
-.field-error {
-  font-weight: 400;
+.checkout-warning,
+.checkout-note {
+  margin: 0;
+  padding: 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  line-height: 1.5rem;
 }
 
-.checkout-problem,
-.field-error {
+.checkout-warning {
+  background: var(--shop-chip-warn-fill);
+  color: var(--shop-chip-warn-ink);
+}
+
+.checkout-warning p {
+  margin: 0 0 0.75rem;
+}
+
+.checkout-note {
+  background: var(--basic-paper);
+}
+
+.checkout-note p {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+}
+
+.field-error,
+.checkout-problem {
   color: var(--shop-chip-danger-ink);
+  font-size: 0.875rem;
+}
+
+.checkout-problem {
+  padding: 1rem;
+  border-block-start: 1px solid var(--basic-border);
+  background: var(--shop-chip-danger-fill);
+}
+
+.checkout-problem p {
+  margin: 0;
 }
 
 .checkout-problem a {
   display: inline-block;
-  margin-block-start: var(--p-app-space-2);
+  margin-block-start: 0.5rem;
+}
+
+@media (min-width: 40rem) {
+  .checkout-view {
+    padding-block-end: 2rem;
+  }
+
+  .checkout-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .checkout-view {
+    max-inline-size: 76rem;
+  }
 }

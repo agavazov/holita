@@ -22,13 +22,15 @@ import {
   sortChoices,
   validCatalogueFilters,
   type BrowseSection,
+  type CatalogueFilters,
 } from './catalogue-url';
 import { StorefrontApi } from './storefront-api';
+import { StorefrontHome } from './storefront-home';
 import { messages, type Language } from './storefront-messages';
 
 @Component({
   selector: 'holita-catalogue-browse',
-  imports: [NgTemplateOutlet, RouterLink],
+  imports: [NgTemplateOutlet, RouterLink, StorefrontHome],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './catalogue-browse.html',
   styleUrl: './catalogue-browse.scss',
@@ -42,10 +44,17 @@ export class CatalogueBrowse {
   readonly shopId = input.required<string>();
   readonly language = input.required<Language>();
   readonly section = input.required<BrowseSection | null>();
+  readonly landing = input(false);
 
   protected readonly slug = computed(() => this.params().get('slug'));
   protected readonly indexSection = computed(() => (this.slug() === null ? this.section() : null));
   protected readonly url = computed(() => parseCatalogueUrl(this.query()));
+  protected readonly home = computed(() => {
+    const { valid, filters } = this.url();
+    return (
+      this.landing() && valid && !this.query().has('page') && !filters.sort && !hasFilters(filters)
+    );
+  });
   protected readonly base = computed(() => ['/s', this.shopId()]);
   protected readonly draft = linkedSignal(() => this.url().filters);
   protected readonly invalidDraft = linkedSignal({ source: this.url, computation: () => false });
@@ -102,6 +111,11 @@ export class CatalogueBrowse {
   protected readonly pageCount = computed(() =>
     Math.max(1, Math.ceil(this.total() / cataloguePageSize)),
   );
+  protected readonly visiblePages = computed(() => {
+    const start = Math.max(1, this.url().page - 1);
+    const end = Math.min(this.pageCount(), this.url().page + 1);
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  });
   protected readonly pageSize = cataloguePageSize;
   protected readonly filtered = computed(() => hasFilters(this.url().filters));
   protected readonly canClear = computed(
@@ -149,7 +163,7 @@ export class CatalogueBrowse {
       if (page > this.pageCount()) {
         void this.router.navigate([], {
           relativeTo: this.route,
-          queryParams: catalogueParams(
+          queryParams: this.browseParams(
             this.indexSection() ? emptyFilters() : filters,
             this.pageCount(),
           ),
@@ -163,12 +177,32 @@ export class CatalogueBrowse {
     return group.some(({ id }) => this.draft().option.includes(id));
   }
 
-  protected toggleFilters() {
-    this.filtersOpen.update((open) => !open);
+  protected openFilters(dialog: HTMLDialogElement) {
+    this.filtersOpen.set(true);
+    dialog.showModal();
   }
 
-  protected update(field: 'q' | 'minPrice' | 'maxPrice' | 'sort', value: string) {
+  protected closeFilters(dialog: HTMLDialogElement) {
+    this.filtersOpen.set(false);
+    dialog.close();
+  }
+
+  protected update(field: 'q' | 'minPrice' | 'maxPrice', value: string) {
     this.draft.update((filters) => ({ ...filters, [field]: value }));
+  }
+
+  protected sortBy(sort: string) {
+    const filters = { ...this.draft(), sort };
+    this.draft.set(filters);
+    if (!validCatalogueFilters(filters)) {
+      this.invalidDraft.set(true);
+      return;
+    }
+    this.invalidDraft.set(false);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: this.browseParams(filters, 1),
+    });
   }
 
   protected changeBrand(id: string, checked: boolean) {
@@ -192,28 +226,32 @@ export class CatalogueBrowse {
     this.draft.update((filters) => ({ ...filters, inStock }));
   }
 
-  protected apply(event: Event) {
+  protected apply(event: Event, dialog: HTMLDialogElement) {
     event.preventDefault();
     if (!validCatalogueFilters(this.draft())) {
       this.invalidDraft.set(true);
       return;
     }
     this.invalidDraft.set(false);
-    this.filtersOpen.set(false);
+    this.closeFilters(dialog);
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: catalogueParams(this.draft(), 1),
+      queryParams: this.browseParams(this.draft(), 1),
     });
   }
 
   protected clear() {
-    this.draft.set(emptyFilters());
+    const filters = emptyFilters();
+    this.draft.set(filters);
     this.invalidDraft.set(false);
-    void this.router.navigate([], { relativeTo: this.route });
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: this.browseParams(filters, 1),
+    });
   }
 
   protected paging(page: number) {
-    return catalogueParams(this.indexSection() ? emptyFilters() : this.url().filters, page);
+    return this.browseParams(this.indexSection() ? emptyFilters() : this.url().filters, page);
   }
 
   protected retry() {
@@ -222,5 +260,12 @@ export class CatalogueBrowse {
     } else {
       this.products.reload();
     }
+  }
+
+  private browseParams(filters: CatalogueFilters, page: number) {
+    const params = catalogueParams(filters, page);
+    return this.landing() && page === 1 && !filters.sort && !hasFilters(filters)
+      ? { ...params, page }
+      : params;
   }
 }

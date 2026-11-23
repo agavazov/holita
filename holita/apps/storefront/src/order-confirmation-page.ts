@@ -20,6 +20,7 @@ import { OrderReceipt } from './order-receipt';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, OrderReceipt],
   templateUrl: './order-confirmation-page.html',
+  styleUrl: './order-confirmation-page.scss',
 })
 export class OrderConfirmationPage {
   readonly language = input.required<Language>();

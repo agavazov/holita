@@ -1,91 +1,142 @@
-<section class="orders-view" aria-labelledby="orders-title">
+<section class="orders-view basic-surface" aria-labelledby="orders-title">
   @let detail = orderId() !== null;
-  <header class="shop-page-heading shop-page-heading--with-link">
-    <h1 #heading id="orders-title" tabindex="-1">
+  <header class="orders-header">
+    <nav class="basic-breadcrumb" [attr.aria-label]="t().browsePath">
+      <ol role="list">
+        <li>
+          <a [routerLink]="base()" [attr.aria-label]="t().home">
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M10 2 2 10h2v7h4v-5h4v5h4v-7h2z" />
+            </svg>
+          </a>
+        </li>
+        <li>
+          <span aria-hidden="true">›</span>
+          <a [routerLink]="[...base(), 'account']">{{ t().account }}</a>
+        </li>
+        @if (detail) {
+        <li>
+          <span aria-hidden="true">›</span>
+          <a [routerLink]="ordersLink()" [queryParams]="pageParams(page())">
+            {{ t().backToOrders }}
+          </a>
+        </li>
+        }
+        <li>
+          <span aria-hidden="true">›</span>
+          <span aria-current="page">{{ detail ? t().orderDetail : t().accountOrders }}</span>
+        </li>
+      </ol>
+    </nav>
+    <h1 #heading id="orders-title" class="basic-page-title" tabindex="-1">
       {{ detail ? t().orderDetail : t().accountOrders }}
     </h1>
-    @if (detail) {
-    <a class="shop-text-link" [routerLink]="ordersLink()" [queryParams]="pageParams(page())">
-      {{ t().backToOrders }}
-    </a>
-    }
   </header>
 
-  @if (signedOut()) {
-  <div class="shop-state">
-    @if (expired()) {
-    <p role="alert">{{ t().ordersSessionExpired }}</p>
-    } @else {
-    <p>{{ t().ordersSignInRequired }}</p>
+  <div class="orders-layout" [class.orders-layout--signed-in]="!signedOut()">
+    @if (!signedOut()) {
+    <nav class="orders-nav" [attr.aria-label]="t().account">
+      <a [routerLink]="[...base(), 'account']">{{ t().account }}</a>
+      <a
+        [routerLink]="ordersLink()"
+        [queryParams]="pageParams(page())"
+        [attr.aria-current]="detail ? 'true' : 'page'"
+      >
+        {{ t().accountOrders }}
+      </a>
+    </nav>
     }
-    <a class="shop-primary" [routerLink]="[...base(), 'sign-in']">{{ t().signIn }}</a>
-  </div>
-  } @else if (loading()) {
-  <p class="shop-state" role="status">{{ t().loading }}</p>
-  } @else if (failed()) {
-  <div class="shop-state">
-    <p role="alert">{{ detail ? t().orderLoadFailed : t().ordersLoadFailed }}</p>
-    <button class="shop-secondary" type="button" (click)="retry()">{{ t().retry }}</button>
-  </div>
-  } @else if (order(); as receipt) {
-  <holita-order-receipt [order]="receipt" [language]="language()" />
-  } @else if (detail) {
-  <p class="shop-state" role="alert">{{ t().orderUnavailable }}</p>
-  } @else if (list(); as result) { @if (result.items.length) {
-  <ul class="shop-panel shop-panel--sections order-list" role="list">
-    @for (item of result.items; track item.id) { @let status = orderStatuses[item.status]; @let
-    payment = paymentStatuses[item.paymentStatus];
-    <li class="shop-panel-section order-list-row">
-      <div class="order-list-identity">
-        <h2>
-          <a
-            class="shop-text-link app-num"
-            [routerLink]="[...ordersLink(), item.id]"
-            [queryParams]="pageParams(page())"
-          >
-            {{ item.number }}
-          </a>
-        </h2>
-        <time [attr.datetime]="item.placedAt">{{ formatDate(item.placedAt) }}</time>
+    <div class="orders-content">
+      @if (signedOut()) {
+      <div class="basic-state">
+        @if (expired()) {
+        <p role="alert">{{ t().ordersSessionExpired }}</p>
+        } @else {
+        <p>{{ t().ordersSignInRequired }}</p>
+        }
+        <a class="basic-button basic-button--primary" [routerLink]="[...base(), 'sign-in']">
+          {{ t().signIn }}
+        </a>
       </div>
-      <div class="order-list-status">
-        <span class="shop-chip" [attr.data-tone]="status.tone">{{ t()[status.label] }}</span>
-        <span class="shop-chip" [attr.data-tone]="payment.tone">{{ t()[payment.label] }}</span>
+      } @else if (loading()) {
+      <p class="basic-state" role="status">{{ t().loading }}</p>
+      } @else if (failed()) {
+      <div class="basic-state">
+        <p role="alert">{{ detail ? t().orderLoadFailed : t().ordersLoadFailed }}</p>
+        <button class="basic-button" type="button" (click)="retry()">{{ t().retry }}</button>
       </div>
-      <dl class="order-list-facts">
-        <div>
-          <dt>{{ t().shippingMethod }}</dt>
-          <dd>{{ item.shippingMethodLabel }}</dd>
-        </div>
-        <div>
-          <dt>{{ t().paymentMethod }}</dt>
-          <dd>{{ item.paymentMethodLabel }}</dd>
-        </div>
-        <div class="order-list-total">
-          <dt>{{ t().quoteTotal }}</dt>
-          <dd class="app-num">{{ formatPrice(item.total, item.currency) }}</dd>
-        </div>
-      </dl>
-    </li>
-    }
-  </ul>
-  @if (result.total > result.limit) {
-  <nav class="orders-pagination" [attr.aria-label]="t().ordersPagination">
-    @if (result.offset > 0) {
-    <a class="shop-secondary" [routerLink]="[]" [queryParams]="pageParams(page() - 1)"
-      >{{ t().previous }}</a
-    >
-    }
-    <span class="app-num" aria-live="polite">
-      {{ result.offset + 1 }}–{{ result.offset + result.items.length }} / {{ result.total }}
-    </span>
-    @if (result.offset + result.limit < result.total) {
-    <a class="shop-secondary" [routerLink]="[]" [queryParams]="pageParams(page() + 1)"
-      >{{ t().next }}</a
-    >
-    }
-  </nav>
-  } } @else if (result.total === 0) {
-  <p class="shop-state">{{ t().ordersEmpty }}</p>
-  } }
+      } @else if (order(); as receipt) {
+      <holita-order-receipt [order]="receipt" [language]="language()" />
+      } @else if (detail) {
+      <p class="basic-state" role="alert">{{ t().orderUnavailable }}</p>
+      } @else if (list(); as result) {
+      @if (result.items.length) {
+      <ul class="order-list" role="list">
+        @for (item of result.items; track item.id) {
+        @let status = orderStatuses[item.status];
+        @let payment = paymentStatuses[item.paymentStatus];
+        <li class="order-list-row">
+          <div class="order-list-identity">
+            <div class="order-list-header">
+              <h2>
+                <a
+                  class="basic-link"
+                  [routerLink]="[...ordersLink(), item.id]"
+                  [queryParams]="pageParams(page())"
+                >
+                  {{ item.number }} <span aria-hidden="true">→</span>
+                </a>
+              </h2>
+              <div class="order-list-status">
+                <span class="shop-chip" [attr.data-tone]="status.tone">{{ t()[status.label] }}</span>
+                <span class="shop-chip" [attr.data-tone]="payment.tone">{{ t()[payment.label] }}</span>
+              </div>
+            </div>
+            <time [attr.datetime]="item.placedAt">{{ formatDate(item.placedAt) }}</time>
+            <dl class="order-list-methods">
+              <div>
+                <dt class="app-visually-hidden">{{ t().shippingMethod }}</dt>
+                <dd>{{ item.shippingMethodLabel }}</dd>
+              </div>
+              <div>
+                <dt class="app-visually-hidden">{{ t().paymentMethod }}</dt>
+                <dd>{{ item.paymentMethodLabel }}</dd>
+              </div>
+            </dl>
+          </div>
+          <dl class="order-list-total">
+            <dt class="app-visually-hidden">{{ t().quoteTotal }}</dt>
+            <dd>{{ formatPrice(item.total, item.currency) }}</dd>
+          </dl>
+        </li>
+        }
+      </ul>
+      @if (result.total > result.limit) {
+      <nav class="orders-pagination" [attr.aria-label]="t().ordersPagination">
+        @if (result.offset > 0) {
+        <a class="basic-link" [routerLink]="[]" [queryParams]="pageParams(page() - 1)">
+          <span aria-hidden="true">←</span> {{ t().previous }}
+        </a>
+        }
+        <span aria-live="polite">
+          {{ result.offset + 1 }}–{{ result.offset + result.items.length }} / {{ result.total }}
+        </span>
+        @if (result.offset + result.limit < result.total) {
+        <a class="basic-link" [routerLink]="[]" [queryParams]="pageParams(page() + 1)">
+          {{ t().next }} <span aria-hidden="true">→</span>
+        </a>
+        }
+      </nav>
+      }
+      } @else if (result.total === 0) {
+      <div class="basic-state basic-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M5 8h14l1 12H4L5 8Zm4 0V6a3 3 0 0 1 6 0v2" stroke-linejoin="round" />
+        </svg>
+        <p>{{ t().ordersEmpty }}</p>
+      </div>
+      }
+      }
+    </div>
+  </div>
 </section>

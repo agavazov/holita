@@ -35,7 +35,8 @@ export class StorefrontBlog {
   private readonly query = toSignal(this.route.queryParamMap, { requireSync: true });
 
   protected readonly t = computed(() => messages[this.language()]);
-  protected readonly blogLink = computed(() => ['/s', this.shopId(), 'blog']);
+  protected readonly homeLink = computed(() => ['/s', this.shopId()]);
+  protected readonly blogLink = computed(() => [...this.homeLink(), 'blog']);
   protected readonly tag = computed(() => this.query().get('tag'));
   protected readonly page = computed(() => {
     const raw = this.query().get('page') ?? '1';

@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { OrderConfirmationFieldsFragment } from './generated/operations';
 import { orderStatuses, paymentStatuses } from './order-status';
@@ -7,12 +8,14 @@ import { formatStorefrontMoney } from './storefront-money';
 @Component({
   selector: 'holita-order-receipt',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [NgTemplateOutlet],
   templateUrl: './order-receipt.html',
-  styleUrls: ['./checkout-layout.scss', './order-receipt.scss'],
+  styleUrl: './order-receipt.scss',
 })
 export class OrderReceipt {
   readonly order = input.required<OrderConfirmationFieldsFragment>();
   readonly language = input.required<Language>();
+  readonly confirmation = input(false);
 
   protected readonly t = computed(() => messages[this.language()]);
   protected readonly status = computed(() => orderStatuses[this.order().status]);

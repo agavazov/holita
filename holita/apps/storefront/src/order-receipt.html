@@ -1,108 +1,196 @@
 @let receipt = order();
-<div class="checkout-layout order-receipt">
-  <section class="shop-panel checkout-summary" aria-labelledby="receipt-summary-heading">
-    <div class="receipt-number">
-      <dl>
-        <div>
-          <dt>{{ t().orderNumber }}</dt>
-          <dd class="app-num">{{ receipt.number }}</dd>
-        </div>
-        <div>
-          <dt>{{ t().orderDate }}</dt>
-          <dd>
-            <time [attr.datetime]="receipt.placedAt">{{ placedOn() }}</time>
-          </dd>
-        </div>
-        <div>
-          <dt>{{ t().orderStatus }}</dt>
-          <dd class="receipt-statuses">
-            <span class="shop-chip" [attr.data-tone]="status().tone">
-              {{ t()[status().label] }}
-            </span>
-            <span class="shop-chip" [attr.data-tone]="payment().tone">
-              {{ t()[payment().label] }}
-            </span>
-          </dd>
-        </div>
-      </dl>
-    </div>
-    <h2 id="receipt-summary-heading">{{ t().orderSummary }}</h2>
-    <ul class="checkout-lines" role="list">
+<div class="order-receipt basic-surface" [class.order-receipt--confirmation]="confirmation()">
+  <div class="receipt-header">
+    <dl class="receipt-number">
+      <div>
+        <dt [class.app-visually-hidden]="confirmation()">{{ t().orderNumber }}</dt>
+        <dd class="receipt-number-value">{{ receipt.number }}</dd>
+      </div>
+      <div>
+        <dt>{{ t().orderDate }}</dt>
+        <dd>
+          <time [attr.datetime]="receipt.placedAt">{{ placedOn() }}</time>
+        </dd>
+      </div>
+      <div>
+        <dt>{{ t().orderStatus }}</dt>
+        <dd class="receipt-statuses">
+          <span class="shop-chip" [attr.data-tone]="status().tone">{{ t()[status().label] }}</span>
+          <span class="shop-chip" [attr.data-tone]="payment().tone">{{ t()[payment().label] }}</span>
+        </dd>
+      </div>
+      @if (confirmation()) {
+      <div class="receipt-email">
+        <dt>{{ t().email }}</dt>
+        <dd>{{ receipt.contact.email }}</dd>
+      </div>
+      } @else {
+      <div>
+        <dt>{{ t().quoteTotal }}</dt>
+        <dd class="receipt-header-total">{{ formatPrice(receipt.total) }}</dd>
+      </div>
+      }
+    </dl>
+  </div>
+
+  <section class="receipt-items" aria-labelledby="receipt-summary-heading">
+    <h2 id="receipt-summary-heading" [class.app-visually-hidden]="confirmation()">
+      {{ t().orderSummary }}
+    </h2>
+    @if (confirmation()) {
+    <ul class="receipt-lines" role="list">
       @for (line of receipt.lines; track $index) {
-      <li class="checkout-line">
-        <div class="checkout-line-details">
-          <strong>{{ line.label }}</strong>
-          <span>{{ line.sku }}</span>
-          <span class="app-num">{{ line.quantity }} × {{ formatPrice(line.unitPrice) }}</span>
+      <li class="receipt-line">
+        <ng-container [ngTemplateOutlet]="productPlaceholder" />
+        <div class="receipt-line-details">
+          <h3>{{ line.label }}</h3>
+          <p>{{ line.sku }}</p>
+          <dl class="receipt-line-facts">
+            <div>
+              <dt>{{ t().quantity }}</dt>
+              <dd>{{ line.quantity }}</dd>
+            </div>
+            <div>
+              <dt>{{ t().unitPrice }}</dt>
+              <dd>{{ formatPrice(line.unitPrice) }}</dd>
+            </div>
+            <div>
+              <dt>{{ t().lineTotal }}</dt>
+              <dd>{{ formatPrice(line.lineTotal) }}</dd>
+            </div>
+          </dl>
         </div>
-        <strong class="app-num checkout-line-total">{{ formatPrice(line.lineTotal) }}</strong>
       </li>
       }
     </ul>
-    <dl class="checkout-totals">
-      <div>
-        <dt>{{ t().subtotal }}</dt>
-        <dd class="app-num">{{ formatPrice(receipt.subtotal) }}</dd>
-      </div>
-      @if (receipt.discountCode; as code) {
-      <div>
-        <dt>
-          {{ t().discountAmount }} <span class="checkout-promo-code app-mono">{{ code }}</span>
-        </dt>
-        <dd class="app-num checkout-saving">−{{ formatPrice(receipt.discountAmount) }}</dd>
-      </div>
-      }
-      <div>
-        <dt>{{ t().shippingFee }}</dt>
-        <dd class="app-num">{{ formatPrice(receipt.shippingFee) }}</dd>
-      </div>
-      <div class="checkout-total">
-        <dt>{{ t().quoteTotal }}</dt>
-        <dd class="app-num">{{ formatPrice(receipt.total) }}</dd>
-      </div>
-    </dl>
+    } @else {
+    <table class="receipt-table">
+      <thead>
+        <tr>
+          <th scope="col">{{ t().products }}</th>
+          <th scope="col" class="receipt-table-quantity">{{ t().quantity }}</th>
+          <th scope="col" class="receipt-table-price">{{ t().unitPrice }}</th>
+          <th scope="col">{{ t().lineTotal }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of receipt.lines; track $index) {
+        <tr>
+          <th scope="row">
+            <div class="receipt-table-item">
+              <ng-container [ngTemplateOutlet]="productPlaceholder" />
+              <div>
+                <span class="receipt-table-label">{{ line.label }}</span>
+                <span class="receipt-table-sku">{{ line.sku }}</span>
+                <span class="receipt-table-compact">
+                  {{ t().quantity }} {{ line.quantity }}
+                </span>
+                <span class="receipt-table-compact-price">{{ formatPrice(line.unitPrice) }}</span>
+              </div>
+            </div>
+          </th>
+          <td class="receipt-table-quantity">{{ line.quantity }}</td>
+          <td class="receipt-table-price">{{ formatPrice(line.unitPrice) }}</td>
+          <td>{{ formatPrice(line.lineTotal) }}</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+    }
   </section>
-  <div class="shop-panel shop-panel--sections">
-    <section class="shop-panel-section checkout-section" aria-labelledby="receipt-contact-heading">
+
+  <div class="receipt-details">
+    @if (confirmation()) {
+    <ng-container [ngTemplateOutlet]="addresses" />
+    <ng-container [ngTemplateOutlet]="methods" />
+    <ng-container [ngTemplateOutlet]="totals" />
+    } @else {
+    <ng-container [ngTemplateOutlet]="totals" />
+    <ng-container [ngTemplateOutlet]="methods" />
+    <ng-container [ngTemplateOutlet]="addresses" />
+    }
+  </div>
+</div>
+
+<ng-template #productPlaceholder>
+  <span class="receipt-placeholder" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="m3 16 5-5 4 4 3-3 6 6M15 8h.01" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  </span>
+</ng-template>
+
+<ng-template #addresses>
+  <div class="receipt-pair">
+    <section aria-labelledby="receipt-contact-heading">
       <h2 id="receipt-contact-heading">{{ t().contactDetails }}</h2>
       <div class="receipt-address">
-        <strong>{{ receipt.contact.name }}</strong>
+        <span>{{ receipt.contact.name }}</span>
+        @if (!confirmation()) {
         <span>{{ receipt.contact.email }}</span>
+        }
         <span>{{ receipt.contact.phone }}</span>
       </div>
     </section>
-    <section class="shop-panel-section checkout-section" aria-labelledby="receipt-address-heading">
+    <section aria-labelledby="receipt-address-heading">
       <h2 id="receipt-address-heading">{{ t().shippingAddress }}</h2>
-      <div class="receipt-address">
-        <strong>{{ receipt.shippingAddress.line1 }}</strong>
+      <address class="receipt-address">
+        <span>{{ receipt.shippingAddress.line1 }}</span>
         @if (receipt.shippingAddress.line2; as line2) {
         <span>{{ line2 }}</span>
         }
         <span>{{ receipt.shippingAddress.postalCode }} {{ receipt.shippingAddress.city }}</span>
         <span>{{ receipt.shippingAddress.countryCode }}</span>
-      </div>
-    </section>
-    <section class="shop-panel-section checkout-section" aria-labelledby="receipt-methods-heading">
-      <h2 id="receipt-methods-heading">{{ t().checkoutMethods }}</h2>
-      <dl class="receipt-methods">
-        <div>
-          <dt>{{ t().shippingMethod }}</dt>
-          <dd>{{ receipt.shippingMethodLabel }}</dd>
-        </div>
-        <div>
-          <dt>{{ t().paymentMethod }}</dt>
-          <dd>{{ receipt.paymentMethodLabel }}</dd>
-        </div>
-      </dl>
-      @if (receipt.paymentInstructions) {
-      <div class="checkout-note">
-        <strong>
-          {{ receipt.paymentStatus === 'UNPAID' && receipt.status !== 'CANCELLED' ?
-          t().paymentInstructions : t().paymentInstructionsAtOrder }}
-        </strong>
-        <p>{{ receipt.paymentInstructions }}</p>
-      </div>
-      }
+      </address>
     </section>
   </div>
-</div>
+</ng-template>
+
+<ng-template #methods>
+  <section class="receipt-methods" aria-labelledby="receipt-methods-heading">
+    <h2 id="receipt-methods-heading" class="app-visually-hidden">{{ t().checkoutMethods }}</h2>
+    <dl class="receipt-pair">
+      <div>
+        <dt>{{ t().paymentMethod }}</dt>
+        <dd>{{ receipt.paymentMethodLabel }}</dd>
+      </div>
+      <div>
+        <dt>{{ t().shippingMethod }}</dt>
+        <dd>{{ receipt.shippingMethodLabel }}</dd>
+      </div>
+    </dl>
+    @if (receipt.paymentInstructions) {
+    <div class="receipt-note">
+      <strong>
+        {{ receipt.paymentStatus === 'UNPAID' && receipt.status !== 'CANCELLED' ?
+        t().paymentInstructions : t().paymentInstructionsAtOrder }}
+      </strong>
+      <p>{{ receipt.paymentInstructions }}</p>
+    </div>
+    }
+  </section>
+</ng-template>
+
+<ng-template #totals>
+  <dl class="receipt-totals">
+    <div>
+      <dt>{{ t().subtotal }}</dt>
+      <dd>{{ formatPrice(receipt.subtotal) }}</dd>
+    </div>
+    @if (receipt.discountCode; as code) {
+    <div>
+      <dt>{{ t().discountAmount }} <span class="receipt-promo-code app-mono">{{ code }}</span></dt>
+      <dd class="receipt-saving">−{{ formatPrice(receipt.discountAmount) }}</dd>
+    </div>
+    }
+    <div>
+      <dt>{{ t().shippingFee }}</dt>
+      <dd>{{ formatPrice(receipt.shippingFee) }}</dd>
+    </div>
+    <div class="receipt-total">
+      <dt>{{ t().quoteTotal }}</dt>
+      <dd>{{ formatPrice(receipt.total) }}</dd>
+    </div>
+  </dl>
+</ng-template>

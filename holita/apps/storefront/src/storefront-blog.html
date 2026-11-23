@@ -1,121 +1,161 @@
-<div class="blog-view">
+<div class="blog-view basic-surface">
+  @let post = article();
+  <nav class="basic-breadcrumb" [attr.aria-label]="t().browsePath">
+    <ol role="list">
+      <li>
+        <a [routerLink]="homeLink()" [attr.aria-label]="t().home">
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M10 2 2 10h2v7h4v-5h4v5h4v-7h2z" />
+          </svg>
+        </a>
+      </li>
+      <li>
+        <span aria-hidden="true">›</span>
+        @if (slug()) {
+        <a [routerLink]="blogLink()" [queryParams]="pageParams()">{{ t().blog }}</a>
+        } @else {
+        <span aria-current="page">{{ t().blog }}</span>
+        }
+      </li>
+      @if (post) {
+      <li class="blog-breadcrumb-title">
+        <span aria-hidden="true">›</span>
+        <span aria-current="page" [attr.lang]="post.language">{{ post.title }}</span>
+      </li>
+      }
+    </ol>
+  </nav>
+
   @if (slug()) {
-  <div class="blog-backbar">
-    <a class="shop-text-link" [routerLink]="blogLink()" [queryParams]="pageParams()">
+  @if (loading()) {
+  <p class="basic-state blog-article" role="status">{{ t().loading }}</p>
+  } @else if (failed()) {
+  <div class="basic-state blog-article">
+    <p role="alert">{{ t().error }}</p>
+    <button class="basic-button" type="button" (click)="retry()">{{ t().retry }}</button>
+  </div>
+  } @else if (post) {
+  <article class="blog-article" [attr.lang]="post.language" aria-labelledby="article-title">
+    <header>
+      <div class="blog-meta" [attr.lang]="language()">
+        <time [attr.datetime]="post.publishedAt">{{ formatDate(post.publishedAt) }}</time>
+        @if (post.tags.length) {
+        <ul class="blog-tags" role="list">
+          @for (tag of post.tags; track tag.slug) {
+          <li>
+            <a class="blog-tag" [routerLink]="blogLink()" [queryParams]="{ tag: tag.slug }">
+              {{ tag.name }}
+            </a>
+          </li>
+          }
+        </ul>
+        }
+      </div>
+      <h1 id="article-title" class="blog-title">{{ post.title }}</h1>
+    </header>
+    <div class="blog-article-body">
+      <p>{{ post.body }}</p>
+    </div>
+  </article>
+  } @else {
+  <h1 class="basic-state blog-article">{{ t().blogArticleMissing }}</h1>
+  }
+  <div class="blog-article blog-back">
+    <a class="basic-button" [routerLink]="blogLink()" [queryParams]="pageParams()">
       <span aria-hidden="true">←</span> {{ t().blogBack }}
     </a>
   </div>
   } @else {
-  <header class="shop-page-heading">
-    <h1>{{ t().blog }}</h1>
-  </header>
-  } @if (loading()) {
-  <p class="shop-state" role="status">{{ t().loading }}</p>
-  } @else if (failed()) {
-  <div class="shop-state">
-    <p role="alert">{{ t().error }}</p>
-    <button class="shop-secondary" type="button" (click)="retry()">{{ t().retry }}</button>
-  </div>
-  } @else if (article(); as content) {
-  <article class="shop-panel content-article" [attr.lang]="content.language">
-    <h1>{{ content.title }}</h1>
-    <div class="blog-article-meta">
-      <time [attr.datetime]="content.publishedAt" [attr.lang]="language()">
-        {{ formatDate(content.publishedAt) }}
-      </time>
-      @if (content.tags.length) {
-      <ul class="blog-tags" role="list">
-        @for (tag of content.tags; track tag.slug) {
-        <li>
-          <a
-            class="shop-chip"
-            data-tone="NEUTRAL"
-            [routerLink]="blogLink()"
-            [queryParams]="{ tag: tag.slug }"
-          >
-            {{ tag.name }}
-          </a>
-        </li>
+  <section class="blog-index" aria-labelledby="blog-title">
+    @let data = list();
+    <header class="blog-index-header">
+      <h1 id="blog-title" class="blog-title">{{ t().blog }}</h1>
+      @if (data && (data.blogTags.length || tag() !== null)) {
+      <nav class="blog-filters" [attr.aria-label]="t().blogTagFilter">
+        <a
+          class="blog-tag"
+          [routerLink]="blogLink()"
+          [attr.aria-current]="tag() === null ? 'page' : null"
+        >
+          {{ t().blogAllArticles }}
+        </a>
+        @for (filter of data.blogTags; track filter.slug) {
+        <a
+          class="blog-tag"
+          [routerLink]="blogLink()"
+          [queryParams]="{ tag: filter.slug }"
+          [attr.aria-current]="tag() === filter.slug ? 'page' : null"
+        >
+          {{ filter.name }}
+        </a>
         }
-      </ul>
+      </nav>
       }
+    </header>
+    @if (loading()) {
+    <p class="basic-state" role="status">{{ t().loading }}</p>
+    } @else if (failed()) {
+    <div class="basic-state">
+      <p role="alert">{{ t().error }}</p>
+      <button class="basic-button" type="button" (click)="retry()">{{ t().retry }}</button>
     </div>
-    <p>{{ content.body }}</p>
-  </article>
-  } @else if (slug()) {
-  <h1 class="shop-state">{{ t().blogArticleMissing }}</h1>
-  } @else if (list(); as data) { @if (data.blogTags.length || tag() !== null) {
-  <nav class="blog-filters" [attr.aria-label]="t().blogTagFilter">
-    <a
-      class="shop-secondary"
-      [routerLink]="blogLink()"
-      [attr.aria-current]="tag() === null ? 'page' : null"
-    >
-      {{ t().blogAllArticles }}
-    </a>
-    @for (filter of data.blogTags; track filter.slug) {
-    <a
-      class="shop-secondary"
-      [routerLink]="blogLink()"
-      [queryParams]="{ tag: filter.slug }"
-      [attr.aria-current]="tag() === filter.slug ? 'page' : null"
-    >
-      {{ filter.name }}
-    </a>
-    }
-  </nav>
-  } @let result = data.blogArticles; @if (result.items.length) {
-  <ul class="shop-panel shop-panel--sections blog-list" role="list">
-    @for (item of result.items; track item.slug) { @let localized = localizedTitle(item);
-    <li class="shop-panel-section blog-list-row">
-      <div>
-        <h2 [attr.lang]="localized.language">
-          <a
-            class="shop-text-link"
-            [routerLink]="[...blogLink(), item.slug]"
-            [queryParams]="pageParams()"
-          >
-            {{ localized.title }}
-          </a>
-        </h2>
-        <time [attr.datetime]="item.publishedAt">{{ formatDate(item.publishedAt) }}</time>
-      </div>
-      @if (item.tags.length) {
-      <ul class="blog-tags" role="list">
-        @for (tag of item.tags; track tag.slug) {
-        <li>
-          <a
-            class="shop-chip"
-            data-tone="NEUTRAL"
-            [routerLink]="blogLink()"
-            [queryParams]="{ tag: tag.slug }"
-          >
-            {{ tag.name }}
-          </a>
-        </li>
-        }
-      </ul>
+    } @else if (data) {
+    @let result = data.blogArticles;
+    @if (result.items.length) {
+    <ul class="blog-list" role="list">
+      @for (item of result.items; track item.slug) {
+      @let localized = localizedTitle(item);
+      <li>
+        <article class="blog-list-row">
+          <div class="blog-meta">
+            <time [attr.datetime]="item.publishedAt">{{ formatDate(item.publishedAt) }}</time>
+            @if (item.tags.length) {
+            <ul class="blog-tags" role="list">
+              @for (tag of item.tags; track tag.slug) {
+              <li>
+                <a class="blog-tag" [routerLink]="blogLink()" [queryParams]="{ tag: tag.slug }">
+                  {{ tag.name }}
+                </a>
+              </li>
+              }
+            </ul>
+            }
+          </div>
+          <h2 [attr.lang]="localized.language">
+            <a [routerLink]="[...blogLink(), item.slug]" [queryParams]="pageParams()">
+              {{ localized.title }}
+            </a>
+          </h2>
+        </article>
+      </li>
       }
-    </li>
+    </ul>
+    @if (result.total > result.limit) {
+    <nav class="blog-pagination" [attr.aria-label]="t().blogPagination">
+      @if (result.offset > 0) {
+      <a class="blog-previous" [routerLink]="blogLink()" [queryParams]="pageParams(page() - 1)">
+        <span aria-hidden="true">←</span> {{ t().previous }}
+      </a>
+      }
+      <span class="blog-page-count" aria-live="polite">
+        {{ result.offset + 1 }}–{{ result.offset + result.items.length }} / {{ result.total }}
+      </span>
+      @if (result.offset + result.limit < result.total) {
+      <a class="blog-next" [routerLink]="blogLink()" [queryParams]="pageParams(page() + 1)">
+        {{ t().next }} <span aria-hidden="true">→</span>
+      </a>
+      }
+    </nav>
     }
-  </ul>
-  @if (result.total > result.limit) {
-  <nav class="blog-pagination" [attr.aria-label]="t().blogPagination">
-    @if (result.offset > 0) {
-    <a class="shop-secondary" [routerLink]="blogLink()" [queryParams]="pageParams(page() - 1)">
-      {{ t().previous }}
-    </a>
+    } @else if (result.total === 0) {
+    <div class="basic-state basic-empty blog-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6m-6 4h6" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <p>{{ tag() === null ? t().blogEmpty : t().blogFilteredEmpty }}</p>
+    </div>
     }
-    <span class="app-num" aria-live="polite">
-      {{ result.offset + 1 }}–{{ result.offset + result.items.length }} / {{ result.total }}
-    </span>
-    @if (result.offset + result.limit < result.total) {
-    <a class="shop-secondary" [routerLink]="blogLink()" [queryParams]="pageParams(page() + 1)">
-      {{ t().next }}
-    </a>
     }
-  </nav>
-  } } @else if (result.total === 0) {
-  <p class="shop-state">{{ tag() === null ? t().blogEmpty : t().blogFilteredEmpty }}</p>
-  } }
+  </section>
+  }
 </div>

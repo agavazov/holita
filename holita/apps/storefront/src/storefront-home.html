@@ -1,0 +1,121 @@
+<section class="home-hero home-hero--with-tiles" aria-labelledby="home-hero-heading">
+  <div class="home-hero-media" aria-hidden="true">
+    <img src="/storefront-basic/images/placeholders/home-hero.svg" alt="" fetchpriority="high" />
+  </div>
+  <div class="home-hero-copy">
+    <h1 id="home-hero-heading">{{ t().seasonTitle }}</h1>
+    <a class="shop-primary" [routerLink]="[...base(), 'products']">{{ t().browseProducts }}</a>
+  </div>
+  <div class="home-tiles shop-width">
+    @for (tile of tiles; track tile.section; let index = $index) {
+      <article class="home-tile">
+        <img
+          [src]="'/storefront-basic/images/placeholders/home-tile-' + (index + 1) + '.svg'"
+          alt=""
+        />
+        <div class="home-tile-copy">
+          <p aria-hidden="true">{{ t().explore }}</p>
+          <h2>
+            <a [routerLink]="[...base(), tile.section]">{{ t()[tile.label] }}</a>
+          </h2>
+        </div>
+      </article>
+    }
+  </div>
+</section>
+
+@for (shelf of shelves(); track shelf.slug; let index = $index) {
+  <section class="home-shelf" [attr.aria-labelledby]="'home-shelf-' + index">
+    <div class="home-section shop-width">
+      <h2 [id]="'home-shelf-' + index">{{ shelf.name }}</h2>
+      @if (shelf.items.length) {
+        <ul class="home-product-grid" role="list">
+          @for (product of shelf.items; track product.id) {
+            <li class="home-product">
+              @if (product.coverImage; as cover) {
+                <img [src]="cover.url" [alt]="cover.altText ?? ''" loading="lazy" />
+              } @else {
+                <div class="home-product-placeholder">{{ t().noPhoto }}</div>
+              }
+              <h3>
+                <a
+                  [routerLink]="[...base(), 'product', product.id]"
+                  [attr.aria-label]="t().viewProduct(product.name)"
+                  >{{ product.name }}</a
+                >
+              </h3>
+              @if (product.brand; as brand) {
+                <p>{{ brand.name }}</p>
+              }
+              <p class="home-product-price">{{ format().format(+product.price) }}</p>
+            </li>
+          }
+        </ul>
+      } @else if (loading()) {
+        <p class="home-empty" role="status">{{ t().loading }}</p>
+      } @else if (!failed()) {
+        <p class="home-empty">{{ t().empty }}</p>
+      }
+      <a class="home-all-products" [routerLink]="[...base(), 'products']">
+        {{ t().viewAllProducts }} <span aria-hidden="true"> →</span>
+      </a>
+    </div>
+  </section>
+}
+
+<section class="home-perks" aria-labelledby="home-highlights-heading">
+  <div class="home-section shop-width">
+    <h2 id="home-highlights-heading" class="shop-visually-hidden">{{ t().highlights }}</h2>
+    <div class="home-perks-grid">
+      @for (item of highlights; track item.section) {
+        <article>
+          <svg
+            viewBox="0 0 48 48"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            aria-hidden="true"
+          >
+            @switch (item.section) {
+              @case ('categories') {
+                <rect x="8" y="8" width="13" height="13" rx="2" />
+                <rect x="27" y="8" width="13" height="13" rx="2" />
+                <rect x="8" y="27" width="13" height="13" rx="2" />
+                <rect x="27" y="27" width="13" height="13" rx="2" />
+              }
+              @case ('collections') {
+                <path
+                  d="m6 17 18-9 18 9-18 9-18-9Zm0 7 18 9 18-9M6 31l18 9 18-9"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              }
+              @case ('account') {
+                <circle cx="24" cy="16" r="7" />
+                <path d="M9 39a15 15 0 0 1 30 0H9Z" stroke-linejoin="round" />
+              }
+              @case ('contacts') {
+                <rect x="7" y="12" width="34" height="24" rx="3" />
+                <path d="m8 15 16 12 16-12" stroke-linejoin="round" />
+              }
+            }
+          </svg>
+          <div>
+            <h3>
+              <a
+                [routerLink]="
+                  item.section === 'account'
+                    ? [...base(), 'account', 'orders']
+                    : [...base(), item.section]
+                "
+              >
+                {{ t()[item.label] }}
+              </a>
+            </h3>
+            <p>{{ t()[item.description] }}</p>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</section>

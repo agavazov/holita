@@ -524,10 +524,13 @@ products directly assigned to that category or brand. To take a collection offli
 its active status. A category or brand used in a rule can be deleted after the rule is changed.
 The Sofia demo shop includes the curated Kitchen Essentials collection and a Cookware collection.
 
-Shop navigation links to category, brand, collection and tag indexes beneath `/s/<branchId>`.
-Open an index entry to browse products by its slug. Category listings include visible descendants
-and link to direct subcategories. Tags appear in the index while assigned to a public product.
-Manual collections preserve the saved order by default, and rule-based collections sort by name.
+Open `/s/<branchId>` for the shop home with its hero, editorial tiles and product shelves.
+Choose **Products** to browse the full catalogue at `/s/<branchId>/products`. Shop search opens
+that listing with the search term applied. Shop navigation also links to category, brand,
+collection and tag indexes beneath `/s/<branchId>`. Open an index entry to browse products by
+its slug. Category listings include visible descendants and link to direct subcategories. Tags
+appear in the index while assigned to a public product. Manual collections preserve the saved
+order by default, and rule-based collections sort by name.
 
 The public `catalogue` and `catalogueCategoryProducts`, `catalogueBrandProducts`,
 `catalogueCollectionProducts` and `catalogueTagProducts` queries accept filters, sorting and paging.

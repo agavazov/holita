@@ -19,7 +19,9 @@ import {
   RouterLink,
   RouterLinkActive,
   RouterOutlet,
+  type Routes,
   provideRouter,
+  withInMemoryScrolling,
 } from '@angular/router';
 import { InMemoryCache } from '@apollo/client/core';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
@@ -79,67 +81,222 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
     @let header = headerLinks();
     @let footer = footerLinks();
     @let footerContacts = page !== 'contacts' && hasContactDetails();
-    <header class="shop-header">
-      <a class="shop-name" [routerLink]="base()">{{ shop()?.displayName ?? 'Holita' }}</a>
-      <nav class="shop-utilities" [attr.aria-label]="t().navigation">
-        <a [routerLink]="base()" [attr.aria-current]="page === 'catalogue' ? 'page' : null">
-          {{ t().products }}
-        </a>
-        @for (section of browseSections; track section) {
-          <a
-            [routerLink]="[...base(), section]"
-            [attr.aria-current]="page === section ? 'true' : null"
+    <header class="shop-header" data-header-theme="dark">
+      <div class="shop-header-inner shop-width">
+        <div class="shop-mobile-actions">
+          <button
+            type="button"
+            class="shop-icon-button"
+            [attr.aria-label]="t().openMenu"
+            aria-haspopup="dialog"
+            aria-controls="mobile-menu"
+            (click)="mobileMenu.showModal()"
           >
-            {{ t()[section] }}
-          </a>
-        }
-        <a
-          [routerLink]="[...base(), 'contacts']"
-          [attr.aria-current]="page === 'contacts' ? 'page' : null"
-          >{{ t().contacts }}</a
-        >
-      </nav>
-      <div class="shop-actions">
-        @let cartCount = cartState.cart()?.itemCount ?? null;
-        <a
-          class="shop-cart-link"
-          [routerLink]="[...base(), 'cart']"
-          [attr.aria-current]="page === 'cart' ? 'page' : null"
-          [attr.aria-label]="cartCount === null ? t().cart : t().cartCount(cartCount)"
-        >
-          <span class="shop-cart-label">{{ t().cart }}</span>
-          @if (cartCount !== null) {
-            <span class="shop-chip app-num" data-tone="ACCENT" aria-hidden="true">{{
-              cartCount
-            }}</span>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <path d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" stroke-linecap="round" />
+            </svg>
+          </button>
+          <ng-container [ngTemplateOutlet]="searchButton" />
+        </div>
+        <a class="shop-name" [routerLink]="base()">{{ shop()?.displayName ?? 'Holita' }}</a>
+        <div class="shop-desktop-navigation">
+          <nav class="shop-utilities" [attr.aria-label]="t().navigation">
+            <ng-container [ngTemplateOutlet]="storeLinks" />
+          </nav>
+          @if (header.length) {
+            <nav class="shop-header-links" [attr.aria-label]="t().shopHeaderNavigation">
+              <ng-container
+                [ngTemplateOutlet]="menuLinks"
+                [ngTemplateOutletContext]="{ $implicit: header }"
+              />
+            </nav>
           }
-        </a>
-        <a
-          [routerLink]="[...base(), 'account']"
-          [attr.aria-current]="page === 'account' ? 'page' : page === 'orders' ? 'true' : null"
-        >
-          {{ t().account }}
-        </a>
-        <button class="language" type="button" (click)="toggleLanguage()">
-          {{ language() === 'bg' ? 'EN' : 'BG' }}
-        </button>
+        </div>
+        <div class="shop-actions">
+          <span class="shop-desktop-search"
+            ><ng-container [ngTemplateOutlet]="searchButton"
+          /></span>
+          <a
+            class="shop-icon-button"
+            [routerLink]="[...base(), 'account']"
+            [attr.aria-label]="t().account"
+            [attr.aria-current]="page === 'account' ? 'page' : page === 'orders' ? 'true' : null"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <path
+                d="M15.75 7.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.1a7.5 7.5 0 0 1 15 0 18.7 18.7 0 0 1-15 0Z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </a>
+          @let cartCount = cartState.cart()?.itemCount ?? null;
+          <a
+            class="shop-icon-button shop-cart-link"
+            [routerLink]="[...base(), 'cart']"
+            [attr.aria-current]="page === 'cart' ? 'page' : null"
+            [attr.aria-label]="cartCount === null ? t().cart : t().cartCount(cartCount)"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <path
+                d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.6-2.9 1.2 12.7a.75.75 0 0 1-.75.82H3.7a.75.75 0 0 1-.75-.82L4.15 7.6a.75.75 0 0 1 .75-.68h14.2a.75.75 0 0 1 .75.68Z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span class="app-num" aria-hidden="true">{{ cartCount ?? 0 }}</span>
+          </a>
+          <button class="language" type="button" (click)="toggleLanguage()">
+            {{ language() === 'bg' ? 'EN' : 'BG' }}
+          </button>
+        </div>
       </div>
-      @if (header.length) {
-        <nav class="shop-header-links" [attr.aria-label]="t().shopHeaderNavigation">
-          <ng-container
-            [ngTemplateOutlet]="menuLinks"
-            [ngTemplateOutletContext]="{ $implicit: header }"
-          />
-        </nav>
-      }
       @if (shopNavigation.status() === 'error') {
-        <div class="shop-menu-error">
+        <div class="shop-menu-error shop-width">
           <span role="alert">{{ t().shopNavigationUnavailable }}</span>
           <button type="button" (click)="shopNavigation.reload()">{{ t().retry }}</button>
         </div>
       }
     </header>
-    <main>
+
+    <dialog
+      #mobileMenu
+      id="mobile-menu"
+      class="shop-dialog shop-mobile-menu"
+      [attr.aria-label]="t().navigation"
+      closedby="any"
+    >
+      <ng-container
+        [ngTemplateOutlet]="closeButton"
+        [ngTemplateOutletContext]="{ $implicit: mobileMenu }"
+      />
+      <nav [attr.aria-label]="t().navigation">
+        <ng-container
+          [ngTemplateOutlet]="storeLinks"
+          [ngTemplateOutletContext]="{ close: mobileMenu }"
+        />
+      </nav>
+      @if (header.length) {
+        <nav [attr.aria-label]="t().shopHeaderNavigation">
+          <ng-container
+            [ngTemplateOutlet]="menuLinks"
+            [ngTemplateOutletContext]="{ $implicit: header, close: mobileMenu }"
+          />
+        </nav>
+      }
+    </dialog>
+
+    <dialog
+      #shopSearch
+      id="shop-search"
+      class="shop-dialog shop-search-dialog"
+      aria-labelledby="shop-search-title"
+      closedby="any"
+    >
+      <div class="shop-search-heading">
+        <h2 id="shop-search-title">{{ t().search }}</h2>
+        <ng-container
+          [ngTemplateOutlet]="closeButton"
+          [ngTemplateOutletContext]="{ $implicit: shopSearch }"
+        />
+      </div>
+      <form (submit)="$event.preventDefault(); search(searchInput.value, shopSearch)">
+        <label class="shop-form-field" for="shop-search-input">
+          {{ t().searchProducts }}
+          <input
+            #searchInput
+            id="shop-search-input"
+            type="search"
+            maxlength="200"
+            [value]="searchTerm()"
+          />
+        </label>
+        <button class="shop-primary" type="submit">{{ t().search }}</button>
+      </form>
+    </dialog>
+
+    <ng-template #searchButton>
+      <button
+        type="button"
+        class="shop-icon-button"
+        [attr.aria-label]="t().search"
+        aria-haspopup="dialog"
+        aria-controls="shop-search"
+        (click)="shopSearch.showModal(); searchInput.focus()"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path d="m21 21-4.9-4.9m2.4-5.6a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" stroke-linecap="round" />
+        </svg>
+      </button>
+    </ng-template>
+
+    <ng-template #closeButton let-dialog>
+      <button
+        class="shop-icon-button"
+        type="button"
+        [attr.aria-label]="t().close"
+        (click)="dialog.close()"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
+        </svg>
+      </button>
+    </ng-template>
+
+    <ng-template #storeLinks let-close="close">
+      <a
+        [routerLink]="[...base(), 'products']"
+        [attr.aria-current]="page === 'products' ? 'page' : null"
+        (click)="close?.close()"
+        >{{ t().products }}</a
+      >
+      @for (section of browseSections; track section) {
+        <a
+          [routerLink]="[...base(), section]"
+          [attr.aria-current]="page === section ? 'true' : null"
+          (click)="close?.close()"
+          >{{ t()[section] }}</a
+        >
+      }
+      <a
+        [routerLink]="[...base(), 'contacts']"
+        [attr.aria-current]="page === 'contacts' ? 'page' : null"
+        (click)="close?.close()"
+        >{{ t().contacts }}</a
+      >
+    </ng-template>
+
+    <main [class.shop-width]="!browse || !shop()" [class.shop-main-contained]="!browse || !shop()">
       @if (missing()) {
         <p class="shop-state" role="alert">{{ t().shopMissing }}</p>
       } @else {
@@ -162,6 +319,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
               [language]="language()"
               [shopId]="shopId()"
               [section]="section"
+              [landing]="page === 'catalogue'"
             />
           } @else if (error()) {
             <ng-container [ngTemplateOutlet]="requestError" />
@@ -171,11 +329,24 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         }
         @if (page === 'contacts') {
           @if (shop()) {
-            <section aria-labelledby="contact-heading">
-              <header class="shop-page-heading">
+            <div class="product-navigation">
+              <nav class="product-breadcrumbs" [attr.aria-label]="t().browsePath">
+                <ol role="list">
+                  <li>
+                    <a class="product-back" [routerLink]="base()">{{ t().home }}</a>
+                  </li>
+                  <li>
+                    <span aria-hidden="true">›</span
+                    ><span aria-current="page">{{ t().contacts }}</span>
+                  </li>
+                </ol>
+              </nav>
+            </div>
+            <section class="shop-contact-view" aria-labelledby="contact-heading">
+              <header>
                 <h1 id="contact-heading">{{ t().contacts }}</h1>
               </header>
-              <div class="shop-panel shop-contact-panel">
+              <div class="shop-contact-panel">
                 @if (hasContactDetails()) {
                   <ng-container [ngTemplateOutlet]="contactDetails" />
                 } @else {
@@ -191,7 +362,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         }
         @if (page === 'pages') {
           <div class="product-navigation">
-            <a class="product-back" [routerLink]="base()">
+            <a class="product-back" [routerLink]="[...base(), 'products']">
               <span aria-hidden="true">←</span> {{ t().back }}
             </a>
           </div>
@@ -200,7 +371,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
           } @else if (loading()) {
             <p class="shop-state" role="status">{{ t().loading }}</p>
           } @else if (content(); as article) {
-            <article class="shop-panel content-article" [attr.lang]="article.language">
+            <article class="content-article" [attr.lang]="article.language">
               <h1>{{ article.title }}</h1>
               <p>{{ article.body }}</p>
             </article>
@@ -224,7 +395,9 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
               <nav class="product-breadcrumbs" [attr.aria-label]="t().productPath">
                 <ol role="list">
                   <li>
-                    <a class="product-back" [routerLink]="base()">{{ t().products }}</a>
+                    <a class="product-back" [routerLink]="[...base(), 'products']">{{
+                      t().products
+                    }}</a>
                   </li>
                   @for (category of item.categoryPath; track category.id) {
                     <li>
@@ -244,7 +417,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                 </ol>
               </nav>
             } @else {
-              <a class="product-back" [routerLink]="base()">
+              <a class="product-back" [routerLink]="[...base(), 'products']">
                 <span aria-hidden="true">←</span> {{ t().back }}
               </a>
             }
@@ -253,11 +426,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             <ng-container [ngTemplateOutlet]="requestError" />
           } @else if (item) {
             @let photo = item.images[photoIndex()];
-            <article
-              class="product-detail"
-              [class.with-brand]="!photo && item.brand?.logoUrl"
-              [class.with-gallery]="!!photo"
-            >
+            <article class="product-detail">
               @if (photo) {
                 <section class="detail-gallery" [attr.aria-label]="t().productGallery">
                   <img
@@ -282,21 +451,10 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                     </ul>
                   }
                 </section>
-              } @else if (item.brand?.logoUrl; as logo) {
-                <div class="product-brand brand-art">
-                  <img [src]="logo" alt="" width="144" height="144" />
-                </div>
+              } @else {
+                <div class="detail-photo detail-photo-placeholder">{{ t().noPhoto }}</div>
               }
               <div class="product-summary">
-                @if (item.brand; as brand) {
-                  <a class="product-brand" [routerLink]="[...base(), 'brands', brand.slug]">
-                    @if (photo && brand.logoUrl) {
-                      <img [src]="brand.logoUrl" alt="" width="36" height="36" />
-                    }
-                    {{ brand.name }}
-                  </a>
-                }
-                <h1>{{ item.name }}</h1>
                 @if (item.badges.length) {
                   <div class="shop-badge-list">
                     @for (badge of item.badges; track badge.id) {
@@ -304,16 +462,27 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                     }
                   </div>
                 }
+                <h1>{{ item.name }}</h1>
                 @if (selectedVariant(); as variant) {
                   @let available = sellableVariantId() !== null;
                   <div class="product-offer" role="status" aria-atomic="true">
                     <p class="app-num product-price">{{ formatPrice(variant.price) }}</p>
-                    <span
-                      class="shop-chip product-availability"
-                      [attr.data-tone]="available ? 'in-stock' : 'out-of-stock'"
-                    >
+                    <p class="product-availability" [class.available]="available">
+                      <svg
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        aria-hidden="true"
+                      >
+                        @if (available) {
+                          <path d="m4 10 4 4 8-8" stroke-linecap="round" stroke-linejoin="round" />
+                        } @else {
+                          <path d="M5 10h10" stroke-linecap="round" />
+                        }
+                      </svg>
                       {{ available ? t().inStock : t().outOfStock }}
-                    </span>
+                    </p>
                   </div>
                   @if (variantOptions().length || variantChoices().length) {
                     <div class="product-variants">
@@ -391,40 +560,57 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                     }
                   </div>
                 }
-                @if (description(); as detail) {
-                  <p class="product-description" [attr.lang]="detail.language">{{ detail.text }}</p>
-                }
-                @if (item.tags.length) {
-                  <div class="product-tags">
-                    <h2 id="product-tags">{{ t().productTags }}</h2>
-                    <ul role="list" aria-labelledby="product-tags">
-                      @for (tag of item.tags; track tag.id) {
-                        <li>
-                          <a [routerLink]="[...base(), 'tags', tag.slug]">{{ tag.name }}</a>
-                        </li>
+                <div class="product-facts">
+                  @if (description(); as detail) {
+                    <details open>
+                      <summary>{{ t().productDescription }}</summary>
+                      <p class="product-description" [attr.lang]="detail.language">
+                        {{ detail.text }}
+                      </p>
+                    </details>
+                  }
+                  @if (specifications().length) {
+                    <details class="product-specifications" [open]="!description()">
+                      <summary id="product-specifications">{{ t().specifications }}</summary>
+                      @for (group of specifications(); track $index) {
+                        <div>
+                          <h3>{{ group.name }}</h3>
+                          <dl>
+                            @for (specification of group.values; track $index) {
+                              <div>
+                                <dt>{{ specification.name }}</dt>
+                                <dd>{{ specification.value }}</dd>
+                              </div>
+                            }
+                          </dl>
+                        </div>
                       }
-                    </ul>
-                  </div>
-                }
-              </div>
-              @if (specifications().length) {
-                <section class="product-specifications" aria-labelledby="product-specifications">
-                  <h2 id="product-specifications">{{ t().specifications }}</h2>
-                  @for (group of specifications(); track $index) {
-                    <div>
-                      <h3>{{ group.name }}</h3>
-                      <dl>
-                        @for (specification of group.values; track $index) {
-                          <div>
-                            <dt>{{ specification.name }}</dt>
-                            <dd>{{ specification.value }}</dd>
-                          </div>
+                    </details>
+                  }
+                  @if (item.brand; as brand) {
+                    <div class="product-related">
+                      <a class="product-brand" [routerLink]="[...base(), 'brands', brand.slug]">
+                        @if (brand.logoUrl) {
+                          <img [src]="brand.logoUrl" alt="" width="36" height="36" />
                         }
-                      </dl>
+                        {{ brand.name }}
+                      </a>
                     </div>
                   }
-                </section>
-              }
+                  @if (item.tags.length) {
+                    <div class="product-tags product-related">
+                      <h2 id="product-tags">{{ t().productTags }}</h2>
+                      <ul role="list" aria-labelledby="product-tags">
+                        @for (tag of item.tags; track tag.id) {
+                          <li>
+                            <a [routerLink]="[...base(), 'tags', tag.slug]">{{ tag.name }}</a>
+                          </li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                </div>
+              </div>
             </article>
           } @else if (loading()) {
             <p class="shop-state" role="status">{{ t().loading }}</p>
@@ -464,16 +650,16 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
               }
               <form [formGroup]="form" (ngSubmit)="submit()">
                 @if (registering) {
-                  <label class="account-field" for="name">
+                  <label class="shop-form-field" for="name">
                     {{ t().name }}
                     <input id="name" formControlName="name" autocomplete="name" />
                   </label>
                 }
-                <label class="account-field" for="email">
+                <label class="shop-form-field" for="email">
                   {{ t().email }}
                   <input id="email" type="email" formControlName="email" autocomplete="email" />
                 </label>
-                <label class="account-field" for="password">
+                <label class="shop-form-field" for="password">
                   {{ t().password }}
                   <input
                     id="password"
@@ -499,8 +685,19 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
           </section>
         }
         @if (page === 'account') {
-          <section class="account-view" aria-labelledby="account-title">
+          <section class="account-overview" aria-labelledby="account-title">
             <header class="shop-page-heading">
+              <nav class="product-breadcrumbs" [attr.aria-label]="t().browsePath">
+                <ol role="list">
+                  <li>
+                    <a class="product-back" [routerLink]="base()">{{ t().home }}</a>
+                  </li>
+                  <li>
+                    <span aria-hidden="true">›</span
+                    ><span aria-current="page">{{ t().account }}</span>
+                  </li>
+                </ol>
+              </nav>
               <h1 id="account-title">{{ t().account }}</h1>
             </header>
             <div class="account-panel">
@@ -549,21 +746,65 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         }
       }
     </main>
-    @if (footer.length || footerContacts) {
+    @if (shop(); as storefront) {
       <footer class="shop-footer">
-        @if (footer.length) {
-          <nav [attr.aria-label]="t().shopFooterNavigation">
-            <ng-container
-              [ngTemplateOutlet]="menuLinks"
-              [ngTemplateOutletContext]="{ $implicit: footer }"
-            />
-          </nav>
-        }
-        @if (footerContacts) {
-          <section [attr.aria-label]="t().contacts">
-            <ng-container [ngTemplateOutlet]="contactDetails" />
-          </section>
-        }
+        <div class="shop-footer-inner shop-width">
+          <div class="shop-footer-columns">
+            <section>
+              <h2>{{ t().store }}</h2>
+              <ul role="list">
+                <li>
+                  <a [routerLink]="[...base(), 'products']">{{ t().viewAllProducts }}</a>
+                </li>
+                @for (section of browseSections; track section) {
+                  <li>
+                    <a [routerLink]="[...base(), section]">{{ t()[section] }}</a>
+                  </li>
+                }
+              </ul>
+            </section>
+            @if (footer.length) {
+              <section>
+                <h2>{{ t().information }}</h2>
+                <nav [attr.aria-label]="t().shopFooterNavigation">
+                  <ng-container
+                    [ngTemplateOutlet]="menuLinks"
+                    [ngTemplateOutletContext]="{ $implicit: footer }"
+                  />
+                </nav>
+              </section>
+            }
+            <section>
+              <h2>{{ t().help }}</h2>
+              <ul role="list">
+                <li>
+                  <a [routerLink]="[...base(), 'contacts']">{{ t().contactDetails }}</a>
+                </li>
+              </ul>
+            </section>
+            @if (footerContacts) {
+              <section>
+                <h2>{{ storefront.displayName }}</h2>
+                <ng-container [ngTemplateOutlet]="contactDetails" />
+              </section>
+            }
+          </div>
+          <div class="shop-footer-bottom">
+            <p>{{ storefront.displayName }}</p>
+            <label class="shop-footer-language" for="footer-language">
+              <span class="shop-visually-hidden">{{ t().language }}</span>
+              <select
+                #footerLanguage
+                id="footer-language"
+                [value]="language()"
+                (change)="setLanguage(footerLanguage.value === 'en' ? 'en' : 'bg')"
+              >
+                <option value="bg" lang="bg">Български</option>
+                <option value="en" lang="en">English</option>
+              </select>
+            </label>
+          </div>
+        </div>
       </footer>
     }
     <ng-template #contactDetails>
@@ -598,7 +839,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         </dl>
       }
     </ng-template>
-    <ng-template #menuLinks let-links>
+    <ng-template #menuLinks let-links let-close="close">
       @for (link of links; track link.id) {
         @if (link.route) {
           <a
@@ -607,17 +848,20 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             [routerLinkActiveOptions]="menuLinkMatch"
             ariaCurrentWhenActive="page"
             [attr.lang]="link.language"
+            (click)="close?.close()"
             >{{ link.label }}</a
           >
         } @else {
-          <a [href]="link.href" [attr.lang]="link.language">{{ link.label }}</a>
+          <a [href]="link.href" [attr.lang]="link.language" (click)="close?.close()">{{
+            link.label
+          }}</a>
         }
       }
     </ng-template>
     <ng-template #requestError>
       <div class="shop-state">
         <p role="alert">{{ t().error }}</p>
-        <button type="button" (click)="retry()">{{ t().retry }}</button>
+        <button class="shop-secondary" type="button" (click)="retry()">{{ t().retry }}</button>
       </div>
     </ng-template>
   `,
@@ -630,6 +874,8 @@ class StorefrontPage {
   private readonly destroy = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
   private readonly params = toSignal(this.route.paramMap, { requireSync: true });
+  private readonly query = toSignal(this.route.queryParamMap, { requireSync: true });
+  protected readonly searchTerm = computed(() => this.query().get('q') ?? '');
   protected readonly orderId = computed(() => this.params().get('orderId'));
   protected readonly slug = computed(() => this.params().get('slug'));
   protected readonly cartState = inject(CartState);
@@ -640,7 +886,7 @@ class StorefrontPage {
     : (this.route.routeConfig?.path?.split('/').at(2) ?? 'catalogue');
   readonly section = browseSections.find((item) => item === this.page) ?? null;
   readonly browseSections = browseSections;
-  readonly browse = this.page === 'catalogue' || this.section !== null;
+  readonly browse = this.page === 'catalogue' || this.page === 'products' || this.section !== null;
   readonly language = signal<Language>(
     sessionStorage.getItem('holita.storefront.language') === 'en' ? 'en' : 'bg',
   );
@@ -827,10 +1073,18 @@ class StorefrontPage {
     this.selectedVariant.set(exact ?? preferredVariant(variants));
   }
   toggleLanguage() {
-    const language = this.language() === 'bg' ? 'en' : 'bg';
+    this.setLanguage(this.language() === 'bg' ? 'en' : 'bg');
+  }
+  protected setLanguage(language: Language) {
     this.language.set(language);
     this.document.documentElement.lang = language;
     sessionStorage.setItem('holita.storefront.language', language);
+  }
+  protected search(term: string, dialog: HTMLDialogElement) {
+    dialog.close();
+    void this.router.navigate([...this.base(), 'products'], {
+      queryParams: { q: term.trim() || null },
+    });
   }
   retry() {
     this.actionError.set(null);
@@ -921,8 +1175,9 @@ class StorefrontPage {
   template: '<router-outlet />',
 })
 class StorefrontApp {}
-const pages = [
-  { path: 's/:shopId', component: StorefrontPage },
+const pages: Routes = [
+  { path: 's/:shopId', component: StorefrontPage, pathMatch: 'full' },
+  { path: 's/:shopId/products', component: StorefrontPage },
   { path: 's/:shopId/product/:id', component: StorefrontPage },
   { path: 's/:shopId/pages/:slug', component: StorefrontPage },
   { path: 's/:shopId/blog', component: StorefrontPage },
@@ -951,7 +1206,7 @@ async function start(): Promise<void> {
   await bootstrapApplication(StorefrontApp, {
     providers: [
       provideHttpClient(),
-      provideRouter(pages),
+      provideRouter(pages, withInMemoryScrolling({ scrollPositionRestoration: 'enabled' })),
       provideOsnovaTheme(appTheme, license),
       provideApollo(() => ({
         link: inject(HttpLink).create({ uri: '/graphql' }),

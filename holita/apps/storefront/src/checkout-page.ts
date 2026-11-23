@@ -48,8 +48,8 @@ import { formatStorefrontMoney } from './storefront-money';
 import type { QuoteCheckoutMutation } from './generated/operations';
 
 const contactFields = [
-  { name: 'name', label: 'name', type: 'text', autocomplete: 'name' },
   { name: 'email', label: 'email', type: 'email', autocomplete: 'email' },
+  { name: 'name', label: 'name', type: 'text', autocomplete: 'name' },
   { name: 'phone', label: 'phone', type: 'tel', autocomplete: 'tel' },
 ] as const;
 

@@ -1133,6 +1133,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await shopper.goto(`${shopApp.origin}/s/${shopId}`);
     await shopper.getByRole('button', { name: 'EN', exact: true }).click();
     await expectMenu(shopper, ['blog', 'categories/cookware']);
+    await shopper.getByRole('link', { name: 'Products', exact: true }).click();
     const productLink = shopper.getByRole('link', { name: productName, exact: true });
     const productCard = shopper.locator('.catalogue-card').filter({ has: productLink });
     await expect(productCard.getByText('Smoke Brand', { exact: true })).toBeVisible();
@@ -1324,7 +1325,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.getByRole('option', { name: 'Inactive', exact: true }).click();
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Badge saved.');
-    await shopper.goto(`${shopApp.origin}/s/${shopId}`);
+    await shopper.goto(`${shopApp.origin}/s/${shopId}/products`);
     await expect(productLink).toBeVisible();
     await expect(productCard.getByText(badgeName, { exact: true })).toHaveCount(0);
     await productLink.click();
@@ -1573,6 +1574,8 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     });
     await expect(shopper.getByRole('link', { name: 'Second shop', exact: true })).toBeVisible();
     await expect(menuLinks(shopper)).toHaveCount(0);
+    await shopper.getByRole('link', { name: 'Products', exact: true }).click();
+    await expect(shopper.getByRole('main').getByText('No products.', { exact: true })).toBeVisible();
     const foreignProductImage = angled.replace(shopId, secondShopId);
     expect(
       (await shopper.request.get(new URL(foreignProductImage, shopApp.origin).href)).status(),

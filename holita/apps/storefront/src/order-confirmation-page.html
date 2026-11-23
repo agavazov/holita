@@ -1,29 +1,41 @@
-<section class="checkout-view" aria-labelledby="confirmation-title">
+<section class="confirmation-view basic-surface" aria-labelledby="confirmation-title">
   @let receipt = order();
-  <header class="shop-page-heading shop-page-heading--with-link">
-    <h1 #heading id="confirmation-title" tabindex="-1">
-      {{ receipt?.status === 'PLACED' ? t().orderPlaced : t().orderConfirmation }}
-    </h1>
-    <a class="shop-text-link" [routerLink]="base()">{{ t().continueShopping }}</a>
-  </header>
+  <h1
+    #heading
+    id="confirmation-title"
+    class="basic-page-title"
+    [class.confirmation-eyebrow]="receipt"
+    tabindex="-1"
+  >
+    {{ receipt?.status === 'PLACED' ? t().orderPlaced : t().orderConfirmation }}
+  </h1>
   @if (receipt) {
-  <holita-order-receipt [order]="receipt" [language]="language()" />
+  <holita-order-receipt [order]="receipt" [language]="language()" [confirmation]="true" />
   } @else if (sessionExpired()) {
-  <div class="shop-state">
+  <div class="basic-state">
     <p role="alert">{{ t().cartSessionExpired }}</p>
-    <a class="shop-primary" [routerLink]="[...base(), 'sign-in']">{{ t().signIn }}</a>
+    <a class="basic-button basic-button--primary" [routerLink]="[...base(), 'sign-in']">
+      {{ t().signIn }}
+    </a>
   </div>
   } @else if (loadFailed()) {
-  <div class="shop-state">
+  <div class="basic-state">
     <p role="alert">{{ t().orderConfirmationFailed }}</p>
-    <button class="shop-secondary" type="button" (click)="retry()">{{ t().retry }}</button>
+    <button class="basic-button" type="button" (click)="retry()">{{ t().retry }}</button>
   </div>
   } @else if (loading()) {
-  <p class="shop-state" role="status">{{ t().loading }}</p>
+  <p class="basic-state" role="status">{{ t().loading }}</p>
   } @else {
-  <div class="shop-state">
+  <div class="basic-state">
     <p role="alert">{{ t().orderConfirmationUnavailable }}</p>
-    <a class="shop-primary" [routerLink]="[...base(), 'sign-in']">{{ t().signIn }}</a>
+    <a class="basic-button basic-button--primary" [routerLink]="[...base(), 'sign-in']">
+      {{ t().signIn }}
+    </a>
   </div>
   }
+  <div class="confirmation-actions" [class.confirmation-actions--receipt]="receipt">
+    <a class="basic-button basic-button--primary" [routerLink]="[...base(), 'products']">
+      {{ t().continueShopping }}
+    </a>
+  </div>
 </section>

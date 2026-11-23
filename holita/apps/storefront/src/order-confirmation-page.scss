@@ -1,0 +1,38 @@
+@use './basic-secondary';
+
+.confirmation-view {
+  max-inline-size: 44rem;
+  margin-inline: auto;
+  padding-block-start: 2rem;
+}
+
+.confirmation-view h1 {
+  margin-block-start: 0;
+}
+
+.confirmation-view .confirmation-eyebrow {
+  color: var(--basic-link);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5rem;
+  letter-spacing: normal;
+}
+
+.confirmation-actions {
+  margin-block-start: 2.5rem;
+}
+
+.confirmation-actions--receipt {
+  padding-block-start: 2rem;
+  border-block-start: 1px solid var(--basic-border);
+}
+
+@media (min-width: 40rem) {
+  .confirmation-view {
+    padding-block: 4rem 2rem;
+  }
+
+  .confirmation-actions--receipt {
+    margin-inline-start: 11.5rem;
+  }
+}
