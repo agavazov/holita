@@ -87,7 +87,12 @@ export class CatalogueRepository {
   }
 
   private async membership(tx: Prisma.TransactionClient, scope: Scope, route: CatalogueRoute) {
-    const unassigned = { listing: null, join: Prisma.empty, order: Prisma.sql`NULL::integer` };
+    const unassigned = {
+      listing: null,
+      join: Prisma.empty,
+      order: Prisma.sql`NULL::integer`,
+      manualCollection: false,
+    };
     switch (route.kind) {
       case 'all':
         return { ...unassigned, condition: Prisma.sql`TRUE` };
@@ -139,6 +144,7 @@ export class CatalogueRepository {
                 AND c."productId" = p."id" AND c."collectionId" = ${listing.id}::uuid`,
             condition: Prisma.sql`TRUE`,
             order: Prisma.sql`c."sortOrder"`,
+            manualCollection: true,
           };
         }
         const condition =
@@ -190,22 +196,34 @@ export class CatalogueRepository {
       if (new Set(selectedOptions.map(({ option }) => option.id)).size !== selectedOptions.length) {
         throw new BadRequestException('Choose one value per option');
       }
-      // Both facet groups use the same active offers. Only the filtered product list needs prices.
-      const facets = await tx.$queryRaw<{ kind: string; id: unknown }[]>(Prisma.sql`
-        WITH offers AS (
-          SELECT v."tenantId", v."branchId", v."id", p."brandId"
-          ${products}
-          JOIN ${variants} v ON ${activeVariant}
-          WHERE ${publicProduct}
-        )
-        SELECT DISTINCT 'brand' AS kind, "brandId" AS id
-        FROM offers WHERE "brandId" IS NOT NULL
-        UNION ALL
-        SELECT DISTINCT 'option' AS kind, l."optionValueId" AS id
-        FROM offers v
-        JOIN ${links} l ON l."tenantId" = v."tenantId" AND l."branchId" = v."branchId"
-          AND l."variantId" = v."id"
-      `);
+      // Materialize the member products of manual collections so option links use indexed lookups.
+      const facetQuery = membership.manualCollection
+        ? Prisma.sql`
+          WITH candidates AS (${base})
+          SELECT DISTINCT 'brand' AS kind, p."brandId" AS id
+          FROM candidates p WHERE p."brandId" IS NOT NULL
+          UNION ALL
+          SELECT DISTINCT 'option' AS kind, l."optionValueId" AS id
+          FROM candidates p JOIN ${variants} v ON ${activeVariant}
+          JOIN ${links} l ON l."tenantId" = v."tenantId" AND l."branchId" = v."branchId"
+            AND l."variantId" = v."id"
+        `
+        : Prisma.sql`
+          WITH offers AS (
+            SELECT v."tenantId", v."branchId", v."id", p."brandId"
+            ${products}
+            JOIN ${variants} v ON ${activeVariant}
+            WHERE ${publicProduct}
+          )
+          SELECT DISTINCT 'brand' AS kind, "brandId" AS id
+          FROM offers WHERE "brandId" IS NOT NULL
+          UNION ALL
+          SELECT DISTINCT 'option' AS kind, l."optionValueId" AS id
+          FROM offers v
+          JOIN ${links} l ON l."tenantId" = v."tenantId" AND l."branchId" = v."branchId"
+            AND l."variantId" = v."id"
+        `;
+      const facets = await tx.$queryRaw<{ kind: string; id: unknown }[]>(facetQuery);
       const brandFacets = new Set(
         facets.filter(({ kind }) => kind === 'brand').map(({ id }) => resultId(id)),
       );
