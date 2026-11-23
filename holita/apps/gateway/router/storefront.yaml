@@ -1,5 +1,5 @@
 supergraph:
-  listen: '127.0.0.1:${env.STOREFRONT_ROUTER_PORT:-12030}'
+  listen: '127.0.0.1:${env.STOREFRONT_ROUTER_PORT:-12031}'
   path: /graphql
 health_check:
   listen: '127.0.0.1:${env.STOREFRONT_ROUTER_HEALTH_PORT:-12036}'
@@ -7,6 +7,9 @@ health_check:
 limits:
   router:
     http1_max_request_buf_size: 16KiB
+# The public listener needs the full operation to apply the sign-in quota.
+apq:
+  enabled: false
 traffic_shaping:
   router:
     global_rate_limit:

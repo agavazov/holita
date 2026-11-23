@@ -1,10 +1,5 @@
 import { unwrapResolverError } from '@apollo/server/errors';
-import {
-  HttpException,
-  Module,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { Module, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
 import { readFileSync } from 'node:fs';
@@ -37,6 +32,7 @@ import { ShopSettingsResolver } from './shop-settings/shop-settings.resolver.js'
 import { CommerceResolver } from './products/commerce.resolver.js';
 import { CatalogueProductResolver, StorefrontResolver } from './storefront.resolver.js';
 import { StorefrontService } from './storefront.service.js';
+import { StorefrontIngress } from './storefront-ingress.js';
 import { CustomersModule } from './customers/customers.module.js';
 import { CustomersResolver } from './customers/customers.resolver.js';
 import { ProductImagesController } from './products/product-images.controller.js';
@@ -131,6 +127,7 @@ class OperatorModule {}
     CheckoutResolver,
     OrdersResolver,
     StorefrontService,
+    StorefrontIngress,
   ],
 })
 class StorefrontModule {}
@@ -193,17 +190,6 @@ const formatOperatorError: NonNullable<ApolloFederationDriverConfig['formatError
   };
 };
 
-const formatStorefrontError: NonNullable<ApolloFederationDriverConfig['formatError']> = (
-  formatted,
-  error,
-) => {
-  const cause: unknown = unwrapResolverError(error);
-  if (cause instanceof HttpException && cause.getStatus() === 429) {
-    return { ...formatted, extensions: { code: 'TOO_MANY_REQUESTS' } };
-  }
-  return formatFieldErrors(formatted, error);
-};
-
 @Module({
   controllers: [HealthController],
   imports: [
@@ -226,7 +212,7 @@ const formatStorefrontError: NonNullable<ApolloFederationDriverConfig['formatErr
         ...context(http),
         cartToken: http.req.headers['x-cart-token'],
       }),
-      formatError: formatStorefrontError,
+      formatError: formatFieldErrors,
     }),
   ],
 })

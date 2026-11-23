@@ -518,8 +518,13 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const commercePort = await port();
     const routerPort = await port();
     const healthPort = await port();
+    const publicPort = await port();
     const publicRouterPort = await port();
     const publicHealthPort = await port();
+    const commerceOrigin = `http://127.0.0.1:${String(commercePort)}`;
+    const publicUrl = `http://127.0.0.1:${String(publicPort)}/graphql`;
+    const shopApp = await serve('storefront', publicUrl, commerceOrigin);
+    cleanup.push(shopApp.close);
     const coreEnv = {
       ...process.env,
       CORE_DATABASE_URL: coreDb.url,
@@ -546,20 +551,19 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         CORE_AUTH_VERIFY_URL: `http://127.0.0.1:${String(corePort)}/internal/auth/verify`,
         CORE_GRAPHQL_URL: `http://127.0.0.1:${String(corePort)}/graphql`,
         PORT: String(commercePort),
+        STOREFRONT_GRAPHQL_PORT: String(publicPort),
+        STOREFRONT_ROUTER_PORT: String(publicRouterPort),
+        STOREFRONT_ORIGIN: shopApp.origin,
       },
       stdio: 'ignore',
     });
     cleanup.push(() => stopChild(commerce));
-    const commerceOrigin = `http://127.0.0.1:${String(commercePort)}`;
     await waitReady(`${commerceOrigin}/graphql`, commerce, 'graphql');
     const routerUrl = `http://127.0.0.1:${String(routerPort)}/graphql`;
     const admin = await serve('admin', routerUrl, commerceOrigin);
     cleanup.push(admin.close);
     const backoffice = await serve('backoffice', routerUrl);
     cleanup.push(backoffice.close);
-    const publicUrl = `http://127.0.0.1:${String(publicRouterPort)}/graphql`;
-    const shopApp = await serve('storefront', publicUrl, commerceOrigin);
-    cleanup.push(shopApp.close);
     const router = spawn(
       join(root, 'osnova/tools/router/dist/router'),
       [
@@ -1707,16 +1711,14 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
        VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
       [randomUUID(), shopScope.tenantId, shopId, 'Other Customer', otherEmail, otherPhone],
     );
-    await shopper.goto(`${shopApp.origin}/s/${shopId}/sign-in`);
-    await shopper.locator('#email').fill(shopperEmail);
-    await secretFill(shopper.locator('#password'), shopperPassword);
-    await shopper.getByRole('button', { name: 'Sign in', exact: true }).click();
-    await expect(shopper).toHaveURL(cartUrl);
-    const signInAttempt = async (email: string): Promise<unknown> => {
+    const signInAttempt = async (email: string, branchId = shopId): Promise<unknown> => {
       const response = await shopper.request.post(publicUrl, {
-        headers: { 'x-branch-id': shopId },
+        headers: { 'x-branch-id': branchId },
         data: {
           query: `mutation Attempt($email: String!, $password: String!) {
+            ...ShopperLogin
+          }
+          fragment ShopperLogin on Mutation {
             attempt: signInShopper(email: $email, password: $password) { shopper { id } }
           }`,
           variables: { email, password: 'invalid-password' },
@@ -1725,6 +1727,18 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       expect(response.status()).toBe(200);
       return response.json();
     };
+    const missingShop = randomUUID();
+    for (let attempt = 0; attempt < 4; attempt++) {
+      expect(await signInAttempt(shopperEmail, missingShop)).toMatchObject({
+        data: null,
+        errors: [{ extensions: { code: 'NOT_FOUND' } }],
+      });
+    }
+    await shopper.goto(`${shopApp.origin}/s/${shopId}/sign-in`);
+    await shopper.locator('#email').fill(shopperEmail);
+    await secretFill(shopper.locator('#password'), shopperPassword);
+    await shopper.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(shopper).toHaveURL(cartUrl);
     const rejected = await signInAttempt(shopperEmail);
     expect(rejected).toMatchObject({
       data: null,
@@ -1733,17 +1747,29 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     for (const email of ['missing-shopper@example.test', otherEmail]) {
       expect(await signInAttempt(email)).toEqual(rejected);
     }
-    expect(await signInAttempt(shopperEmail)).toMatchObject({
+    const limited = {
       data: null,
-      errors: [{ extensions: { code: 'TOO_MANY_REQUESTS' } }],
-    });
-    expect(await publicProductsQuery()).toMatchObject({
-      data: {
-        catalogue: {
-          items: expect.arrayContaining([expect.objectContaining({ name: configuredProductName })]),
-        },
-      },
-    });
+      errors: [{ message: 'Too many sign-in attempts', extensions: { code: 'TOO_MANY_REQUESTS' } }],
+    };
+    const readCatalogue = async (): Promise<unknown> => {
+      const response = await shopper.request.post(publicUrl, {
+        headers: { 'x-branch-id': shopId },
+        data: { query: '{catalogue{total}}' },
+      });
+      expect(response.status()).toBe(200);
+      return response.json();
+    };
+    for (let batch = 0; batch < 20; batch++) {
+      const [catalogue, ...rejectedAttempts] = await Promise.all([
+        readCatalogue(),
+        ...Array.from({ length: 6 }, () => signInAttempt(shopperEmail)),
+      ]);
+      expect(catalogue).toMatchObject({ data: { catalogue: { total: expect.any(Number) } } });
+      for (const attempt of rejectedAttempts) {
+        expect(attempt).toMatchObject(limited);
+      }
+    }
+    expect(await signInAttempt(shopperEmail, secondShopId)).toEqual(rejected);
     await expect(shopper.getByRole('link', { name: 'Cart, 2 items', exact: true })).toBeVisible();
     const signedInReload = waitForCart(shopper);
     await shopper.reload();

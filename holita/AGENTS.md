@@ -36,7 +36,8 @@ The pending steps are in the [backlog](../docs/todo/two-products.md).
 - `apps/admin` serves merchant operators on 12000; `apps/backoffice` serves platform staff on
   12001; `apps/sales` serves sales agents on 12002.
 - `apps/storefront` serves shoppers on 12020. The operator Router uses 12010 (health 12016),
-  and the storefront Router uses 12030 (health 12036). Shared Core uses 12011 and Commerce 12013.
+  and the public storefront GraphQL listener uses 12030. Its private Router uses 12031
+  (health 12036). Shared Core uses 12011 and Commerce 12013.
 - A shop URL is `/s/<branchId>`; the storefront graph uses the `x-branch-id` header and only
   exposes its public catalogue, cart and shop-scoped shopper accounts.
 - `npm run db:setup:holita` and `npm run db:test:setup:holita` provision only Holita roles and

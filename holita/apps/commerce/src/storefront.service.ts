@@ -65,6 +65,9 @@ export interface ShopScope {
   name: string;
 }
 const shopCache = new Map<string, { expires: number; shop: ShopScope | null }>();
+const signInCapacity = 4;
+const signInWindowMs = 10_000;
+
 function tokenHash(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
@@ -223,6 +226,7 @@ function catalogueProduct(
 @Injectable()
 export class StorefrontService implements OnModuleInit {
   private readonly fallbackPasswordHash = hashPassword(randomBytes(32).toString('base64url'));
+  private signInAttempts: { shop: string; time: number; count: number }[] = [];
   private readonly variantSelectionBatches = new WeakMap<
     StorefrontContext,
     VariantSelectionBatch
@@ -494,6 +498,25 @@ export class StorefrontService implements OnModuleInit {
       throw error;
     }
   }
+  async allowSignIn(branchId: string | undefined, count: number): Promise<boolean> {
+    const { tenantId, branchId: verifiedBranchId } = await this.publicScope({
+      branchId,
+      authorization: undefined,
+    });
+    const shop = `${tenantId}:${verifiedBranchId}`;
+    const now = performance.now();
+    this.signInAttempts = this.signInAttempts.filter(({ time }) => now - time < signInWindowMs);
+    const used = this.signInAttempts.reduce(
+      (total, attempt) => (attempt.shop === shop ? total + attempt.count : total),
+      0,
+    );
+    if (used + count > signInCapacity) {
+      return false;
+    }
+    this.signInAttempts.push({ shop, time: now, count });
+    return true;
+  }
+
   async signIn(context: StorefrontContext, email: string, password: string) {
     const scope = await this.publicScope(context);
     const address = email.trim().toLowerCase();

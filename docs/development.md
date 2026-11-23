@@ -454,7 +454,8 @@ unavailable business screens. See [testing](testing.md) for guarded fixtures and
 
 Holita runs its Admin, Backoffice and Sales applications on ports 12000, 12001 and 12002. Its
 operator Router uses 12010 (health 12016), Core uses 12011 and Commerce uses 12013. The
-storefront app uses 12020 and its public Router uses 12030 (health 12036). Open a shop at
+storefront app uses 12020 and its public GraphQL listener uses 12030. Its private Router uses
+12031 (health 12036). Open a shop at
 `/s/<branchId>`. The first local
 setup creates ignored, private `holita/config/core.env`, `commerce.env` and `seed-accounts.env` with
 `npx tsx holita/tools/runtime-config.mts`; preserve these files on subsequent runs. Provision and
@@ -477,9 +478,11 @@ Admin uploads brand logos and product photos through the operator graph. Serve
 `/media/brands/` and `/media/products/` from Commerce on both the Admin and storefront origins.
 Direct public product image URLs work only while the product is active and has an active variant.
 
-The Storefront Router applies its general limit of 100 requests per second to incoming traffic.
-Commerce applies a separate quota of four shopper sign-in attempts per ten seconds per instance.
-When the sign-in quota is reached, the storefront asks the shopper to wait and retry.
+The public GraphQL listener verifies the shop and allows four shopper sign-in attempts per ten
+seconds for that shop on each Commerce instance. The storefront asks the shopper to wait and retry
+if the quota is reached. Publish the listener on 12030 so excess sign-in requests are rejected before
+the private Router's 100 requests per second limit. Storefront clients send the full GraphQL query
+with each request.
 
 Use Gallery in the Product drawer to add JPEG, PNG or WebP photos, enter alt text, reorder or
 remove photos, then save the product. The first photo is the storefront cover. Add up to 5 MiB
