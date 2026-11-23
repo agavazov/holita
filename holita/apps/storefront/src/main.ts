@@ -6,6 +6,7 @@ import {
   DestroyRef,
   type ElementRef,
   computed,
+  effect,
   inject,
   linkedSignal,
   resource,
@@ -47,11 +48,12 @@ import {
   type CartWriteError,
 } from './cart-state';
 import { CartMergeNotice, CartPage } from './cart-page';
+import { CartPreview } from './cart-preview';
 import { CheckoutPage } from './checkout-page';
 import { OrderConfirmationPage } from './order-confirmation-page';
 import { ShopperOrdersPage } from './shopper-orders-page';
 import { StorefrontBlog } from './storefront-blog';
-import { localizedContent } from './storefront-content';
+import { localizedContent, localizedText } from './storefront-content';
 import type {
   CatalogueProductQuery,
   ShopNavigationLinkFieldsFragment,
@@ -59,6 +61,7 @@ import type {
 
 type VariantSelection = NonNullable<CatalogueProductQuery['catalogueProduct']>['variantSelection'];
 type ProductVariant = VariantSelection['variants'][number];
+const defaultFavicon = '/storefront-basic/images/favicon.svg';
 
 function preferredVariant(variants: readonly ProductVariant[]): ProductVariant | null {
   return variants.find((variant) => variant.available) ?? variants[0] ?? null;
@@ -73,6 +76,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
     NgTemplateOutlet,
     CatalogueBrowse,
     CartPage,
+    CartPreview,
     CheckoutPage,
     OrderConfirmationPage,
     ShopperOrdersPage,
@@ -85,6 +89,11 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
     @let footer = footerLinks();
     @let footerContacts = page !== 'contacts' && hasContactDetails();
     <header class="shop-header" data-header-theme="dark">
+      @if (announcement(); as announcement) {
+        <div class="shop-announcement">
+          <p class="shop-width">{{ announcement }}</p>
+        </div>
+      }
       <div class="shop-header-inner shop-width">
         <div class="shop-mobile-actions">
           <button
@@ -107,7 +116,14 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
           </button>
           <ng-container [ngTemplateOutlet]="searchButton" />
         </div>
-        <a class="shop-name" [routerLink]="base()">{{ shop()?.displayName ?? 'Holita' }}</a>
+        @let shopName = brandingShop()?.displayName ?? 'Holita';
+        <a class="shop-name" [routerLink]="base()">
+          @if (shopLogo(); as logo) {
+            <img [src]="logo" [alt]="shopName" (error)="failedLogo.set(logo)" />
+          } @else {
+            {{ shopName }}
+          }
+        </a>
         <div class="shop-desktop-navigation">
           <nav class="shop-utilities" [attr.aria-label]="t().navigation">
             <ng-container [ngTemplateOutlet]="storeLinks" />
@@ -146,11 +162,14 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             </svg>
           </a>
           @let cartCount = cartState.cart()?.itemCount ?? null;
-          <a
+          <button
+            #cartButton
+            type="button"
             class="shop-icon-button shop-cart-link"
-            [routerLink]="[...base(), 'cart']"
-            [attr.aria-current]="page === 'cart' ? 'page' : null"
             [attr.aria-label]="cartCount === null ? t().cart : t().cartCount(cartCount)"
+            aria-haspopup="dialog"
+            aria-controls="cart-preview"
+            (click)="cartPreview.open(cartButton)"
           >
             <svg
               viewBox="0 0 24 24"
@@ -166,7 +185,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
               />
             </svg>
             <span class="app-num" aria-hidden="true">{{ cartCount ?? 0 }}</span>
-          </a>
+          </button>
           <button class="language" type="button" (click)="toggleLanguage()">
             {{ language() === 'bg' ? 'EN' : 'BG' }}
           </button>
@@ -179,6 +198,8 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         </div>
       }
     </header>
+
+    <holita-cart-preview #cartPreview [language]="language()" [priceFormat]="price()" />
 
     <dialog
       #mobileMenu
@@ -355,10 +376,11 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
           </div>
         }
         @if (browse) {
-          @if (shop()) {
+          @if (shop(); as currentShop) {
             <holita-catalogue-browse
               [language]="language()"
               [shopId]="shopId()"
+              [shopName]="currentShop.displayName"
               [section]="section"
               [landing]="page === 'catalogue'"
             />
@@ -618,7 +640,10 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                   </ng-template>
                   @let quantity = addQuantity();
                   <div class="product-cart">
-                    <form class="shop-control-row" (submit)="$event.preventDefault(); addToCart()">
+                    <form
+                      class="shop-control-row"
+                      (submit)="$event.preventDefault(); addToCart(cartPreview, addButton)"
+                    >
                       <label class="shop-quantity-field" for="product-quantity">
                         {{ t().quantity }}
                         <input
@@ -636,6 +661,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                         />
                       </label>
                       <button
+                        #addButton
                         class="shop-primary"
                         type="submit"
                         [disabled]="!available || quantity.invalid || cartState.locked()"
@@ -1041,6 +1067,19 @@ class StorefrontPage {
     this.request.hasValue() ? this.request.value() : undefined,
   );
   readonly shop = computed(() => this.view()?.shop ?? null);
+  protected readonly brandingShop = computed(() => {
+    const shop = this.shop();
+    return shop?.id === this.shopId().toLowerCase() ? shop : null;
+  });
+  protected readonly failedLogo = signal<string | null>(null);
+  protected readonly shopLogo = computed(() => {
+    const url = this.brandingShop()?.logoUrl;
+    return url && url !== this.failedLogo() ? url : null;
+  });
+  protected readonly announcement = computed(() => {
+    const shop = this.shop();
+    return localizedText(this.language(), shop?.announcementBg, shop?.announcementEn);
+  });
   protected readonly hasContactDetails = computed(() => {
     const shop = this.shop();
     return !!(shop?.contactEmail || shop?.contactPhone || shop?.contactAddress);
@@ -1163,6 +1202,22 @@ class StorefrontPage {
   constructor() {
     inject(Appearance);
     this.document.documentElement.lang = this.language();
+    effect((onCleanup) => {
+      const favicon = this.document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      const url = this.brandingShop()?.faviconUrl;
+      if (!favicon || !url) {
+        return;
+      }
+      const restore = () => {
+        favicon.setAttribute('href', defaultFavicon);
+      };
+      favicon.addEventListener('error', restore, { once: true });
+      favicon.href = url;
+      onCleanup(() => {
+        favicon.removeEventListener('error', restore);
+        restore();
+      });
+    });
   }
   private menuLinks(links: readonly ShopNavigationLinkFieldsFragment[] = []) {
     const preferred = this.language();
@@ -1237,7 +1292,8 @@ class StorefrontPage {
     this.actionError.set(null);
     this.request.reload();
   }
-  protected async addToCart() {
+  protected async addToCart(preview: CartPreview, opener: HTMLButtonElement) {
+    const shopId = this.shopId();
     const variantId = this.sellableVariantId();
     const control = this.addQuantity();
     const quantity = control.value;
@@ -1246,8 +1302,14 @@ class StorefrontPage {
     }
     this.added.set(null);
     const result = await this.cartState.add(variantId, quantity);
+    if (this.destroy.destroyed || this.shopId() !== shopId) {
+      return;
+    }
     if (this.sellableVariantId() === variantId && result !== 'expired') {
       this.added.set(result);
+    }
+    if (result === 'ok') {
+      preview.open(opener);
     }
   }
   async submit() {

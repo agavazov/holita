@@ -43,6 +43,7 @@ export class CatalogueBrowse {
   private readonly params = toSignal(this.route.paramMap, { requireSync: true });
   private readonly query = toSignal(this.route.queryParamMap, { requireSync: true });
   readonly shopId = input.required<string>();
+  readonly shopName = input.required<string>();
   readonly language = input.required<Language>();
   readonly section = input.required<BrowseSection | null>();
   readonly landing = input(false);
@@ -69,7 +70,7 @@ export class CatalogueBrowse {
   private readonly products = resource({
     params: () => {
       const { filters, page, valid } = this.url();
-      return !this.indexSection() && valid
+      return !this.home() && !this.indexSection() && valid
         ? {
             shopId: this.shopId(),
             section: this.section(),

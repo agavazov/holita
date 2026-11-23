@@ -308,15 +308,100 @@ type ShopSettings {
   contactEmail: String
   contactPhone: String
   contactAddress: String
+  logoUrl: String
+  faviconUrl: String
+  basicHome: ShopBasicHomeSettings
 }
 """
-Public shop details replace the saved values. Omitted, null and blank values clear a field.
+Public shop text details replace the saved values. Omitted, null and blank text clears the field.
 """
 input ShopSettingsInput {
   displayName: String
   contactEmail: String
   contactPhone: String
   contactAddress: String
+  "Base64 raster file. Omit to keep the logo or pass null to remove it."
+  logo: String
+  "Base64 raster file. Omit to keep the favicon or pass null to remove it."
+  favicon: String
+  "Omit or pass null to preserve saved Basic appearance settings."
+  basicHome: ShopBasicHomeInput
+}
+enum ShopHomeBenefitIcon {
+  RETURNS
+  CALENDAR
+  GIFT_CARD
+  PLANET
+}
+type ShopBasicHomeSettings {
+  announcementEnabled: Boolean!
+  announcementBg: String
+  announcementEn: String
+  welcomeBg: String
+  welcomeEn: String
+  heroActionBg: String
+  heroActionEn: String
+  heroHref: String
+  heroImageUrl: String
+  showTiles: Boolean!
+  tiles: [ShopHomeTileSettings]!
+  showBenefits: Boolean!
+  benefits: [ShopHomeBenefitSettings]!
+  showLatestProducts: Boolean!
+}
+input ShopBasicHomeInput {
+  announcementEnabled: Boolean!
+  announcementBg: String
+  announcementEn: String
+  welcomeBg: String
+  welcomeEn: String
+  heroActionBg: String
+  heroActionEn: String
+  heroHref: String
+  "Omit to keep the image, pass null to clear it, or upload local raster bytes in base64."
+  heroImageUpload: String
+  showTiles: Boolean!
+  "Three ordered slots. A null slot uses the default. A blank custom title hides the slot."
+  tiles: [ShopHomeTileInput]!
+  showBenefits: Boolean!
+  "Four ordered slots. A null slot uses the default. A custom slot needs a title and description."
+  benefits: [ShopHomeBenefitInput]!
+  showLatestProducts: Boolean!
+}
+type ShopHomeTileSettings {
+  titleBg: String
+  titleEn: String
+  eyebrowBg: String
+  eyebrowEn: String
+  imageAltBg: String
+  imageAltEn: String
+  href: String
+  imageUrl: String
+}
+input ShopHomeTileInput {
+  titleBg: String
+  titleEn: String
+  eyebrowBg: String
+  eyebrowEn: String
+  imageAltBg: String
+  imageAltEn: String
+  href: String
+  "Omit to keep the image, pass null to clear it, or upload local raster bytes in base64."
+  imageUpload: String
+}
+type ShopHomeBenefitSettings {
+  titleBg: String
+  titleEn: String
+  descriptionBg: String
+  descriptionEn: String
+  icon: ShopHomeBenefitIcon!
+}
+input ShopHomeBenefitInput {
+  titleBg: String
+  titleEn: String
+  descriptionBg: String
+  descriptionEn: String
+  icon: ShopHomeBenefitIcon!
 }
 enum NavigationPlacement {
   HEADER
@@ -829,6 +914,7 @@ type Order {
   canEditStorefrontOrder: Boolean!
   customerId: ID
   merchantNote: String
+  shopperNote: String
   paymentMethodId: ID
   shippingMethodId: ID
   invoice: InvoiceSummary

@@ -131,6 +131,7 @@ export class CheckoutPage {
   protected readonly addressFields = addressFields;
   protected readonly billingFields = billingFields;
   protected readonly countries = computed(() => checkoutCountries(this.language()));
+  protected readonly shopperNoteLimit = 5_000;
   protected readonly form = this.fb.group({
     contact: this.fb.group({
       name: ['', required],
@@ -156,6 +157,7 @@ export class CheckoutPage {
       line1: ['', requiredBillingField],
       line2: '',
     }),
+    shopperNote: ['', Validators.maxLength(this.shopperNoteLimit)],
   });
   protected readonly reviewing = signal(false);
   protected readonly placing = signal(false);
@@ -299,6 +301,9 @@ export class CheckoutPage {
     if (!server && !(control.touched && control.invalid)) {
       return null;
     }
+    if (path === 'shopperNote') {
+      return this.t().checkoutShopperNoteInvalid;
+    }
     return path.endsWith('MethodId')
       ? this.t().checkoutInvalidMethod
       : this.t().checkoutInvalidField;
@@ -358,6 +363,7 @@ export class CheckoutPage {
       }
       const order = await this.api.placeOrder(shopId, credentials, {
         ...this.checkoutInput(),
+        shopperNote: this.form.controls.shopperNote.value,
         cartId,
         quoteRevision,
       });
@@ -376,8 +382,21 @@ export class CheckoutPage {
   }
 
   private checkoutInput() {
-    const { separateBillingAddress, billingAddress, ...input } = this.form.getRawValue();
-    return { ...input, ...(separateBillingAddress ? { billingAddress } : {}) };
+    const {
+      contact,
+      shippingAddress,
+      separateBillingAddress,
+      billingAddress,
+      paymentMethodId,
+      shippingMethodId,
+    } = this.form.getRawValue();
+    return {
+      contact,
+      shippingAddress,
+      ...(separateBillingAddress ? { billingAddress } : {}),
+      paymentMethodId,
+      shippingMethodId,
+    };
   }
 
   private checkoutOwner(shopId: string) {

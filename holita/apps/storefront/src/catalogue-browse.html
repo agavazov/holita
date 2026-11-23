@@ -3,16 +3,11 @@
 t()[sectionName] : t().products)); @if (home()) {
 <holita-storefront-home
   [shopId]="shopId()"
+  [shopName]="shopName()"
   [language]="language()"
-  [catalogue]="result()"
-  [loading]="isLoading()"
-  [failed]="failed()"
+  [format]="format()"
 />
-@if (failed()) {
-<div class="shop-width">
-  <ng-container [ngTemplateOutlet]="listingError" />
-</div>
-} } @else {
+} @else {
 <div class="shop-width catalogue" id="products">
   <header class="catalogue-heading">
     <nav class="browse-path" [attr.aria-label]="t().browsePath">

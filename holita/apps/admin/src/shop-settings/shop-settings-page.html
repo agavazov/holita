@@ -104,6 +104,62 @@
       </osnova-form-field>
     </div>
   </section>
+  <section class="app-card app-settings-section" aria-labelledby="shop-branding">
+    <header>
+      <h2 id="shop-branding">{{ text().shopBranding }}</h2>
+    </header>
+    <div class="app-form-grid">
+      @for (field of brandingFields; track field) { @let id = 'shop-settings-' + field; @let label =
+      field === 'logo' ? text().shopLogo : text().shopFavicon; @let error = fieldError(field); @let
+      preview = imagePreview(field);
+      <osnova-form-field
+        [controlId]="id"
+        [label]="label"
+        [hint]="canWrite() ? text().homeImageHint : null"
+        [error]="error"
+      >
+        @if (preview) {
+        <img class="shop-branding-preview" [src]="preview" [alt]="label" width="56" height="56" />
+        } @else if (!error) {
+        <p>{{ field === 'logo' ? text().shopLogoFallback : text().shopFaviconFallback }}</p>
+        } @if (canWrite()) {
+        <input
+          #file
+          [id]="id"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          [disabled]="saving()"
+          [attr.aria-invalid]="!!error"
+          [attr.aria-describedby]="id + '-hint ' + id + '-error'"
+          (change)="chooseImage(field, file)"
+        />
+        @if (preview || error) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [text]="true"
+          [disabled]="saving()"
+          (click)="changeImage(field, null)"
+        >
+          {{ field === 'logo' ? text().shopRemoveLogo : text().shopRemoveFavicon }}
+        </button>
+        } }
+      </osnova-form-field>
+      }
+    </div>
+    @if (errors()['brandingImages']; as error) {
+    <p-message severity="error">{{ error }}</p-message>
+    }
+  </section>
+  <holita-shop-basic-home-fields
+    [home]="form.controls.basicHome"
+    [saved]="record.value().basicHome"
+    [errors]="errors()"
+    [readOnly]="!canWrite()"
+    [saving]="saving()"
+    (editField)="clearError($event)"
+  />
   @if (saveError()) {
   <p-message severity="error">{{ text().generalSettingsSaveFailed }}</p-message>
   } @if (canWrite() && form.dirty) {

@@ -1,33 +1,61 @@
-<section class="home-hero home-hero--with-tiles" aria-labelledby="home-hero-heading">
+@if (appearance.isLoading()) {
+<p class="shop-state" role="status">{{ t().loading }}</p>
+} @else { @let banner = hero();
+<section
+  class="home-hero"
+  [class.home-hero--with-tiles]="tiles().length > 0"
+  aria-labelledby="home-hero-heading"
+>
   <div class="home-hero-media" aria-hidden="true">
-    <img src="/storefront-basic/images/placeholders/home-hero.svg" alt="" fetchpriority="high" />
+    <img [src]="banner.image" alt="" fetchpriority="high" />
   </div>
   <div class="home-hero-copy">
-    <h1 id="home-hero-heading">{{ t().seasonTitle }}</h1>
-    <a class="shop-primary" [routerLink]="[...base(), 'products']">{{ t().browseProducts }}</a>
+    <h1 id="home-hero-heading">{{ banner.title }}</h1>
+    @if (banner.link) {
+    <a class="shop-primary" [routerLink]="banner.link">{{ banner.label }}</a>
+    }
   </div>
+  @if (tiles().length) {
   <div class="home-tiles shop-width">
-    @for (tile of tiles; track tile.section; let index = $index) {
+    @for (tile of tiles(); track tile.index) {
     <article class="home-tile">
-      <img
-        [src]="'/storefront-basic/images/placeholders/home-tile-' + (index + 1) + '.svg'"
-        alt=""
-      />
+      <img [src]="tile.image" [alt]="tile.alt" loading="lazy" />
       <div class="home-tile-copy">
-        <p aria-hidden="true">{{ t().explore }}</p>
+        @if (tile.eyebrow) {
+        <p>{{ tile.eyebrow }}</p>
+        }
         <h2>
-          <a [routerLink]="[...base(), tile.section]" [queryParams]="tile.queryParams">
-            {{ t()[tile.label] }}
-          </a>
+          @if (tile.link) {
+          <a [routerLink]="tile.link">{{ tile.title }}</a>
+          } @else { {{ tile.title }} }
         </h2>
       </div>
     </article>
     }
   </div>
+  }
 </section>
-
-@for (shelf of shelves(); track shelf.slug; let index = $index) {
-<section class="home-shelf" [attr.aria-labelledby]="'home-shelf-' + index">
+} @if (appearance.error()) {
+<div class="shop-state">
+  <p role="alert">{{ t().homeAppearanceUnavailable }}</p>
+  <button type="button" class="shop-secondary" (click)="appearance.reload()">
+    {{ t().retry }}
+  </button>
+</div>
+} @if (products.isLoading()) {
+<p class="shop-state" role="status">{{ t().loading }}</p>
+} @else if (products.error()) {
+<div class="shop-state">
+  <p role="alert">{{ t().error }}</p>
+  <button type="button" class="shop-secondary" (click)="products.reload()">{{ t().retry }}</button>
+</div>
+} @for (shelf of shelves(); track shelf.slug; let index = $index) {
+<section
+  class="home-shelf"
+  [class.home-shelf--catalog]="shelf.layout === 'catalog'"
+  [class.home-shelf--editorial]="shelf.layout === 'editorial'"
+  [attr.aria-labelledby]="'home-shelf-' + index"
+>
   <div class="home-section shop-width">
     <h2 [id]="'home-shelf-' + index">{{ shelf.name }}</h2>
     @if (shelf.items.length) {
@@ -53,23 +81,24 @@
       </li>
       }
     </ul>
-    } @else if (loading()) {
-    <p class="home-empty" role="status">{{ t().loading }}</p>
-    } @else if (!failed()) {
+    } @else {
     <p class="home-empty">{{ t().empty }}</p>
     }
-    <a class="home-all-products" [routerLink]="[...base(), 'products']">
-      {{ t().viewAllProducts }} <span aria-hidden="true"> →</span>
+    <a
+      class="home-all-products"
+      [routerLink]="shelf.slug ? [...base(), 'collections', shelf.slug] : [...base(), 'products']"
+      [queryParams]="shelf.slug ? null : newestParams"
+    >
+      {{ shelf.slug ? t().viewCollection : t().viewAllProducts }} <span aria-hidden="true"> →</span>
     </a>
   </div>
 </section>
-}
-
+} @if (!appearance.isLoading() && highlights().length) {
 <section class="home-perks" aria-labelledby="home-highlights-heading">
   <div class="home-section shop-width">
     <h2 id="home-highlights-heading" class="shop-visually-hidden">{{ t().highlights }}</h2>
     <div class="home-perks-grid">
-      @for (item of highlights; track item.section) {
+      @for (item of highlights(); track item.index) {
       <article>
         <svg
           viewBox="0 0 48 48"
@@ -78,7 +107,7 @@
           stroke-width="1.5"
           aria-hidden="true"
         >
-          @switch (item.section) { @case ('categories') {
+          @switch (item.icon) { @case ('categories') {
           <rect x="8" y="8" width="13" height="13" rx="2" />
           <rect x="27" y="8" width="13" height="13" rx="2" />
           <rect x="8" y="27" width="13" height="13" rx="2" />
@@ -95,24 +124,39 @@
           } @case ('contacts') {
           <rect x="7" y="12" width="34" height="24" rx="3" />
           <path d="m8 15 16 12 16-12" stroke-linejoin="round" />
+          } @case ('RETURNS') {
+          <path
+            d="M13 12h14a12 12 0 0 1 0 24H15M13 12l6-6m-6 6 6 6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          } @case ('CALENDAR') {
+          <rect x="8" y="10" width="32" height="30" rx="4" />
+          <path d="M8 20h32M16 7v7m16-7v7M17 28h4m6 0h4" stroke-linecap="round" />
+          } @case ('GIFT_CARD') {
+          <rect x="7" y="15" width="34" height="22" rx="3" />
+          <path
+            d="M7 22h34M24 15v22m0-22c-10 0-10-9-5-8 3 1 5 8 5 8s2-7 5-8c5-1 5 8-5 8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          } @case ('PLANET') {
+          <circle cx="24" cy="24" r="16" />
+          <ellipse cx="24" cy="24" rx="7" ry="16" />
+          <path d="M8 24h32" />
           } }
         </svg>
         <div>
           <h3>
-            <a
-              [routerLink]="
-                  item.section === 'account'
-                    ? [...base(), 'account', 'orders']
-                    : [...base(), item.section]
-                "
-            >
-              {{ t()[item.label] }}
-            </a>
+            @if (item.link) {
+            <a [routerLink]="item.link">{{ item.title }}</a>
+            } @else { {{ item.title }} }
           </h3>
-          <p>{{ t()[item.description] }}</p>
+          <p>{{ item.description }}</p>
         </div>
       </article>
       }
     </div>
   </div>
 </section>
+}

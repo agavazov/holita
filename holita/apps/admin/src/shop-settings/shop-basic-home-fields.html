@@ -1,0 +1,211 @@
+@let form = home(); @let ids = 'shop-settings-';
+<section class="app-card app-settings-section" [formGroup]="form" aria-labelledby="shop-basic-home">
+  <header>
+    <h2 id="shop-basic-home">{{ t().basicAppearance }}</h2>
+  </header>
+  <div class="app-form-grid">
+    <osnova-form-field controlId="home-announcement-enabled" [label]="t().homeAnnouncementEnabled">
+      <p-toggleswitch
+        inputId="home-announcement-enabled"
+        formControlName="announcementEnabled"
+        [readonly]="readOnly()"
+      />
+    </osnova-form-field>
+    @for (field of homeFields; track field) {
+    <ng-container
+      [ngTemplateOutlet]="copy"
+      [ngTemplateOutletContext]="{
+          control: form.controls[field],
+          path: path('basicHome', field),
+          label: labels()[field],
+          link: field === 'heroHref'
+        }"
+    />
+    }
+    <ng-container
+      [ngTemplateOutlet]="image"
+      [ngTemplateOutletContext]="{
+        control: form.controls.heroImageUpload,
+        path: 'basicHomeHeroImageUpload',
+        attached: !!saved()?.heroImageUrl
+      }"
+    />
+  </div>
+  @if (errors()['basicHomeImages']; as error) {
+  <p role="alert">{{ error }}</p>
+  }
+</section>
+
+<section class="app-card app-settings-section" [formGroup]="form" aria-labelledby="shop-home-tiles">
+  <header>
+    <h2 id="shop-home-tiles">{{ t().homeTiles }}</h2>
+  </header>
+  <osnova-form-field controlId="home-show-tiles" [label]="t().homeShowTiles">
+    <p-toggleswitch inputId="home-show-tiles" formControlName="showTiles" [readonly]="readOnly()" />
+  </osnova-form-field>
+  @for (tile of form.controls.tiles.controls; track tile; let index = $index) { @let prefix =
+  'basicHomeTile' + (index + 1); @let heading = 'home-tile-title-' + index;
+  <section class="app-form-section" [formGroup]="tile" [attr.aria-labelledby]="heading">
+    <h3 [id]="heading">{{ t().homeTile }} {{ index + 1 }}</h3>
+    <div class="app-form-grid">
+      <osnova-form-field [controlId]="prefix + 'Custom'" [label]="t().homeCustomizeTile">
+        <p-toggleswitch
+          [inputId]="prefix + 'Custom'"
+          formControlName="custom"
+          [readonly]="readOnly()"
+        />
+      </osnova-form-field>
+      @if (tile.controls.custom.value) { @for (field of tileFields; track field) {
+      <ng-container
+        [ngTemplateOutlet]="copy"
+        [ngTemplateOutletContext]="{
+                control: tile.controls[field],
+                path: path(prefix, field),
+                label: labels()[field],
+                link: field === 'href'
+              }"
+      />
+      }
+      <ng-container
+        [ngTemplateOutlet]="image"
+        [ngTemplateOutletContext]="{
+              control: tile.controls.imageUpload,
+              path: path(prefix, 'imageUpload'),
+              attached: !!saved()?.tiles?.[index]?.imageUrl
+            }"
+      />
+      }
+    </div>
+  </section>
+  }
+</section>
+
+<section
+  class="app-card app-settings-section"
+  [formGroup]="form"
+  aria-labelledby="shop-home-benefits"
+>
+  <header>
+    <h2 id="shop-home-benefits">{{ t().homeBenefits }}</h2>
+  </header>
+  <osnova-form-field controlId="home-show-benefits" [label]="t().homeShowBenefits">
+    <p-toggleswitch
+      inputId="home-show-benefits"
+      formControlName="showBenefits"
+      [readonly]="readOnly()"
+    />
+  </osnova-form-field>
+  @for (benefit of form.controls.benefits.controls; track benefit; let index = $index) { @let prefix
+  = 'basicHomeBenefit' + (index + 1); @let heading = 'home-benefit-title-' + index;
+  <section class="app-form-section" [formGroup]="benefit" [attr.aria-labelledby]="heading">
+    <h3 [id]="heading">{{ t().homeBenefit }} {{ index + 1 }}</h3>
+    <div class="app-form-grid">
+      <osnova-form-field [controlId]="prefix + 'Custom'" [label]="t().homeCustomizeBenefit">
+        <p-toggleswitch
+          [inputId]="prefix + 'Custom'"
+          formControlName="custom"
+          [readonly]="readOnly()"
+        />
+      </osnova-form-field>
+      @if (benefit.controls.custom.value) {
+      <osnova-form-field [controlId]="prefix + 'Icon'" [label]="t().homeIcon">
+        <p-select
+          [inputId]="prefix + 'Icon'"
+          formControlName="icon"
+          [options]="options()"
+          optionValue="value"
+          optionLabel="label"
+          [readonly]="readOnly()"
+        />
+      </osnova-form-field>
+      @for (field of benefitFields; track field) {
+      <ng-container
+        [ngTemplateOutlet]="copy"
+        [ngTemplateOutletContext]="{
+                control: benefit.controls[field],
+                path: path(prefix, field),
+                label: labels()[field]
+              }"
+      />
+      } }
+    </div>
+  </section>
+  }
+</section>
+
+<section
+  class="app-card app-settings-section"
+  [formGroup]="form"
+  aria-labelledby="shop-home-products"
+>
+  <header>
+    <h2 id="shop-home-products">{{ t().homeProductShelves }}</h2>
+  </header>
+  <osnova-form-field controlId="home-show-latest" [label]="t().homeShowLatest">
+    <p-toggleswitch
+      inputId="home-show-latest"
+      formControlName="showLatestProducts"
+      [readonly]="readOnly()"
+    />
+  </osnova-form-field>
+</section>
+
+<ng-template #copy let-control="control" let-path="path" let-label="label" let-link="link">
+  @let id = ids + path; @let error = fieldError(control, path);
+  <osnova-form-field
+    [controlId]="id"
+    [label]="label"
+    [hint]="link ? t().homeLinkHint : null"
+    [error]="error"
+  >
+    <input
+      pInputText
+      [id]="id"
+      [formControl]="control"
+      [readOnly]="readOnly()"
+      [invalid]="!!error"
+      [attr.aria-invalid]="!!error"
+      [attr.aria-describedby]="id + '-hint ' + id + '-error'"
+      (input)="editField.emit(path)"
+    />
+  </osnova-form-field>
+</ng-template>
+
+<ng-template #image let-control="control" let-path="path" let-attached="attached">
+  @let id = ids + path; @let error = errors()[path] ?? null;
+  <osnova-form-field
+    class="app-form-grid--wide"
+    [controlId]="id"
+    [label]="t().homeImage"
+    [hint]="t().homeImageHint"
+    [error]="error"
+  >
+    @if (control.value === 'keep' && attached) {
+    <p>{{ t().homeImageAttached }}</p>
+    } @else if (control.value?.name; as fileName) {
+    <p>{{ fileName }}</p>
+    } @if (!readOnly()) {
+    <input
+      #file
+      [id]="id"
+      type="file"
+      accept="image/jpeg,image/png,image/webp"
+      [disabled]="saving()"
+      [attr.aria-invalid]="!!error"
+      [attr.aria-describedby]="id + '-hint ' + id + '-error'"
+      (change)="chooseImage(control, path, file)"
+    />
+    @if ((control.value === 'keep' && attached) || control.value?.name) {
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [text]="true"
+      [disabled]="saving()"
+      (click)="changeImage(control, path, null)"
+    >
+      {{ t().homeRemoveImage }}
+    </button>
+    } }
+  </osnova-form-field>
+</ng-template>

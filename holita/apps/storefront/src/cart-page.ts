@@ -4,7 +4,6 @@ import {
   DestroyRef,
   Injector,
   afterNextRender,
-  computed,
   inject,
   input,
   linkedSignal,
@@ -61,15 +60,7 @@ export class CartPage {
   protected readonly maxCartQuantity = maxCartQuantity;
   protected readonly cartProblems = cartProblems;
   protected readonly promoProblems = promoProblems;
-  protected readonly canCheckout = computed(() => {
-    const cart = this.state.cart();
-    return (
-      !!cart?.lines.length &&
-      !this.state.locked() &&
-      !cart.discount?.issue &&
-      cart.lines.every(({ issue }) => issue === null)
-    );
-  });
+  protected readonly canCheckout = this.state.canCheckout;
   protected readonly promoCode = new FormControl('', { nonNullable: true });
   protected readonly promoDraft = toSignal(this.promoCode.valueChanges, { initialValue: '' });
   protected readonly promoError = linkedSignal({
@@ -85,11 +76,14 @@ export class CartPage {
   >({
     source: () => this.state.cart()?.lines ?? [],
     computation: (lines, previous) => {
-      const priorMinima = new Map(previous?.source.map((line) => [line.id, line.minimumQuantity]));
+      const priorLines = new Map(previous?.source.map((line) => [line.id, line]));
       return new Map(
         lines.map(({ id, quantity, minimumQuantity }) => {
-          const prior = priorMinima.get(id) === minimumQuantity ? previous?.value.get(id) : null;
-          return [id, prior ?? quantityControl(quantity, minimumQuantity ?? 1)];
+          const prior = priorLines.get(id);
+          const unchanged =
+            prior?.quantity === quantity && prior.minimumQuantity === minimumQuantity;
+          const control = unchanged ? previous?.value.get(id) : null;
+          return [id, control ?? quantityControl(quantity, minimumQuantity ?? 1)];
         }),
       );
     },

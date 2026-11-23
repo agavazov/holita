@@ -47,6 +47,9 @@ export class StorefrontResolver {
   @Query('shop') shop(@Context() context: StorefrontContext) {
     return this.service.publicShop(context);
   }
+  @Query('shopHome') shopHome(@Context() context: StorefrontContext) {
+    return this.service.shopHome(context);
+  }
   @Query('shopNavigation') shopNavigation(@Context() context: StorefrontContext) {
     return this.service.shopNavigation(context);
   }

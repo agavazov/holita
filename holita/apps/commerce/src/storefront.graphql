@@ -6,6 +6,46 @@ type Shop {
   contactEmail: String
   contactPhone: String
   contactAddress: String
+  logoUrl: String
+  faviconUrl: String
+  announcementBg: String
+  announcementEn: String
+}
+type PublicShopHome {
+  welcomeBg: String
+  welcomeEn: String
+  heroActionBg: String
+  heroActionEn: String
+  heroHref: String
+  heroImageUrl: String
+  showTiles: Boolean!
+  tiles: [PublicShopHomeTile]!
+  showBenefits: Boolean!
+  benefits: [PublicShopHomeBenefit]!
+  showLatestProducts: Boolean!
+}
+type PublicShopHomeTile {
+  titleBg: String
+  titleEn: String
+  eyebrowBg: String
+  eyebrowEn: String
+  imageAltBg: String
+  imageAltEn: String
+  href: String
+  imageUrl: String
+}
+enum ShopHomeBenefitIcon {
+  RETURNS
+  CALENDAR
+  GIFT_CARD
+  PLANET
+}
+type PublicShopHomeBenefit {
+  titleBg: String
+  titleEn: String
+  descriptionBg: String
+  descriptionEn: String
+  icon: ShopHomeBenefitIcon!
 }
 type ShopNavigation {
   header: [ShopNavigationLink!]!
@@ -353,6 +393,8 @@ input PlaceOrderInput {
   shippingAddress: CheckoutAddressInput!
   "Omit or pass null to use the shipping address and order contact."
   billingAddress: CheckoutBillingAddressInput
+  "An optional plain-text instruction of up to 5,000 characters."
+  shopperNote: String
   paymentMethodId: ID!
   shippingMethodId: ID!
 }
@@ -398,6 +440,7 @@ type OrderConfirmation {
   paymentMethodLabel: String!
   paymentInstructions: String!
   shippingMethodLabel: String!
+  shopperNote: String
   lines: [OrderConfirmationLine!]!
   currency: String!
   subtotal: String!
@@ -435,6 +478,7 @@ type Query {
   shop: Shop
   "Saved shop navigation links whose destinations are publicly available."
   shopNavigation: ShopNavigation!
+  shopHome: PublicShopHome
   "The published page with this slug in the current shop."
   shopPage(slug: String!): PublishedShopPage
   "Published articles in descending publication order, optionally filtered by an assigned tag."

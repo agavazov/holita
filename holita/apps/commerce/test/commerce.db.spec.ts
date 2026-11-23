@@ -3,8 +3,10 @@ import { afterAll, beforeAll, expect, it, jest } from '@jest/globals';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import pg from 'pg';
 import type { PrismaClient } from '../src/generated/prisma/client.js';
 import { AppModule } from '../src/app.module.js';
@@ -258,8 +260,11 @@ beforeAll(async () => {
     '20261123020100_characteristic_choices',
     '20261123020200_variant_purchase_options',
     '20261123030000_variant_barcode_measurements',
+    '20261123120000_basic_home_settings',
     '20261123220000_order_billing_address',
     '20261123221000_invoice_issuance',
+    '20261123230000_order_shopper_note',
+    '20261124000000_shop_branding',
   ]) {
     await connection.query(
       await readFile(
@@ -445,6 +450,123 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       input: { displayName: '  ' },
     }),
   ).toEqual({ data: { updateShopSettings: emptySettings } });
+  const imageDirectory = await mkdtemp(join(tmpdir(), 'holita-basic-home-'));
+  const previousImageDirectory = process.env.HOLITA_COMMERCE_IMAGE_DIR;
+  process.env.HOLITA_COMMERCE_IMAGE_DIR = imageDirectory;
+  try {
+    const basicHome = {
+      announcementEnabled: true,
+      announcementEn: 'Shop news',
+      welcomeBg: 'Добре дошли',
+      heroHref: '/products',
+      heroImageUpload:
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jM1sAAAAASUVORK5CYII=',
+      showTiles: false,
+      tiles: [null, null, null],
+      showBenefits: false,
+      benefits: [null, null, null, null],
+      showLatestProducts: true,
+    };
+    for (const heroHref of ['/s/' + publicB + '/products', '/pages/unknown-here']) {
+      expect(
+        await query(tokens.operator, publicA, updateSettings, {
+          input: { basicHome: { ...basicHome, heroHref } },
+        }),
+      ).toMatchObject({
+        data: null,
+        errors: [
+          {
+            extensions: {
+              fieldErrors: [{ path: 'basicHomeHeroHref', code: 'INVALID_DESTINATION' }],
+            },
+          },
+        ],
+      });
+    }
+
+    await expect(
+      query(tokens.operator, publicA, updateSettings, {
+        input: { basicHome, logo: basicHome.heroImageUpload, favicon: basicHome.heroImageUpload },
+      }),
+    ).resolves.toEqual({
+      data: { updateShopSettings: emptySettings },
+    });
+    const homeQuery =
+      '{shop{announcementEn} shopHome{welcomeBg heroHref heroImageUrl tiles{titleBg} benefits{titleBg}}}';
+    const imagePrefix = '/media/shop-home/' + publicA + '/';
+    const publicHome = await storefront(publicA, homeQuery);
+    expect(publicHome).toMatchObject({
+      data: {
+        shop: { announcementEn: 'Shop news' },
+        shopHome: {
+          welcomeBg: 'Добре дошли',
+          heroHref: '/products',
+          heroImageUrl: expect.stringContaining(imagePrefix),
+          tiles: [],
+          benefits: [],
+        },
+      },
+    });
+    const files = await readdir(join(imageDirectory, tenantA, publicA, 'shop-home'));
+    expect(files).toHaveLength(1);
+    const [heroFile] = files;
+    if (!heroFile) {
+      throw new Error('Missing saved hero image');
+    }
+    if (!app) {
+      throw new Error('Missing test application');
+    }
+    const origin = await app.getUrl();
+    const brandingQuery = '{shop{logoUrl faviconUrl}}';
+    const brandingPrefix = '/media/shop-branding/' + publicA + '/';
+    const brandingFiles = await readdir(join(imageDirectory, tenantA, publicA, 'shop-branding'));
+    expect(brandingFiles).toHaveLength(2);
+    expect(await storefront(publicA, brandingQuery)).toMatchObject({
+      data: {
+        shop: {
+          logoUrl: expect.stringContaining(brandingPrefix),
+          faviconUrl: expect.stringContaining(brandingPrefix),
+        },
+      },
+    });
+    expect(await storefront(publicB, brandingQuery)).toEqual({
+      data: { shop: { logoUrl: null, faviconUrl: null } },
+    });
+    for (const file of brandingFiles) {
+      expect((await fetch(origin + brandingPrefix + file)).status).toBe(200);
+      expect((await fetch(origin + '/media/shop-branding/' + publicB + '/' + file)).status).toBe(
+        404,
+      );
+    }
+    expect((await fetch(origin + imagePrefix + heroFile)).status).toBe(200);
+    expect((await fetch(origin + '/media/shop-home/' + publicB + '/' + heroFile)).status).toBe(404);
+    expect(await storefront(publicB, homeQuery)).toEqual({
+      data: { shop: { announcementEn: null }, shopHome: null },
+    });
+    await expect(
+      query(tokens.operator, publicA, updateSettings, {
+        input: {
+          basicHome: { ...basicHome, announcementEnabled: false, heroImageUpload: null },
+          logo: null,
+        },
+      }),
+    ).resolves.toEqual({ data: { updateShopSettings: emptySettings } });
+    expect(await storefront(publicA, brandingQuery)).toMatchObject({
+      data: { shop: { logoUrl: null, faviconUrl: expect.stringContaining(brandingPrefix) } },
+    });
+    expect(await readdir(join(imageDirectory, tenantA, publicA, 'shop-branding'))).toHaveLength(1);
+    expect((await fetch(origin + imagePrefix + heroFile)).status).toBe(404);
+    expect(await storefront(publicA, homeQuery)).toMatchObject({
+      data: { shop: { announcementEn: null }, shopHome: { heroImageUrl: null } },
+    });
+  } finally {
+    if (previousImageDirectory === undefined) {
+      delete process.env.HOLITA_COMMERCE_IMAGE_DIR;
+    } else {
+      process.env.HOLITA_COMMERCE_IMAGE_DIR = previousImageDirectory;
+    }
+    await rm(imageDirectory, { recursive: true, force: true });
+  }
   const pageInput = { slug: 'scoped-page', status: 'DRAFT', titleEn: 'Scoped page' };
   const createPage = 'mutation($input:ShopPageInput!){createShopPage(input:$input){slug}}';
   const updatePage =
@@ -2566,7 +2688,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   });
 
   const receiptFields =
-    'id number placedAt status paymentStatus paymentMethodLabel paymentInstructions shippingMethodLabel shippingAddress{countryCode city postalCode line1} currency subtotal discountCode discountAmount shippingFee total lines{sku label quantity unitPrice lineTotal}';
+    'id number placedAt status paymentStatus paymentMethodLabel paymentInstructions shippingMethodLabel shopperNote shippingAddress{countryCode city postalCode line1} currency subtotal discountCode discountAmount shippingFee total lines{sku label quantity unitPrice lineTotal}';
   const placeOperation = `mutation($input:PlaceOrderInput!){placeOrder(input:$input){${receiptFields}}}`;
   const receiptOperation = `query($orderId:ID!){orderConfirmation(orderId:$orderId){${receiptFields}}}`;
   const billingAddress = {
@@ -2578,11 +2700,12 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     line1: '2 Billing St',
     line2: null,
   };
-  const place = (review: typeof currentReview, bearer = token) =>
+  const shopperNote = 'Ring the bell.\nLeave with reception.';
+  const place = (review: typeof currentReview, bearer = token, note = `  ${shopperNote} `) =>
     storefront(
       publicA,
       placeOperation,
-      { input: { ...quoteInput, ...review, billingAddress } },
+      { input: { ...quoteInput, ...review, billingAddress, shopperNote: note } },
       bearer,
     );
   const orderScope = { ...categoryScope, cartId: accountCart.id };
@@ -2703,6 +2826,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     paymentMethodLabel: 'Cash on Delivery',
     paymentInstructions: 'Pay on arrival.',
     shippingMethodLabel: 'Home Delivery',
+    shopperNote,
     shippingAddress: quoteInput.shippingAddress,
     currency: 'EUR',
     subtotal: '8.50',
@@ -2745,7 +2869,9 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     where: { ...categoryScope, id: quoteInput.shippingMethodId },
     data: { label: 'New shipping method', fixedFee: '99.00' },
   });
-  expect(await place(currentReview)).toEqual({ data: { placeOrder: receipt } });
+  expect(await place(currentReview, token, 'Replacement note')).toEqual({
+    data: { placeOrder: receipt },
+  });
   expect(
     await database.discount.findUniqueOrThrow({
       where: discountKey,
@@ -2792,7 +2918,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       items{id number status} total offset limit
     }
   }`;
-  const adminDetail = `query($id:ID!){order(id:$id){id status paymentStatus billingAddress{name phone countryCode city postalCode line1 line2}}}`;
+  const adminDetail = `query($id:ID!){order(id:$id){id status paymentStatus shopperNote billingAddress{name phone countryCode city postalCode line1 line2}}}`;
   const updateOrder = `mutation($id:ID!,$status:OrderStatus!){
     updateOrderStatus(id:$id,status:$status){id status paymentStatus statusChanges{fromStatus toStatus}}
   }`;
@@ -2950,7 +3076,13 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   }
   expect(await query(tokens.viewer, publicA, adminDetail, operatorTarget)).toEqual({
     data: {
-      order: { ...operatorTarget, status: 'PLACED', paymentStatus: 'UNPAID', billingAddress },
+      order: {
+        ...operatorTarget,
+        status: 'PLACED',
+        paymentStatus: 'UNPAID',
+        billingAddress,
+        shopperNote,
+      },
     },
   });
   expect(await query(tokens.viewer, publicA, adminDetail, { id: guestOrder.id })).toHaveProperty(
@@ -3199,11 +3331,11 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       data: { shopperOrder: null },
     });
   }
-  const guestReceiptFields = { id: guestOrder.id, status: 'CANCELLED' };
+  const guestReceiptFields = { id: guestOrder.id, status: 'CANCELLED', shopperNote: null };
   const guestReceiptReads = [
     [receiptOperation, { orderId: guestOrder.id }, 'orderConfirmation'],
     [
-      'query($cartId:ID!){guestOrderConfirmation(cartId:$cartId){id status}}',
+      'query($cartId:ID!){guestOrderConfirmation(cartId:$cartId){id status shopperNote}}',
       { cartId: guestReview.cartId },
       'guestOrderConfirmation',
     ],

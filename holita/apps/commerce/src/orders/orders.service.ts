@@ -198,6 +198,7 @@ function confirmation(order: Order & { lines: OrderLine[] }) {
       line2: order.shippingLine2,
     },
     paymentInstructions: order.paymentInstructions,
+    shopperNote: order.shopperNote,
     lines: order.lines.map(presentLine),
     subtotal: order.subtotal.toFixed(2),
     discountCode: order.discountCode,
@@ -741,6 +742,11 @@ export class OrdersService {
         throw checkoutError('cart', 'CHECKOUT_QUOTE_CHANGED', 'Review the updated checkout total');
       }
       const billing = orderBillingFields(billingAddress);
+      const note = input.shopperNote;
+      if (note != null && (note.length > 5_000 || note.includes('\u0000'))) {
+        throw invalidValue('shopperNote');
+      }
+      const shopperNote = note?.trim() || null;
 
       const lines: Prisma.OrderLineCreateManyOrderInput[] = [];
       for (const [sortOrder, line] of quote.lines.entries()) {
@@ -772,6 +778,7 @@ export class OrdersService {
           customerId: customerId ?? null,
           ...orderContactFields({ contact, shippingAddress }),
           ...billing,
+          shopperNote,
           paymentMethodId: quote.paymentMethod.id,
           paymentMethodLabel: quote.paymentMethod.label,
           paymentInstructions: quote.paymentMethod.instructions,

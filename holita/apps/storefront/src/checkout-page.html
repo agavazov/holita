@@ -265,6 +265,29 @@
             }
           </section>
         </div>
+        <section class="checkout-section" aria-labelledby="checkout-shopper-note-heading">
+          <h2 id="checkout-shopper-note-heading">
+            <label for="shopperNote">{{ t().checkoutShopperNote }}</label>
+          </h2>
+          @let noteError = fieldError('shopperNote', form.controls.shopperNote);
+          <div class="basic-field">
+            <textarea
+              class="basic-input checkout-shopper-note"
+              id="shopperNote"
+              formControlName="shopperNote"
+              rows="4"
+              [attr.maxlength]="shopperNoteLimit"
+              [attr.aria-invalid]="noteError ? 'true' : null"
+              [attr.aria-describedby]="
+                noteError ? 'checkout-note-error checkout-note-hint' : 'checkout-note-hint'
+              "
+            ></textarea>
+            <span id="checkout-note-hint">{{ t().checkoutShopperNoteHint }}</span>
+            @if (noteError) {
+            <span class="field-error" id="checkout-note-error">{{ noteError }}</span>
+            }
+          </div>
+        </section>
       </fieldset>
     </form>
     }

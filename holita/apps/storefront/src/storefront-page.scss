@@ -71,6 +71,20 @@ main {
   }
 }
 
+.shop-announcement {
+  background: var(--shop-action);
+  color: var(--shop-action-ink);
+
+  p {
+    margin-block: 0;
+    padding-block: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+}
+
 .shop-header-inner {
   display: grid;
   min-height: 4rem;
@@ -94,9 +108,16 @@ main {
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+  line-height: 2.75rem;
   text-overflow: ellipsis;
   text-align: center;
   white-space: nowrap;
+
+  img {
+    max-inline-size: 100%;
+    max-block-size: 2.5rem;
+    vertical-align: middle;
+  }
 
   @media (min-width: 40rem) {
     font-size: 1.125rem;
@@ -149,6 +170,8 @@ main {
 
 .shop-cart-link {
   gap: 0.25rem;
+  min-inline-size: 2.75rem;
+  min-block-size: 2.75rem;
   font-size: 0.8125rem;
   font-weight: 600;
 }

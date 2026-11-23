@@ -582,8 +582,8 @@ async function seedCatalogue(): Promise<void> {
     const navigationMenusInserted = await seedNavigationMenus(client, tenantId, branchId);
     const { rowCount: shopSettingsInserted } = await client.query(
       `INSERT INTO "shopSettings" ("tenantId", "branchId", "displayName",
-                                   "contactEmail", "contactPhone", "contactAddress")
-       VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT ("tenantId", "branchId") DO NOTHING`,
+                                   "contactEmail", "contactPhone", "contactAddress", "basicHome")
+       VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT ("tenantId", "branchId") DO NOTHING`,
       [
         tenantId,
         branchId,
@@ -591,6 +591,7 @@ async function seedCatalogue(): Promise<void> {
         demoShopSettings.contactEmail,
         demoShopSettings.contactPhone,
         demoShopSettings.contactAddress,
+        demoShopSettings.basicHome,
       ],
     );
     await seedShopperCart(client, tenantId, branchId);
@@ -921,6 +922,7 @@ async function seedShopperOrder(
     postalCode,
     address,
     billingAddress,
+    shopperNote,
     subtotal,
     total,
     lines,
@@ -964,9 +966,9 @@ async function seedShopperOrder(
        "status", "paymentStatus", "placedAt", "paidAt", "contactName", "contactEmail", "contactPhone",
        "shippingCountryCode", "shippingCity", "shippingPostalCode", "shippingLine1",
        "paymentMethodLabel", "paymentInstructions", "shippingMethodLabel", "currency", "subtotal", "shippingFee", "total",
-       "billingName", "billingPhone", "billingCountryCode", "billingCity", "billingPostalCode", "billingLine1", "billingLine2")
+       "billingName", "billingPhone", "billingCountryCode", "billingCity", "billingPostalCode", "billingLine1", "billingLine2", "shopperNote")
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'BG', $14, $15, $16, $17, $18, $19,
-       $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30) ON CONFLICT DO NOTHING`,
+       $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31) ON CONFLICT DO NOTHING`,
     [
       orderId,
       tenantId,
@@ -998,6 +1000,7 @@ async function seedShopperOrder(
       billingAddress?.postalCode ?? null,
       billingAddress?.line1 ?? null,
       billingAddress?.line2 ?? null,
+      shopperNote ?? null,
     ],
   );
   if (order.rowCount) {

@@ -16,7 +16,9 @@
         <dt>{{ t().orderStatus }}</dt>
         <dd class="receipt-statuses">
           <span class="shop-chip" [attr.data-tone]="status().tone">{{ t()[status().label] }}</span>
-          <span class="shop-chip" [attr.data-tone]="payment().tone">{{ t()[payment().label] }}</span>
+          <span class="shop-chip" [attr.data-tone]="payment().tone"
+            >{{ t()[payment().label] }}</span
+          >
         </dd>
       </div>
       @if (confirmation()) {
@@ -82,9 +84,7 @@
               <div>
                 <span class="receipt-table-label">{{ line.label }}</span>
                 <span class="receipt-table-sku">{{ line.sku }}</span>
-                <span class="receipt-table-compact">
-                  {{ t().quantity }} {{ line.quantity }}
-                </span>
+                <span class="receipt-table-compact"> {{ t().quantity }} {{ line.quantity }} </span>
                 <span class="receipt-table-compact-price">{{ formatPrice(line.unitPrice) }}</span>
               </div>
             </div>
@@ -108,6 +108,11 @@
     <ng-container [ngTemplateOutlet]="totals" />
     <ng-container [ngTemplateOutlet]="methods" />
     <ng-container [ngTemplateOutlet]="addresses" />
+    } @if (receipt.shopperNote; as note) {
+    <section class="receipt-note" aria-labelledby="receipt-shopper-note-heading">
+      <h2 id="receipt-shopper-note-heading">{{ t().shopperNote }}</h2>
+      <p>{{ note }}</p>
+    </section>
     }
   </div>
 </div>

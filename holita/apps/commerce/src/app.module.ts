@@ -27,6 +27,8 @@ import { PagesModule } from './pages/pages.module.js';
 import { PagesResolver } from './pages/pages.resolver.js';
 import { RefundsModule } from './refunds/refunds.module.js';
 import { RefundsResolver } from './refunds/refunds.resolver.js';
+import { ShopBrandingImagesController } from './shop-settings/shop-branding-images.controller.js';
+import { ShopHomeImagesController } from './shop-settings/shop-home-images.controller.js';
 import { ShopSettingsModule } from './shop-settings/shop-settings.module.js';
 import { ShopSettingsResolver } from './shop-settings/shop-settings.resolver.js';
 import { CommerceResolver } from './products/commerce.resolver.js';
@@ -119,7 +121,12 @@ class OperatorModule {}
     NavigationModule,
     ShopSettingsModule,
   ],
-  controllers: [BrandImagesController, ProductImagesController],
+  controllers: [
+    BrandImagesController,
+    ProductImagesController,
+    ShopHomeImagesController,
+    ShopBrandingImagesController,
+  ],
   providers: [
     StorefrontResolver,
     CatalogueProductResolver,

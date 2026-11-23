@@ -23,10 +23,15 @@
 }
 
 .checkout-section + .checkout-section,
-.checkout-methods > .checkout-section:first-of-type {
+.checkout-methods > .checkout-section:first-of-type,
+.checkout-methods + .checkout-section {
   margin-block-start: 2.5rem;
   padding-block-start: 2.5rem;
   border-block-start: 1px solid var(--basic-border);
+}
+
+.checkout-shopper-note {
+  resize: vertical;
 }
 
 .checkout-guest {

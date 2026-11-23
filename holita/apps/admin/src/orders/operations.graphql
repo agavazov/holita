@@ -20,6 +20,7 @@ fragment OperatorOrderDetail on Order {
   canEditStorefrontOrder
   customerId
   merchantNote
+  shopperNote
   paymentMethodId
   shippingMethodId
   contact {

@@ -3,6 +3,39 @@ fragment OperatorShopSettingsFields on ShopSettings {
   contactEmail
   contactPhone
   contactAddress
+  logoUrl
+  faviconUrl
+  basicHome {
+    announcementEnabled
+    announcementBg
+    announcementEn
+    welcomeBg
+    welcomeEn
+    heroActionBg
+    heroActionEn
+    heroHref
+    heroImageUrl
+    showTiles
+    tiles {
+      titleBg
+      titleEn
+      eyebrowBg
+      eyebrowEn
+      imageAltBg
+      imageAltEn
+      href
+      imageUrl
+    }
+    showBenefits
+    benefits {
+      titleBg
+      titleEn
+      descriptionBg
+      descriptionEn
+      icon
+    }
+    showLatestProducts
+  }
 }
 
 query OperatorShopSettings {

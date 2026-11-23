@@ -68,6 +68,7 @@ type OrderDetailParams = { scope: NonNullable<ReturnType<OrdersApi['scope']>>; i
   styles: `
     .order-payment-instructions,
     .order-refund-reason,
+    .order-shopper-note,
     .order-merchant-note {
       white-space: pre-wrap;
       overflow-wrap: anywhere;

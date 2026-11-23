@@ -350,16 +350,21 @@ export class StorefrontService implements OnModuleInit {
     if (!shop) {
       return null;
     }
-    const { displayName, contactEmail, contactPhone, contactAddress } =
-      await this.shopSettings.readScoped({ tenantId: shop.tenantId, branchId: shop.id });
+    const { displayName, basicHome, ...details } = await this.shopSettings.publicDetails({
+      tenantId: shop.tenantId,
+      branchId: shop.id,
+    });
     return {
       id: shop.id,
       name: shop.name,
       displayName: displayName ?? shop.name,
-      contactEmail,
-      contactPhone,
-      contactAddress,
+      ...details,
+      announcementBg: basicHome?.announcementEnabled ? basicHome.announcementBg : null,
+      announcementEn: basicHome?.announcementEnabled ? basicHome.announcementEn : null,
     };
+  }
+  async shopHome(context: StorefrontContext) {
+    return this.shopSettings.publicHome(await this.publicScope(context));
   }
   async shopPage(context: StorefrontContext, slug: string) {
     return this.pages.published(await this.publicScope(context), slug);

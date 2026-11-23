@@ -230,6 +230,15 @@ export class CartState {
   readonly loading = this.request.isLoading;
   readonly loadFailed = computed(() => this.request.status() === 'error');
   readonly locked = computed(() => this.pending() || this.loading() || this.sessionExpired());
+  readonly canCheckout = computed(() => {
+    const cart = this.cart();
+    return (
+      !!cart?.lines.length &&
+      !this.locked() &&
+      !cart.discount?.issue &&
+      cart.lines.every(({ issue }) => issue === null)
+    );
+  });
 
   refresh(): void {
     this.request.reload();

@@ -227,6 +227,7 @@ export interface DemoShopperOrder {
     readonly line1: string;
     readonly line2?: string;
   };
+  readonly shopperNote?: string;
   readonly subtotal: string;
   readonly total: string;
   readonly lines: readonly {
@@ -391,6 +392,7 @@ export const demoSeparateBillingOrder: DemoShopperOrder = {
   },
   subtotal: '27.05',
   total: '30.12',
+  shopperNote: 'Моля, позвънете при пристигане.',
   lines: [{ ...demoManualOrder.line, id: 15, quantity: 1, unitPrice: '27.05' }],
 };
 
@@ -892,6 +894,19 @@ export const demoShopSettings = {
   contactEmail: 'hello@dom-i-uyut.example.test',
   contactPhone: '+359 2 000 0000',
   contactAddress: 'ул. „Примерна“ 12, 1000 София',
+  basicHome: {
+    announcementEnabled: true,
+    announcementBg: 'Избрани съдове и текстил за дома',
+    announcementEn: 'Selected cookware and textiles for the home',
+    welcomeBg: 'Уют за всеки ден',
+    welcomeEn: 'Make every day feel like home',
+    heroActionBg: 'Към каталога',
+    heroActionEn: 'Browse the catalogue',
+    heroHref: '/products',
+    showTiles: true,
+    showBenefits: true,
+    showLatestProducts: true,
+  },
 } as const;
 
 export const demoBlogTags = [{ id: 1, name: 'Грижа за съдовете', slug: 'cookware-care' }] as const;

@@ -490,8 +490,9 @@ Set it to the absolute path of `.volumes/holita/images` in the checkout before s
 Set a separate generated `HOLITA_DEMO_SHOPPER_PASSWORD` in the ignored
 `holita/config/seed-accounts.env` before reseeding. The Sofia storefront shopper
 `shopper@demo.holita.test` starts with two available variants in the cart.
-Admin uploads brand logos and product photos through the operator graph. Serve
-`/media/brands/` and `/media/products/` from Commerce on both the Admin and storefront origins.
+Admin uploads brand logos, product photos, shop logos and favicons, and Basic home images through
+the operator graph. Serve `/media/brands/`, `/media/products/`, `/media/shop-branding/` and
+`/media/shop-home/` from Commerce on both the Admin and storefront origins.
 Direct public product image URLs work only while the product is active and has an active variant.
 
 The public GraphQL listener verifies the shop and allows four shopper sign-in attempts per ten
@@ -619,9 +620,11 @@ update cart lines. Catalogue cards show each flagged option's distinct values fr
 variants. The Sofia demo shop includes a configurable product with two differently priced
 combinations, one in stock and one sold out.
 
-Select an available variant and quantity on the product page, then add it to the cart. The cart
-shows product thumbnails, current prices and availability, supports quantity changes and removal, and excludes blocked lines
-from the subtotal. Signing in merges eligible guest quantities and shows any skipped items.
+Select an available variant and quantity on the product page, then add it to the cart. The preview
+opens after a successful add and can also be opened from the header cart button. Change quantities
+or remove items in either view. Use View cart to open the full cart or Checkout to continue with
+available items. The cart shows product thumbnails, current prices and availability, and excludes
+blocked lines from the subtotal. Signing in merges eligible guest quantities and shows any skipped items.
 Cart changes, checkout and manual orders enforce the variant minimum. If a merchant raises the
 minimum while a shopper has the item in their cart, the shopper can increase the quantity or
 remove the line before checkout.
@@ -666,6 +669,10 @@ After reviewing the total, choose Place order. A change in available stock, pric
 selected methods prompts you to review the checkout again. If the promo code is no longer eligible,
 go back to Cart to remove or replace it. When an order commits, Commerce saves the code and the
 discount amount on the order and records the redemption.
+Use the optional shopper note to leave up to 5,000 characters of instructions for the merchant.
+Commerce saves it when the order is placed. The note appears in the merchant's Order Detail and
+the shopper's confirmation and account order. The merchant's own order note stays private.
+
 The confirmation shows the order's current fulfillment and payment status with its saved items,
 promo code, discount, payment instructions and delivery fee.
 Signed-in shoppers can reopen their confirmation in the same shop. If the Place order response
@@ -800,6 +807,25 @@ or selecting a different shop asks whether to keep editing or discard the draft.
 display name to use the shop's Branch name. The storefront shows available details in its footer
 and at `/s/<branchId>/contacts`. The operator graph exposes `shopSettings` and
 `updateShopSettings`, and the storefront graph exposes the public fields on `shop`.
+
+In General Settings, use Shop branding to preview, replace or remove the selected shop's logo
+and browser tab icon. The storefront uses the shop name when the logo is absent and its default
+icon when the favicon is absent. Upload JPEG, PNG or WebP. The new branding and Basic home images
+can total up to 5 MiB per save. The operator graph accepts `logo` and `favicon` in
+`updateShopSettings`. Omit either field to keep the image or send null to remove it.
+`shopSettings` and the public `shop` expose the saved `logoUrl` and `faviconUrl`.
+
+In General Settings, use Basic storefront appearance to edit the announcement, welcome and
+hero, three tiles and four benefits in Bulgarian and English. A translation can use the other
+language when its own field is blank. Clear both announcement fields or switch off the
+announcement to hide it. Use a shop-relative link such as `/products` or
+`/collections/summer`. Blank links and unpublished destinations are omitted. Clearing an image
+restores its original illustration. A custom tile needs a title, and a custom benefit needs
+a title and description. Switch off a section to hide it while keeping its content for later.
+The home page shows up to four nonempty public collections. When there are none, it can show
+four newest public products. Shops without saved appearance settings retain their default
+illustrations and copy. The public graph exposes the enabled announcement through `shop` and
+the saved home appearance through `shopHome`.
 
 `npm run dev` starts both products. `npm run kill` stops their development applications while
 leaving PostgreSQL and the ERM units running. Discocan Core reads `discocan/config/core.env`;

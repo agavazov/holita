@@ -110,6 +110,9 @@ model ShopSettings {
   contactEmail String? @db.VarChar(254)
   contactPhone String? @db.VarChar(50)
   contactAddress String? @db.VarChar(500)
+  logoKey String? @db.VarChar(41)
+  faviconKey String? @db.VarChar(41)
+  basicHome Json?
   @@id([tenantId, branchId])
   @@map("shopSettings")
 }
@@ -734,6 +737,7 @@ model Order {
   billingLine1 String? @db.Text
   billingLine2 String? @db.Text
   merchantNote String? @db.Text
+  shopperNote String? @db.Text
   paymentMethodId String? @db.Uuid
   paymentMethod PaymentMethod? @relation(fields: [tenantId, branchId, paymentMethodId], references: [tenantId, branchId, id], onDelete: Restrict)
   paymentMethodLabel String @db.VarChar(200)

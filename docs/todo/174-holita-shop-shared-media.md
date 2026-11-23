@@ -1,10 +1,10 @@
 # 174 Organize shared Basic images into folders
 
-**Status:** Needs owner. Which Basic screen, if any, should use a shop-wide local image picker after 188? **Product:** Holita. Depends on [188](188-holita-basic-home-content.md).
+**Status:** Needs owner. Which Basic screen, if any, should use a shop-wide local image picker? **Product:** Holita.
 
 ## Background
 
-red.bg has a shop file library with folders. Ticket 188 gives one Basic homepage setting a local image picker, and the wider library needs an explicitly approved Basic consumer.
+red.bg has a shop file library with folders. Basic homepage settings already support scoped local image uploads. The wider library needs an explicitly approved Basic consumer.
 
 ## Goal
 
@@ -12,7 +12,7 @@ Allow reuse and folder organization when an approved Basic workflow needs shared
 
 ## Steps
 
-1. Identify the approved Basic consumer and reuse 188's scoped image storage and validation. Add folder listing, move, rename and removal once the consumer can select the stored assets.
+1. Identify the approved Basic consumer and reuse the scoped Commerce image storage and validation. Add folder listing, move, rename and removal once the consumer can select the stored assets.
 2. Preserve shop ownership checks and existing image references during folder changes.
 
 ## Done when
@@ -21,7 +21,7 @@ An approved Basic workflow can use an asset from an organized folder and another
 
 ## Limits
 
-Deferred folder management only. One-image homepage selection belongs to 188.
+Deferred folder management only.
 
 ## References
 

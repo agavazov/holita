@@ -12,3 +12,11 @@ export function localizedContent(content: Content | undefined, language: Languag
   const en = titleEn && bodyEn ? { title: titleEn, body: bodyEn, language: 'en' } : null;
   return language === 'bg' ? (bg ?? en) : (en ?? bg);
 }
+
+export function localizedText(
+  language: Language,
+  bg: string | null | undefined,
+  en: string | null | undefined,
+) {
+  return (language === 'en' ? (en ?? bg) : (bg ?? en)) ?? null;
+}

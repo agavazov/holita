@@ -6,6 +6,40 @@ query PublicShop {
     contactEmail
     contactPhone
     contactAddress
+    logoUrl
+    faviconUrl
+    announcementBg
+    announcementEn
+  }
+}
+query PublicShopHome {
+  shopHome {
+    welcomeBg
+    welcomeEn
+    heroActionBg
+    heroActionEn
+    heroHref
+    heroImageUrl
+    showTiles
+    tiles {
+      titleBg
+      titleEn
+      eyebrowBg
+      eyebrowEn
+      imageAltBg
+      imageAltEn
+      href
+      imageUrl
+    }
+    showBenefits
+    benefits {
+      titleBg
+      titleEn
+      descriptionBg
+      descriptionEn
+      icon
+    }
+    showLatestProducts
   }
 }
 fragment ShopNavigationLinkFields on ShopNavigationLink {
@@ -486,6 +520,7 @@ fragment OrderConfirmationFields on OrderConfirmation {
   paymentMethodLabel
   paymentInstructions
   shippingMethodLabel
+  shopperNote
   lines {
     sku
     label

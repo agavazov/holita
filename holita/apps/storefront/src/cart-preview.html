@@ -1,0 +1,159 @@
+<dialog
+  #dialog
+  id="cart-preview"
+  class="cart-preview"
+  aria-labelledby="cart-preview-title"
+  closedby="any"
+  (close)="restoreFocus()"
+>
+  <div class="cart-preview-panel">
+    <header class="cart-preview-header">
+      <h2 id="cart-preview-title">{{ t().cart }}</h2>
+      <button
+        #closeButton
+        class="shop-secondary cart-preview-close"
+        type="button"
+        [attr.aria-label]="t().closeCart"
+        (click)="dialog.close()"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
+        </svg>
+      </button>
+    </header>
+    @if (shown()) { @let cart = state.cart(); @if (state.sessionExpired()) {
+    <div class="cart-preview-state">
+      <p role="alert">{{ t().cartSessionExpired }}</p>
+      <a class="shop-primary" [routerLink]="[...base(), 'sign-in']" (click)="dialog.close()">
+        {{ t().signIn }}
+      </a>
+    </div>
+    } @else if (state.loadFailed()) {
+    <div class="cart-preview-state">
+      <p role="alert">{{ t().cartLoadFailed }}</p>
+      <button class="shop-secondary" type="button" (click)="state.refresh(); closeButton.focus()">
+        {{ t().retry }}
+      </button>
+    </div>
+    } @else if (state.loading() && !cart) {
+    <p class="cart-preview-state" role="status">{{ t().loading }}</p>
+    } @else if (cart && (cart.lines.length || cart.discount)) {
+    <div class="cart-preview-items">
+      @if (cart.lines.length) {
+      <ul class="cart-preview-list" role="list" [attr.aria-busy]="state.pending()">
+        @for (line of cart.lines; track line.id) { @let name = line.name ?? t().unavailableItem;
+        @let error = lineError(); @let hasError = error?.lineId === line.id; @let minimum =
+        line.minimumQuantity ?? 1;
+        <li class="cart-preview-line">
+          <div class="cart-preview-photo" aria-hidden="true">
+            @if (line.coverImage; as image) {
+            <img [src]="image.url" alt="" />
+            }
+          </div>
+          <div class="cart-preview-line-content">
+            <div class="cart-preview-line-heading">
+              <h3>
+                @if (line.productId && line.name) {
+                <a [routerLink]="[...base(), 'product', line.productId]" (click)="dialog.close()">
+                  {{ name }}
+                </a>
+                } @else { {{ name }} }
+              </h3>
+              @if (line.lineTotal !== null) {
+              <span class="app-num">{{ formatPrice(line.lineTotal) }}</span>
+              }
+            </div>
+            @if (line.optionLabels.length) {
+            <p class="cart-preview-meta">{{ line.optionLabels.join(' · ') }}</p>
+            }
+            <div class="cart-preview-line-actions">
+              @if (line.issue !== 'UNAVAILABLE') {
+              <form novalidate (submit)="$event.preventDefault(); update(line, quantity)">
+                <label class="shop-quantity-field">
+                  <span class="shop-visually-hidden">{{ t().cartItemQuantity(name) }}</span>
+                  <input
+                    #quantity
+                    type="number"
+                    inputmode="numeric"
+                    required
+                    step="1"
+                    [value]="line.quantity.toString()"
+                    [attr.min]="minimum"
+                    [attr.max]="maxCartQuantity"
+                    [readOnly]="state.locked()"
+                    [attr.aria-invalid]="hasError && !quantity.validity.valid ? 'true' : null"
+                  />
+                </label>
+                <button
+                  class="shop-secondary"
+                  type="submit"
+                  [attr.aria-disabled]="state.locked() || null"
+                >
+                  {{ t().updateQuantity }}
+                </button>
+              </form>
+              } @else {
+              <p class="cart-preview-meta">{{ t().quantity }} {{ line.quantity }}</p>
+              }
+              <button
+                class="cart-preview-remove"
+                type="button"
+                [attr.aria-label]="t().cartItemRemove(name)"
+                [attr.aria-disabled]="state.locked() || null"
+                (click)="remove(line)"
+              >
+                {{ t().removeFromCart }}
+              </button>
+            </div>
+            @if (minimum > 1) {
+            <p class="cart-preview-meta">{{ t().minimumQuantity(minimum) }}</p>
+            } @if (line.issue) {
+            <p class="cart-preview-issue">{{ t()[cartProblems[line.issue]] }}</p>
+            } @if (error && hasError) {
+            <p class="cart-preview-issue" role="alert">{{ t()[error.message] }}</p>
+            }
+          </div>
+        </li>
+        }
+      </ul>
+      } @else {
+      <p>{{ t().cartEmpty }}</p>
+      }
+    </div>
+    } @else {
+    <p class="cart-preview-state">{{ t().cartEmpty }}</p>
+    }
+    <footer class="cart-preview-footer">
+      @if (cart && (cart.lines.length || cart.discount)) {
+      <dl class="cart-preview-totals" aria-live="polite">
+        <div>
+          <dt>{{ t().cartSubtotal }}</dt>
+          <dd class="app-num">{{ formatPrice(cart.subtotal) }}</dd>
+        </div>
+        @if (cart.discount && !cart.discount.issue) {
+        <div>
+          <dt>{{ t().discountedSubtotal }}</dt>
+          <dd class="app-num">{{ formatPrice(cart.discountedSubtotal) }}</dd>
+        </div>
+        }
+      </dl>
+      } @if (state.canCheckout()) {
+      <a class="shop-primary" [routerLink]="[...base(), 'checkout']" (click)="dialog.close()">
+        {{ t().checkout }}
+      </a>
+      } @else if (cart?.discount?.issue; as issue) {
+      <p class="cart-preview-issue">{{ t()[promoProblems[issue]] }}</p>
+      }
+      <a class="shop-secondary" [routerLink]="[...base(), 'cart']" (click)="dialog.close()">
+        {{ t().viewCart }}
+      </a>
+    </footer>
+    }
+  </div>
+</dialog>
