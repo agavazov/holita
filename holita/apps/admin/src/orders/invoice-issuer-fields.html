@@ -1,0 +1,39 @@
+<div class="app-form-grid" [formGroup]="form()">
+  @for (field of fields; track field.key) { @let id = 'invoice-' + field.key; @let message =
+  error(field.key); @let required = issuing() && !!field.requiredAtIssue;
+  <osnova-form-field
+    [class.app-form-grid--wide]="field.multiline"
+    [controlId]="id"
+    [label]="text()[field.label]"
+    [required]="required"
+    [error]="message"
+  >
+    @if (field.multiline) {
+    <textarea
+      pTextarea
+      rows="3"
+      [id]="id"
+      [formControlName]="field.key"
+      [readOnly]="readOnly()"
+      [invalid]="!!message"
+      [attr.aria-invalid]="!!message"
+      [attr.aria-required]="required || null"
+      [attr.aria-describedby]="message ? id + '-error' : null"
+      (input)="edited.emit(field.key)"
+    ></textarea>
+    } @else {
+    <input
+      pInputText
+      [id]="id"
+      [formControlName]="field.key"
+      [readOnly]="readOnly()"
+      [invalid]="!!message"
+      [attr.aria-invalid]="!!message"
+      [attr.aria-required]="required || null"
+      [attr.aria-describedby]="message ? id + '-error' : null"
+      (input)="edited.emit(field.key)"
+    />
+    }
+  </osnova-form-field>
+  }
+</div>

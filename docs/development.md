@@ -644,8 +644,10 @@ Lower sort orders appear first. Existing orders retain the method names, instruc
 fee recorded when they were placed.
 
 Open Checkout from a cart with available items, enter contact and delivery details, and choose
-delivery and payment. Review total shows current item prices, any item discount and the fixed
-delivery fee from Commerce. The Sofia seed enables Наложен платеж, Банков превод and
+delivery and payment. Select Use a different billing address to enter separate recipient and
+address details. Otherwise the order uses the delivery address and contact for billing. Review
+total shows current item prices, any item discount and the fixed delivery fee from Commerce.
+The Sofia seed enables Наложен платеж, Банков превод and
 Доставка до адрес (3.07 EUR). Доставка в събота (4.86 EUR) starts disabled.
 The storefront graph exposes the checkout options with `checkout` and prices the selected options
 with `quoteCheckout`, using the cart's existing authorization.
@@ -692,28 +694,38 @@ for two pages, including a customer with a phone, saved address and linked order
 The operator graph exposes `customers`, `customer`, `updateCustomerContact`,
 `createCustomerAddress`, `updateCustomerAddress` and the `customerId` filter on `orders`.
 
-In Admin, open Orders in the selected shop. Search by order number, contact name, email or phone,
-or filter by fulfillment status. The list URL stores search and filter values. Open an order to
-see its saved contact, delivery and payment details, charged fee, items, promo code, discount,
-totals and dated fulfillment history. Use Update status to advance from Placed through Confirmed, Processing,
-Shipped and Completed. Cancelling before shipment returns the original deductions to any
-surviving variants once. Use Mark as paid to record manual payment. Cancellation preserves a
-recorded payment. The operator graph exposes `orders`, `order`, `updateOrderStatus` and
-`markOrderPaid`.
+In Admin, open Orders in the selected shop. Combine search by order number, contact name, email or
+phone with a placement date range, fulfillment statuses, saved shipping and payment method names,
+customer type and a selected customer. Each filter can be cleared on its own. The list URL stores
+search and filter values. Open an order to see its saved contact, delivery and payment details,
+charged fee, items, promo code, discount, totals and dated fulfillment history. Use Update status
+to advance from Placed through Confirmed, Processing, Shipped and Completed. Cancelling before
+shipment returns the original deductions to surviving variants once. Use Mark as paid to record
+manual payment. Cancellation preserves a recorded payment. The operator graph exposes `orders`,
+`order`, `updateOrderStatus` and `markOrderPaid`.
 
 Choose Create manual order to record a phone order. Search by customer name or email to link it to
 their shop order history, or leave the customer field empty for a guest order. Customer selection
 fills untouched contact fields using the account's current name, email and phone. Enter delivery
-details, add variants, select enabled payment and shipping methods, and
-optionally enter a private merchant note.
+details and enter a separate billing address if needed. Search for variants by exact SKU or product
+name and page through additional matches. Select enabled payment and shipping methods and
+optionally enter a private merchant note. Order Detail shows the billing address separately and
+Create invoice uses it to fill the recipient fields.
 Open a placed, unpaid manual order and choose Edit manual order to revise it. Commerce derives
 totals and adjusts stock by the change in held quantities. Existing lines retain their booked
 prices, and unchanged methods retain their saved terms. For a historical order in BGN or an order
-with an issued invoice, the items and shipping method and charge are read-only.
-Contact, delivery address, payment method and
-merchant note remain editable while the order is placed and unpaid. The Sofia demo shop includes
-two guest phone orders, one with an issued invoice. The operator graph exposes
-`manualOrderMethods`, `createManualOrder` and `updateManualOrder`.
+with an issued invoice, the items and shipping method and charge are read-only. Contact, delivery
+and billing addresses, payment method and merchant note remain editable while the order is placed
+and unpaid. The Sofia demo shop includes two guest phone orders, one with an issued invoice.
+The operator graph exposes `manualOrderMethods`, `manualOrderVariants`, `createManualOrder` and
+`updateManualOrder`.
+
+Choose Edit order on a placed, unpaid storefront order without an invoice. The order keeps the
+shopper and cart that placed it. Correct contact details, shipping or billing address, payment
+method, or merchant note. For orders in the operating currency, item edits reconcile stock at
+the booked unit prices for retained lines, and a changed shipping method uses its configured fee.
+Orders with a booked promotion keep their items and discount. Earlier orders in another currency
+keep their items, shipping charge, currency and totals.
 
 On Order Detail, choose Create invoice, enter the invoice number and issuer details, and
 review the recipient and amounts copied from the order. Each shop uses unique invoice numbers.
@@ -724,6 +736,13 @@ order has an issued invoice. The operator graph exposes `orderInvoice` and `issu
 Open **Invoices** in the selected shop to search issued invoices by number or recipient and
 filter by issue date. Open a result to view the saved invoice. Choose **Download PDF** from
 the invoice reached through either Invoices or Order Detail.
+
+Open **Invoice settings** from the Invoices page to save the selected shop's issuer defaults.
+They prefill the next invoice and can be completed or overridden at issue. Use **Create invoice**
+from Invoices to enter the recipient and lines for a standalone EUR invoice. Standalone and
+order-linked invoices share the shop's manual numbering. New invoices can record the tax event
+date, due date, payment terms, payment method and state, issuer representative and bank details,
+reason, note, and line units. Issued invoices retain their original currency and saved details.
 
 Serve `/documents/invoices/` from Commerce on the Admin origin, forwarding the authorization
 and `x-branch-id` headers. Install the Playwright Chromium runtime for the user that runs
@@ -774,12 +793,11 @@ is unavailable. Save a menu with no links to clear its placement.
 
 In Admin, open General Settings to update the selected shop's public display name, email,
 phone and address. Save publishes those values to the storefront. Discard changes restores
-the last saved form values. Leaving the page with unsaved changes, including when switching
-the Admin language, asks whether to keep editing or discard the draft. Clear the display name
-to use the shop's Branch name. The storefront shows available details in its footer and at
-`/s/<branchId>/contacts`. The operator
-graph exposes `shopSettings` and `updateShopSettings`, and the storefront graph exposes the
-public fields on `shop`.
+the last saved form values. With unsaved changes, leaving the page, switching the Admin language
+or selecting a different shop asks whether to keep editing or discard the draft. Clear the
+display name to use the shop's Branch name. The storefront shows available details in its footer
+and at `/s/<branchId>/contacts`. The operator graph exposes `shopSettings` and
+`updateShopSettings`, and the storefront graph exposes the public fields on `shop`.
 
 `npm run dev` starts both products. `npm run kill` stops their development applications while
 leaving PostgreSQL and the ERM units running. Discocan Core reads `discocan/config/core.env`;

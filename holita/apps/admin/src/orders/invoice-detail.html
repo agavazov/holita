@@ -18,10 +18,47 @@
         <dt>{{ text().invoiceIssueDate }}</dt>
         <dd><time [dateTime]="item.issueDate">{{ date(item.issueDate) }}</time></dd>
       </div>
+      @if (item.orderNumber) {
       <div>
         <dt>{{ text().order }}</dt>
         <dd>{{ item.orderNumber }}</dd>
       </div>
+      } @if (item.taxEventDate; as taxEventDate) {
+      <div>
+        <dt>{{ text().invoiceTaxEventDate }}</dt>
+        <dd><time [dateTime]="taxEventDate">{{ date(taxEventDate) }}</time></dd>
+      </div>
+      } @if (item.dueDate; as dueDate) {
+      <div>
+        <dt>{{ text().invoiceDueDate }}</dt>
+        <dd><time [dateTime]="dueDate">{{ date(dueDate) }}</time></dd>
+      </div>
+      } @if (item.paymentTermDays !== null) {
+      <div>
+        <dt>{{ text().invoicePaymentTerm }}</dt>
+        <dd>{{ quantity(item.paymentTermDays, language()) }}</dd>
+      </div>
+      } @if (item.paymentStatus; as status) {
+      <div>
+        <dt>{{ text().orderPaymentStatus }}</dt>
+        <dd>{{ paymentText(status, language()) }}</dd>
+      </div>
+      } @if (item.paymentMethod) {
+      <div>
+        <dt>{{ text().orderPaymentMethod }}</dt>
+        <dd>{{ item.paymentMethod }}</dd>
+      </div>
+      } @if (item.reason) {
+      <div class="app-facts--wide">
+        <dt>{{ text().invoiceReason }}</dt>
+        <dd>{{ item.reason }}</dd>
+      </div>
+      } @if (item.note) {
+      <div class="app-facts--wide">
+        <dt>{{ text().invoiceNote }}</dt>
+        <dd class="invoice-address">{{ item.note }}</dd>
+      </div>
+      }
     </dl>
   </section>
   <section class="app-card" aria-labelledby="invoice-issuer">
@@ -39,6 +76,26 @@
       <div>
         <dt>{{ text().vatNumber }}</dt>
         <dd>{{ item.issuerVatNumber }}</dd>
+      </div>
+      } @if (item.issuerRepresentative) {
+      <div>
+        <dt>{{ text().invoiceIssuerRepresentative }}</dt>
+        <dd>{{ item.issuerRepresentative }}</dd>
+      </div>
+      } @if (item.issuerBankName) {
+      <div>
+        <dt>{{ text().invoiceIssuerBank }}</dt>
+        <dd>{{ item.issuerBankName }}</dd>
+      </div>
+      } @if (item.issuerIban) {
+      <div>
+        <dt>{{ text().invoiceIssuerIban }}</dt>
+        <dd>{{ item.issuerIban }}</dd>
+      </div>
+      } @if (item.issuerBic) {
+      <div>
+        <dt>{{ text().invoiceIssuerBic }}</dt>
+        <dd>{{ item.issuerBic }}</dd>
       </div>
       }
       <div class="app-facts--wide">
@@ -134,7 +191,13 @@
             <span class="app-table-identity-wrap" [title]="line.description"
               >{{ line.description }}</span
             >
+            @if (line.sku) {
             <span [title]="line.sku">{{ line.sku }}</span>
+            } @if (line.unit) {
+            <span class="app-table-identity-wrap" [title]="line.unit">
+              {{ text().invoiceLineUnit }} · {{ line.unit }}
+            </span>
+            }
             <span class="app-table-mobile-meta app-table-tag-wrap"
               >{{ text().orderUnitPrice }} {{ unitPrice }}</span
             >

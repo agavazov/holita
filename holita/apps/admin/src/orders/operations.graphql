@@ -17,6 +17,7 @@ fragment OperatorOrderDetail on Order {
   paymentStatus
   paidAt
   canEditManualOrder
+  canEditStorefrontOrder
   customerId
   merchantNote
   paymentMethodId
@@ -27,6 +28,15 @@ fragment OperatorOrderDetail on Order {
     phone
   }
   shippingAddress {
+    countryCode
+    city
+    postalCode
+    line1
+    line2
+  }
+  billingAddress {
+    name
+    phone
     countryCode
     city
     postalCode
@@ -64,12 +74,37 @@ fragment OperatorOrderDetail on Order {
   }
 }
 
-query OperatorOrders($offset: Int!, $limit: Int!, $search: String, $status: OrderStatus) {
-  orders(offset: $offset, limit: $limit, search: $search, status: $status) {
+query OperatorOrders(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $customerId: ID
+  $filter: OrderListFilter
+) {
+  orders(
+    offset: $offset
+    limit: $limit
+    search: $search
+    customerId: $customerId
+    filter: $filter
+  ) {
     items {
       ...OperatorOrderSummary
     }
     total
+  }
+}
+
+query OperatorOrderFilterMethods {
+  orderFilterMethods {
+    paymentMethodLabels
+    shippingMethodLabels
+  }
+}
+
+query OperatorOrderFilterCustomer($id: ID!) {
+  customerContact(id: $id) {
+    ...OperatorManualOrderCustomer
   }
 }
 
@@ -123,36 +158,87 @@ query OperatorInvoices($offset: Int!, $limit: Int!, $search: String, $filter: In
   }
 }
 
+fragment OperatorInvoice on Invoice {
+  id
+  orderId
+  orderNumber
+  number
+  issueDate
+  taxEventDate
+  dueDate
+  paymentTermDays
+  paymentMethod
+  paymentStatus
+  reason
+  note
+  issuerName
+  issuerCompanyId
+  issuerAddress
+  issuerVatNumber
+  issuerRepresentative
+  issuerBankName
+  issuerIban
+  issuerBic
+  recipientName
+  recipientAddress
+  recipientCompanyId
+  recipientVatNumber
+  recipientEmail
+  recipientPhone
+  currency
+  subtotal
+  discountAmount
+  shippingFee
+  total
+  lines {
+    id
+    description
+    sku
+    unit
+    quantity
+    unitPrice
+    lineTotal
+  }
+}
+
 query OperatorOrderInvoice($orderId: ID!) {
   orderInvoice(orderId: $orderId) {
+    ...OperatorInvoice
+  }
+}
+
+query OperatorInvoiceById($id: ID!) {
+  invoice(id: $id) {
+    ...OperatorInvoice
+  }
+}
+
+fragment OperatorInvoiceIssuerFields on InvoiceIssuerSettings {
+  issuerName
+  issuerCompanyId
+  issuerAddress
+  issuerVatNumber
+  issuerRepresentative
+  issuerBankName
+  issuerIban
+  issuerBic
+}
+
+query OperatorInvoiceIssuerSettings {
+  invoiceIssuerSettings {
+    ...OperatorInvoiceIssuerFields
+  }
+}
+
+mutation OperatorUpdateInvoiceIssuerSettings($input: InvoiceIssuerSettingsInput!) {
+  updateInvoiceIssuerSettings(input: $input) {
+    ...OperatorInvoiceIssuerFields
+  }
+}
+
+mutation OperatorIssueStandaloneInvoice($input: IssueStandaloneInvoiceInput!) {
+  issueStandaloneInvoice(input: $input) {
     id
-    orderId
-    orderNumber
-    number
-    issueDate
-    issuerName
-    issuerCompanyId
-    issuerAddress
-    issuerVatNumber
-    recipientName
-    recipientAddress
-    recipientCompanyId
-    recipientVatNumber
-    recipientEmail
-    recipientPhone
-    currency
-    subtotal
-    discountAmount
-    shippingFee
-    total
-    lines {
-      id
-      description
-      sku
-      quantity
-      unitPrice
-      lineTotal
-    }
   }
 }
 
@@ -215,19 +301,18 @@ query OperatorManualOrderCustomers($search: String) {
   }
 }
 
-query OperatorManualOrderProducts($search: String) {
-  products(search: $search, filter: { statuses: [ACTIVE] }) {
+query OperatorManualOrderVariants($search: String, $offset: Int!) {
+  manualOrderVariants(search: $search, offset: $offset) {
     items {
-      name
-      variants {
-        id
-        active
-        sku
-        minimumQuantity
-        optionValueIds
-      }
+      id
+      productName
+      sku
+      minimumQuantity
+      optionValueIds
     }
     total
+    offset
+    limit
   }
 }
 

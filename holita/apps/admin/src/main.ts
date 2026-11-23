@@ -32,6 +32,7 @@ import { OptionEditor } from './options/option-editor';
 import { OptionsPage } from './options/options-page';
 import { InvoiceDetail } from './orders/invoice-detail';
 import { InvoiceEditor } from './orders/invoice-editor';
+import { InvoiceIssuerSettings } from './orders/invoice-issuer-settings';
 import { InvoicesPage } from './orders/invoices-page';
 import { ManualOrderEditor } from './orders/manual-order-editor';
 import { OrderDetail } from './orders/order-detail';
@@ -59,6 +60,7 @@ void startOperator({
   name: 'admin',
   defaultPage: 'products',
   selectBranch: true,
+  canSwitchBranch: (page) => (page instanceof ShopSettingsPage ? page.canLeave() : true),
   routes: [
     { path: 'dashboard', component: DashboardPage },
     {
@@ -291,7 +293,29 @@ void startOperator({
         },
       ],
     },
-    { path: 'invoices', component: InvoicesPage },
+    {
+      path: 'invoices',
+      component: InvoicesPage,
+      children: [
+        {
+          path: 'new',
+          component: InvoiceEditor,
+          data: { drawer: true, mode: 'create', standaloneInvoice: true },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: 'settings',
+          component: InvoiceIssuerSettings,
+          data: { drawer: true, mode: 'edit' },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
+    {
+      path: 'invoices/document/:recordId',
+      component: InvoiceDetail,
+      data: { fromInvoiceRegister: true, invoiceById: true },
+    },
     {
       path: 'invoices/:recordId',
       component: InvoiceDetail,

@@ -32,6 +32,7 @@ import {
   demoProductImages,
   demoRefund,
   demoSaturdayShipping,
+  demoSeparateBillingOrder,
   demoShippingMethod,
   demoShopSettings,
   demoShopper,
@@ -640,6 +641,10 @@ async function seedCatalogue(): Promise<void> {
         demoHistoricalOrderMoney,
       );
     }
+    await seedShopperOrder(client, tenantId, branchId, demoShopper, demoSeparateBillingOrder, {
+      currency: 'EUR',
+      shippingFee: demoShippingMethod.fixedFee,
+    });
     for (const order of [demoManualOrder, demoInvoicedManualOrder]) {
       await seedManualOrder(client, tenantId, branchId, order);
     }
@@ -915,6 +920,7 @@ async function seedShopperOrder(
     city,
     postalCode,
     address,
+    billingAddress,
     subtotal,
     total,
     lines,
@@ -957,9 +963,10 @@ async function seedShopperOrder(
     `INSERT INTO "order" ("id", "tenantId", "branchId", "cartId", "customerId", "orderNumber",
        "status", "paymentStatus", "placedAt", "paidAt", "contactName", "contactEmail", "contactPhone",
        "shippingCountryCode", "shippingCity", "shippingPostalCode", "shippingLine1",
-       "paymentMethodLabel", "paymentInstructions", "shippingMethodLabel", "currency", "subtotal", "shippingFee", "total")
+       "paymentMethodLabel", "paymentInstructions", "shippingMethodLabel", "currency", "subtotal", "shippingFee", "total",
+       "billingName", "billingPhone", "billingCountryCode", "billingCity", "billingPostalCode", "billingLine1", "billingLine2")
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'BG', $14, $15, $16, $17, $18, $19,
-       $20, $21, $22, $23) ON CONFLICT DO NOTHING`,
+       $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30) ON CONFLICT DO NOTHING`,
     [
       orderId,
       tenantId,
@@ -984,6 +991,13 @@ async function seedShopperOrder(
       subtotal,
       money.shippingFee,
       total,
+      billingAddress?.name ?? null,
+      billingAddress?.phone ?? null,
+      billingAddress?.countryCode ?? null,
+      billingAddress?.city ?? null,
+      billingAddress?.postalCode ?? null,
+      billingAddress?.line1 ?? null,
+      billingAddress?.line2 ?? null,
     ],
   );
   if (order.rowCount) {

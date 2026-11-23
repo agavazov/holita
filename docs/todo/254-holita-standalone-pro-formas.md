@@ -1,10 +1,10 @@
 # 254 Define and issue standalone pro formas
 
-**Status:** Needs owner. Approve pro forma numbering, lifecycle and any conversion to ordinary invoices. **Product:** Holita. Depends on [205](205-holita-standalone-invoices.md).
+**Status:** Needs owner. Approve pro forma numbering, lifecycle and any conversion to ordinary invoices. **Product:** Holita.
 
 ## Background
 
-red.bg distinguishes pro forma documents from ordinary invoices. Ticket 205 covers the ordinary standalone document only.
+red.bg distinguishes pro forma documents from ordinary invoices. Holita supports ordinary standalone invoices.
 
 ## Goal
 

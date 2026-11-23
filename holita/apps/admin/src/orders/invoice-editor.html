@@ -3,48 +3,89 @@
   [title]="text().createInvoice"
   [subtitle]="order()?.number ?? null"
   [state]="state()"
-  [errorText]="text().orderUnavailable"
+  [errorText]="standalone ? text().invoiceLoadFailed : text().orderUnavailable"
   [saving]="saving()"
   [dirty]="form.dirty"
   (retry)="record.reload()"
 >
-  @if (canIssue() && order(); as item) {
+  @if (canIssue()) {
   <form id="invoice-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
     <section class="app-form-section">
-      <p-message severity="info">{{ text().invoiceIssueHint }}</p-message>
+      <p-message severity="info"
+        >{{ standalone ? text().standaloneInvoiceIssueHint : text().invoiceIssueHint }}</p-message
+      >
       <div class="app-form-grid">
         @for (field of documentFields; track field.key) {
         <ng-container *ngTemplateOutlet="invoiceField; context: { $implicit: field }" />
-        } @let dateError = fieldError('issueDate');
+        } @for (field of dateFields; track field.key) { @let id = 'invoice-' + field.key; @let
+        dateError = fieldError(field.key);
         <osnova-form-field
-          controlId="invoice-issueDate"
-          [label]="text().invoiceIssueDate"
-          [required]="true"
+          [controlId]="id"
+          [label]="text()[field.label]"
+          [required]="field.required"
           [error]="dateError"
         >
           <p-datepicker
-            inputId="invoice-issueDate"
-            formControlName="issueDate"
+            [inputId]="id"
+            [formControlName]="field.key"
             appendTo="body"
             iconDisplay="input"
             [showIcon]="true"
             [fluid]="true"
             [dateFormat]="format.datePickerFormat()"
             [invalid]="!!dateError"
-            [pt]="datePickerInputPt('invoice-issueDate', !!dateError)"
-            (onSelect)="clearError('issueDate')"
-            (input)="clearError('issueDate')"
+            [pt]="datePickerInputPt(id, !!dateError)"
+            (onSelect)="clearError(field.key)"
+            (input)="clearError(field.key)"
           />
         </osnova-form-field>
+        } @let termsError = fieldError('paymentTermDays');
+        <osnova-form-field
+          controlId="invoice-paymentTermDays"
+          [label]="text().invoicePaymentTerm"
+          [error]="termsError"
+        >
+          <input
+            pInputText
+            id="invoice-paymentTermDays"
+            type="number"
+            min="0"
+            max="3650"
+            step="1"
+            formControlName="paymentTermDays"
+            [invalid]="!!termsError"
+            [attr.aria-invalid]="!!termsError"
+            [attr.aria-describedby]="termsError ? 'invoice-paymentTermDays-error' : null"
+            (input)="clearError('paymentTermDays')"
+          />
+        </osnova-form-field>
+        <osnova-form-field
+          controlId="invoice-paymentStatus"
+          [label]="text().orderPaymentStatus"
+          [required]="true"
+        >
+          <p-select
+            inputId="invoice-paymentStatus"
+            ariaLabelledBy="invoice-paymentStatus-label"
+            formControlName="paymentStatus"
+            [options]="paymentOptions()"
+            optionLabel="label"
+            optionValue="id"
+          />
+        </osnova-form-field>
+        @for (field of paymentFields; track field.key) {
+        <ng-container *ngTemplateOutlet="invoiceField; context: { $implicit: field }" />
+        }
       </div>
     </section>
     <section class="app-form-section">
       <h3>{{ text().invoiceIssuer }}</h3>
-      <div class="app-form-grid">
-        @for (field of issuerFields; track field.key) {
-        <ng-container *ngTemplateOutlet="invoiceField; context: { $implicit: field }" />
-        }
-      </div>
+      <holita-invoice-issuer-fields
+        [form]="form.controls.issuer"
+        [errors]="errors()"
+        [issuing]="true"
+        (edited)="clearError($event)"
+      />
     </section>
     <section class="app-form-section">
       <h3>{{ text().invoiceRecipient }}</h3>
@@ -56,13 +97,34 @@
     </section>
     <section class="app-form-section">
       <h3>{{ text().orderItems }}</h3>
-      <dl class="app-facts">
-        @for (line of item.lines; track $index) {
+      @if (order(); as item) { @if (errors().lineUnits; as message) {
+      <p-message severity="error">{{ message }}</p-message>
+      }
+      <dl class="app-facts" formArrayName="lineUnits">
+        @for (line of item.lines; track line.id) { @let id = 'invoice-lineUnits.' + $index; @let
+        unitError = linkedUnitError($index);
         <div class="app-facts--wide">
           <dt>{{ line.label }} · {{ line.sku }}</dt>
           <dd class="app-num">
             {{ quantity(line.quantity, language()) }} × {{ amount(line.unitPrice, item.currency,
             language()) }} · {{ amount(line.lineTotal, item.currency, language()) }}
+          </dd>
+          <dd>
+            <osnova-form-field
+              [controlId]="id"
+              [label]="text().invoiceLineUnit"
+              [error]="unitError"
+            >
+              <input
+                pInputText
+                [id]="id"
+                [formControlName]="$index"
+                [invalid]="!!unitError"
+                [attr.aria-invalid]="!!unitError"
+                [attr.aria-describedby]="unitError ? id + '-error' : null"
+                (input)="clearError('lineUnits')"
+              />
+            </osnova-form-field>
           </dd>
         </div>
         }
@@ -89,6 +151,79 @@
           </dd>
         </div>
       </dl>
+      } @else if (standalone) { @if (errors().lines; as message) {
+      <p-message severity="error">{{ message }}</p-message>
+      }
+      <div formArrayName="lines" class="app-view">
+        @for (line of lines.controls; track line; let index = $index) {
+        <div [formGroupName]="index" class="app-form-grid">
+          @for (field of lineFields; track field.key) { @let path = linePath(index, field.key); @let
+          id = 'invoice-' + path; @let error = lineError(index, field.key);
+          <osnova-form-field
+            [class.app-form-grid--wide]="field.key === 'description'"
+            [controlId]="id"
+            [label]="field.key === 'unitPrice' ? text().orderUnitPrice + ' (' + currency + ')' : text()[field.label]"
+            [required]="field.required"
+            [error]="error"
+          >
+            @if (field.key === 'quantity') {
+            <input
+              pInputText
+              [id]="id"
+              type="number"
+              min="1"
+              step="1"
+              formControlName="quantity"
+              [invalid]="!!error"
+              [attr.aria-invalid]="!!error"
+              aria-required="true"
+              [attr.aria-describedby]="error ? id + '-error' : null"
+              (input)="clearError(path)"
+            />
+            } @else {
+            <input
+              pInputText
+              [id]="id"
+              [attr.inputmode]="field.key === 'unitPrice' ? 'decimal' : null"
+              [formControlName]="field.key"
+              [invalid]="!!error"
+              [attr.aria-invalid]="!!error"
+              [attr.aria-required]="field.required || null"
+              [attr.aria-describedby]="error ? id + '-error' : null"
+              (input)="clearError(path)"
+            />
+            }
+          </osnova-form-field>
+          } @if (lines.length > 1) {
+          <div class="app-page-actions app-form-grid--wide">
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              [outlined]="true"
+              [disabled]="saving()"
+              (click)="removeLine(index)"
+            >
+              {{ text().invoiceRemoveLine }}
+            </button>
+          </div>
+          }
+        </div>
+        }
+      </div>
+      <div class="app-page-actions">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving()"
+          (click)="addLine()"
+        >
+          {{ text().invoiceAddLine }}
+        </button>
+      </div>
+      }
     </section>
     @if (saveError()) {
     <p-message severity="error">{{ text().invoiceIssueFailed }}</p-message>
@@ -106,7 +241,7 @@
         @if (field.multiline) {
         <textarea
           pTextarea
-          rows="3"
+          [rows]="field.key === 'recipientAddress' ? 4 : 3"
           [id]="id"
           [formControlName]="field.key"
           [invalid]="!!error"
@@ -131,7 +266,7 @@
       </osnova-form-field>
     </ng-template>
   </form>
-  } @else if (order()) {
+  } @else if (state() === 'ready') {
   <p-message severity="info"
     >{{ alreadyIssued() ? text().invoiceAlreadyIssued : text().invoiceUnavailable }}</p-message
   >

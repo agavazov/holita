@@ -56,6 +56,12 @@ enum OrderPaymentStatus {
   @@map("orderPaymentStatus")
 }
 
+enum InvoicePaymentStatus {
+  UNPAID @map("unpaid")
+  PAID @map("paid")
+  @@map("invoicePaymentStatus")
+}
+
 enum DiscountType {
   PERCENTAGE @map("percentage")
   FIXED @map("fixed")
@@ -720,6 +726,13 @@ model Order {
   shippingPostalCode String @db.Text
   shippingLine1 String @db.Text
   shippingLine2 String? @db.Text
+  billingName String? @db.VarChar(200)
+  billingPhone String? @db.Text
+  billingCountryCode String? @db.Char(2)
+  billingCity String? @db.Text
+  billingPostalCode String? @db.Text
+  billingLine1 String? @db.Text
+  billingLine2 String? @db.Text
   merchantNote String? @db.Text
   paymentMethodId String? @db.Uuid
   paymentMethod PaymentMethod? @relation(fields: [tenantId, branchId, paymentMethodId], references: [tenantId, branchId, id], onDelete: Restrict)
@@ -780,19 +793,45 @@ model OrderStatusChange {
   @@map("orderStatusChange")
 }
 
+model InvoiceIssuerSettings {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  issuerName String? @db.VarChar(200)
+  issuerCompanyId String? @db.VarChar(100)
+  issuerAddress String? @db.Text
+  issuerVatNumber String? @db.VarChar(100)
+  issuerRepresentative String? @db.VarChar(128)
+  issuerBankName String? @db.VarChar(128)
+  issuerIban String? @db.VarChar(64)
+  issuerBic String? @db.VarChar(32)
+  @@id([tenantId, branchId])
+  @@map("invoiceIssuerSettings")
+}
+
 model Invoice {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
   branchId String @db.Uuid
-  orderId String @db.Uuid
-  order Order @relation(fields: [tenantId, branchId, orderId], references: [tenantId, branchId, id], onDelete: Restrict)
-  orderNumber String @db.VarChar(38)
+  orderId String? @db.Uuid
+  order Order? @relation(fields: [tenantId, branchId, orderId], references: [tenantId, branchId, id], onDelete: Restrict)
+  orderNumber String? @db.VarChar(38)
   number String @db.VarChar(100)
   issueDate DateTime @db.Date
+  taxEventDate DateTime? @db.Date
+  dueDate DateTime? @db.Date
+  paymentTermDays Int?
+  paymentMethod String? @db.VarChar(200)
+  paymentStatus InvoicePaymentStatus?
+  reason String? @db.VarChar(255)
+  note String? @db.Text
   issuerName String @db.VarChar(200)
   issuerCompanyId String @db.VarChar(100)
   issuerAddress String @db.Text
   issuerVatNumber String? @db.VarChar(100)
+  issuerRepresentative String? @db.VarChar(128)
+  issuerBankName String? @db.VarChar(128)
+  issuerIban String? @db.VarChar(64)
+  issuerBic String? @db.VarChar(32)
   recipientName String @db.VarChar(200)
   recipientAddress String @db.Text
   recipientCompanyId String? @db.VarChar(100)
@@ -820,6 +859,7 @@ model InvoiceLine {
   sortOrder Int
   description String @db.Text
   sku String @db.VarChar(100)
+  unit String? @db.VarChar(32)
   quantity Int
   unitPrice Decimal @db.Decimal(12, 2)
   lineTotal Decimal @db.Decimal(32, 2)

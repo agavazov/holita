@@ -54,10 +54,16 @@ const contactFields = [
 ] as const;
 
 const addressFields = [
-  { name: 'city', label: 'city', autocomplete: 'address-level2' },
-  { name: 'postalCode', label: 'postalCode', autocomplete: 'postal-code' },
-  { name: 'line1', label: 'addressLine1', autocomplete: 'address-line1' },
-  { name: 'line2', label: 'addressLine2', autocomplete: 'address-line2' },
+  { name: 'city', label: 'city', autocomplete: 'address-level2', maxLength: 120 },
+  { name: 'postalCode', label: 'postalCode', autocomplete: 'postal-code', maxLength: 20 },
+  { name: 'line1', label: 'addressLine1', autocomplete: 'address-line1', maxLength: 200 },
+  { name: 'line2', label: 'addressLine2', autocomplete: 'address-line2', maxLength: 200 },
+] as const;
+
+const billingFields = [
+  { name: 'name', label: 'billingName', autocomplete: 'name', type: 'text', maxLength: 200 },
+  { name: 'phone', label: 'billingPhone', autocomplete: 'tel', type: 'tel', maxLength: 100 },
+  ...addressFields.map((field) => ({ ...field, type: 'text' })),
 ] as const;
 
 type CheckoutProblem =
@@ -97,6 +103,10 @@ function required(control: AbstractControl) {
   return Validators.required(control);
 }
 
+function requiredBillingField(control: AbstractControl<string>) {
+  return control.value.trim() ? null : { required: true };
+}
+
 @Component({
   selector: 'holita-checkout',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -119,6 +129,7 @@ export class CheckoutPage {
   protected readonly t = computed(() => messages[this.language()]);
   protected readonly contactFields = contactFields;
   protected readonly addressFields = addressFields;
+  protected readonly billingFields = billingFields;
   protected readonly countries = computed(() => checkoutCountries(this.language()));
   protected readonly form = this.fb.group({
     contact: this.fb.group({
@@ -135,6 +146,16 @@ export class CheckoutPage {
     }),
     shippingMethodId: ['', required],
     paymentMethodId: ['', required],
+    separateBillingAddress: false,
+    billingAddress: this.fb.group({
+      name: ['', requiredBillingField],
+      phone: ['', requiredBillingField],
+      countryCode: [defaultCountryCode, requiredBillingField],
+      city: ['', requiredBillingField],
+      postalCode: ['', requiredBillingField],
+      line1: ['', requiredBillingField],
+      line2: '',
+    }),
   });
   protected readonly reviewing = signal(false);
   protected readonly placing = signal(false);
@@ -217,6 +238,16 @@ export class CheckoutPage {
   );
 
   constructor() {
+    const { separateBillingAddress, billingAddress } = this.form.controls;
+    billingAddress.disable({ emitEvent: false });
+    separateBillingAddress.valueChanges.pipe(takeUntilDestroyed()).subscribe((separate) => {
+      if (separate) {
+        billingAddress.enable({ emitEvent: false });
+      } else {
+        billingAddress.disable({ emitEvent: false });
+      }
+    });
+
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.reviewed.set(null);
       this.problem.set(null);
@@ -289,7 +320,7 @@ export class CheckoutPage {
     this.reviewed.set(null);
     this.reviewing.set(true);
     try {
-      const quote = await this.api.quoteCheckout(shopId, credentials, this.form.getRawValue());
+      const quote = await this.api.quoteCheckout(shopId, credentials, this.checkoutInput());
       if (!this.destroy.destroyed) {
         this.reviewed.set({ shopId, credentials, quote });
         afterNextRender(() => this.placeButton()?.nativeElement.focus(), {
@@ -326,7 +357,7 @@ export class CheckoutPage {
         rememberPendingGuestCheckout(shopId, guestAttempt);
       }
       const order = await this.api.placeOrder(shopId, credentials, {
-        ...this.form.getRawValue(),
+        ...this.checkoutInput(),
         cartId,
         quoteRevision,
       });
@@ -342,6 +373,11 @@ export class CheckoutPage {
     } finally {
       this.placing.set(false);
     }
+  }
+
+  private checkoutInput() {
+    const { separateBillingAddress, billingAddress, ...input } = this.form.getRawValue();
+    return { ...input, ...(separateBillingAddress ? { billingAddress } : {}) };
   }
 
   private checkoutOwner(shopId: string) {

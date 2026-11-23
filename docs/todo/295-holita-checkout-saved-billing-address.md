@@ -2,11 +2,11 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [198](198-holita-checkout-saved-address.md), [199](199-holita-checkout-billing-address.md).
+**Depends on** [198](198-holita-checkout-saved-address.md).
 
 ## Background
 
-The red.bg coverage report marks CK04 as P2. Tickets 198 and 199 deliver saved shipping choices and a separate billing snapshot respectively.
+The red.bg coverage report marks CK04 as P2. Checkout supports a separate billing snapshot. Ticket 198 covers saved shipping choices.
 
 ## Goal
 

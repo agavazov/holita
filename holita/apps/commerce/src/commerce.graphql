@@ -706,6 +706,25 @@ type OrderPage {
   offset: Int!
   limit: Int!
 }
+enum OrderCustomerType {
+  PROFILE
+  GUEST
+}
+input OrderListFilter {
+  statuses: [OrderStatus!]
+  "Inclusive UTC instant as ISO-8601 text."
+  placedAtFrom: String
+  "Exclusive UTC instant as ISO-8601 text."
+  placedAtBefore: String
+  "Method labels saved on orders in this shop."
+  paymentMethodLabels: [String!]
+  shippingMethodLabels: [String!]
+  customerTypes: [OrderCustomerType!]
+}
+type OrderFilterMethods {
+  paymentMethodLabels: [String!]!
+  shippingMethodLabels: [String!]!
+}
 type OrderContact {
   name: String!
   email: String!
@@ -783,6 +802,8 @@ type Order {
   paidAt: String
   contact: OrderContact!
   shippingAddress: OrderShippingAddress!
+  "A separately recorded billing address. Null uses the shipping address and order contact."
+  billingAddress: OrderBillingAddress
   paymentMethodLabel: String!
   paymentInstructions: String!
   shippingMethodLabel: String!
@@ -797,6 +818,7 @@ type Order {
   nextStatuses: [OrderStatus!]!
   canMarkPaid: Boolean!
   canEditManualOrder: Boolean!
+  canEditStorefrontOrder: Boolean!
   customerId: ID
   merchantNote: String
   paymentMethodId: ID
@@ -815,9 +837,40 @@ input OrderShippingAddressInput {
   line1: String!
   line2: String
 }
+type OrderBillingAddress {
+  name: String!
+  phone: String!
+  countryCode: String!
+  city: String!
+  postalCode: String!
+  line1: String!
+  line2: String
+}
+input OrderBillingAddressInput {
+  name: String!
+  phone: String!
+  countryCode: String!
+  city: String!
+  postalCode: String!
+  line1: String!
+  line2: String
+}
 input ManualOrderLineInput {
   variantId: ID!
   quantity: Int!
+}
+type ManualOrderVariantChoice {
+  id: ID!
+  productName: String!
+  sku: String!
+  minimumQuantity: Int!
+  optionValueIds: [ID!]!
+}
+type ManualOrderVariantPage {
+  items: [ManualOrderVariantChoice!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
 }
 input ManualOrderUpdateLineInput {
   "Choose either an existing line or a new variant."
@@ -830,6 +883,8 @@ input ManualOrderInput {
   merchantNote: String
   contact: OrderContactInput!
   shippingAddress: OrderShippingAddressInput!
+  "Omit or pass null to use the shipping address and order contact."
+  billingAddress: OrderBillingAddressInput
   paymentMethodId: ID!
   shippingMethodId: ID!
   lines: [ManualOrderLineInput!]!
@@ -841,6 +896,8 @@ input ManualOrderUpdateInput {
   merchantNote: String
   contact: OrderContactInput!
   shippingAddress: OrderShippingAddressInput!
+  "Omit to keep the saved choice. Pass null to use the shipping address and order contact."
+  billingAddress: OrderBillingAddressInput
   "Omit to keep the saved payment terms."
   paymentMethodId: ID
   "Omit to keep the saved shipping terms. The method cannot change after invoicing."
@@ -869,7 +926,7 @@ type InvoiceSummary {
 }
 type InvoiceListItem {
   id: ID!
-  orderId: ID!
+  orderId: ID
   number: String!
   issueDate: String!
   recipientName: String!
@@ -890,20 +947,56 @@ type InvoiceLine {
   id: ID!
   description: String!
   sku: String!
+  unit: String
   quantity: Int!
   unitPrice: String!
   lineTotal: String!
 }
+enum InvoicePaymentStatus {
+  UNPAID
+  PAID
+}
+type InvoiceIssuerSettings {
+  issuerName: String
+  issuerCompanyId: String
+  issuerAddress: String
+  issuerVatNumber: String
+  issuerRepresentative: String
+  issuerBankName: String
+  issuerIban: String
+  issuerBic: String
+}
+input InvoiceIssuerSettingsInput {
+  issuerName: String
+  issuerCompanyId: String
+  issuerAddress: String
+  issuerVatNumber: String
+  issuerRepresentative: String
+  issuerBankName: String
+  issuerIban: String
+  issuerBic: String
+}
 type Invoice {
   id: ID!
-  orderId: ID!
-  orderNumber: String!
+  orderId: ID
+  orderNumber: String
   number: String!
   issueDate: String!
+  taxEventDate: String
+  dueDate: String
+  paymentTermDays: Int
+  paymentMethod: String
+  paymentStatus: InvoicePaymentStatus
+  reason: String
+  note: String
   issuerName: String!
   issuerCompanyId: String!
   issuerAddress: String!
   issuerVatNumber: String
+  issuerRepresentative: String
+  issuerBankName: String
+  issuerIban: String
+  issuerBic: String
   recipientName: String!
   recipientAddress: String!
   recipientCompanyId: String
@@ -917,19 +1010,67 @@ type Invoice {
   total: String!
   lines: [InvoiceLine!]!
 }
+input InvoiceLineUnitInput {
+  orderLineId: ID!
+  unit: String!
+}
 input IssueOrderInvoiceInput {
   number: String!
   issueDate: String!
+  taxEventDate: String
+  dueDate: String
+  paymentTermDays: Int
+  paymentMethod: String
+  paymentStatus: InvoicePaymentStatus
+  reason: String
+  note: String
   issuerName: String!
   issuerCompanyId: String!
   issuerAddress: String!
   issuerVatNumber: String
+  issuerRepresentative: String
+  issuerBankName: String
+  issuerIban: String
+  issuerBic: String
   recipientName: String!
   recipientAddress: String!
   recipientCompanyId: String
   recipientVatNumber: String
   recipientEmail: String
   recipientPhone: String
+  lineUnits: [InvoiceLineUnitInput!]
+}
+input StandaloneInvoiceLineInput {
+  description: String!
+  unit: String
+  quantity: Int!
+  unitPrice: String!
+}
+input IssueStandaloneInvoiceInput {
+  number: String!
+  issueDate: String!
+  taxEventDate: String
+  dueDate: String
+  paymentTermDays: Int
+  paymentMethod: String
+  paymentStatus: InvoicePaymentStatus
+  reason: String
+  note: String
+  issuerName: String!
+  issuerCompanyId: String!
+  issuerAddress: String!
+  issuerVatNumber: String
+  issuerRepresentative: String
+  issuerBankName: String
+  issuerIban: String
+  issuerBic: String
+  recipientName: String!
+  recipientAddress: String!
+  recipientCompanyId: String
+  recipientVatNumber: String
+  recipientEmail: String
+  recipientPhone: String
+  lines: [StandaloneInvoiceLineInput!]!
 }
 enum OrderRefundStatus {
   NONE
@@ -1124,17 +1265,22 @@ type Query {
   productTags(search: String, limit: Int! = 20): [ProductTag!]!
   discounts(offset: Int! = 0, limit: Int! = 20, search: String, sort: DiscountSort): DiscountPage!
   discount(id: ID!): Discount
+  manualOrderVariants(search: String, offset: Int! = 0, limit: Int! = 20): ManualOrderVariantPage!
+  orderFilterMethods: OrderFilterMethods!
   orders(
     offset: Int! = 0
     limit: Int! = 20
     search: String
     status: OrderStatus
     customerId: ID
+    filter: OrderListFilter
   ): OrderPage!
   order(id: ID!): Order
   manualOrderMethods: ManualOrderMethods!
   invoices(offset: Int! = 0, limit: Int! = 20, search: String, filter: InvoiceFilter): InvoicePage!
   orderInvoice(orderId: ID!): Invoice
+  invoice(id: ID!): Invoice
+  invoiceIssuerSettings: InvoiceIssuerSettings!
   orderRefundSummary(orderId: ID!): OrderRefundSummary
 }
 type Mutation {
@@ -1180,9 +1326,12 @@ type Mutation {
   createDiscount(input: DiscountInput!): Discount!
   updateDiscount(id: ID!, input: DiscountInput!): Discount!
   createManualOrder(input: ManualOrderInput!): Order!
+  "Correct an eligible order in the merchant order editor."
   updateManualOrder(id: ID!, input: ManualOrderUpdateInput!): Order!
   updateOrderStatus(id: ID!, status: OrderStatus!): Order!
   markOrderPaid(id: ID!): Order!
   issueOrderInvoice(orderId: ID!, input: IssueOrderInvoiceInput!): Invoice!
+  issueStandaloneInvoice(input: IssueStandaloneInvoiceInput!): Invoice!
+  updateInvoiceIssuerSettings(input: InvoiceIssuerSettingsInput!): InvoiceIssuerSettings!
   recordOrderRefund(orderId: ID!, input: RecordOrderRefundInput!): OrderRefund!
 }

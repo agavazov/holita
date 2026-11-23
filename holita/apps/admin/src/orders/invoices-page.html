@@ -1,4 +1,9 @@
-<osnova-page-header [title]="text().invoices" [moduleInfo]="text().invoicesInfo" />
+<osnova-page-header
+  [title]="text().invoices"
+  [moduleInfo]="text().invoicesInfo"
+  [actions]="actions()"
+  (action)="openAction($event)"
+/>
 @if (scope()) {
 <osnova-table-panel
   mobileIdentityLayout="trailing"
@@ -68,7 +73,7 @@
           <div class="app-cell-identity">
             <a
               class="app-link app-table-identity-wrap"
-              [routerLink]="[invoice.orderId]"
+              [routerLink]="invoice.orderId ? [invoice.orderId] : ['document', invoice.id]"
               queryParamsHandling="preserve"
               [preserveFragment]="true"
               (click)="url.cancelPending()"
@@ -96,3 +101,4 @@
 } @else {
 <p-message severity="info">{{ text().noShop }}</p-message>
 }
+<router-outlet [routerOutletData]="drawerHost" />

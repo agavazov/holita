@@ -2,7 +2,7 @@
 
 **Status:** Blocked. Waits for the invoice issuer settings, approved VAT and ordinary invoice numbering. **Product:** Holita.
 
-**Depends on** [203](203-holita-invoice-issuer-settings.md), [209](209-holita-invoice-vat-snapshots.md), [274](274-holita-invoice-number-sequence.md).
+**Depends on** [209](209-holita-invoice-vat-snapshots.md), [274](274-holita-invoice-number-sequence.md).
 
 ## Background
 

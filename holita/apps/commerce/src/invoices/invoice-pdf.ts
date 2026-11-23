@@ -15,8 +15,8 @@ function invoiceHtml(invoice: Invoice): string {
   const rows = invoice.lines
     .map(
       (line) => `<tr>
-        <td class="line-description">${escape(line.description)}<small>${escape(line.sku)}</small></td>
-        <td class="amount">${String(line.quantity)}</td>
+        <td class="line-description">${escape(line.description)}${line.sku ? `<small>${escape(line.sku)}</small>` : ''}</td>
+        <td class="amount">${String(line.quantity)}${line.unit ? ' ' + escape(line.unit) : ''}</td>
         <td class="amount">${escape(line.unitPrice)}</td>
         <td class="amount">${escape(line.lineTotal)}</td>
       </tr>`,
@@ -55,6 +55,12 @@ function invoiceHtml(invoice: Invoice): string {
       <h1>${title}</h1>
       <dl>
         ${fact('Дата на издаване', invoice.issueDate)}
+        ${fact('Данъчно събитие', invoice.taxEventDate)}
+        ${fact('Падеж', invoice.dueDate)}
+        ${fact('Срок (дни)', invoice.paymentTermDays?.toString())}
+        ${fact('Начин на плащане', invoice.paymentMethod)}
+        ${fact('Плащане', invoice.paymentStatus ? (invoice.paymentStatus === 'PAID' ? 'Платена' : 'Неплатена') : null)}
+        ${fact('Основание', invoice.reason)}
         ${fact('Поръчка', invoice.orderNumber)}
         ${fact('Валута', invoice.currency)}
       </dl>
@@ -66,6 +72,10 @@ function invoiceHtml(invoice: Invoice): string {
             ${fact('ЕИК', invoice.issuerCompanyId)}
             ${fact('ДДС номер', invoice.issuerVatNumber)}
             ${fact('Адрес', invoice.issuerAddress)}
+            ${fact('Представител', invoice.issuerRepresentative)}
+            ${fact('Банка', invoice.issuerBankName)}
+            ${fact('IBAN', invoice.issuerIban)}
+            ${fact('BIC / SWIFT', invoice.issuerBic)}
           </dl>
         </section>
         <section>
@@ -91,6 +101,7 @@ function invoiceHtml(invoice: Invoice): string {
         </thead>
         <tbody>${rows}</tbody>
       </table>
+      ${invoice.note ? `<dl>${fact('Бележка', invoice.note)}</dl>` : ''}
       <dl class="totals">
         ${fact('Междинна сума', `${invoice.subtotal} ${currency}`)}
         ${fact('Отстъпка', `${invoice.discountAmount} ${currency}`)}

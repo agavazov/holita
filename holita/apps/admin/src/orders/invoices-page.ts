@@ -7,7 +7,7 @@ import {
   linkedSignal,
   resource,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { OperatorLanguage, operatorStrings } from '@holita/operator';
 import {
   FilterBuilder,
@@ -20,11 +20,15 @@ import {
   tableView,
   trackById,
   uiMessages,
+  type DrawerHost,
+  type MenuChoice,
+  type PageHeaderAction,
   type FilterCondition,
   type FilterField,
   type ListDefinition,
   type TableColumn,
 } from '@osnova/ui';
+import { MessageService } from 'primeng/api';
 import { Message } from 'primeng/message';
 import { TableModule } from 'primeng/table';
 import type { OperatorInvoicesQuery } from '../generated/orders-operations';
@@ -47,13 +51,16 @@ const definition: ListDefinition<InvoiceFilters, 'ISSUE_DATE'> = {
 
 @Component({
   selector: 'holita-invoices-page',
-  imports: [FilterBuilder, Message, PageHeader, RouterLink, TableModule, TablePanel],
+  imports: [FilterBuilder, Message, PageHeader, RouterLink, RouterOutlet, TableModule, TablePanel],
   templateUrl: './invoices-page.html',
   host: { class: 'app-view' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InvoicesPage {
   private readonly api = inject(OrdersApi);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly messages = inject(MessageService);
   private readonly format = injectDisplayFormat();
   protected readonly language = inject(OperatorLanguage).value;
   protected readonly text = computed(() => operatorStrings[this.language()]);
@@ -62,6 +69,25 @@ export class InvoicesPage {
   protected readonly url = new UrlListState(definition, () => !!this.scope());
   protected readonly amount = orderAmount;
   protected readonly trackById = trackById;
+  protected readonly actions = computed<readonly PageHeaderAction[]>(() => {
+    if (!this.scope()) {
+      return [];
+    }
+    const settings = { id: 'settings', label: this.text().invoiceSettings };
+    return this.api.canWrite()
+      ? [{ id: 'new', label: this.text().createInvoice, primary: true }, settings]
+      : [settings];
+  });
+  protected readonly drawerHost: DrawerHost = {
+    saved: ({ message, recordId }) => {
+      if (message) {
+        this.messages.add({ severity: 'success', summary: message });
+      }
+      if (recordId) {
+        this.list.reload();
+      }
+    },
+  };
   protected readonly columns = computed<readonly TableColumn[]>(() => [
     {
       id: 'number',
@@ -160,6 +186,15 @@ export class InvoicesPage {
       if (this.list.hasValue() && !this.list.isLoading()) {
         this.url.correctPage(Math.ceil(this.list.value().total / this.url.state().pageSize));
       }
+    });
+  }
+
+  protected openAction({ id }: MenuChoice): void {
+    this.url.cancelPending();
+    void this.router.navigate([id], {
+      relativeTo: this.route,
+      queryParamsHandling: 'preserve',
+      preserveFragment: true,
     });
   }
 

@@ -1,0 +1,44 @@
+<osnova-route-drawer
+  size="lg"
+  [title]="text().invoiceSettings"
+  [state]="state()"
+  [errorText]="text().invoiceSettingsUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="record.reload()"
+>
+  @if (state() === 'ready') {
+  <form id="invoice-settings-form" #settingsForm [formGroup]="form" (ngSubmit)="save()">
+    <section class="app-form-section">
+      <p-message severity="info">{{ text().invoiceSettingsHint }}</p-message>
+      <holita-invoice-issuer-fields
+        [form]="form"
+        [errors]="errors()"
+        [readOnly]="!canWrite()"
+        (edited)="clearError($event)"
+      />
+    </section>
+    @if (saveError()) {
+    <p-message severity="error">{{ text().invoiceSettingsSaveFailed }}</p-message>
+    }
+  </form>
+  }
+
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ canWrite() ? shared().cancel : shared().close }}
+    </button>
+    @if (canWrite() && state() === 'ready') {
+    <button pButton type="submit" form="invoice-settings-form" [disabled]="saving() || !form.dirty">
+      {{ text().save }}
+    </button>
+    }
+  </div>
+</osnova-route-drawer>

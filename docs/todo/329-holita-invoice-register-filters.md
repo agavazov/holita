@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [328](328-holita-invoice-document-fields.md).
-
 ## Background
 
 The red.bg coverage report marks IV04 as P2. The basic register covers search by number, date or recipient. The source provides filters for the expanded invoice metadata.

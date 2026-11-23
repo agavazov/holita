@@ -319,6 +319,8 @@ input CheckoutAddressInput {
 input CheckoutQuoteInput {
   contact: CheckoutContactInput!
   shippingAddress: CheckoutAddressInput!
+  "Omit or pass null to use the shipping address and order contact."
+  billingAddress: CheckoutBillingAddressInput
   paymentMethodId: ID!
   shippingMethodId: ID!
 }
@@ -335,11 +337,22 @@ type CheckoutQuote {
   shippingFee: String!
   total: String!
 }
+input CheckoutBillingAddressInput {
+  name: String!
+  phone: String!
+  countryCode: String!
+  city: String!
+  postalCode: String!
+  line1: String!
+  line2: String
+}
 input PlaceOrderInput {
   cartId: ID!
   quoteRevision: String!
   contact: CheckoutContactInput!
   shippingAddress: CheckoutAddressInput!
+  "Omit or pass null to use the shipping address and order contact."
+  billingAddress: CheckoutBillingAddressInput
   paymentMethodId: ID!
   shippingMethodId: ID!
 }

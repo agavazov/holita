@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { CartOwner } from '../cart/cart.repository.js';
 import { DatabaseService } from '../database.service.js';
-import { Prisma, type OrderStatus } from '../generated/prisma/client.js';
+import { Prisma } from '../generated/prisma/client.js';
 import type { Scope, ShopperScope } from '../scope.js';
 
 function orderLines(scope: Scope) {
@@ -50,24 +50,27 @@ export class OrdersRepository {
     offset: number,
     limit: number,
     words: string[],
-    status: OrderStatus | null | undefined,
-    customerId: string | undefined,
+    filters: Prisma.OrderWhereInput,
   ) {
     const where: Prisma.OrderWhereInput = {
       ...scope,
-      ...(status ? { status } : {}),
-      ...(customerId ? { customerId } : {}),
-      AND: words.map((word) => {
-        const match = { contains: word.replace(/[\\%_]/gu, '\\$&'), mode: 'insensitive' } as const;
-        return {
-          OR: [
-            { orderNumber: match },
-            { contactName: match },
-            { contactEmail: match },
-            { contactPhone: match },
-          ],
-        };
-      }),
+      AND: [
+        filters,
+        ...words.map((word) => {
+          const match = {
+            contains: word.replace(/[\\%_]/gu, '\\$&'),
+            mode: 'insensitive',
+          } as const;
+          return {
+            OR: [
+              { orderNumber: match },
+              { contactName: match },
+              { contactEmail: match },
+              { contactPhone: match },
+            ],
+          };
+        }),
+      ],
     };
     const order = this.database.client.order;
     const [items, total] = await this.database.client.$transaction(
@@ -95,11 +98,108 @@ export class OrdersRepository {
     return { items, total, offset, limit };
   }
 
+  async operatorFilterMethods(scope: Scope) {
+    const order = this.database.client.order;
+    const [paymentMethods, shippingMethods] = await this.database.client.$transaction(
+      [
+        order.groupBy({
+          where: scope,
+          by: ['paymentMethodLabel'],
+          orderBy: { paymentMethodLabel: 'asc' },
+        }),
+        order.groupBy({
+          where: scope,
+          by: ['shippingMethodLabel'],
+          orderBy: { shippingMethodLabel: 'asc' },
+        }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return {
+      paymentMethodLabels: paymentMethods.map(({ paymentMethodLabel }) => paymentMethodLabel),
+      shippingMethodLabels: shippingMethods.map(({ shippingMethodLabel }) => shippingMethodLabel),
+    };
+  }
+
   operatorOrder(scope: Scope, id: string) {
     return this.database.client.$transaction(
       (tx) => tx.order.findUnique({ where: { ...scope, id }, include: orderDetail(scope) }),
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
+  }
+
+  async manualVariants(scope: Scope, offset: number, limit: number, search: string) {
+    const words = search.split(/\s+/u).filter(Boolean);
+    const product = { ...scope, status: 'ACTIVE' } satisfies Prisma.ProductWhereInput;
+    const select = {
+      id: true,
+      sku: true,
+      minimumQuantity: true,
+      product: { select: { name: true } },
+      values: { where: scope, select: { optionValueId: true } },
+    } satisfies Prisma.ProductVariantSelect;
+    const page = await this.database.client.$transaction(
+      async ({ productVariant }) => {
+        const exact =
+          search && Array.from(search).length <= 100
+            ? await productVariant.findUnique({
+                where: {
+                  tenantId_branchId_sku: { ...scope, sku: search },
+                  active: true,
+                  product,
+                },
+                select,
+              })
+            : null;
+        const first = exact && offset === 0 ? [exact] : [];
+        if (words.length > 5) {
+          return { items: first, total: exact ? 1 : 0 };
+        }
+        const where: Prisma.ProductVariantWhereInput = {
+          ...scope,
+          active: true,
+          ...(exact && { id: { not: exact.id } }),
+          product: {
+            ...product,
+            AND: words.map((word) => ({
+              name: { contains: word.replace(/[\\%_]/gu, '\\$&'), mode: 'insensitive' },
+            })),
+          },
+        };
+        const take = limit - first.length;
+        const matches = take
+          ? await productVariant.findMany({
+              where,
+              skip: exact ? Math.max(0, offset - 1) : offset,
+              take,
+              orderBy: [
+                { product: { name: 'asc' } },
+                { productId: 'asc' },
+                { sortOrder: 'asc' },
+                { id: 'asc' },
+              ],
+              select,
+            })
+          : [];
+        return {
+          items: [...first, ...matches],
+          total: (await productVariant.count({ where })) + (exact ? 1 : 0),
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return {
+      items: page.items.map(({ id, sku, minimumQuantity, product: { name }, values }) => ({
+        id,
+        productName: name,
+        sku,
+        minimumQuantity,
+        optionValueIds: values.map(({ optionValueId }) => optionValueId),
+      })),
+      total: page.total,
+      offset,
+      limit,
+    };
   }
 
   async lockOrder(tx: Prisma.TransactionClient, scope: Scope, id: string) {

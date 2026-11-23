@@ -37,13 +37,16 @@ import {
   innerInputPt,
   lockWhileSaving,
   normalizeSearch,
+  patternValidator,
   searchApplies,
+  textValidator,
   uiMessages,
   validationMessage,
   type RouteDrawerState,
 } from '@osnova/ui';
 import { AutoComplete } from 'primeng/autocomplete';
 import { ButtonDirective } from 'primeng/button';
+import { Checkbox } from 'primeng/checkbox';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
@@ -87,6 +90,25 @@ const addressPaths = [
   'shippingAddress.postalCode',
   'shippingAddress.countryCode',
 ];
+const billingAddressValidators = {
+  name: textValidator(200, { required: true }),
+  phone: textValidator(100, { required: true }),
+  line1: textValidator(200, { required: true }),
+  line2: textValidator(200),
+  city: textValidator(120, { required: true }),
+  postalCode: textValidator(20, { required: true }),
+  countryCode: [textValidator(2, { required: true }), patternValidator(/^[a-z]{2}$/i)],
+};
+const billingAddressKeys = [
+  'name',
+  'phone',
+  'line1',
+  'line2',
+  'city',
+  'postalCode',
+  'countryCode',
+] as const;
+const billingAddressPaths = billingAddressKeys.map((key) => `billingAddress.${key}`);
 
 function operatorFieldPath(path: string): string {
   return path.replace(/\.([a-z0-9])/gu, (_, initial: string) => initial.toUpperCase());
@@ -101,6 +123,7 @@ function customerChoice(customer: OperatorManualOrderCustomerFragment): Customer
   imports: [
     AutoComplete,
     ButtonDirective,
+    Checkbox,
     FormField,
     InputText,
     Message,
@@ -159,8 +182,11 @@ export class ManualOrderEditor {
     loader: async ({ params: { scope, id } }) => {
       const order = id ? await this.api.find(scope, id) : null;
       const choices =
-        !id || order?.canEditManualOrder
-          ? await this.api.manualChoices(scope, order?.customerId ?? null)
+        !id || order?.canEditManualOrder || order?.canEditStorefrontOrder
+          ? await this.api.manualChoices(
+              scope,
+              order?.canEditManualOrder ? (order.customerId ?? null) : null,
+            )
           : null;
       return { order, choices };
     },
@@ -169,6 +195,9 @@ export class ManualOrderEditor {
     this.record.hasValue() ? this.record.value().order : null,
   );
   protected readonly order = linkedSignal(() => this.loadedOrder());
+  protected readonly storefrontOrder = computed(
+    () => this.order()?.canEditStorefrontOrder ?? false,
+  );
   protected readonly amountsLockMessage = computed(() => {
     const order = this.order();
     if (order?.invoice) {
@@ -179,6 +208,20 @@ export class ManualOrderEditor {
       : null;
   });
   protected readonly amountsLocked = computed(() => this.amountsLockMessage() !== null);
+  protected readonly promoLinesLocked = computed(() => {
+    const order = this.order();
+    return !!(
+      order?.canEditStorefrontOrder &&
+      (order.discountCode || Number(order.discountAmount) !== 0)
+    );
+  });
+  protected readonly linesLocked = computed(() => this.amountsLocked() || this.promoLinesLocked());
+  protected readonly paymentMethodRequired = computed(
+    () => !this.storefrontOrder() || !!this.order()?.paymentMethodId,
+  );
+  protected readonly shippingMethodRequired = computed(
+    () => !this.storefrontOrder() || !!this.order()?.shippingMethodId,
+  );
   private readonly choices = computed(() =>
     this.record.hasValue() ? this.record.value().choices : null,
   );
@@ -199,7 +242,9 @@ export class ManualOrderEditor {
   });
   protected readonly canEdit = computed(
     () =>
-      this.canWrite() && !!this.choices() && (!this.editing || this.order()?.canEditManualOrder),
+      this.canWrite() &&
+      !!this.choices() &&
+      (!this.editing || this.order()?.canEditManualOrder || this.storefrontOrder()),
   );
   private readonly customerSearch = signal<string | null>(null);
   private readonly customerSearchInvalid = computed(
@@ -242,9 +287,9 @@ export class ManualOrderEditor {
   protected readonly paymentOptions = computed(() => {
     const options = this.choices()?.manualOrderMethods.paymentMethods ?? [];
     const order = this.order();
-    return order?.paymentMethodId
+    return order && (order.paymentMethodId || order.canEditStorefrontOrder)
       ? [
-          { id: order.paymentMethodId, label: order.paymentMethodLabel },
+          { id: order.paymentMethodId ?? '', label: order.paymentMethodLabel },
           ...options.filter(({ id }) => id !== order.paymentMethodId),
         ]
       : options;
@@ -252,10 +297,10 @@ export class ManualOrderEditor {
   protected readonly shippingOptions = computed(() => {
     const options = this.choices()?.manualOrderMethods.shippingMethods ?? [];
     const order = this.order();
-    return order?.shippingMethodId
+    return order && (order.shippingMethodId || order.canEditStorefrontOrder)
       ? [
           {
-            id: order.shippingMethodId,
+            id: order.shippingMethodId ?? '',
             label: order.shippingMethodLabel,
             fixedFee: order.shippingFee,
           },
@@ -284,12 +329,26 @@ export class ManualOrderEditor {
       line1: ['', required],
       line2: '',
     }),
+    differentBillingAddress: false,
+    billingAddress: this.builder.group({
+      name: '',
+      phone: '',
+      countryCode: 'BG',
+      city: '',
+      postalCode: '',
+      line1: '',
+      line2: '',
+    }),
     merchantNote: '',
     paymentMethodId: ['', required],
     shippingMethodId: ['', required],
     lines: new FormArray<LineForm>([], required),
     variantPicker: new FormControl<VariantChoice | string | null>(null),
   });
+  protected readonly differentBillingAddress = toSignal(
+    this.form.controls.differentBillingAddress.valueChanges,
+    { initialValue: false },
+  );
   protected readonly lines = this.form.controls.lines;
   private readonly selectedShipping = toSignal(this.form.controls.shippingMethodId.valueChanges, {
     initialValue: this.form.controls.shippingMethodId.value,
@@ -301,26 +360,25 @@ export class ManualOrderEditor {
   });
 
   private readonly search = signal<string | null>(null);
-  protected readonly searchInvalid = computed(() => {
-    const search = this.search() ?? '';
-    return !searchApplies(search);
-  });
-  protected readonly products = resource({
+  private readonly variantOffset = signal(0);
+  private readonly variantPicker = viewChild<AutoComplete>('variantPicker');
+  protected readonly variants = resource({
     params: () => {
       const scope = this.api.scope();
       const search = this.search();
-      return scope &&
-        this.canEdit() &&
-        !this.amountsLocked() &&
-        search !== null &&
-        !this.searchInvalid()
-        ? { scope, search }
+      return scope && this.canEdit() && !this.linesLocked() && search !== null
+        ? { scope, search, offset: this.variantOffset() }
         : undefined;
     },
-    loader: ({ params }) => this.api.manualProducts(params.scope, params.search),
+    loader: ({ params, abortSignal }) =>
+      this.api.manualVariants(params.scope, params.search, params.offset, abortSignal),
   });
+  protected readonly variantPage = computed(() =>
+    this.variants.hasValue() && !this.variants.isLoading() ? this.variants.value() : null,
+  );
   protected readonly suggestions = computed<VariantChoice[]>(() => {
-    if (!this.products.hasValue() || this.products.isLoading()) {
+    const page = this.variantPage();
+    if (!page) {
       return [];
     }
     const labels = new Map(
@@ -328,28 +386,21 @@ export class ManualOrderEditor {
         ?.productOptions.filter(({ active }) => active)
         .flatMap(({ values }) => values.map(({ id, label }) => [id, label] as const)),
     );
-    return this.products.value().items.flatMap(({ name, variants }) =>
-      variants
-        .filter(({ active }) => active)
-        .map(({ id, sku, minimumQuantity, optionValueIds }) => ({
-          id,
-          minimumQuantity,
-          label: [
-            name,
-            ...optionValueIds.flatMap((valueId) => labels.get(valueId) ?? []),
-            sku,
-          ].join(' · '),
-        })),
-    );
+    return page.items.map(({ id, productName, sku, minimumQuantity, optionValueIds }) => ({
+      id,
+      minimumQuantity,
+      label: [
+        productName,
+        ...optionValueIds.flatMap((valueId) => labels.get(valueId) ?? []),
+        sku,
+      ].join(' · '),
+    }));
   });
   protected readonly variantEmptyMessage = computed(() => {
-    if (this.products.isLoading()) {
+    if (this.variants.isLoading()) {
       return this.shared().loading;
     }
-    if (this.searchInvalid()) {
-      return this.shared().searchTooManyWords;
-    }
-    if (this.products.error()) {
+    if (this.variants.error()) {
       return this.text().manualOrderProductsUnavailable;
     }
     return this.shared().table.noResultsTitle;
@@ -373,28 +424,47 @@ export class ManualOrderEditor {
         { key: 'countryCode', label: this.text().orderCountryCode, required: true, wide: false },
       ] as const,
   );
+  protected readonly billingContactFields = computed(
+    () =>
+      [
+        { key: 'name', label: this.text().name, type: 'text' },
+        { key: 'phone', label: this.text().orderPhone, type: 'tel' },
+      ] as const,
+  );
 
   constructor() {
     effect(() => {
       this.params();
       const order = this.loadedOrder();
+      const billingAddress = order?.billingAddress;
       const customer = this.choices()?.customerContact;
       this.selectedCustomer = customer ? customerChoice(customer) : null;
       this.customerPicker.reset(this.selectedCustomer);
       this.autofilledContact.clear();
+      this.form.controls.paymentMethodId.setValidators(
+        this.paymentMethodRequired() ? required : null,
+      );
+      this.form.controls.shippingMethodId.setValidators(
+        this.shippingMethodRequired() ? required : null,
+      );
       this.form.reset({
         customerId: order?.customerId ?? '',
         ...(order && {
           contact: order.contact,
           shippingAddress: { ...order.shippingAddress, line2: order.shippingAddress.line2 ?? '' },
         }),
+        differentBillingAddress: !!billingAddress,
+        ...(billingAddress && {
+          billingAddress: { ...billingAddress, line2: billingAddress.line2 ?? '' },
+        }),
         merchantNote: order?.merchantNote ?? '',
         paymentMethodId: order?.paymentMethodId ?? '',
         shippingMethodId: order?.shippingMethodId ?? '',
       });
+      this.billingAddressChanged();
       this.resetLines(order?.lines ?? []);
       this.customerSearch.set(null);
-      this.search.set(null);
+      this.clearVariantSearch();
       this.errors.set({});
       this.saveError.set(null);
     });
@@ -412,6 +482,16 @@ export class ManualOrderEditor {
 
   canLeave(): boolean | Promise<boolean> {
     return !this.saving() && this.drawer().confirmLeave(this.form.dirty);
+  }
+
+  protected billingAddressChanged(): void {
+    const { billingAddress, differentBillingAddress } = this.form.controls;
+    for (const key of billingAddressKeys) {
+      const control = billingAddress.controls[key];
+      control.setValidators(differentBillingAddress.value ? billingAddressValidators[key] : null);
+      control.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+    }
+    billingAddress.updateValueAndValidity({ emitEvent: false });
   }
 
   protected searchCustomers(query: string): void {
@@ -458,7 +538,24 @@ export class ManualOrderEditor {
   }
 
   protected searchVariants(value: string): void {
-    this.search.set(normalizeSearch(value));
+    const search = normalizeSearch(value);
+    if (search === this.search()) {
+      this.variants.reload();
+      return;
+    }
+    this.variantOffset.set(0);
+    this.search.set(search);
+  }
+
+  protected clearVariantSearch(): void {
+    this.search.set(null);
+    this.variantOffset.set(0);
+  }
+
+  protected changeVariantPage(event: Event, offset: number): void {
+    event.stopPropagation();
+    this.variantOffset.set(offset);
+    afterNextRender(() => this.variantPicker()?.show(true), { injector: this.injector });
   }
 
   protected minimumHint(minimumQuantity: number): string | null {
@@ -470,6 +567,7 @@ export class ManualOrderEditor {
   protected addLine(value: unknown): void {
     const variant = this.suggestions().find((item) => item === value);
     this.form.controls.variantPicker.reset();
+    this.clearVariantSearch();
     if (!variant || this.saving()) {
       return;
     }
@@ -480,12 +578,12 @@ export class ManualOrderEditor {
     }
     const { id: variantId, label, minimumQuantity } = variant;
     this.lines.push(this.lineForm({ variantId, label, minimumQuantity }, minimumQuantity));
-    this.form.markAsDirty();
+    this.lines.markAsDirty();
   }
 
   protected removeLine(index: number): void {
     this.lines.removeAt(index);
-    this.form.markAsDirty();
+    this.lines.markAsDirty();
     this.errors.update((errors) =>
       Object.fromEntries(
         Object.entries(errors).filter(([path]) => path !== 'lines' && !path.startsWith('lines.')),
@@ -544,6 +642,8 @@ export class ManualOrderEditor {
       customerId,
       contact,
       shippingAddress,
+      differentBillingAddress,
+      billingAddress,
       merchantNote,
       paymentMethodId,
       shippingMethodId,
@@ -559,27 +659,35 @@ export class ManualOrderEditor {
       return;
     }
     const fields = {
-      customerId: customerId || null,
       contact,
       shippingAddress,
+      billingAddress: differentBillingAddress ? billingAddress : null,
       merchantNote: merchantNote || null,
-      paymentMethodId,
     };
+    const saved = this.order();
     this.saving.set(true);
     try {
       const recordId = params.id
         ? await this.api.updateManual(params.scope, params.id, {
             ...fields,
-            ...(!this.amountsLocked() && {
-              shippingMethodId,
-              lines: lines.map(({ choice, quantity }) => ({
-                ...(choice.lineId ? { lineId: choice.lineId } : { variantId: choice.variantId }),
-                quantity: quantity ?? 0,
-              })),
-            }),
+            ...(!saved?.canEditStorefrontOrder && { customerId: customerId || null }),
+            ...(paymentMethodId &&
+              paymentMethodId !== saved?.paymentMethodId && { paymentMethodId }),
+            ...(!this.amountsLocked() &&
+              shippingMethodId &&
+              shippingMethodId !== saved?.shippingMethodId && { shippingMethodId }),
+            ...(!this.linesLocked() &&
+              this.lines.dirty && {
+                lines: lines.map(({ choice, quantity }) => ({
+                  ...(choice.lineId ? { lineId: choice.lineId } : { variantId: choice.variantId }),
+                  quantity: quantity ?? 0,
+                })),
+              }),
           })
         : await this.api.createManual(params.scope, {
             ...fields,
+            customerId: customerId || null,
+            paymentMethodId,
             shippingMethodId,
             lines: lines.map(({ choice, quantity }) => ({
               variantId: choice.variantId ?? '',
@@ -591,7 +699,12 @@ export class ManualOrderEditor {
       }
       this.form.markAsPristine();
       this.saving.set(false);
-      this.host.saved({ recordId, message: this.text().manualOrderSaved });
+      this.host.saved({
+        recordId,
+        message: saved?.canEditStorefrontOrder
+          ? this.text().orderSaved
+          : this.text().manualOrderSaved,
+      });
       this.drawer().close();
     } catch (error: unknown) {
       if (!isCurrent()) {
@@ -604,6 +717,9 @@ export class ManualOrderEditor {
         MANUAL_ORDER_LEGACY_AMOUNTS_LOCKED: text.manualOrderLegacyAmountsLocked,
         MANUAL_ORDER_NOT_EDITABLE: text.manualOrderNotEditable,
         MINIMUM_QUANTITY_NOT_MET: text.orderMinimumNotMet,
+        STOREFRONT_ORDER_NOT_EDITABLE: text.storefrontOrderNotEditable,
+        STOREFRONT_ORDER_PROMO_LINES_LOCKED: text.storefrontOrderPromoLinesLocked,
+        ORDER_CUSTOMER_LOCKED: text.orderCustomerLocked,
         ORDER_CUSTOMER_UNAVAILABLE: text.orderCustomerUnavailable,
         ORDER_STOCK_SHORT: text.orderStockShort,
         ORDER_VARIANT_DUPLICATE: text.orderVariantDuplicate,
@@ -682,6 +798,7 @@ export class ManualOrderEditor {
       'customerId',
       ...contactPaths,
       ...addressPaths,
+      ...(this.differentBillingAddress() ? billingAddressPaths : []),
       'lines',
       ...this.lines.controls.map((_, index) => `lines.${String(index)}.quantity`),
       'shippingMethodId',

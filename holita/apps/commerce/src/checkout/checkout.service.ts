@@ -7,6 +7,7 @@ import { CartPrice, CartService, type CartContext } from '../cart/cart.service.j
 import { promoError } from '../discounts/discounts.service.js';
 import type {
   Cart,
+  CheckoutBillingAddressInput,
   CheckoutQuote,
   CheckoutQuoteInput,
   CheckoutState,
@@ -35,9 +36,13 @@ function contactField(path: string, value: string, validate: (value: string) => 
   }
 }
 
-function trimmedField(path: string, value: string, required = true) {
+function trimmedField(path: string, value: string, required = true, maxLength = Infinity) {
   const trimmed = value.trim();
-  if ((required && !trimmed) || trimmed.includes('\u0000')) {
+  if (
+    (required && !trimmed) ||
+    trimmed.includes('\u0000') ||
+    Array.from(trimmed).length > maxLength
+  ) {
     throw invalidValue(path);
   }
   return trimmed;
@@ -80,6 +85,18 @@ export function validateOrderContact(
       line1: trimmedField('shippingAddress.line1', address.line1),
       line2: trimmedField('shippingAddress.line2', address.line2 ?? '', false) || null,
     },
+  };
+}
+
+export function validateBillingAddress(address: CheckoutBillingAddressInput) {
+  return {
+    name: contactField('billingAddress.name', address.name, userName),
+    phone: trimmedField('billingAddress.phone', address.phone, true, 100),
+    countryCode: normalizedCountryCode('billingAddress.countryCode', address.countryCode),
+    city: trimmedField('billingAddress.city', address.city, true, 120),
+    postalCode: trimmedField('billingAddress.postalCode', address.postalCode, true, 20),
+    line1: trimmedField('billingAddress.line1', address.line1, true, 200),
+    line2: trimmedField('billingAddress.line2', address.line2 ?? '', false, 200) || null,
   };
 }
 
@@ -172,6 +189,9 @@ export class CheckoutService {
       throw promoError(cart.discount.issue);
     }
     const { contact, shippingAddress } = validateOrderContact(input);
+    const billingAddress = input.billingAddress
+      ? validateBillingAddress(input.billingAddress)
+      : null;
     const paymentMethod = await this.paymentMethod(
       tx,
       scope,
@@ -212,6 +232,6 @@ export class CheckoutService {
       shippingFee,
       total: new CartPrice(cart.discountedSubtotal).plus(shippingFee).toFixed(2),
     };
-    return { quote, contact, shippingAddress };
+    return { quote, contact, shippingAddress, billingAddress };
   }
 }

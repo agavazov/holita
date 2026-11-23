@@ -28,7 +28,7 @@ import { MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { Skeleton } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
-import { orderAmount } from './order-format';
+import { orderAmount, orderPaymentText } from './order-format';
 import { OrdersApi, orderIdPattern } from './orders-api';
 
 @Component({
@@ -56,6 +56,7 @@ export class InvoiceDetail {
   private readonly document = inject(DOCUMENT);
   private readonly messages = inject(MessageService);
   protected readonly fromRegister = this.route.snapshot.data['fromInvoiceRegister'] === true;
+  private readonly byId = this.route.snapshot.data['invoiceById'] === true;
   private readonly routeParams = toSignal(this.route.paramMap, { requireSync: true });
   protected readonly id = computed(() => this.routeParams().get('recordId') ?? '');
   protected readonly queryParams = toSignal(this.route.queryParams, { requireSync: true });
@@ -66,13 +67,17 @@ export class InvoiceDetail {
   private readonly format = injectDisplayFormat();
   protected readonly amount = orderAmount;
   protected readonly quantity = formatNumber;
+  protected readonly paymentText = orderPaymentText;
   protected readonly record = resource({
     params: () => {
       const scope = this.api.scope();
       const id = this.id();
       return scope && orderIdPattern.test(id) ? { scope, id } : undefined;
     },
-    loader: ({ params }) => this.api.invoice(params.scope, params.id),
+    loader: ({ params }) =>
+      this.byId
+        ? this.api.invoiceById(params.scope, params.id)
+        : this.api.invoice(params.scope, params.id),
   });
   protected readonly invoice = computed(() =>
     this.record.hasValue() ? this.record.value() : null,
@@ -150,7 +155,7 @@ export class InvoiceDetail {
     }
     this.downloading.set(true);
     try {
-      const pdf = await this.api.downloadInvoice(scope, invoice.orderId);
+      const pdf = await this.api.downloadInvoice(scope, invoice);
       const url = URL.createObjectURL(pdf);
       const link = this.document.createElement('a');
       link.href = url;

@@ -1,6 +1,6 @@
 # 319 Show invoice activity on the shop dashboard
 
-**Status:** Ready after [328](328-holita-invoice-document-fields.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

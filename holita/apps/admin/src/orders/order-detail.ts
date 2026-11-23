@@ -134,16 +134,24 @@ export class OrderDetail {
     }
     const disabled = this.paymentBusy() || this.record.isLoading();
     const canUpdate = order.nextStatuses.length > 0;
+    const canEdit = order.canEditManualOrder || order.canEditStorefrontOrder;
     return [
-      ...(order.canEditManualOrder
-        ? [{ id: 'edit', label: this.text().editManualOrder, primary: true, disabled }]
+      ...(canEdit
+        ? [
+            {
+              id: 'edit',
+              label: order.canEditManualOrder ? this.text().editManualOrder : this.text().editOrder,
+              primary: true,
+              disabled,
+            },
+          ]
         : []),
       ...(canUpdate
         ? [
             {
               id: 'status',
               label: this.text().updateOrderStatus,
-              primary: !order.canEditManualOrder,
+              primary: !canEdit,
               disabled,
             },
           ]

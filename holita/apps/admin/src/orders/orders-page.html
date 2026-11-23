@@ -33,10 +33,48 @@
     [searchError]="url.searchError() ? shared().searchTooManyWords : null"
     [fields]="filterFields()"
     [conditions]="conditions()"
-    [maxConditions]="1"
+    [maxConditions]="5"
     (searchChange)="url.editSearch($event)"
     (conditionsChange)="changeConditions($event)"
   />
+  <div panelActions class="app-inline">
+    <p-autocomplete
+      [ariaLabel]="text().chooseCustomer"
+      [placeholder]="text().chooseCustomer"
+      [formControl]="customerPicker"
+      [suggestions]="customerOptions()"
+      optionLabel="label"
+      dataKey="id"
+      [dropdown]="true"
+      [dropdownAriaLabel]="text().searchCustomerAccounts"
+      [delay]="300"
+      [emptyMessage]="customerEmptyMessage()"
+      autocomplete="off"
+      (completeMethod)="searchCustomers($event.query)"
+      (onSelect)="applyCustomer()"
+      (onClear)="clearCustomer()"
+      (onBlur)="restoreCustomerSelection()"
+    />
+    @if (filteredCustomerId()) {
+    <button pButton type="button" severity="secondary" [outlined]="true" (click)="clearCustomer()">
+      {{ text().clearOrderCustomerFilter }}
+    </button>
+    }
+  </div>
+  @if (filterMethods.error()) {
+  <div panelActions class="app-inline">
+    <p-message severity="error">{{ text().orderFilterMethodsUnavailable }}</p-message>
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      (click)="filterMethods.reload()"
+    >
+      {{ shared().retry }}
+    </button>
+  </div>
+  }
   <p-table
     class="app-responsive-table app-table-fixed"
     [value]="page()?.items ?? []"

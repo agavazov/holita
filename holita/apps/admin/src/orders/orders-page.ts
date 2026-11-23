@@ -7,6 +7,7 @@ import {
   linkedSignal,
   resource,
 } from '@angular/core';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { OperatorLanguage, operatorStrings } from '@holita/operator';
 import {
@@ -18,10 +19,14 @@ import {
   codecs,
   injectDisplayFormat,
   listRecord,
+  normalizeSearch,
+  searchApplies,
   tableView,
   trackById,
   uiMessages,
+  zonedWallTimeToIso,
   type DrawerHost,
+  type FilterCodec,
   type MenuChoice,
   type PageHeaderAction,
   type FilterCondition,
@@ -32,12 +37,15 @@ import {
   type TableColumn,
 } from '@osnova/ui';
 import { MessageService } from 'primeng/api';
+import { AutoComplete } from 'primeng/autocomplete';
+import { ButtonDirective } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type {
   OperatorOrdersQuery,
   OperatorOrderSummaryFragment,
+  OrderCustomerType,
   OrderStatus,
 } from '../generated/orders-operations';
 import {
@@ -52,22 +60,85 @@ import { OrdersApi } from './orders-api';
 
 type OrdersAction = 'open';
 type OrdersListPage = OperatorOrdersQuery['orders'];
-type OrderFilters = { status: readonly OrderStatus[] | undefined };
+type CustomerOption = { id: string; label: string };
+type OrderFilters = {
+  status: readonly OrderStatus[] | undefined;
+  placedFrom: string | undefined;
+  placedTo: string | undefined;
+  paymentMethod: readonly string[] | undefined;
+  shippingMethod: readonly string[] | undefined;
+  customerType: readonly OrderCustomerType[] | undefined;
+  customerId: readonly string[] | undefined;
+};
+
+const customerTypes = ['PROFILE', 'GUEST'] as const satisfies readonly OrderCustomerType[];
+const setFilterKeys = ['status', 'paymentMethod', 'shippingMethod', 'customerType'] as const;
+const maxMethodLabels = 100;
+
+// Encode each saved label before joining it so a comma in a label survives the list URL codec.
+const methodLabels: FilterCodec<readonly string[]> = {
+  read: (values) => {
+    const labels = values.flatMap((value) => {
+      try {
+        const label = decodeURIComponent(value);
+        return label && Array.from(label).length <= 200 && !label.includes('\u0000') ? [label] : [];
+      } catch {
+        return [];
+      }
+    });
+    return labels.length ? [...new Set(labels)].slice(0, maxMethodLabels).sort() : undefined;
+  },
+  write: (values) => (values?.length ? [...values].sort().map(encodeURIComponent).join(',') : null),
+  same: (left, right) =>
+    left?.length === right?.length && (left?.every((label) => right?.includes(label)) ?? true),
+};
+
+const statusFilter = codecs.enumList(orderStatuses);
+const customerTypeFilter = codecs.enumList(customerTypes);
 const definition: ListDefinition<OrderFilters, 'PLACED_AT'> = {
   pageSizes: [10, 20, 50, 100],
   defaultPageSize: 20,
   sorts: [],
   defaultSort: { field: 'PLACED_AT', direction: 'DESC' },
-  filters: { status: codecs.enumList(orderStatuses) },
-  normalizeFilter: ({ status }) => ({ status: status?.slice(0, 1) }),
+  filters: {
+    status: statusFilter,
+    placedFrom: codecs.dateOnly(),
+    placedTo: codecs.dateOnly(),
+    paymentMethod: methodLabels,
+    shippingMethod: methodLabels,
+    customerType: customerTypeFilter,
+    customerId: codecs.idList(1),
+  },
+  normalizeFilter: ({ placedFrom, placedTo, ...filter }) =>
+    placedFrom && placedTo && placedFrom > placedTo ? filter : { ...filter, placedFrom, placedTo },
 };
+
+function orderDateBoundary(value: string, timeZone: string, followingDay = false): string {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (followingDay) {
+    date.setUTCDate(date.getUTCDate() + 1);
+  }
+  return zonedWallTimeToIso(
+    {
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth() + 1,
+      day: date.getUTCDate(),
+      hour: 0,
+      minute: 0,
+    },
+    timeZone,
+  );
+}
 
 @Component({
   selector: 'holita-orders-page',
   imports: [
+    AutoComplete,
+    ButtonDirective,
     FilterBuilder,
     Message,
     PageHeader,
+    ReactiveFormsModule,
     RouterLink,
     RouterOutlet,
     RowActions,
@@ -106,6 +177,7 @@ export class OrdersPage {
         this.messages.add({ severity: 'success', summary: message });
       }
       this.list.reload();
+      this.filterMethods.reload();
     },
   };
   protected readonly actions = computed<
@@ -143,25 +215,137 @@ export class OrdersPage {
       className: 'app-col-actions',
     },
   ]);
+  protected readonly filterMethods = resource({
+    params: () => this.scope() ?? undefined,
+    loader: ({ params, abortSignal }) => this.api.filterMethods(params, abortSignal),
+  });
+  private readonly methodOptions = computed(() =>
+    this.filterMethods.hasValue() ? this.filterMethods.value() : null,
+  );
+  protected readonly filteredCustomerId = computed(() => this.url.state().filter.customerId?.[0]);
+  private readonly selectedCustomer = resource({
+    params: () => {
+      const scope = this.scope();
+      const id = this.filteredCustomerId();
+      return scope && id ? { scope, id } : undefined;
+    },
+    loader: ({ params, abortSignal }) =>
+      this.api.filterCustomer(params.scope, params.id, abortSignal),
+  });
+  private readonly customerSearch = linkedSignal({
+    source: this.scope,
+    computation: (): string | null => null,
+  });
+  private readonly customerSearchInvalid = computed(
+    () => !searchApplies(this.customerSearch() ?? ''),
+  );
+  protected readonly customerPicker = new FormControl<CustomerOption | string | null>(null);
+  private readonly customers = resource({
+    params: () => {
+      const scope = this.scope();
+      const search = this.customerSearch();
+      return scope && search !== null && !this.customerSearchInvalid()
+        ? { scope, search }
+        : undefined;
+    },
+    loader: ({ params, abortSignal }) =>
+      this.api.manualCustomers(params.scope, params.search, abortSignal),
+  });
+  protected readonly customerOptions = computed<CustomerOption[]>(() =>
+    this.customers.hasValue()
+      ? this.customers.value().map(({ id, name, email }) => ({ id, label: `${name} · ${email}` }))
+      : [],
+  );
+  protected readonly customerEmptyMessage = computed(() => {
+    if (this.customerSearchInvalid()) {
+      return this.shared().searchTooManyWords;
+    }
+    if (this.customers.isLoading()) {
+      return this.shared().loading;
+    }
+    return this.customers.error()
+      ? this.text().manualOrderCustomersUnavailable
+      : this.shared().table.noResultsTitle;
+  });
   protected readonly filterFields = computed<readonly FilterField[]>(() => [
     {
       key: 'status',
       label: this.text().orderStatus,
       type: 'enum',
-      operators: ['equals'],
+      operators: ['isAnyOf'],
       options: orderStatuses.map((status) => ({
         value: status,
         label: this.statusText(status, this.language()),
       })),
     },
+    {
+      key: 'placedAt',
+      label: this.text().orderDate,
+      type: 'date',
+      operators: ['between', 'on', 'after', 'before'],
+    },
+    {
+      key: 'shippingMethod',
+      label: this.text().orderShippingMethod,
+      type: 'enum',
+      operators: ['isAnyOf'],
+      options: (this.methodOptions()?.shippingMethodLabels ?? []).map((label) => ({
+        value: label,
+        label,
+      })),
+      maxValues: maxMethodLabels,
+    },
+    {
+      key: 'paymentMethod',
+      label: this.text().orderPaymentMethod,
+      type: 'enum',
+      operators: ['isAnyOf'],
+      options: (this.methodOptions()?.paymentMethodLabels ?? []).map((label) => ({
+        value: label,
+        label,
+      })),
+      maxValues: maxMethodLabels,
+    },
+    {
+      key: 'customerType',
+      label: this.text().orderCustomerType,
+      type: 'enum',
+      operators: ['isAnyOf'],
+      options: [
+        { value: 'PROFILE', label: this.text().orderRegisteredCustomer },
+        { value: 'GUEST', label: this.text().orderGuestCustomer },
+      ],
+    },
   ]);
   protected readonly conditions = computed<readonly FilterCondition[]>(() => {
-    const status = this.url.state().filter.status?.[0];
-    return status ? [{ id: 'status', field: 'status', operator: 'equals', values: [status] }] : [];
+    const filter = this.url.state().filter;
+    const conditions = setFilterKeys.flatMap<FilterCondition>((field) => {
+      const values = filter[field];
+      return values?.length ? [{ id: field, field, operator: 'isAnyOf', values }] : [];
+    });
+    const { placedFrom, placedTo } = filter;
+    const day = placedFrom ?? placedTo;
+    if (placedFrom && placedTo) {
+      conditions.push({
+        id: 'placedAt',
+        field: 'placedAt',
+        operator: placedFrom === placedTo ? 'on' : 'between',
+        values: placedFrom === placedTo ? [placedFrom] : [placedFrom, placedTo],
+      });
+    } else if (day) {
+      conditions.push({
+        id: 'placedAt',
+        field: 'placedAt',
+        operator: placedFrom ? 'after' : 'before',
+        values: [day],
+      });
+    }
+    return conditions;
   });
   protected readonly params = computed(() => {
     const scope = this.scope();
     const { page, pageSize, search, filter } = this.url.state();
+    const { timeZone } = this.format.preferences();
     return scope
       ? {
           scope,
@@ -169,7 +353,19 @@ export class OrdersPage {
             offset: (page - 1) * pageSize,
             limit: pageSize,
             search,
-            status: filter.status?.[0] ?? null,
+            customerId: this.filteredCustomerId(),
+            filter: {
+              statuses: filter.status ? [...filter.status] : undefined,
+              placedAtFrom: filter.placedFrom
+                ? orderDateBoundary(filter.placedFrom, timeZone, !filter.placedTo)
+                : undefined,
+              placedAtBefore: filter.placedTo
+                ? orderDateBoundary(filter.placedTo, timeZone, !!filter.placedFrom)
+                : undefined,
+              paymentMethodLabels: filter.paymentMethod ? [...filter.paymentMethod] : undefined,
+              shippingMethodLabels: filter.shippingMethod ? [...filter.shippingMethod] : undefined,
+              customerTypes: filter.customerType ? [...filter.customerType] : undefined,
+            },
           },
         }
       : undefined;
@@ -194,7 +390,8 @@ export class OrdersPage {
       loading: this.list.isLoading(),
       error: this.list.error(),
       rows: this.page()?.items.length ?? null,
-      filtered: !!this.url.state().search || this.conditions().length > 0,
+      filtered:
+        !!this.url.state().search || this.conditions().length > 0 || !!this.filteredCustomerId(),
     }),
   );
   protected readonly pagination = computed(() => ({
@@ -204,6 +401,9 @@ export class OrdersPage {
   }));
 
   constructor() {
+    effect(() => {
+      this.restoreCustomerSelection();
+    });
     effect(() => {
       const data = this.list.hasValue() && !this.list.isLoading() ? this.list.value() : null;
       if (data) {
@@ -217,9 +417,44 @@ export class OrdersPage {
   }
 
   protected changeConditions(conditions: readonly FilterCondition[]): void {
-    const value = conditions.find(({ field }) => field === 'status')?.values[0];
-    const status = orderStatuses.find((candidate) => candidate === value);
-    this.url.patchFilter({ status: status ? [status] : undefined });
+    const byField = new Map(conditions.map((condition) => [condition.field, condition]));
+    const date = byField.get('placedAt');
+    const [firstDate, lastDate] = date?.values ?? [];
+    this.url.patchFilter({
+      status: statusFilter.read(byField.get('status')?.values ?? []),
+      placedFrom: date?.operator === 'before' ? undefined : firstDate,
+      placedTo: date?.operator === 'before' || date?.operator === 'on' ? firstDate : lastDate,
+      paymentMethod: byField.get('paymentMethod')?.values,
+      shippingMethod: byField.get('shippingMethod')?.values,
+      customerType: customerTypeFilter.read(byField.get('customerType')?.values ?? []),
+    });
+  }
+
+  protected searchCustomers(query: string): void {
+    this.customerSearch.set(normalizeSearch(query));
+  }
+
+  protected applyCustomer(): void {
+    const customer = this.customerPicker.value;
+    if (customer && typeof customer !== 'string') {
+      this.url.patchFilter({ customerId: [customer.id] });
+    }
+  }
+
+  protected clearCustomer(): void {
+    this.customerSearch.set(null);
+    this.customerPicker.setValue(null);
+    this.url.patchFilter({ customerId: undefined });
+  }
+
+  protected restoreCustomerSelection(): void {
+    const id = this.filteredCustomerId();
+    const customer = this.selectedCustomer.hasValue() ? this.selectedCustomer.value() : null;
+    const label =
+      customer && customer.id === id
+        ? `${customer.name} · ${customer.email}`
+        : this.text().chooseCustomer;
+    this.customerPicker.setValue(id ? { id, label } : null);
   }
 
   protected run(request: ListActionRequest<OrdersAction>): void {

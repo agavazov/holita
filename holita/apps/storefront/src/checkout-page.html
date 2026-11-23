@@ -133,6 +133,62 @@
             }
           </div>
         </section>
+        <section class="checkout-section" aria-labelledby="billing-address-heading">
+          <h2 id="billing-address-heading">{{ t().billingAddress }}</h2>
+          <label>
+            <input type="checkbox" formControlName="separateBillingAddress" />
+            {{ t().useDifferentBillingAddress }}
+          </label>
+          @if (form.controls.separateBillingAddress.value) {
+          <div class="checkout-fields" formGroupName="billingAddress">
+            @let countryError = fieldError('billingAddress.countryCode',
+            form.controls.billingAddress.controls.countryCode);
+            <div class="basic-field">
+              <label for="billing-countryCode">{{ t().country }}</label>
+              <select
+                class="basic-input"
+                id="billing-countryCode"
+                formControlName="countryCode"
+                autocomplete="billing country"
+                required
+                [attr.aria-invalid]="countryError ? 'true' : null"
+                [attr.aria-describedby]="countryError ? 'billing-country-error' : null"
+              >
+                @for (country of countries(); track country.code) {
+                <option [value]="country.code">{{ country.label }}</option>
+                }
+              </select>
+              @if (countryError) {
+              <span class="field-error" id="billing-country-error">{{ countryError }}</span>
+              }
+            </div>
+            @for (field of billingFields; track field.name) { @let id = 'billing-' + field.name;
+            @let control = form.controls.billingAddress.controls[field.name]; @let error =
+            fieldError('billingAddress.' + field.name, control);
+            <div
+              class="basic-field"
+              [class.checkout-field-wide]="field.name === 'line1' || field.name === 'line2'"
+            >
+              <label [for]="id">{{ t()[field.label] }}</label>
+              <input
+                class="basic-input"
+                [id]="id"
+                [formControlName]="field.name"
+                [type]="field.type"
+                [autocomplete]="'billing ' + field.autocomplete"
+                [required]="field.name !== 'line2'"
+                [maxlength]="field.maxLength"
+                [attr.aria-invalid]="error ? 'true' : null"
+                [attr.aria-describedby]="error ? id + '-error' : null"
+              />
+              @if (error) {
+              <span class="field-error" [id]="id + '-error'">{{ error }}</span>
+              }
+            </div>
+            }
+          </div>
+          }
+        </section>
         <div class="checkout-methods" role="group" aria-labelledby="methods-heading">
           <h2 id="methods-heading" class="app-visually-hidden">{{ t().checkoutMethods }}</h2>
           <section class="checkout-section">

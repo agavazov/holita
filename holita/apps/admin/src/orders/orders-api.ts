@@ -7,10 +7,16 @@ import { HttpLink } from 'apollo-angular/http';
 import { firstValueFrom } from 'rxjs';
 import {
   OperatorCreateManualOrderDocument,
+  OperatorInvoiceByIdDocument,
+  OperatorInvoiceIssuerSettingsDocument,
   OperatorInvoicesDocument,
+  OperatorIssueStandaloneInvoiceDocument,
+  OperatorUpdateInvoiceIssuerSettingsDocument,
+  type InvoiceIssuerSettingsInput,
+  type IssueStandaloneInvoiceInput,
   OperatorManualOrderChoicesDocument,
   OperatorManualOrderCustomersDocument,
-  OperatorManualOrderProductsDocument,
+  OperatorManualOrderVariantsDocument,
   OperatorUpdateManualOrderDocument,
   type ManualOrderInput,
   type ManualOrderUpdateInput,
@@ -19,6 +25,8 @@ import {
   OperatorOrderInvoiceDocument,
   type IssueOrderInvoiceInput,
   OperatorOrderDocument,
+  OperatorOrderFilterCustomerDocument,
+  OperatorOrderFilterMethodsDocument,
   OperatorOrdersDocument,
   OperatorRecordOrderRefundDocument,
   type RecordOrderRefundInput,
@@ -79,6 +87,41 @@ export class OrdersApi {
     }
   }
 
+  async filterMethods(scope: OrdersScope, signal: AbortSignal) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorOrderFilterMethodsDocument,
+        context: { fetchOptions: { signal } },
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing order filter methods');
+      }
+      return data.orderFilterMethods;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async filterCustomer(scope: OrdersScope, id: string, signal: AbortSignal) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorOrderFilterCustomerDocument,
+        variables: { id },
+        context: { fetchOptions: { signal } },
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing order filter customer');
+      }
+      return data.customerContact;
+    } finally {
+      client.stop();
+    }
+  }
+
   async find(scope: OrdersScope, id: string) {
     const client = this.client(scope);
     try {
@@ -131,18 +174,19 @@ export class OrdersApi {
     }
   }
 
-  async manualProducts(scope: OrdersScope, search: string) {
+  async manualVariants(scope: OrdersScope, search: string, offset: number, signal: AbortSignal) {
     const client = this.client(scope);
     try {
       const { data } = await client.query({
-        query: OperatorManualOrderProductsDocument,
-        variables: { search },
+        query: OperatorManualOrderVariantsDocument,
+        variables: { search, offset },
+        context: { fetchOptions: { signal } },
         fetchPolicy: 'no-cache',
       });
       if (!data) {
-        throw new Error('Missing manual order products');
+        throw new Error('Missing manual order variants');
       }
-      return data.products;
+      return data.manualOrderVariants;
     } finally {
       client.stop();
     }
@@ -214,9 +258,78 @@ export class OrdersApi {
     }
   }
 
-  downloadInvoice(scope: OrdersScope, orderId: string): Promise<Blob> {
+  async invoiceById(scope: OrdersScope, id: string) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorInvoiceByIdDocument,
+        variables: { id },
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing invoice result');
+      }
+      return data.invoice;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async issuerSettings(scope: OrdersScope) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorInvoiceIssuerSettingsDocument,
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing invoice issuer settings result');
+      }
+      return data.invoiceIssuerSettings;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async saveIssuerSettings(scope: OrdersScope, input: InvoiceIssuerSettingsInput) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: OperatorUpdateInvoiceIssuerSettingsDocument,
+        variables: { input },
+      });
+      if (!data) {
+        throw new Error('Missing updated invoice issuer settings result');
+      }
+      return data.updateInvoiceIssuerSettings;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async issueStandaloneInvoice(scope: OrdersScope, input: IssueStandaloneInvoiceInput) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: OperatorIssueStandaloneInvoiceDocument,
+        variables: { input },
+      });
+      if (!data) {
+        throw new Error('Missing issued invoice result');
+      }
+      return data.issueStandaloneInvoice;
+    } finally {
+      client.stop();
+    }
+  }
+
+  downloadInvoice(
+    scope: OrdersScope,
+    invoice: { id: string; orderId?: string | null },
+  ): Promise<Blob> {
+    const identifier = invoice.orderId ?? `document/${invoice.id}`;
     return firstValueFrom(
-      this.http.get(`/documents/invoices/${orderId}/pdf`, {
+      this.http.get(`/documents/invoices/${identifier}/pdf`, {
         headers: { Authorization: `Bearer ${scope.token}`, 'x-branch-id': scope.branchId },
         responseType: 'blob',
       }),

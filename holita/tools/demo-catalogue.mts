@@ -218,6 +218,15 @@ export interface DemoShopperOrder {
   readonly city: string;
   readonly postalCode: string;
   readonly address: string;
+  readonly billingAddress?: {
+    readonly name: string;
+    readonly phone: string;
+    readonly countryCode: string;
+    readonly city: string;
+    readonly postalCode: string;
+    readonly line1: string;
+    readonly line2?: string;
+  };
   readonly subtotal: string;
   readonly total: string;
   readonly lines: readonly {
@@ -359,6 +368,30 @@ export const demoInvoicedManualOrder = {
   address: 'бул. „Александър Стамболийски“ 42',
   merchantNote: 'Поръчка по телефона. Доставка след 16 ч.',
   line: { ...demoManualOrder.line, id: 10, quantity: 1 },
+};
+
+export const demoSeparateBillingOrder: DemoShopperOrder = {
+  id: 13,
+  status: 'placed',
+  placedAt: '2026-11-23T09:15:00Z',
+  paidAt: null,
+  statusChanges: [],
+  phone: '+359 2 555 0100',
+  city: 'София',
+  postalCode: '1000',
+  address: 'ул. „Професор Иван Георгов“ 15',
+  billingAddress: {
+    name: 'Елица Димитрова',
+    phone: '+359 32 555 0142',
+    countryCode: 'BG',
+    city: 'Пловдив',
+    postalCode: '4000',
+    line1: 'ул. „Иван Вазов“ 24',
+    line2: 'ет. 2',
+  },
+  subtotal: '27.05',
+  total: '30.12',
+  lines: [{ ...demoManualOrder.line, id: 15, quantity: 1, unitPrice: '27.05' }],
 };
 
 export const demoOrders: readonly DemoShopperOrder[] = [

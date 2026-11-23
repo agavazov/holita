@@ -10,6 +10,7 @@ import {
   inject,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import {
@@ -64,6 +65,7 @@ interface OperatorOptions {
     path: string;
   }[];
   selectBranch: boolean;
+  canSwitchBranch?: (page: unknown) => boolean | Promise<boolean>;
   retainRouteContext?: boolean;
 }
 const OPERATOR_OPTIONS = new InjectionToken<OperatorOptions>('operator application');
@@ -150,6 +152,7 @@ export class OperatorApplication {
   private readonly auth = inject(AuthApi);
   private readonly branchApi = inject(BranchesApi);
   private readonly router = inject(Router);
+  private readonly outlet = viewChild(RouterOutlet);
   private readonly moduleInfo = inject(ModuleInfo);
   private readonly pageRecord = inject(PageRecord);
   readonly context = computed(() => {
@@ -214,6 +217,14 @@ export class OperatorApplication {
       if (!left) {
         return;
       }
+    }
+    const outlet = this.outlet();
+    if (
+      outlet?.isActivated &&
+      this.options.canSwitchBranch &&
+      !(await this.options.canSwitchBranch(outlet.component))
+    ) {
+      return;
     }
     this.session.selectBranch(branchId);
   }

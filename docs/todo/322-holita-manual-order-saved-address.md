@@ -22,7 +22,7 @@ A merchant can choose the selected customer's saved address, edit the order copy
 
 ## Limits
 
-Use the shared address model. Any separate saved billing selector should reuse ticket 273's manual billing snapshot.
+Use the shared address model. Any separate saved billing selector should reuse the existing manual billing snapshot.
 
 ## References
 

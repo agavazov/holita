@@ -258,6 +258,8 @@ beforeAll(async () => {
     '20261123020100_characteristic_choices',
     '20261123020200_variant_purchase_options',
     '20261123030000_variant_barcode_measurements',
+    '20261123220000_order_billing_address',
+    '20261123221000_invoice_issuance',
   ]) {
     await connection.query(
       await readFile(
@@ -2567,8 +2569,22 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     'id number placedAt status paymentStatus paymentMethodLabel paymentInstructions shippingMethodLabel shippingAddress{countryCode city postalCode line1} currency subtotal discountCode discountAmount shippingFee total lines{sku label quantity unitPrice lineTotal}';
   const placeOperation = `mutation($input:PlaceOrderInput!){placeOrder(input:$input){${receiptFields}}}`;
   const receiptOperation = `query($orderId:ID!){orderConfirmation(orderId:$orderId){${receiptFields}}}`;
+  const billingAddress = {
+    name: 'Billing Recipient',
+    phone: '0888765432',
+    countryCode: 'BG',
+    city: 'Plovdiv',
+    postalCode: '4000',
+    line1: '2 Billing St',
+    line2: null,
+  };
   const place = (review: typeof currentReview, bearer = token) =>
-    storefront(publicA, placeOperation, { input: { ...quoteInput, ...review } }, bearer);
+    storefront(
+      publicA,
+      placeOperation,
+      { input: { ...quoteInput, ...review, billingAddress } },
+      bearer,
+    );
   const orderScope = { ...categoryScope, cartId: accountCart.id };
   const variantKey = { ...categoryScope, id: variant.id };
   const cartKey = { ...categoryScope, id: accountCart.id };
@@ -2646,6 +2662,36 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     errors: [{ extensions: { fieldErrors: [{ code: 'CHECKOUT_QUOTE_CHANGED' }] } }],
   });
   expect(await editDiscount({})).toHaveProperty('data.updateDiscount.redeemedCount', 0);
+  const invalidBillingAddress = { ...billingAddress, city: ' ' };
+  const invalidBilling = {
+    errors: [
+      { extensions: { fieldErrors: [{ path: 'billingAddress.city', code: 'INVALID_VALUE' }] } },
+    ],
+  };
+  expect(
+    await storefront(
+      publicA,
+      quoteOperation,
+      {
+        input: { ...quoteInput, billingAddress: invalidBillingAddress },
+      },
+      token,
+    ),
+  ).toMatchObject(invalidBilling);
+  expect(
+    await storefront(
+      publicA,
+      placeOperation,
+      {
+        input: {
+          ...quoteInput,
+          ...currentReview,
+          billingAddress: invalidBillingAddress,
+        },
+      },
+      token,
+    ),
+  ).toMatchObject(invalidBilling);
   const placed = await place(currentReview);
   const order = await database.order.findFirstOrThrow({ where: orderScope });
   const receipt = {
@@ -2741,18 +2787,56 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     where: { ...categoryScope, cartId: guestReview.cartId, customerId: null },
   });
 
-  const adminOrders = `query($search:String,$status:OrderStatus,$customerId:ID){
-    orders(search:$search,status:$status,customerId:$customerId,limit:1){
+  const adminOrders = `query($search:String,$status:OrderStatus,$customerId:ID,$filter:OrderListFilter,$offset:Int=0){
+    orders(search:$search,status:$status,customerId:$customerId,filter:$filter,offset:$offset,limit:1){
       items{id number status} total offset limit
     }
   }`;
-  const adminDetail = `query($id:ID!){order(id:$id){id status paymentStatus}}`;
+  const adminDetail = `query($id:ID!){order(id:$id){id status paymentStatus billingAddress{name phone countryCode city postalCode line1 line2}}}`;
   const updateOrder = `mutation($id:ID!,$status:OrderStatus!){
     updateOrderStatus(id:$id,status:$status){id status paymentStatus statusChanges{fromStatus toStatus}}
   }`;
   const markPaid = `mutation($id:ID!){markOrderPaid(id:$id){id paymentStatus paidAt}}`;
   const operatorTarget = { id: order.id };
   const search = `${order.orderNumber.toUpperCase()} SAME@EXAMPLE.TEST`;
+  const combined = {
+    search,
+    customerId: order.customerId,
+    filter: {
+      statuses: ['PLACED', 'CONFIRMED'],
+      placedAtFrom: order.placedAt.toISOString(),
+      placedAtBefore: new Date(order.placedAt.getTime() + 1000).toISOString(),
+      paymentMethodLabels: [order.paymentMethodLabel],
+      shippingMethodLabels: [order.shippingMethodLabel],
+      customerTypes: ['PROFILE'],
+    },
+  };
+  expect(await query(tokens.viewer, publicA, adminOrders, combined)).toMatchObject({
+    data: { orders: { items: [{ id: order.id }], total: 1 } },
+  });
+  for (const [branch, filter] of [
+    [branchB, combined.filter],
+    [publicA, { ...combined.filter, paymentMethodLabels: ['Another method'] }],
+    [publicA, { ...combined.filter, customerTypes: ['GUEST'] }],
+  ] as const) {
+    expect(await query(tokens.viewer, branch, adminOrders, { ...combined, filter })).toMatchObject({
+      data: { orders: { items: [], total: 0 } },
+    });
+  }
+  const guestScope = { ...categoryScope, id: guestOrder.id };
+  await database.order.update({ where: guestScope, data: { placedAt: order.placedAt } });
+  for (const [offset, id] of [order.id, guestOrder.id].sort().reverse().entries()) {
+    expect(
+      await query(tokens.viewer, publicA, adminOrders, {
+        offset,
+        filter: {
+          placedAtFrom: combined.filter.placedAtFrom,
+          placedAtBefore: combined.filter.placedAtBefore,
+        },
+      }),
+    ).toMatchObject({ data: { orders: { items: [{ id }], total: 2, offset } } });
+  }
+  await database.order.update({ where: guestScope, data: { placedAt: guestOrder.placedAt } });
   expect(await query(tokens.viewer, publicA, adminOrders, { search, status: 'PLACED' })).toEqual({
     data: {
       orders: {
@@ -2794,7 +2878,77 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     expect(await query(credential, branch, markPaid, operatorTarget)).toHaveProperty('errors');
   }
   expect(await query(tokens.viewer, publicA, adminDetail, operatorTarget)).toEqual({
-    data: { order: { ...operatorTarget, status: 'PLACED', paymentStatus: 'UNPAID' } },
+    data: {
+      order: { ...operatorTarget, status: 'PLACED', paymentStatus: 'UNPAID', billingAddress },
+    },
+  });
+  expect(await query(tokens.viewer, publicA, adminDetail, { id: guestOrder.id })).toHaveProperty(
+    'data.order.billingAddress',
+    null,
+  );
+  const editStorefrontOrder = `mutation($id:ID!,$input:ManualOrderUpdateInput!){
+    updateManualOrder(id:$id,input:$input){
+      id customerId total discountAmount canEditStorefrontOrder lines{id quantity unitPrice}
+    }
+  }`;
+  const guestLine = await database.orderLine.findFirstOrThrow({
+    where: { ...categoryScope, orderId: guestOrder.id },
+  });
+  const guestEdit = (quantity: number) =>
+    query(tokens.operator, publicA, editStorefrontOrder, {
+      id: guestOrder.id,
+      input: {
+        contact: quoteInput.contact,
+        shippingAddress: quoteInput.shippingAddress,
+        lines: [{ lineId: guestLine.id, quantity }],
+      },
+    });
+  const readStock = () =>
+    database.productVariant.findUniqueOrThrow({
+      where: variantKey,
+      select: { quantity: true },
+    });
+  const originalGuestStock = await readStock();
+  await database.productVariant.update({ where: variantKey, data: { quantity: 4 } });
+  for (const [quantity, stock] of [
+    [2, 3],
+    [3, 2],
+    [1, 4],
+  ] as const) {
+    expect(await guestEdit(quantity)).toMatchObject({
+      data: {
+        updateManualOrder: {
+          id: guestOrder.id,
+          customerId: null,
+          canEditStorefrontOrder: true,
+          discountAmount: '0.00',
+          lines: [{ id: guestLine.id, quantity, unitPrice: guestLine.unitPrice.toFixed(2) }],
+        },
+      },
+    });
+    expect(await readStock()).toEqual({ quantity: stock });
+  }
+  expect(await guestEdit(6)).toMatchObject({
+    errors: [{ extensions: { fieldErrors: [{ code: 'ORDER_STOCK_SHORT' }] } }],
+  });
+  expect(await readStock()).toEqual({ quantity: 4 });
+  expect(await database.order.findUniqueOrThrow({ where: guestScope })).toMatchObject({
+    cartId: guestOrder.cartId,
+    customerId: null,
+    total: guestOrder.total,
+  });
+  await database.productVariant.update({ where: variantKey, data: originalGuestStock });
+  expect(
+    await query(tokens.operator, publicA, editStorefrontOrder, {
+      ...operatorTarget,
+      input: {
+        contact: quoteInput.contact,
+        shippingAddress: quoteInput.shippingAddress,
+        lines: [{ variantId: variant.id, quantity: 1 }],
+      },
+    }),
+  ).toMatchObject({
+    errors: [{ extensions: { fieldErrors: [{ code: 'STOREFRONT_ORDER_PROMO_LINES_LOCKED' }] } }],
   });
   expect(
     await query(tokens.viewer, publicA, updateOrder, { ...operatorTarget, status: 'CONFIRMED' }),
@@ -2901,6 +3055,22 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       },
     },
   });
+  const manualVariants = `query($search:String!,$offset:Int!){
+    manualOrderVariants(search:$search,offset:$offset,limit:1){items{sku minimumQuantity} total}
+  }`;
+  for (const [branch, search, offset, total, skus] of [
+    [publicA, replacement.sku, 0, 1, [replacement.sku]],
+    [publicA, 'Visible', 2, 3, ['Visible bowl']],
+    [publicA, 'Draft', 0, 0, []],
+    [publicA, 'No active variant', 0, 0, []],
+    [branchB, replacement.sku, 0, 0, []],
+  ] as const) {
+    expect(await query(tokens.viewer, branch, manualVariants, { search, offset })).toEqual({
+      data: {
+        manualOrderVariants: { total, items: skus.map((sku) => ({ sku, minimumQuantity: 1 })) },
+      },
+    });
+  }
   expect(await saveVariants([savedBlue])).toMatchObject({
     errors: [
       {
@@ -3247,25 +3417,75 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     issueOrderInvoice(orderId:$orderId,input:$input){id orderId number issueDate recipientName currency subtotal discountAmount shippingFee total lines{description sku quantity unitPrice lineTotal}}
   }`;
   const readInvoice = `query($orderId:ID!){
-    orderInvoice(orderId:$orderId){id orderId number issueDate recipientName currency subtotal discountAmount shippingFee total lines{description sku quantity unitPrice lineTotal}}
+    orderInvoice(orderId:$orderId){
+      id orderId number issueDate recipientName currency subtotal discountAmount shippingFee total
+      issuerRepresentative taxEventDate dueDate paymentTermDays paymentMethod paymentStatus reason note
+      lines{description sku unit quantity unitPrice lineTotal}
+    }
   }`;
   const readInvoices = `query($offset:Int! = 0,$limit:Int! = 20,$search:String,$filter:InvoiceFilter){
     invoices(offset:$offset,limit:$limit,search:$search,filter:$filter){
       items{orderId number issueDate recipientName currency total} total offset limit
     }
   }`;
-  const invoiceInput = {
-    number: 'TEST-0001',
-    issueDate: '2026-11-22',
+  const issuerFields =
+    'issuerName issuerCompanyId issuerAddress issuerRepresentative issuerBankName';
+  const issuerSettings = `{invoiceIssuerSettings{${issuerFields}}}`;
+  const saveIssuerSettings = `mutation($input:InvoiceIssuerSettingsInput!){
+    updateInvoiceIssuerSettings(input:$input){${issuerFields}}
+  }`;
+  const issuer = {
     issuerName: 'Invoice issuer',
     issuerCompanyId: '000000001',
     issuerAddress: '1 Invoice Street',
+    issuerRepresentative: 'Invoice representative',
+    issuerBankName: 'Invoice bank',
+  };
+  expect(await query(tokens.viewer, publicA, saveIssuerSettings, { input: issuer })).toHaveProperty(
+    'errors',
+  );
+  expect(await query(tokens.operator, publicA, saveIssuerSettings, { input: issuer })).toEqual({
+    data: { updateInvoiceIssuerSettings: issuer },
+  });
+  expect(await query(tokens.viewer, publicA, issuerSettings)).toEqual({
+    data: { invoiceIssuerSettings: issuer },
+  });
+  for (const [credential, branch] of [
+    [tokens.viewer, branchB],
+    [tokens.foreign, branchForeign],
+  ] as const) {
+    expect(await query(credential, branch, issuerSettings)).toHaveProperty(
+      'data.invoiceIssuerSettings.issuerName',
+      null,
+    );
+  }
+
+  const orderLine = await database.orderLine.findFirstOrThrow({
+    where: { ...categoryScope, orderId: order.id },
+  });
+  const documentFields = {
+    taxEventDate: '2026-11-21',
+    dueDate: '2026-12-22',
+    paymentTermDays: 30,
+    paymentMethod: 'Bank transfer',
+    paymentStatus: 'UNPAID',
+    reason: 'Ordered goods',
+    note: 'Invoice note',
+  };
+  const invoiceInput = {
+    number: 'TEST-0001',
+    issueDate: '2026-11-22',
+    ...issuer,
     recipientName: order.contactName,
     recipientAddress: order.shippingLine1,
+    ...documentFields,
   };
   const invoiceTarget = { orderId: order.id };
   const invoicePdf = new URL(`/documents/invoices/${order.id}/pdf`, endpoint);
-  const issuance = { ...invoiceTarget, input: invoiceInput };
+  const issuance = {
+    ...invoiceTarget,
+    input: { ...invoiceInput, lineUnits: [{ orderLineId: orderLine.id, unit: 'pcs' }] },
+  };
   expect(await query(tokens.viewer, publicA, issueInvoice, issuance)).toHaveProperty('errors');
   const issued = await query(tokens.operator, publicA, issueInvoice, issuance);
   expect(issued).toMatchObject({
@@ -3291,6 +3511,9 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
         ...invoiceTarget,
         number: invoiceInput.number,
         discountAmount: receipt.discountAmount,
+        issuerRepresentative: issuer.issuerRepresentative,
+        ...documentFields,
+        lines: [expect.objectContaining({ unit: 'pcs' })],
       },
     },
   });
@@ -3318,7 +3541,10 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     errors: [{ extensions: { code: 'CONFLICT' } }],
   });
   expect(
-    await query(tokens.operator, publicA, issueInvoice, { ...issuance, orderId: guestOrder.id }),
+    await query(tokens.operator, publicA, issueInvoice, {
+      orderId: guestOrder.id,
+      input: invoiceInput,
+    }),
   ).toMatchObject({
     errors: [
       {
@@ -3361,6 +3587,90 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     ).toEqual({ data: { invoices: { items, total, offset, limit: 1 } } });
   }
 
+  expect(
+    await query(tokens.operator, publicA, saveIssuerSettings, {
+      input: { ...issuer, issuerRepresentative: 'New representative' },
+    }),
+  ).toHaveProperty('data.updateInvoiceIssuerSettings.issuerRepresentative', 'New representative');
+  expect(await query(tokens.viewer, publicA, readInvoice, invoiceTarget)).toEqual(savedInvoice);
+
+  const issueStandalone = `mutation($input:IssueStandaloneInvoiceInput!){
+    issueStandaloneInvoice(input:$input){id}
+  }`;
+  const standaloneInput = {
+    ...invoiceInput,
+    number: 'TEST-STANDALONE',
+    recipientName: 'Standalone recipient',
+    paymentStatus: 'PAID',
+    lines: [
+      { description: 'Goods', quantity: 2, unitPrice: '4.85', unit: 'pcs' },
+      { description: 'Delivery', quantity: 1, unitPrice: '0.30' },
+    ],
+  };
+  expect(
+    await query(tokens.viewer, publicA, issueStandalone, { input: standaloneInput }),
+  ).toHaveProperty('errors');
+  expect(
+    await query(tokens.operator, publicA, issueStandalone, {
+      input: { ...standaloneInput, number: invoiceInput.number },
+    }),
+  ).toMatchObject({
+    errors: [{ extensions: { fieldErrors: [{ path: 'number', code: 'INVOICE_NUMBER_USED' }] } }],
+  });
+  expect(
+    await query(tokens.operator, publicA, issueStandalone, {
+      input: { ...standaloneInput, dueDate: '2026-11-21' },
+    }),
+  ).toMatchObject({
+    errors: [{ extensions: { fieldErrors: [{ path: 'dueDate', code: 'INVALID_RANGE' }] } }],
+  });
+  expect(
+    await query(tokens.operator, publicA, issueStandalone, { input: standaloneInput }),
+  ).toMatchObject({
+    data: { issueStandaloneInvoice: { id: expect.any(String) } },
+  });
+  const standalone = await database.invoice.findUniqueOrThrow({
+    where: { tenantId_branchId_number: { ...categoryScope, number: standaloneInput.number } },
+  });
+  const readStandalone = `query($id:ID!){
+    invoice(id:$id){orderId currency subtotal total paymentStatus lines{description unit lineTotal}}
+  }`;
+  expect(await query(tokens.viewer, publicA, readStandalone, { id: standalone.id })).toEqual({
+    data: {
+      invoice: {
+        orderId: null,
+        currency: 'EUR',
+        subtotal: '10.00',
+        total: '10.00',
+        paymentStatus: 'PAID',
+        lines: [
+          { description: 'Goods', unit: 'pcs', lineTotal: '9.70' },
+          { description: 'Delivery', unit: null, lineTotal: '0.30' },
+        ],
+      },
+    },
+  });
+  for (const [credential, branch] of [
+    [tokens.viewer, branchB],
+    [tokens.foreign, branchForeign],
+  ] as const) {
+    expect(await query(credential, branch, readStandalone, { id: standalone.id })).toEqual({
+      data: { invoice: null },
+    });
+  }
+  expect(
+    await query(tokens.viewer, publicA, readInvoices, { search: standaloneInput.number }),
+  ).toHaveProperty('data.invoices.items', [
+    {
+      orderId: null,
+      number: standaloneInput.number,
+      issueDate: standaloneInput.issueDate,
+      recipientName: standaloneInput.recipientName,
+      currency: 'EUR',
+      total: '10.00',
+    },
+  ]);
+
   const createManual = `mutation($input:ManualOrderInput!){
     createManualOrder(input:$input){id currency total shippingFee customerId merchantNote canEditManualOrder}
   }`;
@@ -3377,10 +3687,18 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     where: variantIdentity,
     data: { active: true, inventoryTracked: true, price: '8.00', quantity: 7, minimumQuantity: 2 },
   });
+  expect(
+    await query(tokens.viewer, publicA, manualVariants, { search: replacement.sku, offset: 0 }),
+  ).toEqual({
+    data: {
+      manualOrderVariants: { total: 1, items: [{ sku: replacement.sku, minimumQuantity: 2 }] },
+    },
+  });
   const { contact, shippingAddress, paymentMethodId, shippingMethodId } = quoteInput;
   const manualInput = {
     contact,
     shippingAddress,
+    billingAddress,
     paymentMethodId,
     shippingMethodId,
     merchantNote: 'Private note',
@@ -3552,7 +3870,12 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(
     await query(tokens.operator, publicA, issueInvoice, {
       ...manualInvoiceTarget,
-      input: { ...invoiceInput, number: 'TEST-0002' },
+      input: {
+        ...invoiceInput,
+        number: 'TEST-0002',
+        recipientName: billingAddress.name,
+        recipientAddress: billingAddress.line1,
+      },
     }),
   ).toMatchObject({
     data: {
@@ -3564,6 +3887,10 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     },
   });
   const savedManualInvoice = await query(tokens.viewer, publicA, readInvoice, manualInvoiceTarget);
+  expect(await query(tokens.viewer, publicA, adminDetail, manualTarget)).toHaveProperty(
+    'data.order.billingAddress',
+    billingAddress,
+  );
   const readStoredManual = () =>
     database.order.findUniqueOrThrow({
       where: { ...categoryScope, ...manualTarget },
@@ -3601,13 +3928,35 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(
     await query(tokens.operator, publicA, updateManual, {
       ...manualTarget,
-      input: { contact, shippingAddress, merchantNote },
+      input: { contact, shippingAddress, billingAddress: null, merchantNote },
     }),
   ).toMatchObject({ data: { updateManualOrder: { merchantNote, canEditManualOrder: true } } });
-  expect(await readStoredManual()).toEqual({ ...invoicedManual, merchantNote });
+  expect(await readStoredManual()).toEqual({
+    ...invoicedManual,
+    merchantNote,
+    billingName: null,
+    billingPhone: null,
+    billingCountryCode: null,
+    billingCity: null,
+    billingPostalCode: null,
+    billingLine1: null,
+    billingLine2: null,
+  });
+  expect(await query(tokens.viewer, publicA, adminDetail, manualTarget)).toHaveProperty(
+    'data.order.billingAddress',
+    null,
+  );
   expect(await query(tokens.viewer, publicA, readInvoice, manualInvoiceTarget)).toEqual(
     savedManualInvoice,
   );
+  const readInvoiceRecipient = `query($orderId:ID!){
+    orderInvoice(orderId:$orderId){recipientName recipientAddress}
+  }`;
+  expect(await query(tokens.viewer, publicA, readInvoiceRecipient, manualInvoiceTarget)).toEqual({
+    data: {
+      orderInvoice: { recipientName: billingAddress.name, recipientAddress: billingAddress.line1 },
+    },
+  });
 
   await query(tokens.operator, publicA, markPaid, { id: manual.id });
   expect(await query(tokens.operator, publicA, updateManual, untrackedIncrease)).toHaveProperty(

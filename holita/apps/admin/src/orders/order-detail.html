@@ -114,59 +114,83 @@
       </div>
     </dl>
   </section>
-  <section class="app-card" aria-labelledby="order-payment">
-    <h2 id="order-payment" class="app-card__title">{{ text().orderPayment }}</h2>
+  <section class="app-card" aria-labelledby="order-billing">
+    <h2 id="order-billing" class="app-card__title">{{ text().orderBillingAddress }}</h2>
+    @if (item.billingAddress; as billing) {
     <dl class="app-facts">
       <div>
-        <dt>{{ text().orderPaymentMethod }}</dt>
-        <dd>{{ item.paymentMethodLabel }}</dd>
+        <dt>{{ text().name }}</dt>
+        <dd>{{ billing.name }}</dd>
       </div>
       <div>
-        <dt>{{ text().orderPaymentStatus }}</dt>
-        <dd>
-          <p-tag
-            [severity]="paymentSeverity(item.paymentStatus)"
-            [value]="paymentText(item.paymentStatus, language())"
-          />
-        </dd>
+        <dt>{{ text().orderPhone }}</dt>
+        <dd>{{ billing.phone }}</dd>
       </div>
-      @if (item.paidAt; as paidAt) {
-      <div>
-        <dt>{{ text().orderPaidAt }}</dt>
-        <dd>
-          <time [dateTime]="paidAt" [title]="format.utc(paidAt)"
-            >{{ format.dateTime(paidAt) }}</time
-          >
-        </dd>
-      </div>
-      } @if (item.paymentInstructions) {
       <div class="app-facts--wide">
-        <dt>{{ text().orderPaymentInstructions }}</dt>
-        <dd class="order-payment-instructions">{{ item.paymentInstructions }}</dd>
-      </div>
-      } @if (item.refundSummary; as refund) {
-      <div>
-        <dt>{{ text().refundedAmount }}</dt>
-        <dd class="app-num">{{ amount(refund.refundedAmount, item.currency, language()) }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().refundableAmount }}</dt>
-        <dd class="app-num">{{ amount(refund.refundableAmount, item.currency, language()) }}</dd>
-      </div>
-      @if (refund.status !== 'NONE') {
-      <div class="app-facts--wide">
-        <dt>{{ text().refundStatus }}</dt>
+        <dt>{{ text().address }}</dt>
         <dd>
-          <p-tag
-            [severity]="refund.status === 'FULL' ? 'success' : 'info'"
-            [value]="refund.status === 'FULL' ? text().fullyRefunded : text().partiallyRefunded"
-          />
+          {{ billing.line1 }}<br />
+          @if (billing.line2; as line2) { {{ line2 }}<br />
+          } {{ billing.postalCode }} {{ billing.city }}<br />
+          {{ billing.countryCode }}
         </dd>
       </div>
-      } }
     </dl>
+    } @else {
+    <p>{{ text().orderBillingSameAsShipping }}</p>
+    }
   </section>
 </div>
+<section class="app-card" aria-labelledby="order-payment">
+  <h2 id="order-payment" class="app-card__title">{{ text().orderPayment }}</h2>
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().orderPaymentMethod }}</dt>
+      <dd>{{ item.paymentMethodLabel }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().orderPaymentStatus }}</dt>
+      <dd>
+        <p-tag
+          [severity]="paymentSeverity(item.paymentStatus)"
+          [value]="paymentText(item.paymentStatus, language())"
+        />
+      </dd>
+    </div>
+    @if (item.paidAt; as paidAt) {
+    <div>
+      <dt>{{ text().orderPaidAt }}</dt>
+      <dd>
+        <time [dateTime]="paidAt" [title]="format.utc(paidAt)">{{ format.dateTime(paidAt) }}</time>
+      </dd>
+    </div>
+    } @if (item.paymentInstructions) {
+    <div class="app-facts--wide">
+      <dt>{{ text().orderPaymentInstructions }}</dt>
+      <dd class="order-payment-instructions">{{ item.paymentInstructions }}</dd>
+    </div>
+    } @if (item.refundSummary; as refund) {
+    <div>
+      <dt>{{ text().refundedAmount }}</dt>
+      <dd class="app-num">{{ amount(refund.refundedAmount, item.currency, language()) }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().refundableAmount }}</dt>
+      <dd class="app-num">{{ amount(refund.refundableAmount, item.currency, language()) }}</dd>
+    </div>
+    @if (refund.status !== 'NONE') {
+    <div class="app-facts--wide">
+      <dt>{{ text().refundStatus }}</dt>
+      <dd>
+        <p-tag
+          [severity]="refund.status === 'FULL' ? 'success' : 'info'"
+          [value]="refund.status === 'FULL' ? text().fullyRefunded : text().partiallyRefunded"
+        />
+      </dd>
+    </div>
+    } }
+  </dl>
+</section>
 @if (item.refundSummary; as refund) {
 <osnova-table-panel
   mode="local"

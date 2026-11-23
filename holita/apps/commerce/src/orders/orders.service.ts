@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { isUUID } from 'class-validator';
+import { isISO8601, isUUID } from 'class-validator';
 import { GraphQLError } from 'graphql';
 import { randomUUID } from 'node:crypto';
 import { CartRepository } from '../cart/cart.repository.js';
@@ -14,6 +14,7 @@ import {
   checkoutError,
   CheckoutService,
   invalidValue,
+  validateBillingAddress,
   validateOrderContact,
 } from '../checkout/checkout.service.js';
 import { checkoutCurrency } from '../checkout/currency.js';
@@ -31,6 +32,7 @@ import type {
   MutationUpdateOrderStatusArgs,
   Order as OperatorOrder,
   OrderPage,
+  QueryManualOrderVariantsArgs,
   QueryOrdersArgs,
 } from '../generated/graphql/types.js';
 import type { Order, OrderLine, OrderStatus, Prisma } from '../generated/prisma/client.js';
@@ -50,6 +52,34 @@ type OrderSummaryRow = Pick<
 >;
 type OrderDetailRow = NonNullable<Awaited<ReturnType<OrdersRepository['operatorOrder']>>>;
 
+function orderFilterInstant(value: string | null | undefined, path: string): Date | undefined {
+  if (value == null) {
+    return undefined;
+  }
+  const date = new Date(value);
+  if (
+    !value.endsWith('Z') ||
+    !isISO8601(value, { strict: true, strictSeparator: true }) ||
+    Number.isNaN(date.getTime())
+  ) {
+    throw invalidValue(path);
+  }
+  return date;
+}
+
+function orderFilterMethodLabels(labels: string[] | null | undefined, path: string) {
+  if (!labels?.length) {
+    return undefined;
+  }
+  if (
+    labels.length > 100 ||
+    labels.some((label) => !label || Array.from(label).length > 200 || label.includes('\u0000'))
+  ) {
+    throw invalidValue(path);
+  }
+  return { in: labels };
+}
+
 const nextStatuses: Record<OrderStatus, OrderStatus[]> = {
   PLACED: ['CONFIRMED', 'CANCELLED'],
   CONFIRMED: ['PROCESSING', 'CANCELLED'],
@@ -59,8 +89,16 @@ const nextStatuses: Record<OrderStatus, OrderStatus[]> = {
   CANCELLED: [],
 };
 
+function isPlacedUnpaid(order: Order): boolean {
+  return order.status === 'PLACED' && order.paymentStatus === 'UNPAID';
+}
+
 function canEditManualOrder(order: Order): boolean {
-  return order.cartId === null && order.status === 'PLACED' && order.paymentStatus === 'UNPAID';
+  return order.cartId === null && isPlacedUnpaid(order);
+}
+
+function canEditStorefrontOrder(order: OrderDetailRow): boolean {
+  return order.cartId !== null && isPlacedUnpaid(order) && !order.invoice;
 }
 
 function orderIdentity() {
@@ -79,6 +117,33 @@ function orderContactFields({ contact, shippingAddress }: ReturnType<typeof vali
     shippingLine1: shippingAddress.line1,
     shippingLine2: shippingAddress.line2,
   };
+}
+
+function orderBillingFields(address: ReturnType<typeof validateBillingAddress> | null) {
+  return {
+    billingName: address?.name ?? null,
+    billingPhone: address?.phone ?? null,
+    billingCountryCode: address?.countryCode ?? null,
+    billingCity: address?.city ?? null,
+    billingPostalCode: address?.postalCode ?? null,
+    billingLine1: address?.line1 ?? null,
+    billingLine2: address?.line2 ?? null,
+  };
+}
+
+function recordedBillingAddress(order: Order) {
+  const {
+    billingName: name,
+    billingPhone: phone,
+    billingCountryCode: countryCode,
+    billingCity: city,
+    billingPostalCode: postalCode,
+    billingLine1: line1,
+    billingLine2: line2,
+  } = order;
+  return name && phone && countryCode && city && postalCode && line1
+    ? { name, phone, countryCode, city, postalCode, line1, line2 }
+    : null;
 }
 
 function summary(order: OrderSummaryRow) {
@@ -138,9 +203,11 @@ function canMarkPaid(order: Order): boolean {
 function operatorDetail(order: OrderDetailRow): OperatorOrder {
   return {
     ...confirmation(order),
+    billingAddress: recordedBillingAddress(order),
     invoice: order.invoice,
     paidAt: order.paidAt?.toISOString() ?? null,
     canEditManualOrder: canEditManualOrder(order),
+    canEditStorefrontOrder: canEditStorefrontOrder(order),
     customerId: order.customerId,
     merchantNote: order.merchantNote,
     paymentMethodId: order.paymentMethodId,
@@ -197,7 +264,7 @@ export class OrdersService {
 
   async operatorOrders(
     context: RequestContext,
-    { offset = 0, limit = 20, search: rawSearch, status, customerId }: QueryOrdersArgs,
+    { offset = 0, limit = 20, search: rawSearch, status, customerId, filter }: QueryOrdersArgs,
   ): Promise<OrderPage> {
     const scope = await requireScope(context, false);
     if (offset < 0 || limit < 1 || limit > 100) {
@@ -211,18 +278,43 @@ export class OrdersService {
     if (customerId != null && !isUUID(customerId)) {
       throw invalidValue('customerId');
     }
-    const page = await this.orders.operatorOrders(
-      scope,
-      offset,
-      limit,
-      words,
-      status,
-      customerId?.toLowerCase(),
+    const from = orderFilterInstant(filter?.placedAtFrom, 'filter.placedAtFrom');
+    const before = orderFilterInstant(filter?.placedAtBefore, 'filter.placedAtBefore');
+    if (from && before && from >= before) {
+      throw invalidValue('filter.placedAtBefore');
+    }
+    const customerTypes = new Set(filter?.customerTypes);
+    const paymentMethodLabel = orderFilterMethodLabels(
+      filter?.paymentMethodLabels,
+      'filter.paymentMethodLabels',
     );
+    const shippingMethodLabel = orderFilterMethodLabels(
+      filter?.shippingMethodLabels,
+      'filter.shippingMethodLabels',
+    );
+    const page = await this.orders.operatorOrders(scope, offset, limit, words, {
+      ...(filter?.statuses?.length && { status: { in: filter.statuses } }),
+      ...(customerId && { customerId: customerId.toLowerCase() }),
+      ...((from || before) && {
+        placedAt: { ...(from && { gte: from }), ...(before && { lt: before }) },
+      }),
+      ...(paymentMethodLabel && { paymentMethodLabel }),
+      ...(shippingMethodLabel && { shippingMethodLabel }),
+      AND: [
+        ...(status ? [{ status }] : []),
+        ...(customerTypes.size === 1
+          ? [{ customerId: customerTypes.has('PROFILE') ? { not: null } : null }]
+          : []),
+      ],
+    });
     return {
       ...page,
       items: page.items.map((order) => ({ ...summary(order), contactName: order.contactName })),
     };
+  }
+
+  async operatorFilterMethods(context: RequestContext) {
+    return this.orders.operatorFilterMethods(await requireScope(context, false));
   }
 
   async operatorOrder(context: RequestContext, id: string): Promise<OperatorOrder | null> {
@@ -237,6 +329,21 @@ export class OrdersService {
   async manualMethods(context: RequestContext) {
     const scope = await requireScope(context, false);
     return this.orders.transaction((tx) => this.checkout.enabledMethods(tx, scope));
+  }
+
+  async manualVariants(
+    context: RequestContext,
+    { offset = 0, limit = 20, search: rawSearch }: QueryManualOrderVariantsArgs,
+  ) {
+    const scope = await requireScope(context, false);
+    if (offset < 0 || limit < 1 || limit > 100) {
+      throw new BadRequestException('Invalid page');
+    }
+    const search = (rawSearch ?? '').trim();
+    if (Array.from(search).length > 200 || search.includes('\u0000')) {
+      throw new BadRequestException('Invalid search');
+    }
+    return this.orders.manualVariants(scope, offset, limit, search);
   }
 
   async createManual(context: RequestContext, input: ManualOrderInput): Promise<OperatorOrder> {
@@ -270,8 +377,12 @@ export class OrdersService {
     const scope = await requireScope(context, true);
     return this.orders.transaction(async (tx) => {
       const order = await this.requireLockedOrder(tx, scope, id);
-      if (!canEditManualOrder(order)) {
-        throw checkoutError('order', 'MANUAL_ORDER_NOT_EDITABLE', 'This order cannot be edited');
+      if (!canEditManualOrder(order) && !canEditStorefrontOrder(order)) {
+        throw checkoutError(
+          'order',
+          order.cartId === null ? 'MANUAL_ORDER_NOT_EDITABLE' : 'STOREFRONT_ORDER_NOT_EDITABLE',
+          'This order cannot be edited',
+        );
       }
       const legacyCurrency = order.currency !== checkoutCurrency;
       const changesAmounts =
@@ -291,6 +402,17 @@ export class OrdersService {
               'An invoice has been issued. Order items and the shipping charge are locked',
             );
       }
+      if (
+        order.cartId !== null &&
+        input.lines !== undefined &&
+        (order.discountCode !== null || !order.discountAmount.isZero())
+      ) {
+        throw checkoutError(
+          'order',
+          'STOREFRONT_ORDER_PROMO_LINES_LOCKED',
+          'Items are locked because this order has a booked promotion',
+        );
+      }
       const {
         data: { shippingFee, ...fields },
         revised,
@@ -302,12 +424,11 @@ export class OrdersService {
         order.id,
         {
           ...fields,
-          ...(!legacyCurrency &&
-            !order.invoice && {
-              shippingFee,
-              subtotal,
-              total: new CartPrice(subtotal).plus(shippingFee),
-            }),
+          ...(changesAmounts && {
+            shippingFee,
+            subtotal,
+            total: new CartPrice(subtotal).minus(order.discountAmount).plus(shippingFee),
+          }),
         },
         revised?.lines,
       );
@@ -322,13 +443,27 @@ export class OrdersService {
     order: Order | null,
   ) {
     const contact = orderContactFields(validateOrderContact(input));
+    const billing =
+      input.billingAddress === undefined
+        ? {}
+        : orderBillingFields(
+            input.billingAddress ? validateBillingAddress(input.billingAddress) : null,
+          );
     const customerId =
       input.customerId === undefined
         ? (order?.customerId ?? null)
         : input.customerId === null
           ? null
           : manualOrderId(input.customerId, 'customerId');
-    if (customerId && !(await this.customers.findById(tx, scope, customerId))) {
+    const storefront = order !== null && order.cartId !== null;
+    if (storefront && customerId !== order.customerId) {
+      throw checkoutError(
+        'customerId',
+        'ORDER_CUSTOMER_LOCKED',
+        'This order keeps its original shopper',
+      );
+    }
+    if (!storefront && customerId && !(await this.customers.findById(tx, scope, customerId))) {
       throw checkoutError(
         'customerId',
         'ORDER_CUSTOMER_UNAVAILABLE',
@@ -343,35 +478,34 @@ export class OrdersService {
 
     const paymentMethodId =
       input.paymentMethodId === undefined
-        ? order?.paymentMethodId
+        ? (order?.paymentMethodId ?? null)
         : this.checkout.paymentMethodId(input.paymentMethodId ?? '');
     const shippingMethodId =
       input.shippingMethodId === undefined
-        ? order?.shippingMethodId
+        ? (order?.shippingMethodId ?? null)
         : this.checkout.shippingMethodId(input.shippingMethodId ?? '');
-    if (!paymentMethodId || !shippingMethodId) {
+    if (!storefront && (!paymentMethodId || !shippingMethodId)) {
       throw invalidValue(!paymentMethodId ? 'paymentMethodId' : 'shippingMethodId');
     }
     const payment =
-      order?.paymentMethodId === paymentMethodId
+      order && order.paymentMethodId === paymentMethodId
         ? { label: order.paymentMethodLabel, instructions: order.paymentInstructions }
-        : await this.checkout.paymentMethod(tx, scope, paymentMethodId);
+        : await this.checkout.paymentMethod(tx, scope, paymentMethodId ?? '');
     const shipping =
-      order?.shippingMethodId === shippingMethodId
+      order && order.shippingMethodId === shippingMethodId
         ? { label: order.shippingMethodLabel, fixedFee: order.shippingFee }
-        : await this.checkout.shippingMethod(tx, scope, shippingMethodId);
+        : await this.checkout.shippingMethod(tx, scope, shippingMethodId ?? '');
 
     if (input.lines === null) {
       throw invalidValue('lines');
     }
     const revised =
-      input.lines === undefined
-        ? undefined
-        : await this.reviseLines(tx, scope, order?.id ?? null, input.lines);
+      input.lines === undefined ? undefined : await this.reviseLines(tx, scope, order, input.lines);
     return {
       data: {
         ...contact,
-        customerId,
+        ...billing,
+        ...(!storefront && { customerId }),
         merchantNote: merchantNote || null,
         paymentMethodId,
         paymentMethodLabel: payment.label,
@@ -387,9 +521,10 @@ export class OrdersService {
   private async reviseLines(
     tx: Prisma.TransactionClient,
     scope: Scope,
-    orderId: string | null,
+    order: Order | null,
     lines: NonNullable<ManualOrderUpdateInput['lines']>,
   ) {
+    const orderId = order?.id ?? null;
     const inputs = manualLineInputs(lines);
     const newIds = inputs.flatMap(({ variantId }) => variantId ?? []);
     await this.orders.lockOrderProducts(tx, scope, orderId, newIds);
@@ -397,7 +532,18 @@ export class OrdersService {
     const saved = orderId ? await this.orders.lines(tx, scope, orderId) : [];
     const ids = [...new Set([...newIds, ...saved.flatMap(({ variantId }) => variantId ?? [])])];
     const sellable = await this.cartRepository.publicVariants(tx, scope, ids);
-    const revised = reviseOrderLines(inputs, saved, sellable);
+    // Re-adding a booked storefront variant keeps its original price and line snapshot.
+    const bookedLines = order?.cartId
+      ? new Map(saved.map((line) => [line.variantId, line.id]))
+      : null;
+    const revised = reviseOrderLines(
+      inputs.map((input) => {
+        const lineId = input.variantId && bookedLines?.get(input.variantId);
+        return lineId ? { lineId, quantity: input.quantity } : input;
+      }),
+      saved,
+      sellable,
+    );
     for (const [id, { quantity, path }] of revised.stockDeltas) {
       if (quantity > 0 && !(await this.orders.decrementStock(tx, scope, id, quantity))) {
         throw checkoutError(path, 'ORDER_STOCK_SHORT', 'Requested stock is no longer available');
@@ -562,7 +708,7 @@ export class OrdersService {
       if (cart.lines.some(({ issue }) => issue === 'INSUFFICIENT_STOCK')) {
         throw stockChanged();
       }
-      const { quote, contact, shippingAddress } = await this.checkout.quoteCart(
+      const { quote, contact, shippingAddress, billingAddress } = await this.checkout.quoteCart(
         tx,
         scope,
         { ...storedCart, cart },
@@ -571,6 +717,7 @@ export class OrdersService {
       if (input.quoteRevision !== quote.quoteRevision) {
         throw checkoutError('cart', 'CHECKOUT_QUOTE_CHANGED', 'Review the updated checkout total');
       }
+      const billing = orderBillingFields(billingAddress);
 
       const lines: Prisma.OrderLineCreateManyOrderInput[] = [];
       for (const [sortOrder, line] of quote.lines.entries()) {
@@ -601,8 +748,11 @@ export class OrdersService {
           cartId,
           customerId: customerId ?? null,
           ...orderContactFields({ contact, shippingAddress }),
+          ...billing,
+          paymentMethodId: quote.paymentMethod.id,
           paymentMethodLabel: quote.paymentMethod.label,
           paymentInstructions: quote.paymentMethod.instructions,
+          shippingMethodId: quote.shippingMethod.id,
           shippingMethodLabel: quote.shippingMethod.label,
           currency: quote.currency,
           subtotal: quote.subtotal,

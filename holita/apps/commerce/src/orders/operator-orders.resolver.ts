@@ -4,6 +4,7 @@ import type {
   MutationMarkOrderPaidArgs,
   MutationUpdateManualOrderArgs,
   MutationUpdateOrderStatusArgs,
+  QueryManualOrderVariantsArgs,
   QueryOrderArgs,
   QueryOrdersArgs,
 } from '../generated/graphql/types.js';
@@ -19,6 +20,11 @@ export class OperatorOrdersResolver {
     return this.orders.operatorOrders(context, args);
   }
 
+  @Query('orderFilterMethods')
+  filterMethods(@Context() context: RequestContext) {
+    return this.orders.operatorFilterMethods(context);
+  }
+
   @Query('order')
   order(@Args() { id }: QueryOrderArgs, @Context() context: RequestContext) {
     return this.orders.operatorOrder(context, id);
@@ -27,6 +33,11 @@ export class OperatorOrdersResolver {
   @Query('manualOrderMethods')
   methods(@Context() context: RequestContext) {
     return this.orders.manualMethods(context);
+  }
+
+  @Query('manualOrderVariants')
+  variants(@Args() args: QueryManualOrderVariantsArgs, @Context() context: RequestContext) {
+    return this.orders.manualVariants(context, args);
   }
 
   @Mutation('createManualOrder')

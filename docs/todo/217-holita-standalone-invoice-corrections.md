@@ -1,6 +1,6 @@
 # 217 Define how standalone invoices are corrected
 
-**Status:** Needs owner. Approve correction, retention and numbering policy for issued documents. **Product:** Holita. Depends on [205](205-holita-standalone-invoices.md).
+**Status:** Needs owner. Approve correction, retention and numbering policy for issued documents. **Product:** Holita.
 
 ## Background
 

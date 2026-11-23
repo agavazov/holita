@@ -405,10 +405,12 @@ async function editOption(page: Page) {
   await page.getByRole('link', { name: 'Options', exact: true }).click();
   await page.getByRole('button', { name: 'Add option', exact: true }).click();
   await page.locator('#option-name').fill('Finish');
+  const shown = page.getByRole('option', { name: 'Shown', exact: true });
   await page.locator('#option-show-in-filters').click();
-  await page.getByRole('option', { name: 'Shown', exact: true }).click();
+  await shown.click();
+  await expect(shown).toHaveCount(0);
   await page.locator('#option-show-in-listing').click();
-  await page.getByRole('option', { name: 'Shown', exact: true }).click();
+  await shown.click();
   const addValue = page.getByRole('button', { name: 'Add value', exact: true });
   await addValue.click();
   await page.locator('#option-value-0').fill('Matt');
@@ -1030,7 +1032,9 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
             .last()
             .fill(target);
         }
-        await merchant.getByRole('option', { name: target }).click();
+        const destination = merchant.getByRole('option', { name: target });
+        await destination.click();
+        await expect(destination).toHaveCount(0);
       }
     };
     const saveMenu = async (mutation: 'createNavigationMenu' | 'updateNavigationMenu') => {
@@ -1993,6 +1997,15 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       await page.getByRole('button', { name: 'Apply promo code', exact: true }).click();
       return (await applied).json();
     };
+    const billingRecipient = {
+      name: 'Billing Recipient',
+      phone: '+359 32 555 0118',
+      countryCode: 'BG',
+      city: 'Plovdiv',
+      postalCode: '4000',
+      line1: '24 Billing Street',
+      line2: 'Floor 2',
+    };
     const quoteCheckout = async (
       page: Page,
       subtotal: string,
@@ -2002,6 +2015,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         discountAmount: '0.00',
       },
       shippingFee = '6.50',
+      separateBilling = false,
     ) => {
       await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Shopper');
       await page.getByRole('textbox', { name: 'Email', exact: true }).fill(shopperEmail);
@@ -2016,9 +2030,26 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       await page
         .getByLabel('Payment method', { exact: true })
         .selectOption({ label: paymentLabel });
+      if (separateBilling) {
+        await page.getByRole('checkbox', { name: 'Use a different billing address' }).check();
+        for (const [key, value] of Object.entries(billingRecipient)) {
+          const field = page.locator(`#billing-${key}`);
+          if (key === 'countryCode') {
+            await field.selectOption(value);
+          } else {
+            await field.fill(value);
+          }
+        }
+      }
       const quoted = waitForCart(page, 'QuoteCheckout');
       await page.getByRole('button', { name: 'Review total', exact: true }).click();
-      expect(await (await quoted).json()).toMatchObject({
+      const response = await quoted;
+      if (separateBilling) {
+        expect(response.request().postDataJSON()).toMatchObject({
+          variables: { input: { billingAddress: billingRecipient } },
+        });
+      }
+      expect(await response.json()).toMatchObject({
         data: {
           quoteCheckout: { subtotal, shippingFee, total, currency: 'EUR', ...discount },
         },
@@ -2334,7 +2365,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     });
     const discountedQuote = { discountCode, discountAmount: '3.00' };
     const chargedTotal = '33.50';
-    await reviewCheckout(shopper, '30.00', chargedTotal, discountedQuote);
+    await reviewCheckout(shopper, '30.00', chargedTotal, discountedQuote, '6.50', true);
     const interruptedAccountCheckout = await interruptCheckout(shopper);
     const pendingAccountCart = () =>
       shopper.evaluate((id) => sessionStorage.getItem(`holita.shopper-checkout.${id}`), shopId);
@@ -2353,7 +2384,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       data: { checkout: { cart: { itemCount: 1 } } },
     });
     await expect.poll(pendingAccountCart).toBeNull();
-    await quoteCheckout(shopper, '30.00', chargedTotal, discountedQuote);
+    await quoteCheckout(shopper, '30.00', chargedTotal, discountedQuote, '6.50', true);
 
     const committedAccountPlacement = await interruptedAccountCheckout.place();
     const [recoveredAccount, accountReceipt] = await Promise.all([
@@ -2466,13 +2497,62 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     });
     const accountReceiptUrl = shopper.url();
 
+    const invoiceNavigation = merchant
+      .getByRole('navigation', { name: 'Navigation', exact: true })
+      .getByRole('link', { name: 'Invoices', exact: true });
+    await invoiceNavigation.click();
+    const openIssuerSettings = async () => {
+      await merchant.getByRole('button', { name: 'Page actions', exact: true }).click();
+      await merchant.getByRole('menuitem', { name: 'Invoice settings', exact: true }).click();
+    };
+    const saveIssuerSettings = async (input: Record<string, string>) => {
+      await openIssuerSettings();
+      for (const [key, value] of Object.entries(input)) {
+        await merchant.locator(`#invoice-${key}`).fill(value);
+      }
+      const saved = waitForCart(merchant, 'OperatorUpdateInvoiceIssuerSettings');
+      await merchant.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+      expect(await (await saved).json()).toMatchObject({
+        data: { updateInvoiceIssuerSettings: input },
+      });
+      await dismissSuccess(merchant, 'Invoice settings saved.');
+    };
+    const issuer = {
+      issuerName: 'Demo Issuer',
+      issuerCompanyId: '000000001',
+      issuerAddress: '20 Invoice Street, Sofia',
+      issuerRepresentative: 'Default Representative',
+      issuerBankName: 'Demo Bank',
+      issuerIban: 'BG00TEST00000000000000',
+      issuerBic: 'TESTBGSF',
+    };
+    await saveIssuerSettings(issuer);
     await merchant.getByRole('link', { name: 'Orders', exact: true }).click();
     const operatorDiscountedOrder = waitForCart(merchant, 'OperatorOrder');
     await merchant.getByRole('link', { name: `Open order · ${orderNumber}` }).click();
     expect(await (await operatorDiscountedOrder).json()).toMatchObject({
-      data: { order: { id: accountOrderId, total: chargedTotal, ...discountedQuote } },
+      data: { order: { ...accountOrderSnapshot, billingAddress: billingRecipient } },
     });
-    await merchant.getByRole('button', { name: 'Update status', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Edit order', exact: true }).click();
+    await merchant.locator('#manual-merchantNote').fill('Confirm delivery window');
+    const storefrontEdit = waitForCart(merchant, 'OperatorUpdateManualOrder');
+    const editedOrder = waitForCart(merchant, 'OperatorOrder');
+    await merchant.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+    expect(await (await storefrontEdit).json()).toMatchObject({
+      data: { updateManualOrder: { id: accountOrderId } },
+    });
+    expect(await (await editedOrder).json()).toMatchObject({
+      data: {
+        order: {
+          ...accountOrderSnapshot,
+          billingAddress: billingRecipient,
+          merchantNote: 'Confirm delivery window',
+        },
+      },
+    });
+    await dismissSuccess(merchant, 'Order saved.');
+    await merchant.getByRole('button', { name: 'Page actions', exact: true }).click();
+    await merchant.getByRole('menuitem', { name: 'Update status', exact: true }).click();
     await merchant.locator('#order-status').click();
     await merchant.getByRole('option', { name: 'Confirmed', exact: true }).click();
     const confirmed = waitForCart(merchant, 'OperatorUpdateOrderStatus');
@@ -2498,9 +2578,29 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.getByRole('menuitem', { name: 'Create invoice', exact: true }).click();
     const invoiceNumber = 'SMOKE-0001';
     await merchant.locator('#invoice-number').fill(invoiceNumber);
-    await merchant.locator('#invoice-issuerName').fill('Demo Issuer');
-    await merchant.locator('#invoice-issuerCompanyId').fill('000000001');
-    await merchant.locator('#invoice-issuerAddress').fill('20 Invoice Street, Sofia');
+    const invoiceDetails = {
+      taxEventDate: '2026-11-22',
+      issueDate: '2026-11-23',
+      dueDate: '2026-12-07',
+      paymentMethod: 'Bank transfer',
+      reason: 'Ceramic goods',
+      note: 'Synthetic acceptance invoice',
+      issuerRepresentative: 'Invoice Representative',
+    };
+    for (const [key, value] of Object.entries(invoiceDetails)) {
+      const field = merchant.locator(`#invoice-${key}`);
+      if (key.endsWith('Date')) {
+        await field.press('ControlOrMeta+a');
+        await field.press('Backspace');
+        await field.pressSequentially(value);
+        await field.press('Tab');
+        await expect(field).toHaveValue(value);
+      } else {
+        await field.fill(value);
+      }
+    }
+    await merchant.locator('#invoice-paymentTermDays').fill('14');
+    await merchant.locator('[id="invoice-lineUnits.0"]').fill('pcs');
     const issuance = waitForCart(merchant, 'OperatorIssueOrderInvoice');
     await merchant
       .getByRole('dialog')
@@ -2520,25 +2620,41 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         orderInvoice: {
           orderId: accountOrderId,
           number: invoiceNumber,
+          ...issuer,
+          ...invoiceDetails,
+          paymentStatus: 'PAID',
+          paymentTermDays: 14,
+          recipientName: billingRecipient.name,
+          recipientPhone: billingRecipient.phone,
+          recipientAddress: '24 Billing Street\nFloor 2\n4000 Plovdiv\nBG',
+          currency: 'EUR',
           subtotal: '30.00',
           discountAmount: discountedQuote.discountAmount,
           shippingFee: '6.50',
           total: chargedTotal,
-          lines: [{ sku: 'CONFIG-Satin', quantity: 1, unitPrice: '30.00', lineTotal: '30.00' }],
+          lines: [
+            {
+              sku: 'CONFIG-Satin',
+              quantity: 1,
+              unit: 'pcs',
+              unitPrice: '30.00',
+              lineTotal: '30.00',
+            },
+          ],
         },
       },
     });
-    const downloadInvoicePdf = async (name: string) => {
+    const downloadInvoicePdf = async (name: string, number = invoiceNumber) => {
       const download = merchant.waitForEvent('download');
       await merchant.getByRole('button', { name: 'Download PDF', exact: true }).click();
       const file = await download;
-      expect(file.suggestedFilename()).toBe(`invoice-${invoiceNumber}.pdf`);
+      expect(file.suggestedFilename()).toBe(`invoice-${number}.pdf`);
       const contents = await readFile(await file.path());
       expect(contents.subarray(0, 5).toString()).toBe('%PDF-');
       await file.saveAs(testInfo.outputPath(name));
     };
     await downloadInvoicePdf('invoice-before-order-change.pdf');
-    await merchant.getByRole('link', { name: 'Invoices', exact: true }).click();
+    await invoiceNavigation.click();
     const register = merchant.waitForResponse((response) => {
       const request = response.request().postData();
       return (
@@ -2571,6 +2687,48 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     );
     await merchant.locator('#invoice-summary').waitFor();
 
+    await invoiceNavigation.click();
+    await saveIssuerSettings({ issuerName: 'New Default Issuer' });
+    await merchant.getByRole('button', { name: 'Create invoice', exact: true }).click();
+    const standaloneNumber = 'SMOKE-0002';
+    await merchant.locator('#invoice-number').fill(standaloneNumber);
+    await merchant.locator('#invoice-recipientName').fill('Standalone Recipient');
+    await merchant.locator('#invoice-recipientAddress').fill('10 Example Street, Sofia');
+    await merchant.locator('[id="invoice-lines.0.description"]').fill('Bowls');
+    await merchant.locator('[id="invoice-lines.0.quantity"]').fill('2');
+    await merchant.locator('[id="invoice-lines.0.unitPrice"]').fill('4.85');
+    await merchant.getByRole('button', { name: 'Add line', exact: true }).click();
+    await merchant.locator('[id="invoice-lines.1.description"]').fill('Wrapping');
+    await merchant.locator('[id="invoice-lines.1.unitPrice"]').fill('0.30');
+    const standaloneIssue = waitForCart(merchant, 'OperatorIssueStandaloneInvoice');
+    await merchant
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Create invoice', exact: true })
+      .click();
+    expect(await (await standaloneIssue).json()).toMatchObject({
+      data: { issueStandaloneInvoice: { id: expect.any(String) } },
+    });
+    const standaloneRead = waitForCart(merchant, 'OperatorInvoiceById');
+    await merchant.getByRole('link', { name: standaloneNumber, exact: true }).click();
+    expect(await (await standaloneRead).json()).toMatchObject({
+      data: {
+        invoice: {
+          orderId: null,
+          number: standaloneNumber,
+          issuerName: 'New Default Issuer',
+          currency: 'EUR',
+          total: '10.00',
+          lines: [
+            { description: 'Bowls', quantity: 2, unitPrice: '4.85', lineTotal: '9.70' },
+            { description: 'Wrapping', quantity: 1, unitPrice: '0.30', lineTotal: '0.30' },
+          ],
+        },
+      },
+    });
+    const standaloneId = new URL(merchant.url()).pathname.split('/').at(-1);
+    await downloadInvoicePdf('standalone-invoice.pdf', standaloneNumber);
+    await merchant.goto(orderInvoiceUrl);
+
     const reloadedOrder = waitForCart(shopper, 'ShopperOrder');
     await shopper.reload();
     expect(await (await reloadedOrder).json()).toMatchObject({
@@ -2602,6 +2760,20 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       });
       return response.json();
     };
+    expect(
+      await operatorRouter(
+        'query($orderId:ID!,$id:ID!){orderInvoice(orderId:$orderId){id} invoice(id:$id){id} invoices(search:"SMOKE"){total} invoiceIssuerSettings{issuerName}}',
+        { orderId: accountOrderId, id: standaloneId },
+        secondShopId,
+      ),
+    ).toEqual({
+      data: {
+        orderInvoice: null,
+        invoice: null,
+        invoices: { total: 0 },
+        invoiceIssuerSettings: { issuerName: null },
+      },
+    });
     const inventoryRead = 'query($id:ID!){inventoryVariant(id:$id){id quantity}}';
     expect(await operatorRouter(inventoryRead, trackedVariant)).toEqual({
       data: { inventoryVariant: { ...trackedVariant, quantity: 4 } },
@@ -2919,8 +3091,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.locator('[id="manual-shippingAddress.city"]').fill('Sofia');
     await merchant.locator('[id="manual-shippingAddress.postalCode"]').fill('1000');
     await merchant.locator('[id="manual-shippingAddress.line1"]').fill('12 Demo Street');
-    await merchant.locator('#manual-lines').fill(configuredProductName);
+    await merchant.locator('#manual-lines').fill('CONFIG-Satin');
     await merchant.getByRole('option', { name: /CONFIG-Satin/ }).click();
+    await merchant.locator('#manual-differentBillingAddress').check();
+    for (const [key, value] of Object.entries(billingRecipient)) {
+      await merchant.locator(`[id="manual-billingAddress.${key}"]`).fill(value);
+    }
     await merchant.locator('#manual-shippingMethodId').click();
     await merchant.getByRole('option', { name: shippingLabel, exact: true }).click();
     await merchant.locator('#manual-paymentMethodId').click();
@@ -2934,18 +3110,27 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     expect(await (await manualCreate).json()).toMatchObject({
       data: { createManualOrder: { id: expect.any(String) } },
     });
+    const manualOrderDetail = waitForCart(merchant, 'OperatorOrder');
     await merchant.getByRole('link', { name: /Open order · .* · Phone Shopper/ }).click();
     await merchant.waitForURL(/\/orders\/[0-9a-f-]+$/u);
     const manualId = new URL(merchant.url()).pathname.split('/').at(-1);
     if (!manualId) {
       throw new Error('Missing manual order ID');
     }
+    expect(await (await manualOrderDetail).json()).toMatchObject({
+      data: { order: { id: manualId, billingAddress: billingRecipient } },
+    });
     await merchant.getByRole('button', { name: 'Edit manual order', exact: true }).click();
+    await merchant.locator('#manual-differentBillingAddress').uncheck();
     await merchant.locator('[id="manual-lines.0.quantity"]').fill('2');
     const manualUpdate = waitForCart(merchant, 'OperatorUpdateManualOrder');
+    const manualUpdatedDetail = waitForCart(merchant, 'OperatorOrder');
     await merchant.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
     expect(await (await manualUpdate).json()).toMatchObject({
       data: { updateManualOrder: { id: manualId } },
+    });
+    expect(await (await manualUpdatedDetail).json()).toMatchObject({
+      data: { order: { id: manualId, billingAddress: null } },
     });
 
     await shopper.getByRole('link', { name: 'Back to orders', exact: true }).click();
@@ -3141,8 +3326,78 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.getByRole('link', { name: `H-${manualId}`, exact: true }).click();
     expect(await (await linkedOrder).json()).toMatchObject({ data: { order: { id: manualId } } });
 
-    await merchant.getByRole('link', { name: 'Dashboard', exact: true }).click();
+    const filteredOrdersUrl = new URL('/en/orders', merchant.url());
+    for (const [key, value] of Object.entries({
+      status: 'PLACED,CONFIRMED',
+      customerType: 'PROFILE',
+      paymentMethod: encodeURIComponent(paymentLabel),
+      shippingMethod: encodeURIComponent(shippingLabel),
+    })) {
+      filteredOrdersUrl.searchParams.set(key, value);
+    }
+    await merchant.goto(filteredOrdersUrl.href);
+    await expect(
+      merchant.getByRole('link', { name: /Open order · .* · Phone Shopper/ }),
+    ).toBeVisible();
+    const filteredOrders = waitForCart(merchant, 'OperatorOrders');
+    await merchant.reload();
+    expect(await (await filteredOrders).json()).toMatchObject({
+      data: { orders: { items: [{ id: manualId }], total: 1 } },
+    });
+    const removePayment = merchant.getByRole('button', { name: /Remove.*Payment method/ });
+    if (!(await removePayment.isVisible())) {
+      await merchant.getByRole('button', { name: /Filters/ }).click();
+    }
+    await removePayment.click();
+    await expect(merchant).toHaveURL(
+      (url) =>
+        !url.searchParams.has('paymentMethod') &&
+        url.searchParams.has('shippingMethod') &&
+        url.searchParams.has('status') &&
+        url.searchParams.get('customerType') === 'PROFILE',
+    );
+    const orderCustomerFilter = merchant.getByRole('combobox', { name: 'Customer account' });
+    await orderCustomerFilter.fill(shopperEmail);
+    await merchant.getByRole('option', { name: updatedCustomer, exact: true }).click();
+    await expect(merchant).toHaveURL((url) => !!url.searchParams.get('customerId'));
+    await merchant.getByRole('button', { name: 'Clear customer filter' }).click();
+    await expect(merchant).toHaveURL(
+      (url) => !url.searchParams.has('customerId') && url.searchParams.has('shippingMethod'),
+    );
+
     const shopPicker = merchant.locator('.app-topbar__branch').getByRole('button');
+    const selectShop = async (name: string) => {
+      await shopPicker.click();
+      await merchant.getByRole('menuitem', { name, exact: true }).click();
+    };
+    await merchant.getByRole('link', { name: 'General Settings', exact: true }).click();
+    const shopName = merchant.locator('#shop-settings-displayName');
+    const secondShopDisplayName = 'Second shop saved public name';
+    await selectShop('Second shop');
+    await expect(shopPicker).toContainText('Second shop');
+    await expect(shopName).toHaveValue('');
+    await shopName.fill(secondShopDisplayName);
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Settings saved.');
+    await selectShop('First shop');
+    await expect(shopName).toHaveValue(contactSettings.displayName);
+
+    const draftName = 'Unsaved synthetic shop name';
+    await shopName.fill(draftName);
+    await selectShop('Second shop');
+    const discardChanges = merchant.getByRole('alertdialog');
+    await discardChanges.getByRole('button', { name: 'Keep editing' }).click();
+    await expect(shopPicker).toContainText('First shop');
+    await expect(shopName).toHaveValue(draftName);
+    await selectShop('Second shop');
+    await discardChanges.getByRole('button', { name: 'Discard changes' }).click();
+    await expect(shopPicker).toContainText('Second shop');
+    await expect(shopName).toHaveValue(secondShopDisplayName);
+    await selectShop('First shop');
+    await expect(shopName).toHaveValue(contactSettings.displayName);
+    await expect(discardChanges).toHaveCount(0);
+
+    await merchant.getByRole('link', { name: 'Dashboard', exact: true }).click();
     const switchDashboardShop = async (name: string, id: string): Promise<unknown> => {
       await shopPicker.click();
       const read = merchant.waitForResponse((response) => {
