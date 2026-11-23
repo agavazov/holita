@@ -74,12 +74,10 @@
               (click)="url.cancelPending()"
               >{{ invoice.number }}</a
             >
-            <span class="app-table-mobile-meta" [title]="invoice.recipientName">
-              {{ invoice.recipientName }}
+            <span class="app-table-mobile-meta" [title]="issueDate + ' · ' + invoice.recipientName">
+              <time [dateTime]="invoice.issueDate">{{ issueDate }}</time> · {{ invoice.recipientName
+              }}
             </span>
-            <time class="app-table-mobile-meta" [dateTime]="invoice.issueDate"
-              >{{ issueDate }}</time
-            >
           </div>
         </td>
         <td class="app-table-merged-column">

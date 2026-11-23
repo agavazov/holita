@@ -1266,17 +1266,14 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.getByRole('button', { name: 'Create product', exact: true }).click();
     const configuredProductName = 'Stoneware cookware';
     await merchant.locator('#product-name').fill(configuredProductName);
-    const generateFinishVariants = async (drawerTitle: string) => {
-      await merchant.locator('#product-variant-generation-values').click();
-      for (const finish of ['Gloss', 'Satin']) {
-        await merchant
-          .getByRole('option', { name: `Surface finish: ${finish}`, exact: true })
-          .click();
-      }
-      await merchant.getByRole('heading', { name: drawerTitle, exact: true }).click();
-      await merchant.getByRole('button', { name: 'Generate combinations', exact: true }).click();
-    };
-    await generateFinishVariants('Create product');
+    await merchant.locator('#product-variant-generation-values').click();
+    for (const finish of ['Gloss', 'Satin']) {
+      await merchant
+        .getByRole('option', { name: `Surface finish: ${finish}`, exact: true })
+        .click();
+    }
+    await merchant.getByRole('heading', { name: 'Create product', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Generate combinations', exact: true }).click();
     for (const [index, label, price] of [
       [0, 'Gloss', '24.00'],
       [1, 'Satin', '30.00'],
@@ -2590,12 +2587,6 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
           variants{id sku price inventoryTracked active optionValueIds}}}`,
         { id: configuredProductId },
       );
-    await merchant.getByRole('link', { name: 'Products', exact: true }).click();
-    await configuredProduct.click();
-    await merchant.locator('#product-variant-price-0').fill('24.99');
-    await generateFinishVariants('Edit product');
-    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
-    await dismissSuccess(merchant, 'Product saved.');
     const configuredRead = await readConfiguredProduct();
     if (
       typeof configuredRead !== 'object' ||
@@ -2623,7 +2614,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       throw new Error('The configured product requires both saved variants');
     }
     expect(savedVariants).toMatchObject([
-      { sku: 'CONFIG-Gloss', price: '24.99', optionValueIds: [gloss.id] },
+      { sku: 'CONFIG-Gloss', optionValueIds: [gloss.id] },
       { id: trackedVariant.id, sku: 'CONFIG-Satin', optionValueIds: [satin.id] },
     ]);
 

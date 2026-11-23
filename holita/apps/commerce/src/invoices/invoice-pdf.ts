@@ -15,7 +15,7 @@ function invoiceHtml(invoice: Invoice): string {
   const rows = invoice.lines
     .map(
       (line) => `<tr>
-        <td>${escape(line.description)}<small>${escape(line.sku)}</small></td>
+        <td class="line-description">${escape(line.description)}<small>${escape(line.sku)}</small></td>
         <td class="amount">${String(line.quantity)}</td>
         <td class="amount">${escape(line.unitPrice)}</td>
         <td class="amount">${escape(line.lineTotal)}</td>
@@ -31,6 +31,7 @@ function invoiceHtml(invoice: Invoice): string {
       <style>
         body { color: #202830; font: 10.5pt Arial, "Liberation Sans", "DejaVu Sans", sans-serif; }
         h1 { font-size: 21pt; margin: 0 0 12pt; overflow-wrap: anywhere; }
+        h1, .line-description { white-space: pre-wrap; }
         h2 { font-size: 12pt; margin: 0 0 7pt; }
         dl { margin: 0; }
         dl div { display: grid; grid-template-columns: 88pt 1fr; gap: 6pt; margin-bottom: 4pt; }
