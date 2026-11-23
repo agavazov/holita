@@ -1,6 +1,6 @@
 # 146 Save lead follow-up in Quick Work
 
-**Status:** Ready after [137](137-holita-sales-tasks.md). **Product:** Holita.
+**Status:** Ready after [301](301-holita-sales-task-queue.md). **Product:** Holita.
 
 ## Background
 
@@ -15,8 +15,8 @@ from the Leads list in one save.
 
 ## Steps
 
-1. Add a Quick Work row action and follow-up prompt to Leads. Use the existing Sofia
-   day buckets from 137. Prompt for an active lead with no open work scheduled today or
+1. Add a Quick Work row action and follow-up prompt to Leads. Use the Sofia
+   day buckets from 301. Prompt for an active lead with no open work scheduled today or
    later, including an active lead whose only open tasks are overdue. Closed leads do
    not show the prompt.
 2. Open a shared drawer with the lead's current stage and selectable open tasks. The
@@ -44,7 +44,8 @@ or new activity entities.
 
 ## References
 
-- [red.bg Quick Work routes and handler](/workspace/projects/red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/Crm/LeadsController.php)
-- [red.bg task summary and prompt rules](/workspace/projects/red.bg/workspace-sales/services/sales/app/Services/Crm/LeadTaskListingPresenter.php)
-- [red.bg Quick Work editor](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/quick-work-fields.blade.php)
-- [red.bg Leads list follow-up prompt](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/task-listing-summary.blade.php)
+- [red.bg Quick Work routes and handler](../../../red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/Crm/LeadsController.php)
+- [red.bg task summary and prompt rules](../../../red.bg/workspace-sales/services/sales/app/Services/Crm/LeadTaskListingPresenter.php)
+- [red.bg Quick Work editor](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/quick-work-fields.blade.php)
+- [red.bg Leads list follow-up prompt](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/task-listing-summary.blade.php)
+- [Holita Sales route registration](../../holita/apps/sales/src/main.ts#L9)

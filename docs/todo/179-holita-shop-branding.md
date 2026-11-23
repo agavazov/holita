@@ -1,10 +1,10 @@
 # 179 Manage shop logo and favicon
 
-**Status:** Ready after [126](126-holita-general-settings.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-red.bg Admin has logo and favicon upload and removal. Holita image storage serves product and brand photos. Queue 126 covers the public display name and contact details.
+red.bg Admin has logo and favicon upload and removal. Holita image storage serves product and brand photos. Public display name and contact details shipped in `946cb21d`.
 
 ## Goal
 
@@ -17,7 +17,7 @@ Let a merchant manage shop identity images for Basic storefront.
 
 ## Done when
 
-The selected shop gets its saved logo and favicon, and removing them restores its text/default identity.
+The selected shop uses its saved logo and favicon in Basic, and another shop keeps its own identity. Removing either asset restores the corresponding text/default identity.
 
 ## Limits
 
@@ -28,4 +28,5 @@ Fixed Basic storefront only. Use existing raster and local storage conventions.
 - [red.bg logo editor](../../../red.bg/workspace-ecommerce/services/admin/app/Http/Controllers/Admin/Design/LogoController.php)
 - [Holita image pattern](../../holita/apps/admin/src/brands/brand-editor.ts)
 - [Storefront shell](../../holita/apps/storefront/src/main.ts)
-- [General settings queue](../../docs/todo/126-holita-general-settings.md)
+- [Holita existing shop settings](../../holita/apps/admin/src/shop-settings/shop-settings-page.ts#L67)
+- [Holita text identity in Basic](../../holita/apps/storefront/src/main.ts#L81)

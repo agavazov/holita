@@ -1,6 +1,6 @@
-# 190 Verify a storefront alias for the selected shop
+# 190 Decide the storefront alias and canonical URL policy
 
-**Status:** Needs owner. Approve hosting, DNS proof, TLS ownership and canonical URL policy. **Product:** Holita.
+**Status:** Needs owner. Which shops may use aliases, which DNS proof and TLS/ingress setup should they use, and which URL is canonical? **Product:** Holita.
 
 ## Background
 
@@ -8,23 +8,25 @@ red.bg Admin manages verified custom storefront domains. Holita resolves shops u
 
 ## Goal
 
-Let a merchant register and verify an alias for one Branch once hosting and canonical URL policy are approved.
+Set the rules for a merchant to use their own domain for one shop.
 
 ## Steps
 
-1. Confirm the approved hosting, domain eligibility, DNS proof and canonical URL policy before enabling the alias flow.
-2. Add scoped pending, verified and removed records and Admin actions. Bind verification and uniqueness to the proposed hostname, verified Tenant and Branch.
+1. Record which shops may use aliases, the required DNS ownership proof and how adding or withdrawing a domain affects eligibility.
+2. Agree on ingress and TLS ownership, the canonical public address and the behavior of existing Branch URLs and inbound links. Give 353 and 253 a single policy to implement.
 
 ## Done when
 
-A merchant can prove control for their shop's pending alias, and another shop cannot claim the verified hostname.
+The owner has approved concrete rules for domain eligibility, proof, expiry or withdrawal, TLS and canonical URLs, including how a released domain and existing shop links are handled.
 
 ## Limits
 
-Alias records and proof verification only. Host resolution, ingress and TLS belong to 253.
+Policy decision only. Alias records and proof verification follow in 353. Host resolution, ingress and TLS follow in 253.
 
 ## References
 
 - [red.bg custom domain service](../../../red.bg/workspace-ecommerce/services/api/app/Services/Stores/CustomDomainService.php)
 - [red.bg domain routes](../../../red.bg/workspace-ecommerce/services/admin/routes/admin.php)
 - [Holita shop routing policy](../../holita/AGENTS.md)
+- [red.bg Admin custom domain actions](../../../red.bg/workspace-ecommerce/services/admin/app/Http/Controllers/Admin/Settings/CustomDomainsController.php)
+- [Holita Branch path](../../holita/apps/storefront/src/main.ts#L919)

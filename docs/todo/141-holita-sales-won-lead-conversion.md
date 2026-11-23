@@ -46,8 +46,8 @@ the new Branch and the new merchant administrator can sign in and select it.
 
 ## Limits
 
-New merchant and first shop only. Ticket 144 adds existing-merchant handoff and ticket 142
-adds reporting filters. No custom domains, catalogue copying, plan activation or credential
+New merchant and first shop only. Tickets 144 and 304 add both existing-merchant handoff paths and ticket 142
+adds reporting. No custom domains, catalogue copying, plan activation or credential
 delivery.
 
 ## References
@@ -55,6 +55,7 @@ delivery.
 - [Atomic Core provisioning](143-holita-sales-core-provisioning.md)
 - [Core merchant and shop contracts](../../osnova/apps/core/src/modules/tenants/tenants.graphql)
 - [Commerce public shop resolution](../../holita/apps/commerce/src/storefront.service.ts)
-- [red.bg merchant creation](/workspace/projects/red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/MerchantsController.php)
-- [red.bg merchant form](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/merchants/partials/form.blade.php)
-- [red.bg shop creation](/workspace/projects/red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/StoresController.php)
+- [red.bg merchant creation](../../../red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/MerchantsController.php)
+- [red.bg merchant form](../../../red.bg/workspace-sales/services/sales/resources/views/sales/merchants/partials/form.blade.php)
+- [red.bg shop creation](../../../red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/StoresController.php)
+- [Holita storefront shop lookup](../../holita/apps/commerce/src/storefront.service.ts#L243)

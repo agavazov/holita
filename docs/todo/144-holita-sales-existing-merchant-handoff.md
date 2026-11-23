@@ -10,48 +10,38 @@ Branch-create mutation still requires a platform administrator or operator.
 
 ## Goal
 
-Let an agent hand off a Won lead to an explicitly selected existing merchant and either an
-existing shop or a newly created shop for that merchant.
+Let an agent hand off a Won lead to an explicitly selected current merchant and shop.
 
 ## Steps
 
-1. In the existing Won Lead Detail handoff editor add Use existing merchant. List explicit
-   choices using the Core merchant directory. Show only the selected merchant's eligible
-   Branches, with a separate Create shop action and shop-name field. No matching by email,
-   company name or prospect URL.
-2. For an existing Branch, use a server-verified Core read before saving. Verify that the
-   merchant is an active customer Tenant and the active Branch belongs to it, even if the
-   IDs were supplied directly. For a new Branch add a narrow internal Core command using
-   the authenticated internal transport and real platform SALES session. In Core verify
-   the target merchant, then create exactly one Branch under it. Reuse 143's scoped replay
-   pattern with a separate operation kind. Keep the existing platform GraphQL permissions.
-3. Extend the one-per-lead handoff record from 141 with the two destination modes
-   (`existingBranch`, `newBranch`) and explicit Core merchant Tenant and Branch IDs.
-   Keep handoff ID, initiation Core user, state and timestamps. Link a verified pair
-   directly or complete the new-Branch mode after Core confirms. Retry an uncertain
-   shop creation with the same operation ID. Show the linked merchant and storefront
-   on Lead Detail using the existing handoff presentation.
-4. Add one unconverted Won demo lead for each path and one completed existing-Branch
-   handoff referencing the existing demo merchant and shop. Use stable Sales fixture
-   IDs and preserve the seeded Core records.
+1. Add Use existing merchant to the Won Lead Detail handoff editor. Use the Core merchant
+   directory and show eligible Branches for the selected merchant with explicit selection.
+2. Verify in Core that the selected merchant is an active customer Tenant and that the active
+   Branch belongs to it before saving. Extend the one-per-lead handoff record from 141 with
+   an `existingBranch` mode and reuse its verified tenant scope, initiator, state and timestamps.
+   Show the linked merchant and storefront through the existing handoff presentation.
+3. Add URL-backed Leads filters for handoff state, initiator including Mine, and completed-date
+   range. Keep the initiator distinct from the current lead assignee. Reuse these filters in 142.
+4. Seed one eligible unconverted Won lead and one already handed off to an existing demo shop.
+   Preserve the existing Core fixtures.
 
 ## Done when
 
-An agent can complete either existing-merchant path without creating another merchant.
-Selecting a Branch from another merchant is rejected server-side. A repeated new-shop
-request yields the same Branch. Both successful paths link to the correct merchant and
-shop and leave the lead Won.
+An agent can hand off an eligible Won lead to an active merchant and existing Branch. A mismatched
+owner or Branch is rejected. A completed handoff stays linked once and is available through the
+same Lead Detail and list filters.
 
 ## Limits
 
-No merchant-account changes, cross-merchant Branch reassignment, implicit matches,
-bulk links or general Backoffice permissions. One completed handoff per lead.
+Existing Branch handoff only. Ticket 304 handles creating a shop for the selected merchant.
+Lead handoff has no effect on existing merchant relationships or general Core permissions.
 
 ## References
 
 - [Core merchant directory and Branch mutation](../../osnova/apps/core/src/modules/tenants/tenants.graphql)
 - [Core public Branch resolution](../../osnova/apps/core/src/modules/branches/internal-branches.controller.ts)
-- [red.bg merchant links and existing shop selection](/workspace/projects/red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/MerchantsController.php)
-- [red.bg shop creation for a merchant](/workspace/projects/red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/StoresController.php)
-- [red.bg merchant link form](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/merchants/partials/link-form.blade.php)
-- [red.bg merchant shops screen](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/merchants/stores/index.blade.php)
+- [red.bg merchant links and existing shop selection](../../../red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/MerchantsController.php)
+- [red.bg shop creation for a merchant](../../../red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/StoresController.php)
+- [red.bg merchant link form](../../../red.bg/workspace-sales/services/sales/resources/views/sales/merchants/partials/link-form.blade.php)
+- [red.bg merchant shops screen](../../../red.bg/workspace-sales/services/sales/resources/views/sales/merchants/stores/index.blade.php)
+- [Holita existing Sales merchant routes](../../holita/apps/sales/src/main.ts#L9)

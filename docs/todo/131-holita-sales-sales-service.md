@@ -22,7 +22,7 @@ Core sign-in.
    port 12015). Give it a Holita-only PostgreSQL database and role, dedicated test database and
    role, and its own Prisma schema, client and migration directory. Wire up the existing
    Holita Nx/npm development, stop, database setup and migration paths and the root environment
-   reference. Add the Sales server types and Sales application TypedDocumentNodes to the
+   reference. Add the Sales server types to the
    explicit operator graph generation and schema checks.
    Use the ignored `holita/config/sales.env` for `PORT=12015`, `SALES_DATABASE_URL`,
    `SALES_TEST_DATABASE_URL`, `CORE_AUTH_VERIFY_URL` and the matching
@@ -38,44 +38,29 @@ Core sign-in.
    keep relationships inside the same tenant. Prospect work has no selected Branch; any
    eventual destination merchant and Branch IDs are references. The CRM team shares leads
    inside the platform tenant, with personal views based on Core user IDs.
-3. Connect a protected workspace-access query to the existing Sales sign-in and shell. Its
-   viewer fields are the verified platform tenant ID and Core user ID. Keep Merchants as the
-   existing landing screen and show localized access feedback when CRM access is denied.
-   Preserve the existing Core API permissions for merchant reads.
-4. Reuse the existing insert-only Core Sales demo account. This ticket seeds no CRM rows;
-   feature tickets add them when their models exist.
-5. Extend the existing guarded Holita Playwright harness and smoke case. Add Sales API to the
-   Nx smoke build inputs. Extend the existing test-database helper to validate the dedicated
-   Sales test URL and create/migrate a disposable schema; start the Sales API on an ephemeral
-   port against that schema. Serve the Sales Angular build through the existing same-origin
-   proxy; point the operator Router at the isolated Sales API and pass `SALES_ORIGIN`.
-   Register normal teardown for the service, UI and schema. In the existing case, sign in
-   through Sales with the seeded Core SALES account and assert the protected workspace
-   query succeeds through the Router and the shell loads. Send the same query through the
-   Router without a session and with signed-in non-Sales platform and merchant accounts
-   and assert access is denied. Extend the current case without adding a test case.
+3. Expose an operator-only workspace-access query returning the verified platform Tenant ID
+   and Core user ID. Confirm the existing Core Sales demo account can run it through the operator
+   Router and that anonymous, merchant and non-Sales platform callers are denied.
 
 ## Done when
 
-The seeded Sales account reaches the Sales shell and its protected query through the operator
-Router. Anonymous, demo-tenant, merchant and non-Sales platform identities cannot use the CRM
-query. The public storefront schema has no Sales types or fields. The existing Holita
-smoke case exercises the Sales UI and operator Router with isolated test resources and
-cleans up the resources it starts.
+The operator Router composes the Sales subgraph and the verified Core SALES account can read its
+workspace identity. Other accounts lack CRM access. The storefront schema contains no Sales types
+or fields, and the new database is isolated from Core and Commerce.
 
 ## Limits
 
-Use the existing two Routers and shared sign-in. Keep Sales persistence out of Commerce, Core,
-and Osnova packages. No other app routes, new roles, Sales credential store or placeholder screens.
+Subgraph and lifecycle only. Ticket 300 connects the current Sales shell and extends the guarded
+smoke. CRM data models and screens have their own tickets. Keep two Routers and the shared sign-in.
 
 ## References
 
 - [Sales app entry point](../../holita/apps/sales/src/main.ts)
 - [Operator graph descriptors](../../holita/tools/graphql/contracts.mts)
-- [Guarded Holita browser smoke](../../holita/tools/browser/holita.smoke.spec.mts)
 - [Holita runtime initializer](../../holita/tools/runtime-config.mts)
 - [Holita setup](../development.md)
 - [Workspace database ownership](../architecture/decisions/0002-database-ownership.md)
 - [red.bg Sales service inventory](../../holita/docs/red-bg/services/sales.md)
-- [red.bg CRM schema migration](/workspace/projects/red.bg/workspace-sales/services/sales/database/migrations/2026_08_03_000003_create_crm_schema.php)
-- [red.bg Sales routes](/workspace/projects/red.bg/workspace-sales/services/sales/routes/web.php)
+- [red.bg CRM schema migration](../../../red.bg/workspace-sales/services/sales/database/migrations/2026_08_03_000003_create_crm_schema.php)
+- [red.bg Sales routes](../../../red.bg/workspace-sales/services/sales/routes/web.php)
+- [Holita operator subgraph registration](../../holita/tools/graphql/contracts.mts#L1)

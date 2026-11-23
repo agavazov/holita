@@ -4,7 +4,7 @@
 
 ## Background
 
-red.bg Backoffice lists queued email and can send a restricted sample to exercise delivery. Ticket 210 supplies local recipient capture, and Holita Backoffice has no email screen.
+red.bg Backoffice lists queued email and can send a restricted sample to exercise delivery. Ticket 210 supplies local recipient capture, and Holita Backoffice has no email screen. Inspection uses the same resolved delivery state as local capture.
 
 ## Goal
 
@@ -27,3 +27,5 @@ Local inspection and sample delivery only. Live email requires owner approval.
 
 - [red.bg Backoffice email controller](../../../red.bg/workspace-ecommerce/services/backoffice/app/Http/Controllers/Backoffice/System/EmailsController.php)
 - [Holita Backoffice entry](../../holita/apps/backoffice/src/main.ts)
+- [red.bg recorded delivery outcome](../../../red.bg/workspace-ecommerce/services/api/app/Services/Notifications/EmailQueueDrainer.php)
+- [Holita Backoffice route registration](../../holita/apps/backoffice/src/main.ts#L9)

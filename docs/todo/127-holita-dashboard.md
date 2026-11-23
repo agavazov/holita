@@ -26,10 +26,12 @@ and an empty shop displays zero states.
 
 ## Limits
 
-Use live Commerce data. Storefront pages and external analytics are outside this slice.
+Use live Commerce data for the base dashboard. Prior-period comparisons and status breakdowns, registration and newsletter metrics, invoice metrics, cart funnel, method and low-stock panels, top customers and products, and activity-feed summaries are follow-ups. The period sales report follows separately in 221 and 222.
 
 ## References
 
 - [Holita feature skill](../../.agents/skills/holita-feature/SKILL.md)
 - [Dashboard service](../../../red.bg/workspace-ecommerce/services/api/app/Services/Commerce/DashboardService.php)
 - [Admin dashboard](../../../red.bg/workspace-ecommerce/services/admin/resources/views/admin/dashboard/index.blade.php)
+- [Holita current Admin landing page](../../holita/apps/admin/src/main.ts#L58)
+- [Holita order list contract](../../holita/apps/commerce/src/commerce.graphql#L616)

@@ -28,3 +28,4 @@ Signed-in password change only.
 - [red.bg password route](../../../red.bg/workspace-ecommerce/services/storefront/basic/routes/web.php)
 - [Holita account and authentication](../../holita/apps/storefront/src/main.ts)
 - [Storefront schema](../../holita/apps/commerce/src/storefront.graphql)
+- [Holita signed-in account route](../../holita/apps/storefront/src/main.ts#L937)

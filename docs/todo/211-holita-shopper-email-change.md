@@ -21,10 +21,11 @@ The intended new recipient can confirm from the local mailbox. An expired or reu
 
 ## Limits
 
-Internal release and local delivery only. Live email remains owner-gated. Keep merchant-initiated correction separate.
+Existing signed-in accounts changing their email only. Use local capture for this release. Live email remains owner-gated. Keep merchant-initiated correction separate.
 
 ## References
 
 - [red.bg account controller](../../../red.bg/workspace-ecommerce/services/storefront/basic/app/Http/Controllers/AccountController.php)
 - [Holita account shell](../../holita/apps/storefront/src/main.ts)
 - [Holita shopper authentication](../../holita/apps/commerce/src/storefront.service.ts)
+- [Holita existing public account mutations](../../holita/apps/commerce/src/storefront.graphql#L433)

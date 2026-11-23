@@ -27,3 +27,4 @@ Use the shared email-change policy. Do not expose confirmation credentials to op
 
 - [red.bg Admin customers](../../../red.bg/workspace-ecommerce/services/admin/app/Http/Controllers/Admin/Customers/CustomersController.php)
 - [Holita customer detail](../../holita/apps/admin/src/customers/customer-detail.html)
+- [Holita customer detail contract](../../holita/apps/commerce/src/commerce.graphql#L148)

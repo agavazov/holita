@@ -12,7 +12,7 @@ Allow signed-in merchants and Backoffice staff to view their profile and change 
 
 ## Steps
 
-1. Add profile routes to Admin and Backoffice using shared forms and current Core account mutations.
+1. Add working Profile links and routes in Admin and Backoffice using shared forms and the existing Core account mutations.
 2. Show name and email, edit the supported profile fields, and change the password with the current-credential check and localized feedback.
 
 ## Done when
@@ -28,3 +28,5 @@ Self-service only. Keep staff management and changes to another person's account
 - [red.bg Admin profile](../../../red.bg/workspace-ecommerce/services/admin/app/Http/Controllers/Admin/System/ProfileController.php)
 - [Holita operator shell](../../holita/packages/operator/src/application.ts)
 - [Core account contract](../../osnova/apps/core/src/modules/tenants/tenants.graphql)
+- [Holita operator shell](../../holita/packages/operator/src/application.ts#L113)
+- [Core self-profile mutations](../../osnova/apps/core/src/modules/tenants/tenants.graphql#L63)

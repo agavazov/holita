@@ -52,5 +52,6 @@ existing-merchant handoffs and dashboard filters are out of scope.
 - [Core platform writes](../../osnova/apps/core/src/modules/platform/platform.service.ts)
 - [Core platform persistence](../../osnova/apps/core/src/modules/platform/platform.repository.ts)
 - [Core internal auth pattern](../../osnova/apps/core/src/auth/auth.controller.ts)
-- [red.bg merchant creation](/workspace/projects/red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/MerchantsController.php)
-- [red.bg store creation](/workspace/projects/red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/StoresController.php)
+- [red.bg merchant creation](../../../red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/MerchantsController.php)
+- [red.bg store creation](../../../red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/StoresController.php)
+- [Holita existing Sales app entry](../../holita/apps/sales/src/main.ts#L9)

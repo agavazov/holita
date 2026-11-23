@@ -1,6 +1,6 @@
 # 214 Define supported removal of a shop customer
 
-**Status:** Needs owner. Confirm deletion and order-data retention requirements. **Product:** Holita.
+**Status:** Needs owner. Under the retention policy, should a merchant remove the customer account or revoke access and keep the account record? Depends on [283](283-holita-customer-data-retention-policy.md). **Product:** Holita.
 
 ## Background
 
@@ -12,7 +12,7 @@ Give merchants an approved way to remove a shop account while retaining required
 
 ## Steps
 
-1. Confirm the retention behavior for credentials, addresses, customer content and order snapshots.
+1. Confirm the merchant account action and use 283 for retention of credentials, addresses, customer content and order snapshots.
 2. Implement the approved scoped removal and confirmed Admin action, including invalidating access where relevant.
 
 ## Done when

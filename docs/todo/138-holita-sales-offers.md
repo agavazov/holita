@@ -11,7 +11,7 @@ the source form.
 
 ## Goal
 
-Let agents prepare, preview, print and manually track offers with the two plan/price lines.
+Let agents save standalone and lead-linked draft offers with two validated quote lines.
 
 ## Steps
 
@@ -24,38 +24,26 @@ Let agents prepare, preview, print and manually track offers with the two plan/p
    and nonnegative decimal monthly price. Require name and price together for each line.
    Show included scope as editable text, and label prices EUR per month before VAT. Use
    the source Start 19.99 and Growth 35.00 as demo examples.
-3. Add My Offers list, offer create/edit/detail, a printable internal preview and a linked
-   offers section on Lead Detail for the author. Keep author-scoped access within the
-   platform tenant. Expose URL-backed search, `status=draft|prepared|manuallySent` and
-   `expires=within7Days`. The latter selects manually sent offers with a validity date
-   from today through seven days ahead, inclusive, in Europe/Sofia. Use the same predicate
-   in the dashboard count and offer list.
-4. Start saves in Draft. Add a Mark prepared action on Offer Detail and preview that sets
-   `preparedAt`. Allow Mark manually sent from Prepared; set `manuallySentAt` when the
-   agent confirms that they sent the quote. Clearing manual sent status clears only
-   `manuallySentAt` and returns to Prepared. Editing prepared quote content clears
-   `preparedAt` and returns to Draft. To edit a sent quote, clear sent status first or
-   create a new quote.
-5. Seed one draft, one prepared offer and one manually sent linked offer with distinct
-   validity dates and both priced lines. Use stable IDs and keep the seeds insert-only.
+3. Add an author-scoped My Offers list and draft create/edit/detail in the verified platform
+   Tenant, with search and a linked offers section on Lead Detail. Save new offers in Draft.
+   Seed one insert-only draft using both priced lines and a stable identifier.
 
 ## Done when
 
-An agent can draft a standalone or lead-linked offer, preview and print both exact prices,
-then use Draft → Prepared → Manually sent. Clearing sent status returns it to Prepared.
-The expiry URL shows only the agent's sent quotes in the stated window, and another agent's
-offer cannot be opened by ID.
+An agent can save and edit a standalone or lead-linked draft with both exact monthly amounts.
+Another agent's offer cannot be opened by ID.
 
 ## Limits
 
-No subscription activation, billing, catalogue snapshots, collection lookup, external sending,
+Print and lifecycle follow in 302. Scope here excludes subscription activation, billing, catalogue snapshots, collection lookup, external sending,
 public share URLs or tracking pixels. Offer pricing belongs to the quote.
 
 ## References
 
-- [red.bg Offer model](/workspace/projects/red.bg/workspace-sales/services/sales/app/Models/Crm/Offer.php)
-- [red.bg input fields](/workspace/projects/red.bg/workspace-sales/services/sales/app/Services/Crm/OfferInput.php)
-- [red.bg plan defaults and validation](/workspace/projects/red.bg/workspace-sales/services/sales/app/Services/Crm/OfferTemplates/RedBgOnlineStoreV1.php)
-- [red.bg two plan price fields](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/offer-maker/templates/red-bg-online-store/v1/form.blade.php)
-- [red.bg printable offer and VAT label](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/offer-maker/templates/red-bg-online-store/v1/document.blade.php)
-- [red.bg offer preview, print and manual sent actions](/workspace/projects/red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/Crm/OfferMakerController.php)
+- [red.bg Offer model](../../../red.bg/workspace-sales/services/sales/app/Models/Crm/Offer.php)
+- [red.bg input fields](../../../red.bg/workspace-sales/services/sales/app/Services/Crm/OfferInput.php)
+- [red.bg plan defaults and validation](../../../red.bg/workspace-sales/services/sales/app/Services/Crm/OfferTemplates/RedBgOnlineStoreV1.php)
+- [red.bg two plan price fields](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/offer-maker/templates/red-bg-online-store/v1/form.blade.php)
+- [red.bg printable offer and VAT label](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/offer-maker/templates/red-bg-online-store/v1/document.blade.php)
+- [red.bg offer preview, print and manual sent actions](../../../red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/Crm/OfferMakerController.php)
+- [Holita Sales entry point](../../holita/apps/sales/src/main.ts#L9)

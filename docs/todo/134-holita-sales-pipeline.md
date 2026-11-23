@@ -38,7 +38,8 @@ telephony side effects or automatic merchant creation.
 
 ## References
 
-- [red.bg lead statuses and close flags](/workspace/projects/red.bg/workspace-sales/services/sales/app/Enums/Sales/Crm/CrmLeadStatus.php)
-- [red.bg status migration](/workspace/projects/red.bg/workspace-sales/services/sales/database/migrations/2026_08_26_000007_replace_follow_up_lead_status.php)
-- [red.bg lead status editor](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/lead-status-editor.blade.php)
-- [red.bg lead list filters](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/filters.blade.php)
+- [red.bg lead statuses and close flags](../../../red.bg/workspace-sales/services/sales/app/Enums/Sales/Crm/CrmLeadStatus.php)
+- [red.bg status migration](../../../red.bg/workspace-sales/services/sales/database/migrations/2026_08_26_000007_replace_follow_up_lead_status.php)
+- [red.bg lead status editor](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/lead-status-editor.blade.php)
+- [red.bg lead list filters](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/filters.blade.php)
+- [Holita existing Sales app entry](../../holita/apps/sales/src/main.ts#L9)

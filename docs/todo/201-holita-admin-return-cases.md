@@ -13,7 +13,7 @@ Let merchants review and decide a return case for an order in the selected shop.
 ## Steps
 
 1. Add scoped cases with requested order lines and quantities, reason, status and decision history. Require the lines to belong to the same order and seed one pending case for the demo.
-2. Add the Admin Returns list, detail, approve and reject actions with shared request states.
+2. Add the Admin Returns list, detail and approve or reject actions with shared request states. Show the order, requested items and prior decisions where applicable.
 
 ## Done when
 
@@ -28,3 +28,4 @@ Merchant review and decisions only. Intake and settlement have separate tickets.
 - [red.bg return actions](../../../red.bg/workspace-ecommerce/services/admin/routes/admin.php#L389)
 - [red.bg Returns controller](../../../red.bg/workspace-ecommerce/services/admin/app/Http/Controllers/Admin/Sales/ReturnsController.php)
 - [Holita order refunds](../../holita/apps/commerce/src/refunds/refunds.service.ts)
+- [Holita current order detail contract](../../holita/apps/commerce/src/commerce.graphql#L690)

@@ -12,7 +12,7 @@ Let merchants find issued invoices without finding the underlying order first.
 
 ## Steps
 
-1. Add a scoped, paginated invoice list query with number/date and recipient search as supported.
+1. Add a Tenant- and Branch-scoped, paginated register of issued invoices with the recorded number, issue date, recipient and total. Provide number/date and recipient search using the stored values.
 2. Add the Admin Invoices page with shared states and links to the existing invoice detail.
 
 ## Done when
@@ -28,3 +28,4 @@ Read-only register. Invoice creation, amendment and downloads are separate.
 - [red.bg invoices routes](../../../red.bg/workspace-ecommerce/services/admin/routes/admin.php)
 - [Holita invoice details](../../holita/apps/admin/src/orders/invoice-detail.ts)
 - [Holita operator SDL](../../holita/apps/commerce/src/commerce.graphql)
+- [Holita invoice snapshot contract](../../holita/apps/commerce/src/commerce.graphql#L791)

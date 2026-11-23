@@ -1,6 +1,6 @@
 # 139 Configure appointment services and availability
 
-**Status:** Ready after [131](131-holita-sales-sales-service.md). **Product:** Holita.
+**Status:** Ready after [300](300-holita-sales-workspace-access.md). **Product:** Holita.
 
 ## Background
 
@@ -38,7 +38,8 @@ external calendar sync or public booking.
 
 ## References
 
-- [red.bg appointment service model](/workspace/projects/red.bg/workspace-sales/services/sales/app/Models/Booking/BookingService.php)
-- [red.bg weekly availability model](/workspace/projects/red.bg/workspace-sales/services/sales/app/Models/Booking/BookingAvailabilityRule.php)
-- [red.bg service and schedule validation](/workspace/projects/red.bg/workspace-sales/services/sales/app/Services/Booking/ServiceManager.php)
-- [red.bg shared window editor](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/booking/services/partials/form.blade.php)
+- [red.bg appointment service model](../../../red.bg/workspace-sales/services/sales/app/Models/Booking/BookingService.php)
+- [red.bg weekly availability model](../../../red.bg/workspace-sales/services/sales/app/Models/Booking/BookingAvailabilityRule.php)
+- [red.bg service and schedule validation](../../../red.bg/workspace-sales/services/sales/app/Services/Booking/ServiceManager.php)
+- [red.bg shared window editor](../../../red.bg/workspace-sales/services/sales/resources/views/sales/booking/services/partials/form.blade.php)
+- [Holita Sales routes](../../holita/apps/sales/src/main.ts#L9)

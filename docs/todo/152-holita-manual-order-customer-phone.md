@@ -4,7 +4,7 @@
 
 ## Background
 
-Customer Detail saves a phone on the customer profile. The manual order picker still prefills the phone from the customer's last linked order, so a corrected number can be missed.
+Customer Detail saves a phone on the customer profile. After a merchant corrects that phone, a new manual order still takes it from the customer's last linked order and can use the old number. A customer with no previous order can have a profile phone that the picker leaves unused.
 
 ## Goal
 
@@ -18,7 +18,7 @@ Selecting a customer for a new manual order uses their current profile phone.
 
 ## Done when
 
-Updating a customer's profile phone and selecting the customer in a new manual order displays the updated number. Clearing the profile phone leaves the required field empty. Prior order contacts stay intact.
+Selecting the customer after a profile correction uses the new phone, including for a customer with no previous orders. A blank profile phone leaves the required field empty and a phone already typed on the draft is preserved. New orders snapshot the resulting phone and prior order contacts stay intact.
 
 ## Limits
 
@@ -26,6 +26,7 @@ Keep the existing scoped Admin query and contact editing workflow.
 
 ## References
 
-- [Manual order choices operation](../../holita/apps/admin/src/orders/operations.graphql#L163)
+- [red.bg manual order form](../../../red.bg/workspace-ecommerce/services/admin/resources/views/admin/sales/orders/partials/form.blade.php)
+- [Manual order choices operation](../../holita/apps/admin/src/orders/operations.graphql#L176)
 - [Manual order customer autofill](../../holita/apps/admin/src/orders/manual-order-editor.ts#L172)
 - [Customer contact update](../../holita/apps/commerce/src/customers/customers.service.ts#L90)

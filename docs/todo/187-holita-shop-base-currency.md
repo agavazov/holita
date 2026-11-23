@@ -1,30 +1,35 @@
-# 187 Configure a shop's base currency
+# 187 Decide the base currency policy for shops
 
-**Status:** Needs owner. Confirm supported currencies and the lock-in policy for each shop. **Product:** Holita.
+**Status:** Needs owner. Which base currencies are allowed for new shops, from what effective date, and when does the shop's choice lock? **Product:** Holita.
 
 ## Background
 
-red.bg General Settings has a base currency. Holita checkout is configured for BGN and queue 126 explicitly keeps currency outside the general settings form.
+red.bg stores a base currency in its settings API. The existing Holita general settings shipped in
+`946cb21d`, and Commerce checkout currently uses BGN.
 
 ## Goal
 
-Allow merchants to use an approved base currency for new shops.
+Record the owner's decision once so the Branch setting, historical snapshots and currency display can
+be implemented separately.
 
 ## Steps
 
-1. Confirm supported currency choices and when the base currency becomes locked.
-2. Persist the shop currency and use it for new catalogue prices, checkout quotes and order and invoice snapshots.
+1. Record the approved currency choices, the effective date and the event that locks the setting for
+   a shop. Confirm how the current BGN default applies to existing shops and records.
 
 ## Done when
 
-An approved non-default shop currency appears consistently on new prices and orders. Existing documents retain their recorded currency.
+The decision specifies which currency is assigned to shops and new transactions at the cutover and
+how a later merchant selection is constrained. Existing order and invoice currency snapshots retain
+their recorded values.
 
 ## Limits
 
-One currency per shop. No conversions, rates, provider integration or redenomination of existing shops.
+Policy only, with one base currency per shop. The follow-up tickets handle implementation.
 
 ## References
 
-- [red.bg settings service](../../../red.bg/workspace-ecommerce/services/api/app/Services/Settings/StoreSettingsService.php)
-- [Holita currency constant](../../holita/apps/commerce/src/checkout/currency.ts)
-- [General settings queue](../../docs/todo/126-holita-general-settings.md)
+- [red.bg currency setting](../../../red.bg/workspace-ecommerce/services/api/app/Services/Settings/StoreSettingsService.php#L44)
+- [red.bg currency service](../../../red.bg/workspace-ecommerce/services/api/app/Services/Commerce/StoreCurrencyService.php)
+- [Holita checkout currency](../../holita/apps/commerce/src/checkout/currency.ts#L1)
+- [Holita existing general settings](../../holita/apps/commerce/src/shop-settings/shop-settings.service.ts#L24)

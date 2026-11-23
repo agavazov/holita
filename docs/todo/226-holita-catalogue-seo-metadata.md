@@ -12,7 +12,7 @@ Let merchants set search titles and descriptions for products and categories.
 
 ## Steps
 
-1. Add optional BG/EN SEO title and description fields, fallback rules and a shop-scoped Admin list showing missing metadata.
+1. Add optional BG/EN SEO title and description fields, fallback rules and a shop-scoped Admin worklist that flags missing metadata and links to editing.
 2. Apply saved fields or derived fallbacks in the public storefront page metadata.
 
 ## Done when
@@ -28,3 +28,4 @@ Start with products and categories. Keep theme editing, analytics connectors and
 - [red.bg SEO editor](../../../red.bg/workspace-ecommerce/services/admin/app/Http/Controllers/Admin/Marketing/SeoController.php)
 - [red.bg SEO work queue](../../../red.bg/workspace-ecommerce/services/api/app/Services/Seo/SeoWorkQueueService.php)
 - [Holita storefront entry](../../holita/apps/storefront/src/main.ts)
+- [Holita public document setup](../../holita/apps/storefront/src/main.ts#L943)

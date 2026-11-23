@@ -35,7 +35,8 @@ event store.
 
 ## References
 
-- [red.bg note model](/workspace/projects/red.bg/workspace-sales/services/sales/app/Models/Crm/LeadNote.php)
-- [red.bg note timestamp migration](/workspace/projects/red.bg/workspace-sales/services/sales/database/migrations/2026_08_26_000005_add_time_to_crm_lead_notes.php)
-- [red.bg note editor](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/note-editor.blade.php)
-- [red.bg activity panel](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/activity.blade.php)
+- [red.bg note model](../../../red.bg/workspace-sales/services/sales/app/Models/Crm/LeadNote.php)
+- [red.bg note timestamp migration](../../../red.bg/workspace-sales/services/sales/database/migrations/2026_08_26_000005_add_time_to_crm_lead_notes.php)
+- [red.bg note editor](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/note-editor.blade.php)
+- [red.bg activity panel](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/activity.blade.php)
+- [Holita existing Sales app entry](../../holita/apps/sales/src/main.ts#L9)

@@ -27,4 +27,5 @@ Ordinary issuance only. Pro forma policy, corrections and VAT changes are separa
 
 - [red.bg invoice controller](../../../red.bg/workspace-ecommerce/services/admin/app/Http/Controllers/Admin/Documents/InvoicesController.php)
 - [Holita invoice issuance](../../holita/apps/commerce/src/invoices/invoices.service.ts)
-- [Holita invoice data model](../../holita/apps/commerce/prisma/schema.prisma#L556)
+- [Holita invoice data model](../../holita/apps/commerce/prisma/schema.prisma#L701)
+- [Holita invoice issue service](../../holita/apps/commerce/src/invoices/invoices.service.ts#L94)

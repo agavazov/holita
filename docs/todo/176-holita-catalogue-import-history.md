@@ -27,3 +27,5 @@ Use 175's fixed local CSV format and durable results. No upload wizard or connec
 
 - [red.bg Admin import routes](../../../red.bg/workspace-ecommerce/services/admin/routes/admin.php#L299)
 - [red.bg import controller](../../../red.bg/workspace-ecommerce/services/admin/app/Http/Controllers/Admin/Imports/ImportsController.php)
+- [red.bg stored CSV job entry](../../../red.bg/workspace-ecommerce/services/api/app/Http/Controllers/Api/Admin/Imports/MappedImportsController.php#L23)
+- [Holita operator query entry](../../holita/apps/commerce/src/commerce.graphql#L894)

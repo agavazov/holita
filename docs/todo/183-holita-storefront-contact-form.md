@@ -1,10 +1,10 @@
 # 183 Submit an inquiry from the contact page
 
-**Status:** Ready after [126](126-holita-general-settings.md), [182](182-holita-admin-inquiry-inbox.md). **Product:** Holita.
+**Status:** Ready after [182](182-holita-admin-inquiry-inbox.md). **Product:** Holita.
 
 ## Background
 
-red.bg Basic posts a contact form into the merchant inquiry inbox. Queue 126 renders public contact information.
+red.bg Basic posts a contact form into the merchant inquiry inbox. The Basic contacts page shipped in `946cb21d`.
 
 ## Goal
 
@@ -26,5 +26,6 @@ Plain text only. No external form service or email marketing.
 ## References
 
 - [red.bg public submission](../../../red.bg/workspace-ecommerce/services/storefront/basic/app/Http/Controllers/PublicSubmissionController.php)
-- [General settings queue](../../docs/todo/126-holita-general-settings.md)
 - [Storefront graph](../../holita/apps/commerce/src/storefront.graphql)
+- [red.bg public write API](../../../red.bg/workspace-ecommerce/services/api/app/Http/Controllers/Api/Storefront/Content/PublicWritesController.php)
+- [Holita Basic contacts route](../../holita/apps/storefront/src/main.ts#L924)

@@ -12,7 +12,7 @@ Use localized operator text for these request failures and retain request IDs fo
 
 ## Steps
 
-1. Map known sign-in and operation failures to the selected language and use a localized fallback for unclassified catalogue and Backoffice requests. Keep request identification separate from service text.
+1. Map known sign-in and operation failures by GraphQL error code to the selected language and use a localized fallback for unclassified catalogue and Backoffice requests. Keep request identification separate from service text.
 2. Preserve actionable localized validation where the affected form already maps field errors.
 
 ## Done when
@@ -28,5 +28,5 @@ Limit changes to affected Holita callers. Keep shared request handling and servi
 - [Products list](../../holita/apps/admin/src/products/products-page.ts)
 - [Merchants list](../../holita/packages/operator/src/merchants-page.ts)
 - [Merchant detail](../../holita/packages/operator/src/merchant-detail-page.ts)
-- [Request message helper](../../osnova/packages/ui/src/app/graphql/request-error.ts)
-- [Holita sign-in shell](../../holita/packages/operator/src/application.ts)
+- [Request message helper](../../osnova/packages/ui/src/app/graphql/request-error.ts#L27)
+- [Holita sign-in shell](../../holita/packages/operator/src/application.ts#L223)

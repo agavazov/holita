@@ -1,6 +1,6 @@
 # 142 Show the daily sales dashboard
 
-**Status:** Ready after [137](137-holita-sales-tasks.md), [138](138-holita-sales-offers.md), [140](140-holita-sales-bookings.md), [144](144-holita-sales-existing-merchant-handoff.md). **Product:** Holita.
+**Status:** Ready after [301](301-holita-sales-task-queue.md), [302](302-holita-sales-offer-preview-lifecycle.md), [303](303-holita-sales-appointment-calendar.md), [304](304-holita-sales-handoff-new-shop.md). **Product:** Holita.
 
 ## Background
 
@@ -20,19 +20,18 @@ that open the same records counted on the dashboard.
    sent offers expiring within seven days, My confirmed appointments for Today and Next
    7 days, and handoffs I initiated that completed in the last 30 Sofia dates including today.
    Use the same feature query predicates for counts and corresponding lists.
-2. Add URL-backed reporting filters to Leads for handoff state, initiating Core user
-   (including Mine), and completed date range. Combine Complete, initiated by Mine and
+2. Reuse the URL-backed handoff state, initiator and completed-date filters from 144. Combine Complete, initiated by Mine and
    the 30-day date range for the handoff count link. Count each completed handoff once
    across new-merchant and existing-merchant modes. Keep the current assignee filter
    independent of who initiated the handoff.
 3. Make Dashboard the Sales landing page using shared KPI cards and lists with BG/EN
    labels and loading, error and zero states. Link lead stages to Leads with Mine and
-   that stage, task counts to the Mine and bucket URL from 137, offer counts to the
-   lifecycle or expiry URL from 138, and appointment counts to the Mine + Confirmed +
-   period URL from 140. Link previews to their records.
+   that stage, task counts to the Mine and bucket URL from 301, offer counts to the
+   lifecycle or expiry URL from 302, and appointment counts to the Mine + Confirmed +
+   period URL from 303. Link previews to their records.
 4. Reuse insert-only demo records for ordinary exploration. Verify date counts in a
    separate guarded schema with the server and browser fixed at Monday 2026-11-23 at
-   09:00 Europe/Sofia. Use 140's active weekday service (09:00–17:00, 45-minute slots
+   09:00 Europe/Sofia. Use 303's active weekday service (09:00–17:00, 45-minute slots
    with 15-minute buffer) and dated booking fixture. Expect My confirmed Today = 1
    (Monday 10:00) and Next 7 days = 1 (Tuesday 11:00); neither the other-only nor the
    cancelled appointment appears. Seed isolated supporting rows for the chosen agent:
@@ -58,12 +57,13 @@ provider delivery status or visit analytics.
 
 ## References
 
-- [Task queue filters](137-holita-sales-tasks.md)
-- [Offer lifecycle and expiry filters](138-holita-sales-offers.md)
-- [Appointment filters and fixture](140-holita-sales-bookings.md)
+- [Task queue filters](301-holita-sales-task-queue.md)
+- [Offer lifecycle and expiry filters](302-holita-sales-offer-preview-lifecycle.md)
+- [Appointment filters and fixture](303-holita-sales-appointment-calendar.md)
 - [Existing-merchant handoff](144-holita-sales-existing-merchant-handoff.md)
-- [red.bg seller scoping](/workspace/projects/red.bg/workspace-sales/services/sales/app/Services/Dashboard/SellerActivityScope.php)
-- [red.bg task dashboard](/workspace/projects/red.bg/workspace-sales/services/sales/app/Services/Dashboard/LeadTaskDashboard.php)
-- [red.bg offers dashboard](/workspace/projects/red.bg/workspace-sales/services/sales/app/Services/Dashboard/OfferDashboard.php)
-- [red.bg booking dashboard](/workspace/projects/red.bg/workspace-sales/services/sales/app/Services/Dashboard/BookingDashboard.php)
-- [red.bg dashboard screen](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/dashboard/index.blade.php)
+- [red.bg seller scoping](../../../red.bg/workspace-sales/services/sales/app/Services/Dashboard/SellerActivityScope.php)
+- [red.bg task dashboard](../../../red.bg/workspace-sales/services/sales/app/Services/Dashboard/LeadTaskDashboard.php)
+- [red.bg offers dashboard](../../../red.bg/workspace-sales/services/sales/app/Services/Dashboard/OfferDashboard.php)
+- [red.bg booking dashboard](../../../red.bg/workspace-sales/services/sales/app/Services/Dashboard/BookingDashboard.php)
+- [red.bg dashboard screen](../../../red.bg/workspace-sales/services/sales/resources/views/sales/dashboard/index.blade.php)
+- [Holita current Sales landing screen](../../holita/apps/sales/src/main.ts#L9)

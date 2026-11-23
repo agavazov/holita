@@ -17,7 +17,7 @@ Let a shopper opt in to the selected shop's newsletter.
 
 ## Done when
 
-Submitting an email records one opt-in in that shop's Admin list and works for guests.
+A guest can submit an email and see confirmation. Submitting it again leaves one opt-in in that shop's Admin list.
 
 ## Limits
 
@@ -28,3 +28,4 @@ Local subscription only. No marketing connector or outbound campaigns.
 - [red.bg public submission](../../../red.bg/workspace-ecommerce/services/storefront/basic/app/Http/Controllers/PublicSubmissionController.php)
 - [Basic routes](../../../red.bg/workspace-ecommerce/services/storefront/basic/routes/web.php)
 - [Holita storefront shell](../../holita/apps/storefront/src/main.ts)
+- [Holita Basic header shell](../../holita/apps/storefront/src/main.ts#L81)

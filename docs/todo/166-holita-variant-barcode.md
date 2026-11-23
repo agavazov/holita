@@ -13,7 +13,7 @@ Allow optional barcode identification from the existing catalogue and inventory 
 ## Steps
 
 1. Persist an optional validated barcode under the correct shop scope and add it to the variant editor.
-2. Include barcode in the supported Admin variant or inventory search.
+2. Include barcode in the existing Admin inventory search alongside SKU.
 
 ## Done when
 
@@ -28,3 +28,5 @@ Optional barcode only. No scanner integration.
 - [red.bg variant rules](../../../red.bg/workspace-ecommerce/services/api/app/Services/Catalog/ProductService.php)
 - [Holita product input](../../holita/apps/commerce/src/commerce.graphql)
 - [Holita inventory](../../holita/apps/admin/src/inventory/inventory-page.ts)
+- [red.bg warehouse barcode lookup](../../../red.bg/workspace-ecommerce/services/api/app/Services/Catalog/InventoryReadService.php#L47)
+- [Holita variant fields](../../holita/apps/commerce/src/commerce.graphql#L38)

@@ -1,10 +1,10 @@
 # 174 Organize shared Basic images into folders
 
-**Status:** Blocked. Deferred until a Basic workflow needs reusable images in folders. **Product:** Holita. Depends on [188](188-holita-basic-home-content.md).
+**Status:** Needs owner. Which Basic screen, if any, should use a shop-wide local image picker after 188? **Product:** Holita. Depends on [188](188-holita-basic-home-content.md).
 
 ## Background
 
-red.bg has a shop file library with folders. Ticket 188 gives one Basic homepage setting a local image picker, and there is no other approved library consumer in this draft.
+red.bg has a shop file library with folders. Ticket 188 gives one Basic homepage setting a local image picker, and the wider library needs an explicitly approved Basic consumer.
 
 ## Goal
 
@@ -27,3 +27,4 @@ Deferred folder management only. One-image homepage selection belongs to 188.
 
 - [red.bg shared files](../../../red.bg/workspace-ecommerce/services/admin/app/Http/Controllers/Admin/Files/SharedFilesController.php)
 - [Holita image validation](../../holita/apps/admin/src/image-upload.ts)
+- [Holita current image selection](../../holita/apps/admin/src/image-upload.ts#L1)

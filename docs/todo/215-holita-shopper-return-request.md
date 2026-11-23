@@ -21,10 +21,11 @@ An eligible API request creates one pending case for the shopper's order. Cross-
 
 ## Limits
 
-API intake only. No new Basic form, merchant intake or shipment workflow.
+Storefront API submission only. Reading cases from a shopper account and any new Basic form are separate work.
 
 ## References
 
 - [red.bg storefront return route](../../../red.bg/workspace-ecommerce/services/api/routes/api/v1/storefront.php#L80)
 - [red.bg return service](../../../red.bg/workspace-ecommerce/services/api/app/Services/Commerce/ReturnService.php)
 - [Holita storefront contract](../../holita/apps/commerce/src/storefront.graphql)
+- [Holita public mutation entry](../../holita/apps/commerce/src/storefront.graphql#L433)

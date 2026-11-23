@@ -12,7 +12,7 @@ Show the highest-selling products and categories for the report period.
 
 ## Steps
 
-1. Extend the scoped report with revenue and unit counts for top products using sold line snapshots. Join surviving products to current catalogue categories for the category section.
+1. Extend the scoped report with revenue and unit counts for top products using sold line snapshots. Apply the same date range and cancelled-order exclusion as the 221 totals. Join surviving products to current catalogue categories for the category section.
 2. Show both sections under the same date controls. Let uncategorized or missing products contribute to headline and applicable product totals without assigning them to a category.
 
 ## Done when
@@ -27,3 +27,4 @@ Best sellers and current category breakdown only. Keep report filters and series
 
 - [red.bg aggregation](../../../red.bg/workspace-ecommerce/services/api/app/Services/Commerce/SalesAnalyticsService.php#L31)
 - [red.bg report view](../../../red.bg/workspace-ecommerce/services/admin/resources/views/admin/analytics/sales/index.blade.php#L79)
+- [Holita stored order line contract](../../holita/apps/commerce/src/commerce.graphql#L634)

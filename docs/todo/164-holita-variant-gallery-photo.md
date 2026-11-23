@@ -13,7 +13,7 @@ Let merchants associate a gallery image with a variant and show it when the shop
 ## Steps
 
 1. Add an optional variant image reference with ownership validation and appropriate handling when its gallery image is removed.
-2. Add an existing-image picker in Admin and select the referenced image on product detail.
+2. Add an existing-image picker in Admin and select the referenced image on product detail when the shopper changes variant.
 
 ## Done when
 
@@ -28,3 +28,5 @@ Use existing gallery files and the current photo picker pattern.
 - [red.bg Basic product view model](../../../red.bg/workspace-ecommerce/services/storefront/basic/app/Services/Storefront/ProductDetailView.php)
 - [Holita product editor](../../holita/apps/admin/src/products/product-editor.ts)
 - [Holita product view](../../holita/apps/storefront/src/main.ts)
+- [red.bg variant gallery selection](../../../red.bg/workspace-ecommerce/services/admin/resources/views/admin/catalog/products/partials/form/editor-script.blade.php#L399)
+- [Holita Basic variant choices](../../holita/apps/storefront/src/main.ts#L747)

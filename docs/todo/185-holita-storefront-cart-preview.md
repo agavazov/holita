@@ -17,7 +17,7 @@ Offer a compact cart preview for the shopper's current shop and cart.
 
 ## Done when
 
-A shopper can open and close the drawer from catalogue or product detail and see current cart contents.
+A shopper can open and close the drawer from catalogue or product detail with the keyboard and see the current cart contents and total.
 
 ## Limits
 
@@ -28,3 +28,4 @@ Reuse the existing cart identity and mutations. Keep the full cart route.
 - [red.bg Basic cart controller](../../../red.bg/workspace-ecommerce/services/storefront/basic/app/Http/Controllers/CommerceController.php)
 - [Holita cart state](../../holita/apps/storefront/src/cart-state.ts)
 - [Holita shop header](../../holita/apps/storefront/src/main.ts)
+- [Holita existing cart state](../../holita/apps/storefront/src/cart-state.ts#L143)

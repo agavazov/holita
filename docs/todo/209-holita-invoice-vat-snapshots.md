@@ -1,6 +1,6 @@
 # 209 Record approved VAT values on orders and invoice snapshots
 
-**Status:** Needs owner. Approve tax-inclusive pricing, rates and rounding for new orders and invoices. **Product:** Holita.
+**Status:** Needs owner. Which VAT-inclusive pricing rules, supported rates and rounding should apply to new orders and invoices? **Product:** Holita.
 
 ## Background
 
@@ -26,5 +26,6 @@ Persistence and arithmetic only. VAT rendering follows in 255. No tax, exchange-
 ## References
 
 - [red.bg order snapshots](../../../red.bg/workspace-ecommerce/services/api/app/Services/Commerce/OrderService.php)
-- [Holita invoice data model](../../holita/apps/commerce/prisma/schema.prisma#L556)
+- [Holita invoice data model](../../holita/apps/commerce/prisma/schema.prisma#L701)
 - [Holita invoice snapshot service](../../holita/apps/commerce/src/invoices/invoices.service.ts)
+- [Holita current invoice line model](../../holita/apps/commerce/prisma/schema.prisma#L732)

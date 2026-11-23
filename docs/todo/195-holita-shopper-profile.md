@@ -12,7 +12,7 @@ Let shoppers edit the supported name and phone fields for their account in the c
 
 ## Steps
 
-1. Add a storefront operation over the existing Commerce customer record and verify the shopper's shop session.
+1. Add a storefront operation over the existing Commerce customer record and verify the shopper's shop session. Reuse the existing contact validation rules for name and phone.
 2. Add a profile form, loading and failure states, and Bulgarian and English field feedback.
 
 ## Done when
@@ -28,3 +28,5 @@ Name and phone only. Keep email and credentials in their dedicated flows.
 - [red.bg Basic account controller](../../../red.bg/workspace-ecommerce/services/storefront/basic/app/Http/Controllers/AccountController.php)
 - [Holita My Account](../../holita/apps/storefront/src/main.ts)
 - [Storefront schema](../../holita/apps/commerce/src/storefront.graphql)
+- [Holita account route](../../holita/apps/storefront/src/main.ts#L937)
+- [Holita contact validation entry](../../holita/apps/commerce/src/customers/customers.service.ts#L90)

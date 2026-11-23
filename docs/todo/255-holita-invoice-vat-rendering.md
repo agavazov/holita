@@ -12,12 +12,12 @@ Show the saved VAT breakdown on invoice detail and downloaded copies when it exi
 
 ## Steps
 
-1. Render the persisted line and total VAT amounts from 209 in the existing invoice view and renderer.
+1. Render the persisted line and total VAT amounts from 209 in the existing invoice detail and the renderer introduced by 206. Shopper history in 207 must use that same renderer.
 2. Keep older invoices readable and omit the VAT breakdown when the snapshot lacks it.
 
 ## Done when
 
-Merchant and shopper copies display the same saved VAT breakdown for a new taxable invoice. An older snapshot displays no inferred rates.
+The merchant invoice detail and PDF display the same saved VAT breakdown for a new taxable invoice. An older snapshot displays no inferred rates.
 
 ## Limits
 
@@ -27,3 +27,4 @@ Rendering only. Use stored amounts and rates.
 
 - [red.bg VAT rendering](../../../red.bg/workspace-ecommerce/services/api/app/Services/Commerce/InvoicePdfService.php#L35)
 - [Holita invoice detail](../../holita/apps/admin/src/orders/invoice-detail.html)
+- [Holita invoice snapshot contract](../../holita/apps/commerce/src/commerce.graphql#L791)

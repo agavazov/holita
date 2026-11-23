@@ -12,7 +12,7 @@ Let merchants see unread order alerts for the selected shop regardless of where 
 
 ## Steps
 
-1. Feed both existing placement paths into the same Tenant and Branch scoped inbox. Record one entry per placed order and use shared read state for that shop.
+1. Feed successful storefront placement and successful manual Admin creation into the same Tenant- and Branch-scoped inbox. Record one entry per placed order and use shared read state for that shop.
 2. Expose the Admin inbox and unread count, link each entry to Order Detail, and allow opening or marking all as read for that shop.
 
 ## Done when
@@ -29,3 +29,5 @@ Newly placed orders only. Email delivery and external channels are separate.
 - [red.bg event consumer](../../../red.bg/workspace-ecommerce/services/api/app/Services/Events/Consumers/OrderPlacedNotificationConsumer.php#L20)
 - [Holita placement](../../holita/apps/commerce/src/orders/orders.service.ts)
 - [Holita manual orders](../../holita/apps/admin/src/orders/manual-order-editor.ts)
+- [Holita storefront order placement](../../holita/apps/commerce/src/storefront.graphql#L443)
+- [Holita manual order creation](../../holita/apps/commerce/src/orders/orders.service.ts#L242)

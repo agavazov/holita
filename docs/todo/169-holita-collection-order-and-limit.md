@@ -13,7 +13,7 @@ Allow the merchant to choose a supported default order and maximum for a rule-ba
 ## Steps
 
 1. Add configured rank and item limit to the automatic collection editor and apply them to public reads before pagination.
-2. Support deterministic catalogue orders first and add best-selling from existing order data if the report provides an appropriate scoped metric.
+2. Support deterministic price, name and newest orders. Use a stable tie-breaker so the capped selection stays consistent across pages.
 
 ## Done when
 
@@ -21,9 +21,11 @@ A capped collection delivers the same intended ranked product set across its pub
 
 ## Limits
 
-Keep user sorting and manual collection ordering well defined. No external data.
+Keep user sorting and manual collection ordering well defined. Store the catalogue order and limit only. Sales-based ranking is separate.
 
 ## References
 
 - [red.bg collection selection service](../../../red.bg/workspace-ecommerce/services/api/app/Services/Catalog/CollectionSelectionService.php)
 - [Holita storefront contract](../../holita/apps/commerce/src/storefront.graphql)
+- [red.bg sort modes](../../../red.bg/workspace-ecommerce/services/api/app/Enums/Catalog/CollectionSortMode.php)
+- [Holita existing collection contract](../../holita/apps/commerce/src/commerce.graphql#L528)

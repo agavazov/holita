@@ -1,6 +1,6 @@
 # 237 Find merchants and maintain their account details
 
-**Status:** Ready after [155](155-holita-merchant-detail-states.md). **Product:** Holita.
+**Status:** Ready after [155](155-holita-merchant-detail-states.md) and [268](268-holita-merchant-directory-pagination.md). **Product:** Holita.
 
 ## Background
 
@@ -12,7 +12,7 @@ Let authorized Backoffice staff find a merchant and maintain a selected merchant
 
 ## Steps
 
-1. Add searchable merchant identity/detail reads to the existing platform scope. Show associated merchant accounts and allow explicit selection when there is more than one.
+1. Extend the paged merchant search and scoped detail from 268 with merchant identity filters and supported contact fields. Reuse the loading, not-found and error states from 155. Show associated merchant accounts and allow explicit selection when there is more than one.
 2. Add supported name and email edits with existing Core validation and localized field feedback.
 
 ## Done when
@@ -28,3 +28,5 @@ Preserve merchant status and shop management. Do not infer an account from list 
 - [red.bg Backoffice merchants](../../../red.bg/workspace-ecommerce/services/backoffice/app/Http/Controllers/Backoffice/Stores/MerchantsController.php)
 - [Holita merchant detail](../../holita/packages/operator/src/merchant-detail-page.ts)
 - [Core platform service](../../osnova/apps/core/src/modules/platform/platform.service.ts)
+- [Holita merchant list](../../holita/packages/operator/src/merchants-page.ts#L123)
+- [Holita merchant detail page](../../holita/packages/operator/src/merchant-detail-page.ts#L105)

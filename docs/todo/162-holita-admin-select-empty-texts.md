@@ -17,7 +17,7 @@ Show the selected BG or EN language when merchant select lists have no options o
 
 ## Done when
 
-An empty choice list or a search with no matches shows localized copy in both languages.
+An empty choice list and a search with no matches show their corresponding localized labels on affected Product, Collection and Manual Order selectors in both languages.
 
 ## Limits
 
@@ -25,8 +25,8 @@ Selector text only. Preserve loading and lookup error behavior.
 
 ## References
 
-- [Collection editor](../../holita/apps/admin/src/collections/collection-editor.html)
-- [Manual order editor](../../holita/apps/admin/src/orders/manual-order-editor.html)
-- [Product editor](../../holita/apps/admin/src/products/product-editor.html)
+- [Collection editor](../../holita/apps/admin/src/collections/collection-editor.html#L230)
+- [Manual order editor](../../holita/apps/admin/src/orders/manual-order-editor.html#L167)
+- [Product editor](../../holita/apps/admin/src/products/product-editor.html#L45)
 - [Bulgarian catalog](../../holita/packages/operator/src/i18n/bg.json)
 - [English catalog](../../holita/packages/operator/src/i18n/en.json)

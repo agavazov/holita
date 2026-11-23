@@ -28,3 +28,4 @@ Contact-only creation. Verified account claiming would be a separate change.
 - [red.bg customer controller](../../../red.bg/workspace-ecommerce/services/admin/app/Http/Controllers/Admin/Customers/CustomersController.php)
 - [Holita shopper registration](../../holita/apps/commerce/src/storefront.service.ts#L430)
 - [Holita Customers list](../../holita/apps/admin/src/customers/customers-page.ts)
+- [Holita scoped customer service](../../holita/apps/commerce/src/customers/customers.service.ts#L73)

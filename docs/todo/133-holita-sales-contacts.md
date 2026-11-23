@@ -37,7 +37,8 @@ communications integration are outside this ticket.
 
 ## References
 
-- [red.bg Contact model](/workspace/projects/red.bg/workspace-sales/services/sales/app/Models/Crm/Contact.php)
-- [red.bg Contacts controller](/workspace/projects/red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/Crm/ContactsController.php)
-- [red.bg contact write and primary handling](/workspace/projects/red.bg/workspace-sales/services/sales/app/Services/Crm/SalesCrmService.php)
-- [red.bg lead contacts overview](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/contacts-overview.blade.php)
+- [red.bg Contact model](../../../red.bg/workspace-sales/services/sales/app/Models/Crm/Contact.php)
+- [red.bg Contacts controller](../../../red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/Crm/ContactsController.php)
+- [red.bg contact write and primary handling](../../../red.bg/workspace-sales/services/sales/app/Services/Crm/SalesCrmService.php)
+- [red.bg lead contacts overview](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/contacts-overview.blade.php)
+- [Holita existing Sales app entry](../../holita/apps/sales/src/main.ts#L9)

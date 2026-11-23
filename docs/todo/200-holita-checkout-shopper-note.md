@@ -12,7 +12,7 @@ Allow the shopper to pass an order instruction to the merchant.
 
 ## Steps
 
-1. Add a localized, bounded note field to checkout and save the text as a scoped order snapshot.
+1. Add a localized, bounded note field to checkout and save the text as a scoped order snapshot in storefront placement, independent of the merchant note.
 2. Show the shopper note in Order Detail and the shopper's confirmation and account order where appropriate.
 
 ## Done when
@@ -28,3 +28,4 @@ One plain-text note. No messaging thread.
 - [red.bg checkout](../../../red.bg/workspace-ecommerce/services/storefront/basic/app/Http/Controllers/CommerceController.php)
 - [Holita checkout](../../holita/apps/storefront/src/checkout-page.html)
 - [Holita order detail](../../holita/apps/admin/src/orders/order-detail.html)
+- [Holita storefront placement input](../../holita/apps/commerce/src/storefront.graphql#L288)

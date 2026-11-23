@@ -1,6 +1,6 @@
 # 229 Scope parity for shop redirect rule APIs
 
-**Status:** Blocked. Deferred until an API-only caller and scope are explicitly approved. **Product:** Holita.
+**Status:** Needs owner. Which API caller and approved internal shop paths, if any, should use redirect rules during a migration? **Product:** Holita.
 
 ## Background
 
@@ -12,7 +12,7 @@ If API parity is explicitly approved, expose scoped rule writes and a resolution
 
 ## Steps
 
-1. Confirm the API caller, supported shop paths and redirect semantics.
+1. Confirm the API caller, supported shop paths and whether each supported path needs a permanent or temporary redirect.
 2. Implement verified Tenant and Branch rule management and resolution for approved internal shop paths.
 
 ## Done when
@@ -27,3 +27,4 @@ Deferred API scope only. Keep an Admin editor and Basic redirect behavior out of
 
 - [red.bg redirect API](../../../red.bg/workspace-ecommerce/services/api/routes/api/v1/admin.php#L258)
 - [red.bg resolver](../../../red.bg/workspace-ecommerce/services/api/app/Services/Storefront/StorefrontRedirectResolver.php)
+- [Basic storefront routes](../../holita/apps/storefront/src/main.ts#L918)

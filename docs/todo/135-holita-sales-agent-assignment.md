@@ -55,5 +55,6 @@ drives work queues within the verified team scope.
 - [Holita Core demo accounts](../../holita/config/core-seed.json)
 - [Holita runtime initializer](../../holita/tools/runtime-config.mts)
 - [Environment reference](../../.env.example)
-- [red.bg responsible user and assignee validation](/workspace/projects/red.bg/workspace-sales/services/sales/app/Services/Crm/SalesCrmService.php)
-- [red.bg lead agent editor](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/form.blade.php)
+- [red.bg responsible user and assignee validation](../../../red.bg/workspace-sales/services/sales/app/Services/Crm/SalesCrmService.php)
+- [red.bg lead agent editor](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/partials/form.blade.php)
+- [Holita existing Sales app entry](../../holita/apps/sales/src/main.ts#L9)

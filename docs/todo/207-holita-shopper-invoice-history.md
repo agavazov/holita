@@ -13,7 +13,7 @@ Let signed-in shoppers find and download invoices for their own orders in the se
 ## Steps
 
 1. Expose owner-scoped invoice list and detail using the verified shop session. Add account routes with loading, empty, unavailable and error states.
-2. Use the existing renderer for the download button. Recheck shop and owning customer for the document response and keep operator-only fields private.
+2. Use the renderer introduced by 206, including saved VAT fields whenever the shared renderer supports them. Recheck shop and owning customer for the document response and keep operator-only fields private.
 
 ## Done when
 
@@ -28,3 +28,4 @@ Issued shopper-owned documents only. Preserve the same snapshot that the merchan
 - [red.bg Basic invoice routes](../../../red.bg/workspace-ecommerce/services/storefront/basic/routes/web.php)
 - [Holita account routes](../../holita/apps/storefront/src/main.ts)
 - [Holita storefront contract](../../holita/apps/commerce/src/storefront.graphql)
+- [Holita existing shopper order routes](../../holita/apps/storefront/src/main.ts#L932)

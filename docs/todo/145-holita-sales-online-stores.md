@@ -1,6 +1,6 @@
 # 145 Manage prospect online stores
 
-**Status:** Ready after [131](131-holita-sales-sales-service.md). **Product:** Holita.
+**Status:** Ready after [300](300-holita-sales-workspace-access.md). **Product:** Holita.
 
 ## Background
 
@@ -44,10 +44,11 @@ acquisition, Core shop provisioning, lead linking or external integrations.
 
 ## References
 
-- [red.bg online-store schema](/workspace/projects/red.bg/workspace-sales/services/sales/database/migrations/2026_09_02_000003_replace_crm_websites_with_online_stores.php)
-- [red.bg online-store model](/workspace/projects/red.bg/workspace-sales/services/sales/app/Models/Crm/OnlineStore.php)
-- [red.bg online-store search](/workspace/projects/red.bg/workspace-sales/services/sales/app/Services/Crm/OnlineStoreListingQuery.php)
-- [red.bg URL normalization](/workspace/projects/red.bg/workspace-sales/services/sales/app/Services/Crm/OnlineStoreUrlNormalizer.php)
-- [red.bg identifier normalization](/workspace/projects/red.bg/workspace-sales/services/sales/app/Services/Crm/OnlineStoreIdentifierNormalizer.php)
-- [red.bg Online Stores list](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/online-stores/index.blade.php)
-- [red.bg store editor](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/online-stores/partials/form.blade.php)
+- [red.bg online-store schema](../../../red.bg/workspace-sales/services/sales/database/migrations/2026_09_02_000003_replace_crm_websites_with_online_stores.php)
+- [red.bg online-store model](../../../red.bg/workspace-sales/services/sales/app/Models/Crm/OnlineStore.php)
+- [red.bg online-store search](../../../red.bg/workspace-sales/services/sales/app/Services/Crm/OnlineStoreListingQuery.php)
+- [red.bg URL normalization](../../../red.bg/workspace-sales/services/sales/app/Services/Crm/OnlineStoreUrlNormalizer.php)
+- [red.bg identifier normalization](../../../red.bg/workspace-sales/services/sales/app/Services/Crm/OnlineStoreIdentifierNormalizer.php)
+- [red.bg Online Stores list](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/online-stores/index.blade.php)
+- [red.bg store editor](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/online-stores/partials/form.blade.php)
+- [Holita Sales routes](../../holita/apps/sales/src/main.ts#L9)

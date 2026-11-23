@@ -1,6 +1,6 @@
 # 132 Manage prospect records
 
-**Status:** Ready after [131](131-holita-sales-sales-service.md). **Product:** Holita.
+**Status:** Ready after [300](300-holita-sales-workspace-access.md). **Product:** Holita.
 
 ## Background
 
@@ -37,7 +37,8 @@ hard delete, crawler metadata and discovered-store ingestion.
 
 ## References
 
-- [red.bg Lead model](/workspace/projects/red.bg/workspace-sales/services/sales/app/Models/Crm/Lead.php)
-- [red.bg Leads controller](/workspace/projects/red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/Crm/LeadsController.php)
-- [red.bg Leads list](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/index.blade.php)
-- [red.bg Lead detail](/workspace/projects/red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/view.blade.php)
+- [red.bg Lead model](../../../red.bg/workspace-sales/services/sales/app/Models/Crm/Lead.php)
+- [red.bg Leads controller](../../../red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/Crm/LeadsController.php)
+- [red.bg Leads list](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/index.blade.php)
+- [red.bg Lead detail](../../../red.bg/workspace-sales/services/sales/resources/views/sales/crm/leads/view.blade.php)
+- [Holita Sales routes](../../holita/apps/sales/src/main.ts#L9)
