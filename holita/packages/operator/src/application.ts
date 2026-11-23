@@ -25,15 +25,19 @@ import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import {
   AdminShell,
+  EmptyState,
   ModuleInfo,
-  PageRecord,
   OperationToast,
+  PageHeader,
+  PageRecord,
   SignIn,
   UI_LANGUAGE,
   navigationContext,
+  uiMessages,
   type NavGroup,
 } from '@osnova/ui';
 import { MessageService } from 'primeng/api';
+import { ButtonDirective } from 'primeng/button';
 import {
   AuthApi,
   BranchesApi,
@@ -70,6 +74,17 @@ interface OperatorOptions {
 }
 const OPERATOR_OPTIONS = new InjectionToken<OperatorOptions>('operator application');
 
+type ShopDiscovery =
+  | { kind: 'loading' | 'error' | 'empty' }
+  | { kind: 'ready'; branches: readonly { id: string; name: string }[] };
+
+interface ShopScope {
+  readonly tenantId: string;
+  readonly token: string;
+  readonly language: Language;
+  readonly attempt: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class OperatorLanguage {
   private readonly document = inject(DOCUMENT);
@@ -82,7 +97,15 @@ export class OperatorLanguage {
 
 @Component({
   selector: 'holita-operator',
-  imports: [AdminShell, OperationToast, SignIn, RouterOutlet],
+  imports: [
+    AdminShell,
+    ButtonDirective,
+    EmptyState,
+    OperationToast,
+    PageHeader,
+    SignIn,
+    RouterOutlet,
+  ],
   providers: [MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -97,9 +120,11 @@ export class OperatorLanguage {
         (submitCredentials)="signIn($event)"
       />
     } @else {
+      @let discovery = shopDiscovery();
       <osnova-admin-shell
         productName="Holita"
         productMark="H"
+        [class.shop-discovery-error]="discovery.kind === 'error'"
         [language]="language.value()"
         [languages]="languages"
         [homeLink]="homeLink()"
@@ -107,14 +132,38 @@ export class OperatorLanguage {
         [navigation]="navigation()"
         [context]="context()"
         [branches]="branches()"
-        [branchId]="session.branchId()"
+        [branchId]="activeBranch()"
+        [loading]="selectsShop && discovery.kind === 'loading'"
         [tenantName]="session.current()?.tenant?.name ?? null"
         [account]="account()"
         (branchSelected)="selectBranch($event)"
         (languageChange)="changeLanguageValue($event)"
         (signOut)="signOut()"
       >
-        <router-outlet />
+        @if (!selectsShop || activeBranch()) {
+          <router-outlet />
+        } @else {
+          <div class="app-view">
+            <osnova-page-header [title]="text().shops" [moduleInfo]="text().shopsInfo" />
+            <div class="app-card">
+              @switch (discovery.kind) {
+                @case ('error') {
+                  <osnova-empty-state kind="error" [title]="text().shopsUnavailable">
+                    <button emptyActions pButton type="button" (click)="retryShops()">
+                      {{ shared().retry }}
+                    </button>
+                  </osnova-empty-state>
+                }
+                @case ('empty') {
+                  <osnova-empty-state [title]="text().shopsEmpty" />
+                }
+                @default {
+                  <div role="status">{{ text().shopsLoading }}</div>
+                }
+              }
+            </div>
+          </div>
+        }
         <osnova-operation-toast />
       </osnova-admin-shell>
     }
@@ -126,7 +175,35 @@ export class OperatorApplication {
   private readonly options = inject(OPERATOR_OPTIONS);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
-  readonly branches = signal<readonly { id: string; name: string }[]>([]);
+  protected readonly selectsShop = this.options.selectBranch;
+  protected readonly text = computed(() => strings[this.language.value()]);
+  protected readonly shared = computed(() => uiMessages[this.language.value()]);
+  private readonly tenantId = computed(() => this.session.current()?.tenant.id);
+  private readonly token = computed(() => this.session.current()?.token);
+  private readonly shopAttempt = signal(0);
+  private readonly shopScope = computed<ShopScope | null>(() => {
+    const tenantId = this.tenantId();
+    const token = this.token();
+    if (!this.selectsShop || !tenantId || !token) {
+      return null;
+    }
+    return { tenantId, token, language: this.language.value(), attempt: this.shopAttempt() };
+  });
+  private readonly shopResult = signal<{ scope: ShopScope; state: ShopDiscovery } | null>(null);
+  protected readonly shopDiscovery = computed<ShopDiscovery>(() => {
+    const result = this.shopResult();
+    return result && result.scope === this.shopScope() ? result.state : { kind: 'loading' };
+  });
+  protected readonly branches = computed(() => {
+    const discovery = this.shopDiscovery();
+    return discovery.kind === 'ready' ? discovery.branches : [];
+  });
+  protected readonly activeBranch = computed(() => {
+    const selected = this.session.branchId();
+    return !this.selectsShop || this.branches().some((branch) => branch.id === selected)
+      ? selected
+      : null;
+  });
   readonly languages = [
     { code: 'bg', label: 'Български' },
     { code: 'en', label: 'English' },
@@ -159,6 +236,9 @@ export class OperatorApplication {
     if (!this.moduleInfo.info()) {
       return null;
     }
+    if (this.selectsShop && !this.activeBranch()) {
+      return { group: '', page: this.text().shops };
+    }
     const context = navigationContext(
       this.navigation(),
       this.router.lastSuccessfulNavigation()?.finalUrl?.toString() ?? this.router.url,
@@ -176,27 +256,32 @@ export class OperatorApplication {
       this.messages.clear();
     });
     effect((cleanup) => {
-      const current = this.session.current();
-      const language = this.language.value();
-      if (!current || !this.options.selectBranch) {
-        this.branches.set([]);
+      const scope = this.shopScope();
+      if (!scope) {
         return;
       }
-      const { query, close } = this.branchApi.watch(language, {
-        tenantId: current.tenant.id,
-        token: current.token,
+      const { query, close } = this.branchApi.watch(scope.language, {
+        tenantId: scope.tenantId,
+        token: scope.token,
       });
-      const subscription = query.valueChanges.subscribe((result) => {
-        if (result.dataState === 'complete') {
-          this.branches.set(result.data.branches);
-          const selected = untracked(() => this.session.branchId());
-          if (!result.data.branches.some((branch) => branch.id === selected)) {
-            const first = result.data.branches[0];
-            if (first) {
-              this.session.selectBranch(first.id);
-            }
+      const publish = (state: ShopDiscovery) => this.shopResult.set({ scope, state });
+      const subscription = query.valueChanges.subscribe({
+        next: (result) => {
+          if (result.error) {
+            publish({ kind: 'error' });
+          } else if (result.loading) {
+            publish({ kind: 'loading' });
+          } else if (result.dataState === 'complete') {
+            untracked(() => {
+              if (this.shopScope() === scope) {
+                publish(this.reconcileShops(result.data.branches));
+              }
+            });
+          } else {
+            publish({ kind: 'error' });
           }
-        }
+        },
+        error: () => publish({ kind: 'error' }),
       });
       cleanup(() => {
         subscription.unsubscribe();
@@ -204,6 +289,28 @@ export class OperatorApplication {
       });
     });
   }
+
+  private reconcileShops(branches: readonly { id: string; name: string }[]): ShopDiscovery {
+    const selected = this.session.branchId();
+    const first = branches[0];
+    if (!first) {
+      const current = this.session.current();
+      if (current && selected !== null) {
+        // Keep the signed-in account and persist it with no Branch selected.
+        this.session.start(current);
+      }
+      return { kind: 'empty' };
+    }
+    if (!branches.some((branch) => branch.id === selected)) {
+      this.session.selectBranch(first.id);
+    }
+    return { kind: 'ready', branches };
+  }
+
+  protected retryShops(): void {
+    this.shopAttempt.update((attempt) => attempt + 1);
+  }
+
   async selectBranch(branchId: string): Promise<void> {
     if (branchId === this.session.branchId()) {
       return;

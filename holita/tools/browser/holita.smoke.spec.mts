@@ -3720,6 +3720,53 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await contactPhone.fill(typedPhone);
     await selectCustomer(otherEmail, otherCustomer);
     await expect(contactPhone).toHaveValue(typedPhone);
+
+    const savedBranch = (page: Page) =>
+      page.evaluate(() => {
+        const saved: unknown = JSON.parse(localStorage.getItem('holita.admin.session') ?? 'null');
+        return saved && typeof saved === 'object' && 'branchId' in saved
+          ? saved.branchId
+          : undefined;
+      });
+    expect(await savedBranch(merchant)).toBe(shopId);
+    for (const [name, id] of [
+      ['Second shop', secondShopId],
+      ['First shop', shopId],
+    ] as const) {
+      const row = staff.getByRole('row').filter({ hasText: name });
+      const suspended = waitForOperation(
+        staff,
+        `${backoffice.origin}/graphql`,
+        'OperatorSetBranchStatus',
+      );
+      await row.getByRole('button', { name: 'Suspend', exact: true }).click();
+      expect(await (await suspended).json()).toMatchObject({
+        data: { setMerchantBranchStatus: { id, status: 'SUSPENDED' } },
+      });
+      await expect(row.getByRole('button', { name: 'Reactivate', exact: true })).toBeVisible();
+    }
+
+    const suspendedShopPage = await merchantContext.newPage();
+    const adminEndpoint = `${admin.origin}/graphql`;
+    const scopedRequests: string[] = [];
+    suspendedShopPage.on('request', (request) => {
+      const branch = request.headers()['x-branch-id'];
+      if (request.url() === adminEndpoint && branch) {
+        scopedRequests.push(branch);
+      }
+    });
+    const discovery = suspendedShopPage.waitForResponse((response) => {
+      const request = response.request();
+      return (
+        response.url() === adminEndpoint &&
+        request.headers()['accept-language'] === 'en' &&
+        request.postData()?.includes('"operationName":"AdminBranches"') === true
+      );
+    });
+    await suspendedShopPage.goto(`${admin.origin}/en/dashboard`);
+    expect(await (await discovery).json()).toEqual({ data: { branches: [] } });
+    await expect.poll(() => savedBranch(suspendedShopPage)).toBeNull();
+    expect(scopedRequests).toEqual([]);
   } finally {
     for (const close of cleanup.reverse()) {
       try {

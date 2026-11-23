@@ -476,6 +476,10 @@ current Core internal token without displaying it. Run both Holita database setu
 the Holita migration command above before restarting Holita. The operator Router reads
 `SALES_GRAPHQL_URL` from its launch environment for a non-default Sales endpoint.
 
+Merchant Admin loads available shops before opening the current page. If the list fails to
+load, select **Retry**. When the list is empty, Admin clears the saved shop and shows
+**No shops available**.
+
 The operator graph exposes `salesWorkspaceAccess { tenantId userId }` to Core platform
 accounts with the `SALES` role. The IDs identify the verified platform tenant and signed-in
 Core user. CRM scope comes from that platform tenant, independent of Branch selection. In Sales,

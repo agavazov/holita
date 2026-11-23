@@ -51,7 +51,7 @@ import { ProductsPage } from './products/products-page';
 
 const canEditShopContent: CanActivateFn = (route) => {
   const session = inject(DemoSession);
-  return !session.current() || (session.hasRole('OPERATOR') && session.branchId())
+  return !session.current() || session.hasRole('OPERATOR')
     ? true
     : createUrlTreeFromSnapshot(route, ['..'], route.queryParams, route.fragment);
 };

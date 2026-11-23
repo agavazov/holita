@@ -1,1 +1,6 @@
 @use '@osnova/ui/styles';
+
+// The shared disabled picker shows the empty label. During failure, the page offers Retry.
+.shop-discovery-error .app-topbar__branch {
+  display: none;
+}
