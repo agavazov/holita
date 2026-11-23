@@ -642,7 +642,9 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                       <p class="product-cart-error" role="alert">
                         @if (variant.minimumQuantity > 1 && quantity.hasError('min')) {
                           {{ t().cartMinimumNotMet }}
-                        } @else if (variant.availableQuantity != null && quantity.hasError('max')) {
+                        } @else if (
+                          typeof variant.availableQuantity === 'number' && quantity.hasError('max')
+                        ) {
                           {{ t().cartInsufficientStock }}
                         } @else {
                           {{ t().cartInvalidQuantity }}

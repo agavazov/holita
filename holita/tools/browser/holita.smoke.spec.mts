@@ -2868,10 +2868,19 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.getByRole('link', { name: 'Orders', exact: true }).click();
     await merchant.getByRole('button', { name: 'Create manual order', exact: true }).click();
     const selectCustomer = async (search: string, label: string) => {
+      const picker = merchant.locator('#manual-customerId');
+      await picker.fill('');
       const found = waitForCart(merchant, 'OperatorManualOrderCustomers');
-      await merchant.locator('#manual-customerId').fill(search);
-      expect((await found).request().postDataJSON()).toMatchObject({
+      await picker.fill(search);
+      const result = await found;
+      expect(result.request().postDataJSON()).toMatchObject({
         variables: { search },
+      });
+      const [name, email] = label.split(' · ');
+      expect(await result.json()).toMatchObject({
+        data: {
+          customers: { items: expect.arrayContaining([expect.objectContaining({ name, email })]) },
+        },
       });
       const option = merchant.getByRole('option', {
         name: label,
