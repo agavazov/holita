@@ -284,7 +284,6 @@ query CatalogueProduct($id: ID!) {
         sku
         price
         available
-        availableQuantity
         imageId
         minimumQuantity
         optionValueIds

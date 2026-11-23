@@ -168,8 +168,6 @@ type CatalogueVariant {
   depth: Float
   available: Boolean!
   minimumQuantity: Int!
-  "Null when stock is not tracked."
-  availableQuantity: Int
   imageId: ID
   "Visible values in option group order."
   optionValueIds: [ID!]!
@@ -193,7 +191,7 @@ type CatalogueFacets {
   brands: [CatalogueBrand!]!
   tags: [CatalogueTag!]!
   options: [CatalogueOption!]!
-  "Counts include other active filters and exclude the choice filter for the counted characteristic."
+  "Choices come from the listing. Counts include search and other filters, excluding this characteristic's selection."
   characteristicFacets: [CatalogueCharacteristicGroupFacet!]!
 }
 type CataloguePage {

@@ -1758,17 +1758,19 @@ async function verifyCharacteristicFacets(db: PrismaClient, categoryId: string, 
       choiceId,
     })),
   });
-  const browse = `query($ids:[ID!]!, $offset:Int!) {
-    catalogueCategoryProducts(slug:"parent", limit:1, offset:$offset, sort:NAME_ASC, filter:{characteristicChoiceIds:$ids}) {
+  const browse = `query($ids:[ID!]!, $offset:Int!, $search:String) {
+    catalogueCategoryProducts(slug:"parent", limit:1, offset:$offset, sort:NAME_ASC, filter:{characteristicChoiceIds:$ids,search:$search}) {
       items{name} total facets{characteristicFacets{id characteristics{id choices{id count}}}}
     }
   }`;
-  for (const [ids, offset, names, total, v1Count, v2Count] of [
+  for (const [ids, offset, names, total, v1Count, v2Count, search] of [
     [[v1.id, v2.id], 1, ['Visible bowl'], 2, 1, 1],
     [[v1.id, v2.id, glaze.id], 0, ['Visible bowl'], 1, 0, 1],
     [[v1.id, glaze.id], 0, [], 0, 0, 1],
+    [[v1.id], 0, [], 0, 0, 1, 'Visible bowl'],
+    [[v1.id], 0, ['Visible'], 1, 1, 1, 'Parent'],
   ] as const) {
-    expect(await storefront(publicA, browse, { ids, offset })).toMatchObject({
+    expect(await storefront(publicA, browse, { ids, offset, search })).toMatchObject({
       data: {
         catalogueCategoryProducts: {
           items: names.map((name) => ({ name })),
@@ -1793,6 +1795,15 @@ async function verifyCharacteristicFacets(db: PrismaClient, categoryId: string, 
       },
     });
   }
+  expect(
+    await storefront(
+      publicA,
+      'query($id:ID!){catalogueProduct(id:$id){variantSelection{variants{availableQuantity}}}}',
+      { id: product.id },
+    ),
+  ).toMatchObject({
+    errors: [{ message: expect.stringContaining('Cannot query field "availableQuantity"') }],
+  });
   expect(
     await storefront(
       publicB,

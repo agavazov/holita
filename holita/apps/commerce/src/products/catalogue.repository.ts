@@ -185,12 +185,12 @@ export class CatalogueRepository {
     const categories = this.database.table('category');
     return Prisma.sql`
       WITH RECURSIVE public_categories AS (
-        SELECT "tenantId", "branchId", "id", "name"
+        SELECT "tenantId", "branchId", "id", ARRAY["name"::text] AS names
         FROM ${categories}
         WHERE "tenantId" = ${scope.tenantId}::uuid AND "branchId" = ${scope.branchId}::uuid
           AND "active" AND "parentId" IS NULL
         UNION ALL
-        SELECT child."tenantId", child."branchId", child."id", child."name"
+        SELECT child."tenantId", child."branchId", child."id", array_append(parent.names, child."name"::text)
         FROM ${categories} child
         JOIN public_categories parent ON child."tenantId" = parent."tenantId"
           AND child."branchId" = parent."branchId" AND child."parentId" = parent."id"
@@ -213,8 +213,10 @@ export class CatalogueRepository {
           CASE WHEN ${Prisma.join(tokenMatches, ' AND ')} THEN 7 END
         ) AS "searchRank"
         FROM (
-          VALUES (p."name", 0), (b."name", 1), (c."name", 1),
+          VALUES (p."name", 0), (b."name", 1),
             (p."descriptionBg", 2), (p."descriptionEn", 2)
+          UNION ALL
+          SELECT unnest(c.names), 1
           UNION ALL
           SELECT v."sku", 0 FROM ${this.database.table('productVariant')} v
           WHERE ${matchingVariant}
@@ -226,7 +228,6 @@ export class CatalogueRepository {
             AND a."productId" = p."id"
         ) field(value, priority)
       ) matches
-      WHERE matches."searchRank" IS NOT NULL
     `;
   }
 
@@ -517,6 +518,10 @@ export class CatalogueRepository {
         )`);
       }
       const candidates = this.searchCandidates(scope, base, words, matchingVariant);
+      if (words.length) {
+        // Search narrows counts and results while the listing still supplies all its choices.
+        conditions.push(Prisma.sql`p."searchRank" IS NOT NULL`);
+      }
       const characteristics = await this.characteristicFilters(
         tx,
         scope,

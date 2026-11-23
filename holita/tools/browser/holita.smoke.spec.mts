@@ -1274,8 +1274,6 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.locator('#brand-name').fill('Inline Smoke Brand');
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Brand saved.');
-    await expect(merchant.locator('#product-name')).toHaveValue(configuredProductName);
-    await expect(merchant.locator('#product-brand')).toHaveText('Inline Smoke Brand');
     await merchant.locator('#product-variant-generation-values').click();
     for (const finish of ['Gloss', 'Satin']) {
       await merchant
@@ -1299,15 +1297,31 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.getByRole('option', { name: 'Hidden', exact: true }).click();
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Category saved.');
-    await expect(merchant.locator('#product-name')).toHaveValue(configuredProductName);
-    await expect(merchant.locator('#product-category')).toHaveText('Inline Smoke Category');
-    await expect(merchant.locator('#product-variant-sku-0')).toHaveValue('CONFIG-Gloss');
-    await expect(merchant.locator('#product-image-alt-0')).toHaveValue('Inline gallery draft');
     await merchant.locator('#product-variant-tracking-0').click();
     await merchant.getByRole('option', { name: 'Tracked', exact: true }).click();
     await merchant.locator('#product-status').click();
     await merchant.getByRole('option', { name: 'Active', exact: true }).click();
+    const configuredSave = waitForOperation(
+      merchant,
+      `${admin.origin}/graphql`,
+      'OperatorCreateProduct',
+    );
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    const configuredResult = await configuredSave;
+    expect(configuredResult.request().postDataJSON()).toMatchObject({
+      variables: {
+        input: {
+          name: configuredProductName,
+          brandId: expect.any(String),
+          categoryId: expect.any(String),
+          variants: [{ sku: 'CONFIG-Gloss' }, { sku: 'CONFIG-Satin' }],
+          images: [{ altText: 'Inline gallery draft' }],
+        },
+      },
+    });
+    expect(await configuredResult.json()).toMatchObject({
+      data: { createProduct: { id: expect.any(String), name: configuredProductName } },
+    });
     await dismissSuccess(merchant, 'Product saved.');
     const shopper = await shopperContext.newPage();
     await shopper.goto(`${shopApp.origin}/s/${shopId}`);

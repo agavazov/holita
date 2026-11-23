@@ -190,7 +190,7 @@
         <div class="app-card__body" [formGroup]="choice">
           <osnova-form-field
             [controlId]="choiceId"
-            [label]="text().characteristicChoice"
+            [label]="indexedChoiceLabel(text().characteristicChoice, index, choiceIndex)"
             [required]="true"
             [error]="choiceError"
           >
@@ -216,7 +216,7 @@
               [disabled]="saving()"
               (click)="removeChoice(item, index, choiceIndex)"
             >
-              {{ text().removeCharacteristicChoice }}
+              {{ indexedChoiceLabel(text().removeCharacteristicChoice, index, choiceIndex) }}
             </button>
           </div>
           }

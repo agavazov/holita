@@ -544,7 +544,8 @@ order by default, and rule-based collections sort by name.
 The public `catalogue` and `catalogueCategoryProducts`, `catalogueBrandProducts`,
 `catalogueCollectionProducts` and `catalogueTagProducts` queries accept filters, sorting and paging.
 Search matches product names, Bulgarian and English descriptions, active variant SKUs, and
-public brand, category and tag names. Searches use relevance unless a sort is selected.
+public brand, tag and category names, including the product's visible ancestor categories.
+Searches use relevance unless a sort is selected.
 `tagIds` matches any selected tag and combines with the other filters. Catalogue pages expose
 the tag choices under `facets.tags`.
 The storefront stores browsing state in the URL with `q`, `sort`, `minPrice`, `maxPrice`,
@@ -564,8 +565,9 @@ hides inapplicable values and preserves them for later use.
 
 Basic shows saved text and choice labels on the product page. In catalogue filters, multiple
 choices from one characteristic match any of those choices. Selections across different
-characteristics must all match. Counts reflect the current listing and other filters, excluding
-the counted characteristic's own selection. Filter links carry repeated `characteristic` choice
+characteristics must all match. Choices come from the current listing. Counts reflect search
+and other filters, excluding the counted characteristic's own selection.
+Filter links carry repeated `characteristic` choice
 IDs in the URL. The public graph exposes `catalogueProductSpecifications(productId)` and
 `facets.characteristicFacets` on catalogue listings.
 
@@ -611,8 +613,9 @@ price on catalogue cards. The public `CatalogueProduct.available` field reports 
 variant is available. On a product page, `CatalogueProduct.variantSelection` supplies the active
 variants and their public option labels. The page starts with the first available variant in the
 merchant's saved order, or the first active variant when all are sold out. Choosing a combination
-updates its price, photo, availability and quantity. A tracked variant is available when its
-stock meets its minimum. Catalogue cards show each flagged option's distinct values from active
+updates its price, photo, availability and quantity. The public variant contract exposes
+availability and the minimum purchase quantity. Commerce checks stock when shoppers add or
+update cart lines. Catalogue cards show each flagged option's distinct values from active
 variants. The Sofia demo shop includes a configurable product with two differently priced
 combinations, one in stock and one sold out.
 

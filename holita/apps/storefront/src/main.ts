@@ -548,16 +548,10 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                                   "
                                   (change)="choice && selectedVariant.set(choice)"
                                 />
-                                <span class="variant-choice-label">
-                                  @if (value.swatchColor; as color) {
-                                    <span
-                                      class="shop-option-swatch"
-                                      aria-hidden="true"
-                                      [style.background-color]="color"
-                                    ></span>
-                                  }
-                                  <span>{{ value.label }}</span>
-                                </span>
+                                <ng-container
+                                  [ngTemplateOutlet]="variantValue"
+                                  [ngTemplateOutletContext]="{ $implicit: value }"
+                                />
                                 @if (!choice?.available) {
                                   <span [id]="'variant-stock-' + value.id" hidden>{{
                                     t().outOfStock
@@ -588,7 +582,16 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                                   "
                                   (change)="selectedVariant.set(choice.variant)"
                                 />
-                                <span>{{ choice.label }}</span>
+                                <span class="variant-choice-label variant-choice-combination">
+                                  @for (value of choice.values; track value.id) {
+                                    <ng-container
+                                      [ngTemplateOutlet]="variantValue"
+                                      [ngTemplateOutletContext]="{ $implicit: value }"
+                                    />
+                                    <span aria-hidden="true">·</span>
+                                  }
+                                  <span class="variant-choice-text">{{ choice.variant.sku }}</span>
+                                </span>
                                 @if (!choice.variant.available) {
                                   <span [id]="'variant-stock-' + choice.variant.id" hidden>{{
                                     t().outOfStock
@@ -601,6 +604,18 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                       }
                     </div>
                   }
+                  <ng-template #variantValue let-value>
+                    <span class="variant-choice-label">
+                      @if (value.swatchColor; as color) {
+                        <span
+                          class="shop-option-swatch"
+                          aria-hidden="true"
+                          [style.background-color]="color"
+                        ></span>
+                      }
+                      <span class="variant-choice-text">{{ value.label }}</span>
+                    </span>
+                  </ng-template>
                   @let quantity = addQuantity();
                   <div class="product-cart">
                     <form class="shop-control-row" (submit)="$event.preventDefault(); addToCart()">
@@ -611,7 +626,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                           type="number"
                           [min]="variant.minimumQuantity"
                           step="1"
-                          [max]="maximumQuantity()"
+                          [max]="maxCartQuantity"
                           [formControl]="quantity"
                           [readOnly]="!available || cartState.locked()"
                           [attr.aria-invalid]="quantity.touched && quantity.invalid ? 'true' : null"
@@ -642,10 +657,6 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                       <p class="product-cart-error" role="alert">
                         @if (variant.minimumQuantity > 1 && quantity.hasError('min')) {
                           {{ t().cartMinimumNotMet }}
-                        } @else if (
-                          typeof variant.availableQuantity === 'number' && quantity.hasError('max')
-                        ) {
-                          {{ t().cartInsufficientStock }}
                         } @else {
                           {{ t().cartInvalidQuantity }}
                         }
@@ -1084,16 +1095,10 @@ class StorefrontPage {
     const variant = this.selectedVariant();
     return variant?.available ? variant.id : null;
   });
-  protected readonly maximumQuantity = computed(() => {
-    const variant = this.selectedVariant();
-    return Math.max(
-      variant?.minimumQuantity ?? 1,
-      Math.min(variant?.availableQuantity ?? maxCartQuantity, maxCartQuantity),
-    );
-  });
+  protected readonly maxCartQuantity = maxCartQuantity;
   protected readonly addQuantity = linkedSignal(() => {
     const minimum = this.selectedVariant()?.minimumQuantity ?? 1;
-    return quantityControl(minimum, minimum, this.maximumQuantity());
+    return quantityControl(minimum, minimum);
   });
   protected readonly added = linkedSignal({
     source: this.sellableVariantId,
@@ -1121,14 +1126,14 @@ class StorefrontPage {
     if (!selection || selection.variants.length < 2 || this.variantOptions().length) {
       return [];
     }
-    const labels = new Map(
-      selection.options.flatMap(({ values }) =>
-        values.map<[string, string]>(({ id, label }) => [id, label]),
+    const values = new Map(
+      selection.options.flatMap((option) =>
+        option.values.map((value) => [value.id, value] as const),
       ),
     );
     return selection.variants.map((variant) => ({
       variant,
-      label: [...variant.optionValueIds.map((id) => labels.get(id)), variant.sku].join(' · '),
+      values: variant.optionValueIds.flatMap((id) => values.get(id) ?? []),
     }));
   });
   readonly description = computed(() => {

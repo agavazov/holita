@@ -28,8 +28,10 @@ import {
   drawerRouteData,
   fieldErrors,
   focusFirstInvalid,
+  formatNumber,
   injectDrawerHost,
   integerValidator,
+  interpolate,
   lockWhileSaving,
   selectMultiplePt,
   textValidator,
@@ -221,6 +223,13 @@ export class CharacteristicGroupEditor {
 
   protected clearError(path: string): void {
     this.errors.update((errors) => ({ ...errors, [path]: undefined }));
+  }
+
+  protected indexedChoiceLabel(template: string, fieldIndex: number, choiceIndex: number): string {
+    const language = this.language.value();
+    const field = formatNumber(fieldIndex + 1, language);
+    const choice = formatNumber(choiceIndex + 1, language);
+    return interpolate(template, { number: `${field}.${choice}` });
   }
 
   protected addCharacteristic(): void {

@@ -49,10 +49,7 @@ import { ShopSettingsService } from './shop-settings/shop-settings.service.js';
 import { CatalogueRepository, type BrowseCriteria } from './products/catalogue.repository.js';
 import { CommerceRepository } from './products/commerce.repository.js';
 import { productImageUrl } from './products/product-images.js';
-import {
-  compareCatalogueOptionValues,
-  trackedVariantQuantity,
-} from './products/product-relations.js';
+import { compareCatalogueOptionValues } from './products/product-relations.js';
 import { ShopperRepository } from './customers/shopper.repository.js';
 
 export interface StorefrontContext {
@@ -227,7 +224,6 @@ function catalogueProductChoices({ variants }: VariantSelectionRow): CataloguePr
           depth: variant.depth?.toNumber() ?? null,
           available: variantAvailable(variant),
           minimumQuantity: variant.minimumQuantity,
-          availableQuantity: trackedVariantQuantity(variant),
           imageId: variant.imageId,
           optionValueIds: orderedValueIds.filter((id) => valueIds.has(id)),
         };
