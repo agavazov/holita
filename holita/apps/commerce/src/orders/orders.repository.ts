@@ -19,10 +19,19 @@ function orderDetail(scope: Scope) {
   } satisfies Prisma.OrderInclude;
 }
 
-function guestOrderOwnership(scope: Scope, guestTokenHash: string) {
+const guestConfirmationWindowMs = 24 * 60 * 60 * 1000;
+
+function confirmationOwnership(scope: Scope, owner: CartOwner) {
+  if ('customerId' in owner) {
+    return { customerId: owner.customerId };
+  }
   return {
     customerId: null,
-    cart: { ...scope, guestTokenHash, consumedAt: { not: null } },
+    cart: {
+      ...scope,
+      guestTokenHash: owner.guestTokenHash,
+      consumedAt: { gt: new Date(Date.now() - guestConfirmationWindowMs) },
+    },
   } satisfies Prisma.OrderWhereInput;
 }
 
@@ -203,34 +212,23 @@ export class OrdersRepository {
   }
 
   findConfirmation(scope: Scope, id: string, owner: CartOwner) {
-    const ownership =
-      'customerId' in owner
-        ? { customerId: owner.customerId }
-        : guestOrderOwnership(scope, owner.guestTokenHash);
     return this.database.client.order.findUnique({
-      where: { ...scope, id, ...ownership },
+      where: { ...scope, id, ...confirmationOwnership(scope, owner) },
       include: { lines: orderLines(scope) },
     });
   }
 
-  findGuestConfirmationForCart(scope: Scope, cartId: string, guestTokenHash: string) {
-    return this.database.client.order.findUnique({
-      where: {
-        tenantId_branchId_cartId: { ...scope, cartId },
-        ...guestOrderOwnership(scope, guestTokenHash),
-      },
-      include: { lines: orderLines(scope) },
-    });
-  }
-
-  findForCart(
-    tx: Prisma.TransactionClient,
+  findConfirmationForCart(
     scope: Scope,
     cartId: string,
-    customerId: string | null,
+    owner: CartOwner,
+    tx: Prisma.TransactionClient = this.database.client,
   ) {
     return tx.order.findUnique({
-      where: { tenantId_branchId_cartId: { ...scope, cartId }, customerId },
+      where: {
+        tenantId_branchId_cartId: { ...scope, cartId },
+        ...confirmationOwnership(scope, owner),
+      },
       include: { lines: orderLines(scope) },
     });
   }

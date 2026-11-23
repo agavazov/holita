@@ -589,9 +589,11 @@ discount amount on the order and records the redemption.
 The confirmation shows the order's current fulfillment and payment status with its saved items,
 promo code, discount, payment instructions and delivery fee.
 Signed-in shoppers can reopen their confirmation in the same shop. Guests can reopen theirs
-in the browser that placed the order. If a guest loses the response to Place order, reloading
-Checkout opens the confirmation when the order was placed. If the cart is still active, enter
-the checkout details and review the total again before placing the order.
+in the browser that placed the order for 24 hours after Commerce consumes the cart. The same
+window applies when reloading Checkout after a lost Place order response or retrying a placement
+that already committed. After 24 hours, the guest confirmation is unavailable. If the cart is
+still active after an interrupted checkout, enter the checkout details and review the total again
+before placing the order.
 The storefront graph uses `placeOrder` with the reviewed cart ID and quote revision, and
 `orderConfirmation` with the order ID and the placing shopper's authorization. The
 `guestOrderConfirmation` query recovers a placed guest order by cart ID using the original

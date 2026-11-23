@@ -53,8 +53,9 @@ function pendingGuestCheckoutKey(shopId: string) {
 }
 
 export function pendingGuestCheckout(shopId: string): GuestCheckoutAttempt | null {
-  const stored = localStorage.getItem(pendingGuestCheckoutKey(shopId));
-  if (!stored) {
+  const key = pendingGuestCheckoutKey(shopId);
+  const stored = localStorage.getItem(key);
+  if (stored === null) {
     return null;
   }
   try {
@@ -64,14 +65,17 @@ export function pendingGuestCheckout(shopId: string): GuestCheckoutAttempt | nul
       typeof attempt === 'object' &&
       'cartId' in attempt &&
       typeof attempt.cartId === 'string' &&
+      attempt.cartId &&
       'token' in attempt &&
-      typeof attempt.token === 'string'
+      typeof attempt.token === 'string' &&
+      attempt.token
     ) {
       return { cartId: attempt.cartId, token: attempt.token };
     }
   } catch {
     // An unreadable checkout attempt has no credentials to restore.
   }
+  localStorage.removeItem(key);
   return null;
 }
 
@@ -95,6 +99,12 @@ function guestReceiptStorageKey(shopId: string, orderId: string) {
 
 export function guestReceiptToken(shopId: string, orderId: string) {
   return localStorage.getItem(guestReceiptStorageKey(shopId, orderId));
+}
+
+export function forgetGuestReceipt(shopId: string, orderId: string, token: string) {
+  if (guestReceiptToken(shopId, orderId) === token) {
+    localStorage.removeItem(guestReceiptStorageKey(shopId, orderId));
+  }
 }
 
 export function rememberGuestReceipt(shopId: string, orderId: string, token: string) {

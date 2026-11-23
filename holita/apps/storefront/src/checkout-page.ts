@@ -308,10 +308,10 @@ export class CheckoutPage {
     } = reviewed;
     this.problem.set(null);
     this.placing.set(true);
+    const pending = credentials.guestCartToken
+      ? { cartId, token: credentials.guestCartToken }
+      : null;
     try {
-      const pending = credentials.guestCartToken
-        ? { cartId, token: credentials.guestCartToken }
-        : null;
       if (pending) {
         rememberPendingGuestCheckout(shopId, pending);
       }
@@ -322,6 +322,10 @@ export class CheckoutPage {
       });
       await this.finishCheckout(shopId, order.id, pending);
     } catch (error) {
+      if (pending && cartNotFound(error)) {
+        forgetPendingGuestCheckout(shopId, pending);
+        forgetGuestCart(shopId, pending.token);
+      }
       if (!this.destroy.destroyed && !this.cartState.expireSession(shopId, credentials, error)) {
         this.showRejection(error, 'orderPlacementFailed');
       }

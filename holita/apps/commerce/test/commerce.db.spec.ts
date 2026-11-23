@@ -2303,6 +2303,9 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     ],
   });
   const receiptVariables = { orderId: order.id };
+  const expiredConsumption = new Date(Date.now() - 25 * 60 * 60 * 1000);
+  await database.cart.update({ where: cartKey, data: { consumedAt: expiredConsumption } });
+  expect(await place(currentReview)).toEqual({ data: { placeOrder: receipt } });
   expect(await storefront(publicA, receiptOperation, receiptVariables, token)).toEqual({
     data: { orderConfirmation: receipt },
   });
@@ -2346,15 +2349,55 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       data: { shopperOrder: null },
     });
   }
-  expect(
-    await storefront(
-      publicA,
-      receiptOperation,
-      { orderId: guestOrder.id },
+  const guestReceiptFields = { id: guestOrder.id, status: 'CANCELLED' };
+  const guestReceiptReads = [
+    [receiptOperation, { orderId: guestOrder.id }, 'orderConfirmation'],
+    [
+      'query($cartId:ID!){guestOrderConfirmation(cartId:$cartId){id status}}',
+      { cartId: guestReview.cartId },
+      'guestOrderConfirmation',
+    ],
+  ] as const;
+  const retryGuestPlacement = (branch: string, cartToken: string) =>
+    storefront(
+      branch,
+      placeOperation,
+      { input: { ...quoteInput, ...guestReview } },
       undefined,
-      guestCheckoutToken,
-    ),
-  ).toMatchObject({ data: { orderConfirmation: { id: guestOrder.id, status: 'CANCELLED' } } });
+      cartToken,
+    );
+  for (const [operation, variables, field] of guestReceiptReads) {
+    expect(
+      await storefront(publicA, operation, variables, undefined, guestCheckoutToken),
+    ).toMatchObject({ data: { [field]: guestReceiptFields } });
+  }
+  expect(await retryGuestPlacement(publicA, guestCheckoutToken)).toMatchObject({
+    data: { placeOrder: guestReceiptFields },
+  });
+  for (const [branch, cartToken, expired] of [
+    [publicA, randomBytes(32).toString('base64url'), false],
+    [publicB, guestCheckoutToken, false],
+    [publicA, guestCheckoutToken, true],
+  ] as const) {
+    if (expired) {
+      await database.cart.update({
+        where: { ...categoryScope, id: guestReview.cartId },
+        data: { consumedAt: expiredConsumption },
+      });
+    }
+    for (const [operation, variables, field] of guestReceiptReads) {
+      expect(await storefront(branch, operation, variables, undefined, cartToken)).toEqual({
+        data: { [field]: null },
+      });
+    }
+    expect(await retryGuestPlacement(branch, cartToken)).toMatchObject({
+      data: null,
+      errors: [{ extensions: { fieldErrors: [{ path: 'cart', code: 'CART_NOT_FOUND' }] } }],
+    });
+  }
+  expect(
+    await database.order.count({ where: { ...categoryScope, cartId: guestReview.cartId } }),
+  ).toBe(1);
   for (const [branch, bearer] of [
     [publicA, foreignOwner],
     [publicB, foreignShopBearer],

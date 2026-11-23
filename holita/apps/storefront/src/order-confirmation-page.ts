@@ -10,7 +10,7 @@ import {
   type ElementRef,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CartState, guestReceiptToken, shopperStorageKey } from './cart-state';
+import { CartState, forgetGuestReceipt, guestReceiptToken, shopperStorageKey } from './cart-state';
 import { StorefrontApi } from './storefront-api';
 import { messages, type Language } from './storefront-messages';
 import { OrderReceipt } from './order-receipt';
@@ -38,7 +38,12 @@ export class OrderConfirmationPage {
         ? { guestCartToken }
         : { shopperToken: sessionStorage.getItem(shopperStorageKey(shopId)) };
       try {
-        return await this.api.orderConfirmation(shopId, credentials, orderId);
+        const order = await this.api.orderConfirmation(shopId, credentials, orderId);
+        abortSignal.throwIfAborted();
+        if (!order && guestCartToken !== null) {
+          forgetGuestReceipt(shopId, orderId, guestCartToken);
+        }
+        return order;
       } catch (error) {
         abortSignal.throwIfAborted();
         if (this.cartState.expireSession(shopId, credentials, error)) {

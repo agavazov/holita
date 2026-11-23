@@ -498,10 +498,10 @@ export class OrdersService {
     if (!owner || !('guestTokenHash' in owner) || !isUUID(cartId)) {
       return null;
     }
-    const order = await this.orders.findGuestConfirmationForCart(
+    const order = await this.orders.findConfirmationForCart(
       context.scope,
       cartId.toLowerCase(),
-      owner.guestTokenHash,
+      owner,
     );
     return order ? confirmation(order) : null;
   }
@@ -524,7 +524,7 @@ export class OrdersService {
       }
       const { id: cartId, discountId } = storedCart;
       if (storedCart.consumedAt) {
-        const order = await this.orders.findForCart(tx, scope, cartId, customerId ?? null);
+        const order = await this.orders.findConfirmationForCart(scope, cartId, owner, tx);
         if (!order) {
           throw cartMissing();
         }
