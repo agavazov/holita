@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { afterAll, beforeAll, expect, it } from '@jest/globals';
+import { afterAll, beforeAll, expect, it, jest } from '@jest/globals';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
@@ -9,6 +9,7 @@ import pg from 'pg';
 import type { PrismaClient } from '../src/generated/prisma/client.js';
 import { AppModule } from '../src/app.module.js';
 import { DatabaseService } from '../src/database.service.js';
+import { StorefrontService } from '../src/storefront.service.js';
 
 const legacyProductId = randomUUID();
 const tenantA = randomUUID();
@@ -42,6 +43,7 @@ const previous = {
 let connection: pg.Client | undefined;
 let database: PrismaClient | undefined;
 let core: Server | undefined;
+let publicBranchLookupAvailable = true;
 let app: INestApplication | undefined;
 let schema = '';
 let endpoint: string;
@@ -196,6 +198,10 @@ beforeAll(async () => {
           ? value.variables.id
           : undefined;
       if (request.url === '/internal/branches/resolve') {
+        if (!publicBranchLookupAvailable) {
+          response.writeHead(503).end();
+          return;
+        }
         const branch =
           typeof value === 'object' && value !== null && 'id' in value ? value.id : null;
         const shop =
@@ -1359,10 +1365,47 @@ function reviewedCart(value: unknown): { cartId: string; quoteRevision: string }
   return { cartId, quoteRevision };
 }
 
+async function verifyPublicShopCache(service: StorefrontService): Promise<void> {
+  const resolveShop = (branchId: string) => service.shop({ branchId, authorization: undefined });
+  const startedAt = performance.now();
+  const clock = jest.spyOn(performance, 'now').mockReturnValue(startedAt);
+  const shop = { id: publicA, tenantId: tenantA, name: 'Shop' };
+  const missingShop = randomUUID();
+  const unavailable = 'Shop verification is unavailable';
+
+  try {
+    expect(await resolveShop(publicA)).toEqual(shop);
+    publicBranchLookupAvailable = false;
+    expect(await resolveShop(publicA.toUpperCase())).toEqual(shop);
+
+    publicBranchLookupAvailable = true;
+    for (let index = 1; index < 1024; index += 1) {
+      await resolveShop(randomUUID());
+    }
+    expect(await resolveShop(missingShop)).toBeNull();
+    publicBranchLookupAvailable = false;
+    expect(await resolveShop(missingShop)).toBeNull();
+    await expect(resolveShop(publicA)).rejects.toThrow(unavailable);
+
+    publicBranchLookupAvailable = true;
+    expect(await resolveShop(publicA)).toEqual(shop);
+    publicBranchLookupAvailable = false;
+    clock.mockReturnValue(startedAt + 4999);
+    expect(await resolveShop(publicA)).toEqual(shop);
+    clock.mockReturnValue(startedAt + 5000);
+    await expect(resolveShop(publicA)).rejects.toThrow(unavailable);
+    await expect(resolveShop(missingShop)).rejects.toThrow(unavailable);
+  } finally {
+    publicBranchLookupAvailable = true;
+    clock.mockRestore();
+  }
+}
+
 it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () => {
-  if (!database) {
+  if (!database || !app) {
     throw new Error('Missing database');
   }
+  await verifyPublicShopCache(app.get(StorefrontService));
   const publishedPage = { slug: 'published-page', titleBg: 'За нас', bodyBg: 'Нашият магазин.' };
   const readPublicPage = 'query($slug:String!){shopPage(slug:$slug){slug titleBg bodyBg}}';
   await database.shopPage.createMany({

@@ -64,9 +64,20 @@ export interface ShopScope {
   tenantId: string;
   name: string;
 }
+const shopCacheCapacity = 1024;
+const shopCacheFreshnessMs = 5000;
 const shopCache = new Map<string, { expires: number; shop: ShopScope | null }>();
 const signInCapacity = 4;
 const signInWindowMs = 10_000;
+
+function pruneShopCache(now: number): void {
+  for (const [id, entry] of shopCache) {
+    if (entry.expires > now && shopCache.size <= shopCacheCapacity) {
+      break;
+    }
+    shopCache.delete(id);
+  }
+}
 
 function tokenHash(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -256,8 +267,9 @@ export class StorefrontService implements OnModuleInit {
       return null;
     }
     const id = context.branchId.toLowerCase();
+    pruneShopCache(performance.now());
     const cached = shopCache.get(id);
-    if (cached && cached.expires > Date.now()) {
+    if (cached) {
       return cached.shop;
     }
     const url = new URL(process.env.CORE_GRAPHQL_URL ?? 'http://127.0.0.1:12011/graphql');
@@ -293,7 +305,11 @@ export class StorefrontService implements OnModuleInit {
       typeof value.name === 'string'
         ? { id, tenantId: value.tenantId, name: value.name }
         : null;
-    shopCache.set(id, { expires: Date.now() + 5000, shop });
+    const resolvedAt = performance.now();
+    // Keep expiry order when concurrent lookups for the same shop finish.
+    shopCache.delete(id);
+    shopCache.set(id, { expires: resolvedAt + shopCacheFreshnessMs, shop });
+    pruneShopCache(resolvedAt);
     return shop;
   }
   async requireShop(context: StorefrontContext): Promise<ShopScope> {
