@@ -162,14 +162,15 @@ export class CatalogueRepository {
       const links = this.database.table('productVariantValue');
       const activeVariant = Prisma.sql`v."productId" = p."id" AND v."tenantId" = p."tenantId"
         AND v."branchId" = p."branchId" AND v."active"`;
-      const productScope = Prisma.sql`p."tenantId" = ${scope.tenantId}::uuid
-        AND p."branchId" = ${scope.branchId}::uuid AND p."status" = 'active'`;
+      const products = Prisma.sql`FROM ${this.database.table('product')} p ${membership.join}`;
+      const publicProduct = Prisma.sql`p."tenantId" = ${scope.tenantId}::uuid
+        AND p."branchId" = ${scope.branchId}::uuid AND p."status" = 'active'
+        AND ${membership.condition}`;
       const base = Prisma.sql`SELECT p."tenantId", p."branchId", p."id", p."name", p."brandId",
           ${membership.order} AS "sortOrder", offer.price
-        FROM ${this.database.table('product')} p
-        ${membership.join}
+        ${products}
         CROSS JOIN LATERAL (SELECT MIN(v."price") AS price FROM ${variants} v WHERE ${activeVariant}) offer
-        WHERE ${productScope} AND ${membership.condition} AND offer.price IS NOT NULL`;
+        WHERE ${publicProduct} AND offer.price IS NOT NULL`;
       const visibleOption = { ...scope, active: true, showInFilters: true };
       const brands = await tx.brand.findMany({
         where: { ...scope, status: 'ACTIVE' },
@@ -189,13 +190,19 @@ export class CatalogueRepository {
       if (new Set(selectedOptions.map(({ option }) => option.id)).size !== selectedOptions.length) {
         throw new BadRequestException('Choose one value per option');
       }
+      // Both facet groups use the same active offers. Only the filtered product list needs prices.
       const facets = await tx.$queryRaw<{ kind: string; id: unknown }[]>(Prisma.sql`
-        WITH candidates AS (${base})
-        SELECT DISTINCT 'brand' AS kind, p."brandId" AS id
-        FROM candidates p WHERE p."brandId" IS NOT NULL
+        WITH offers AS (
+          SELECT v."tenantId", v."branchId", v."id", p."brandId"
+          ${products}
+          JOIN ${variants} v ON ${activeVariant}
+          WHERE ${publicProduct}
+        )
+        SELECT DISTINCT 'brand' AS kind, "brandId" AS id
+        FROM offers WHERE "brandId" IS NOT NULL
         UNION ALL
         SELECT DISTINCT 'option' AS kind, l."optionValueId" AS id
-        FROM candidates p JOIN ${variants} v ON ${activeVariant}
+        FROM offers v
         JOIN ${links} l ON l."tenantId" = v."tenantId" AND l."branchId" = v."branchId"
           AND l."variantId" = v."id"
       `);

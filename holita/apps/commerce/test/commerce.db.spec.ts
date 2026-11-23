@@ -1519,7 +1519,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   const visible = await database.brand.create({
     data: { tenantId: tenantA, branchId: publicA, name: 'Visible Brand', slug: 'visible' },
   });
-  await database.brand.create({
+  const hidden = await database.brand.create({
     data: {
       tenantId: tenantA,
       branchId: publicA,
@@ -1576,18 +1576,24 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   });
   const red = { id: randomUUID(), label: 'Red', sortOrder: 0 };
   const blue = { id: randomUUID(), label: 'Blue', sortOrder: 1 };
+  const matte = { id: randomUUID(), label: 'Matte', sortOrder: 0 };
   await database.option.create({
     data: {
       ...categoryScope,
       name: 'Color',
+      showInFilters: true,
       values: { create: [red, blue] },
     },
   });
-  for (const [name, status] of [
-    ['Visible', 'ACTIVE'],
-    ['Draft', 'DRAFT'],
-    ['Archived', 'ARCHIVED'],
-    ['No active variant', 'ACTIVE'],
+  await database.option.create({
+    data: { ...categoryScope, name: 'Finish', values: { create: matte } },
+  });
+  for (const [name, status, brandId, optionValueId] of [
+    ['Visible', 'ACTIVE', visible.id, red.id],
+    ['Visible bowl', 'ACTIVE', hidden.id, matte.id],
+    ['Draft', 'DRAFT', visible.id],
+    ['Archived', 'ARCHIVED', visible.id, blue.id],
+    ['No active variant', 'ACTIVE', visible.id, blue.id],
   ] as const) {
     const tracked = name === 'Visible';
     await database.product.create({
@@ -1600,18 +1606,26 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
             ...storedVariant(name, '1.00', name !== 'No active variant'),
             inventoryTracked: tracked,
             quantity: tracked ? 2 : 0,
-            ...(tracked && {
-              combinationKey: createHash('sha256').update(red.id).digest('hex'),
-              values: { create: { optionValueId: red.id } },
+            ...(optionValueId && {
+              combinationKey: createHash('sha256').update(optionValueId).digest('hex'),
+              values: { create: { optionValueId } },
             }),
           },
         },
         status,
-        brandId: visible.id,
+        brandId,
         categoryId: category.id,
       },
     });
   }
+  await database.product.create({
+    data: {
+      ...foreignScope,
+      name: 'Visible foreign bowl',
+      status: 'ACTIVE',
+      variants: { create: storedVariant('FOREIGN-BOWL', '1.00') },
+    },
+  });
   const mutation =
     'mutation($email:String!){registerShopper(name:"Person",email:$email,password:"temporary-password"){token shopper{email}}}';
   const token = registeredToken(
@@ -1641,12 +1655,19 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   ).toEqual({
     data: {
       catalogue: {
-        total: 1,
+        total: 2,
         items: [
           {
             name: 'Visible',
             price: '1.00',
             brand: { id: visible.id },
+            category: { id: category.id },
+            categoryPath: [{ id: parent.id }, { id: category.id }],
+          },
+          {
+            name: 'Visible bowl',
+            price: '1.00',
+            brand: null,
             category: { id: category.id },
             categoryPath: [{ id: parent.id }, { id: category.id }],
           },
@@ -1659,6 +1680,30 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       ],
     },
   });
+  const browse = `query($search:String!, $offset:Int!) {
+    catalogue(offset:$offset, limit:1, sort:NAME_ASC, filter:{search:$search}) {
+      items{name} total offset facets{brands{id} options{name values{id}}}
+    }
+  }`;
+  const facets = {
+    brands: [{ id: visible.id }],
+    options: [{ name: 'Color', values: [{ id: red.id }] }],
+  };
+  for (const [search, offset, total, names] of [
+    ['Visible', 0, 2, ['Visible']],
+    ['Visible', 0, 2, ['Visible']],
+    ['Visible', 1, 2, ['Visible bowl']],
+    ['Visible', 2, 2, []],
+    ['bowl', 0, 1, ['Visible bowl']],
+    ['missing', 0, 0, []],
+  ] as const) {
+    expect(await storefront(publicA, browse, { search, offset })).toEqual({
+      data: { catalogue: { items: names.map((name) => ({ name })), total, offset, facets } },
+    });
+  }
+  expect(await storefront(publicB, browse, { search: 'Visible', offset: 0 })).toEqual({
+    data: { catalogue: { items: [], total: 0, offset: 0, facets: { brands: [], options: [] } } },
+  });
   expect(await storefront(publicB, '{catalogueBrands{id} catalogueCategories{id}}')).toEqual({
     data: { catalogueBrands: [], catalogueCategories: [] },
   });
@@ -1670,11 +1715,17 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(
     await storefront(
       publicA,
-      '{catalogue{items{brand{id} category{id} categoryPath{id}}} catalogueCategories{id}}',
+      '{catalogue{items{brand{id} category{id} categoryPath{id}} facets{brands{id} options{name values{id}}}} catalogueCategories{id}}',
     ),
   ).toEqual({
     data: {
-      catalogue: { items: [{ brand: null, category: null, categoryPath: [] }] },
+      catalogue: {
+        items: [
+          { brand: null, category: null, categoryPath: [] },
+          { brand: null, category: null, categoryPath: [] },
+        ],
+        facets: { brands: [], options: facets.options },
+      },
       catalogueCategories: [],
     },
   });
