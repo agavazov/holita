@@ -32,6 +32,7 @@ import { OptionEditor } from './options/option-editor';
 import { OptionsPage } from './options/options-page';
 import { InvoiceDetail } from './orders/invoice-detail';
 import { InvoiceEditor } from './orders/invoice-editor';
+import { InvoicesPage } from './orders/invoices-page';
 import { ManualOrderEditor } from './orders/manual-order-editor';
 import { OrderDetail } from './orders/order-detail';
 import { OrderRefundEditor } from './orders/order-refund-editor';
@@ -290,6 +291,12 @@ void startOperator({
         },
       ],
     },
+    { path: 'invoices', component: InvoicesPage },
+    {
+      path: 'invoices/:recordId',
+      component: InvoiceDetail,
+      data: { fromInvoiceRegister: true },
+    },
     { path: 'orders/:recordId/invoice', component: InvoiceDetail },
     {
       path: 'orders/:recordId',
@@ -426,6 +433,7 @@ void startOperator({
     { id: 'blog-tags', label: 'blogTags', icon: 'tags', path: 'blog-tags' },
     { id: 'navigation', label: 'navigation', icon: 'directions', path: 'navigation' },
     { id: 'orders', label: 'orders', icon: 'truck', path: 'orders' },
+    { id: 'invoices', label: 'invoices', icon: 'list-check', path: 'invoices' },
     { id: 'discounts', label: 'discounts', icon: 'tags', path: 'discounts' },
     { id: 'customers', label: 'customers', icon: 'users', path: 'customers' },
     { id: 'payment-methods', label: 'paymentMethods', icon: 'cog', path: 'payment-methods' },

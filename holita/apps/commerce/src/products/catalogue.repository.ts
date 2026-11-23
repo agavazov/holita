@@ -33,6 +33,7 @@ const sortOrder: Record<CatalogueSort, Prisma.Sql> = {
   NAME_DESC: Prisma.sql`"name" DESC, "id" ASC`,
   PRICE_ASC: Prisma.sql`"price" ASC, "id" ASC`,
   PRICE_DESC: Prisma.sql`"price" DESC, "id" ASC`,
+  NEWEST: Prisma.sql`"createdAt" DESC, "id" DESC`,
 };
 const snapshot = { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead };
 
@@ -173,7 +174,7 @@ export class CatalogueRepository {
         AND p."branchId" = ${scope.branchId}::uuid AND p."status" = 'active'
         AND ${membership.condition}`;
       const base = Prisma.sql`SELECT p."tenantId", p."branchId", p."id", p."name", p."brandId",
-          ${membership.order} AS "sortOrder", offer.price
+          p."createdAt", ${membership.order} AS "sortOrder", offer.price
         ${products}
         CROSS JOIN LATERAL (SELECT MIN(v."price") AS price FROM ${variants} v WHERE ${activeVariant}) offer
         WHERE ${publicProduct} AND offer.price IS NOT NULL`;

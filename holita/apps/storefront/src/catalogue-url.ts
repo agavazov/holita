@@ -4,6 +4,7 @@ import type { CatalogueQueryVariables, CatalogueSort } from './generated/operati
 export const browseSections = ['categories', 'brands', 'collections', 'tags'] as const;
 export type BrowseSection = (typeof browseSections)[number];
 export const cataloguePageSize = 20;
+export const newestCatalogueSort = 'newest';
 const maxPage = Math.floor(2_147_483_647 / cataloguePageSize) + 1;
 
 export const sortChoices = [
@@ -12,6 +13,7 @@ export const sortChoices = [
   { value: 'name-desc', label: 'sortNameDesc', sort: 'NAME_DESC' },
   { value: 'price-asc', label: 'sortPriceAsc', sort: 'PRICE_ASC' },
   { value: 'price-desc', label: 'sortPriceDesc', sort: 'PRICE_DESC' },
+  { value: newestCatalogueSort, label: 'sortNewest', sort: 'NEWEST' },
 ] as const satisfies readonly { value: string; label: string; sort: CatalogueSort | null }[];
 
 export interface CatalogueFilters {

@@ -1,10 +1,10 @@
 # 205 Issue ordinary standalone invoices
 
-**Status:** Ready after [204](204-holita-invoice-register.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-red.bg can issue an invoice independently of an order. Holita issues immutable order-linked invoices, and the register in 204 provides a shared way to find invoices.
+red.bg can issue an invoice independently of an order. Holita issues immutable order-linked invoices, and the shop invoice register provides a shared way to find invoices.
 
 ## Goal
 

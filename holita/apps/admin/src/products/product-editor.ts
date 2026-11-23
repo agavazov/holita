@@ -69,6 +69,7 @@ import type {
   ProductVariantInput,
 } from '../generated/products-operations';
 import { encodeImage } from '../image-upload';
+import { shopCurrency } from '../shop-currency';
 import { ProductsApi } from './products-api';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -120,6 +121,10 @@ function variantForm(variant?: Variant) {
     active: new FormControl(variant?.active ?? true, { nonNullable: true }),
     optionValueIds: new FormControl<string[]>(variant?.optionValueIds ?? [], { nonNullable: true }),
   });
+}
+
+function variantCombinationKey(ids: readonly string[]): string {
+  return [...ids].sort().join(',');
 }
 
 @Component({
@@ -208,6 +213,7 @@ export class ProductEditor {
     return !this.editing || (this.record.hasValue() && this.record.value()) ? 'ready' : 'not-found';
   });
   protected readonly text = computed(() => operatorStrings[this.language.value()]);
+  protected readonly priceCurrency = shopCurrency;
   protected readonly shared = computed(() => uiMessages[this.language.value()]);
   protected readonly subtitle = computed(() =>
     this.record.hasValue() ? (this.record.value()?.name ?? null) : null,
@@ -294,6 +300,7 @@ export class ProductEditor {
   });
   protected readonly characteristicValues = new FormRecord<FormControl<string>>({});
   protected readonly variants = new FormArray([variantForm()]);
+  protected readonly generationValues = new FormControl<string[]>([], { nonNullable: true });
   protected readonly images = new FormArray<ImageForm>([]);
   protected readonly previews = signal(new Map<ImageForm, string | null>());
   protected readonly uploadError = signal<
@@ -352,6 +359,7 @@ export class ProductEditor {
         },
         { emitEvent: false },
       );
+      this.generationValues.reset();
       this.selectedTags.set(product?.tags ?? []);
       this.tagName.reset();
       this.tagCreateError.set(null);
@@ -388,6 +396,7 @@ export class ProductEditor {
         this.focusError();
       },
     );
+    lockWhileSaving(this.generationValues, this.saving, () => undefined);
   }
 
   canLeave(): boolean | Promise<boolean> {
@@ -430,10 +439,15 @@ export class ProductEditor {
     };
   }
 
-  protected variantValuesPt(error: string | null, id: string): SelectPassThrough {
+  protected variantValuesPt(
+    error: string | null,
+    id: string,
+    description = id + '-error',
+  ): SelectPassThrough {
     const pt = this.selectPt(error, id, true);
     return {
       ...pt,
+      label: { ...pt.label, 'aria-describedby': description },
       listContainer: { 'data-variant-values-list': '' },
       option: {
         style: {
@@ -664,6 +678,55 @@ export class ProductEditor {
     this.errors.update((errors) =>
       Object.fromEntries(Object.entries(errors).filter(([path]) => !path.startsWith('image'))),
     );
+  }
+
+  protected generateVariants(): void {
+    const selected = new Set(this.generationValues.value);
+    const selectedGroups = this.optionGroups()
+      .map(({ items }) => items.filter(({ id }) => selected.has(id)))
+      .filter((items) => items.length);
+    if (!selectedGroups.length) {
+      return;
+    }
+
+    const existing = new Set(
+      this.variants.controls.map(({ controls }) =>
+        variantCombinationKey(controls.optionValueIds.value),
+      ),
+    );
+    const missing = selectedGroups
+      .reduce<string[][]>(
+        (rows, items) => rows.flatMap((row) => items.map(({ id }) => [...row, id])),
+        [[]],
+      )
+      .filter((ids) => !existing.has(variantCombinationKey(ids)));
+    const [firstCombination] = missing;
+    if (!firstCombination) {
+      return;
+    }
+
+    const starter = this.variants.at(0);
+    let firstGenerated = this.variants.length;
+    if (
+      firstGenerated === 1 &&
+      !starter.dirty &&
+      !starter.controls.id.value &&
+      !starter.controls.optionValueIds.value.length
+    ) {
+      starter.controls.optionValueIds.setValue(firstCombination);
+      missing.shift();
+      firstGenerated = 0;
+    }
+    if (missing.length) {
+      this.variants.push(
+        missing.map((ids) => {
+          const row = variantForm();
+          row.controls.optionValueIds.setValue(ids);
+          return row;
+        }),
+      );
+    }
+    this.variantsChanged('product-variant-sku-' + String(firstGenerated));
   }
 
   protected addVariant(): void {

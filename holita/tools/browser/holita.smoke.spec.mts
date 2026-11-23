@@ -210,15 +210,26 @@ async function serve(
         response.end(Buffer.from(await upstream.arrayBuffer()));
         return;
       }
-      if (commerceOrigin && request.url && /^\/media\/(brands|products)\//.test(request.url)) {
-        const authorization = request.headers.authorization;
-        const upstream = await fetch(new URL(request.url, commerceOrigin), {
-          headers: authorization ? { authorization } : {},
-        });
+      const invoiceDownload = app === 'admin' && request.url?.startsWith('/documents/invoices/');
+      if (
+        commerceOrigin &&
+        request.url &&
+        (invoiceDownload || /^\/media\/(brands|products)\//.test(request.url))
+      ) {
+        const headers = new Headers();
+        for (const key of invoiceDownload ? ['authorization', 'x-branch-id'] : ['authorization']) {
+          const value = request.headers[key];
+          if (typeof value === 'string') {
+            headers.set(key, value);
+          }
+        }
+        const upstream = await fetch(new URL(request.url, commerceOrigin), { headers });
+        const disposition = upstream.headers.get('content-disposition');
         response.writeHead(upstream.status, {
           'content-type': upstream.headers.get('content-type') ?? 'application/octet-stream',
           'cache-control': upstream.headers.get('cache-control') ?? 'no-store',
           'x-content-type-options': upstream.headers.get('x-content-type-options') ?? 'nosniff',
+          ...(disposition ? { 'content-disposition': disposition } : {}),
         });
         response.end(Buffer.from(await upstream.arrayBuffer()));
         return;
@@ -552,7 +563,7 @@ function pngAtSize(source: Buffer, size: number): Buffer {
 
 test('staff provisions a shop, its merchant publishes a product and shoppers check out', async ({
   browser,
-}) => {
+}, testInfo) => {
   const staffEmail = process.env.HOLITA_STAFF_EMAIL;
   const staffPassword = process.env.HOLITA_STAFF_PASSWORD;
   const salesEmail = process.env.HOLITA_SALES_EMAIL;
@@ -1255,16 +1266,21 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.getByRole('button', { name: 'Create product', exact: true }).click();
     const configuredProductName = 'Stoneware cookware';
     await merchant.locator('#product-name').fill(configuredProductName);
+    const generateFinishVariants = async (drawerTitle: string) => {
+      await merchant.locator('#product-variant-generation-values').click();
+      for (const finish of ['Gloss', 'Satin']) {
+        await merchant
+          .getByRole('option', { name: `Surface finish: ${finish}`, exact: true })
+          .click();
+      }
+      await merchant.getByRole('heading', { name: drawerTitle, exact: true }).click();
+      await merchant.getByRole('button', { name: 'Generate combinations', exact: true }).click();
+    };
+    await generateFinishVariants('Create product');
     for (const [index, label, price] of [
       [0, 'Gloss', '24.00'],
       [1, 'Satin', '30.00'],
     ] as const) {
-      if (index) {
-        await merchant.getByRole('button', { name: 'Add variant', exact: true }).click();
-      }
-      await merchant.locator(`#product-variant-values-${String(index)}`).click();
-      await merchant.getByRole('option', { name: `Surface finish: ${label}`, exact: true }).click();
-      await merchant.getByRole('heading', { name: 'Create product', exact: true }).click();
       await merchant.locator(`#product-variant-sku-${String(index)}`).fill(`CONFIG-${label}`);
       await merchant.locator(`#product-variant-price-${String(index)}`).fill(price);
     }
@@ -1278,7 +1294,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await shopper.goto(`${shopApp.origin}/s/${shopId}`);
     await shopper.getByRole('button', { name: 'EN', exact: true }).click();
     await expectMenu(shopper, ['blog', 'categories/cookware']);
-    await shopper.getByRole('link', { name: 'Products', exact: true }).click();
+    await shopper.getByRole('link', { name: 'New arrivals', exact: true }).click();
+    await expect(shopper).toHaveURL(`${shopApp.origin}/s/${shopId}/products?sort=newest`);
+    await expect(shopper.locator('.catalogue-card h2')).toHaveText([
+      configuredProductName,
+      productName,
+    ]);
     const productLink = shopper.getByRole('link', { name: productName, exact: true });
     const productCard = shopper.locator('.catalogue-card').filter({ has: productLink });
     await expect(productCard.getByText('Smoke Brand', { exact: true })).toBeVisible();
@@ -1950,7 +1971,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       await page.getByRole('button', { name: 'Review total', exact: true }).click();
       expect(await (await quoted).json()).toMatchObject({
         data: {
-          quoteCheckout: { subtotal, shippingFee, total, currency: 'BGN', ...discount },
+          quoteCheckout: { subtotal, shippingFee, total, currency: 'EUR', ...discount },
         },
       });
     };
@@ -2376,7 +2397,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         postalCode: '1000',
         countryCode: 'BG',
       },
-      currency: 'BGN',
+      currency: 'EUR',
       subtotal: '30.00',
       shippingFee: '6.50',
       total: chargedTotal,
@@ -2441,6 +2462,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     });
     await merchant.getByRole('link', { name: invoiceNumber, exact: true }).click();
     await merchant.waitForURL((url) => url.pathname.endsWith('/invoice'));
+    const orderInvoiceUrl = merchant.url();
     await merchant.locator('#invoice-summary').waitFor();
     const reopenedInvoice = waitForCart(merchant, 'OperatorOrderInvoice');
     await merchant.reload();
@@ -2457,6 +2479,48 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         },
       },
     });
+    const downloadInvoicePdf = async (name: string) => {
+      const download = merchant.waitForEvent('download');
+      await merchant.getByRole('button', { name: 'Download PDF', exact: true }).click();
+      const file = await download;
+      expect(file.suggestedFilename()).toBe(`invoice-${invoiceNumber}.pdf`);
+      const contents = await readFile(await file.path());
+      expect(contents.subarray(0, 5).toString()).toBe('%PDF-');
+      await file.saveAs(testInfo.outputPath(name));
+    };
+    await downloadInvoicePdf('invoice-before-order-change.pdf');
+    await merchant.getByRole('link', { name: 'Invoices', exact: true }).click();
+    const register = merchant.waitForResponse((response) => {
+      const request = response.request().postData();
+      return (
+        request?.includes('"operationName":"OperatorInvoices"') === true &&
+        request.includes(`"search":"${invoiceNumber}"`)
+      );
+    });
+    await merchant
+      .getByRole('searchbox', { name: 'Search by number or recipient' })
+      .fill(invoiceNumber);
+    expect(await (await register).json()).toMatchObject({
+      data: {
+        invoices: {
+          items: [
+            {
+              orderId: accountOrderId,
+              number: invoiceNumber,
+              currency: 'EUR',
+              total: chargedTotal,
+            },
+          ],
+        },
+      },
+    });
+    await merchant.getByRole('link', { name: invoiceNumber, exact: true }).click();
+    await expect(merchant).toHaveURL(
+      (url) =>
+        url.pathname.endsWith('/invoices/' + accountOrderId) &&
+        url.searchParams.get('search') === invoiceNumber,
+    );
+    await merchant.locator('#invoice-summary').waitFor();
 
     const reloadedOrder = waitForCart(shopper, 'ShopperOrder');
     await shopper.reload();
@@ -2506,6 +2570,15 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         data: { updateOrderStatus: { id: accountOrderId, status } },
       });
     }
+    const updateInvoiceSourceContact = (contactName: string) =>
+      commerceDb.client.query(
+        `UPDATE "order" SET "contactName" = $4
+       WHERE "tenantId" = $1 AND "branchId" = $2 AND "id" = $3`,
+        [shopScope.tenantId, shopId, accountOrderId, contactName],
+      );
+    await updateInvoiceSourceContact('Changed shopper after invoicing');
+    await downloadInvoicePdf('invoice-after-order-change.pdf');
+    await updateInvoiceSourceContact('Shopper');
 
     const configuredProductId = new URL(configuredProductUrl).pathname.split('/').at(-1);
     if (!configuredProductId) {
@@ -2517,6 +2590,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
           variants{id sku price inventoryTracked active optionValueIds}}}`,
         { id: configuredProductId },
       );
+    await merchant.getByRole('link', { name: 'Products', exact: true }).click();
+    await configuredProduct.click();
+    await merchant.locator('#product-variant-price-0').fill('24.99');
+    await generateFinishVariants('Edit product');
+    await merchant.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(merchant, 'Product saved.');
     const configuredRead = await readConfiguredProduct();
     if (
       typeof configuredRead !== 'object' ||
@@ -2544,7 +2623,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       throw new Error('The configured product requires both saved variants');
     }
     expect(savedVariants).toMatchObject([
-      { sku: 'CONFIG-Gloss', optionValueIds: [gloss.id] },
+      { sku: 'CONFIG-Gloss', price: '24.99', optionValueIds: [gloss.id] },
       { id: trackedVariant.id, sku: 'CONFIG-Satin', optionValueIds: [satin.id] },
     ]);
 
@@ -2608,6 +2687,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       data: { shopperOrder: { ...accountOrderSnapshot, status: 'SHIPPED' } },
     });
 
+    await merchant.goto(orderInvoiceUrl);
     await merchant.getByRole('link', { name: 'Back to order', exact: true }).click();
     const openRefund = async () => {
       await merchant.getByRole('button', { name: 'Page actions', exact: true }).click();
@@ -2626,7 +2706,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.locator('#refund-reason').fill('Partial refund recorded externally');
     const partial = waitForCart(merchant, 'OperatorOrder').then((response) => response.json());
     expect(await submitRefund()).toMatchObject({
-      data: { recordOrderRefund: { amount: '12.00', currency: 'BGN', restock: false } },
+      data: { recordOrderRefund: { amount: '12.00', currency: 'EUR', restock: false } },
     });
     await merchant.waitForURL((url) => url.pathname.endsWith(accountOrderId));
     expect(await partial).toMatchObject({
@@ -2659,7 +2739,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.locator('#refund-restock').check();
     const full = waitForCart(merchant, 'OperatorOrder').then((response) => response.json());
     expect(await submitRefund()).toMatchObject({
-      data: { recordOrderRefund: { amount: '21.50', currency: 'BGN', restock: true } },
+      data: { recordOrderRefund: { amount: '21.50', currency: 'EUR', restock: true } },
     });
     await merchant.waitForURL((url) => url.pathname.endsWith(accountOrderId));
     expect(await full).toMatchObject({
@@ -2995,7 +3075,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
                 id: manualId,
                 status: 'PLACED',
                 number: `H-${manualId}`,
-                currency: 'BGN',
+                currency: 'EUR',
                 placedAt: expect.any(String),
                 total: '66.50',
               }),

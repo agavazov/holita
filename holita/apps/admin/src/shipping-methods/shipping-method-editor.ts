@@ -36,7 +36,8 @@ import { ButtonDirective } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
-import { ShippingMethodsApi, shippingFeeCurrency } from './shipping-methods-api';
+import { shopCurrency } from '../shop-currency';
+import { ShippingMethodsApi } from './shipping-methods-api';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fields = ['label', 'enabled', 'sortOrder', 'fixedFee'] as const;
@@ -98,7 +99,7 @@ export class ShippingMethodEditor {
   protected readonly subtitle = computed(() =>
     this.record.hasValue() ? (this.record.value()?.label ?? null) : null,
   );
-  protected readonly feeCurrency = shippingFeeCurrency;
+  protected readonly feeCurrency = shopCurrency;
   protected readonly statusOptions = computed(() => [
     { value: true, label: this.text().methodEnabled },
     { value: false, label: this.text().methodDisabled },

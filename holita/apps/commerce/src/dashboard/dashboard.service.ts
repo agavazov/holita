@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { checkoutCurrency } from '../checkout/currency.js';
+import { bgnPerEur, checkoutCurrency } from '../checkout/currency.js';
 import type { DashboardPeriod, ShopDashboard } from '../generated/graphql/types.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { requireScope, type RequestContext } from '../scope.js';
 import { DashboardRepository } from './dashboard.repository.js';
 
+// Stored totals can have 30 whole digits. Keep enough precision to round converted cents.
+const Revenue = Prisma.Decimal.clone({ precision: 40 });
 const timeZone = 'Europe/Sofia';
 const shopDate = new Intl.DateTimeFormat('sv-SE', {
   timeZone,
@@ -38,23 +40,33 @@ export class DashboardService {
     for (let index = 0; index < days[period]; index++) {
       daily.set(date.toISOString().slice(0, 10), {
         orderCount: 0,
-        completedRevenue: new Prisma.Decimal(0),
+        completedRevenue: new Revenue(0),
       });
       date.setUTCDate(date.getUTCDate() + 1);
     }
 
     const { orders, newCustomerCount, outOfStockVariantCount, recentOrders } =
       await this.repository.read(scope, shopMidnight(startDate), asOf);
-    let completedRevenue = new Prisma.Decimal(0);
+    let completedRevenue = new Revenue(0);
     for (const order of orders) {
       const bucket = daily.get(shopDate.format(order.placedAt));
       if (!bucket) {
         continue;
       }
       bucket.orderCount++;
-      if (order.status === 'COMPLETED' && order.currency === checkoutCurrency) {
-        bucket.completedRevenue = bucket.completedRevenue.plus(order.total);
-        completedRevenue = completedRevenue.plus(order.total);
+      if (order.status !== 'COMPLETED') {
+        continue;
+      }
+      const total = new Revenue(order.total);
+      const revenue =
+        order.currency === checkoutCurrency
+          ? total
+          : order.currency === 'BGN'
+            ? total.div(bgnPerEur).toDecimalPlaces(2)
+            : null;
+      if (revenue !== null) {
+        bucket.completedRevenue = bucket.completedRevenue.plus(revenue);
+        completedRevenue = completedRevenue.plus(revenue);
       }
     }
     return {

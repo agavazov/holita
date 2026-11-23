@@ -44,7 +44,7 @@ import {
   type StorefrontFieldError,
 } from './storefront-api';
 import { messages, type Language } from './storefront-messages';
-import { formatStorefrontMoney } from './storefront-money';
+import { formatStorefrontMoney, shopCurrency } from './storefront-money';
 import type { QuoteCheckoutMutation } from './generated/operations';
 
 const contactFields = [
@@ -208,7 +208,7 @@ export class CheckoutPage {
     () =>
       new Intl.NumberFormat(this.language(), {
         style: 'currency',
-        currency: this.quote()?.currency ?? this.checkout()?.currency ?? 'BGN',
+        currency: this.quote()?.currency ?? this.checkout()?.currency ?? shopCurrency,
       }),
   );
 

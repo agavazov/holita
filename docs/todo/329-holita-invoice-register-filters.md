@@ -2,7 +2,7 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [204](204-holita-invoice-register.md), [328](328-holita-invoice-document-fields.md).
+**Depends on** [328](328-holita-invoice-document-fields.md).
 
 ## Background
 

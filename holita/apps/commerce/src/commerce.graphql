@@ -792,6 +792,25 @@ type InvoiceSummary {
   id: ID!
   number: String!
 }
+type InvoiceListItem {
+  id: ID!
+  orderId: ID!
+  number: String!
+  issueDate: String!
+  recipientName: String!
+  currency: String!
+  total: String!
+}
+type InvoicePage {
+  items: [InvoiceListItem!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+input InvoiceFilter {
+  issueDateFrom: String
+  issueDateTo: String
+}
 type InvoiceLine {
   id: ID!
   description: String!
@@ -1039,6 +1058,7 @@ type Query {
   ): OrderPage!
   order(id: ID!): Order
   manualOrderMethods: ManualOrderMethods!
+  invoices(offset: Int! = 0, limit: Int! = 20, search: String, filter: InvoiceFilter): InvoicePage!
   orderInvoice(orderId: ID!): Invoice
   orderRefundSummary(orderId: ID!): OrderRefundSummary
 }

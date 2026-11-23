@@ -49,11 +49,15 @@ export function orderPaymentSeverity(status: OrderPaymentStatus) {
   return toneSeverity(status === 'PAID' ? 'success' : 'warn');
 }
 
+function isMoneyAmount(amount: string): amount is `${number}` {
+  return /^-?\d+\.\d{2}$/.test(amount);
+}
+
 export function orderAmount(amount: string, currency: string, language: Language): string {
   return new Intl.NumberFormat(localeOf(language), {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(Number(amount));
+  }).format(isMoneyAmount(amount) ? amount : Number(amount));
 }

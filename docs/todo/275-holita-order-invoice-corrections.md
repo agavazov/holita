@@ -2,8 +2,6 @@
 
 **Status:** Needs owner. Which correction or cancellation action is permitted for issued order-linked invoices, and what history must stay visible? **Product:** Holita.
 
-**Depends on** [204](204-holita-invoice-register.md).
-
 ## Background
 
 The red.bg coverage report marks IV08 as P1. Holita issues immutable linked invoice snapshots. Ticket 217 concerns standalone documents.

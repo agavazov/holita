@@ -1,10 +1,13 @@
+import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable } from '@angular/core';
 import { ApolloClient } from '@apollo/client/core';
 import { OperatorLanguage } from '@holita/operator';
 import { DemoSession, OperatorConfig, graphqlOptions, type Language } from '@osnova/ui/app';
 import { HttpLink } from 'apollo-angular/http';
+import { firstValueFrom } from 'rxjs';
 import {
   OperatorCreateManualOrderDocument,
+  OperatorInvoicesDocument,
   OperatorManualOrderChoicesDocument,
   OperatorManualOrderCustomersDocument,
   OperatorManualOrderProductsDocument,
@@ -20,6 +23,7 @@ import {
   OperatorRecordOrderRefundDocument,
   type RecordOrderRefundInput,
   OperatorUpdateOrderStatusDocument,
+  type OperatorInvoicesQueryVariables,
   type OperatorOrdersQueryVariables,
   type OrderStatus,
 } from '../generated/orders-operations';
@@ -39,6 +43,7 @@ export class OrdersApi {
   private readonly language = inject(OperatorLanguage);
   private readonly link = inject(HttpLink);
   private readonly config = inject(OperatorConfig);
+  private readonly http = inject(HttpClient);
   private readonly tenantId = computed(() => this.session.current()?.tenant.id);
   private readonly token = computed(() => this.session.current()?.token);
   readonly scope = computed<OrdersScope | null>(() => {
@@ -175,6 +180,23 @@ export class OrdersApi {
     }
   }
 
+  async invoices(scope: OrdersScope, variables: OperatorInvoicesQueryVariables) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorInvoicesDocument,
+        variables,
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing invoices result');
+      }
+      return data.invoices;
+    } finally {
+      client.stop();
+    }
+  }
+
   async invoice(scope: OrdersScope, orderId: string) {
     const client = this.client(scope);
     try {
@@ -190,6 +212,15 @@ export class OrdersApi {
     } finally {
       client.stop();
     }
+  }
+
+  downloadInvoice(scope: OrdersScope, orderId: string): Promise<Blob> {
+    return firstValueFrom(
+      this.http.get(`/documents/invoices/${orderId}/pdf`, {
+        headers: { Authorization: `Bearer ${scope.token}`, 'x-branch-id': scope.branchId },
+        responseType: 'blob',
+      }),
+    );
   }
 
   async issueInvoice(scope: OrdersScope, orderId: string, input: IssueOrderInvoiceInput) {

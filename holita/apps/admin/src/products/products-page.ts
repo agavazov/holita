@@ -40,6 +40,7 @@ import {
 import { DemoSession, requestError } from '@osnova/ui/app';
 import { OperatorLanguage, operatorStrings as strings } from '@holita/operator';
 import { type OperatorProductsQuery, type ProductStatus } from '../generated/products-operations';
+import { shopCurrency } from '../shop-currency';
 import { ProductsApi } from './products-api';
 
 type ProductPage = OperatorProductsQuery['products'];
@@ -92,7 +93,8 @@ export class ProductsPage {
   readonly text = computed(() => strings[this.language.value()]);
   readonly shared = computed(() => uiMessages[this.language.value()]);
   private readonly price = computed(
-    () => new Intl.NumberFormat(this.language.value(), { style: 'currency', currency: 'BGN' }),
+    () =>
+      new Intl.NumberFormat(this.language.value(), { style: 'currency', currency: shopCurrency }),
   );
   readonly params = computed(() => {
     const scope = this.scope();

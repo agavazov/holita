@@ -1,12 +1,12 @@
 # 332 Render invoice original and copy labels for printing
 
-**Status:** Blocked. Waits for the PDF and stored tax rendering in tickets 206 and 255. **Product:** Holita.
+**Status:** Blocked. Waits for stored tax rendering in ticket 255. **Product:** Holita.
 
-**Depends on** [206](206-holita-invoice-download.md), [255](255-holita-invoice-vat-rendering.md).
+**Depends on** [255](255-holita-invoice-vat-rendering.md).
 
 ## Background
 
-The red.bg coverage report marks IV13 as P2. Ticket 206 downloads one PDF and 255 adds stored VAT. The source also allows original and copy variants and printing.
+The red.bg coverage report marks IV13 as P2. Holita downloads one PDF per snapshot. Ticket 255 covers stored VAT rendering. The source also allows original and copy variants and printing.
 
 ## Goal
 

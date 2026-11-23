@@ -27,6 +27,7 @@ import {
 import { StorefrontApi } from './storefront-api';
 import { StorefrontHome } from './storefront-home';
 import { messages, type Language } from './storefront-messages';
+import { shopCurrency } from './storefront-money';
 
 @Component({
   selector: 'holita-catalogue-browse',
@@ -62,7 +63,7 @@ export class CatalogueBrowse {
   protected readonly sortChoices = sortChoices;
   protected readonly t = computed(() => messages[this.language()]);
   protected readonly format = computed(
-    () => new Intl.NumberFormat(this.language(), { style: 'currency', currency: 'BGN' }),
+    () => new Intl.NumberFormat(this.language(), { style: 'currency', currency: shopCurrency }),
   );
 
   private readonly products = resource({

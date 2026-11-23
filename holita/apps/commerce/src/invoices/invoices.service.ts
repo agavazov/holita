@@ -1,7 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { isEmail, isUUID } from 'class-validator';
 import { GraphQLError } from 'graphql';
-import type { Invoice, IssueOrderInvoiceInput } from '../generated/graphql/types.js';
+import { contentListCriteria } from '../content-validation.js';
+import type {
+  Invoice,
+  InvoicePage,
+  IssueOrderInvoiceInput,
+  QueryInvoicesArgs,
+} from '../generated/graphql/types.js';
 import { requireScope, type RequestContext } from '../scope.js';
 import { InvoicesRepository } from './invoices.repository.js';
 
@@ -9,6 +15,25 @@ function invalid(path: keyof IssueOrderInvoiceInput, message: string, code = 'IN
   return new GraphQLError(message, {
     extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path, code, message }] },
   });
+}
+
+function invoiceDate(value: string): Date | null {
+  if (!/^(?!0000)\d{4}-\d{2}-\d{2}$/u.test(value)) {
+    return null;
+  }
+  const date = new Date(value + 'T00:00:00Z');
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value ? date : null;
+}
+
+function filterDate(value: string | null | undefined) {
+  if (value == null) {
+    return undefined;
+  }
+  const date = invoiceDate(value);
+  if (!date) {
+    throw new BadRequestException('Enter a valid issue date');
+  }
+  return date;
 }
 
 function details(input: IssueOrderInvoiceInput) {
@@ -26,13 +51,8 @@ function details(input: IssueOrderInvoiceInput) {
     }
     return value;
   };
-  const date = required('issueDate', 10);
-  const issueDate = new Date(date + 'T00:00:00Z');
-  if (
-    !/^(?!0000)\d{4}-\d{2}-\d{2}$/u.test(date) ||
-    !Number.isFinite(issueDate.getTime()) ||
-    issueDate.toISOString().slice(0, 10) !== date
-  ) {
+  const issueDate = invoiceDate(required('issueDate', 10));
+  if (!issueDate) {
     throw invalid('issueDate', 'Enter a valid calendar date');
   }
   const recipientEmail = text('recipientEmail', 254);
@@ -76,6 +96,25 @@ function present(row: InvoiceRow): Invoice {
 @Injectable()
 export class InvoicesService {
   constructor(private readonly invoices: InvoicesRepository) {}
+
+  async list(context: RequestContext, args: QueryInvoicesArgs): Promise<InvoicePage> {
+    const scope = await requireScope(context, false);
+    const { offset, limit, words } = contentListCriteria(args);
+    const from = filterDate(args.filter?.issueDateFrom);
+    const to = filterDate(args.filter?.issueDateTo);
+    if (from && to && from > to) {
+      throw new BadRequestException('Invalid issue date range');
+    }
+    const page = await this.invoices.list(scope, offset, limit, words, from, to);
+    return {
+      ...page,
+      items: page.items.map((row) => ({
+        ...row,
+        issueDate: row.issueDate.toISOString().slice(0, 10),
+        total: row.total.toFixed(2),
+      })),
+    };
+  }
 
   async find(context: RequestContext, orderId: string) {
     const scope = await requireScope(context, false);

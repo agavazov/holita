@@ -1,0 +1,100 @@
+<osnova-page-header [title]="text().invoices" [moduleInfo]="text().invoicesInfo" />
+@if (scope()) {
+<osnova-table-panel
+  mobileIdentityLayout="trailing"
+  [mobileFullWidthActions]="true"
+  [heading]="text().shopInvoices"
+  [columns]="columns()"
+  tableMinWidth="33rem"
+  [view]="view()"
+  [busy]="list.isLoading()"
+  [total]="page()?.total ?? null"
+  [page]="pagination()"
+  [emptyTitle]="text().invoicesEmpty"
+  [errorText]="text().invoicesUnavailable"
+  (pageChange)="url.setPage($event)"
+  (retry)="list.reload()"
+  (clearFilters)="url.clearFilters()"
+>
+  <osnova-filter-builder
+    panelActions
+    [mobileFullWidth]="true"
+    [searchLabel]="text().searchInvoices"
+    [search]="url.searchDraft()"
+    [searchError]="url.searchError() ? shared().searchTooManyWords : null"
+    [fields]="filterFields()"
+    [conditions]="conditions()"
+    [maxConditions]="1"
+    (searchChange)="url.editSearch($event)"
+    (conditionsChange)="changeConditions($event)"
+  />
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="page()?.items ?? []"
+    [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    dataKey="id"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="
+            column.kind === 'identity'
+              ? 'var(--app-table-identity-width, ' + column.width + ')'
+              : column.width
+          "
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        <th scope="col" class="app-col-identity">{{ text().invoiceNumber }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().invoiceIssueDate }}</th>
+        <th scope="col" class="app-table-merged-column">{{ text().invoiceRecipient }}</th>
+        <th scope="col" class="app-cell-number">{{ text().orderTotal }}</th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-invoice>
+      @let issueDate = date(invoice.issueDate); @let total = amount(invoice.total, invoice.currency,
+      language());
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-cell-identity">
+            <a
+              class="app-link app-table-identity-wrap"
+              [routerLink]="[invoice.orderId]"
+              queryParamsHandling="preserve"
+              [preserveFragment]="true"
+              (click)="url.cancelPending()"
+              >{{ invoice.number }}</a
+            >
+            <span class="app-table-mobile-meta" [title]="invoice.recipientName">
+              {{ invoice.recipientName }}
+            </span>
+            <time class="app-table-mobile-meta" [dateTime]="invoice.issueDate"
+              >{{ issueDate }}</time
+            >
+          </div>
+        </td>
+        <td class="app-table-merged-column">
+          <time class="app-cell-date" [dateTime]="invoice.issueDate">{{ issueDate }}</time>
+        </td>
+        <td class="app-table-merged-column">
+          <span class="app-cell-truncate" [title]="invoice.recipientName">
+            {{ invoice.recipientName }}
+          </span>
+        </td>
+        <td class="app-cell-number" [title]="total">{{ total }}</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+} @else {
+<p-message severity="info">{{ text().noShop }}</p-message>
+}

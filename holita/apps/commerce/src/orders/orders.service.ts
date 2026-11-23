@@ -252,6 +252,7 @@ export class OrdersService {
         {
           ...orderIdentity(),
           ...data,
+          currency: checkoutCurrency,
           subtotal: revised.subtotal,
           total: revised.subtotal.plus(data.shippingFee),
         },
@@ -272,17 +273,23 @@ export class OrdersService {
       if (!canEditManualOrder(order)) {
         throw checkoutError('order', 'MANUAL_ORDER_NOT_EDITABLE', 'This order cannot be edited');
       }
-      if (
-        order.invoice &&
-        (input.lines !== undefined ||
-          (input.shippingMethodId !== undefined &&
-            input.shippingMethodId?.toLowerCase() !== order.shippingMethodId))
-      ) {
-        throw checkoutError(
-          'order',
-          'MANUAL_ORDER_AMOUNTS_LOCKED',
-          'An invoice has been issued. Order items and the shipping charge are locked',
-        );
+      const legacyCurrency = order.currency !== checkoutCurrency;
+      const changesAmounts =
+        input.lines !== undefined ||
+        (input.shippingMethodId !== undefined &&
+          input.shippingMethodId?.toLowerCase() !== order.shippingMethodId);
+      if (changesAmounts && (legacyCurrency || order.invoice)) {
+        throw legacyCurrency
+          ? checkoutError(
+              'order',
+              'MANUAL_ORDER_LEGACY_AMOUNTS_LOCKED',
+              'This order keeps its original currency. Order items and the shipping charge are locked',
+            )
+          : checkoutError(
+              'order',
+              'MANUAL_ORDER_AMOUNTS_LOCKED',
+              'An invoice has been issued. Order items and the shipping charge are locked',
+            );
       }
       const {
         data: { shippingFee, ...fields },
@@ -295,11 +302,12 @@ export class OrdersService {
         order.id,
         {
           ...fields,
-          ...(!order.invoice && {
-            shippingFee,
-            subtotal,
-            total: new CartPrice(subtotal).plus(shippingFee),
-          }),
+          ...(!legacyCurrency &&
+            !order.invoice && {
+              shippingFee,
+              subtotal,
+              total: new CartPrice(subtotal).plus(shippingFee),
+            }),
         },
         revised?.lines,
       );
@@ -365,7 +373,6 @@ export class OrdersService {
         ...contact,
         customerId,
         merchantNote: merchantNote || null,
-        currency: order?.currency ?? checkoutCurrency,
         paymentMethodId,
         paymentMethodLabel: payment.label,
         paymentInstructions: payment.instructions,

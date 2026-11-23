@@ -39,6 +39,8 @@ import {
   type DemoShopperOrder,
 } from './demo-catalogue.mjs';
 
+const demoHistoricalOrderMoney = { currency: 'BGN', shippingFee: '6.00' } as const;
+
 config({
   path: [
     'holita/config/commerce.env',
@@ -573,7 +575,14 @@ async function seedCatalogue(): Promise<void> {
       discountsInserted += rowCount ?? 0;
     }
     for (const order of demoOrders) {
-      await seedShopperOrder(client, tenantId, branchId, demoShopper, order);
+      await seedShopperOrder(
+        client,
+        tenantId,
+        branchId,
+        demoShopper,
+        order,
+        demoHistoricalOrderMoney,
+      );
     }
     for (const order of [demoManualOrder, demoInvoicedManualOrder]) {
       await seedManualOrder(client, tenantId, branchId, order);
@@ -734,6 +743,7 @@ async function seedCustomerDetail(client: pg.Client, tenantId: string, branchId:
     branchId,
     { name: fixture.name, email: fixture.email, customerId },
     { ...fixture.order, phone: fixture.phone, city, postalCode, address: line1 },
+    demoHistoricalOrderMoney,
   );
 }
 
@@ -796,7 +806,7 @@ async function seedDashboard(client: pg.Client, tenantId: string, branchId: stri
         ? { ...customer, customerId }
         : { name: 'Виктория Илиева', email: 'viktoria-127@example.test', guest: true };
     const fulfillment = ['placed', 'confirmed', 'processing', 'shipped', 'completed'];
-    await seedShopperOrder(client, tenantId, branchId, contact, {
+    const order: DemoShopperOrder = {
       id,
       status,
       subtotal,
@@ -817,7 +827,11 @@ async function seedDashboard(client: pg.Client, tenantId: string, branchId: stri
       city: 'София',
       postalCode: '1000',
       address: 'ул. „Шипка“ 27',
-      lines: [{ ...demoManualOrder.line, id: lineId, quantity }],
+      lines: [{ ...demoManualOrder.line, id: lineId, quantity, unitPrice: '27.05' }],
+    };
+    await seedShopperOrder(client, tenantId, branchId, contact, order, {
+      currency: 'EUR',
+      shippingFee: demoShippingMethod.fixedFee,
     });
   }
 }
@@ -833,6 +847,7 @@ async function seedShopperOrder(
     readonly guest?: boolean;
   },
   fixture: DemoShopperOrder,
+  money: { readonly currency: 'BGN' | 'EUR'; readonly shippingFee: string },
 ) {
   const {
     id,
@@ -888,7 +903,7 @@ async function seedShopperOrder(
        "shippingCountryCode", "shippingCity", "shippingPostalCode", "shippingLine1",
        "paymentMethodLabel", "paymentInstructions", "shippingMethodLabel", "currency", "subtotal", "shippingFee", "total")
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'BG', $14, $15, $16, $17, $18, $19,
-       'BGN', $20, $21, $22) ON CONFLICT DO NOTHING`,
+       $20, $21, $22, $23) ON CONFLICT DO NOTHING`,
     [
       orderId,
       tenantId,
@@ -909,8 +924,9 @@ async function seedShopperOrder(
       demoPaymentMethod.label,
       demoPaymentMethod.instructions,
       demoShippingMethod.label,
+      money.currency,
       subtotal,
-      demoShippingMethod.fixedFee,
+      money.shippingFee,
       total,
     ],
   );
@@ -990,13 +1006,13 @@ async function seedManualOrder(
        "paymentInstructions", "shippingMethodId", "shippingMethodLabel", "currency",
        "subtotal", "shippingFee", "total")
      SELECT $1, $2, $3, $4, $5, $6, $7, $8, 'BG', $9, $10, $11, $12, p."id", $13, $14,
-       s."id", $15, 'BGN', $16::numeric * $17::integer, $18::numeric,
-       $16::numeric * $17::integer + $18::numeric
+       s."id", $15, $16, $17::numeric * $18::integer, $19::numeric,
+       $17::numeric * $18::integer + $19::numeric
      FROM "productVariant" v
      JOIN "paymentMethod" p ON p."tenantId" = v."tenantId" AND p."branchId" = v."branchId"
      JOIN "shippingMethod" s ON s."tenantId" = v."tenantId" AND s."branchId" = v."branchId"
-     WHERE v."tenantId" = $2 AND v."branchId" = $3 AND v."id" = $19 AND NOT v."inventoryTracked"
-       AND p."id" = $20 AND s."id" = $21
+     WHERE v."tenantId" = $2 AND v."branchId" = $3 AND v."id" = $20 AND NOT v."inventoryTracked"
+       AND p."id" = $21 AND s."id" = $22
      ON CONFLICT DO NOTHING`,
     [
       orderId,
@@ -1014,9 +1030,10 @@ async function seedManualOrder(
       demoPaymentMethod.label,
       demoPaymentMethod.instructions,
       demoShippingMethod.label,
+      demoHistoricalOrderMoney.currency,
       fixture.line.unitPrice,
       fixture.line.quantity,
-      demoShippingMethod.fixedFee,
+      demoHistoricalOrderMoney.shippingFee,
       variantId,
       fixtureId('d3', 1),
       fixtureId('d4', 1),
@@ -1053,11 +1070,12 @@ async function seedOrderInvoice(
   const invoice = await client.query(
     `INSERT INTO "invoice" ("id", "tenantId", "branchId", "orderId", "orderNumber", "number", "issueDate",
        "issuerName", "issuerCompanyId", "issuerAddress", "issuerVatNumber",
-       "recipientName", "recipientAddress", "recipientEmail", "recipientPhone", "currency", "subtotal", "shippingFee", "total")
+       "recipientName", "recipientAddress", "recipientEmail", "recipientPhone", "currency", "subtotal",
+       "discountAmount", "shippingFee", "total")
      SELECT $1, "tenantId", "branchId", "id", "orderNumber", $5, $6, $7, $8, $9, $10,
        "contactName", concat_ws(chr(10), "shippingLine1", "shippingLine2",
          "shippingPostalCode" || ' ' || "shippingCity", "shippingCountryCode"),
-       "contactEmail", "contactPhone", "currency", "subtotal", "shippingFee", "total"
+       "contactEmail", "contactPhone", "currency", "subtotal", "discountAmount", "shippingFee", "total"
      FROM "order" WHERE "tenantId" = $2 AND "branchId" = $3 AND "id" = $4
      ON CONFLICT DO NOTHING`,
     [

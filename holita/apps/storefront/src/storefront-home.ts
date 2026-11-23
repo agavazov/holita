@@ -1,8 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, resource } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  resource,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { newestCatalogueSort } from './catalogue-url';
 import type { CatalogueBrowsePageFragment } from './generated/operations';
 import { StorefrontApi } from './storefront-api';
 import { messages, type Language } from './storefront-messages';
+import { shopCurrency } from './storefront-money';
 
 @Component({
   selector: 'holita-storefront-home',
@@ -23,7 +32,7 @@ export class StorefrontHome {
   protected readonly t = computed(() => messages[this.language()]);
   protected readonly base = computed(() => ['/s', this.shopId()]);
   protected readonly format = computed(
-    () => new Intl.NumberFormat(this.language(), { style: 'currency', currency: 'BGN' }),
+    () => new Intl.NumberFormat(this.language(), { style: 'currency', currency: shopCurrency }),
   );
   private readonly collections = resource({
     params: this.shopId,
@@ -57,9 +66,9 @@ export class StorefrontHome {
     ];
   });
   protected readonly tiles = [
-    { label: 'productSelection', section: 'products' },
-    { label: 'categories', section: 'categories' },
-    { label: 'collections', section: 'collections' },
+    { label: 'newArrivals', section: 'products', queryParams: { sort: newestCatalogueSort } },
+    { label: 'categories', section: 'categories', queryParams: null },
+    { label: 'collections', section: 'collections', queryParams: null },
   ] as const;
   protected readonly highlights = [
     { label: 'categories', description: 'categoriesDescription', section: 'categories' },

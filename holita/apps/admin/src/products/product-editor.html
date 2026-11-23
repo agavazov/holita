@@ -496,7 +496,45 @@
         {{ optionGroups().length ? text().variantOptionsHint : text().variantNoOptions }} @if
         (editing && optionGroups().length) { {{ text().variantSavedOptionsHint }} }
       </p>
-      @if (errors()['variants']; as message) {
+      @if (optionGroups().length) {
+      <osnova-form-field
+        controlId="product-variant-generation-values"
+        [label]="text().variantGenerationValues"
+        [hint]="text().variantGenerationHint"
+      >
+        <p-select
+          inputId="product-variant-generation-values"
+          ariaLabelledBy="product-variant-generation-values-label"
+          [formControl]="generationValues"
+          [options]="optionGroups()"
+          optionLabel="displayLabel"
+          optionValue="id"
+          [group]="true"
+          [multiple]="true"
+          [filter]="true"
+          [ariaFilterLabel]="text().variantSearchValues"
+          [emptyFilterMessage]="shared().table.noResultsTitle"
+          [placeholder]="text().variantChooseValues"
+          [overlayOptions]="{ style: { width: '100%' } }"
+          [pt]="variantValuesPt(null, 'product-variant-generation-values', 'product-variant-generation-values-hint')"
+          (onShow)="resetVariantValuesScroll($event)"
+        >
+          <ng-template #item let-value>{{ value.label }}</ng-template>
+        </p-select>
+      </osnova-form-field>
+      <div>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving() || !generationValues.value.length"
+          (click)="generateVariants()"
+        >
+          {{ text().variantGenerate }}
+        </button>
+      </div>
+      } @if (errors()['variants']; as message) {
       <p-message id="product-variants-error" severity="error">{{ message }}</p-message>
       } @for (variant of variants.controls; track variant; let index = $index) { @let valuesId =
       'product-variant-values-' + index; @let skuId = 'product-variant-sku-' + index; @let priceId =
@@ -601,7 +639,7 @@
           </osnova-form-field>
           <osnova-form-field
             [controlId]="priceId"
-            [label]="text().price"
+            [label]="text().price + ' (' + priceCurrency + ')'"
             [required]="true"
             [error]="priceError"
           >

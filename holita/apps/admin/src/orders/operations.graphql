@@ -108,6 +108,21 @@ mutation OperatorMarkOrderPaid($id: ID!) {
   }
 }
 
+query OperatorInvoices($offset: Int!, $limit: Int!, $search: String, $filter: InvoiceFilter) {
+  invoices(offset: $offset, limit: $limit, search: $search, filter: $filter) {
+    items {
+      id
+      orderId
+      number
+      issueDate
+      recipientName
+      currency
+      total
+    }
+    total
+  }
+}
+
 query OperatorOrderInvoice($orderId: ID!) {
   orderInvoice(orderId: $orderId) {
     id

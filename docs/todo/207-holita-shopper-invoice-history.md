@@ -1,10 +1,10 @@
 # 207 Find and download issued invoices in shopper accounts
 
-**Status:** Ready after [206](206-holita-invoice-download.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-red.bg Basic can list, display and download a shopper's issued invoices. Holita My Account lists orders only. Ticket 206 provides a reusable renderer.
+red.bg Basic can list, display and download a shopper's issued invoices. Holita My Account lists orders only. Admin uses a reusable PDF renderer.
 
 ## Goal
 
@@ -13,7 +13,7 @@ Let signed-in shoppers find and download invoices for their own orders in the se
 ## Steps
 
 1. Expose owner-scoped invoice list and detail using the verified shop session. Add account routes with loading, empty, unavailable and error states.
-2. Use the renderer introduced by 206, including saved VAT fields whenever the shared renderer supports them. Recheck shop and owning customer for the document response and keep operator-only fields private.
+2. Use the existing PDF renderer, including saved VAT fields whenever the shared renderer supports them. Recheck shop and owning customer for the document response and keep operator-only fields private.
 
 ## Done when
 

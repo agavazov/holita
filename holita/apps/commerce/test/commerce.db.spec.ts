@@ -12,6 +12,13 @@ import { DatabaseService } from '../src/database.service.js';
 import { StorefrontService } from '../src/storefront.service.js';
 
 const legacyProductId = randomUUID();
+const legacyShippingId = randomUUID();
+const legacyPaymentId = randomUUID();
+const fixedDiscountId = randomUUID();
+const percentageDiscountId = randomUUID();
+const legacyDraftId = randomUUID();
+const legacyInvoicedId = randomUUID();
+const legacyInvoiceId = randomUUID();
 const tenantA = randomUUID();
 const tenantB = randomUUID();
 const branchA = randomUUID();
@@ -166,6 +173,87 @@ beforeAll(async () => {
       ),
     );
   }
+  await connection.query(
+    `INSERT INTO "paymentMethod" ("id", "tenantId", "branchId", "label", "instructions", "updatedAt")
+     VALUES ($1, $2, $3, 'Legacy payment', 'Pay on arrival.', CURRENT_TIMESTAMP)`,
+    [legacyPaymentId, tenantA, branchA],
+  );
+  await connection.query(
+    `INSERT INTO "shippingMethod" ("id", "tenantId", "branchId", "label", "fixedFee", "updatedAt")
+     VALUES ($1, $2, $3, 'Legacy delivery', 6.00, CURRENT_TIMESTAMP)`,
+    [legacyShippingId, tenantA, branchA],
+  );
+  await connection.query(
+    `INSERT INTO "discount" ("id", "tenantId", "branchId", "code", "type", "value", "minSubtotal", "updatedAt")
+     VALUES ($1, $3, $4, 'LEGACY-FIXED', 'fixed', 5.00, 30.00, CURRENT_TIMESTAMP),
+            ($2, $3, $4, 'LEGACY-PERCENTAGE', 'percentage', 10.00, 40.00, CURRENT_TIMESTAMP)`,
+    [fixedDiscountId, percentageDiscountId, tenantA, branchA],
+  );
+  const legacyPlacedAt = new Date(Date.now() - 86_400_000);
+  for (const [id, status, paymentStatus] of [
+    [legacyDraftId, 'placed', 'unpaid'],
+    [legacyInvoicedId, 'completed', 'paid'],
+  ] as const) {
+    await connection.query(
+      `INSERT INTO "order" (
+        "id", "tenantId", "branchId", "orderNumber", "status", "paymentStatus", "placedAt",
+        "contactName", "contactEmail", "contactPhone", "shippingCountryCode", "shippingCity",
+        "shippingPostalCode", "shippingLine1", "paymentMethodId", "paymentMethodLabel",
+        "paymentInstructions", "shippingMethodId", "shippingMethodLabel", "currency",
+        "subtotal", "discountCode", "discountAmount", "shippingFee", "total"
+      ) VALUES ($1, $2, $3, 'H-' || $1::uuid::text, $4, $5, $8,
+        'Legacy customer', 'legacy@example.test', '0888123456', 'BG', 'Sofia', '1000', '1 Test St',
+        $6, 'Legacy payment', 'Pay on arrival.', $7, 'Legacy delivery', 'BGN',
+        39.90, 'LEGACY-FIXED', 5.00, 6.00, 40.90)`,
+      [
+        id,
+        tenantA,
+        branchA,
+        status,
+        paymentStatus,
+        legacyPaymentId,
+        legacyShippingId,
+        legacyPlacedAt,
+      ],
+    );
+    await connection.query(
+      `INSERT INTO "orderLine" (
+        "id", "tenantId", "branchId", "orderId", "variantId", "sortOrder", "sku", "label", "quantity", "unitPrice"
+      ) VALUES ($1, $2, $3, $4, $5, 0, 'LEGACY', 'Local', 2, 19.95)`,
+      [randomUUID(), tenantA, branchA, id, legacyProductId],
+    );
+  }
+  await connection.query(
+    `INSERT INTO "invoice" (
+      "id", "tenantId", "branchId", "orderId", "orderNumber", "number", "issueDate",
+      "issuerName", "issuerCompanyId", "issuerAddress", "recipientName", "recipientAddress",
+      "currency", "subtotal", "discountAmount", "shippingFee", "total"
+    ) SELECT $1, "tenantId", "branchId", "id", "orderNumber", 'LEGACY-001', CURRENT_DATE,
+      'Legacy issuer', '000000001', '1 Invoice St', "contactName", "shippingLine1",
+      "currency", "subtotal", "discountAmount", "shippingFee", "total"
+      FROM "order" WHERE "id" = $2 AND "tenantId" = $3 AND "branchId" = $4`,
+    [legacyInvoiceId, legacyInvoicedId, tenantA, branchA],
+  );
+  await connection.query(
+    `INSERT INTO "invoiceLine" (
+      "id", "tenantId", "branchId", "invoiceId", "sortOrder", "description", "sku", "quantity", "unitPrice", "lineTotal"
+    ) VALUES ($1, $2, $3, $4, 0, 'Local', 'LEGACY', 2, 19.95, 39.90)`,
+    [randomUUID(), tenantA, branchA, legacyInvoiceId],
+  );
+  await connection.query(
+    `INSERT INTO "orderRefund" ("id", "tenantId", "branchId", "orderId", "amount", "currency")
+     VALUES ($1, $2, $3, $4, 2.50, 'BGN')`,
+    [randomUUID(), tenantA, branchA, legacyInvoicedId],
+  );
+  await connection.query(
+    await readFile(
+      new URL(
+        '../prisma/migrations/20261123020000_eur_shop_currency/migration.sql',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
   url.searchParams.set('schema', schema);
   process.env.COMMERCE_DATABASE_URL = url.toString();
   const coreServer = createServer((request, response) => {
@@ -553,6 +641,125 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     quantity: 0,
     inventoryTracked: false,
   });
+  const legacyScope = { tenantId: tenantA, branchId: branchA };
+  const legacyAmounts = {
+    currency: 'BGN',
+    subtotal: '39.90',
+    discountAmount: '5.00',
+    shippingFee: '6.00',
+    total: '40.90',
+    lines: [{ unitPrice: '19.95', lineTotal: '39.90' }],
+  };
+  const archived = await database.bgnToEurAmount.findMany({ where: legacyScope });
+  expect(
+    archived.map((row) => [row.recordId, row.amountBgn.toFixed(2), row.amountEur.toFixed(2)]),
+  ).toEqual(
+    expect.arrayContaining([
+      [legacyProductId, '19.95', '10.20'],
+      [legacyShippingId, '6.00', '3.07'],
+      [fixedDiscountId, '5.00', '2.56'],
+      [fixedDiscountId, '30.00', '15.34'],
+      [percentageDiscountId, '40.00', '20.45'],
+    ]),
+  );
+  expect(archived).toHaveLength(5);
+  expect(rows[0].legacyPrice?.toFixed(2)).toBe('19.95');
+  expect(
+    await query(
+      tokens.viewer,
+      branchA,
+      `query($product:ID!,$shipping:ID!,$fixed:ID!,$percent:ID!){
+      product(id:$product){price}
+      shippingMethod(id:$shipping){fixedFee}
+      fixed:discount(id:$fixed){currency value minSubtotal}
+      percent:discount(id:$percent){currency value minSubtotal}
+    }`,
+      {
+        product: legacyProductId,
+        shipping: legacyShippingId,
+        fixed: fixedDiscountId,
+        percent: percentageDiscountId,
+      },
+    ),
+  ).toEqual({
+    data: {
+      product: { price: '10.20' },
+      shippingMethod: { fixedFee: '3.07' },
+      fixed: { currency: 'EUR', value: '2.56', minSubtotal: '15.34' },
+      percent: { currency: 'EUR', value: '10.00', minSubtotal: '20.45' },
+    },
+  });
+  const snapshotFields =
+    'currency subtotal discountAmount shippingFee total lines{unitPrice lineTotal}';
+  const readLegacy = `query($id:ID!){
+    order(id:$id){${snapshotFields}}
+    orderInvoice(orderId:$id){${snapshotFields}}
+    orderRefundSummary(orderId:$id){refundableAmount refunds{amount currency}}
+  }`;
+  expect(await query(tokens.viewer, branchA, readLegacy, { id: legacyInvoicedId })).toEqual({
+    data: {
+      order: legacyAmounts,
+      orderInvoice: legacyAmounts,
+      orderRefundSummary: {
+        refundableAmount: '38.40',
+        refunds: [{ amount: '2.50', currency: 'BGN' }],
+      },
+    },
+  });
+  expect(await query(tokens.viewer, branchB, readLegacy, { id: legacyInvoicedId })).toEqual({
+    data: { order: null, orderInvoice: null, orderRefundSummary: null },
+  });
+  const editLegacy = `mutation($id:ID!,$input:ManualOrderUpdateInput!){
+    updateManualOrder(id:$id,input:$input){${snapshotFields} merchantNote}
+  }`;
+  const legacyContact = {
+    contact: { name: 'Legacy customer', email: 'legacy@example.test', phone: '0888123456' },
+    shippingAddress: { countryCode: 'BG', city: 'Sofia', postalCode: '1000', line1: '1 Test St' },
+    merchantNote: 'Contact confirmed',
+  };
+  for (const amountChange of [
+    { lines: [{ variantId: legacyProductId, quantity: 1 }] },
+    { shippingMethodId: randomUUID() },
+  ]) {
+    expect(
+      await query(tokens.operator, branchA, editLegacy, {
+        id: legacyDraftId,
+        input: { ...legacyContact, ...amountChange },
+      }),
+    ).toMatchObject({
+      errors: [{ extensions: { fieldErrors: [{ code: 'MANUAL_ORDER_LEGACY_AMOUNTS_LOCKED' }] } }],
+    });
+  }
+  expect(
+    await query(tokens.operator, branchA, editLegacy, {
+      id: legacyDraftId,
+      input: legacyContact,
+    }),
+  ).toEqual({
+    data: { updateManualOrder: { ...legacyAmounts, merchantNote: legacyContact.merchantNote } },
+  });
+  expect(
+    await query(
+      tokens.operator,
+      branchA,
+      `mutation($id:ID!,$input:IssueOrderInvoiceInput!){
+    issueOrderInvoice(orderId:$id,input:$input){${snapshotFields}}
+  }`,
+      {
+        id: legacyDraftId,
+        input: {
+          number: 'LEGACY-002',
+          issueDate: '2026-11-23',
+          issuerName: 'Issuer',
+          issuerCompanyId: '000000001',
+          issuerAddress: '1 Invoice St',
+          recipientName: 'Legacy customer',
+          recipientAddress: '1 Test St',
+        },
+      },
+    ),
+  ).toEqual({ data: { issueOrderInvoice: legacyAmounts } });
+
   for (const [method, type, fields] of [
     ['paymentMethod', 'PaymentMethod', { instructions: 'Pay in person.' }],
     ['shippingMethod', 'ShippingMethod', { fixedFee: '0' }],
@@ -633,9 +840,10 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     },
   });
   const dashboard =
-    '{shopDashboard{period orderCount completedRevenue newCustomerCount outOfStockVariantCount recentOrders{id}}}';
+    '{shopDashboard{period orderCount completedRevenue newCustomerCount outOfStockVariantCount currency recentOrders{id currency total}}}';
   const emptyDashboard = {
     period: 'DAYS_30',
+    currency: 'EUR',
     orderCount: 0,
     completedRevenue: '0.00',
     newCustomerCount: 0,
@@ -649,7 +857,20 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     [tokens.foreign, branchForeign, 0, 1],
   ] as const) {
     expect(await query(token, branch, dashboard)).toEqual({
-      data: { shopDashboard: { ...emptyDashboard, newCustomerCount, outOfStockVariantCount } },
+      data: {
+        shopDashboard: {
+          ...emptyDashboard,
+          newCustomerCount,
+          outOfStockVariantCount,
+          ...(branch === branchA && {
+            orderCount: 2,
+            completedRevenue: '20.91',
+            recentOrders: [legacyInvoicedId, legacyDraftId]
+              .sort((a, b) => b.localeCompare(a))
+              .map((id) => ({ id, currency: 'BGN', total: '40.90' })),
+          }),
+        },
+      },
     });
   }
   expect(await query(tokens.foreign, branchA, dashboard)).toMatchObject({
@@ -1680,8 +1901,8 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       ],
     },
   });
-  const browse = `query($search:String!, $offset:Int!) {
-    catalogue(offset:$offset, limit:1, sort:NAME_ASC, filter:{search:$search}) {
+  const browse = `query($search:String!, $offset:Int!, $sort:CatalogueSort = NAME_ASC) {
+    catalogue(offset:$offset, limit:1, sort:$sort, filter:{search:$search}) {
       items{name} total offset facets{brands{id} options{name values{id}}}
     }
   }`;
@@ -1704,6 +1925,23 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(await storefront(publicB, browse, { search: 'Visible', offset: 0 })).toEqual({
     data: { catalogue: { items: [], total: 0, offset: 0, facets: { brands: [], options: [] } } },
   });
+  const sameCreationTime = new Date('2026-11-22T12:00:00Z');
+  await database.product.updateMany({
+    where: { ...categoryScope, name: { in: ['Visible', 'Visible bowl'] } },
+    data: { createdAt: sameCreationTime },
+  });
+  const newest = await database.product.findMany({
+    where: { ...categoryScope, name: { in: ['Visible', 'Visible bowl'] } },
+    orderBy: { id: 'desc' },
+    select: { name: true },
+  });
+  for (const [offset, item] of newest.entries()) {
+    expect(
+      await storefront(publicA, browse, { search: 'Visible', offset, sort: 'NEWEST' }),
+    ).toEqual({
+      data: { catalogue: { items: [item], total: 2, offset, facets } },
+    });
+  }
   expect(await storefront(publicB, '{catalogueBrands{id} catalogueCategories{id}}')).toEqual({
     data: { catalogueBrands: [], catalogueCategories: [] },
   });
@@ -1844,7 +2082,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     shippingMethodId: methodIds.shippingMethodId.available,
   };
   const quoteOperation =
-    'mutation($input:CheckoutQuoteInput!){quoteCheckout(input:$input){cartId quoteRevision subtotal discountCode discountAmount shippingFee total lines{id variantId unitPrice}}}';
+    'mutation($input:CheckoutQuoteInput!){quoteCheckout(input:$input){cartId quoteRevision currency subtotal discountCode discountAmount shippingFee total lines{id variantId unitPrice}}}';
   const quote = (input = quoteInput) => storefront(publicA, quoteOperation, { input }, token);
   for (const path of ['paymentMethodId', 'shippingMethodId'] as const) {
     for (const key of ['foreign', 'disabled'] as const) {
@@ -1865,6 +2103,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       quoteCheckout: {
         cartId: accountCart.id,
         quoteRevision: expect.any(String),
+        currency: 'EUR',
         subtotal: '2.00',
         discountCode: null,
         discountAmount: '0.00',
@@ -2064,6 +2303,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       quoteCheckout: {
         cartId: accountCart.id,
         quoteRevision: expect.any(String),
+        currency: 'EUR',
         subtotal: '8.50',
         discountCode: discount.code,
         discountAmount: '1.28',
@@ -2143,7 +2383,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     paymentInstructions: 'Pay on arrival.',
     shippingMethodLabel: 'Home Delivery',
     shippingAddress: quoteInput.shippingAddress,
-    currency: 'BGN',
+    currency: 'EUR',
     subtotal: '8.50',
     discountCode: discount.code,
     discountAmount: '1.28',
@@ -2659,7 +2899,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
           recordOrderRefund: {
             id: expect.any(String),
             amount: '10.00',
-            currency: 'BGN',
+            currency: 'EUR',
             restock: false,
             reason: 'Returned externally',
           },
@@ -2693,7 +2933,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       input: { amount: '3.22', restock: true },
     }),
   ).toMatchObject({
-    data: { recordOrderRefund: { amount: '3.22', currency: 'BGN', reason: null, restock: true } },
+    data: { recordOrderRefund: { amount: '3.22', currency: 'EUR', reason: null, restock: true } },
   });
   expect(await query(tokens.viewer, publicA, readRefunds, refundTarget)).toMatchObject({
     data: {
@@ -2729,10 +2969,15 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   });
 
   const issueInvoice = `mutation($orderId:ID!,$input:IssueOrderInvoiceInput!){
-    issueOrderInvoice(orderId:$orderId,input:$input){id orderId number issueDate recipientName subtotal discountAmount shippingFee total lines{description sku quantity unitPrice lineTotal}}
+    issueOrderInvoice(orderId:$orderId,input:$input){id orderId number issueDate recipientName currency subtotal discountAmount shippingFee total lines{description sku quantity unitPrice lineTotal}}
   }`;
   const readInvoice = `query($orderId:ID!){
-    orderInvoice(orderId:$orderId){id orderId number issueDate recipientName subtotal discountAmount shippingFee total lines{description sku quantity unitPrice lineTotal}}
+    orderInvoice(orderId:$orderId){id orderId number issueDate recipientName currency subtotal discountAmount shippingFee total lines{description sku quantity unitPrice lineTotal}}
+  }`;
+  const readInvoices = `query($offset:Int! = 0,$limit:Int! = 20,$search:String,$filter:InvoiceFilter){
+    invoices(offset:$offset,limit:$limit,search:$search,filter:$filter){
+      items{orderId number issueDate recipientName currency total} total offset limit
+    }
   }`;
   const invoiceInput = {
     number: 'TEST-0001',
@@ -2744,6 +2989,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     recipientAddress: order.shippingLine1,
   };
   const invoiceTarget = { orderId: order.id };
+  const invoicePdf = new URL(`/documents/invoices/${order.id}/pdf`, endpoint);
   const issuance = { ...invoiceTarget, input: invoiceInput };
   expect(await query(tokens.viewer, publicA, issueInvoice, issuance)).toHaveProperty('errors');
   const issued = await query(tokens.operator, publicA, issueInvoice, issuance);
@@ -2754,6 +3000,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
         number: invoiceInput.number,
         issueDate: invoiceInput.issueDate,
         recipientName: order.contactName,
+        currency: receipt.currency,
         subtotal: receipt.subtotal,
         discountAmount: receipt.discountAmount,
         shippingFee: receipt.shippingFee,
@@ -2782,7 +3029,16 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     expect(await query(credential, branch, issueInvoice, issuance)).toMatchObject({
       errors: [{ message: 'Order not found' }],
     });
+    expect(await query(credential, branch, readInvoices)).toEqual({
+      data: { invoices: { items: [], total: 0, offset: 0, limit: 20 } },
+    });
+    const response = await fetch(invoicePdf, {
+      headers: { authorization: `Bearer ${credential}`, 'x-branch-id': branch },
+    });
+    expect(response.status).toBe(404);
   }
+  const unauthenticatedPdf = await fetch(invoicePdf, { headers: { 'x-branch-id': publicA } });
+  expect(unauthenticatedPdf.status).toBe(401);
   expect(await query(tokens.operator, publicA, issueInvoice, issuance)).toMatchObject({
     errors: [{ extensions: { code: 'CONFLICT' } }],
   });
@@ -2809,9 +3065,29 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     }),
   ]);
   expect(await query(tokens.viewer, publicA, readInvoice, invoiceTarget)).toEqual(savedInvoice);
+  const savedInvoiceListItem = {
+    ...invoiceTarget,
+    number: invoiceInput.number,
+    issueDate: invoiceInput.issueDate,
+    recipientName: invoiceInput.recipientName,
+    currency: receipt.currency,
+    total: receipt.total,
+  };
+  const issueDate = { issueDateFrom: invoiceInput.issueDate, issueDateTo: invoiceInput.issueDate };
+  for (const [search, filter, offset, total, items] of [
+    [invoiceInput.number.toLowerCase(), issueDate, 0, 1, [savedInvoiceListItem]],
+    [invoiceInput.recipientName, issueDate, 0, 1, [savedInvoiceListItem]],
+    [invoiceInput.number, issueDate, 1, 1, []],
+    [invoiceInput.number, { issueDateFrom: '2026-11-23' }, 0, 0, []],
+    ['Changed order contact', issueDate, 0, 0, []],
+  ] as const) {
+    expect(
+      await query(tokens.viewer, publicA, readInvoices, { search, filter, offset, limit: 1 }),
+    ).toEqual({ data: { invoices: { items, total, offset, limit: 1 } } });
+  }
 
   const createManual = `mutation($input:ManualOrderInput!){
-    createManualOrder(input:$input){id total shippingFee customerId merchantNote canEditManualOrder}
+    createManualOrder(input:$input){id currency total shippingFee customerId merchantNote canEditManualOrder}
   }`;
   const updateManual = `mutation($id:ID!,$input:ManualOrderUpdateInput!){
     updateManualOrder(id:$id,input:$input){id total shippingFee merchantNote canEditManualOrder lines{id quantity unitPrice}}
@@ -2846,6 +3122,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(created).toMatchObject({
     data: {
       createManualOrder: {
+        currency: 'EUR',
         customerId: null,
         merchantNote: 'Private note',
         total: '115.00',
@@ -3000,6 +3277,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     data: {
       issueOrderInvoice: {
         ...manualAmounts,
+        currency: 'EUR',
         lines: [{ quantity: 2, unitPrice: '9.00', lineTotal: '18.00' }],
       },
     },

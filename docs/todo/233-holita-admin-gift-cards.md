@@ -1,6 +1,6 @@
 # 233 Issue shop gift cards for an approved use
 
-**Status:** Needs owner. What manual use is allowed for shop gift cards, and when may an operator reactivate or delete one? Depends on [270](270-holita-branch-base-currency.md). **Product:** Holita.
+**Status:** Needs owner. What manual use is allowed for shop gift cards, and when may an operator reactivate or delete one? **Product:** Holita.
 
 ## Background
 

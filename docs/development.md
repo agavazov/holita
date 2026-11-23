@@ -509,9 +509,10 @@ covers and a three-photo gallery for the „Орех“ baking pot.
 
 Open **Dashboard** in Admin for the selected shop's order count, completed order revenue, new
 customers and tracked variants at zero stock. Choose 7, 14 or 30 days (the default). The date window
-includes today in Europe/Sofia and groups orders by placement day. Revenue sums the saved BGN
-totals of completed orders, including delivery. Current stock and the eight latest orders stay
-independent of the period. An order number opens its Order Detail page.
+includes today in Europe/Sofia and groups orders by placement day. Revenue includes delivery and
+reports completed orders in EUR. For reporting, each historical BGN total is converted at the
+fixed rate and rounded to cents. Current stock and the eight latest orders stay independent of
+the period. An order number opens its Order Detail page in its recorded currency.
 
 The operator graph exposes this read as `shopDashboard(period: DashboardPeriod! = DAYS_30)`.
 The period covers the date range, dated totals and daily chart values. It also returns the current
@@ -541,7 +542,9 @@ The public `catalogue` and `catalogueCategoryProducts`, `catalogueBrandProducts`
 `catalogueCollectionProducts` and `catalogueTagProducts` queries accept filters, sorting and paging.
 The storefront stores browsing state in the URL with `q`, `sort`, `minPrice`, `maxPrice`,
 repeated `brand` and `option` IDs, `inStock=1` and one-based `page`. The sort values are
-`name-asc`, `name-desc`, `price-asc` and `price-desc`. Copy the URL after applying filters to
+`name-asc`, `name-desc`, `price-asc`, `price-desc` and `newest`. The home page **New arrivals**
+tile opens `/s/<branchId>/products?sort=newest`. The public `NEWEST` sort orders products by
+creation time and then by product ID, both descending. Copy the URL after applying filters to
 share the same view. Price bounds use the displayed price, and selected option values and
 the in-stock filter must match the same active variant.
 
@@ -559,9 +562,11 @@ and `updateOption`. To delete a value used by a product variant, first remove th
 that value. Variants with stock still eligible for restoration can be deactivated until then.
 
 In Admin, open a product and edit its Variants section. Leave option values empty for the
-default variant of a simple product. For a configurable product, add one row per combination
-and choose one value from each of the same options in every active row. Each variant has a shop-unique
-SKU, price, inventory tracking and status. A saved variant keeps its combination. To offer a
+default variant of a simple product. For a configurable product, select the desired option values
+and choose **Generate combinations** to fill in the missing combinations. Existing variants keep
+their edits and status. You can also add rows manually. Each active row must use one value from
+each of the same options. Enter a shop-unique SKU and a price for each new variant. Each variant
+has its own inventory tracking and status. A saved variant keeps its combination. To offer a
 different combination, add a new variant and set its own initial quantity if tracked. Set the
 original variant to Inactive to stop selling it. When a simple product gains options, set its
 original variant to Inactive and keep it for any stock that may still need to be restored.
@@ -593,10 +598,10 @@ use limit. The list shows how many orders have used each code. The operator grap
 
 Shoppers can apply or remove one promo code in Cart through `applyCartDiscount` and
 `removeCartDiscount`. The Sofia demo code `HOME10` gives 10% off an item subtotal of at least
-40.00 BGN. `OLD10` has expired.
+20.45 EUR. `OLD10` has expired.
 
 In Admin, open Payment methods or Shipping methods for the selected shop. Add or edit a method,
-enter its label and sort order, and set payment instructions or a fixed delivery fee in BGN.
+enter its label and sort order, and set payment instructions or a fixed delivery fee in EUR.
 Enable the method to offer it at checkout, or disable it to take it out of the available choices.
 Lower sort orders appear first. Existing orders retain the method names, instructions and delivery
 fee recorded when they were placed.
@@ -604,9 +609,19 @@ fee recorded when they were placed.
 Open Checkout from a cart with available items, enter contact and delivery details, and choose
 delivery and payment. Review total shows current item prices, any item discount and the fixed
 delivery fee from Commerce. The Sofia seed enables Наложен платеж, Банков превод and
-Доставка до адрес (6.00 BGN). Доставка в събота (9.50 BGN) starts disabled.
+Доставка до адрес (3.07 EUR). Доставка в събота (4.86 EUR) starts disabled.
 The storefront graph exposes the checkout options with `checkout` and prices the selected options
 with `quoteCheckout`, using the cart's existing authorization.
+
+#### Shop operating currency
+
+The owner approved EUR as the sole operating currency on 2026-11-23. Every shop uses EUR for
+current prices, fixed discounts and minimum spend, shipping fees, checkout quotes and new orders.
+The cutover migration converts BGN amounts using decimal arithmetic at
+1.95583 BGN per EUR and archives the original and converted values in Commerce. Apply it with BGN
+writers stopped, then start the EUR release before resuming traffic. Historical orders, invoices
+and refunds keep their recorded currency and amounts. Invoices issued after cutover use the
+currency and amounts of the linked order.
 
 After reviewing the total, choose Place order. A change in available stock, prices, discount or
 selected methods prompts you to review the checkout again. If the promo code is no longer eligible,
@@ -656,8 +671,9 @@ details, add variants, select enabled payment and shipping methods, and
 optionally enter a private merchant note.
 Open a placed, unpaid manual order and choose Edit manual order to revise it. Commerce derives
 totals and adjusts stock by the change in held quantities. Existing lines retain their booked
-prices, and unchanged methods retain their saved terms. Once an invoice is issued, the items
-and shipping method and charge become read-only. Contact, delivery address, payment method and
+prices, and unchanged methods retain their saved terms. For a historical order in BGN or an order
+with an issued invoice, the items and shipping method and charge are read-only.
+Contact, delivery address, payment method and
 merchant note remain editable while the order is placed and unpaid. The Sofia demo shop includes
 two guest phone orders, one with an issued invoice. The operator graph exposes
 `manualOrderMethods`, `createManualOrder` and `updateManualOrder`.
@@ -667,6 +683,15 @@ review the recipient and amounts copied from the order. Each shop uses unique in
 Open the issued document from its numbered link on the order. Its totals include any saved
 discount deduction. Later changes to the order leave the invoice intact. The Sofia demo shipped
 order has an issued invoice. The operator graph exposes `orderInvoice` and `issueOrderInvoice`.
+
+Open **Invoices** in the selected shop to search issued invoices by number or recipient and
+filter by issue date. Open a result to view the saved invoice. Choose **Download PDF** from
+the invoice reached through either Invoices or Order Detail.
+
+Serve `/documents/invoices/` from Commerce on the Admin origin, forwarding the authorization
+and `x-branch-id` headers. Install the Playwright Chromium runtime for the user that runs
+Commerce with `npm exec -- playwright install --with-deps chromium`. The PDF renderer uses
+the local browser and fonts.
 
 After returning money outside Holita, use Record refund on a paid order. Order Detail shows the
 refund history and remaining balance, including the delivery fee in the original paid amount.

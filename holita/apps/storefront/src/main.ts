@@ -30,6 +30,7 @@ import { HttpLink } from 'apollo-angular/http';
 import { loadLocalConfig, readPrimeUiLicense } from '@osnova/ui/app';
 import { Appearance, appTheme, provideOsnovaTheme } from '@osnova/ui/theme';
 import { messages, type Language } from './storefront-messages';
+import { shopCurrency } from './storefront-money';
 import { StorefrontApi } from './storefront-api';
 import { CatalogueBrowse } from './catalogue-browse';
 import { browseSections } from './catalogue-url';
@@ -1018,7 +1019,7 @@ class StorefrontPage {
   });
   readonly shopper = linkedSignal(() => this.view()?.shopper ?? null);
   protected readonly price = computed(
-    () => new Intl.NumberFormat(this.language(), { style: 'currency', currency: 'BGN' }),
+    () => new Intl.NumberFormat(this.language(), { style: 'currency', currency: shopCurrency }),
   );
   readonly form = new FormGroup({
     name: new FormControl('', { nonNullable: true }),

@@ -1,10 +1,10 @@
 # 255 Render stored invoice VAT in downloaded documents
 
-**Status:** Blocked. Waiting for the approved VAT snapshots in 209 and the current document renderer in 206. **Product:** Holita. Depends on [206](206-holita-invoice-download.md), [209](209-holita-invoice-vat-snapshots.md).
+**Status:** Blocked. Waiting for the approved VAT snapshots in 209. **Product:** Holita. Depends on [209](209-holita-invoice-vat-snapshots.md).
 
 ## Background
 
-red.bg PDF renders the stored VAT rates and amounts. Ticket 206 renders the current Holita invoice fields, and 209 records approved VAT values on new snapshots.
+red.bg PDF renders the stored VAT rates and amounts. The Holita PDF renderer uses the current snapshot fields. Ticket 209 covers approved VAT values on new snapshots.
 
 ## Goal
 
@@ -12,7 +12,7 @@ Show the saved VAT breakdown on invoice detail and downloaded copies when it exi
 
 ## Steps
 
-1. Render the persisted line and total VAT amounts from 209 in the existing invoice detail and the renderer introduced by 206. Shopper history in 207 must use that same renderer.
+1. Render the persisted line and total VAT amounts from 209 in the existing invoice detail and the existing PDF renderer. Shopper history in 207 must use that same renderer.
 2. Keep older invoices readable and omit the VAT breakdown when the snapshot lacks it.
 
 ## Done when

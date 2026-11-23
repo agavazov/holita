@@ -1,10 +1,10 @@
 # 319 Show invoice activity on the shop dashboard
 
-**Status:** Ready after [204](204-holita-invoice-register.md) and [328](328-holita-invoice-document-fields.md). **Product:** Holita.
+**Status:** Ready after [328](328-holita-invoice-document-fields.md). **Product:** Holita.
 
 ## Background
 
-The red.bg dashboard summarizes paid, unpaid and overdue invoices, groups invoice amounts by issue date and links to recent documents. Holita has a shop dashboard. The invoice register is covered in ticket 204.
+The red.bg dashboard summarizes paid, unpaid and overdue invoices, groups invoice amounts by issue date and links to recent documents. Holita has a shop dashboard. The invoice register links to issued document details.
 
 ## Goal
 

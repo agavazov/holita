@@ -51,6 +51,7 @@ import type {
   OperatorManualOrderCustomerFragment,
   OperatorOrderDetailFragment,
 } from '../generated/orders-operations';
+import { shopCurrency } from '../shop-currency';
 import { orderAmount } from './order-format';
 import { OrdersApi, orderIdPattern } from './orders-api';
 
@@ -165,7 +166,16 @@ export class ManualOrderEditor {
     this.record.hasValue() ? this.record.value().order : null,
   );
   protected readonly order = linkedSignal(() => this.loadedOrder());
-  protected readonly amountsLocked = computed(() => !!this.order()?.invoice);
+  protected readonly amountsLockMessage = computed(() => {
+    const order = this.order();
+    if (order?.invoice) {
+      return this.text().manualOrderAmountsLocked;
+    }
+    return order && order.currency !== shopCurrency
+      ? this.text().manualOrderLegacyAmountsLocked
+      : null;
+  });
+  protected readonly amountsLocked = computed(() => this.amountsLockMessage() !== null);
   private readonly choices = computed(() =>
     this.record.hasValue() ? this.record.value().choices : null,
   );
@@ -580,6 +590,7 @@ export class ManualOrderEditor {
       const reasons: Record<string, string> = {
         INVALID_METHOD: text.orderMethodUnavailable,
         MANUAL_ORDER_AMOUNTS_LOCKED: text.manualOrderAmountsLocked,
+        MANUAL_ORDER_LEGACY_AMOUNTS_LOCKED: text.manualOrderLegacyAmountsLocked,
         MANUAL_ORDER_NOT_EDITABLE: text.manualOrderNotEditable,
         ORDER_CUSTOMER_UNAVAILABLE: text.orderCustomerUnavailable,
         ORDER_STOCK_SHORT: text.orderStockShort,

@@ -12,8 +12,6 @@ import {
   type ShippingMethodInput,
 } from '../generated/shipping-methods-operations';
 
-export const shippingFeeCurrency = 'BGN';
-
 interface ShippingMethodScope {
   readonly tenantId: string;
   readonly branchId: string;

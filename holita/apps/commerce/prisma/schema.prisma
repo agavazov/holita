@@ -62,6 +62,14 @@ enum DiscountType {
   @@map("discountType")
 }
 
+enum BgnToEurAmountKind {
+  VARIANT_PRICE @map("variantPrice")
+  SHIPPING_FEE @map("shippingFee")
+  FIXED_DISCOUNT @map("fixedDiscount")
+  DISCOUNT_MIN_SUBTOTAL @map("discountMinSubtotal")
+  @@map("bgnToEurAmountKind")
+}
+
 enum ShopPageStatus {
   DRAFT @map("draft")
   PUBLISHED @map("published")
@@ -569,6 +577,17 @@ model Discount {
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, code])
   @@map("discount")
+}
+
+model BgnToEurAmount {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  kind BgnToEurAmountKind
+  recordId String @db.Uuid
+  amountBgn Decimal @db.Decimal(32, 2)
+  amountEur Decimal @db.Decimal(32, 2)
+  @@id([tenantId, branchId, kind, recordId])
+  @@map("bgnToEurAmount")
 }
 
 model CartLine {

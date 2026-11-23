@@ -34,7 +34,8 @@ import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { OperatorShippingMethodsQuery } from '../generated/shipping-methods-operations';
 import { orderAmount } from '../orders/order-format';
-import { ShippingMethodsApi, shippingFeeCurrency } from './shipping-methods-api';
+import { shopCurrency } from '../shop-currency';
+import { ShippingMethodsApi } from './shipping-methods-api';
 
 type ShippingMethodAction = 'edit';
 type ShippingMethodListPage = OperatorShippingMethodsQuery['shippingMethods'];
@@ -181,7 +182,7 @@ export class ShippingMethodsPage {
   }
 
   protected fee(method: ShippingMethodRow): string {
-    return orderAmount(method.fixedFee, shippingFeeCurrency, this.language());
+    return orderAmount(method.fixedFee, shopCurrency, this.language());
   }
 
   protected open(id: string): void {

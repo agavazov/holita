@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CartPrice } from '../cart/cart.service.js';
 import { DatabaseService } from '../database.service.js';
-import type { Prisma } from '../generated/prisma/client.js';
+import { Prisma } from '../generated/prisma/client.js';
 import { OrdersRepository } from '../orders/orders.repository.js';
 import type { Scope } from '../scope.js';
 
@@ -31,6 +31,50 @@ export class InvoicesRepository {
     private readonly database: DatabaseService,
     private readonly orders: OrdersRepository,
   ) {}
+
+  async list(
+    scope: Scope,
+    offset: number,
+    limit: number,
+    words: string[],
+    issueDateFrom: Date | undefined,
+    issueDateTo: Date | undefined,
+  ) {
+    const where: Prisma.InvoiceWhereInput = {
+      ...scope,
+      issueDate: {
+        ...(issueDateFrom ? { gte: issueDateFrom } : {}),
+        ...(issueDateTo ? { lte: issueDateTo } : {}),
+      },
+      AND: words.map((word) => {
+        const match = { contains: word.replace(/[\\%_]/gu, '\\$&'), mode: 'insensitive' } as const;
+        return { OR: [{ number: match }, { recipientName: match }] };
+      }),
+    };
+    const invoice = this.database.client.invoice;
+    const [items, total] = await this.database.client.$transaction(
+      [
+        invoice.findMany({
+          where,
+          skip: offset,
+          take: limit,
+          orderBy: [{ issueDate: 'desc' }, { id: 'desc' }],
+          select: {
+            id: true,
+            orderId: true,
+            number: true,
+            issueDate: true,
+            recipientName: true,
+            currency: true,
+            total: true,
+          },
+        }),
+        invoice.count({ where }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return { items, total, offset, limit };
+  }
 
   find(scope: Scope, orderId: string) {
     return this.database.client.invoice.findUnique({

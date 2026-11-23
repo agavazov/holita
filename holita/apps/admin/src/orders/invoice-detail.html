@@ -2,8 +2,10 @@
   [title]="title()"
   [moduleInfo]="text().invoiceInfo"
   [moduleInfoTitle]="text().invoice"
-  [backLink]="['/', language(), 'orders', id()]"
-  [backLabel]="text().backToOrder"
+  [backLink]="backLink()"
+  [backLabel]="fromRegister ? text().backToInvoices : text().backToOrder"
+  [actions]="downloadActions()"
+  (action)="download()"
   [backQueryParams]="queryParams()"
   [backFragment]="fragment()"
 />
