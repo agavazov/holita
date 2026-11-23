@@ -40,44 +40,50 @@
   <header>
     <h2 id="shop-home-tiles">{{ t().homeTiles }}</h2>
   </header>
-  <osnova-form-field controlId="home-show-tiles" [label]="t().homeShowTiles">
-    <p-toggleswitch inputId="home-show-tiles" formControlName="showTiles" [readonly]="readOnly()" />
-  </osnova-form-field>
-  @for (tile of form.controls.tiles.controls; track tile; let index = $index) { @let prefix =
-  'basicHomeTile' + (index + 1); @let heading = 'home-tile-title-' + index;
-  <section class="app-form-section" [formGroup]="tile" [attr.aria-labelledby]="heading">
-    <h3 [id]="heading">{{ t().homeTile }} {{ index + 1 }}</h3>
-    <div class="app-form-grid">
-      <osnova-form-field [controlId]="prefix + 'Custom'" [label]="t().homeCustomizeTile">
-        <p-toggleswitch
-          [inputId]="prefix + 'Custom'"
-          formControlName="custom"
-          [readonly]="readOnly()"
-        />
-      </osnova-form-field>
-      @if (tile.controls.custom.value) { @for (field of tileFields; track field) {
-      <ng-container
-        [ngTemplateOutlet]="copy"
-        [ngTemplateOutletContext]="{
+  <div class="app-card__body">
+    <osnova-form-field controlId="home-show-tiles" [label]="t().homeShowTiles">
+      <p-toggleswitch
+        inputId="home-show-tiles"
+        formControlName="showTiles"
+        [readonly]="readOnly()"
+      />
+    </osnova-form-field>
+    @for (tile of form.controls.tiles.controls; track tile; let index = $index) { @let prefix =
+    'basicHomeTile' + (index + 1); @let heading = 'home-tile-title-' + index;
+    <section class="app-form-section" [formGroup]="tile" [attr.aria-labelledby]="heading">
+      <h3 [id]="heading">{{ t().homeTile }} {{ index + 1 }}</h3>
+      <div class="app-form-grid">
+        <osnova-form-field [controlId]="prefix + 'Custom'" [label]="t().homeCustomizeTile">
+          <p-toggleswitch
+            [inputId]="prefix + 'Custom'"
+            formControlName="custom"
+            [readonly]="readOnly()"
+          />
+        </osnova-form-field>
+        @if (tile.controls.custom.value) { @for (field of tileFields; track field) {
+        <ng-container
+          [ngTemplateOutlet]="copy"
+          [ngTemplateOutletContext]="{
                 control: tile.controls[field],
                 path: path(prefix, field),
                 label: labels()[field],
                 link: field === 'href'
               }"
-      />
-      }
-      <ng-container
-        [ngTemplateOutlet]="image"
-        [ngTemplateOutletContext]="{
+        />
+        }
+        <ng-container
+          [ngTemplateOutlet]="image"
+          [ngTemplateOutletContext]="{
               control: tile.controls.imageUpload,
               path: path(prefix, 'imageUpload'),
               attached: !!saved()?.tiles?.[index]?.imageUrl
             }"
-      />
-      }
-    </div>
-  </section>
-  }
+        />
+        }
+      </div>
+    </section>
+    }
+  </div>
 </section>
 
 <section
@@ -88,49 +94,51 @@
   <header>
     <h2 id="shop-home-benefits">{{ t().homeBenefits }}</h2>
   </header>
-  <osnova-form-field controlId="home-show-benefits" [label]="t().homeShowBenefits">
-    <p-toggleswitch
-      inputId="home-show-benefits"
-      formControlName="showBenefits"
-      [readonly]="readOnly()"
-    />
-  </osnova-form-field>
-  @for (benefit of form.controls.benefits.controls; track benefit; let index = $index) { @let prefix
-  = 'basicHomeBenefit' + (index + 1); @let heading = 'home-benefit-title-' + index;
-  <section class="app-form-section" [formGroup]="benefit" [attr.aria-labelledby]="heading">
-    <h3 [id]="heading">{{ t().homeBenefit }} {{ index + 1 }}</h3>
-    <div class="app-form-grid">
-      <osnova-form-field [controlId]="prefix + 'Custom'" [label]="t().homeCustomizeBenefit">
-        <p-toggleswitch
-          [inputId]="prefix + 'Custom'"
-          formControlName="custom"
-          [readonly]="readOnly()"
-        />
-      </osnova-form-field>
-      @if (benefit.controls.custom.value) {
-      <osnova-form-field [controlId]="prefix + 'Icon'" [label]="t().homeIcon">
-        <p-select
-          [inputId]="prefix + 'Icon'"
-          formControlName="icon"
-          [options]="options()"
-          optionValue="value"
-          optionLabel="label"
-          [readonly]="readOnly()"
-        />
-      </osnova-form-field>
-      @for (field of benefitFields; track field) {
-      <ng-container
-        [ngTemplateOutlet]="copy"
-        [ngTemplateOutletContext]="{
+  <div class="app-card__body">
+    <osnova-form-field controlId="home-show-benefits" [label]="t().homeShowBenefits">
+      <p-toggleswitch
+        inputId="home-show-benefits"
+        formControlName="showBenefits"
+        [readonly]="readOnly()"
+      />
+    </osnova-form-field>
+    @for (benefit of form.controls.benefits.controls; track benefit; let index = $index) { @let
+    prefix = 'basicHomeBenefit' + (index + 1); @let heading = 'home-benefit-title-' + index;
+    <section class="app-form-section" [formGroup]="benefit" [attr.aria-labelledby]="heading">
+      <h3 [id]="heading">{{ t().homeBenefit }} {{ index + 1 }}</h3>
+      <div class="app-form-grid">
+        <osnova-form-field [controlId]="prefix + 'Custom'" [label]="t().homeCustomizeBenefit">
+          <p-toggleswitch
+            [inputId]="prefix + 'Custom'"
+            formControlName="custom"
+            [readonly]="readOnly()"
+          />
+        </osnova-form-field>
+        @if (benefit.controls.custom.value) {
+        <osnova-form-field [controlId]="prefix + 'Icon'" [label]="t().homeIcon">
+          <p-select
+            [inputId]="prefix + 'Icon'"
+            formControlName="icon"
+            [options]="options()"
+            optionValue="value"
+            optionLabel="label"
+            [readonly]="readOnly()"
+          />
+        </osnova-form-field>
+        @for (field of benefitFields; track field) {
+        <ng-container
+          [ngTemplateOutlet]="copy"
+          [ngTemplateOutletContext]="{
                 control: benefit.controls[field],
                 path: path(prefix, field),
                 label: labels()[field]
               }"
-      />
-      } }
-    </div>
-  </section>
-  }
+        />
+        } }
+      </div>
+    </section>
+    }
+  </div>
 </section>
 
 <section

@@ -49,8 +49,16 @@ export const homeErrorFields = [
   ),
 ];
 
-function text(value: string | null | undefined, max = 200) {
-  return new FormControl(value ?? '', { nonNullable: true, validators: [textValidator(max)] });
+function text(value: string | null | undefined, max = 200, custom?: FormControl<boolean>) {
+  const validate = textValidator(max);
+  const field = new FormControl(value ?? '', {
+    nonNullable: true,
+    validators: [(control) => (custom?.value === false ? null : validate(control))],
+  });
+  custom?.valueChanges.subscribe(() => {
+    field.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+  });
+  return field;
 }
 
 export function shopBasicHomeForm(saved?: SavedHome | null) {
@@ -70,15 +78,16 @@ export function shopBasicHomeForm(saved?: SavedHome | null) {
     tiles: new FormArray(
       [0, 1, 2].map((index) => {
         const tile = saved?.tiles[index];
+        const custom = new FormControl(!!tile, { nonNullable: true });
         return new FormGroup({
-          custom: new FormControl(!!tile, { nonNullable: true }),
-          titleBg: text(tile?.titleBg),
-          titleEn: text(tile?.titleEn),
-          eyebrowBg: text(tile?.eyebrowBg),
-          eyebrowEn: text(tile?.eyebrowEn),
-          imageAltBg: text(tile?.imageAltBg),
-          imageAltEn: text(tile?.imageAltEn),
-          href: text(tile?.href, 220),
+          custom,
+          titleBg: text(tile?.titleBg, 200, custom),
+          titleEn: text(tile?.titleEn, 200, custom),
+          eyebrowBg: text(tile?.eyebrowBg, 200, custom),
+          eyebrowEn: text(tile?.eyebrowEn, 200, custom),
+          imageAltBg: text(tile?.imageAltBg, 200, custom),
+          imageAltEn: text(tile?.imageAltEn, 200, custom),
+          href: text(tile?.href, 220, custom),
           imageUpload: new FormControl<HomeImageDraft>('keep', { nonNullable: true }),
         });
       }),
@@ -87,12 +96,13 @@ export function shopBasicHomeForm(saved?: SavedHome | null) {
     benefits: new FormArray(
       benefitIcons.map((defaultIcon, index) => {
         const benefit = saved?.benefits[index];
+        const custom = new FormControl(!!benefit, { nonNullable: true });
         return new FormGroup({
-          custom: new FormControl(!!benefit, { nonNullable: true }),
-          titleBg: text(benefit?.titleBg),
-          titleEn: text(benefit?.titleEn),
-          descriptionBg: text(benefit?.descriptionBg, 500),
-          descriptionEn: text(benefit?.descriptionEn, 500),
+          custom,
+          titleBg: text(benefit?.titleBg, 200, custom),
+          titleEn: text(benefit?.titleEn, 200, custom),
+          descriptionBg: text(benefit?.descriptionBg, 500, custom),
+          descriptionEn: text(benefit?.descriptionEn, 500, custom),
           icon: new FormControl(benefit?.icon ?? defaultIcon, { nonNullable: true }),
         });
       }),

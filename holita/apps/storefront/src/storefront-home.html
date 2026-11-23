@@ -10,24 +10,31 @@
     <img [src]="banner.image" alt="" fetchpriority="high" />
   </div>
   <div class="home-hero-copy">
-    <h1 id="home-hero-heading">{{ banner.title }}</h1>
+    <h1 id="home-hero-heading" [attr.lang]="banner.title.language">{{ banner.title.text }}</h1>
     @if (banner.link) {
-    <a class="shop-primary" [routerLink]="banner.link">{{ banner.label }}</a>
+    <a class="shop-primary" [routerLink]="banner.link" [attr.lang]="banner.label.language">
+      {{ banner.label.text }}
+    </a>
     }
   </div>
   @if (tiles().length) {
   <div class="home-tiles shop-width">
     @for (tile of tiles(); track tile.index) {
     <article class="home-tile">
-      <img [src]="tile.image" [alt]="tile.alt" loading="lazy" />
+      <img
+        [src]="tile.image"
+        [alt]="tile.alt?.text ?? ''"
+        [attr.lang]="tile.alt?.language"
+        loading="lazy"
+      />
       <div class="home-tile-copy">
         @if (tile.eyebrow) {
-        <p>{{ tile.eyebrow }}</p>
+        <p [attr.lang]="tile.eyebrow.language">{{ tile.eyebrow.text }}</p>
         }
-        <h2>
+        <h2 [attr.lang]="tile.title.language">
           @if (tile.link) {
-          <a [routerLink]="tile.link">{{ tile.title }}</a>
-          } @else { {{ tile.title }} }
+          <a [routerLink]="tile.link">{{ tile.title.text }}</a>
+          } @else { {{ tile.title.text }} }
         </h2>
       </div>
     </article>
@@ -147,12 +154,12 @@
           } }
         </svg>
         <div>
-          <h3>
+          <h3 [attr.lang]="item.title.language">
             @if (item.link) {
-            <a [routerLink]="item.link">{{ item.title }}</a>
-            } @else { {{ item.title }} }
+            <a [routerLink]="item.link">{{ item.title.text }}</a>
+            } @else { {{ item.title.text }} }
           </h3>
-          <p>{{ item.description }}</p>
+          <p [attr.lang]="item.description.language">{{ item.description.text }}</p>
         </div>
       </article>
       }

@@ -20,7 +20,6 @@ interface Shelf {
 }
 
 const collectionLimit = 4;
-const collectionIndexLimit = 100;
 const preview = { offset: 0, limit: 4 };
 
 @Component({
@@ -60,7 +59,7 @@ export class StorefrontHome {
     loader: async ({ params: { shopId, showLatest }, abortSignal }) => {
       const collections: Shelf[] = [];
       // Empty public collections do not take the place of a populated shelf.
-      for (let offset = 0; offset < collectionIndexLimit; offset += collectionLimit) {
+      for (let offset = 0; collections.length < collectionLimit; offset += collectionLimit) {
         const { items, total } = await this.api.index(shopId, 'collections', {
           offset,
           limit: collectionLimit,
@@ -75,7 +74,7 @@ export class StorefrontHome {
         );
         abortSignal.throwIfAborted();
         collections.push(...batch.filter(({ items }) => items.length));
-        if (collections.length >= collectionLimit || offset + items.length >= total) {
+        if (offset + items.length >= total) {
           break;
         }
       }
@@ -113,9 +112,10 @@ export class StorefrontHome {
     const home = this.custom();
     return {
       title: home
-        ? (this.text(home.welcomeBg, home.welcomeEn) ?? this.shopName())
-        : this.t().seasonTitle,
-      label: this.text(home?.heroActionBg, home?.heroActionEn) ?? this.t().browseProducts,
+        ? (this.text(home.welcomeBg, home.welcomeEn) ?? this.uiText(this.shopName()))
+        : this.uiText(this.t().seasonTitle),
+      label:
+        this.text(home?.heroActionBg, home?.heroActionEn) ?? this.uiText(this.t().browseProducts),
       link: this.link(home ? home.heroHref : '/products'),
       image: home?.heroImageUrl ?? '/storefront-basic/images/placeholders/home-hero.svg',
     };
@@ -133,7 +133,7 @@ export class StorefrontHome {
     ];
     return defaults.flatMap((fallback, index) => {
       const tile = home?.tiles[index];
-      const title = tile ? this.text(tile.titleBg, tile.titleEn) : fallback.title;
+      const title = tile ? this.text(tile.titleBg, tile.titleEn) : this.uiText(fallback.title);
       if (!title) {
         return [];
       }
@@ -141,8 +141,8 @@ export class StorefrontHome {
         {
           index,
           title,
-          eyebrow: tile ? this.text(tile.eyebrowBg, tile.eyebrowEn) : this.t().explore,
-          alt: this.text(tile?.imageAltBg, tile?.imageAltEn) ?? '',
+          eyebrow: tile ? this.text(tile.eyebrowBg, tile.eyebrowEn) : this.uiText(this.t().explore),
+          alt: this.text(tile?.imageAltBg, tile?.imageAltEn),
           link: this.link(tile ? tile.href : fallback.href),
           image:
             tile?.imageUrl ??
@@ -185,8 +185,8 @@ export class StorefrontHome {
         return [
           {
             index,
-            title: fallback.title,
-            description: fallback.description,
+            title: this.uiText(fallback.title),
+            description: this.uiText(fallback.description),
             icon: fallback.icon,
             link: this.link(fallback.href),
           },
@@ -210,6 +210,10 @@ export class StorefrontHome {
 
   private text(bg: string | null | undefined, en: string | null | undefined) {
     return localizedText(this.language(), bg, en);
+  }
+
+  private uiText(text: string) {
+    return { text, language: this.language() };
   }
 
   private link(href: string | null) {

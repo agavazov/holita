@@ -148,13 +148,39 @@ export class ShopSettingsService {
             return null;
           }
           if (!tile.titleBg && !tile.titleEn) {
-            return { ...tile, href: null, imageUrl: null };
+            return {
+              titleBg: null,
+              titleEn: null,
+              eyebrowBg: null,
+              eyebrowEn: null,
+              imageAltBg: null,
+              imageAltEn: null,
+              href: null,
+              imageUrl: null,
+            };
           }
           return { ...tile, href: await publicHref(tile.href) };
         }),
       ),
       showBenefits,
-      benefits: showBenefits ? benefits : [],
+      benefits: showBenefits
+        ? benefits.map((benefit) => {
+            if (
+              !benefit ||
+              ((benefit.titleBg || benefit.titleEn) &&
+                (benefit.descriptionBg || benefit.descriptionEn))
+            ) {
+              return benefit;
+            }
+            return {
+              titleBg: null,
+              titleEn: null,
+              descriptionBg: null,
+              descriptionEn: null,
+              icon: 'RETURNS',
+            };
+          })
+        : [],
       showLatestProducts,
     };
   }

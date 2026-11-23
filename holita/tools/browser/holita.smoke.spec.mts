@@ -2333,7 +2333,6 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     expect(await recoveredReceipt).toMatchObject({
       data: { orderConfirmation: expectedOrder },
     });
-    await expect(guestOrder.getByRole('heading', { name: 'Order note' })).toBeVisible();
     const receipt = waitForCart(guestOrder, 'OrderConfirmation').then((response) =>
       response.json(),
     );

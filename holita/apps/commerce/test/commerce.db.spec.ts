@@ -543,10 +543,25 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     expect(await storefront(publicB, homeQuery)).toEqual({
       data: { shop: { announcementEn: null }, shopHome: null },
     });
+    const hiddenTile = { eyebrowEn: 'Draft eyebrow', imageAltBg: 'Чернова', href: '/products' };
+    const hiddenBenefit = { titleEn: 'Draft benefit', icon: 'CALENDAR' };
     await expect(
       query(tokens.operator, publicA, updateSettings, {
         input: {
-          basicHome: { ...basicHome, announcementEnabled: false, heroImageUpload: null },
+          basicHome: {
+            ...basicHome,
+            announcementEnabled: false,
+            heroImageUpload: null,
+            showTiles: true,
+            tiles: [hiddenTile, null, { titleEn: 'Published tile' }],
+            showBenefits: true,
+            benefits: [
+              hiddenBenefit,
+              null,
+              { descriptionEn: 'Draft detail', icon: 'PLANET' },
+              null,
+            ],
+          },
           logo: null,
         },
       }),
@@ -558,6 +573,24 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     expect((await fetch(origin + imagePrefix + heroFile)).status).toBe(404);
     expect(await storefront(publicA, homeQuery)).toMatchObject({
       data: { shop: { announcementEn: null }, shopHome: { heroImageUrl: null } },
+    });
+    const blankBenefit = { titleEn: null, descriptionEn: null, icon: 'RETURNS' };
+    expect(
+      await storefront(
+        publicA,
+        '{shopHome{tiles{titleEn eyebrowEn imageAltBg href} benefits{titleEn descriptionEn icon}}}',
+      ),
+    ).toEqual({
+      data: {
+        shopHome: {
+          tiles: [
+            { titleEn: null, eyebrowEn: null, imageAltBg: null, href: null },
+            null,
+            { titleEn: 'Published tile', eyebrowEn: null, imageAltBg: null, href: null },
+          ],
+          benefits: [blankBenefit, null, blankBenefit, null],
+        },
+      },
     });
   } finally {
     if (previousImageDirectory === undefined) {

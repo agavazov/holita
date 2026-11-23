@@ -17,6 +17,13 @@ export function localizedText(
   language: Language,
   bg: string | null | undefined,
   en: string | null | undefined,
-) {
-  return (language === 'en' ? (en ?? bg) : (bg ?? en)) ?? null;
+): { text: string; language: Language } | null {
+  const translations = { bg, en };
+  const preferred = translations[language];
+  if (preferred) {
+    return { text: preferred, language };
+  }
+  const fallbackLanguage = language === 'bg' ? 'en' : 'bg';
+  const fallback = translations[fallbackLanguage];
+  return fallback ? { text: fallback, language: fallbackLanguage } : null;
 }

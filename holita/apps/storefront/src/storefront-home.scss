@@ -29,21 +29,30 @@
   }
 }
 
-.home-hero--with-tiles .home-hero-media {
-  inset-block-end: auto;
-  height: 33rem;
+.home-hero--with-tiles {
+  @media (width < 40rem) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
 
-  @media (min-width: 40rem) {
-    inset-block-end: 8rem;
-    height: auto;
+    .home-hero-media {
+      grid-row: 1 / 2;
+      inset-block-end: -2rem;
+      min-height: 33rem;
+    }
   }
 
-  @media (min-width: 48rem) {
-    inset-block-end: 10rem;
-  }
+  .home-hero-media {
+    @media (min-width: 40rem) {
+      inset-block-end: 8rem;
+    }
 
-  @media (min-width: 64rem) {
-    inset-block-end: 12rem;
+    @media (min-width: 48rem) {
+      inset-block-end: 10rem;
+    }
+
+    @media (min-width: 64rem) {
+      inset-block-end: 12rem;
+    }
   }
 }
 

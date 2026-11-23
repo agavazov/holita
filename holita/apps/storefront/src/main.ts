@@ -91,7 +91,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
     <header class="shop-header" data-header-theme="dark">
       @if (announcement(); as announcement) {
         <div class="shop-announcement">
-          <p class="shop-width">{{ announcement }}</p>
+          <p class="shop-width" [attr.lang]="announcement.language">{{ announcement.text }}</p>
         </div>
       }
       <div class="shop-header-inner shop-width">
@@ -169,7 +169,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             [attr.aria-label]="cartCount === null ? t().cart : t().cartCount(cartCount)"
             aria-haspopup="dialog"
             aria-controls="cart-preview"
-            (click)="cartPreview.open(cartButton)"
+            (click)="cartState.refresh(); cartPreview.open(cartButton)"
           >
             <svg
               viewBox="0 0 24 24"
