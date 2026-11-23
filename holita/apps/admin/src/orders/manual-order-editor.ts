@@ -8,6 +8,7 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   resource,
   signal,
   viewChild,
@@ -46,6 +47,7 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
+import type { OperatorOrderDetailFragment } from '../generated/orders-operations';
 import { orderAmount } from './order-format';
 import { OrdersApi, orderIdPattern } from './orders-api';
 
@@ -147,9 +149,10 @@ export class ManualOrderEditor {
       return { order, choices };
     },
   });
-  protected readonly order = computed(() =>
+  private readonly loadedOrder = computed(() =>
     this.record.hasValue() ? this.record.value().order : null,
   );
+  protected readonly order = linkedSignal(() => this.loadedOrder());
   protected readonly amountsLocked = computed(() => !!this.order()?.invoice);
   private readonly choices = computed(() =>
     this.record.hasValue() ? this.record.value().choices : null,
@@ -169,7 +172,10 @@ export class ManualOrderEditor {
     }
     return 'ready';
   });
-  protected readonly canEdit = computed(() => this.canWrite() && !!this.choices());
+  protected readonly canEdit = computed(
+    () =>
+      this.canWrite() && !!this.choices() && (!this.editing || this.order()?.canEditManualOrder),
+  );
   protected readonly customerOptions = computed(() => [
     { id: '', label: this.text().guestOrder, name: '', email: '', phone: '' },
     ...(this.choices()?.customers ?? []).map(({ id, name, email, orderPhone }) => ({
@@ -315,8 +321,7 @@ export class ManualOrderEditor {
   constructor() {
     effect(() => {
       this.params();
-      const order = this.order();
-      this.lines.clear();
+      const order = this.loadedOrder();
       this.autofilledContact.clear();
       this.form.reset({
         customerId: order?.customerId ?? '',
@@ -328,18 +333,7 @@ export class ManualOrderEditor {
         paymentMethodId: order?.paymentMethodId ?? '',
         shippingMethodId: order?.shippingMethodId ?? '',
       });
-      for (const line of order?.lines ?? []) {
-        this.lines.push(
-          this.lineForm(
-            {
-              lineId: line.id,
-              variantId: line.variantId,
-              label: `${line.label} · ${line.sku}`,
-            },
-            line.quantity,
-          ),
-        );
-      }
+      this.resetLines(order?.lines ?? []);
       this.search.set(null);
       this.errors.set({});
       this.saveError.set(null);
@@ -444,6 +438,7 @@ export class ManualOrderEditor {
     if (!params || this.saving() || !this.canEdit()) {
       return;
     }
+    const isCurrent = () => !this.destroyRef.destroyed && this.params() === params;
     this.form.markAllAsTouched();
     this.errors.set({});
     this.saveError.set(null);
@@ -493,7 +488,7 @@ export class ManualOrderEditor {
               quantity: quantity ?? 0,
             })),
           });
-      if (this.destroyRef.destroyed || this.params() !== params) {
+      if (!isCurrent()) {
         return;
       }
       this.form.markAsPristine();
@@ -501,7 +496,7 @@ export class ManualOrderEditor {
       this.host.saved({ recordId, message: this.text().manualOrderSaved });
       this.drawer().close();
     } catch (error: unknown) {
-      if (this.destroyRef.destroyed || this.params() !== params) {
+      if (!isCurrent()) {
         return;
       }
       const text = this.text();
@@ -525,6 +520,23 @@ export class ManualOrderEditor {
         params.scope.language,
         (code) => reasons[code],
       );
+      const { order: orderErrorCode } = fieldErrors(
+        error,
+        ['order'],
+        params.scope.language,
+        (code) => code,
+      );
+      if (orderErrorCode === 'MANUAL_ORDER_AMOUNTS_LOCKED' && params.id) {
+        const saved = await this.api.find(params.scope, params.id).catch(() => null);
+        if (!isCurrent()) {
+          return;
+        }
+        if (saved?.invoice) {
+          this.order.set(saved);
+          this.resetLines(saved.lines);
+          this.form.controls.shippingMethodId.reset(saved.shippingMethodId ?? '');
+        }
+      }
       const messages = Object.fromEntries(
         paths.flatMap((path) => {
           const message = wireErrors[operatorFieldPath(path)];
@@ -538,6 +550,16 @@ export class ManualOrderEditor {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  private resetLines(lines: OperatorOrderDetailFragment['lines']): void {
+    this.lines.clear();
+    for (const { id, variantId, label, sku, quantity } of lines) {
+      this.lines.push(
+        this.lineForm({ lineId: id, variantId, label: `${label} · ${sku}` }, quantity),
+      );
+    }
+    this.lines.markAsPristine();
   }
 
   private lineForm(choice: LineChoice, quantity: number): LineForm {
