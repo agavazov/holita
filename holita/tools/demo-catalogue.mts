@@ -493,6 +493,14 @@ export const demoCatalogue: readonly DemoBrand[] = [
           en: 'A two-handled ceramic dish for baking and serving.',
         },
       ],
+      [
+        72,
+        'Каменинова купа „Дюна“, 18 см',
+        '32.90',
+        'draft',
+        4,
+        [['KUPA-DUNA-18-PYASAK', '32.90', 8, [1]]],
+      ],
     ],
   },
   {

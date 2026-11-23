@@ -492,7 +492,10 @@
       >
         {{ text().variants }}
       </h3>
-      <p>{{ optionGroups().length ? text().variantOptionsHint : text().variantNoOptions }}</p>
+      <p>
+        {{ optionGroups().length ? text().variantOptionsHint : text().variantNoOptions }} @if
+        (editing && optionGroups().length) { {{ text().variantSavedOptionsHint }} }
+      </p>
       @if (errors()['variants']; as message) {
       <p-message id="product-variants-error" severity="error">{{ message }}</p-message>
       } @for (variant of variants.controls; track variant; let index = $index) { @let valuesId =
@@ -529,7 +532,25 @@
         </div>
         @if (errors()[path(index, 'id')]; as message) {
         <p-message severity="error">{{ message }}</p-message>
-        } @if (optionGroups().length) {
+        } @if (retained) {
+        <osnova-form-field
+          [controlId]="valuesId"
+          [label]="text().variantValues"
+          [error]="valuesError"
+        >
+          <div
+            class="variant-combination"
+            [id]="valuesId"
+            role="group"
+            tabindex="-1"
+            [attr.aria-labelledby]="valuesId + '-label'"
+            [attr.aria-describedby]="valuesError ? valuesId + '-error' : null"
+            [attr.aria-invalid]="valuesError ? 'true' : null"
+          >
+            {{ variantCombination(variant.controls.optionValueIds.value) }}
+          </div>
+        </osnova-form-field>
+        } @else if (optionGroups().length) {
         <osnova-form-field
           [controlId]="valuesId"
           [label]="text().variantValues"

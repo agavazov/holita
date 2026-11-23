@@ -12,6 +12,10 @@
   font-weight: 600;
 }
 
+.variant-combination {
+  overflow-wrap: anywhere;
+}
+
 .product-gallery {
   display: grid;
   gap: var(--p-app-space-3);

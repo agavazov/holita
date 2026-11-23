@@ -1498,12 +1498,22 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(await storefront(publicB, readNavigation)).toEqual({
     data: { shopNavigation: { header: [], footer: [] } },
   });
+  const red = { id: randomUUID(), label: 'Red', sortOrder: 0 };
+  const blue = { id: randomUUID(), label: 'Blue', sortOrder: 1 };
+  await database.option.create({
+    data: {
+      ...categoryScope,
+      name: 'Color',
+      values: { create: [red, blue] },
+    },
+  });
   for (const [name, status] of [
     ['Visible', 'ACTIVE'],
     ['Draft', 'DRAFT'],
     ['Archived', 'ARCHIVED'],
     ['No active variant', 'ACTIVE'],
   ] as const) {
+    const tracked = name === 'Visible';
     await database.product.create({
       data: {
         tenantId: tenantA,
@@ -1512,8 +1522,12 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
         variants: {
           create: {
             ...storedVariant(name, '1.00', name !== 'No active variant'),
-            inventoryTracked: name === 'Visible',
-            quantity: name === 'Visible' ? 2 : 0,
+            inventoryTracked: tracked,
+            quantity: tracked ? 2 : 0,
+            ...(tracked && {
+              combinationKey: createHash('sha256').update(red.id).digest('hex'),
+              values: { create: { optionValueId: red.id } },
+            }),
           },
         },
         status,
@@ -1598,7 +1612,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   const variant = await database.productVariant.findFirstOrThrow({
     where: { ...categoryScope, sku: 'Visible' },
   });
-  const readCart = '{cart{itemCount subtotal lines{id variantId name issue}}}';
+  const readCart = '{cart{itemCount subtotal lines{id variantId name optionLabels issue}}}';
   const cart = () => storefront(publicA, readCart, {}, token);
   expect(await cart()).toEqual({ data: { cart: { itemCount: 0, subtotal: '0.00', lines: [] } } });
   const add =
@@ -1824,21 +1838,42 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   ).toHaveProperty('errors');
 
   const saveProduct =
-    'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){variants{id}}}';
-  const draft = {
+    'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){variants{id quantity optionValueIds}}}';
+  const redDraft = {
+    id: variant.id,
     sku: variant.sku,
     price: '4.25',
     active: true,
     inventoryTracked: true,
-    optionValueIds: [],
+    optionValueIds: [red.id],
   };
-  const saveVariants = (id?: string, price = draft.price) =>
+  const saveVariants = (
+    variants: (Omit<typeof redDraft, 'id'> & { id?: string; quantity?: number })[],
+  ) =>
     query(tokens.operator, publicA, saveProduct, {
       id: variant.productId,
-      input: { name: 'Visible', status: 'ACTIVE', variants: [{ ...draft, id, price }] },
+      input: { name: 'Visible', status: 'ACTIVE', variants },
     });
-  expect(await saveVariants(variant.id)).toEqual({
-    data: { updateProduct: { variants: [{ id: variant.id }] } },
+  expect(await saveVariants([{ ...redDraft, optionValueIds: [blue.id] }])).toMatchObject({
+    data: null,
+    errors: [
+      {
+        extensions: {
+          code: 'BAD_USER_INPUT',
+          fieldErrors: [{ path: 'variants0OptionValueIds', code: 'VARIANT_COMBINATION_IMMUTABLE' }],
+        },
+      },
+    ],
+  });
+  expect(await cart()).toMatchObject({
+    data: {
+      cart: { lines: [{ id: line.id, variantId: variant.id, optionLabels: ['Red'], issue: null }] },
+    },
+  });
+  expect(await saveVariants([redDraft])).toEqual({
+    data: {
+      updateProduct: { variants: [{ id: variant.id, quantity: 2, optionValueIds: [red.id] }] },
+    },
   });
   expect(await storefront(publicA, applyDiscount, { code: discountInput.code }, token)).toEqual({
     data: {
@@ -1941,7 +1976,13 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     shippingFee: '6.00',
     total: '13.22',
     lines: [
-      { sku: variant.sku, label: 'Visible', quantity: 2, unitPrice: '4.25', lineTotal: '8.50' },
+      {
+        sku: variant.sku,
+        label: 'Visible · Red',
+        quantity: 2,
+        unitPrice: '4.25',
+        lineTotal: '8.50',
+      },
     ],
   };
   expect(placed).toEqual({ data: { placeOrder: receipt } });
@@ -2078,9 +2119,38 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     ],
   });
 
-  await database.productVariant.update({
-    where: variantKey,
-    data: { active: false, inventoryTracked: false },
+  const blueDraft = {
+    sku: 'Visible-Blue',
+    price: '5.00',
+    active: true,
+    inventoryTracked: true,
+    optionValueIds: [blue.id],
+  };
+  expect(
+    await saveVariants([
+      { ...redDraft, active: false, inventoryTracked: false },
+      { ...blueDraft, quantity: 5 },
+    ]),
+  ).toEqual({
+    data: {
+      updateProduct: {
+        variants: [
+          { id: variant.id, quantity: 0, optionValueIds: [red.id] },
+          { id: expect.any(String), quantity: 5, optionValueIds: [blue.id] },
+        ],
+      },
+    },
+  });
+  const replacement = await database.productVariant.findFirstOrThrow({
+    where: { ...categoryScope, productId: variant.productId, sku: blueDraft.sku },
+  });
+  expect(replacement.id).not.toBe(variant.id);
+  expect(await cart()).toMatchObject({
+    data: {
+      cart: {
+        lines: [{ id: newLine.id, variantId: null, optionLabels: [], issue: 'UNAVAILABLE' }],
+      },
+    },
   });
   expect(
     await database.productVariant.findUniqueOrThrow({
@@ -2117,10 +2187,18 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     ],
   });
 
-  expect(await saveVariants(variant.id, '5.00')).toEqual({
-    data: { updateProduct: { variants: [{ id: variant.id }] } },
+  const savedBlue = { ...blueDraft, id: replacement.id };
+  expect(await saveVariants([{ ...redDraft, price: '5.00' }, savedBlue])).toEqual({
+    data: {
+      updateProduct: {
+        variants: [
+          { id: variant.id, quantity: 1, optionValueIds: [red.id] },
+          { id: replacement.id, quantity: 5, optionValueIds: [blue.id] },
+        ],
+      },
+    },
   });
-  expect(await saveVariants(undefined, '5.00')).toMatchObject({
+  expect(await saveVariants([savedBlue])).toMatchObject({
     errors: [
       {
         extensions: {
@@ -2210,14 +2288,11 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       select: { quantity: true },
     }),
   ).toEqual({ quantity: 3 });
-  expect(await saveVariants(undefined, '5.00')).toHaveProperty('data.updateProduct');
-  const replacement = await database.productVariant.findFirstOrThrow({
-    where: {
-      ...categoryScope,
-      productId: variant.productId,
+  expect(await saveVariants([savedBlue])).toEqual({
+    data: {
+      updateProduct: { variants: [{ id: replacement.id, quantity: 5, optionValueIds: [blue.id] }] },
     },
   });
-  expect(replacement.id).not.toBe(variant.id);
   expect(await cart()).toMatchObject({
     data: {
       cart: {

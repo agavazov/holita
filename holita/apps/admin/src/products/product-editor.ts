@@ -230,6 +230,14 @@ export class ProductEditor {
         items: values.map(({ id, label }) => ({ id, label, displayLabel: `${name}: ${label}` })),
       })),
   );
+  private readonly optionValueLabels = computed(
+    () =>
+      new Map(
+        this.optionGroups().flatMap(({ items }) =>
+          items.map(({ id, displayLabel }) => [id, displayLabel] as const),
+        ),
+      ),
+  );
   protected readonly statusOptions = computed(() => [
     { value: 'DRAFT', label: this.text().draft },
     { value: 'ACTIVE', label: this.text().active },
@@ -403,6 +411,11 @@ export class ProductEditor {
 
   protected variantError(index: number, field: VariantField): string | null {
     return this.controlError(this.variants.at(index).controls[field], this.path(index, field));
+  }
+
+  protected variantCombination(ids: string[]): string {
+    const labels = this.optionValueLabels();
+    return ids.flatMap((id) => labels.get(id) ?? []).join(', ') || this.text().variantNoValues;
   }
 
   protected selectPt(error: string | null, id: string, multiple = false) {
@@ -785,8 +798,10 @@ export class ProductEditor {
       const messages: Record<string, string> = {
         DUPLICATE_SKU: this.text().variantDuplicateSku,
         DUPLICATE_COMBINATION: this.text().variantDuplicateCombination,
+        VARIANT_COMBINATION_IMMUTABLE: this.text().variantCombinationImmutable,
         INVALID_OPTION_VALUES: this.text().variantInvalidValues,
         MISMATCHED_OPTIONS: this.text().variantMismatchedOptions,
+        VARIANT_HAS_OUTSTANDING_DEDUCTIONS: this.text().variantOutstandingDeductionRemoval,
         INVALID_GALLERY: this.text().productImageInvalid,
         INVALID_IMAGE: this.text().productImageInvalid,
         IMAGE_BATCH_TOO_LARGE: this.text().productImageBatchTooLarge,
@@ -816,11 +831,6 @@ export class ProductEditor {
         }
         if (path.startsWith('variants.') && path.endsWith('.id')) {
           return this.text().variantUnavailable;
-        }
-        if (code === 'VARIANT_HAS_OUTSTANDING_DEDUCTIONS') {
-          return path === 'variants'
-            ? this.text().variantOutstandingDeductionRemoval
-            : this.text().variantOutstandingDeductionCombination;
         }
         return messages[code];
       });

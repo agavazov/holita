@@ -519,12 +519,15 @@ The Sofia demo shop includes Material and Finish values on a ceramic baking dish
 In Admin, use Options to define reusable options for the selected shop. The drawer lets you set
 the option's status and filter visibility, edit its text values and move them into order. The Sofia
 demo shop includes Colour and Size. The operator graph exposes `options`, `option`, `createOption`
-and `updateOption`. To delete a value used by a product variant, first remove it from the variant.
+and `updateOption`. To delete a value used by a product variant, first remove the variants using
+that value. Variants with stock still eligible for restoration can be deactivated until then.
 
 In Admin, open a product and edit its Variants section. Leave option values empty for the
 default variant of a simple product. For a configurable product, add one row per combination
 and choose one value from each of the same options in every row. Each variant has a shop-unique
-SKU, price, inventory tracking and status. Set an initial quantity when adding a tracked variant.
+SKU, price, inventory tracking and status. A saved variant keeps its combination. To offer a
+different combination, add a new variant and set its own initial quantity if tracked. Set the
+original variant to Inactive to stop selling it.
 For a saved variant, search Inventory by product name or SKU, then open the variant to view its
 details or set its tracked stock count. Filter by tracking status or show only tracked variants
 with zero stock.

@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [257](257-holita-variant-combination-identity.md).
-
 ## Background
 
 The red.bg coverage report marks PRD-06 as P2. The product editor currently adds variant rows manually.
@@ -23,7 +21,7 @@ The merchant can generate a small variant matrix, edit a row and regenerate with
 
 ## Limits
 
-Use the existing product editor and stable identity from ticket 257. No arbitrary form builder.
+Use the existing product editor and preserve saved variant identities. No arbitrary form builder.
 
 ## References
 

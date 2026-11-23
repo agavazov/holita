@@ -14,6 +14,7 @@ import {
   CommerceRepository,
   ConflictingVariantQuantityError,
   DuplicateSkuError,
+  ImmutableVariantCombinationError,
   InvalidImageIdError,
   InvalidMarkerIdError,
   InvalidVariantIdError,
@@ -280,16 +281,30 @@ export class CommerceService {
       if (error instanceof InvalidVariantIdError) {
         throw variantError(error.index, 'id', 'INVALID_VALUE', error.message);
       }
+      if (error instanceof ImmutableVariantCombinationError) {
+        throw new UnprocessableEntityException({
+          message: error.message,
+          fieldErrors: [
+            {
+              path: `variants.${String(error.index)}.optionValueIds`,
+              code: 'VARIANT_COMBINATION_IMMUTABLE',
+              message: error.message,
+            },
+          ],
+        });
+      }
       if (error instanceof ConflictingVariantQuantityError) {
         throw variantError(error.index, 'quantity', 'INVENTORY_QUANTITY_CONFLICT', error.message);
       }
       if (error instanceof VariantOutstandingDeductionsError) {
-        const path =
-          error.index === undefined ? 'variants' : `variants.${String(error.index)}.optionValueIds`;
         throw new UnprocessableEntityException({
           message: error.message,
           fieldErrors: [
-            { path, code: 'VARIANT_HAS_OUTSTANDING_DEDUCTIONS', message: error.message },
+            {
+              path: 'variants',
+              code: 'VARIANT_HAS_OUTSTANDING_DEDUCTIONS',
+              message: error.message,
+            },
           ],
         });
       }

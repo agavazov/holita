@@ -2120,14 +2120,15 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
           input: { ...productFields, variants },
         },
       );
-    for (const [draft, path] of [
-      [[glossVariant], 'variants'],
+    for (const [draft, path, code] of [
+      [[glossVariant], 'variants', 'VARIANT_HAS_OUTSTANDING_DEDUCTIONS'],
       [
         [
           { ...glossVariant, optionValueIds: [satin.id] },
           { ...satinVariant, optionValueIds: [gloss.id] },
         ],
-        'variants1OptionValueIds',
+        'variants0OptionValueIds',
+        'VARIANT_COMBINATION_IMMUTABLE',
       ],
     ] as const) {
       expect(await saveConfiguredVariants(draft)).toMatchObject({
@@ -2135,7 +2136,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
           {
             extensions: {
               code: 'BAD_USER_INPUT',
-              fieldErrors: [{ path, code: 'VARIANT_HAS_OUTSTANDING_DEDUCTIONS' }],
+              fieldErrors: [{ path, code }],
             },
           },
         ],

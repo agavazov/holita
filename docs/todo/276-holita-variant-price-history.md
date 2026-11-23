@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [257](257-holita-variant-combination-identity.md).
-
 ## Background
 
 The red.bg coverage report marks PRI-03 as P1. Holita does not store effective price history. red.bg provides a separate historical reference in the public API.
@@ -23,7 +21,7 @@ Changing a variant price preserves the historical values under the same identity
 
 ## Limits
 
-Keep Admin compare-at and any shopper-visible discount claim in ticket 163. Use actual price data and the variant identity fix in ticket 257.
+Keep Admin compare-at and any shopper-visible discount claim in ticket 163. Record actual prices against the saved variant ID.
 
 ## References
 

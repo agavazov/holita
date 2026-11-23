@@ -224,7 +224,6 @@ export class CommerceRepository {
           })
         : [];
       const currentById = new Map(current.map((variant) => [variant.id, variant]));
-      const reassigned = new Map<string, number>();
       const replacements = variants.map((variant, index) => {
         if (!variant.id) {
           return { ...variant, quantity: variant.quantity ?? 0 };
@@ -233,11 +232,11 @@ export class CommerceRepository {
         if (!existing) {
           throw new InvalidVariantIdError(index);
         }
+        if (variant.combinationKey !== existing.combinationKey) {
+          throw new ImmutableVariantCombinationError(index);
+        }
         if (variant.quantity !== undefined && variant.quantity !== existing.quantity) {
           throw new ConflictingVariantQuantityError(index);
-        }
-        if (variant.combinationKey !== existing.combinationKey) {
-          reassigned.set(variant.id, index);
         }
         return { ...variant, quantity: existing.quantity };
       });
@@ -255,21 +254,11 @@ export class CommerceRepository {
       }
       const retainedIds = new Set(replacements.map((variant) => variant.id));
       const removedIds = current.map((variant) => variant.id).filter((id) => !retainedIds.has(id));
-      if (removedIds.length || reassigned.size) {
-        const protectedIds = await this.variantsWithOutstandingDeductions(tx, scope, [
-          ...removedIds,
-          ...reassigned.keys(),
-        ]);
-        if (removedIds.some((id) => protectedIds.has(id))) {
+      if (removedIds.length) {
+        const protectedIds = await this.variantsWithOutstandingDeductions(tx, scope, removedIds);
+        if (protectedIds.size) {
           throw new VariantOutstandingDeductionsError();
         }
-        for (const [id, index] of reassigned) {
-          if (protectedIds.has(id)) {
-            throw new VariantOutstandingDeductionsError(index);
-          }
-        }
-      }
-      if (removedIds.length) {
         await tx.cartLine.updateMany({
           where: { ...scope, variantId: { in: removedIds } },
           data: { variantId: null },
@@ -280,7 +269,7 @@ export class CommerceRepository {
         });
       }
       // Replace the aggregate atomically, keeping the IDs of retained variants.
-      // This also permits exchanging a SKU or combination between rows in one edit.
+      // This also permits exchanging SKUs between rows in one edit.
       await tx.productVariant.deleteMany({ where: productScope });
       for (const { optionValueIds, ...variant } of replacements) {
         await tx.productVariant.create({
@@ -426,6 +415,12 @@ export class InvalidVariantIdError extends Error {
   }
 }
 
+export class ImmutableVariantCombinationError extends Error {
+  constructor(readonly index: number) {
+    super('Add a new variant for a different combination');
+  }
+}
+
 export class ConflictingVariantQuantityError extends Error {
   constructor(readonly index: number) {
     super('Use Inventory to adjust quantities for tracked variants');
@@ -433,7 +428,7 @@ export class ConflictingVariantQuantityError extends Error {
 }
 
 export class VariantOutstandingDeductionsError extends Error {
-  constructor(readonly index?: number) {
+  constructor() {
     super('This variant still has stock to restore');
   }
 }
