@@ -188,3 +188,13 @@ These stay outside the runnable wave until their blockers are resolved. The scop
 | [233 Issue shop gift cards for an approved use](233-holita-admin-gift-cards.md)                             | 5    | Needs owner. What manual use is allowed for shop gift cards, and when may an operator reactivate or delete one?       |                    |
 | [343 Accept and read verified shopper reviews through the API](343-holita-verified-shopper-review-api.md)   | 5    | Blocked                                                                                                               | 230                |
 | [358 Reconcile the final red.bg Sales transfer](358-holita-sales-final-transfer.md)                         | 4    | Blocked. Wait for the owner’s final review, a current source export and the applicable CRM screens.                   | 134, 135, 138, 139 |
+| [359 Confirm the reviewed order amount before issuing an invoice](359-holita-invoice-review-amount.md) | 5 | Ready | Fix the verified HLR-01 behavior and apply its acceptance criterion. |
+| [360 Keep the selected variant identifiable through checkout](360-holita-checkout-variant-identity.md) | 5 | Ready | Fix the verified HLR-02 behavior and apply its acceptance criterion. |
+| [361 Refresh the reviewed quote after header cart edits](361-holita-checkout-cart-review.md) | 5 | Ready | Fix the verified HLR-03 behavior and apply its acceptance criterion. |
+| [362 Preserve primary contact selection when editing a note](362-holita-sales-primary-note.md) | 5 | Ready | Fix the verified HLR-04 behavior and apply its acceptance criterion. |
+| [363 Make full phone searches independent of formatting](363-holita-sales-full-phone-search.md) | 5 | Ready | Fix the verified HLR-05 behavior and apply its acceptance criterion. |
+| [364 Reject duplicate source identifiers during import preview](364-holita-sales-import-duplicate-identity.md) | 5 | Ready | Fix the verified HLR-06 behavior and apply its acceptance criterion. |
+| [365 Preserve a storefront session across equivalent shop URLs](365-holita-shop-uuid-casing.md) | 5 | Ready | Fix the verified HLR-07 behavior and apply its acceptance criterion. |
+| [366 Show the effective minimum when editing manual order quantities](366-holita-manual-order-line-minimum.md) | 5 | Ready | Fix the verified HLR-08 behavior and apply its acceptance criterion. |
+| [367 Mark the conflicting SKU on its Admin variant row](367-holita-admin-variant-field-errors.md) | 5 | Ready | Fix the verified HLR-09 behavior and apply its acceptance criterion. |
+| [368 Discard unapplied mobile catalogue filters when sorting](368-holita-mobile-filter-cancel.md) | 5 | Ready | Fix the verified HLR-10 behavior and apply its acceptance criterion. |
