@@ -1,0 +1,6 @@
+query OperatorSalesWorkspace {
+  salesWorkspaceAccess {
+    tenantId
+    userId
+  }
+}

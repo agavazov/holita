@@ -59,6 +59,7 @@
             "holita-admin",
             "holita-backoffice",
             "holita-sales",
+            "holita-sales-api",
             "holita-gateway",
             "holita-commerce",
             "osnova-core",

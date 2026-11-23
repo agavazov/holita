@@ -22,6 +22,7 @@ export const operationPaths = [
   'osnova/packages/ui/src/app/auth/operations.graphql',
   'osnova/packages/ui/src/app/branches/operations.graphql',
   'holita/packages/operator/src/operations.graphql',
+  'holita/apps/sales/src/workspace/operations.graphql',
   'holita/apps/admin/src/badges/operations.graphql',
   'holita/apps/admin/src/blog/operations.graphql',
   'holita/apps/admin/src/brands/operations.graphql',
@@ -51,6 +52,12 @@ export const targets = {
       subgraph: 'sales',
       path: 'holita/apps/sales-api/src/generated/graphql/types.ts',
     },
+    clients: [
+      {
+        path: 'holita/apps/sales/src/generated/operations.ts',
+        operations: ['holita/apps/sales/src/workspace/operations.graphql'],
+      },
+    ],
   },
   operator: {
     clients: [

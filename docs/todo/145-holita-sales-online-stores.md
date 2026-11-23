@@ -1,6 +1,6 @@
 # 145 Manage prospect online stores
 
-**Status:** Ready after [300](300-holita-sales-workspace-access.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

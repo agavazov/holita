@@ -1,0 +1,6 @@
+{
+  "salesAccessChecking": "Checking Sales workspace access…",
+  "salesAccessGranted": "You have access to the Sales workspace.",
+  "salesAccessDenied": "The Sales workspace requires a Sales account.",
+  "salesAccessUnavailable": "Sales workspace access could not be verified."
+}

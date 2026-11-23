@@ -57,6 +57,7 @@
       "{workspaceRoot}/holita/packages/operator/**/*",
       "{workspaceRoot}/osnova/packages/ui/**/*",
       "{workspaceRoot}/holita/apps/commerce/src/**/*.graphql",
+      "{workspaceRoot}/holita/apps/sales-api/src/**/*.graphql",
       "{workspaceRoot}/osnova/apps/core/src/**/*.graphql"
     ]
   }

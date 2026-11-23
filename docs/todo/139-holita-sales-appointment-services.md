@@ -1,6 +1,6 @@
 # 139 Configure appointment services and availability
 
-**Status:** Ready after [300](300-holita-sales-workspace-access.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

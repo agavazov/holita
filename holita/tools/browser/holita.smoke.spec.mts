@@ -15,20 +15,29 @@ config({
   path: [
     join(root, 'holita/config/core.env'),
     join(root, 'holita/config/commerce.env'),
+    join(root, 'holita/config/sales.env'),
     join(root, 'holita/config/seed-accounts.env'),
   ],
   quiet: true,
   override: true,
 });
 
-function testUrl(service: 'core' | 'commerce'): URL {
+const migrationPaths = {
+  core: 'osnova/apps/core/prisma/migrations',
+  commerce: 'holita/apps/commerce/prisma/migrations',
+  sales: 'holita/apps/sales-api/prisma/migrations',
+};
+type TestDatabase = keyof typeof migrationPaths;
+
+function testUrl(service: TestDatabase): URL {
   const name = `holita_${service}_test`;
   const value = process.env[`${service.toUpperCase()}_TEST_DATABASE_URL`];
   if (!value) {
     throw new Error('The dedicated Holita test database is required');
   }
-  const url = new URL(value);
+  const url = URL.parse(value);
   if (
+    !url ||
     url.protocol !== 'postgresql:' ||
     url.hostname !== '127.0.0.1' ||
     url.pathname !== `/${name}` ||
@@ -42,7 +51,7 @@ function testUrl(service: 'core' | 'commerce'): URL {
   return url;
 }
 
-async function database(service: 'core' | 'commerce') {
+async function database(service: TestDatabase) {
   const url = testUrl(service);
   const schema = `test_${randomUUID().replaceAll('-', '')}`;
   const client = new pg.Client({ connectionString: url.toString(), connectionTimeoutMillis: 5000 });
@@ -52,12 +61,7 @@ async function database(service: 'core' | 'commerce') {
     await client.query(`CREATE SCHEMA ${pg.escapeIdentifier(schema)}`);
     created = true;
     await client.query(`SET search_path TO ${pg.escapeIdentifier(schema)}`);
-    const migrations = join(
-      root,
-      service === 'core'
-        ? 'osnova/apps/core/prisma/migrations'
-        : 'holita/apps/commerce/prisma/migrations',
-    );
+    const migrations = join(root, migrationPaths[service]);
     const directories = (await readdir(migrations, { withFileTypes: true }))
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
@@ -166,7 +170,7 @@ async function runSeed(env: NodeJS.ProcessEnv): Promise<void> {
 }
 
 async function serve(
-  app: 'admin' | 'backoffice' | 'storefront',
+  app: 'admin' | 'backoffice' | 'sales' | 'storefront',
   routerUrl: string,
   commerceOrigin?: string,
 ) {
@@ -273,19 +277,69 @@ async function serve(
 async function secretFill(locator: Locator, value: string): Promise<void> {
   await locator.evaluate((element, secret) => {
     if (!(element instanceof HTMLInputElement)) {
-      throw new Error('Missing password input');
+      throw new Error('Missing credential input');
     }
     element.value = secret;
     element.dispatchEvent(new Event('input', { bubbles: true }));
   }, value);
 }
 
-async function signIn(page: Page, email: string, password: string): Promise<void> {
+function waitForOperation(page: Page, endpoint: string, name: string): Promise<Response> {
+  return page.waitForResponse(
+    (response) =>
+      response.url() === endpoint &&
+      response.request().postData()?.includes(`"operationName":"${name}"`) === true,
+  );
+}
+
+async function signIn(page: Page, email: string, password: string) {
   await page.getByRole('button', { name: 'Език' }).click();
   await page.getByText('English', { exact: true }).click();
-  await page.locator('#sign-in-email').fill(email);
+  await secretFill(page.locator('#sign-in-email'), email);
   await secretFill(page.locator('#sign-in-password'), password);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  const [response] = await Promise.all([
+    waitForOperation(page, new URL('/graphql', page.url()).href, 'AdminSignIn'),
+    page.getByRole('button', { name: 'Sign in', exact: true }).click(),
+  ]);
+  if (!response.ok()) {
+    throw new Error('Core sign-in request failed');
+  }
+  const result: unknown = await response.json();
+  if (!result || typeof result !== 'object' || !('data' in result)) {
+    throw new Error('Core sign-in did not return a session');
+  }
+  const data = result.data;
+  if (!data || typeof data !== 'object' || !('signIn' in data)) {
+    throw new Error('Core sign-in did not return a session');
+  }
+  const session = data.signIn;
+  if (
+    !session ||
+    typeof session !== 'object' ||
+    !('token' in session) ||
+    typeof session.token !== 'string' ||
+    !session.token ||
+    !('tenant' in session) ||
+    !session.tenant ||
+    typeof session.tenant !== 'object' ||
+    !('id' in session.tenant) ||
+    typeof session.tenant.id !== 'string' ||
+    !('user' in session) ||
+    !session.user ||
+    typeof session.user !== 'object' ||
+    !('id' in session.user) ||
+    typeof session.user.id !== 'string' ||
+    !('role' in session.user) ||
+    typeof session.user.role !== 'string'
+  ) {
+    throw new Error('Core sign-in returned an incomplete session');
+  }
+  return {
+    authorization: `Bearer ${session.token}`,
+    tenantId: session.tenant.id,
+    userId: session.user.id,
+    role: session.user.role,
+  };
 }
 
 async function createShop(page: Page, name: string): Promise<string> {
@@ -501,8 +555,10 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
 }) => {
   const staffEmail = process.env.HOLITA_STAFF_EMAIL;
   const staffPassword = process.env.HOLITA_STAFF_PASSWORD;
+  const salesEmail = process.env.HOLITA_SALES_EMAIL;
+  const salesPassword = process.env.HOLITA_SALES_PASSWORD;
   const internal = process.env.CORE_INTERNAL_AUTH_TOKEN;
-  if (!staffEmail || !staffPassword || !internal) {
+  if (!staffEmail || !staffPassword || !salesEmail || !salesPassword || !internal) {
     throw new Error('Holita test seed configuration is required');
   }
   const cleanup: (() => Promise<void>)[] = [];
@@ -514,8 +570,11 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     cleanup.push(coreDb.close);
     const commerceDb = await database('commerce');
     cleanup.push(commerceDb.close);
+    const salesDb = await database('sales');
+    cleanup.push(salesDb.close);
     const corePort = await port();
     const commercePort = await port();
+    const salesPort = await port();
     const routerPort = await port();
     const healthPort = await port();
     const publicPort = await port();
@@ -559,11 +618,27 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     });
     cleanup.push(() => stopChild(commerce));
     await waitReady(`${commerceOrigin}/graphql`, commerce, 'graphql');
+    const salesGraphqlUrl = `http://127.0.0.1:${String(salesPort)}/graphql`;
+    const salesApi = spawn(process.execPath, ['dist/main.js'], {
+      cwd: join(root, 'holita/apps/sales-api'),
+      env: {
+        ...process.env,
+        SALES_DATABASE_URL: salesDb.url,
+        CORE_INTERNAL_AUTH_TOKEN: internal,
+        CORE_AUTH_VERIFY_URL: `http://127.0.0.1:${String(corePort)}/internal/auth/verify`,
+        PORT: String(salesPort),
+      },
+      stdio: 'ignore',
+    });
+    cleanup.push(() => stopChild(salesApi));
+    await waitReady(salesGraphqlUrl, salesApi, 'graphql');
     const routerUrl = `http://127.0.0.1:${String(routerPort)}/graphql`;
     const admin = await serve('admin', routerUrl, commerceOrigin);
     cleanup.push(admin.close);
     const backoffice = await serve('backoffice', routerUrl);
     cleanup.push(backoffice.close);
+    const salesApp = await serve('sales', routerUrl);
+    cleanup.push(salesApp.close);
     const router = spawn(
       join(root, 'osnova/tools/router/dist/router'),
       [
@@ -581,8 +656,10 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
           ROUTER_HEALTH_PORT: String(healthPort),
           CORE_GRAPHQL_URL: `http://127.0.0.1:${String(corePort)}/graphql`,
           COMMERCE_GRAPHQL_URL: `http://127.0.0.1:${String(commercePort)}/graphql`,
+          SALES_GRAPHQL_URL: salesGraphqlUrl,
           ADMIN_ORIGIN: admin.origin,
           BACKOFFICE_ORIGIN: backoffice.origin,
+          SALES_ORIGIN: salesApp.origin,
         },
         stdio: 'ignore',
       },
@@ -616,7 +693,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     cleanup.push(() => staffContext.close());
     const staff = await staffContext.newPage();
     await staff.goto(backoffice.origin);
-    await signIn(staff, staffEmail, staffPassword);
+    const staffSession = await signIn(staff, staffEmail, staffPassword);
     await staff.getByRole('button', { name: 'Create merchant', exact: true }).click();
     const merchantName = `Merchant ${randomUUID()}`;
     const merchantEmail = `merchant-${randomUUID()}@example.test`;
@@ -633,7 +710,58 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     cleanup.push(() => merchantContext.close());
     const merchant = await merchantContext.newPage();
     await merchant.goto(admin.origin);
-    await signIn(merchant, merchantEmail, merchantPassword);
+    const merchantSession = await signIn(merchant, merchantEmail, merchantPassword);
+
+    const salesContext = await browser.newContext();
+    cleanup.push(() => salesContext.close());
+    const sales = await salesContext.newPage();
+    await sales.goto(salesApp.origin);
+    const salesEndpoint = `${salesApp.origin}/graphql`;
+    const workspaceOperation = 'OperatorSalesWorkspace';
+    const [workspace, salesSession] = await Promise.all([
+      waitForOperation(sales, salesEndpoint, workspaceOperation),
+      signIn(sales, salesEmail, salesPassword),
+    ]);
+    expect(salesSession.role).toBe('SALES');
+    expect(workspace.status()).toBe(200);
+    expect(await workspace.request().headerValue('x-branch-id')).toBeNull();
+    const workspaceResult: unknown = await workspace.json();
+    expect(workspaceResult).not.toHaveProperty('errors');
+    expect(workspaceResult).toMatchObject({
+      data: {
+        salesWorkspaceAccess: { tenantId: salesSession.tenantId, userId: salesSession.userId },
+      },
+    });
+    await expect(sales).toHaveURL(`${salesApp.origin}/en/merchants`);
+    await expect(
+      sales.getByText('You have access to the Sales workspace.', { exact: true }),
+    ).toBeVisible();
+
+    const accessRequest = JSON.stringify({
+      operationName: workspaceOperation,
+      query: `query ${workspaceOperation} { salesWorkspaceAccess { tenantId userId } }`,
+    });
+    for (const [authorization, code] of [
+      [undefined, 'UNAUTHENTICATED'],
+      [staffSession.authorization, 'FORBIDDEN'],
+      [merchantSession.authorization, 'FORBIDDEN'],
+    ] as const) {
+      const denied = await fetch(salesEndpoint, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(authorization ? { authorization } : {}),
+        },
+        body: accessRequest,
+      });
+      expect(denied.status).toBe(200);
+      const result: unknown = await denied.json();
+      expect(result).toMatchObject({
+        data: null,
+        errors: [{ path: ['salesWorkspaceAccess'], extensions: { code } }],
+      });
+    }
+
     const contactSettings = {
       displayName: 'Дом и уют за тестове',
       contactEmail: 'contact@example.test',
