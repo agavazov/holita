@@ -2508,7 +2508,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     createManualOrder(input:$input){id total shippingFee customerId merchantNote canEditManualOrder}
   }`;
   const updateManual = `mutation($id:ID!,$input:ManualOrderUpdateInput!){
-    updateManualOrder(id:$id,input:$input){id total shippingFee lines{id quantity unitPrice}}
+    updateManualOrder(id:$id,input:$input){id total shippingFee merchantNote canEditManualOrder lines{id quantity unitPrice}}
   }`;
   const variantIdentity = { ...categoryScope, id: replacement.id };
   const readManualStock = () =>
@@ -2668,6 +2668,82 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     data: { updateManualOrder: { total: '117.00' } },
   });
   expect(await readManualStock()).toEqual({ quantity: 6 });
+
+  const manualShipping = await database.shippingMethod.create({
+    data: { ...categoryScope, label: 'Manual-order delivery', fixedFee: '6.00', enabled: true },
+  });
+  await database.shippingMethod.update({
+    where: { ...categoryScope, id: shippingMethodId },
+    data: { enabled: true },
+  });
+  const manualTarget = { id: manual.id };
+  const manualAmounts = { subtotal: '18.00', shippingFee: '6.00', total: '24.00' };
+  expect(
+    await query(tokens.operator, publicA, updateManual, {
+      ...manualTarget,
+      input: { contact, shippingAddress, shippingMethodId: manualShipping.id },
+    }),
+  ).toMatchObject({ data: { updateManualOrder: { shippingFee: '6.00', total: '24.00' } } });
+  const manualInvoiceTarget = { orderId: manual.id };
+  expect(
+    await query(tokens.operator, publicA, issueInvoice, {
+      ...manualInvoiceTarget,
+      input: { ...invoiceInput, number: 'TEST-0002' },
+    }),
+  ).toMatchObject({
+    data: {
+      issueOrderInvoice: {
+        ...manualAmounts,
+        lines: [{ quantity: 2, unitPrice: '9.00', lineTotal: '18.00' }],
+      },
+    },
+  });
+  const savedManualInvoice = await query(tokens.viewer, publicA, readInvoice, manualInvoiceTarget);
+  const readStoredManual = () =>
+    database.order.findUniqueOrThrow({
+      where: { ...categoryScope, ...manualTarget },
+      include: { lines: true },
+    });
+  const invoicedManual = await readStoredManual();
+  await database.productVariant.update({
+    where: variantIdentity,
+    data: { inventoryTracked: true },
+  });
+  for (const changes of [
+    { lines: manualEdit(3, lineReference).input.lines },
+    { shippingMethodId },
+  ]) {
+    expect(
+      await query(tokens.operator, publicA, updateManual, {
+        ...manualTarget,
+        input: { contact, shippingAddress, ...changes },
+      }),
+    ).toMatchObject({
+      data: null,
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'order', code: 'MANUAL_ORDER_AMOUNTS_LOCKED' }],
+          },
+        },
+      ],
+    });
+  }
+  expect(await readStoredManual()).toEqual(invoicedManual);
+  expect(await readManualStock()).toEqual({ quantity: 6 });
+  const merchantNote = 'Updated note after invoicing';
+  expect(
+    await query(tokens.operator, publicA, updateManual, {
+      ...manualTarget,
+      input: { contact, shippingAddress, merchantNote },
+    }),
+  ).toMatchObject({ data: { updateManualOrder: { merchantNote, canEditManualOrder: true } } });
+  expect(await readStoredManual()).toEqual({ ...invoicedManual, merchantNote });
+  expect(await query(tokens.viewer, publicA, readInvoice, manualInvoiceTarget)).toEqual(
+    savedManualInvoice,
+  );
+
   await query(tokens.operator, publicA, markPaid, { id: manual.id });
   expect(await query(tokens.operator, publicA, updateManual, untrackedIncrease)).toHaveProperty(
     'errors',
@@ -2680,7 +2756,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(
     await query(tokens.operator, publicA, recordRefund, {
       orderId: manual.id,
-      input: { amount: '117.00', restock: true },
+      input: { amount: manualAmounts.total, restock: true },
     }),
   ).toMatchObject({ data: { recordOrderRefund: { restock: true } } });
   expect(

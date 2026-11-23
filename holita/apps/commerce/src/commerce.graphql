@@ -756,9 +756,9 @@ input ManualOrderUpdateInput {
   shippingAddress: OrderShippingAddressInput!
   "Omit to keep the saved payment terms."
   paymentMethodId: ID
-  "Omit to keep the saved shipping terms."
+  "Omit to keep the saved shipping terms. The method cannot change after invoicing."
   shippingMethodId: ID
-  "Omit to keep the saved lines. An ordered replacement requires at least one line."
+  "Omit to keep the saved lines. Replacement requires at least one line and no issued invoice."
   lines: [ManualOrderUpdateLineInput!]
 }
 type ManualOrderPaymentMethod {

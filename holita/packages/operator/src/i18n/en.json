@@ -153,6 +153,7 @@
   "editManualOrder": "Edit manual order",
   "manualOrderSaved": "Manual order saved.",
   "manualOrderSaveFailed": "Could not save the manual order.",
+  "manualOrderAmountsLocked": "An invoice has been issued. Order items and the shipping charge are locked.",
   "manualOrderNotEditable": "Only placed, unpaid manual orders can be edited.",
   "manualOrderUnavailable": "The manual order form could not be opened.",
   "manualOrderProductsUnavailable": "Could not load the available variants.",

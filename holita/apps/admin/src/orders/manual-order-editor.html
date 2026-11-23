@@ -12,6 +12,8 @@
   <form id="manual-order-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
     @if (saveError(); as message) {
     <p-message severity="error">{{ message }}</p-message>
+    } @else if (amountsLocked()) {
+    <p-message severity="info">{{ text().manualOrderAmountsLocked }}</p-message>
     }
     <section class="app-form-section" aria-labelledby="manual-contact-heading">
       <h3 id="manual-contact-heading">{{ text().orderContact }}</h3>
@@ -61,7 +63,7 @@
     </section>
     <section class="app-form-section" aria-labelledby="manual-lines-heading">
       <h3 id="manual-lines-heading">{{ text().orderItems }}</h3>
-      @let linesError = error('lines');
+      @if (!amountsLocked()) { @let linesError = error('lines');
       <osnova-form-field
         controlId="manual-lines"
         [label]="text().addOrderLine"
@@ -103,8 +105,8 @@
           {{ shared().retry }}
         </button>
       </div>
-      } @for (line of lines.controls; track line; let index = $index) { @let path = 'lines.' + index
-      + '.quantity'; @let id = 'manual-' + path; @let message = lineError(index);
+      } } @for (line of lines.controls; track line; let index = $index) { @let path = 'lines.' +
+      index + '.quantity'; @let id = 'manual-' + path; @let message = lineError(index);
       <div
         class="app-form-grid manual-order-line"
         role="group"
@@ -113,6 +115,14 @@
         <strong class="app-form-grid--wide" [id]="id + '-item'"
           >{{ line.controls.choice.value.label }}</strong
         >
+        @if (amountsLocked()) {
+        <dl class="app-facts app-form-grid--wide">
+          <div>
+            <dt>{{ text().orderQuantity }}</dt>
+            <dd class="app-num">{{ line.controls.quantity.value }}</dd>
+          </div>
+        </dl>
+        } @else {
         <osnova-form-field
           class="app-form-grid--wide"
           [controlId]="id"
@@ -147,6 +157,7 @@
             </button>
           </div>
         </osnova-form-field>
+        }
       </div>
       }
     </section>
@@ -157,7 +168,14 @@
       }
       <div class="app-form-grid">
         @let shippingError = error('shippingMethodId'); @let paymentError =
-        error('paymentMethodId');
+        error('paymentMethodId'); @if (amountsLocked()) {
+        <dl class="app-facts">
+          <div>
+            <dt>{{ text().orderShippingMethod }}</dt>
+            <dd>{{ order()?.shippingMethodLabel }}</dd>
+          </div>
+        </dl>
+        } @else {
         <osnova-form-field
           controlId="manual-shippingMethodId"
           [label]="text().orderShippingMethod"
@@ -177,6 +195,7 @@
             (onChange)="clearError('shippingMethodId')"
           />
         </osnova-form-field>
+        }
         <osnova-form-field
           controlId="manual-paymentMethodId"
           [label]="text().orderPaymentMethod"

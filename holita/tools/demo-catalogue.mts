@@ -179,6 +179,7 @@ export const demoPaymentMethod = {
   instructions: 'Платете при получаване.',
 };
 export const demoShippingMethod = { label: 'Доставка до адрес', fixedFee: '6.00' };
+export const demoPickupShipping = { label: 'Получаване от магазина', fixedFee: '0.00' };
 
 export const demoBankTransfer = {
   label: 'Банков превод',
@@ -209,6 +210,18 @@ export const demoManualOrder = {
     quantity: 2,
     unitPrice: '52.90',
   },
+};
+
+export const demoInvoicedManualOrder = {
+  ...demoManualOrder,
+  id: 8,
+  placedAt: '2026-11-23T08:00:00Z',
+  contactName: 'Мария Димитрова',
+  contactEmail: 'maria@demo.holita.test',
+  phone: '+359 2 555 0106',
+  address: 'бул. „Александър Стамболийски“ 42',
+  merchantNote: 'Поръчка по телефона. Доставка след 16 ч.',
+  line: { ...demoManualOrder.line, id: 10, quantity: 1 },
 };
 
 export const demoOrders: readonly DemoShopperOrder[] = [
@@ -350,6 +363,8 @@ export const demoOrders: readonly DemoShopperOrder[] = [
 ];
 
 export const demoInvoice = {
+  id: 1,
+  firstLineId: 1,
   order: 4,
   number: '0000000001',
   issueDate: '2026-11-21',
@@ -357,7 +372,16 @@ export const demoInvoice = {
   issuerCompanyId: '000000001',
   issuerVatNumber: 'BG000000001',
   issuerAddress: 'ул. „Керамична работилница“ 12, 1000 София',
-} as const;
+};
+
+export const demoManualOrderInvoice = {
+  ...demoInvoice,
+  id: 2,
+  firstLineId: 3,
+  order: demoInvoicedManualOrder.id,
+  number: '0000000002',
+  issueDate: '2026-11-23',
+};
 
 export const demoRefund = {
   order: 5,

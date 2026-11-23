@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [256](256-holita-invoiced-manual-order-amounts.md).
-
 ## Background
 
 The red.bg coverage report marks OR08 as P2. The manual order uses the selected method's default shipping fee. Merchants sometimes need to enter the amount agreed for one order.

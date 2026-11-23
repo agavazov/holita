@@ -16,12 +16,15 @@ import {
   demoCustomerDetail,
   demoDiscounts,
   demoInvoice,
+  demoInvoicedManualOrder,
   demoManualOrder,
+  demoManualOrderInvoice,
   demoNavigationMenus,
   demoOptions,
   demoOrders,
   demoPages,
   demoPaymentMethod,
+  demoPickupShipping,
   demoProductCovers,
   demoProductImages,
   demoRefund,
@@ -476,6 +479,7 @@ async function seedCatalogue(): Promise<void> {
     for (const [id, method, enabled, sortOrder] of [
       [1, demoShippingMethod, true, 0],
       [2, demoSaturdayShipping, false, 10],
+      [3, demoPickupShipping, true, 20],
     ] as const) {
       await client.query(
         `INSERT INTO "shippingMethod" ("id", "tenantId", "branchId", "label", "fixedFee", "enabled", "sortOrder", "updatedAt")
@@ -502,8 +506,12 @@ async function seedCatalogue(): Promise<void> {
     for (const order of demoOrders) {
       await seedShopperOrder(client, tenantId, branchId, demoShopper, order);
     }
-    await seedManualOrder(client, tenantId, branchId);
-    await seedOrderInvoice(client, tenantId, branchId);
+    for (const order of [demoManualOrder, demoInvoicedManualOrder]) {
+      await seedManualOrder(client, tenantId, branchId, order);
+    }
+    for (const invoice of [demoInvoice, demoManualOrderInvoice]) {
+      await seedOrderInvoice(client, tenantId, branchId, invoice);
+    }
     await seedCustomerDetail(client, tenantId, branchId);
     await client.query('COMMIT');
     console.log(
@@ -792,8 +800,12 @@ async function seedShopperOrder(
   }
 }
 
-async function seedManualOrder(client: pg.Client, tenantId: string, branchId: string) {
-  const fixture = demoManualOrder;
+async function seedManualOrder(
+  client: pg.Client,
+  tenantId: string,
+  branchId: string,
+  fixture: typeof demoManualOrder,
+) {
   const orderId = fixtureId('d5', fixture.id);
   const variantId = fixtureId('92', fixture.line.variant);
   const inserted = await client.query(
@@ -855,9 +867,14 @@ async function seedManualOrder(client: pg.Client, tenantId: string, branchId: st
   }
 }
 
-async function seedOrderInvoice(client: pg.Client, tenantId: string, branchId: string) {
-  const invoiceId = fixtureId('d7', 1);
-  const orderId = fixtureId('d5', demoInvoice.order);
+async function seedOrderInvoice(
+  client: pg.Client,
+  tenantId: string,
+  branchId: string,
+  fixture: typeof demoInvoice,
+) {
+  const invoiceId = fixtureId('d7', fixture.id);
+  const orderId = fixtureId('d5', fixture.order);
   const invoice = await client.query(
     `INSERT INTO "invoice" ("id", "tenantId", "branchId", "orderId", "orderNumber", "number", "issueDate",
        "issuerName", "issuerCompanyId", "issuerAddress", "issuerVatNumber",
@@ -873,22 +890,22 @@ async function seedOrderInvoice(client: pg.Client, tenantId: string, branchId: s
       tenantId,
       branchId,
       orderId,
-      demoInvoice.number,
-      demoInvoice.issueDate,
-      demoInvoice.issuerName,
-      demoInvoice.issuerCompanyId,
-      demoInvoice.issuerAddress,
-      demoInvoice.issuerVatNumber,
+      fixture.number,
+      fixture.issueDate,
+      fixture.issuerName,
+      fixture.issuerCompanyId,
+      fixture.issuerAddress,
+      fixture.issuerVatNumber,
     ],
   );
   if (invoice.rowCount) {
     await client.query(
       `INSERT INTO "invoiceLine" ("id", "tenantId", "branchId", "invoiceId", "sortOrder",
          "description", "sku", "quantity", "unitPrice", "lineTotal")
-       SELECT ('d8000000-0000-4000-8000-' || lpad(("sortOrder" + 1)::text, 12, '0'))::uuid,
+       SELECT ('d8000000-0000-4000-8000-' || lpad(("sortOrder" + $5::integer)::text, 12, '0'))::uuid,
          "tenantId", "branchId", $1, "sortOrder", "label", "sku", "quantity", "unitPrice", "unitPrice" * "quantity"
        FROM "orderLine" WHERE "tenantId" = $2 AND "branchId" = $3 AND "orderId" = $4`,
-      [invoiceId, tenantId, branchId, orderId],
+      [invoiceId, tenantId, branchId, orderId, fixture.firstLineId],
     );
   }
 }

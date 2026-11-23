@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [256](256-holita-invoiced-manual-order-amounts.md).
-
 ## Background
 
 The red.bg coverage report marks OR07 as P2. Manual order lines use the catalogue price, with no explicit merchant price or discount on a line.

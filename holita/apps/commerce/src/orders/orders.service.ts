@@ -272,16 +272,34 @@ export class OrdersService {
       if (!canEditManualOrder(order)) {
         throw checkoutError('order', 'MANUAL_ORDER_NOT_EDITABLE', 'This order cannot be edited');
       }
-      const { data, revised } = await this.manualChanges(tx, scope, input, order);
+      if (
+        order.invoice &&
+        (input.lines !== undefined ||
+          (input.shippingMethodId !== undefined &&
+            input.shippingMethodId?.toLowerCase() !== order.shippingMethodId))
+      ) {
+        throw checkoutError(
+          'order',
+          'MANUAL_ORDER_AMOUNTS_LOCKED',
+          'An invoice has been issued. Order items and the shipping charge are locked',
+        );
+      }
+      const {
+        data: { shippingFee, ...fields },
+        revised,
+      } = await this.manualChanges(tx, scope, input, order);
       const subtotal = revised?.subtotal ?? order.subtotal;
       const updated = await this.orders.updateManual(
         tx,
         scope,
         order.id,
         {
-          ...data,
-          subtotal,
-          total: new CartPrice(subtotal).plus(data.shippingFee),
+          ...fields,
+          ...(!order.invoice && {
+            shippingFee,
+            subtotal,
+            total: new CartPrice(subtotal).plus(shippingFee),
+          }),
         },
         revised?.lines,
       );

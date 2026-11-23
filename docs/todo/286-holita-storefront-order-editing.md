@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [256](256-holita-invoiced-manual-order-amounts.md).
-
 ## Background
 
 The red.bg coverage report marks OR04 as P1. The manual-order editor is limited to eligible manual orders. The merchant cannot correct an eligible storefront order through the same workflow.
@@ -23,7 +21,7 @@ An eligible online order can be corrected and reconciles stock correctly. Inelig
 
 ## Limits
 
-Reuse the manual editor and the order guard corrected in ticket 256. Keep any additional new edit fields separate.
+Reuse the manual editor and its invoice guard. Keep any additional new edit fields separate.
 
 ## References
 

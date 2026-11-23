@@ -613,9 +613,11 @@ matches. Enter delivery details, add variants, select enabled payment and shippi
 optionally enter a private merchant note.
 Open a placed, unpaid manual order and choose Edit manual order to revise it. Commerce derives
 totals and adjusts stock by the change in held quantities. Existing lines retain their booked
-prices, and unchanged methods retain their saved terms. The Sofia demo shop includes a guest
-phone order. The operator graph exposes `manualOrderMethods`, `createManualOrder` and
-`updateManualOrder`.
+prices, and unchanged methods retain their saved terms. Once an invoice is issued, the items
+and shipping method and charge become read-only. Contact, delivery address, payment method and
+merchant note remain editable while the order is placed and unpaid. The Sofia demo shop includes
+two guest phone orders, one with an issued invoice. The operator graph exposes
+`manualOrderMethods`, `createManualOrder` and `updateManualOrder`.
 
 On Order Detail, choose Create invoice, enter the invoice number and issuer details, and
 review the recipient and amounts copied from the order. Each shop uses unique invoice numbers.

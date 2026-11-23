@@ -150,6 +150,7 @@ export class ManualOrderEditor {
   protected readonly order = computed(() =>
     this.record.hasValue() ? this.record.value().order : null,
   );
+  protected readonly amountsLocked = computed(() => !!this.order()?.invoice);
   private readonly choices = computed(() =>
     this.record.hasValue() ? this.record.value().choices : null,
   );
@@ -247,7 +248,11 @@ export class ManualOrderEditor {
     params: () => {
       const scope = this.api.scope();
       const search = this.search();
-      return scope && this.canEdit() && search !== null && !this.searchInvalid()
+      return scope &&
+        this.canEdit() &&
+        !this.amountsLocked() &&
+        search !== null &&
+        !this.searchInvalid()
         ? { scope, search }
         : undefined;
     },
@@ -466,20 +471,23 @@ export class ManualOrderEditor {
       shippingAddress,
       merchantNote: merchantNote || null,
       paymentMethodId,
-      shippingMethodId,
     };
     this.saving.set(true);
     try {
       const recordId = params.id
         ? await this.api.updateManual(params.scope, params.id, {
             ...fields,
-            lines: lines.map(({ choice, quantity }) => ({
-              ...(choice.lineId ? { lineId: choice.lineId } : { variantId: choice.variantId }),
-              quantity: quantity ?? 0,
-            })),
+            ...(!this.amountsLocked() && {
+              shippingMethodId,
+              lines: lines.map(({ choice, quantity }) => ({
+                ...(choice.lineId ? { lineId: choice.lineId } : { variantId: choice.variantId }),
+                quantity: quantity ?? 0,
+              })),
+            }),
           })
         : await this.api.createManual(params.scope, {
             ...fields,
+            shippingMethodId,
             lines: lines.map(({ choice, quantity }) => ({
               variantId: choice.variantId ?? '',
               quantity: quantity ?? 0,
@@ -499,6 +507,7 @@ export class ManualOrderEditor {
       const text = this.text();
       const reasons: Record<string, string> = {
         INVALID_METHOD: text.orderMethodUnavailable,
+        MANUAL_ORDER_AMOUNTS_LOCKED: text.manualOrderAmountsLocked,
         MANUAL_ORDER_NOT_EDITABLE: text.manualOrderNotEditable,
         ORDER_CUSTOMER_UNAVAILABLE: text.orderCustomerUnavailable,
         ORDER_STOCK_SHORT: text.orderStockShort,
