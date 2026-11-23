@@ -264,7 +264,9 @@ export class OperatorApplication {
         tenantId: scope.tenantId,
         token: scope.token,
       });
-      const publish = (state: ShopDiscovery) => this.shopResult.set({ scope, state });
+      const publish = (state: ShopDiscovery) => {
+        this.shopResult.set({ scope, state });
+      };
       const subscription = query.valueChanges.subscribe({
         next: (result) => {
           if (result.error) {
@@ -281,7 +283,9 @@ export class OperatorApplication {
             publish({ kind: 'error' });
           }
         },
-        error: () => publish({ kind: 'error' }),
+        error: () => {
+          publish({ kind: 'error' });
+        },
       });
       cleanup(() => {
         subscription.unsubscribe();
