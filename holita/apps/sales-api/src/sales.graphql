@@ -1,8 +1,53 @@
 type Query {
   salesWorkspaceAccess: SalesWorkspaceViewer!
+  leads(offset: Int! = 0, limit: Int! = 20, search: String, sort: LeadSort): LeadPage!
+  lead(id: ID!): Lead
+}
+
+type Mutation {
+  createLead(input: LeadInput!): Lead!
+  updateLead(id: ID!, input: LeadInput!): Lead!
 }
 
 type SalesWorkspaceViewer {
   tenantId: ID!
   userId: ID!
+}
+
+type Lead {
+  id: ID!
+  displayName: String
+  websiteUrl: String
+  sourceName: String
+  createdByUserId: ID!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type LeadPage {
+  items: [Lead!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+
+input LeadInput {
+  displayName: String
+  websiteUrl: String
+  sourceName: String
+}
+
+enum LeadSortField {
+  CREATED_AT
+  DISPLAY_NAME
+}
+
+enum LeadSortDirection {
+  ASC
+  DESC
+}
+
+input LeadSort {
+  field: LeadSortField! = CREATED_AT
+  direction: LeadSortDirection! = DESC
 }

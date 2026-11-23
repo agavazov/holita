@@ -1,6 +1,6 @@
 # 133 Manage lead contacts
 
-**Status:** Ready after [132](132-holita-sales-leads.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

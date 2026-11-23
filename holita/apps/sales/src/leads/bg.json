@@ -1,0 +1,23 @@
+{
+  "prospects": "Потенциални клиенти",
+  "leadsInfo": "Намерете потенциални клиенти по име, уебсайт или източник.",
+  "leadDetailInfo": "Основни данни за потенциалния клиент и откъде сте научили за него.",
+  "lead": "Лийд",
+  "leadDetails": "Данни за лийда",
+  "newLead": "Нов лийд",
+  "editLead": "Редактиране",
+  "searchLeads": "Търсене по име, уебсайт или източник",
+  "leadDisplayName": "Име",
+  "leadWebsiteUrl": "Уебсайт",
+  "leadSourceName": "Източник",
+  "leadIdentityRequired": "Въведете име или адрес на уебсайт.",
+  "leadInvalidWebsite": "Въведете пълен адрес, започващ с http:// или https://.",
+  "leadCreatedAt": "Създаден на",
+  "leadUpdatedAt": "Обновен на",
+  "emptyLeads": "Все още няма лийдове",
+  "leadsUnavailable": "Лийдовете не можаха да се заредят.",
+  "leadUnavailable": "Лийдът не можа да се зареди.",
+  "leadNotFound": "Лийдът не е намерен",
+  "leadSaveFailed": "Лийдът не можа да бъде запазен.",
+  "leadSaved": "Лийдът е запазен."
+}

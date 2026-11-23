@@ -478,7 +478,11 @@ the Holita migration command above before restarting Holita. The operator Router
 
 The operator graph exposes `salesWorkspaceAccess { tenantId userId }` to Core platform
 accounts with the `SALES` role. The IDs identify the verified platform tenant and signed-in
-Core user. CRM scope comes from that platform tenant, independent of Branch selection.
+Core user. CRM scope comes from that platform tenant, independent of Branch selection. In Sales,
+open **Leads** to find prospects by name, website or source. **New lead** requires a name or
+an HTTP(S) website and opens the saved prospect at its own address. Use **Edit lead** on the
+prospect page to update it. The operator graph provides `leads`, `lead`, `createLead` and
+`updateLead` to authorized Sales accounts. The Holita demo seed inserts two fictional prospects.
 
 Existing Holita checkouts need `HOLITA_COMMERCE_IMAGE_DIR` in `holita/config/commerce.env`.
 Set it to the absolute path of `.volumes/holita/images` in the checkout before seeding.

@@ -1,0 +1,38 @@
+fragment SalesLeadFields on Lead {
+  id
+  displayName
+  websiteUrl
+  sourceName
+  createdByUserId
+  createdAt
+  updatedAt
+}
+
+query SalesLeads($offset: Int!, $limit: Int!, $search: String, $sort: LeadSort) {
+  leads(offset: $offset, limit: $limit, search: $search, sort: $sort) {
+    items {
+      ...SalesLeadFields
+    }
+    total
+    offset
+    limit
+  }
+}
+
+query SalesLead($id: ID!) {
+  lead(id: $id) {
+    ...SalesLeadFields
+  }
+}
+
+mutation SalesCreateLead($input: LeadInput!) {
+  createLead(input: $input) {
+    id
+  }
+}
+
+mutation SalesUpdateLead($id: ID!, $input: LeadInput!) {
+  updateLead(id: $id, input: $input) {
+    id
+  }
+}

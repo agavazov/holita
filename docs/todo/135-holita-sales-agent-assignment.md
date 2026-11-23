@@ -1,6 +1,6 @@
 # 135 Assign leads to Core sales agents
 
-**Status:** Ready after [132](132-holita-sales-leads.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

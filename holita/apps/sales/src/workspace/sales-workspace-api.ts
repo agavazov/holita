@@ -5,7 +5,7 @@ import { DemoSession, OperatorConfig, graphqlOptions } from '@osnova/ui/app';
 import { HttpLink } from 'apollo-angular/http';
 import { OperatorSalesWorkspaceDocument } from '../generated/operations';
 
-interface SalesWorkspaceScope {
+export interface SalesWorkspaceScope {
   readonly tenantId: string;
   readonly token: string;
   readonly language: Language;

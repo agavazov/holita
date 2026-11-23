@@ -1,11 +1,12 @@
 import { unwrapResolverError } from '@apollo/server/errors';
-import { Module, ServiceUnavailableException } from '@nestjs/common';
+import { Module, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage } from 'node:http';
 import { DatabaseModule } from './database.module.js';
 import { HealthController } from './health.controller.js';
+import { LeadsModule } from './leads/leads.module.js';
 import { WorkspaceModule } from './workspace/workspace.module.js';
 
 @Module({
@@ -13,6 +14,7 @@ import { WorkspaceModule } from './workspace/workspace.module.js';
   imports: [
     DatabaseModule,
     WorkspaceModule,
+    LeadsModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       typeDefs: readFileSync(new URL('./sales.graphql', import.meta.url), 'utf8'),
@@ -21,8 +23,12 @@ import { WorkspaceModule } from './workspace/workspace.module.js';
         authorization: req.headers.authorization,
       }),
       formatError: (formatted, error) => {
-        if (unwrapResolverError(error) instanceof ServiceUnavailableException) {
+        const cause = unwrapResolverError(error);
+        if (cause instanceof ServiceUnavailableException) {
           return { ...formatted, extensions: { code: 'SERVICE_UNAVAILABLE' } };
+        }
+        if (cause instanceof NotFoundException) {
+          return { ...formatted, extensions: { code: 'NOT_FOUND' } };
         }
         return formatted;
       },

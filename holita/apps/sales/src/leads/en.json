@@ -1,0 +1,23 @@
+{
+  "prospects": "Prospects",
+  "leadsInfo": "Find prospects by name, website, or source.",
+  "leadDetailInfo": "See the prospect’s details and where you heard about them.",
+  "lead": "Lead",
+  "leadDetails": "Lead details",
+  "newLead": "New lead",
+  "editLead": "Edit lead",
+  "searchLeads": "Search by name, website, or source",
+  "leadDisplayName": "Name",
+  "leadWebsiteUrl": "Website",
+  "leadSourceName": "Source",
+  "leadIdentityRequired": "Enter a name or a website URL.",
+  "leadInvalidWebsite": "Enter a complete address starting with http:// or https://.",
+  "leadCreatedAt": "Created",
+  "leadUpdatedAt": "Updated",
+  "emptyLeads": "No leads yet",
+  "leadsUnavailable": "The leads could not be loaded.",
+  "leadUnavailable": "The lead could not be loaded.",
+  "leadNotFound": "Lead not found",
+  "leadSaveFailed": "The lead could not be saved.",
+  "leadSaved": "Lead saved."
+}

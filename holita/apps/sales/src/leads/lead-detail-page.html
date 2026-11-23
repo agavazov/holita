@@ -1,0 +1,82 @@
+<osnova-page-header
+  [title]="name() ?? text().lead"
+  [moduleInfo]="text().leadDetailInfo"
+  [moduleInfoTitle]="text().lead"
+  [backLink]="backLink()"
+  [backLabel]="backLabel()"
+  [backQueryParams]="queryParams()"
+  [backFragment]="fragment()"
+  [actions]="actions()"
+  (action)="edit()"
+/>
+@if (!entry.validId()) {
+<section class="app-card">
+  <osnova-empty-state
+    kind="not-found"
+    [title]="shared().drawer.invalidIdTitle"
+    [description]="shared().drawer.invalidIdDescription"
+  />
+</section>
+} @else if (entry.record.error()) {
+<section class="app-card">
+  <osnova-empty-state kind="error" [title]="text().leadUnavailable">
+    <button emptyActions pButton type="button" severity="secondary" (click)="entry.record.reload()">
+      {{ shared().retry }}
+    </button>
+  </osnova-empty-state>
+</section>
+} @else if (entry.lead(); as lead) {
+<section class="app-card" aria-labelledby="lead-details">
+  <h2 id="lead-details" class="app-card__title">{{ text().leadDetails }}</h2>
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().leadDisplayName }}</dt>
+      <dd>{{ lead.displayName ?? '—' }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().leadWebsiteUrl }}</dt>
+      <dd>
+        @if (lead.websiteUrl; as website) {
+        <a class="app-link" [href]="website" target="_blank" rel="noopener noreferrer"
+          >{{ website }}</a
+        >
+        } @else { — }
+      </dd>
+    </div>
+    <div>
+      <dt>{{ text().leadSourceName }}</dt>
+      <dd>{{ lead.sourceName ?? '—' }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().leadCreatedAt }}</dt>
+      <dd>
+        <time [attr.datetime]="lead.createdAt" [title]="format.utc(lead.createdAt)"
+          >{{ format.dateTime(lead.createdAt) }}</time
+        >
+      </dd>
+    </div>
+    <div>
+      <dt>{{ text().leadUpdatedAt }}</dt>
+      <dd>
+        <time [attr.datetime]="lead.updatedAt" [title]="format.utc(lead.updatedAt)"
+          >{{ format.dateTime(lead.updatedAt) }}</time
+        >
+      </dd>
+    </div>
+  </dl>
+</section>
+} @else if (entry.record.isLoading()) {
+<section class="app-card" role="status" [attr.aria-label]="shared().loading">
+  <p-skeleton width="8rem" />
+  <div class="app-facts">
+    @for (fact of [1, 2, 3, 4, 5]; track fact) {
+    <div><p-skeleton width="5rem" /><p-skeleton width="9rem" /></div>
+    }
+  </div>
+</section>
+} @else {
+<section class="app-card">
+  <osnova-empty-state kind="not-found" [title]="text().leadNotFound" />
+</section>
+}
+<router-outlet [routerOutletData]="drawerHost" />

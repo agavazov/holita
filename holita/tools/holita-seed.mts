@@ -40,7 +40,12 @@ import {
 } from './demo-catalogue.mjs';
 
 config({
-  path: ['holita/config/commerce.env', 'holita/config/core.env', 'holita/config/seed-accounts.env'],
+  path: [
+    'holita/config/commerce.env',
+    'holita/config/core.env',
+    'holita/config/sales.env',
+    'holita/config/seed-accounts.env',
+  ],
   quiet: true,
   override: true,
 });
@@ -65,6 +70,67 @@ const result = spawnSync('npm', ['run', 'db:seed', '--workspace', '@osnova/core'
 process.exitCode = result.status ?? 1;
 if (result.status === 0) {
   await seedCatalogue();
+  await seedLeads(url);
+}
+
+async function seedLeads(core: URL): Promise<void> {
+  const sales = URL.parse(process.env.SALES_DATABASE_URL ?? '');
+  if (
+    !sales ||
+    sales.protocol !== 'postgresql:' ||
+    sales.hostname !== '127.0.0.1' ||
+    sales.pathname !== '/holita_sales' ||
+    sales.username !== 'holita_sales' ||
+    sales.search ||
+    sales.hash
+  ) {
+    throw new Error('Seed only the dedicated local Holita Sales database');
+  }
+  const email = process.env.HOLITA_SALES_EMAIL?.trim().toLowerCase();
+  if (!email) {
+    throw new Error('Configure the Holita Sales seed account');
+  }
+  const coreClient = new pg.Client({ connectionString: core.toString() });
+  await coreClient.connect();
+  let creator: { id: string; tenantId: string } | undefined;
+  try {
+    const account = await coreClient.query<{ id: string; tenantId: string }>(
+      `SELECT u."id", u."tenantId"
+       FROM "user" u JOIN "tenant" t ON t."id" = u."tenantId"
+       WHERE u."email" = $1 AND u."role" = 'sales' AND t."kind" = 'platform'`,
+      [email],
+    );
+    creator = account.rows[0];
+  } finally {
+    await coreClient.end();
+  }
+  if (!creator) {
+    throw new Error('The Core platform Sales seed account is missing');
+  }
+
+  const client = new pg.Client({ connectionString: sales.toString() });
+  await client.connect();
+  try {
+    const { rowCount } = await client.query(
+      `INSERT INTO "lead" ("id", "tenantId", "displayName", "websiteUrl", "sourceName",
+                           "createdByUserId", "updatedAt")
+       VALUES ($1, $2, NULL, $3, NULL, $4, CURRENT_TIMESTAMP),
+              ($5, $2, $6, NULL, $7, $4, CURRENT_TIMESTAMP)
+       ON CONFLICT ("id") DO NOTHING`,
+      [
+        'b2000000-0000-4000-8000-000000000001',
+        creator.tenantId,
+        'https://rilska-hartiya.example',
+        creator.id,
+        'b2000000-0000-4000-8000-000000000002',
+        'Ателие „Бяла глина“',
+        'Препоръка',
+      ],
+    );
+    console.log(`Holita Sales prospects inserted: ${String(rowCount)}`);
+  } finally {
+    await client.end();
+  }
 }
 
 async function seedCatalogue(): Promise<void> {

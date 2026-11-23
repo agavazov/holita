@@ -1,6 +1,6 @@
 # 134 Track leads through pipeline stages
 
-**Status:** Ready after [132](132-holita-sales-leads.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

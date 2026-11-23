@@ -1,4 +1,4 @@
-import { DOCUMENT, NgComponentOutlet } from '@angular/common';
+import { DOCUMENT } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -10,7 +10,6 @@ import {
   inject,
   signal,
   untracked,
-  type Type,
 } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideRouter, Router, RouterOutlet, type Routes } from '@angular/router';
@@ -58,7 +57,6 @@ interface OperatorOptions {
     path: string;
   }[];
   selectBranch: boolean;
-  workspaceStatus?: Type<unknown>;
 }
 const OPERATOR_OPTIONS = new InjectionToken<OperatorOptions>('operator application');
 
@@ -74,7 +72,7 @@ export class OperatorLanguage {
 
 @Component({
   selector: 'holita-operator',
-  imports: [AdminShell, NgComponentOutlet, OperationToast, SignIn, RouterOutlet],
+  imports: [AdminShell, OperationToast, SignIn, RouterOutlet],
   providers: [MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -106,9 +104,6 @@ export class OperatorLanguage {
         (languageChange)="changeLanguageValue($event)"
         (signOut)="signOut()"
       >
-        @if (workspaceStatus; as status) {
-          <ng-container *ngComponentOutlet="status" />
-        }
         <router-outlet />
         <osnova-operation-toast />
       </osnova-admin-shell>
@@ -119,7 +114,6 @@ export class OperatorApplication {
   readonly session = inject(DemoSession);
   readonly language = inject(OperatorLanguage);
   private readonly options = inject(OPERATOR_OPTIONS);
-  protected readonly workspaceStatus = this.options.workspaceStatus;
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly branches = signal<readonly { id: string; name: string }[]>([]);

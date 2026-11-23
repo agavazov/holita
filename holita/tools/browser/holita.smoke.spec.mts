@@ -762,6 +762,135 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       });
     }
 
+    const salesGraphql = async (query: string, variables: Record<string, unknown> = {}) => {
+      const response = await salesContext.request.post(salesEndpoint, {
+        headers: { authorization: salesSession.authorization },
+        data: { query, variables },
+      });
+      expect(response.status()).toBe(200);
+      const result: unknown = await response.json();
+      return result;
+    };
+    const foreignLeadId = randomUUID();
+    const foreignName = 'Foreign tenant smoke prospect';
+    await salesDb.client.query(
+      `INSERT INTO "lead" ("id", "tenantId", "displayName", "createdByUserId", "updatedAt")
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`,
+      [foreignLeadId, merchantSession.tenantId, foreignName, merchantSession.userId],
+    );
+    expect(
+      await salesGraphql(
+        'query ForeignLead($id: ID!, $search: String!) { lead(id: $id) { id } leads(search: $search) { items { id } total } }',
+        { id: foreignLeadId, search: foreignName },
+      ),
+    ).toEqual({ data: { lead: null, leads: { items: [], total: 0 } } });
+    const updateLead =
+      'mutation ScopedLeadUpdate($id: ID!, $input: LeadInput!) { updateLead(id: $id, input: $input) { id } }';
+    for (const id of [foreignLeadId, randomUUID()]) {
+      expect(
+        await salesGraphql(updateLead, { id, input: { displayName: 'Attempted change' } }),
+      ).toMatchObject({
+        data: null,
+        errors: [{ message: 'Lead not found', extensions: { code: 'NOT_FOUND' } }],
+      });
+    }
+    const foreignLead = await salesDb.client.query(
+      'SELECT "displayName" FROM "lead" WHERE "id" = $1 AND "tenantId" = $2',
+      [foreignLeadId, merchantSession.tenantId],
+    );
+    expect(foreignLead.rows).toEqual([{ displayName: foreignName }]);
+
+    expect(
+      await salesGraphql(
+        'mutation InvalidLead($input: LeadInput!) { createLead(input: $input) { id } }',
+        {
+          input: { displayName: 'Invalid website smoke prospect', websiteUrl: 'file:///tmp/lead' },
+        },
+      ),
+    ).toMatchObject({
+      data: null,
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'websiteUrl', code: 'INVALID_FORMAT' }],
+          },
+        },
+      ],
+    });
+
+    const website = 'https://smoke-studio.example';
+    const source = 'Изложение за ръчна изработка';
+    await sales.getByRole('link', { name: 'Leads', exact: true }).click();
+    await sales.getByRole('button', { name: 'New lead', exact: true }).click();
+    await sales.locator('#lead-websiteUrl').fill(website);
+    await sales.locator('#lead-sourceName').fill(source);
+    await sales.getByRole('button', { name: 'Save', exact: true }).click();
+    await sales.waitForURL((url) => /\/leads\/[0-9a-f-]{36}$/u.test(url.pathname));
+    const leadUrl = sales.url();
+    const leadId = new URL(leadUrl).pathname.split('/').pop();
+    expect(leadId).toBeTruthy();
+
+    await sales.goto(new URL('/en/leads', leadUrl).href);
+    await expect(sales.getByRole('link', { name: website, exact: true })).toBeVisible();
+    const listRequest = waitForOperation(sales, salesEndpoint, 'SalesLeads');
+    await sales.getByRole('searchbox').fill('ръчна smoke-studio');
+    const listResponse = await listRequest;
+    const pageResult: unknown = await listResponse.json();
+    expect(pageResult).toMatchObject({
+      data: {
+        leads: {
+          items: [{ id: leadId, displayName: null, websiteUrl: website, sourceName: source }],
+          total: 1,
+        },
+      },
+    });
+    await sales.getByRole('link', { name: website, exact: true }).click();
+    await sales.waitForURL(
+      (url) => url.pathname === new URL(leadUrl).pathname && url.searchParams.has('search'),
+    );
+    await sales.getByRole('button', { name: 'Edit lead', exact: true }).click();
+    const updatedName = 'Ателие за тестова керамика';
+    await sales.locator('#lead-displayName').fill(updatedName);
+    await sales.getByRole('button', { name: 'Save', exact: true }).click();
+    await dismissSuccess(sales, 'Lead saved.');
+    await sales.waitForURL(
+      (url) => url.pathname === new URL(leadUrl).pathname && url.searchParams.has('search'),
+    );
+    const readRequest = waitForOperation(sales, salesEndpoint, 'SalesLead');
+    await sales.goto(leadUrl);
+    const readResult: unknown = await (await readRequest).json();
+    expect(readResult).toMatchObject({
+      data: {
+        lead: {
+          id: leadId,
+          displayName: updatedName,
+          websiteUrl: website,
+          createdByUserId: salesSession.userId,
+        },
+      },
+    });
+
+    const referralName = 'Ателие за тестови свещи';
+    const referralSource = 'Препоръка';
+    await sales.goto(new URL('/en/leads/new', leadUrl).href);
+    await sales.locator('#lead-displayName').fill(referralName);
+    await sales.locator('#lead-sourceName').fill(referralSource);
+    await sales.getByRole('button', { name: 'Save', exact: true }).click();
+    await sales.waitForURL((url) => /\/leads\/[0-9a-f-]{36}$/u.test(url.pathname));
+    const referralResult = await salesGraphql(
+      'query ReferralLead($search: String!) { leads(search: $search) { total items { displayName websiteUrl sourceName } } }',
+      { search: 'свещи препоръка' },
+    );
+    expect(referralResult).toEqual({
+      data: {
+        leads: {
+          total: 1,
+          items: [{ displayName: referralName, websiteUrl: null, sourceName: referralSource }],
+        },
+      },
+    });
+
     const contactSettings = {
       displayName: 'Дом и уют за тестове',
       contactEmail: 'contact@example.test',
@@ -1575,7 +1704,9 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await expect(shopper.getByRole('link', { name: 'Second shop', exact: true })).toBeVisible();
     await expect(menuLinks(shopper)).toHaveCount(0);
     await shopper.getByRole('link', { name: 'Products', exact: true }).click();
-    await expect(shopper.getByRole('main').getByText('No products.', { exact: true })).toBeVisible();
+    await expect(
+      shopper.getByRole('main').getByText('No products.', { exact: true }),
+    ).toBeVisible();
     const foreignProductImage = angled.replace(shopId, secondShopId);
     expect(
       (await shopper.request.get(new URL(foreignProductImage, shopApp.origin).href)).status(),

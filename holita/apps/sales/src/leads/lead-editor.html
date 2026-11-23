@@ -1,0 +1,84 @@
+<osnova-route-drawer
+  [title]="editing ? text().editLead : text().newLead"
+  [subtitle]="subtitle()"
+  [state]="state()"
+  [errorText]="text().leadUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="entry.record.reload()"
+>
+  <form id="lead-editor-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
+    <section class="app-form-section">
+      @let nameError = fieldError('displayName'); @let websiteError = fieldError('websiteUrl'); @let
+      sourceError = fieldError('sourceName');
+      <osnova-form-field
+        controlId="lead-displayName"
+        [label]="text().leadDisplayName"
+        [hint]="nameError ? null : text().leadIdentityRequired"
+        [error]="nameError"
+      >
+        <input
+          pInputText
+          id="lead-displayName"
+          formControlName="displayName"
+          autocomplete="off"
+          aria-describedby="lead-displayName-hint lead-displayName-error"
+          [invalid]="!!nameError"
+          [attr.aria-invalid]="!!nameError"
+          (input)="clearError('displayName')"
+        />
+      </osnova-form-field>
+      <osnova-form-field
+        controlId="lead-websiteUrl"
+        [label]="text().leadWebsiteUrl"
+        [error]="websiteError"
+      >
+        <input
+          pInputText
+          id="lead-websiteUrl"
+          formControlName="websiteUrl"
+          type="url"
+          autocomplete="off"
+          aria-describedby="lead-websiteUrl-error"
+          [invalid]="!!websiteError"
+          [attr.aria-invalid]="!!websiteError"
+          (input)="clearError('websiteUrl')"
+        />
+      </osnova-form-field>
+      <osnova-form-field
+        controlId="lead-sourceName"
+        [label]="text().leadSourceName"
+        [error]="sourceError"
+      >
+        <input
+          pInputText
+          id="lead-sourceName"
+          formControlName="sourceName"
+          autocomplete="off"
+          aria-describedby="lead-sourceName-error"
+          [invalid]="!!sourceError"
+          [attr.aria-invalid]="!!sourceError"
+          (input)="clearError('sourceName')"
+        />
+      </osnova-form-field>
+      @if (saveError(); as error) {
+      <p-message severity="error">{{ error }}</p-message>
+      }
+    </section>
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="lead-editor-form" [disabled]="saving()">
+      {{ saveLabel() }}
+    </button>
+  </div>
+</osnova-route-drawer>
