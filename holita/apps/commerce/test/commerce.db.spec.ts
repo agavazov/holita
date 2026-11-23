@@ -2806,8 +2806,8 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       statuses: ['PLACED', 'CONFIRMED'],
       placedAtFrom: order.placedAt.toISOString(),
       placedAtBefore: new Date(order.placedAt.getTime() + 1000).toISOString(),
-      paymentMethodLabels: [order.paymentMethodLabel],
-      shippingMethodLabels: [order.shippingMethodLabel],
+      paymentMethodIds: [methodIds.paymentMethodId.available],
+      shippingMethodIds: [methodIds.shippingMethodId.available],
       customerTypes: ['PROFILE'],
     },
   };
@@ -2816,7 +2816,7 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   });
   for (const [branch, filter] of [
     [branchB, combined.filter],
-    [publicA, { ...combined.filter, paymentMethodLabels: ['Another method'] }],
+    [publicA, { ...combined.filter, paymentMethodIds: [methodIds.paymentMethodId.foreign] }],
     [publicA, { ...combined.filter, customerTypes: ['GUEST'] }],
   ] as const) {
     expect(await query(tokens.viewer, branch, adminOrders, { ...combined, filter })).toMatchObject({
@@ -2824,6 +2824,77 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     });
   }
   const guestScope = { ...categoryScope, id: guestOrder.id };
+  const samePaymentLabel = 'Renamed payment';
+  const sameShippingLabel = 'Renamed delivery';
+  const paymentIds = [methodIds.paymentMethodId.available, methodIds.paymentMethodId.disabled];
+  const shippingIds = [methodIds.shippingMethodId.available, methodIds.shippingMethodId.disabled];
+  const renameMethods = async (paymentLabel: string, shippingLabel: string) => {
+    await database.paymentMethod.updateMany({
+      where: { ...categoryScope, id: { in: paymentIds } },
+      data: { label: paymentLabel },
+    });
+    await database.shippingMethod.updateMany({
+      where: { ...categoryScope, id: { in: shippingIds } },
+      data: { label: shippingLabel },
+    });
+  };
+  await renameMethods(samePaymentLabel, sameShippingLabel);
+  const setGuestMethods = (paymentMethodId: string | null, shippingMethodId: string | null) =>
+    database.order.update({ where: guestScope, data: { paymentMethodId, shippingMethodId } });
+  await setGuestMethods(methodIds.paymentMethodId.disabled, methodIds.shippingMethodId.disabled);
+  const methodChoicesQuery = `{
+    orderFilterMethods{paymentMethods{id label} shippingMethods{id label} paymentMethodLabels shippingMethodLabels}
+  }`;
+  expect(await query(tokens.viewer, publicA, methodChoicesQuery)).toMatchObject({
+    data: {
+      orderFilterMethods: {
+        paymentMethods: expect.arrayContaining(
+          paymentIds.map((id) => ({ id, label: samePaymentLabel })),
+        ),
+        shippingMethods: expect.arrayContaining(
+          shippingIds.map((id) => ({ id, label: sameShippingLabel })),
+        ),
+      },
+    },
+  });
+  for (const [method, id] of [
+    ['available', order.id],
+    ['disabled', guestOrder.id],
+  ] as const) {
+    expect(
+      await query(tokens.viewer, publicA, adminOrders, {
+        filter: {
+          paymentMethodIds: [methodIds.paymentMethodId[method]],
+          shippingMethodIds: [methodIds.shippingMethodId[method]],
+        },
+      }),
+    ).toMatchObject({ data: { orders: { items: [{ id }], total: 1 } } });
+  }
+  await setGuestMethods(null, null);
+  const legacyMethods = {
+    paymentMethodLabels: [guestOrder.paymentMethodLabel],
+    shippingMethodLabels: [guestOrder.shippingMethodLabel],
+  };
+  expect(await query(tokens.viewer, publicA, methodChoicesQuery)).toMatchObject({
+    data: { orderFilterMethods: legacyMethods },
+  });
+  expect(await query(tokens.viewer, publicA, adminOrders, { filter: legacyMethods })).toMatchObject(
+    {
+      data: { orders: { items: [{ id: guestOrder.id }], total: 1 } },
+    },
+  );
+  expect(
+    await query(tokens.viewer, publicA, adminOrders, {
+      filter: {
+        ...legacyMethods,
+        paymentMethodIds: [paymentIds[0]],
+        shippingMethodIds: [shippingIds[0]],
+      },
+    }),
+  ).toHaveProperty('data.orders.total', 2);
+  await setGuestMethods(guestOrder.paymentMethodId, guestOrder.shippingMethodId);
+  await renameMethods(order.paymentMethodLabel, order.shippingMethodLabel);
+
   await database.order.update({ where: guestScope, data: { placedAt: order.placedAt } });
   for (const [offset, id] of [order.id, guestOrder.id].sort().reverse().entries()) {
     expect(

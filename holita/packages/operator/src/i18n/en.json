@@ -207,6 +207,7 @@
   "shopOrders": "Shop orders",
   "searchOrders": "Search by number or contact",
   "orderDate": "Order date",
+  "orderLegacyMethod": "Historical label",
   "orderCustomerType": "Customer type",
   "orderRegisteredCustomer": "Registered customer",
   "orderGuestCustomer": "Guest",

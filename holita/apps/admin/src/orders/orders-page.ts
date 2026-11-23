@@ -61,19 +61,25 @@ import { OrdersApi } from './orders-api';
 type OrdersAction = 'open';
 type OrdersListPage = OperatorOrdersQuery['orders'];
 type CustomerOption = { id: string; label: string };
+type PlacedDate = Omit<FilterCondition, 'id' | 'field'>;
 type OrderFilters = {
   status: readonly OrderStatus[] | undefined;
   placedFrom: string | undefined;
   placedTo: string | undefined;
+  placedDates: readonly PlacedDate[] | undefined;
   paymentMethod: readonly string[] | undefined;
+  paymentMethodId: readonly string[] | undefined;
   shippingMethod: readonly string[] | undefined;
+  shippingMethodId: readonly string[] | undefined;
   customerType: readonly OrderCustomerType[] | undefined;
   customerId: readonly string[] | undefined;
 };
 
 const customerTypes = ['PROFILE', 'GUEST'] as const satisfies readonly OrderCustomerType[];
-const setFilterKeys = ['status', 'paymentMethod', 'shippingMethod', 'customerType'] as const;
-const maxMethodLabels = 100;
+const methodFields = ['paymentMethod', 'shippingMethod'] as const;
+const dateOperators = ['between', 'on', 'after', 'before'] as const;
+const maxMethodValues = 100;
+const methodIds = codecs.idList(maxMethodValues);
 
 // Encode each saved label before joining it so a comma in a label survives the list URL codec.
 const methodLabels: FilterCodec<readonly string[]> = {
@@ -86,12 +92,64 @@ const methodLabels: FilterCodec<readonly string[]> = {
         return [];
       }
     });
-    return labels.length ? [...new Set(labels)].slice(0, maxMethodLabels).sort() : undefined;
+    return labels.length ? [...new Set(labels)].slice(0, maxMethodValues).sort() : undefined;
   },
   write: (values) => (values?.length ? [...values].sort().map(encodeURIComponent).join(',') : null),
   same: (left, right) =>
     left?.length === right?.length && (left?.every((label) => right?.includes(label)) ?? true),
 };
+
+const dateOnly = codecs.dateOnly();
+const placedDates: FilterCodec<readonly PlacedDate[]> = {
+  read: (entries) => {
+    const conditions = entries.flatMap((entry) => {
+      const [name, start, end] = entry.split(':');
+      const operator = dateOperators.find((candidate) => candidate === name);
+      const first = start && dateOnly.read([start]);
+      const last = end && dateOnly.read([end]);
+      if (!operator || !first || (operator === 'between' && (!last || last < first))) {
+        return [];
+      }
+      return [{ operator, values: operator === 'between' && last ? [first, last] : [first] }];
+    });
+    return conditions.length ? conditions : undefined;
+  },
+  write: (conditions) =>
+    conditions?.length
+      ? conditions.map(({ operator, values }) => [operator, ...values].join(':')).join(',')
+      : null,
+  same: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+};
+
+function methodChoices(
+  linked: readonly { id: string; label: string }[],
+  legacy: readonly string[],
+  legacyLabel: string,
+) {
+  const labels = new Map<string, number>();
+  for (const { label } of linked) {
+    labels.set(label, (labels.get(label) ?? 0) + 1);
+  }
+  return [
+    ...linked.map(({ id, label }) => ({
+      value: 'id:' + id,
+      label: (labels.get(label) ?? 0) > 1 ? `${label} · ${id}` : label,
+    })),
+    ...legacy.map((label) => ({ value: 'label:' + label, label: `${label} · ${legacyLabel}` })),
+  ];
+}
+
+function orderMethodValues(values: readonly string[]) {
+  const labels = values
+    .filter((value) => value.startsWith('label:'))
+    .map((value) => value.slice(6));
+  return {
+    ids: methodIds.read(
+      values.filter((value) => value.startsWith('id:')).map((value) => value.slice(3)),
+    ),
+    labels: labels.length ? labels : undefined,
+  };
+}
 
 const statusFilter = codecs.enumList(orderStatuses);
 const customerTypeFilter = codecs.enumList(customerTypes);
@@ -102,10 +160,13 @@ const definition: ListDefinition<OrderFilters, 'PLACED_AT'> = {
   defaultSort: { field: 'PLACED_AT', direction: 'DESC' },
   filters: {
     status: statusFilter,
-    placedFrom: codecs.dateOnly(),
-    placedTo: codecs.dateOnly(),
+    placedFrom: dateOnly,
+    placedTo: dateOnly,
+    placedDates,
     paymentMethod: methodLabels,
+    paymentMethodId: methodIds,
     shippingMethod: methodLabels,
+    shippingMethodId: methodIds,
     customerType: customerTypeFilter,
     customerId: codecs.idList(1),
   },
@@ -128,6 +189,28 @@ function orderDateBoundary(value: string, timeZone: string, followingDay = false
     },
     timeZone,
   );
+}
+
+function orderDateBounds(dates: readonly PlacedDate[], timeZone: string) {
+  let placedAtFrom: string | undefined;
+  let placedAtBefore: string | undefined;
+  for (const {
+    operator,
+    values: [day, end],
+  } of dates) {
+    if (!day) {
+      continue;
+    }
+    if (operator !== 'before') {
+      const from = orderDateBoundary(day, timeZone, operator === 'after');
+      placedAtFrom = !placedAtFrom || from > placedAtFrom ? from : placedAtFrom;
+    }
+    if (operator !== 'after') {
+      const before = orderDateBoundary(end ?? day, timeZone, operator !== 'before');
+      placedAtBefore = !placedAtBefore || before < placedAtBefore ? before : placedAtBefore;
+    }
+  }
+  return { placedAtFrom, placedAtBefore };
 }
 
 @Component({
@@ -282,29 +365,31 @@ export class OrdersPage {
       key: 'placedAt',
       label: this.text().orderDate,
       type: 'date',
-      operators: ['between', 'on', 'after', 'before'],
+      operators: dateOperators,
     },
     {
       key: 'shippingMethod',
       label: this.text().orderShippingMethod,
       type: 'enum',
       operators: ['isAnyOf'],
-      options: (this.methodOptions()?.shippingMethodLabels ?? []).map((label) => ({
-        value: label,
-        label,
-      })),
-      maxValues: maxMethodLabels,
+      options: methodChoices(
+        this.methodOptions()?.shippingMethods ?? [],
+        this.methodOptions()?.shippingMethodLabels ?? [],
+        this.text().orderLegacyMethod,
+      ),
+      maxValues: maxMethodValues,
     },
     {
       key: 'paymentMethod',
       label: this.text().orderPaymentMethod,
       type: 'enum',
       operators: ['isAnyOf'],
-      options: (this.methodOptions()?.paymentMethodLabels ?? []).map((label) => ({
-        value: label,
-        label,
-      })),
-      maxValues: maxMethodLabels,
+      options: methodChoices(
+        this.methodOptions()?.paymentMethods ?? [],
+        this.methodOptions()?.paymentMethodLabels ?? [],
+        this.text().orderLegacyMethod,
+      ),
+      maxValues: maxMethodValues,
     },
     {
       key: 'customerType',
@@ -317,30 +402,48 @@ export class OrdersPage {
       ],
     },
   ]);
-  protected readonly conditions = computed<readonly FilterCondition[]>(() => {
-    const filter = this.url.state().filter;
-    const conditions = setFilterKeys.flatMap<FilterCondition>((field) => {
-      const values = filter[field];
-      return values?.length ? [{ id: field, field, operator: 'isAnyOf', values }] : [];
-    });
-    const { placedFrom, placedTo } = filter;
+  private readonly dateConditions = computed<readonly PlacedDate[]>(() => {
+    const { placedFrom, placedTo, placedDates } = this.url.state().filter;
+    if (placedDates) {
+      return placedDates;
+    }
     const day = placedFrom ?? placedTo;
     if (placedFrom && placedTo) {
-      conditions.push({
-        id: 'placedAt',
-        field: 'placedAt',
-        operator: placedFrom === placedTo ? 'on' : 'between',
-        values: placedFrom === placedTo ? [placedFrom] : [placedFrom, placedTo],
-      });
-    } else if (day) {
-      conditions.push({
-        id: 'placedAt',
-        field: 'placedAt',
-        operator: placedFrom ? 'after' : 'before',
-        values: [day],
-      });
+      return [
+        {
+          operator: placedFrom === placedTo ? 'on' : 'between',
+          values: placedFrom === placedTo ? [placedFrom] : [placedFrom, placedTo],
+        },
+      ];
     }
-    return conditions;
+    return day ? [{ operator: placedFrom ? 'after' : 'before', values: [day] }] : [];
+  });
+  protected readonly conditions = computed<readonly FilterCondition[]>(() => {
+    const filter = this.url.state().filter;
+    const fields: ReadonlyArray<readonly [string, readonly string[] | undefined]> = [
+      ['status', filter.status],
+      ['customerType', filter.customerType],
+      ...methodFields.map(
+        (field) =>
+          [
+            field,
+            [
+              ...(filter[`${field}Id`] ?? []).map((id) => 'id:' + id),
+              ...(filter[field] ?? []).map((label) => 'label:' + label),
+            ],
+          ] as const,
+      ),
+    ];
+    return [
+      ...fields.flatMap<FilterCondition>(([field, values]) =>
+        values?.length ? [{ id: field, field, operator: 'isAnyOf', values }] : [],
+      ),
+      ...this.dateConditions().map((condition, index) => ({
+        ...condition,
+        id: `placedAt-${String(index)}`,
+        field: 'placedAt',
+      })),
+    ];
   });
   protected readonly params = computed(() => {
     const scope = this.scope();
@@ -356,13 +459,10 @@ export class OrdersPage {
             customerId: this.filteredCustomerId(),
             filter: {
               statuses: filter.status ? [...filter.status] : undefined,
-              placedAtFrom: filter.placedFrom
-                ? orderDateBoundary(filter.placedFrom, timeZone, !filter.placedTo)
-                : undefined,
-              placedAtBefore: filter.placedTo
-                ? orderDateBoundary(filter.placedTo, timeZone, !!filter.placedFrom)
-                : undefined,
+              ...orderDateBounds(this.dateConditions(), timeZone),
+              paymentMethodIds: filter.paymentMethodId ? [...filter.paymentMethodId] : undefined,
               paymentMethodLabels: filter.paymentMethod ? [...filter.paymentMethod] : undefined,
+              shippingMethodIds: filter.shippingMethodId ? [...filter.shippingMethodId] : undefined,
               shippingMethodLabels: filter.shippingMethod ? [...filter.shippingMethod] : undefined,
               customerTypes: filter.customerType ? [...filter.customerType] : undefined,
             },
@@ -418,14 +518,20 @@ export class OrdersPage {
 
   protected changeConditions(conditions: readonly FilterCondition[]): void {
     const byField = new Map(conditions.map((condition) => [condition.field, condition]));
-    const date = byField.get('placedAt');
-    const [firstDate, lastDate] = date?.values ?? [];
+    const dates = conditions
+      .filter(({ field }) => field === 'placedAt')
+      .map(({ operator, values }) => ({ operator, values }));
+    const payment = orderMethodValues(byField.get('paymentMethod')?.values ?? []);
+    const shipping = orderMethodValues(byField.get('shippingMethod')?.values ?? []);
     this.url.patchFilter({
       status: statusFilter.read(byField.get('status')?.values ?? []),
-      placedFrom: date?.operator === 'before' ? undefined : firstDate,
-      placedTo: date?.operator === 'before' || date?.operator === 'on' ? firstDate : lastDate,
-      paymentMethod: byField.get('paymentMethod')?.values,
-      shippingMethod: byField.get('shippingMethod')?.values,
+      placedFrom: undefined,
+      placedTo: undefined,
+      placedDates: dates.length ? dates : undefined,
+      paymentMethod: payment.labels,
+      paymentMethodId: payment.ids,
+      shippingMethod: shipping.labels,
+      shippingMethodId: shipping.ids,
       customerType: customerTypeFilter.read(byField.get('customerType')?.values ?? []),
     });
   }

@@ -33,7 +33,7 @@
     [searchError]="url.searchError() ? shared().searchTooManyWords : null"
     [fields]="filterFields()"
     [conditions]="conditions()"
-    [maxConditions]="5"
+    [maxConditions]="6"
     (searchChange)="url.editSearch($event)"
     (conditionsChange)="changeConditions($event)"
   />

@@ -695,8 +695,10 @@ The operator graph exposes `customers`, `customer`, `updateCustomerContact`,
 `createCustomerAddress`, `updateCustomerAddress` and the `customerId` filter on `orders`.
 
 In Admin, open Orders in the selected shop. Combine search by order number, contact name, email or
-phone with a placement date range, fulfillment statuses, saved shipping and payment method names,
-customer type and a selected customer. Each filter can be cleared on its own. The list URL stores
+phone with placement date conditions, fulfillment statuses, shipping and payment methods,
+customer type and a selected customer. The date conditions apply together. Renaming a linked method
+keeps its orders under the same filter choice. Orders without a linked method use the recorded
+label. Each filter can be cleared on its own. The list URL stores
 search and filter values. Open an order to see its saved contact, delivery and payment details,
 charged fee, items, promo code, discount, totals and dated fulfillment history. Use Update status
 to advance from Placed through Confirmed, Processing, Shipped and Completed. Cancelling before

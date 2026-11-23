@@ -99,25 +99,39 @@ export class OrdersRepository {
   }
 
   async operatorFilterMethods(scope: Scope) {
-    const order = this.database.client.order;
-    const [paymentMethods, shippingMethods] = await this.database.client.$transaction(
-      [
-        order.groupBy({
-          where: scope,
-          by: ['paymentMethodLabel'],
-          orderBy: { paymentMethodLabel: 'asc' },
-        }),
-        order.groupBy({
-          where: scope,
-          by: ['shippingMethodLabel'],
-          orderBy: { shippingMethodLabel: 'asc' },
-        }),
-      ],
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
-    );
+    const { order, paymentMethod, shippingMethod } = this.database.client;
+    const usedInShop = { ...scope, orders: { some: scope } };
+    const [paymentMethods, shippingMethods, legacyPayments, legacyShipping] =
+      await this.database.client.$transaction(
+        [
+          paymentMethod.findMany({
+            where: usedInShop,
+            select: { id: true, label: true },
+            orderBy: [{ label: 'asc' }, { id: 'asc' }],
+          }),
+          shippingMethod.findMany({
+            where: usedInShop,
+            select: { id: true, label: true },
+            orderBy: [{ label: 'asc' }, { id: 'asc' }],
+          }),
+          order.groupBy({
+            where: { ...scope, paymentMethodId: null },
+            by: ['paymentMethodLabel'],
+            orderBy: { paymentMethodLabel: 'asc' },
+          }),
+          order.groupBy({
+            where: { ...scope, shippingMethodId: null },
+            by: ['shippingMethodLabel'],
+            orderBy: { shippingMethodLabel: 'asc' },
+          }),
+        ],
+        { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+      );
     return {
-      paymentMethodLabels: paymentMethods.map(({ paymentMethodLabel }) => paymentMethodLabel),
-      shippingMethodLabels: shippingMethods.map(({ shippingMethodLabel }) => shippingMethodLabel),
+      paymentMethods,
+      shippingMethods,
+      paymentMethodLabels: legacyPayments.map(({ paymentMethodLabel }) => paymentMethodLabel),
+      shippingMethodLabels: legacyShipping.map(({ shippingMethodLabel }) => shippingMethodLabel),
     };
   }
 

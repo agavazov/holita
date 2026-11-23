@@ -99,6 +99,14 @@ query OperatorOrderFilterMethods {
   orderFilterMethods {
     paymentMethodLabels
     shippingMethodLabels
+    paymentMethods {
+      id
+      label
+    }
+    shippingMethods {
+      id
+      label
+    }
   }
 }
 

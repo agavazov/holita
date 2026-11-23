@@ -207,6 +207,7 @@
   "shopOrders": "Поръчки в магазина",
   "searchOrders": "Търсене по номер или контакт",
   "orderDate": "Дата на поръчката",
+  "orderLegacyMethod": "Историческо име",
   "orderCustomerType": "Тип клиент",
   "orderRegisteredCustomer": "Регистриран клиент",
   "orderGuestCustomer": "Гост",

@@ -28,12 +28,13 @@ import { MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { Skeleton } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
-import { orderAmount, orderPaymentText } from './order-format';
+import { Tag } from 'primeng/tag';
+import { orderAmount, orderPaymentSeverity, orderPaymentText } from './order-format';
 import { OrdersApi, orderIdPattern } from './orders-api';
 
 @Component({
   selector: 'holita-invoice-detail',
-  imports: [ButtonDirective, EmptyState, PageHeader, Skeleton, TableModule, TablePanel],
+  imports: [ButtonDirective, EmptyState, PageHeader, Skeleton, TableModule, TablePanel, Tag],
   templateUrl: './invoice-detail.html',
   styles: `
     .invoice-address {
@@ -68,6 +69,7 @@ export class InvoiceDetail {
   protected readonly amount = orderAmount;
   protected readonly quantity = formatNumber;
   protected readonly paymentText = orderPaymentText;
+  protected readonly paymentSeverity = orderPaymentSeverity;
   protected readonly record = resource({
     params: () => {
       const scope = this.api.scope();

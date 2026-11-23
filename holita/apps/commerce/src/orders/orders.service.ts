@@ -80,6 +80,16 @@ function orderFilterMethodLabels(labels: string[] | null | undefined, path: stri
   return { in: labels };
 }
 
+function orderFilterMethodIds(ids: string[] | null | undefined, path: string) {
+  if (!ids?.length) {
+    return undefined;
+  }
+  if (ids.length > 100 || ids.some((id) => !isUUID(id))) {
+    throw invalidValue(path);
+  }
+  return { in: ids.map((id) => id.toLowerCase()) };
+}
+
 const nextStatuses: Record<OrderStatus, OrderStatus[]> = {
   PLACED: ['CONFIRMED', 'CANCELLED'],
   CONFIRMED: ['PROCESSING', 'CANCELLED'],
@@ -280,10 +290,15 @@ export class OrdersService {
     }
     const from = orderFilterInstant(filter?.placedAtFrom, 'filter.placedAtFrom');
     const before = orderFilterInstant(filter?.placedAtBefore, 'filter.placedAtBefore');
-    if (from && before && from >= before) {
-      throw invalidValue('filter.placedAtBefore');
-    }
     const customerTypes = new Set(filter?.customerTypes);
+    const paymentMethodId = orderFilterMethodIds(
+      filter?.paymentMethodIds,
+      'filter.paymentMethodIds',
+    );
+    const shippingMethodId = orderFilterMethodIds(
+      filter?.shippingMethodIds,
+      'filter.shippingMethodIds',
+    );
     const paymentMethodLabel = orderFilterMethodLabels(
       filter?.paymentMethodLabels,
       'filter.paymentMethodLabels',
@@ -292,15 +307,23 @@ export class OrdersService {
       filter?.shippingMethodLabels,
       'filter.shippingMethodLabels',
     );
+    const paymentMatches = [
+      ...(paymentMethodId ? [{ paymentMethodId }] : []),
+      ...(paymentMethodLabel ? [{ paymentMethodId: null, paymentMethodLabel }] : []),
+    ];
+    const shippingMatches = [
+      ...(shippingMethodId ? [{ shippingMethodId }] : []),
+      ...(shippingMethodLabel ? [{ shippingMethodId: null, shippingMethodLabel }] : []),
+    ];
     const page = await this.orders.operatorOrders(scope, offset, limit, words, {
       ...(filter?.statuses?.length && { status: { in: filter.statuses } }),
       ...(customerId && { customerId: customerId.toLowerCase() }),
       ...((from || before) && {
         placedAt: { ...(from && { gte: from }), ...(before && { lt: before }) },
       }),
-      ...(paymentMethodLabel && { paymentMethodLabel }),
-      ...(shippingMethodLabel && { shippingMethodLabel }),
       AND: [
+        ...(paymentMatches.length ? [{ OR: paymentMatches }] : []),
+        ...(shippingMatches.length ? [{ OR: shippingMatches }] : []),
         ...(status ? [{ status }] : []),
         ...(customerTypes.size === 1
           ? [{ customerId: customerTypes.has('PROFILE') ? { not: null } : null }]

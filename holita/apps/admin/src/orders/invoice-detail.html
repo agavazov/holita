@@ -41,7 +41,9 @@
       } @if (item.paymentStatus; as status) {
       <div>
         <dt>{{ text().orderPaymentStatus }}</dt>
-        <dd>{{ paymentText(status, language()) }}</dd>
+        <dd>
+          <p-tag [value]="paymentText(status, language())" [severity]="paymentSeverity(status)" />
+        </dd>
       </div>
       } @if (item.paymentMethod) {
       <div>

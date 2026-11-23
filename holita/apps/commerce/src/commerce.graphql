@@ -716,14 +716,22 @@ input OrderListFilter {
   placedAtFrom: String
   "Exclusive UTC instant as ISO-8601 text."
   placedAtBefore: String
-  "Method labels saved on orders in this shop."
+  "Labels saved on legacy orders without a linked method."
   paymentMethodLabels: [String!]
   shippingMethodLabels: [String!]
+  paymentMethodIds: [ID!]
+  shippingMethodIds: [ID!]
   customerTypes: [OrderCustomerType!]
+}
+type OrderFilterMethod {
+  id: ID!
+  label: String!
 }
 type OrderFilterMethods {
   paymentMethodLabels: [String!]!
   shippingMethodLabels: [String!]!
+  paymentMethods: [OrderFilterMethod!]!
+  shippingMethods: [OrderFilterMethod!]!
 }
 type OrderContact {
   name: String!

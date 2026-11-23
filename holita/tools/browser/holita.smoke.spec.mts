@@ -2084,11 +2084,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     };
     expect(await readWithGuestToken(secondShopId)).toMatchObject(missingCart);
     const otherEmail = 'other-order-customer@example.test';
+    const otherCustomerId = randomUUID();
     const otherPhone = '+359 2 555 0175';
     await commerceDb.client.query(
       `INSERT INTO "customer" ("id", "tenantId", "branchId", "name", "email", "phone", "updatedAt")
        VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
-      [randomUUID(), shopScope.tenantId, shopId, 'Other Customer', otherEmail, otherPhone],
+      [otherCustomerId, shopScope.tenantId, shopId, 'Other Customer', otherEmail, otherPhone],
     );
     const signInAttempt = async (email: string, branchId = shopId): Promise<unknown> => {
       const response = await shopper.request.post(publicUrl, {
@@ -3326,12 +3327,20 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.getByRole('link', { name: `H-${manualId}`, exact: true }).click();
     expect(await (await linkedOrder).json()).toMatchObject({ data: { order: { id: manualId } } });
 
+    const {
+      rows: [orderMethods],
+    } = await commerceDb.client.query<{ paymentMethodId: string; shippingMethodId: string }>(
+      'SELECT "paymentMethodId", "shippingMethodId" FROM "order" WHERE "tenantId" = $1 AND "branchId" = $2 AND "id" = $3',
+      [shopScope.tenantId, shopId, manualId],
+    );
+    if (!orderMethods?.paymentMethodId || !orderMethods.shippingMethodId) {
+      throw new Error('Missing linked methods for the order filter fixture');
+    }
     const filteredOrdersUrl = new URL('/en/orders', merchant.url());
     for (const [key, value] of Object.entries({
       status: 'PLACED,CONFIRMED',
       customerType: 'PROFILE',
-      paymentMethod: encodeURIComponent(paymentLabel),
-      shippingMethod: encodeURIComponent(shippingLabel),
+      ...orderMethods,
     })) {
       filteredOrdersUrl.searchParams.set(key, value);
     }
@@ -3339,31 +3348,76 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await expect(
       merchant.getByRole('link', { name: /Open order · .* · Phone Shopper/ }),
     ).toBeVisible();
+    const addDateFilter = async (operator: 'after' | 'before', date: string) => {
+      await merchant.getByRole('button', { name: 'Add filter', exact: true }).click();
+      const editor = merchant.getByRole('dialog', { name: 'Filter condition' });
+      await editor.getByRole('combobox', { name: 'Column' }).click();
+      await merchant.getByRole('option', { name: 'Order date', exact: true }).click();
+      await editor.getByRole('combobox', { name: 'Condition' }).click();
+      await merchant.getByRole('option', { name: operator, exact: true }).click();
+      const dateInput = editor.locator('input[id$="-value"]');
+      await dateInput.pressSequentially(date);
+      await dateInput.press('Tab');
+      const requested = waitForCart(merchant, 'OperatorOrders');
+      await editor.getByRole('button', { name: 'Apply', exact: true }).click();
+      await requested;
+      await expect(editor).toBeHidden();
+    };
+    await addDateFilter('after', '2000-01-01');
+    await addDateFilter('before', '2099-01-01');
+    const remainingFilter = {
+      statuses: ['PLACED', 'CONFIRMED'],
+      customerTypes: ['PROFILE'],
+      shippingMethodIds: [orderMethods.shippingMethodId],
+      placedAtFrom: '2000-01-01T22:00:00.000Z',
+      placedAtBefore: '2098-12-31T22:00:00.000Z',
+    };
     const filteredOrders = waitForCart(merchant, 'OperatorOrders');
     await merchant.reload();
-    expect(await (await filteredOrders).json()).toMatchObject({
+    const filteredResponse = await filteredOrders;
+    expect(filteredResponse.request().postDataJSON()).toMatchObject({
+      variables: {
+        filter: { ...remainingFilter, paymentMethodIds: [orderMethods.paymentMethodId] },
+      },
+    });
+    expect(await filteredResponse.json()).toMatchObject({
       data: { orders: { items: [{ id: manualId }], total: 1 } },
     });
     const removePayment = merchant.getByRole('button', { name: /Remove.*Payment method/ });
     if (!(await removePayment.isVisible())) {
       await merchant.getByRole('button', { name: /Filters/ }).click();
     }
+    const removedPayment = waitForCart(merchant, 'OperatorOrders');
     await removePayment.click();
-    await expect(merchant).toHaveURL(
-      (url) =>
-        !url.searchParams.has('paymentMethod') &&
-        url.searchParams.has('shippingMethod') &&
-        url.searchParams.has('status') &&
-        url.searchParams.get('customerType') === 'PROFILE',
+    const withoutPayment = await removedPayment;
+    expect(withoutPayment.request().postDataJSON()).toMatchObject({
+      variables: { filter: remainingFilter },
+    });
+    expect(withoutPayment.request().postDataJSON()).not.toHaveProperty(
+      'variables.filter.paymentMethodIds',
     );
+    expect(await withoutPayment.json()).toMatchObject({
+      data: { orders: { items: [{ id: manualId }], total: 1 } },
+    });
     const orderCustomerFilter = merchant.getByRole('combobox', { name: 'Customer account' });
-    await orderCustomerFilter.fill(shopperEmail);
-    await merchant.getByRole('option', { name: updatedCustomer, exact: true }).click();
-    await expect(merchant).toHaveURL((url) => !!url.searchParams.get('customerId'));
+    await orderCustomerFilter.fill(otherEmail);
+    const selectedCustomerOrders = waitForCart(merchant, 'OperatorOrders');
+    await merchant.getByRole('option', { name: otherCustomer, exact: true }).click();
+    const forCustomer = await selectedCustomerOrders;
+    expect(forCustomer.request().postDataJSON()).toMatchObject({
+      variables: { customerId: otherCustomerId, filter: remainingFilter },
+    });
+    expect(await forCustomer.json()).toMatchObject({ data: { orders: { items: [], total: 0 } } });
+    const afterCustomerClear = waitForCart(merchant, 'OperatorOrders');
     await merchant.getByRole('button', { name: 'Clear customer filter' }).click();
-    await expect(merchant).toHaveURL(
-      (url) => !url.searchParams.has('customerId') && url.searchParams.has('shippingMethod'),
-    );
+    const withoutCustomer = await afterCustomerClear;
+    expect(withoutCustomer.request().postDataJSON()).toMatchObject({
+      variables: { filter: remainingFilter },
+    });
+    expect(withoutCustomer.request().postDataJSON()).not.toHaveProperty('variables.customerId');
+    expect(await withoutCustomer.json()).toMatchObject({
+      data: { orders: { items: [{ id: manualId }], total: 1 } },
+    });
 
     const shopPicker = merchant.locator('.app-topbar__branch').getByRole('button');
     const selectShop = async (name: string) => {
