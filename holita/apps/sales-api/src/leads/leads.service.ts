@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
+import { contactSearchWords } from '../contacts/contact-search.js';
 import type { Lead, LeadInput, QueryLeadsArgs } from '../generated/graphql/types.js';
 import { Prisma, type Lead as StoredLead } from '../generated/prisma/client.js';
 import type { SalesScope } from '../scope.js';
@@ -64,7 +65,7 @@ export class LeadsService {
 
   async list(scope: SalesScope, { offset = 0, limit = 20, search, sort }: QueryLeadsArgs) {
     const term = (search ?? '').trim();
-    const words = term.split(/\s+/u).filter(Boolean);
+    const words = contactSearchWords(term);
     if (offset < 0 || limit < 1 || limit > 100) {
       throw new BadRequestException('Invalid page');
     }

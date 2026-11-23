@@ -28,6 +28,7 @@ import { Tag } from 'primeng/tag';
 import type { LeadContactSortField, SalesContactsQuery } from '../generated/contacts-operations';
 import { leadLabel } from '../leads/lead-record';
 import { contactLabel, contactRoleLabels, contactStrings } from './contact-labels';
+import { compactPhoneSearch } from './contact-search';
 import { ContactsApi } from './contacts-api';
 
 type ContactPage = SalesContactsQuery['salesContacts'];
@@ -55,6 +56,7 @@ export class ContactsPage {
   private readonly api = inject(ContactsApi);
   protected readonly language = inject(UI_LANGUAGE);
   protected readonly url = new UrlListState(definition, () => !!this.api.scope());
+  protected readonly compactPhoneSearch = compactPhoneSearch;
   protected readonly text = computed(() => contactStrings[this.language()]);
   protected readonly title = computed(() => operatorStrings[this.language()].contacts);
   protected readonly shared = computed(() => uiMessages[this.language()]);
@@ -80,7 +82,7 @@ export class ContactsPage {
       width: '12rem',
       className: 'app-table-merged-column',
     },
-    { id: 'updated', label: this.text().contactUpdated, width: '9rem', kind: 'date' },
+    { id: 'updatedAt', label: this.text().contactUpdated, width: '9rem', kind: 'date' },
   ]);
   protected readonly sortFields = computed(() => [
     { field: 'NAME', label: this.text().contactName },

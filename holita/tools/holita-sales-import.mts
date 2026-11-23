@@ -229,8 +229,9 @@ async function readStaging(client: pg.Client, settings: ReturnType<typeof option
   ]);
   const {
     rows: [access],
-  } = await client.query<{ database: string; writable: boolean }>(
+  } = await client.query<{ database: string; snapshot: string | null; writable: boolean }>(
     `SELECT current_database() AS database,
+            obj_description(to_regnamespace($1), 'pg_namespace') AS snapshot,
             has_schema_privilege($1, 'CREATE')
             OR has_table_privilege($2, 'INSERT, UPDATE, DELETE, TRUNCATE')
             OR has_table_privilege($3, 'INSERT, UPDATE, DELETE, TRUNCATE')
@@ -240,6 +241,9 @@ async function readStaging(client: pg.Client, settings: ReturnType<typeof option
   );
   if (access?.database !== 'holita_sales_import' || access.writable) {
     throw new ImportFailure('staging_read_only_role_required');
+  }
+  if (access.snapshot !== snapshot) {
+    throw new ImportFailure('staging_snapshot_mismatch');
   }
   const {
     rows: [counts],

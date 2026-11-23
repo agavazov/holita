@@ -14,6 +14,7 @@ import { Prisma, type LeadContact as StoredContact } from '../generated/prisma/c
 import type { SalesScope } from '../scope.js';
 import { isContactEmail } from './contact-email.js';
 import { normalizeContactPhone } from './contact-phone.js';
+import { contactSearchWords } from './contact-search.js';
 import { ContactsRepository } from './contacts.repository.js';
 
 type ContactText = keyof Pick<LeadContactInput, 'name' | 'phone' | 'email' | 'notes'>;
@@ -110,7 +111,7 @@ export class ContactsService {
 
   async list(scope: SalesScope, { offset = 0, limit = 20, search, sort }: QuerySalesContactsArgs) {
     const term = (search ?? '').trim();
-    const words = term.split(/\s+/u).filter(Boolean);
+    const words = contactSearchWords(term);
     if (offset < 0 || limit < 1 || limit > 100) {
       throw new BadRequestException('Invalid page');
     }

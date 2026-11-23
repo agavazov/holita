@@ -501,8 +501,11 @@ Confirm the initial staging projection in `holita_sales_import.red_bg_20260821` 
 metadata. It must contain the approved lead and contact columns and the promoted snapshot's totals
 of 23 leads and 24 contacts. The importer checks the approved text columns of `leads` and
 `contacts` against schema metadata before reading records. It validates UUIDs and flags and
-preserves timestamps at millisecond precision. For a later approved snapshot, use its UTC
-snapshot identifier and corresponding `red_bg_YYYYMMDD` staging schema.
+preserves timestamps at millisecond precision. The staging administrator records the full UTC
+identifier from the verified export as the comment on its `red_bg_YYYYMMDD` schema. For the
+initial export this is `COMMENT ON SCHEMA red_bg_20260821 IS '20260821T075453Z';`.
+The importer requires the schema comment to match `--snapshot` before producing a plan or
+writing to Sales.
 
 Use the verified platform tenant UUID to preview the initial snapshot.
 

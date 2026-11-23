@@ -1,5 +1,11 @@
 import type { Prisma } from '../generated/prisma/client.js';
-import { contactPhoneFragment } from './contact-phone.js';
+import { contactPhoneFragment, normalizeContactPhone } from './contact-phone.js';
+
+export function contactSearchWords(term: string): string[] {
+  const words = term.split(/\s+/u).filter(Boolean);
+  const phone = words.length > 5 ? normalizeContactPhone(term) : null;
+  return phone ? [phone] : words;
+}
 
 export function searchText(word: string) {
   return { contains: word.replace(/[\\%_]/g, '\\$&'), mode: 'insensitive' as const };

@@ -59,6 +59,7 @@ export class LeadContacts {
     scope: this.api.scope(),
     leadId: this.leadId(),
   }));
+  protected readonly removeFailure = signal<ReturnType<LeadContacts['actionContext']> | null>(null);
   protected readonly list = resource({
     params: () => {
       const { scope, leadId } = this.actionContext();
@@ -160,6 +161,7 @@ export class LeadContacts {
       return;
     }
 
+    this.removeFailure.set(null);
     this.removing.set(true);
     try {
       await this.api.remove(scope, leadId, id);
@@ -169,7 +171,7 @@ export class LeadContacts {
       }
     } catch {
       if (!this.destroyRef.destroyed && this.actionContext() === context) {
-        this.messages.add({ severity: 'error', summary: this.text().contactRemoveFailed });
+        this.removeFailure.set(context);
       }
     } finally {
       this.removing.set(false);

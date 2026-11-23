@@ -24,8 +24,10 @@
     [mobileFullWidth]="true"
     [searchLabel]="text().searchLeads"
     [search]="url.searchDraft()"
-    [searchError]="url.searchError() ? shared().searchTooManyWords : null"
-    (searchChange)="url.editSearch($event)"
+    [searchError]="url.searchError() && compactPhoneSearch(url.searchDraft()) === url.searchDraft()
+      ? shared().searchTooManyWords
+      : null"
+    (searchChange)="url.editSearch(compactPhoneSearch($event))"
   >
     <osnova-list-sort-menu
       filterActions

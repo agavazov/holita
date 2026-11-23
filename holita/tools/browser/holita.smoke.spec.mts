@@ -988,6 +988,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     expect(foreignContact.rows).toEqual([{ name: foreignContactName, isPrimary: false }]);
 
     const phone = '+12025550123';
+    const formattedPhone = '00 1 202 555 01 23';
     const email = 'smoke-inbox@example.test';
     const browseContacts = `query BrowseSmokeContacts($search: String!) {
       salesContacts(search: $search) { total items { contact { id phone } lead { id } } }
@@ -1022,7 +1023,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         ],
       },
     });
-    const browse = await salesGraphql(browseContacts, { search: phone });
+    const browse = await salesGraphql(browseContacts, { search: formattedPhone });
     expect(browse).toMatchObject({
       data: { salesContacts: { total: 1, items: [{ contact: { phone }, lead: { id: leadId } }] } },
     });
@@ -1034,7 +1035,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       missingContact,
     );
     expect(await salesGraphql(deleteContact, wrongLead)).toMatchObject(missingContact);
-    for (const search of [input.name, email, '00 1 (202) 555-0123']) {
+    for (const search of [input.name, email, formattedPhone]) {
       expect(
         await salesGraphql(
           'query SearchSmokeContact($search: String!) { leads(search: $search) { total items { id } } }',
@@ -1042,6 +1043,25 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         ),
       ).toEqual({ data: { leads: { total: 1, items: [{ id: leadId }] } } });
     }
+    for (const [path, operation, expected] of [
+      ['leads', 'SalesLeads', { leads: { total: 1, items: [{ id: leadId }] } }],
+      [
+        'contacts',
+        'SalesContacts',
+        { salesContacts: { total: 1, items: [{ contact: { phone }, lead: { id: leadId } }] } },
+      ],
+    ] as const) {
+      await Promise.all([
+        waitForOperation(sales, salesEndpoint, operation),
+        sales.goto(new URL('/en/' + path, leadUrl).href),
+      ]);
+      const [response] = await Promise.all([
+        waitForOperation(sales, salesEndpoint, operation),
+        sales.getByRole('searchbox').fill(formattedPhone),
+      ]);
+      expect(await response.json()).toMatchObject({ data: expected });
+    }
+    await sales.goto(detailUrl.href);
     await sales
       .getByRole('row')
       .filter({ hasText: email })

@@ -31,6 +31,7 @@ import {
 import { MessageService } from 'primeng/api';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import type { LeadSortField, SalesLeadsQuery } from '../generated/leads-operations';
+import { compactPhoneSearch } from '../contacts/contact-search';
 import { leadLabel } from './lead-record';
 import { leadStrings } from './lead-strings';
 import { LeadsApi } from './leads-api';
@@ -69,6 +70,7 @@ export class LeadsPage {
   private readonly language = inject(UI_LANGUAGE);
   private readonly sortReady = injectSortReady();
   protected readonly url = new UrlListState(definition, () => !!this.api.scope());
+  protected readonly compactPhoneSearch = compactPhoneSearch;
   protected readonly text = computed(() => leadStrings[this.language()]);
   protected readonly title = computed(() => operatorStrings[this.language()].leads);
   protected readonly shared = computed(() => uiMessages[this.language()]);

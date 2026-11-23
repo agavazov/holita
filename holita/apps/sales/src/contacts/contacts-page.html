@@ -19,8 +19,10 @@
     [mobileFullWidth]="true"
     [searchLabel]="text().searchContacts"
     [search]="url.searchDraft()"
-    [searchError]="url.searchError() ? shared().searchTooManyWords : null"
-    (searchChange)="url.editSearch($event)"
+    [searchError]="url.searchError() && compactPhoneSearch(url.searchDraft()) === url.searchDraft()
+      ? shared().searchTooManyWords
+      : null"
+    (searchChange)="url.editSearch(compactPhoneSearch($event))"
   >
     <osnova-list-sort-menu
       filterActions
@@ -33,8 +35,13 @@
     class="app-responsive-table app-table-fixed"
     [value]="page()?.items ?? []"
     [rowTrackBy]="trackByContact"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
     [scrollable]="true"
     [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    [sortField]="sort().field === 'NAME' ? 'name' : 'updatedAt'"
+    [sortOrder]="sort().direction === 'asc' ? 1 : -1"
+    (onSort)="url.sortFromTable($event)"
     dataKey="contact.id"
   >
     <ng-template #colgroup>
@@ -52,13 +59,18 @@
     </ng-template>
     <ng-template #header>
       <tr>
-        @for (column of columns(); track column.id) {
+        @for (column of columns(); track column.id) { @let sortable = column.id === 'name' ||
+        column.id === 'updatedAt';
         <th
           scope="col"
           [class]="column.className ?? ''"
           [class.app-cell-date]="column.kind === 'date'"
+          [pSortableColumn]="column.id"
+          [pSortableColumnDisabled]="!sortable"
         >
-          {{ column.label }}
+          {{ column.label }} @if (sortable) {
+          <p-sort-icon [field]="column.id" />
+          }
         </th>
         }
       </tr>
