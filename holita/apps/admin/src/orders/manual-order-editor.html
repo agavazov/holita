@@ -35,8 +35,15 @@
             [filter]="true"
             filterBy="label"
             [ariaFilterLabel]="text().chooseCustomer"
+            [emptyFilterMessage]="shared().table.noResultsTitle"
             [invalid]="!!customerError"
-            [pt]="{ label: { 'aria-invalid': customerError ? 'true' : undefined, 'aria-describedby': customerError ? 'manual-customerId-error' : undefined } }"
+            [pt]="{
+              label: {
+                'aria-invalid': customerError ? 'true' : undefined,
+                'aria-describedby': customerError ? 'manual-customerId-error' : undefined,
+              },
+              option: { style: { whiteSpace: 'normal', overflowWrap: 'anywhere' } },
+            }"
             (onChange)="customerChanged()"
           />
         </osnova-form-field>

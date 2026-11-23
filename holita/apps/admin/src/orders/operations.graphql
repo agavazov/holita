@@ -177,7 +177,7 @@ query OperatorManualOrderChoices {
     id
     name
     email
-    orderPhone
+    phone
   }
   productOptions {
     active

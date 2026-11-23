@@ -1,6 +1,6 @@
 # 263 Page customers and bound manual-order customer search
 
-**Status:** Ready after [152](152-holita-manual-order-customer-phone.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

@@ -178,11 +178,11 @@ export class ManualOrderEditor {
   );
   protected readonly customerOptions = computed(() => [
     { id: '', label: this.text().guestOrder, name: '', email: '', phone: '' },
-    ...(this.choices()?.customers ?? []).map(({ id, name, email, orderPhone }) => ({
+    ...(this.choices()?.customers ?? []).map(({ id, name, email, phone }) => ({
       id,
       name,
       email,
-      phone: orderPhone ?? '',
+      phone: phone ?? '',
       label: `${name} · ${email}`,
     })),
   ]);

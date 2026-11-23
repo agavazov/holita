@@ -2254,12 +2254,34 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       data: { updateProduct: { id: configuredProductId } },
     });
 
-    await merchant.getByRole('link', { name: 'Back to orders', exact: true }).click();
+    await merchant.getByRole('link', { name: 'Customers', exact: true }).click();
+    await merchant
+      .getByRole('row')
+      .filter({ hasText: shopperEmail })
+      .getByRole('link', { name: 'Shopper', exact: true })
+      .click();
+    await merchant.waitForURL(/\/customers\/[0-9a-f-]+$/u);
+    const customerUrl = merchant.url();
+    const customerDialog = merchant.getByRole('dialog');
+    const saveCustomer = async () => {
+      await customerDialog.getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(merchant).toHaveURL(customerUrl);
+    };
+
+    const customerName = 'Updated Shopper';
+    const customerPhone = '+359 2 555 0199';
+    await merchant.getByRole('button', { name: 'Edit contact', exact: true }).click();
+    await customerDialog.getByRole('textbox', { name: /^Name\b/u }).fill(customerName);
+    await customerDialog.getByRole('textbox', { name: 'Phone', exact: true }).fill(customerPhone);
+    await saveCustomer();
+
+    await merchant.getByRole('link', { name: 'Orders', exact: true }).click();
     const otherEmail = 'other-order-customer@example.test';
+    const otherPhone = '+359 2 555 0175';
     await commerceDb.client.query(
-      `INSERT INTO "customer" ("id", "tenantId", "branchId", "name", "email", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
-      [randomUUID(), shopScope.tenantId, shopId, 'Other Customer', otherEmail],
+      `INSERT INTO "customer" ("id", "tenantId", "branchId", "name", "email", "phone", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
+      [randomUUID(), shopScope.tenantId, shopId, 'Other Customer', otherEmail, otherPhone],
     );
     await merchant.getByRole('button', { name: 'Create manual order', exact: true }).click();
     const selectCustomer = async (label: string) => {
@@ -2272,17 +2294,18 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       await option.click();
       await expect(option).toHaveCount(0);
     };
-    const originalCustomer = `Shopper · ${shopperEmail}`;
+    const updatedCustomer = `${customerName} · ${shopperEmail}`;
+    const otherCustomer = `Other Customer · ${otherEmail}`;
     const contactName = merchant.locator('[id="manual-contact.name"]');
     const contactPhone = merchant.locator('[id="manual-contact.phone"]');
-    await selectCustomer(originalCustomer);
-    await expect(contactPhone).toHaveValue('+359 2 555 0100');
+    await selectCustomer(updatedCustomer);
+    await expect(contactPhone).toHaveValue(customerPhone);
     await contactName.fill('Phone Shopper');
-    await selectCustomer(`Other Customer · ${otherEmail}`);
+    await selectCustomer(otherCustomer);
     await expect(contactName).toHaveValue('Phone Shopper');
     await expect(merchant.locator('[id="manual-contact.email"]')).toHaveValue(otherEmail);
-    await expect(contactPhone).toHaveValue('');
-    await selectCustomer(originalCustomer);
+    await expect(contactPhone).toHaveValue(otherPhone);
+    await selectCustomer(updatedCustomer);
     await merchant.locator('[id="manual-shippingAddress.city"]').fill('Sofia');
     await merchant.locator('[id="manual-shippingAddress.postalCode"]').fill('1000');
     await merchant.locator('[id="manual-shippingAddress.line1"]').fill('12 Demo Street');
@@ -2326,6 +2349,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     expect(await (await persistedManual).json()).toMatchObject({
       data: {
         shopperOrder: {
+          contact: { name: 'Phone Shopper', email: shopperEmail, phone: customerPhone },
           total: '66.50',
           lines: [{ sku: 'CONFIG-Satin', quantity: 2, unitPrice: '30.00' }],
         },
@@ -2339,27 +2363,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await shopper.goto(accountReceiptUrl);
     await originalReceipt;
 
-    await merchant.getByRole('link', { name: 'Customers', exact: true }).click();
-    await merchant
-      .getByRole('row')
-      .filter({ hasText: shopperEmail })
-      .getByRole('link', { name: 'Shopper', exact: true })
-      .click();
-    await merchant.waitForURL(/\/customers\/[0-9a-f-]+$/u);
-    const customerUrl = merchant.url();
-    const customerDialog = merchant.getByRole('dialog');
-    const saveCustomer = async () => {
-      await customerDialog.getByRole('button', { name: 'Save', exact: true }).click();
-      await expect(merchant).toHaveURL(customerUrl);
-    };
-
-    const customerName = 'Updated Shopper';
-    const customerPhone = '+359 2 555 0199';
-    await merchant.getByRole('button', { name: 'Edit contact', exact: true }).click();
-    await customerDialog.getByRole('textbox', { name: /^Name\b/u }).fill(customerName);
-    await customerDialog.getByRole('textbox', { name: 'Phone', exact: true }).fill(customerPhone);
-    await saveCustomer();
-
+    await merchant.goto(customerUrl);
     const addressRecipient = 'Parcel Recipient';
     const newStreet = '28 Customer Street';
     const addressCity = 'Sofia';
@@ -2505,6 +2509,20 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const archivedImage = await archivedPreview;
     expect(archivedImage.status()).toBe(200);
     expect(archivedImage.headers()['content-type']).toBe('image/png');
+
+    await merchant.goto(customerUrl);
+    await merchant.getByRole('button', { name: 'Edit contact', exact: true }).click();
+    await customerDialog.getByRole('textbox', { name: 'Phone', exact: true }).fill('');
+    await saveCustomer();
+    await merchant.getByRole('link', { name: 'Orders', exact: true }).click();
+    await merchant.getByRole('button', { name: 'Create manual order', exact: true }).click();
+    await selectCustomer(otherCustomer);
+    await selectCustomer(updatedCustomer);
+    await expect(contactPhone).toHaveValue('');
+    const typedPhone = '+359 2 555 0150';
+    await contactPhone.fill(typedPhone);
+    await selectCustomer(otherCustomer);
+    await expect(contactPhone).toHaveValue(typedPhone);
   } finally {
     for (const close of cleanup.reverse()) {
       try {
