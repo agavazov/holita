@@ -479,11 +479,43 @@ the Holita migration command above before restarting Holita. The operator Router
 The operator graph exposes `salesWorkspaceAccess { tenantId userId }` to Core platform
 accounts with the `SALES` role. The IDs identify the verified platform tenant and signed-in
 Core user. CRM scope comes from that platform tenant, independent of Branch selection. In Sales,
-open **Leads** to find prospects by name, website or source. **New lead** requires a name or
-an HTTP(S) website and opens the saved prospect at its own address. Use **Edit lead** on the
-prospect page to update it. Sales preserves the current list or record URL through sign-in and
-language changes. The operator graph provides `leads`, `lead`, `createLead` and
-`updateLead` to authorized Sales accounts. The Holita demo seed inserts two fictional prospects.
+open **Leads** to find prospects by name, website, source or contact details. **New lead**
+requires a name or an HTTP(S) website and opens the saved prospect at its own address. Use
+**Edit lead** to update the prospect, and use its **Contacts** section to manage contacts and
+the primary contact. **Contacts** in the workspace navigation searches contacts across leads
+and links to each prospect. Sales preserves the current list or record URL through sign-in and
+language changes. The operator graph provides `leads`, `lead`, `createLead`, `updateLead`,
+`salesContacts` and per-lead contact reads and mutations to authorized Sales accounts.
+The Holita demo seed inserts two fictional prospects and three contacts.
+
+**Local Sales import**
+
+Use an approved export in private loopback staging with a read-only role. Run the Sales migrations
+on the dedicated local development database and start the local operator Router. Provide
+`HOLITA_SALES_IMPORT_STAGING_URL` and a current platform SALES bearer in
+`HOLITA_SALES_IMPORT_BEARER` through the private process environment. The importer uses the target
+`SALES_DATABASE_URL` from `holita/config/sales.env` and verifies the actor through
+`salesWorkspaceAccess` on port 12010. Confirm that the running Sales API uses that same database.
+
+Confirm the initial staging projection in `holita_sales_import.red_bg_20260821` from schema
+metadata. It must contain the approved lead and contact columns and the promoted snapshot's totals
+of 23 leads and 24 contacts. The importer checks the approved text columns of `leads` and
+`contacts` against schema metadata before reading records. It validates UUIDs and flags and
+preserves timestamps at millisecond precision. For a later approved snapshot, use its UTC
+snapshot identifier and corresponding `red_bg_YYYYMMDD` staging schema.
+
+Use the verified platform tenant UUID to preview the initial snapshot.
+
+```bash
+npm run db:import:holita:sales -- --snapshot 20260821T075453Z --expected-tenant "$SALES_TENANT_ID"
+```
+
+Review the aggregate plan, then add `--apply` to insert the approved additions. Rerun with the same
+arguments to confirm zero new rows. For each entity, compare the source count with inserted,
+already-present and rejected counts. Lead fields without a target representation are counted where
+present in the staging projection. Imported leads use the verified Core actor as creator, and the
+ledger records that fallback. The ledger retains mappings for removed contacts. A later export
+reports source and operator changes by aggregate and leaves mapped rows intact.
 
 Existing Holita checkouts need `HOLITA_COMMERCE_IMAGE_DIR` in `holita/config/commerce.env`.
 Set it to the absolute path of `.volumes/holita/images` in the checkout before seeding.

@@ -1,9 +1,15 @@
 import { unwrapResolverError } from '@apollo/server/errors';
-import { Module, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  ConflictException,
+  Module,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage } from 'node:http';
+import { ContactsModule } from './contacts/contacts.module.js';
 import { DatabaseModule } from './database.module.js';
 import { HealthController } from './health.controller.js';
 import { LeadsModule } from './leads/leads.module.js';
@@ -15,6 +21,7 @@ import { WorkspaceModule } from './workspace/workspace.module.js';
     DatabaseModule,
     WorkspaceModule,
     LeadsModule,
+    ContactsModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       typeDefs: readFileSync(new URL('./sales.graphql', import.meta.url), 'utf8'),
@@ -29,6 +36,9 @@ import { WorkspaceModule } from './workspace/workspace.module.js';
         }
         if (cause instanceof NotFoundException) {
           return { ...formatted, extensions: { code: 'NOT_FOUND' } };
+        }
+        if (cause instanceof ConflictException) {
+          return { ...formatted, extensions: { code: 'CONFLICT' } };
         }
         return formatted;
       },

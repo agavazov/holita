@@ -7,7 +7,7 @@
   [backQueryParams]="queryParams()"
   [backFragment]="fragment()"
   [actions]="actions()"
-  (action)="edit()"
+  (action)="openAction($event.id)"
 />
 @if (!entry.validId()) {
 <section class="app-card">
@@ -65,6 +65,11 @@
     </div>
   </dl>
 </section>
+<holita-lead-contacts
+  [leadId]="lead.id"
+  (add)="openAction('add-contact')"
+  (edit)="editContact($event)"
+/>
 } @else if (entry.record.isLoading()) {
 <section class="app-card" role="status" [attr.aria-label]="shared().loading">
   <p-skeleton width="8rem" />

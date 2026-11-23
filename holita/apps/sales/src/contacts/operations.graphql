@@ -1,0 +1,64 @@
+fragment SalesLeadContactFields on LeadContact {
+  id
+  leadId
+  name
+  phone
+  email
+  role
+  isPrimary
+  notes
+  createdAt
+  updatedAt
+}
+
+query SalesLeadContacts($leadId: ID!) {
+  leadContacts(leadId: $leadId) {
+    ...SalesLeadContactFields
+  }
+}
+
+query SalesLeadContact($leadId: ID!, $id: ID!) {
+  leadContact(leadId: $leadId, id: $id) {
+    ...SalesLeadContactFields
+  }
+}
+
+query SalesContacts($offset: Int!, $limit: Int!, $search: String, $sort: LeadContactSort) {
+  salesContacts(offset: $offset, limit: $limit, search: $search, sort: $sort) {
+    items {
+      contact {
+        id
+        name
+        phone
+        email
+        role
+        isPrimary
+        updatedAt
+      }
+      lead {
+        id
+        displayName
+        websiteUrl
+      }
+    }
+    total
+    offset
+    limit
+  }
+}
+
+mutation SalesCreateLeadContact($leadId: ID!, $input: LeadContactInput!) {
+  createLeadContact(leadId: $leadId, input: $input) {
+    id
+  }
+}
+
+mutation SalesUpdateLeadContact($leadId: ID!, $id: ID!, $input: LeadContactInput!) {
+  updateLeadContact(leadId: $leadId, id: $id, input: $input) {
+    id
+  }
+}
+
+mutation SalesDeleteLeadContact($leadId: ID!, $id: ID!) {
+  deleteLeadContact(leadId: $leadId, id: $id)
+}

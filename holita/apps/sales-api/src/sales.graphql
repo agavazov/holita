@@ -2,11 +2,22 @@ type Query {
   salesWorkspaceAccess: SalesWorkspaceViewer!
   leads(offset: Int! = 0, limit: Int! = 20, search: String, sort: LeadSort): LeadPage!
   lead(id: ID!): Lead
+  leadContacts(leadId: ID!): [LeadContact!]!
+  leadContact(leadId: ID!, id: ID!): LeadContact
+  salesContacts(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    sort: LeadContactSort
+  ): LeadContactPage!
 }
 
 type Mutation {
   createLead(input: LeadInput!): Lead!
   updateLead(id: ID!, input: LeadInput!): Lead!
+  createLeadContact(leadId: ID!, input: LeadContactInput!): LeadContact!
+  updateLeadContact(leadId: ID!, id: ID!, input: LeadContactInput!): LeadContact!
+  deleteLeadContact(leadId: ID!, id: ID!): Boolean!
 }
 
 type SalesWorkspaceViewer {
@@ -50,4 +61,67 @@ enum LeadSortDirection {
 input LeadSort {
   field: LeadSortField! = CREATED_AT
   direction: LeadSortDirection! = DESC
+}
+
+type LeadContact {
+  id: ID!
+  leadId: ID!
+  name: String
+  phone: String
+  email: String
+  role: LeadContactRole!
+  isPrimary: Boolean!
+  notes: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+input LeadContactInput {
+  name: String
+  phone: String
+  email: String
+  role: LeadContactRole! = UNKNOWN
+  isPrimary: Boolean! = false
+  notes: String
+}
+
+enum LeadContactRole {
+  OWNER
+  MANAGER
+  EMPLOYEE
+  TECHNICAL
+  UNKNOWN
+}
+
+type LeadContactPage {
+  items: [SalesContact!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+
+type SalesContact {
+  contact: LeadContact!
+  lead: LeadContactParent!
+}
+
+type LeadContactParent {
+  id: ID!
+  displayName: String
+  websiteUrl: String
+}
+
+enum LeadContactSortField {
+  NAME
+  UPDATED_AT
+}
+
+enum LeadContactSortDirection {
+  ASC
+  DESC
+}
+
+input LeadContactSort {
+  field: LeadContactSortField! = NAME
+  direction: LeadContactSortDirection! = ASC
 }

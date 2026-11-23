@@ -27,6 +27,5 @@ Exclude telephony, recordings, SMS, crawler payloads, external providers, passwo
 
 ## References
 
-- [Initial Sales import](357-holita-sales-initial-import.md)
 - [Migration queue](holita-migration.md)
 - [red.bg Sales inventory](../../holita/docs/red-bg/services/sales.md)

@@ -24,6 +24,7 @@ export const operationPaths = [
   'holita/packages/operator/src/operations.graphql',
   'holita/apps/sales/src/workspace/operations.graphql',
   'holita/apps/sales/src/leads/operations.graphql',
+  'holita/apps/sales/src/contacts/operations.graphql',
   'holita/apps/admin/src/badges/operations.graphql',
   'holita/apps/admin/src/blog/operations.graphql',
   'holita/apps/admin/src/brands/operations.graphql',
@@ -61,6 +62,10 @@ export const targets = {
       {
         path: 'holita/apps/sales/src/generated/leads-operations.ts',
         operations: ['holita/apps/sales/src/leads/operations.graphql'],
+      },
+      {
+        path: 'holita/apps/sales/src/generated/contacts-operations.ts',
+        operations: ['holita/apps/sales/src/contacts/operations.graphql'],
       },
     ],
   },

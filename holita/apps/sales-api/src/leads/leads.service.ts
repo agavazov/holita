@@ -71,7 +71,7 @@ export class LeadsService {
     if (term.includes('\u0000') || Array.from(term).length > 200 || words.length > 5) {
       throw new BadRequestException('Invalid search');
     }
-    const page = await this.repository.list(scope, offset, limit, words, sort);
+    const page = await this.repository.list(scope, offset, limit, term, words, sort);
     return { ...page, items: page.items.map(present) };
   }
 

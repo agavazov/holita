@@ -114,7 +114,10 @@ async function seedLeads(core: URL): Promise<void> {
 
   const client = new pg.Client({ connectionString: sales.toString() });
   await client.connect();
+  const firstLead = 'b2000000-0000-4000-8000-000000000001';
+  const secondLead = 'b2000000-0000-4000-8000-000000000002';
   try {
+    await client.query('BEGIN');
     const { rowCount } = await client.query(
       `INSERT INTO "lead" ("id", "tenantId", "displayName", "websiteUrl", "sourceName",
                            "createdByUserId", "updatedAt")
@@ -122,16 +125,45 @@ async function seedLeads(core: URL): Promise<void> {
               ($5, $2, $6, NULL, $7, $4, CURRENT_TIMESTAMP)
        ON CONFLICT ("id") DO NOTHING`,
       [
-        'b2000000-0000-4000-8000-000000000001',
+        firstLead,
         creator.tenantId,
         'https://rilska-hartiya.example',
         creator.id,
-        'b2000000-0000-4000-8000-000000000002',
+        secondLead,
         'Ателие „Бяла глина“',
         'Препоръка',
       ],
     );
+    const contacts = await client.query(
+      `INSERT INTO "leadContact" ("id", "tenantId", "leadId", "name", "phone", "email",
+                                  "role", "isPrimary", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, 'owner', NOT EXISTS (
+                 SELECT 1 FROM "leadContact" WHERE "tenantId" = $2 AND "leadId" = $3 AND "isPrimary"
+               ), CURRENT_TIMESTAMP),
+              ($7, $2, $3, $8, NULL, $9, 'technical', false, CURRENT_TIMESTAMP),
+              ($10, $2, $11, NULL, NULL, $12, 'unknown', false, CURRENT_TIMESTAMP)
+       ON CONFLICT ("id") DO NOTHING`,
+      [
+        'b3000000-0000-4000-8000-000000000001',
+        creator.tenantId,
+        firstLead,
+        'Ива Стоянова',
+        '+12025550101',
+        'owner@rilska-hartiya.example',
+        'b3000000-0000-4000-8000-000000000002',
+        'Борис Илиев',
+        'tech@rilska-hartiya.example',
+        'b3000000-0000-4000-8000-000000000003',
+        secondLead,
+        'hello@byala-glina.example',
+      ],
+    );
+    await client.query('COMMIT');
     console.log(`Holita Sales prospects inserted: ${String(rowCount)}`);
+    console.log(`Holita Sales contacts inserted: ${String(contacts.rowCount)}`);
+  } catch (error: unknown) {
+    await client.query('ROLLBACK');
+    throw error;
   } finally {
     await client.end();
   }

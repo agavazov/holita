@@ -1,5 +1,7 @@
 import { MerchantDetailPage, MerchantsPage, startOperator } from '@holita/operator';
 import { leaveDrawer } from '@osnova/ui';
+import { ContactEditor } from './contacts/contact-editor';
+import { ContactsPage } from './contacts/contacts-page';
 import { LeadDetailPage } from './leads/lead-detail-page';
 import { LeadEditor } from './leads/lead-editor';
 import { LeadsPage } from './leads/leads-page';
@@ -46,14 +48,33 @@ void startOperator({
               data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
               canDeactivate: [leaveDrawer],
             },
+            {
+              path: 'contacts/new',
+              component: ContactEditor,
+              data: { drawer: true, mode: 'create', contactEditor: true },
+              canDeactivate: [leaveDrawer],
+            },
+            {
+              path: 'contacts/:recordId/edit',
+              component: ContactEditor,
+              data: { drawer: true, mode: 'edit', recordParam: 'recordId', contactEditor: true },
+              canDeactivate: [leaveDrawer],
+            },
           ],
         },
       ],
+    },
+    {
+      path: 'contacts',
+      component: SalesWorkspaceStatus,
+      data: { requireSalesAccess: true },
+      children: [{ path: '', component: ContactsPage }],
     },
   ],
   navigation: [
     { id: 'merchants', label: 'merchants', icon: 'users', path: 'merchants' },
     { id: 'leads', label: 'leads', icon: 'id-card', path: 'leads' },
+    { id: 'contacts', label: 'contacts', icon: 'envelope', path: 'contacts' },
   ],
 }).catch((error: unknown) => {
   console.error(error);

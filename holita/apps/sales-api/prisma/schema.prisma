@@ -3,6 +3,7 @@ generator client {
   output              = "../src/generated/prisma"
   moduleFormat        = "esm"
   importFileExtension = "js"
+  previewFeatures     = ["partialIndexes"]
 }
 
 datasource db {
@@ -10,16 +11,63 @@ datasource db {
 }
 
 model Lead {
-  id              String   @id @default(uuid()) @db.Uuid
-  tenantId        String   @db.Uuid
-  displayName     String?  @db.VarChar(255)
-  websiteUrl      String?  @db.VarChar(2048)
-  sourceName      String?  @db.VarChar(255)
-  createdByUserId String   @db.Uuid
-  createdAt       DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @db.Uuid
+  displayName     String?       @db.VarChar(255)
+  websiteUrl      String?       @db.VarChar(2048)
+  sourceName      String?       @db.VarChar(255)
+  createdByUserId String        @db.Uuid
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
+  contacts        LeadContact[]
 
   @@unique([tenantId, id])
   @@index([tenantId, createdAt, id])
   @@map("lead")
+}
+
+enum LeadContactRole {
+  OWNER     @map("owner")
+  MANAGER   @map("manager")
+  EMPLOYEE  @map("employee")
+  TECHNICAL @map("technical")
+  UNKNOWN   @map("unknown")
+
+  @@map("leadContactRole")
+}
+
+model LeadContact {
+  id        String          @id @default(uuid()) @db.Uuid
+  tenantId  String          @db.Uuid
+  leadId    String          @db.Uuid
+  name      String?         @db.VarChar(255)
+  phone     String?         @db.VarChar(16)
+  email     String?         @db.VarChar(255)
+  role      LeadContactRole @default(UNKNOWN)
+  isPrimary Boolean         @default(false)
+  notes     String?         @db.Text
+  createdAt DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime        @updatedAt @db.Timestamptz(3)
+  lead      Lead            @relation(fields: [tenantId, leadId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, leadId], map: "leadContact_primary_key", where: raw("\"isPrimary\""))
+  @@index([tenantId, leadId])
+  @@map("leadContact")
+}
+
+model SalesImportRecord {
+  tenantId                String   @db.Uuid
+  sourceSystem            String   @db.VarChar(32)
+  entity                  String   @db.VarChar(16)
+  sourceId                String   @db.Uuid
+  targetId                String   @db.Uuid
+  snapshotId              String   @db.VarChar(32)
+  sourceFingerprint       String   @db.Char(64)
+  targetFingerprint       String   @db.Char(64)
+  importedAt              DateTime @default(now()) @db.Timestamptz(3)
+  importedByCoreUserId    String   @db.Uuid
+  leadCreatorProvenance   String?  @db.VarChar(32)
+
+  @@id([tenantId, sourceSystem, entity, sourceId])
+  @@map("salesImportRecord")
 }

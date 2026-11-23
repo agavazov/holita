@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { normalizeContactPhone } from '../contacts/contact-phone.js';
+import { contactWordMatches, searchText } from '../contacts/contact-search.js';
 import { DatabaseService } from '../database.service.js';
 import type { LeadSort } from '../generated/graphql/types.js';
 import { Prisma, type Lead } from '../generated/prisma/client.js';
@@ -14,15 +16,27 @@ export class LeadsRepository {
     { tenantId }: SalesScope,
     offset: number,
     limit: number,
+    term: string,
     words: string[],
     sort?: LeadSort | null,
   ) {
+    const perWord = words.map((word) => {
+      const match = searchText(word);
+      return {
+        OR: [
+          { displayName: match },
+          { websiteUrl: match },
+          { sourceName: match },
+          { contacts: { some: { tenantId, OR: contactWordMatches(word) } } },
+        ],
+      };
+    });
+    const phone = normalizeContactPhone(term);
     const where: Prisma.LeadWhereInput = {
       tenantId,
-      AND: words.map((word) => {
-        const match = { contains: word.replace(/[\\%_]/g, '\\$&'), mode: 'insensitive' as const };
-        return { OR: [{ displayName: match }, { websiteUrl: match }, { sourceName: match }] };
-      }),
+      ...(phone
+        ? { OR: [{ AND: perWord }, { contacts: { some: { tenantId, phone } } }] }
+        : { AND: perWord }),
     };
     const direction = sort?.direction === 'ASC' ? 'asc' : 'desc';
     const order: Prisma.LeadOrderByWithRelationInput =

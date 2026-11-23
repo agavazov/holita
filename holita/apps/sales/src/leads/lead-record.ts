@@ -4,7 +4,9 @@ import { LeadsApi } from './leads-api';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
-export function leadLabel(lead: SalesLeadFieldsFragment): string {
+export function leadLabel(
+  lead: Pick<SalesLeadFieldsFragment, 'id' | 'displayName' | 'websiteUrl'>,
+): string {
   return lead.displayName ?? lead.websiteUrl ?? lead.id;
 }
 

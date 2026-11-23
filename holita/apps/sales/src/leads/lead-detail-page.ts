@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { operatorStrings } from '@holita/operator';
@@ -15,12 +15,14 @@ import {
 import { MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { Skeleton } from 'primeng/skeleton';
+import { contactStrings } from '../contacts/contact-labels';
+import { LeadContacts } from '../contacts/lead-contacts';
 import { injectLeadRecord, leadLabel } from './lead-record';
 import { leadStrings } from './lead-strings';
 
 @Component({
   selector: 'holita-lead-detail-page',
-  imports: [PageHeader, EmptyState, ButtonDirective, Skeleton, RouterOutlet],
+  imports: [PageHeader, EmptyState, ButtonDirective, Skeleton, RouterOutlet, LeadContacts],
   templateUrl: './lead-detail-page.html',
   host: { class: 'app-view' },
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,7 +36,8 @@ export class LeadDetailPage {
   protected readonly queryParams = toSignal(this.route.queryParams, { requireSync: true });
   protected readonly fragment = toSignal(this.route.fragment, { requireSync: true });
   private readonly id = computed(() => this.params().get('recordId'));
-  protected readonly entry = injectLeadRecord(this.id);
+  readonly entry = injectLeadRecord(this.id);
+  private readonly contacts = viewChild(LeadContacts);
   protected readonly name = computed(() => {
     const lead = this.entry.lead();
     return lead ? leadLabel(lead) : null;
@@ -45,12 +48,25 @@ export class LeadDetailPage {
   protected readonly backLabel = computed(() => operatorStrings[this.language()].leads);
   protected readonly format = injectDisplayFormat();
   protected readonly actions = computed<readonly PageHeaderAction[]>(() =>
-    this.entry.lead() ? [{ id: 'edit', label: this.text().editLead, primary: true }] : [],
+    this.entry.lead()
+      ? [
+          { id: 'edit', label: this.text().editLead, primary: true },
+          {
+            id: 'add-contact',
+            label: contactStrings[this.language()].newContact,
+            disabled: this.contacts()?.removing() ?? false,
+          },
+        ]
+      : [],
   );
   protected readonly drawerHost: DrawerHost = {
     saved: ({ message }) => {
       this.messages.add({ severity: 'success', summary: message });
-      this.entry.record.reload();
+      if (this.route.firstChild?.snapshot.data['contactEditor'] === true) {
+        this.contacts()?.refresh();
+      } else {
+        this.entry.record.reload();
+      }
     },
   };
 
@@ -64,8 +80,16 @@ export class LeadDetailPage {
     });
   }
 
-  protected edit(): void {
-    void this.router.navigate(['edit'], {
+  protected openAction(action: string): void {
+    this.open(action === 'edit' ? ['edit'] : ['contacts', 'new']);
+  }
+
+  protected editContact(id: string): void {
+    this.open(['contacts', id, 'edit']);
+  }
+
+  private open(path: string[]): void {
+    void this.router.navigate(path, {
       relativeTo: this.route,
       queryParamsHandling: 'preserve',
       preserveFragment: true,

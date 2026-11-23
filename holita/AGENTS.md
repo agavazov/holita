@@ -15,6 +15,9 @@ Discocan. Its package scope is `@holita/*` and its Nx projects are named `holita
 - Operators (platform staff, merchants and sales agents) are Core accounts and use the one shared
   sign-in. Shoppers are customers of a single shop: they register in each shop, their e-mail is
   unique within that shop and they are not Core accounts.
+- Sales owns its CRM screens, models, database migrations and import bookkeeping. For future
+  extraction, use public APIs for verified Core identity and for merchant and Branch references.
+  Keep Sales and Commerce independent.
 - A Branch is an online shop. The storefront resolves it from the request; an operator request
   takes it from the verified session and the selected Branch.
 - Start basic: a few fields per entity, enough to run and test every layer. Add depth only when

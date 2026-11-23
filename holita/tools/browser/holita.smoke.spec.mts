@@ -780,9 +780,13 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       });
     }
 
-    const salesGraphql = async (query: string, variables: Record<string, unknown> = {}) => {
+    const salesGraphql = async (
+      query: string,
+      variables: Record<string, unknown> = {},
+      authorization = salesSession.authorization,
+    ) => {
       const response = await salesContext.request.post(salesEndpoint, {
-        headers: { authorization: salesSession.authorization },
+        headers: { authorization },
         data: { query, variables },
       });
       expect(response.status()).toBe(200);
@@ -923,6 +927,141 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
           items: [{ displayName: referralName, websiteUrl: null, sourceName: referralSource }],
         },
       },
+    });
+
+    const referralId = new URL(sales.url()).pathname.split('/').at(-1);
+    const foreignContactId = randomUUID();
+    const foreignContactName = 'Foreign tenant smoke contact';
+    await salesDb.client.query(
+      `INSERT INTO "leadContact" ("id", "tenantId", "leadId", "name", "updatedAt")
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`,
+      [foreignContactId, merchantSession.tenantId, foreignLeadId, foreignContactName],
+    );
+    const findContact = `query ScopedContact($lead: ID!, $contact: ID!, $search: String!) {
+      leadContacts(leadId: $lead) { id }
+      leadContact(leadId: $lead, id: $contact) { id }
+      leads(search: $search) { items { id } total }
+      salesContacts(search: $search) { items { contact { id } } total }
+    }`;
+    expect(
+      await salesGraphql(findContact, {
+        lead: foreignLeadId,
+        contact: foreignContactId,
+        search: foreignContactName,
+      }),
+    ).toEqual({
+      data: {
+        leadContacts: [],
+        leadContact: null,
+        leads: { items: [], total: 0 },
+        salesContacts: { items: [], total: 0 },
+      },
+    });
+    const createContact = `mutation ScopedContactCreate($lead: ID!, $input: LeadContactInput!) {
+      createLeadContact(leadId: $lead, input: $input) { id }
+    }`;
+    const updateContact = `mutation ScopedContactUpdate($lead: ID!, $contact: ID!, $input: LeadContactInput!) {
+      updateLeadContact(leadId: $lead, id: $contact, input: $input) { id }
+    }`;
+    const deleteContact = `mutation ScopedContactDelete($lead: ID!, $contact: ID!) {
+      deleteLeadContact(leadId: $lead, id: $contact)
+    }`;
+    const missingContact = {
+      data: null,
+      errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    };
+    const input = { name: 'Smoke contact', isPrimary: true };
+    expect(await salesGraphql(createContact, { lead: foreignLeadId, input })).toMatchObject(
+      missingContact,
+    );
+    for (const lead of [foreignLeadId, leadId]) {
+      const variables = { lead, contact: foreignContactId };
+      expect(await salesGraphql(updateContact, { ...variables, input })).toMatchObject(
+        missingContact,
+      );
+      expect(await salesGraphql(deleteContact, variables)).toMatchObject(missingContact);
+    }
+    const foreignContact = await salesDb.client.query(
+      'SELECT "name", "isPrimary" FROM "leadContact" WHERE "tenantId" = $1 AND "leadId" = $2',
+      [merchantSession.tenantId, foreignLeadId],
+    );
+    expect(foreignContact.rows).toEqual([{ name: foreignContactName, isPrimary: false }]);
+
+    const phone = '+12025550123';
+    const email = 'smoke-inbox@example.test';
+    const browseContacts = `query BrowseSmokeContacts($search: String!) {
+      salesContacts(search: $search) { total items { contact { id phone } lead { id } } }
+    }`;
+    await sales.goto(detailUrl.href);
+    await sales.getByRole('button', { name: 'Add contact', exact: true }).click();
+    await sales.locator('#contact-name').fill(input.name);
+    await sales.locator('#contact-phone').fill('+1 (202) 555-0123');
+    await sales.getByRole('switch', { name: 'Primary', exact: true }).click();
+    await sales.getByRole('button', { name: 'Save', exact: true }).click();
+    await sales.waitForURL(detailUrl.href);
+
+    await sales.getByRole('button', { name: 'Add contact', exact: true }).click();
+    await sales.locator('#contact-email').fill(email);
+    await sales.getByRole('button', { name: 'Save', exact: true }).click();
+    await sales.waitForURL(detailUrl.href);
+    await sales.getByRole('button', { name: email, exact: true }).click();
+    await sales.waitForURL((url) => /\/contacts\/[0-9a-f-]{36}\/edit$/u.test(url.pathname));
+    const inboxContactId = new URL(sales.url()).pathname.split('/').at(-2);
+    await sales.getByRole('switch', { name: 'Primary', exact: true }).click();
+    await sales.getByRole('button', { name: 'Save', exact: true }).click();
+    await sales.waitForURL(detailUrl.href);
+
+    const listContacts = `query ReadSmokeContacts($lead: ID!) {
+      leadContacts(leadId: $lead) { id name email isPrimary }
+    }`;
+    expect(await salesGraphql(listContacts, { lead: leadId })).toMatchObject({
+      data: {
+        leadContacts: [
+          { name: null, email, isPrimary: true },
+          { name: input.name, email: null, isPrimary: false },
+        ],
+      },
+    });
+    const browse = await salesGraphql(browseContacts, { search: phone });
+    expect(browse).toMatchObject({
+      data: { salesContacts: { total: 1, items: [{ contact: { phone }, lead: { id: leadId } }] } },
+    });
+    expect(
+      await salesGraphql(browseContacts, { search: phone }, merchantSession.authorization),
+    ).toMatchObject({ data: null, errors: [{ extensions: { code: 'FORBIDDEN' } }] });
+    const wrongLead = { lead: referralId, contact: inboxContactId };
+    expect(await salesGraphql(updateContact, { ...wrongLead, input })).toMatchObject(
+      missingContact,
+    );
+    expect(await salesGraphql(deleteContact, wrongLead)).toMatchObject(missingContact);
+    for (const search of [input.name, email, '00 1 (202) 555-0123']) {
+      expect(
+        await salesGraphql(
+          'query SearchSmokeContact($search: String!) { leads(search: $search) { total items { id } } }',
+          { search },
+        ),
+      ).toEqual({ data: { leads: { total: 1, items: [{ id: leadId }] } } });
+    }
+    await sales
+      .getByRole('row')
+      .filter({ hasText: email })
+      .getByRole('button', { name: `Actions for ${email}`, exact: true })
+      .click();
+    await sales.getByRole('menuitem', { name: 'Remove contact', exact: true }).click();
+    await Promise.all([
+      waitForOperation(sales, salesEndpoint, 'SalesDeleteLeadContact'),
+      sales
+        .getByRole('alertdialog')
+        .getByRole('button', { name: 'Remove contact', exact: true })
+        .click(),
+    ]);
+    expect(
+      await salesGraphql(
+        'query ContactRemoval($lead: ID!) { lead(id: $lead) { id } leadContacts(leadId: $lead) { name isPrimary } }',
+        { lead: leadId },
+      ),
+    ).toEqual({
+      data: { lead: { id: leadId }, leadContacts: [{ name: input.name, isPrimary: false }] },
     });
 
     const contactSettings = {

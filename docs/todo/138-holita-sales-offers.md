@@ -1,6 +1,6 @@
 # 138 Prepare and track priced offers
 
-**Status:** Ready after [133](133-holita-sales-contacts.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

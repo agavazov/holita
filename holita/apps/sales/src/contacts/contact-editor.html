@@ -1,0 +1,113 @@
+<osnova-route-drawer
+  [title]="editing ? text().editContact : text().newContact"
+  [subtitle]="subtitle()"
+  [closeLink]="closeLink()"
+  [state]="state()"
+  [errorText]="text().contactsUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  <form
+    id="contact-editor-form"
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="app-form-section"
+  >
+    @let nameError = fieldError('name'); @let phoneError = fieldError('phone'); @let emailError =
+    fieldError('email'); @let notesError = fieldError('notes');
+    <osnova-form-field
+      controlId="contact-name"
+      [label]="text().contactName"
+      [hint]="nameError ? null : text().contactIdentityRequired"
+      [error]="nameError"
+    >
+      <input
+        pInputText
+        id="contact-name"
+        formControlName="name"
+        autocomplete="off"
+        aria-describedby="contact-name-hint contact-name-error"
+        [invalid]="!!nameError"
+        [attr.aria-invalid]="!!nameError"
+        (input)="clearError('name')"
+      />
+    </osnova-form-field>
+    <osnova-form-field controlId="contact-phone" [label]="text().contactPhone" [error]="phoneError">
+      <input
+        pInputText
+        id="contact-phone"
+        formControlName="phone"
+        type="tel"
+        autocomplete="off"
+        aria-describedby="contact-phone-error"
+        [invalid]="!!phoneError"
+        [attr.aria-invalid]="!!phoneError"
+        (input)="clearError('phone')"
+      />
+    </osnova-form-field>
+    <osnova-form-field controlId="contact-email" [label]="text().contactEmail" [error]="emailError">
+      <input
+        pInputText
+        id="contact-email"
+        formControlName="email"
+        type="email"
+        autocomplete="off"
+        aria-describedby="contact-email-error"
+        [invalid]="!!emailError"
+        [attr.aria-invalid]="!!emailError"
+        (input)="clearError('email')"
+      />
+    </osnova-form-field>
+    <div class="app-form-grid">
+      <osnova-form-field controlId="contact-role" [label]="text().contactRole">
+        <p-select
+          inputId="contact-role"
+          ariaLabelledBy="contact-role-label"
+          formControlName="role"
+          [options]="roleOptions()"
+          optionLabel="label"
+          optionValue="value"
+        />
+      </osnova-form-field>
+      <osnova-form-field controlId="contact-primary" [label]="text().contactPrimary">
+        <p-toggleswitch
+          inputId="contact-primary"
+          ariaLabelledBy="contact-primary-label"
+          formControlName="isPrimary"
+        />
+      </osnova-form-field>
+    </div>
+    <osnova-form-field controlId="contact-notes" [label]="text().contactNotes" [error]="notesError">
+      <textarea
+        pTextarea
+        id="contact-notes"
+        formControlName="notes"
+        rows="3"
+        aria-describedby="contact-notes-error"
+        [invalid]="!!notesError"
+        [attr.aria-invalid]="!!notesError"
+        (input)="clearError('notes')"
+      ></textarea>
+    </osnova-form-field>
+    @if (saveError(); as error) {
+    <p-message severity="error">{{ error }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="contact-editor-form" [disabled]="saving()">
+      {{ saveLabel() }}
+    </button>
+  </div>
+</osnova-route-drawer>
