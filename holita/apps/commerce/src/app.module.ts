@@ -1,5 +1,10 @@
 import { unwrapResolverError } from '@apollo/server/errors';
-import { Module, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  HttpException,
+  Module,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
 import { readFileSync } from 'node:fs';
@@ -187,6 +192,18 @@ const formatOperatorError: NonNullable<ApolloFederationDriverConfig['formatError
     },
   };
 };
+
+const formatStorefrontError: NonNullable<ApolloFederationDriverConfig['formatError']> = (
+  formatted,
+  error,
+) => {
+  const cause: unknown = unwrapResolverError(error);
+  if (cause instanceof HttpException && cause.getStatus() === 429) {
+    return { ...formatted, extensions: { code: 'TOO_MANY_REQUESTS' } };
+  }
+  return formatFieldErrors(formatted, error);
+};
+
 @Module({
   controllers: [HealthController],
   imports: [
@@ -209,7 +226,7 @@ const formatOperatorError: NonNullable<ApolloFederationDriverConfig['formatError
         ...context(http),
         cartToken: http.req.headers['x-cart-token'],
       }),
-      formatError: formatFieldErrors,
+      formatError: formatStorefrontError,
     }),
   ],
 })

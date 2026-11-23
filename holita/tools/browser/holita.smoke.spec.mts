@@ -1700,11 +1700,50 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       errors: [{ extensions: { code: 'NOT_FOUND' } }],
     };
     expect(await readWithGuestToken(secondShopId)).toMatchObject(missingCart);
+    const otherEmail = 'other-order-customer@example.test';
+    const otherPhone = '+359 2 555 0175';
+    await commerceDb.client.query(
+      `INSERT INTO "customer" ("id", "tenantId", "branchId", "name", "email", "phone", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
+      [randomUUID(), shopScope.tenantId, shopId, 'Other Customer', otherEmail, otherPhone],
+    );
     await shopper.goto(`${shopApp.origin}/s/${shopId}/sign-in`);
     await shopper.locator('#email').fill(shopperEmail);
     await secretFill(shopper.locator('#password'), shopperPassword);
     await shopper.getByRole('button', { name: 'Sign in', exact: true }).click();
     await expect(shopper).toHaveURL(cartUrl);
+    const signInAttempt = async (email: string): Promise<unknown> => {
+      const response = await shopper.request.post(publicUrl, {
+        headers: { 'x-branch-id': shopId },
+        data: {
+          query: `mutation Attempt($email: String!, $password: String!) {
+            attempt: signInShopper(email: $email, password: $password) { shopper { id } }
+          }`,
+          variables: { email, password: 'invalid-password' },
+        },
+      });
+      expect(response.status()).toBe(200);
+      return response.json();
+    };
+    const rejected = await signInAttempt(shopperEmail);
+    expect(rejected).toMatchObject({
+      data: null,
+      errors: [{ message: expect.any(String), extensions: { code: 'UNAUTHENTICATED' } }],
+    });
+    for (const email of ['missing-shopper@example.test', otherEmail]) {
+      expect(await signInAttempt(email)).toEqual(rejected);
+    }
+    expect(await signInAttempt(shopperEmail)).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'TOO_MANY_REQUESTS' } }],
+    });
+    expect(await publicProductsQuery()).toMatchObject({
+      data: {
+        catalogue: {
+          items: expect.arrayContaining([expect.objectContaining({ name: configuredProductName })]),
+        },
+      },
+    });
     await expect(shopper.getByRole('link', { name: 'Cart, 2 items', exact: true })).toBeVisible();
     const signedInReload = waitForCart(shopper);
     await shopper.reload();
@@ -2366,13 +2405,6 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await saveCustomer();
 
     await merchant.getByRole('link', { name: 'Orders', exact: true }).click();
-    const otherEmail = 'other-order-customer@example.test';
-    const otherPhone = '+359 2 555 0175';
-    await commerceDb.client.query(
-      `INSERT INTO "customer" ("id", "tenantId", "branchId", "name", "email", "phone", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
-      [randomUUID(), shopScope.tenantId, shopId, 'Other Customer', otherEmail, otherPhone],
-    );
     await merchant.getByRole('button', { name: 'Create manual order', exact: true }).click();
     const selectCustomer = async (label: string) => {
       await merchant.locator('#manual-customerId').click();

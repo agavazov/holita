@@ -1,3 +1,4 @@
+import { HttpException, HttpStatus } from '@nestjs/common';
 import { Args, Context, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import type {
   CatalogueProduct,
@@ -20,6 +21,9 @@ import type {
 } from './generated/graphql/storefront-types.js';
 import { StorefrontService, type StorefrontContext } from './storefront.service.js';
 
+const signInCapacity = 4;
+const signInWindowMs = 10_000;
+
 @Resolver('CatalogueProduct')
 export class CatalogueProductResolver {
   constructor(private readonly service: StorefrontService) {}
@@ -35,6 +39,8 @@ export class CatalogueProductResolver {
 
 @Resolver()
 export class StorefrontResolver {
+  private readonly signInAttempts: number[] = [];
+
   constructor(private readonly service: StorefrontService) {}
   @Query('shop') shop(@Context() context: StorefrontContext) {
     return this.service.publicShop(context);
@@ -145,6 +151,15 @@ export class StorefrontResolver {
     @Context() context: StorefrontContext,
     @Args() args: MutationSignInShopperArgs,
   ) {
+    const now = performance.now();
+    const oldest = this.signInAttempts[0];
+    if (oldest !== undefined && this.signInAttempts.length === signInCapacity) {
+      if (now - oldest < signInWindowMs) {
+        throw new HttpException('Too many sign-in attempts', HttpStatus.TOO_MANY_REQUESTS);
+      }
+      this.signInAttempts.shift();
+    }
+    this.signInAttempts.push(now);
     return this.service.signIn(context, args.email, args.password);
   }
   @Mutation('signOutShopper') signOut(@Context() context: StorefrontContext) {

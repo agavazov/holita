@@ -22,6 +22,7 @@ import {
   provideRouter,
 } from '@angular/router';
 import { InMemoryCache } from '@apollo/client/core';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { provideApollo } from 'apollo-angular';
 import { HttpLink } from 'apollo-angular/http';
 import { loadLocalConfig, readPrimeUiLicense } from '@osnova/ui/app';
@@ -482,7 +483,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                   />
                 </label>
                 @if (error()) {
-                  <p class="account-error" role="alert">{{ t().error }}</p>
+                  <p class="account-error" role="alert">{{ t()[actionError() ?? 'error'] }}</p>
                 }
                 <button class="shop-primary" type="submit" [disabled]="busy()">
                   {{ registering ? t().register : t().signIn }}
@@ -700,8 +701,8 @@ class StorefrontPage {
     matrixParams: 'ignored',
   } as const;
   readonly missing = computed(() => this.view()?.shop === null);
-  private readonly actionError = signal(false);
-  readonly error = computed(() => this.actionError() || this.request.status() === 'error');
+  protected readonly actionError = signal<'error' | 'signInThrottled' | null>(null);
+  readonly error = computed(() => this.actionError() !== null || this.request.status() === 'error');
   readonly loading = this.request.isLoading;
   readonly busy = signal(false);
   protected readonly content = computed(() => localizedContent(this.view()?.page, this.language()));
@@ -832,7 +833,7 @@ class StorefrontPage {
     sessionStorage.setItem('holita.storefront.language', language);
   }
   retry() {
-    this.actionError.set(false);
+    this.actionError.set(null);
     this.request.reload();
   }
   protected async addToCart() {
@@ -860,7 +861,7 @@ class StorefrontPage {
     const shopId = this.shopId();
     const guestToken = guestCartToken(shopId);
     this.busy.set(true);
-    this.actionError.set(false);
+    this.actionError.set(null);
     try {
       const input = this.form.getRawValue();
       const result =
@@ -879,8 +880,12 @@ class StorefrontPage {
           info: guestToken ? new CartMergeNotice(shopId, result.cartMergeIssues) : undefined,
         });
       }
-    } catch {
-      this.actionError.set(true);
+    } catch (error: unknown) {
+      const throttled =
+        this.page === 'sign-in' &&
+        CombinedGraphQLErrors.is(error) &&
+        error.errors.some(({ extensions }) => extensions?.['code'] === 'TOO_MANY_REQUESTS');
+      this.actionError.set(throttled ? 'signInThrottled' : 'error');
     } finally {
       this.busy.set(false);
     }
@@ -893,7 +898,7 @@ class StorefrontPage {
     const key = shopperStorageKey(shopId);
     const token = sessionStorage.getItem(key);
     this.busy.set(true);
-    this.actionError.set(false);
+    this.actionError.set(null);
     try {
       await this.api.signOut(shopId, token);
       if (sessionStorage.getItem(key) === token) {
@@ -904,7 +909,7 @@ class StorefrontPage {
         this.cartState.refreshOwner();
       }
     } catch {
-      this.actionError.set(true);
+      this.actionError.set('error');
     } finally {
       this.busy.set(false);
     }

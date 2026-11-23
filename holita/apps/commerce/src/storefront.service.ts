@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  type OnModuleInit,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -220,7 +221,8 @@ function catalogueProduct(
 }
 
 @Injectable()
-export class StorefrontService {
+export class StorefrontService implements OnModuleInit {
+  private readonly fallbackPasswordHash = hashPassword(randomBytes(32).toString('base64url'));
   private readonly variantSelectionBatches = new WeakMap<
     StorefrontContext,
     VariantSelectionBatch
@@ -240,6 +242,11 @@ export class StorefrontService {
     private readonly navigation: NavigationService,
     private readonly shopSettings: ShopSettingsService,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.fallbackPasswordHash;
+  }
+
   async shop(context: StorefrontContext): Promise<ShopScope | null> {
     if (!context.branchId || !isUUID(context.branchId)) {
       return null;
@@ -491,7 +498,9 @@ export class StorefrontService {
     const scope = await this.publicScope(context);
     const address = email.trim().toLowerCase();
     const shopper = await this.shoppers.findByEmail(scope, address);
-    if (!shopper?.passwordHash || !(await verifyPassword(password, shopper.passwordHash))) {
+    const passwordHash = shopper?.passwordHash || (await this.fallbackPasswordHash);
+    const verified = await verifyPassword(password, passwordHash);
+    if (!shopper?.passwordHash || !verified) {
       throw new UnauthorizedException('Invalid email or password');
     }
     return this.shoppers.transaction((tx) =>

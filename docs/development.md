@@ -477,6 +477,10 @@ Admin uploads brand logos and product photos through the operator graph. Serve
 `/media/brands/` and `/media/products/` from Commerce on both the Admin and storefront origins.
 Direct public product image URLs work only while the product is active and has an active variant.
 
+The Storefront Router applies its general limit of 100 requests per second to incoming traffic.
+Commerce applies a separate quota of four shopper sign-in attempts per ten seconds per instance.
+When the sign-in quota is reached, the storefront asks the shopper to wait and retry.
+
 Use Gallery in the Product drawer to add JPEG, PNG or WebP photos, enter alt text, reorder or
 remove photos, then save the product. The first photo is the storefront cover. Add up to 5 MiB
 of new photos per save. If the picker rejects files, choose new photos or discard that selection
