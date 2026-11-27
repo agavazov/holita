@@ -1,6 +1,6 @@
 # 305 Show the saved address book in Basic
 
-**Status:** Ready after [197](197-holita-shopper-address-book.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

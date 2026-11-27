@@ -487,7 +487,8 @@ open **Leads** to find prospects by name, website, source or contact details. **
 requires a name or an HTTP(S) website and opens the saved prospect at its own address. Use
 **Edit lead** to update the prospect, and use its **Contacts** section to manage contacts and
 the primary contact. **Contacts** in the workspace navigation searches contacts across leads
-and links to each prospect. Sales preserves the current list or record URL through sign-in and
+and links to each prospect. Full phone numbers match regardless of spaces or punctuation in
+Leads and Contacts. Sales preserves the current list or record URL through sign-in and
 language changes. The operator graph provides `leads`, `lead`, `createLead`, `updateLead`,
 `salesContacts` and per-lead contact reads and mutations to authorized Sales accounts.
 The Holita demo seed inserts two fictional prospects and three contacts.
@@ -519,8 +520,9 @@ npm run db:import:holita:sales -- --snapshot 20260821T075453Z --expected-tenant 
 
 Review the aggregate plan, then add `--apply` to insert the approved additions. Rerun with the same
 arguments to confirm zero new rows. For each entity, compare the source count with inserted,
-already-present and rejected counts. Lead fields without a target representation are counted where
-present in the staging projection. Imported leads use the verified Core actor as creator, and the
+already-present and rejected counts. The preview rejects rows with duplicate source IDs within
+an entity and reports them as `duplicateIdentity`. Lead fields without a target representation
+are counted where present in the staging projection. Imported leads use the verified Core actor as creator, and the
 ledger records that fallback. The ledger retains mappings for removed contacts. A later export
 reports source and operator changes by aggregate and leaves mapped rows intact.
 
@@ -549,10 +551,9 @@ covers and a three-photo gallery for the „Орех“ baking pot.
 
 Open **Dashboard** in Admin for the selected shop's order count, completed order revenue, new
 customers and tracked variants at zero stock. Choose 7, 14 or 30 days (the default). The date window
-includes today in Europe/Sofia and groups orders by placement day. Revenue includes delivery and
-reports completed orders in EUR. For reporting, each historical BGN total is converted at the
-fixed rate and rounded to cents. Current stock and the eight latest orders stay independent of
-the period. An order number opens its Order Detail page in its recorded currency.
+includes today in Europe/Sofia and groups orders by placement day. Revenue sums the stored totals
+of completed EUR orders, including delivery. Current stock and the eight latest orders stay
+independent of the period. An order number opens its Order Detail page in its recorded currency.
 
 The operator graph exposes this read as `shopDashboard(period: DashboardPeriod! = DAYS_30)`.
 The period covers the date range, dated totals and daily chart values. It also returns the current
@@ -698,11 +699,11 @@ with `quoteCheckout`, using the cart's existing authorization.
 
 The owner approved EUR as the sole operating currency on 2026-11-23. Every shop uses EUR for
 current prices, fixed discounts and minimum spend, shipping fees, checkout quotes and new orders.
-The cutover migration converts BGN amounts using decimal arithmetic at
-1.95583 BGN per EUR and archives the original and converted values in Commerce. Apply it with BGN
-writers stopped, then start the EUR release before resuming traffic. Historical orders, invoices
-and refunds keep their recorded currency and amounts. Invoices issued after cutover use the
-currency and amounts of the linked order.
+The original cutover converted catalogue prices, fixed discounts, minimum spend and shipping fees
+at 1.95583 BGN per EUR and archived the original and converted values in Commerce. The follow-up
+migration sets the currency of historical BGN orders, invoices and refunds to EUR and keeps every
+stored amount. Apply both migrations with BGN writers stopped and start the EUR release before
+resuming traffic. An order-linked invoice uses the currency and amounts of its order.
 
 After reviewing the total, choose Place order. A change in available stock, prices, discount or
 selected methods prompts you to review the checkout again. If the promo code is no longer eligible,
@@ -733,12 +734,16 @@ and `shopperOrder` for this history.
 
 In Admin, open Customers to page through the current shop's customers or search by name or email.
 Use Edit contact to change a customer's name or optional phone. The sign-in email is read-only.
-Add or edit saved addresses from the same page, and open any linked order from Order history.
+Add, edit or remove saved addresses from the same page. Choose Shipping or Billing and set one
+default for each type. Older addresses appear as General until edited. Open a linked order from
+Order history.
 The Customers link restores the previous search, page and page size. Existing orders keep the
 contact and address details recorded on the order. The Sofia demo shop includes enough customers
 for two pages, including a customer with a phone, saved address and linked order.
 The operator graph exposes `customers`, `customer`, `updateCustomerContact`,
-`createCustomerAddress`, `updateCustomerAddress` and the `customerId` filter on `orders`.
+`createCustomerAddress`, `updateCustomerAddress`, `removeCustomerAddress` and the `customerId` filter
+on `orders`. Signed-in shoppers can manage their own addresses in their shop through
+`shopperAddresses`, `createShopperAddress`, `updateShopperAddress` and `removeShopperAddress`.
 
 In Admin, open Orders in the selected shop. Combine search by order number, contact name, email or
 phone with placement date conditions, fulfillment statuses, shipping and payment methods,
@@ -761,10 +766,10 @@ optionally enter a private merchant note. Order Detail shows the billing address
 Create invoice uses it to fill the recipient fields.
 Open a placed, unpaid manual order and choose Edit manual order to revise it. Commerce derives
 totals and adjusts stock by the change in held quantities. Existing lines retain their booked
-prices, and unchanged methods retain their saved terms. For a historical order in BGN or an order
-with an issued invoice, the items and shipping method and charge are read-only. Contact, delivery
-and billing addresses, payment method and merchant note remain editable while the order is placed
-and unpaid. The Sofia demo shop includes two guest phone orders, one with an issued invoice.
+prices, and unchanged methods retain their saved terms. For an order in a non-EUR currency or an
+order with an issued invoice, the items and shipping method and charge are read-only. Contact,
+delivery and billing addresses, payment method and merchant note remain editable while the order
+is placed and unpaid. The Sofia demo shop includes two guest phone orders, one with an issued invoice.
 The operator graph exposes `manualOrderMethods`, `manualOrderVariants`, `createManualOrder` and
 `updateManualOrder`.
 
@@ -776,7 +781,9 @@ Orders with a booked promotion keep their items and discount. Earlier orders in 
 keep their items, shipping charge, currency and totals.
 
 On Order Detail, choose Create invoice, enter the invoice number and issuer details, and
-review the recipient and amounts copied from the order. Each shop uses unique invoice numbers.
+review the recipient and amounts copied from the order. If the order items or amounts change
+before issuance, review the updated amounts in the same editor and choose Create invoice again.
+Each shop uses unique invoice numbers.
 Open the issued document from its numbered link on the order. Its totals include any saved
 discount deduction. Later changes to the order leave the invoice intact. The Sofia demo shipped
 order has an issued invoice. The operator graph exposes `orderInvoice` and `issueOrderInvoice`.
@@ -790,7 +797,7 @@ They prefill the next invoice and can be completed or overridden at issue. Use *
 from Invoices to enter the recipient and lines for a standalone EUR invoice. Standalone and
 order-linked invoices share the shop's manual numbering. New invoices can record the tax event
 date, due date, payment terms, payment method and state, issuer representative and bank details,
-reason, note, and line units. Issued invoices retain their original currency and saved details.
+reason, note, and line units.
 
 Serve `/documents/invoices/` from Commerce on the Admin origin, forwarding the authorization
 and `x-branch-id` headers. Install the Playwright Chromium runtime for the user that runs

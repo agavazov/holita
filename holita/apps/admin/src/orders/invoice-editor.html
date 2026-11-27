@@ -14,6 +14,9 @@
       <p-message severity="info"
         >{{ standalone ? text().standaloneInvoiceIssueHint : text().invoiceIssueHint }}</p-message
       >
+      @if (reviewChanged()) {
+      <p-message severity="warn">{{ text().invoiceReviewChanged }}</p-message>
+      }
       <div class="app-form-grid">
         @for (field of documentFields; track field.key) {
         <ng-container *ngTemplateOutlet="invoiceField; context: { $implicit: field }" />

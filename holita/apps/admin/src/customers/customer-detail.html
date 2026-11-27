@@ -37,10 +37,11 @@
   [columns]="addressColumns()"
   tableMinWidth="42rem"
   [view]="addressView()"
-  [busy]="record.isLoading()"
+  [busy]="record.isLoading() || removingAddress()"
   [total]="item.addresses.length"
   [emptyTitle]="text().noCustomerAddresses"
   [errorText]="text().customerUnavailable"
+  [actionFeedback]="addressFeedback()"
   [actionContext]="drawerHost()"
   [actions]="addressActions()"
   (retry)="record.reload()"
@@ -95,7 +96,8 @@
     </ng-template>
     <ng-template #body let-address>
       @let row = addressRecord(address); @let locality = address.postalCode + ' ' + address.city + '
-      · ' + address.countryCode;
+      · ' + address.countryCode; @let street = address.line2 ? address.line1 + ' · ' + address.line2
+      : address.line1;
       <tr>
         <td class="app-col-identity">
           <div class="app-table-identity-layout">
@@ -115,8 +117,17 @@
                 >{{ address.recipient }}</span
               >
               }
-              <span class="app-table-mobile-meta app-table-tag-wrap" [title]="address.line1">
-                {{ address.line1 }}
+              <span class="app-cell-status app-table-tag-wrap">
+                <p-tag severity="secondary" [value]="addressTypeText(address.type)" />
+                @if (address.isDefault) {
+                <p-tag severity="info" [value]="text().addressDefault" />
+                }
+              </span>
+              @if (address.phone) {
+              <span class="app-table-tag-wrap">{{ address.phone }}</span>
+              }
+              <span class="app-table-mobile-meta app-table-tag-wrap" [title]="street">
+                {{ street }}
               </span>
               <span class="app-table-mobile-meta app-table-tag-wrap" [title]="locality">
                 {{ locality }}
@@ -134,7 +145,7 @@
           </div>
         </td>
         <td class="app-table-merged-column">
-          <span class="app-cell-truncate" [title]="address.line1">{{ address.line1 }}</span>
+          <span class="app-cell-truncate" [title]="street">{{ street }}</span>
         </td>
         <td class="app-table-merged-column">
           <span class="app-cell-truncate" [title]="address.city">{{ address.city }}</span>

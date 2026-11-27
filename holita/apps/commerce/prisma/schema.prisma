@@ -558,6 +558,13 @@ model ProductVariantValue {
   @@map("productVariantValue")
 }
 
+enum CustomerAddressType {
+  GENERAL @map("general")
+  SHIPPING @map("shipping")
+  BILLING @map("billing")
+  @@map("customerAddressType")
+}
+
 model Customer {
   id String @id @default(uuid()) @db.Uuid
   tenantId String @db.Uuid
@@ -584,14 +591,19 @@ model CustomerAddress {
   branchId String @db.Uuid
   customerId String @db.Uuid
   customer Customer @relation(fields: [tenantId, branchId, customerId], references: [tenantId, branchId, id], onDelete: Cascade)
+  type CustomerAddressType @default(GENERAL)
+  isDefault Boolean @default(false)
   recipient String @db.VarChar(200)
   line1 String @db.VarChar(200)
+  line2 String? @db.VarChar(200)
+  phone String? @db.VarChar(50)
   city String @db.VarChar(120)
   postalCode String @db.VarChar(20)
   countryCode String @db.Char(2)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
   @@index([tenantId, branchId, customerId, createdAt, id])
+  @@unique([tenantId, branchId, customerId, type], map: "customerAddress_default_type_key", where: raw("\"isDefault\""))
   @@map("customerAddress")
 }
 

@@ -257,6 +257,7 @@ export class InvoicesService {
     const result = await this.invoices.issue(
       scope,
       orderId.toLowerCase(),
+      input.orderReviewRevision,
       details(input),
       orderLineUnits(input.lineUnits),
     );
@@ -267,6 +268,12 @@ export class InvoicesService {
         throw new GraphQLError('This order already has an invoice', {
           extensions: { code: 'CONFLICT' },
         });
+      case 'order-changed':
+        throw invalid(
+          'orderReviewRevision',
+          'Review the updated order before issuing the invoice',
+          'INVOICE_ORDER_CHANGED',
+        );
       case 'invalid-lines':
         throw invalid('lineUnits', 'The order lines have changed');
       case 'number-used':

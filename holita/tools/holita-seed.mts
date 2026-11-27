@@ -41,7 +41,7 @@ import {
   type DemoVariant,
 } from './demo-catalogue.mjs';
 
-const demoHistoricalOrderMoney = { currency: 'BGN', shippingFee: '6.00' } as const;
+const demoHistoricalOrderMoney = { currency: 'EUR', shippingFee: '6.00' } as const;
 
 config({
   path: [
@@ -344,7 +344,11 @@ async function seedCatalogue(): Promise<void> {
         }
         productsInserted += product.rowCount;
         if (variants.some(([, , , , , purchase]) => purchase)) {
-          await saveGallery(productId, demoProductImages[id]);
+          const gallery = demoProductImages[id];
+          if (!gallery) {
+            throw new Error(`Missing demo gallery for product ${String(id)}`);
+          }
+          await saveGallery(productId, gallery);
         }
         for (const [
           sortOrder,
@@ -899,7 +903,12 @@ async function seedDashboard(client: pg.Client, tenantId: string, branchId: stri
       daysAgo <= customer.daysAgo
         ? { ...customer, customerId }
         : { name: 'Виктория Илиева', email: 'viktoria-127@example.test', guest: true };
-    const fulfillment = ['placed', 'confirmed', 'processing', 'shipped', 'completed'];
+    const fulfillment = [
+      ['placed', 'confirmed'],
+      ['confirmed', 'processing'],
+      ['processing', 'shipped'],
+      ['shipped', 'completed'],
+    ] as const;
     const order: DemoShopperOrder = {
       id,
       status,
@@ -909,13 +918,11 @@ async function seedDashboard(client: pg.Client, tenantId: string, branchId: stri
       paidAt: null,
       statusChanges:
         status === 'completed'
-          ? fulfillment
-              .slice(1)
-              .map((to, index) => [
-                fulfillment[index],
-                to,
-                new Date(noon.getTime() + (index + 1) * 3_600_000).toISOString(),
-              ])
+          ? fulfillment.map(([from, to], index) => [
+              from,
+              to,
+              new Date(noon.getTime() + (index + 1) * 3_600_000).toISOString(),
+            ])
           : [],
       phone: customer.phone,
       city: 'София',
@@ -941,7 +948,7 @@ async function seedShopperOrder(
     readonly guest?: boolean;
   },
   fixture: DemoShopperOrder,
-  money: { readonly currency: 'BGN' | 'EUR'; readonly shippingFee: string },
+  money: { readonly currency: 'EUR'; readonly shippingFee: string },
 ) {
   const {
     id,

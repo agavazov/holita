@@ -37,6 +37,7 @@ import { StorefrontService } from './storefront.service.js';
 import { StorefrontIngress } from './storefront-ingress.js';
 import { CustomersModule } from './customers/customers.module.js';
 import { CustomersResolver } from './customers/customers.resolver.js';
+import { ShopperAddressesResolver } from './customers/shopper-addresses.resolver.js';
 import { ProductImagesController } from './products/product-images.controller.js';
 import { HealthController } from './health.controller.js';
 import { BrandImagesController } from './brands/brand-images.controller.js';
@@ -131,6 +132,7 @@ class OperatorModule {}
     StorefrontResolver,
     CatalogueProductResolver,
     CartResolver,
+    ShopperAddressesResolver,
     CheckoutResolver,
     OrdersResolver,
     StorefrontService,

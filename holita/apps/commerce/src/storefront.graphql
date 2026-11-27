@@ -271,6 +271,42 @@ type Shopper {
   name: String!
   email: String!
 }
+enum CustomerAddressType {
+  "An unclassified address usable for shipping or billing."
+  GENERAL
+  SHIPPING
+  BILLING
+}
+type CustomerAddress {
+  id: ID!
+  type: CustomerAddressType!
+  isDefault: Boolean!
+  recipient: String!
+  line1: String!
+  line2: String
+  phone: String
+  city: String!
+  postalCode: String!
+  countryCode: String!
+}
+input CustomerAddressInput {
+  "Omit to keep the current type on update or use GENERAL on create."
+  type: CustomerAddressType
+  """
+  A shipping or billing default replaces the previous default for that type.
+  Omit on update to keep the default flag when the type stays the same.
+  """
+  isDefault: Boolean
+  recipient: String!
+  line1: String!
+  "Omit to keep the current second line on update. Pass null or blank to clear it."
+  line2: String
+  "Omit to keep the current phone on update. Pass null or blank to clear it."
+  phone: String
+  city: String!
+  postalCode: String!
+  countryCode: String!
+}
 type ShopperSession {
   token: String!
   shopper: Shopper!
@@ -531,6 +567,7 @@ type Query {
     sort: CatalogueSort
   ): CataloguePage
   shopperMe: Shopper
+  shopperAddresses: [CustomerAddress!]!
   shopperOrders(offset: Int! = 0, limit: Int! = 20): ShopperOrderPage!
   shopperOrder(id: ID!): OrderConfirmation
   cart: Cart!
@@ -543,6 +580,9 @@ type Mutation {
   registerShopper(name: String!, email: String!, password: String!): ShopperSession!
   signInShopper(email: String!, password: String!): ShopperSession!
   signOutShopper: Boolean!
+  createShopperAddress(input: CustomerAddressInput!): CustomerAddress!
+  updateShopperAddress(addressId: ID!, input: CustomerAddressInput!): CustomerAddress!
+  removeShopperAddress(addressId: ID!): Boolean!
   addCartLine(variantId: ID!, quantity: Int!): CartAddResult!
   updateCartLine(lineId: ID!, quantity: Int!): Cart!
   removeCartLine(lineId: ID!): Cart!

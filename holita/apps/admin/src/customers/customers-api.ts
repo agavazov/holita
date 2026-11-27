@@ -8,6 +8,7 @@ import {
   OperatorCustomerDocument,
   OperatorCustomerOrdersDocument,
   OperatorCustomersDocument,
+  OperatorRemoveCustomerAddressDocument,
   OperatorUpdateCustomerAddressDocument,
   OperatorUpdateCustomerContactDocument,
   type CustomerAddressInput,
@@ -140,6 +141,21 @@ export class CustomersApi {
         }
       }
       throw new Error('Missing saved customer address');
+    } finally {
+      client.stop();
+    }
+  }
+
+  async removeAddress(scope: CustomersScope, customerId: string, addressId: string) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: OperatorRemoveCustomerAddressDocument,
+        variables: { customerId, addressId },
+      });
+      if (!data?.removeCustomerAddress) {
+        throw new Error('Missing customer address removal result');
+      }
     } finally {
       client.stop();
     }

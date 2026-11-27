@@ -72,6 +72,7 @@ function totals(source: number) {
     missingFromSnapshot: 0,
     rejected: {
       invalidRecord: 0,
+      duplicateIdentity: 0,
       missingParent: 0,
       missingTarget: 0,
       wrongParent: 0,
@@ -463,9 +464,21 @@ function recordExisting(
   }
 }
 
+function sourceIdentities(rows: readonly { id: string }[]) {
+  const sourceIds = new Set<string>();
+  const duplicateIds = new Set<string>();
+  for (const { id } of rows) {
+    if (sourceIds.has(id)) {
+      duplicateIds.add(id);
+    }
+    sourceIds.add(id);
+  }
+  return { sourceIds, duplicateIds };
+}
+
 function planLeads(rows: SourceLead[], mappings: Map<string, KnownMapping>, actor: string) {
   const tally = totals(rows.length);
-  const sourceIds = new Set(rows.map((row) => row.id));
+  const { sourceIds, duplicateIds } = sourceIdentities(rows);
   tally.missingFromSnapshot = [...mappings.keys()].filter((id) => !sourceIds.has(id)).length;
   const parents = new Map<string, string>();
   for (const mapping of mappings.values()) {
@@ -478,6 +491,10 @@ function planLeads(rows: SourceLead[], mappings: Map<string, KnownMapping>, acto
     const fields = normalizedLead(row);
     if (!fields) {
       tally.rejected.invalidRecord++;
+      continue;
+    }
+    if (duplicateIds.has(row.id)) {
+      tally.rejected.duplicateIdentity++;
       continue;
     }
     const sourceFingerprint = leadFingerprint(fields, null);
@@ -507,7 +524,7 @@ function planContacts(
   primaryLeadIds: Set<string>,
 ) {
   const tally = totals(rows.length);
-  const sourceIds = new Set(rows.map((row) => row.id));
+  const { sourceIds, duplicateIds } = sourceIdentities(rows);
   tally.missingFromSnapshot = [...mappings.keys()].filter((id) => !sourceIds.has(id)).length;
   const pending: (Addition & ContactFields & { leadId: string })[] = [];
   const primaryCounts = new Map<string, number>();
@@ -515,6 +532,10 @@ function planContacts(
     const fields = normalizedContact(row);
     if (!fields) {
       tally.rejected.invalidRecord++;
+      continue;
+    }
+    if (duplicateIds.has(row.id)) {
+      tally.rejected.duplicateIdentity++;
       continue;
     }
     const leadId = row.crmLeadId && parents.get(row.crmLeadId);

@@ -12,7 +12,7 @@ import {
   type ElementRef,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { OperatorLanguage, operatorStrings } from '@holita/operator';
 import {
@@ -30,31 +30,79 @@ import {
   type RouteDrawerState,
 } from '@osnova/ui';
 import { ButtonDirective } from 'primeng/button';
+import { Checkbox } from 'primeng/checkbox';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
+import { Select } from 'primeng/select';
+import type { CustomerAddressType } from '../generated/customers-operations';
 import { customerRecordIdPattern, injectCustomerRecord } from './customer-record';
 import { CustomersApi } from './customers-api';
 
 const fields = [
-  { name: 'recipient', label: 'addressRecipient', autocomplete: 'name', wide: true },
-  { name: 'line1', label: 'addressStreet', autocomplete: 'address-line1', wide: true },
-  { name: 'city', label: 'orderCity', autocomplete: 'address-level2', wide: false },
-  { name: 'postalCode', label: 'orderPostalCode', autocomplete: 'postal-code', wide: false },
-  { name: 'countryCode', label: 'orderCountryCode', autocomplete: 'country', wide: false },
+  {
+    name: 'recipient',
+    label: 'addressRecipient',
+    autocomplete: 'name',
+    wide: true,
+    required: true,
+  },
+  {
+    name: 'line1',
+    label: 'addressStreet',
+    autocomplete: 'address-line1',
+    wide: true,
+    required: true,
+  },
+  {
+    name: 'line2',
+    label: 'addressLine2',
+    autocomplete: 'address-line2',
+    wide: true,
+    required: false,
+  },
+  { name: 'city', label: 'orderCity', autocomplete: 'address-level2', wide: false, required: true },
+  {
+    name: 'postalCode',
+    label: 'orderPostalCode',
+    autocomplete: 'postal-code',
+    wide: false,
+    required: true,
+  },
+  {
+    name: 'countryCode',
+    label: 'orderCountryCode',
+    autocomplete: 'country',
+    wide: false,
+    required: true,
+  },
+  { name: 'phone', label: 'orderPhone', autocomplete: 'tel', wide: false, required: false },
 ] as const;
-type AddressField = (typeof fields)[number]['name'];
-const fieldNames = fields.map(({ name }) => name);
+type AddressField = 'type' | 'isDefault' | (typeof fields)[number]['name'];
+const fieldNames: readonly AddressField[] = [
+  'type',
+  'isDefault',
+  ...fields.map(({ name }) => name),
+];
 
-function addressText(max: number) {
+function addressText(max: number, required = true) {
   return new FormControl('', {
     nonNullable: true,
-    validators: [textValidator(max, { required: true })],
+    validators: [textValidator(max, { required })],
   });
 }
 
 @Component({
   selector: 'holita-customer-address-editor',
-  imports: [ButtonDirective, FormField, InputText, Message, ReactiveFormsModule, RouteDrawer],
+  imports: [
+    ButtonDirective,
+    Checkbox,
+    FormField,
+    InputText,
+    Message,
+    ReactiveFormsModule,
+    RouteDrawer,
+    Select,
+  ],
   templateUrl: './customer-address-editor.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -91,9 +139,19 @@ export class CustomerAddressEditor {
   protected readonly saveError = signal(false);
   private readonly serverErrors = signal<Partial<Record<AddressField, string>>>({});
   protected readonly fields = fields;
+  protected readonly typeOptions = computed(() => [
+    { value: 'SHIPPING', label: this.text().addressTypeShipping },
+    { value: 'BILLING', label: this.text().addressTypeBilling },
+  ]);
   protected readonly form = new FormGroup({
+    type: new FormControl<CustomerAddressType | null>(null, (control) =>
+      Validators.required(control),
+    ),
+    isDefault: new FormControl(false, { nonNullable: true }),
     recipient: addressText(200),
     line1: addressText(200),
+    line2: addressText(200, false),
+    phone: addressText(50, false),
     city: addressText(120),
     postalCode: addressText(20),
     countryCode: new FormControl('', {
@@ -127,8 +185,12 @@ export class CustomerAddressEditor {
       const address = this.address();
       this.form.reset(
         {
+          type: address?.type === 'GENERAL' ? null : (address?.type ?? 'SHIPPING'),
+          isDefault: address?.isDefault ?? false,
           recipient: address?.recipient ?? '',
           line1: address?.line1 ?? '',
+          line2: address?.line2 ?? '',
+          phone: address?.phone ?? '',
           city: address?.city ?? '',
           postalCode: address?.postalCode ?? '',
           countryCode: address?.countryCode ?? '',
@@ -162,6 +224,12 @@ export class CustomerAddressEditor {
   protected clearError(field: AddressField): void {
     this.serverErrors.update((errors) => ({ ...errors, [field]: undefined }));
     this.saveError.set(false);
+  }
+
+  protected addressTypeChanged(): void {
+    this.form.controls.isDefault.setValue(false);
+    this.clearError('type');
+    this.clearError('isDefault');
   }
 
   protected async save(): Promise<void> {

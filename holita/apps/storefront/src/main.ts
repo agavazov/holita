@@ -88,7 +88,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
     @let header = headerLinks();
     @let footer = footerLinks();
     @let footerContacts = page !== 'contacts' && hasContactDetails();
-    <header class="shop-header" data-header-theme="dark">
+    <header class="shop-header" data-header-theme="dark" [hidden]="notFound && !shop()">
       @if (announcement(); as announcement) {
         <div class="shop-announcement">
           <p class="shop-width" [attr.lang]="announcement.language">{{ announcement.text }}</p>
@@ -361,6 +361,17 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
     <main [class.shop-width]="!browse || !shop()" [class.shop-main-contained]="!browse || !shop()">
       @if (missing()) {
         <p class="shop-state" role="alert">{{ t().shopMissing }}</p>
+      } @else if (notFound) {
+        @if (shop()) {
+          <header class="shop-page-heading shop-page-heading--with-link">
+            <h1>{{ t().pageMissing }}</h1>
+            <a class="shop-primary" [routerLink]="base()">{{ t().backToShop }}</a>
+          </header>
+        } @else if (error()) {
+          <ng-container [ngTemplateOutlet]="requestError" />
+        } @else {
+          <p class="shop-state" role="status">{{ t().loading }}</p>
+        }
       } @else {
         @if (
           cartState.sessionExpired() &&
@@ -1036,6 +1047,7 @@ class StorefrontPage {
   readonly page = this.route.routeConfig?.data?.['orderHistory']
     ? 'orders'
     : (this.route.routeConfig?.path?.split('/').at(2) ?? 'catalogue');
+  protected readonly notFound = this.route.routeConfig?.data?.['notFound'] === true;
   readonly section = browseSections.find((item) => item === this.page) ?? null;
   readonly browseSections = browseSections;
   readonly browse = this.page === 'catalogue' || this.page === 'products' || this.section !== null;
@@ -1408,6 +1420,7 @@ const pages: Routes = [
   { path: 's/:shopId/cart', component: StorefrontPage },
   { path: 's/:shopId/checkout/confirmation/:orderId', component: StorefrontPage },
   { path: 's/:shopId/checkout', component: StorefrontPage },
+  { path: 's/:shopId/**', component: StorefrontPage, data: { notFound: true } },
 ];
 // PrimeNG requires its license in the bootstrap providers, before its initializer runs.
 async function start(): Promise<void> {

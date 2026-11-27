@@ -1,6 +1,6 @@
 # 268 Page the merchant directory and load one merchant at a time
 
-**Status:** Ready after [155](155-holita-merchant-detail-states.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

@@ -2,7 +2,7 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [160](160-holita-storefront-not-found.md), [226](226-holita-catalogue-seo-metadata.md), [290](290-holita-product-slugs.md).
+**Depends on** [226](226-holita-catalogue-seo-metadata.md), [290](290-holita-product-slugs.md).
 
 ## Background
 

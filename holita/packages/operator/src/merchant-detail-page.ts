@@ -14,6 +14,7 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { TableModule } from 'primeng/table';
 import {
+  EmptyState,
   FormField,
   PageHeader,
   RouteDrawer,
@@ -29,9 +30,15 @@ import type { OperatorMerchantsQuery } from './generated/operations';
 
 type Merchant = OperatorMerchantsQuery['merchants'][number];
 
+type MerchantDetailState =
+  | { kind: 'loading' | 'missing' }
+  | { kind: 'error'; message: string }
+  | { kind: 'ready'; merchant: Merchant };
+
 @Component({
   selector: 'holita-merchant-detail',
   imports: [
+    EmptyState,
     PageHeader,
     TablePanel,
     TableModule,
@@ -47,41 +54,50 @@ type Merchant = OperatorMerchantsQuery['merchants'][number];
     <osnova-page-header
       [title]="merchant()?.name ?? text().merchants"
       [backLink]="['/', language.value(), 'merchants']"
-      [backLabel]="text().merchants"
+      [backLabel]="text().backToMerchants"
       [actions]="actions()"
-      (action)="drawer.set(true)"
+      (action)="openCreate()"
     />
-    <osnova-table-panel
-      [heading]="text().shops"
-      [view]="view()"
-      [total]="merchant()?.branches?.length ?? null"
-      [errorText]="error()"
-      (retry)="load()"
-    >
-      <p-table [value]="merchant()?.branches ?? []"
-        ><ng-template #header
-          ><tr>
-            <th>{{ text().name }}</th>
-            <th>{{ text().status }}</th>
-            @if (canWrite()) {
-              <th></th>
-            }</tr></ng-template
-        ><ng-template #body let-row
-          ><tr>
-            <td>{{ row.name }}</td>
-            <td>{{ row.status === 'ACTIVE' ? text().active : text().suspended }}</td>
-            @if (canWrite()) {
-              <td>
-                <button pButton type="button" severity="secondary" (click)="toggle(row)">
-                  {{ row.status === 'ACTIVE' ? text().suspend : text().reactivate }}
-                </button>
-              </td>
-            }
-          </tr></ng-template
-        ></p-table
+    @if (state().kind === 'missing') {
+      <section class="app-card">
+        <osnova-empty-state kind="not-found" [title]="text().merchantNotFound" />
+      </section>
+    } @else {
+      <osnova-table-panel
+        [heading]="text().shops"
+        [view]="view()"
+        [total]="merchant()?.branches.length ?? null"
+        [emptyTitle]="text().shopsEmpty"
+        [errorText]="tableError()"
+        (retry)="load()"
       >
-    </osnova-table-panel>
-    @if (drawer()) {
+        <p-table [value]="merchant()?.branches ?? []">
+          <ng-template #header>
+            <tr>
+              <th>{{ text().name }}</th>
+              <th>{{ text().status }}</th>
+              @if (writableMerchant()) {
+                <th></th>
+              }
+            </tr>
+          </ng-template>
+          <ng-template #body let-row>
+            <tr>
+              <td>{{ row.name }}</td>
+              <td>{{ row.status === 'ACTIVE' ? text().active : text().suspended }}</td>
+              @if (writableMerchant()) {
+                <td>
+                  <button pButton type="button" severity="secondary" (click)="toggle(row)">
+                    {{ row.status === 'ACTIVE' ? text().suspend : text().reactivate }}
+                  </button>
+                </td>
+              }
+            </tr>
+          </ng-template>
+        </p-table>
+      </osnova-table-panel>
+    }
+    @if (drawer() && writableMerchant()) {
       <osnova-route-drawer
         [title]="text().createShop"
         [closeLink]="null"
@@ -93,7 +109,7 @@ type Merchant = OperatorMerchantsQuery['merchants'][number];
           <osnova-form-field controlId="shop-name" [label]="text().name" [required]="true"
             ><input pInputText id="shop-name" formControlName="name"
           /></osnova-form-field>
-          @if (error(); as message) {
+          @if (createError(); as message) {
             <p-message severity="error">{{ message }}</p-message>
           }
           <button pButton type="submit" [disabled]="saving()">{{ text().save }}</button>
@@ -105,27 +121,37 @@ type Merchant = OperatorMerchantsQuery['merchants'][number];
 export class MerchantDetailPage {
   readonly language = inject(OperatorLanguage);
   private readonly session = inject(DemoSession);
-  readonly canWrite = computed(() =>
-    ['ADMINISTRATOR', 'OPERATOR'].includes(this.session.user()?.role ?? ''),
-  );
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(OperatorApi);
-  readonly merchant = signal<Merchant | null>(null);
-  readonly loading = signal(true);
-  readonly error = signal<string | null>(null);
+  readonly state = signal<MerchantDetailState>({ kind: 'loading' });
+  readonly merchant = computed(() => {
+    const state = this.state();
+    return state.kind === 'ready' ? state.merchant : null;
+  });
+  readonly writableMerchant = computed(() =>
+    ['ADMINISTRATOR', 'OPERATOR'].includes(this.session.user()?.role ?? '')
+      ? this.merchant()
+      : null,
+  );
+  private readonly shopStatusError = signal<string | null>(null);
+  readonly createError = signal<string | null>(null);
   readonly drawer = signal(false);
   readonly saving = signal(false);
   readonly text = computed(() => strings[this.language.value()]);
+  readonly tableError = computed(() => {
+    const state = this.state();
+    return state.kind === 'error' ? state.message : this.shopStatusError();
+  });
   readonly view = computed(() =>
     tableView({
-      loading: this.loading(),
-      error: this.error(),
+      loading: this.state().kind === 'loading',
+      error: this.tableError(),
       rows: this.merchant()?.branches.length ?? null,
       filtered: false,
     }),
   );
   readonly actions = computed<readonly PageHeaderAction[]>(() =>
-    this.canWrite() ? [{ id: 'create', label: this.text().createShop, primary: true }] : [],
+    this.writableMerchant() ? [{ id: 'create', label: this.text().createShop, primary: true }] : [],
   );
   readonly form = new FormGroup({
     name: new FormControl('', {
@@ -142,22 +168,23 @@ export class MerchantDetailPage {
     });
   }
   async load(): Promise<void> {
-    this.loading.set(true);
+    this.state.set({ kind: 'loading' });
+    this.shopStatusError.set(null);
     try {
       const id = this.route.snapshot.paramMap.get('id');
-      this.merchant.set(
-        (await this.api.merchants(this.language.value())).find((row) => row.id === id) ?? null,
-      );
-      this.error.set(null);
+      const merchant = (await this.api.merchants(this.language.value())).find((row) => row.id === id);
+      this.state.set(merchant ? { kind: 'ready', merchant } : { kind: 'missing' });
     } catch (error: unknown) {
-      this.error.set(requestError(error, this.text().unavailable));
-    } finally {
-      this.loading.set(false);
+      this.state.set({ kind: 'error', message: requestError(error, this.text().unavailable) });
     }
+  }
+  openCreate(): void {
+    this.createError.set(null);
+    this.drawer.set(true);
   }
   async create(): Promise<void> {
     this.form.markAllAsTouched();
-    const merchant = this.merchant();
+    const merchant = this.writableMerchant();
     if (this.form.invalid || !merchant) {
       return;
     }
@@ -172,13 +199,13 @@ export class MerchantDetailPage {
       this.form.reset();
       await this.load();
     } catch (error: unknown) {
-      this.error.set(requestError(error, this.text().unavailable));
+      this.createError.set(requestError(error, this.text().unavailable));
     } finally {
       this.saving.set(false);
     }
   }
   async toggle(row: Merchant['branches'][number]): Promise<void> {
-    const merchant = this.merchant();
+    const merchant = this.writableMerchant();
     if (!merchant) {
       return;
     }
@@ -191,7 +218,7 @@ export class MerchantDetailPage {
       );
       await this.load();
     } catch (error: unknown) {
-      this.error.set(requestError(error, this.text().unavailable));
+      this.shopStatusError.set(requestError(error, this.text().unavailable));
     }
   }
 }

@@ -11,6 +11,7 @@ fragment OperatorOrderSummary on OrderSummary {
 
 fragment OperatorOrderDetail on Order {
   id
+  invoiceReviewRevision
   number
   placedAt
   status

@@ -16,6 +16,41 @@
   <form id="customer-address-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
     <section class="app-form-section">
       <div class="app-form-grid">
+        @let typeError = fieldError('type');
+        <osnova-form-field
+          controlId="customer-address-type"
+          [label]="text().addressType"
+          [required]="true"
+          [error]="typeError"
+        >
+          <p-select
+            inputId="customer-address-type"
+            ariaLabelledBy="customer-address-type-label"
+            formControlName="type"
+            [options]="typeOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [placeholder]="text().addressChooseType"
+            [invalid]="!!typeError"
+            [pt]="{ label: { 'aria-required': 'true', 'aria-invalid': typeError ? 'true' : undefined, 'aria-describedby': typeError ? 'customer-address-type-error' : undefined } }"
+            (onChange)="addressTypeChanged()"
+          />
+        </osnova-form-field>
+        @let defaultError = fieldError('isDefault');
+        <osnova-form-field
+          controlId="customer-address-isDefault"
+          [label]="text().addressMakeDefault"
+          [error]="defaultError"
+        >
+          <p-checkbox
+            inputId="customer-address-isDefault"
+            formControlName="isDefault"
+            [binary]="true"
+            [invalid]="!!defaultError"
+            [pt]="{ input: { 'aria-invalid': defaultError ? 'true' : undefined, 'aria-describedby': defaultError ? 'customer-address-isDefault-error' : undefined } }"
+            (onChange)="clearError('isDefault')"
+          />
+        </osnova-form-field>
         @for (field of fields; track field.name) { @let controlId = 'customer-address-' +
         field.name; @let error = fieldError(field.name); @let hint = field.name === 'countryCode' ?
         text().customerAddressCountryHint : null;
@@ -23,7 +58,7 @@
           [class.app-form-grid--wide]="field.wide"
           [controlId]="controlId"
           [label]="text()[field.label]"
-          [required]="true"
+          [required]="field.required"
           [hint]="hint"
           [error]="error"
         >
@@ -32,7 +67,8 @@
             [id]="controlId"
             [formControlName]="field.name"
             [autocomplete]="field.autocomplete"
-            aria-required="true"
+            [type]="field.name === 'phone' ? 'tel' : 'text'"
+            [attr.aria-required]="field.required ? 'true' : null"
             [attr.aria-describedby]="(hint ? controlId + '-hint ' : '') + (error ? controlId + '-error' : '')"
             [invalid]="!!error"
             [attr.aria-invalid]="!!error"

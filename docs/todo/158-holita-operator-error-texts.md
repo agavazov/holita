@@ -1,6 +1,6 @@
 # 158 Localize operator request failures
 
-**Status:** Ready after [155](155-holita-merchant-detail-states.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

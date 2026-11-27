@@ -1,11 +1,13 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
   effect,
   inject,
   linkedSignal,
   resource,
+  signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
@@ -37,6 +39,7 @@ import { Skeleton } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type {
+  CustomerAddressType,
   OperatorCustomerAddressFragment,
   OperatorCustomerOrdersQuery,
 } from '../generated/customers-operations';
@@ -50,9 +53,15 @@ import {
 import { injectCustomerRecord } from './customer-record';
 import { CustomersApi } from './customers-api';
 
-type AddressAction = 'edit';
+type AddressAction = 'edit' | 'remove';
 type OrdersPage = OperatorCustomerOrdersQuery['orders'];
 type CustomerParams = ReturnType<ReturnType<typeof injectCustomerRecord>['params']>;
+
+const addressTypeLabels = {
+  GENERAL: 'addressTypeGeneral',
+  SHIPPING: 'addressTypeShipping',
+  BILLING: 'addressTypeBilling',
+} as const;
 
 const orderHistory: ListDefinition<Record<string, never>, 'PLACED_AT'> = {
   pageSizes: [10, 20, 50, 100],
@@ -86,6 +95,7 @@ export class CustomerDetail {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messages = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly customerRecord = injectCustomerRecord(this.route);
   protected readonly record = this.customerRecord.record;
   protected readonly profile = this.customerRecord.profile;
@@ -136,7 +146,28 @@ export class CustomerDetail {
   );
   protected readonly addressActions = computed<
     readonly ListAction<AddressAction, OperatorCustomerAddressFragment>[]
-  >(() => (this.canWrite() ? [{ id: 'edit', label: this.text().editCustomerAddress }] : []));
+  >(() => {
+    if (!this.canWrite()) {
+      return [];
+    }
+    const text = this.text();
+    return [
+      { id: 'edit', label: text.editCustomerAddress },
+      {
+        id: 'remove',
+        label: text.removeCustomerAddress,
+        danger: true,
+        confirm: { title: text.removeCustomerAddressConfirm, accept: text.removeCustomerAddress },
+      },
+    ];
+  });
+  protected readonly removingAddress = signal(false);
+  private readonly removalError = signal<CustomerParams>(undefined);
+  protected readonly addressFeedback = computed(() =>
+    this.removalError() && this.removalError() === this.customerRecord.params()
+      ? this.text().customerAddressRemoveFailed
+      : null,
+  );
   protected readonly addressColumns = computed<readonly TableColumn[]>(() => [
     {
       id: 'recipient',
@@ -291,14 +322,48 @@ export class CustomerDetail {
   }
 
   protected addressRecord(address: OperatorCustomerAddressFragment) {
-    return listRecord(this.addressActions(), address, address.id, address.recipient);
+    const street = address.line2 ? `${address.line1} · ${address.line2}` : address.line1;
+    const label = `${address.recipient} · ${this.addressTypeText(address.type)} · ${street}`;
+    return listRecord(this.addressActions(), address, address.id, label);
   }
 
-  protected runAddressAction({ ids }: ListActionRequest<AddressAction>): void {
+  protected addressTypeText(type: CustomerAddressType): string {
+    return this.text()[addressTypeLabels[type]];
+  }
+
+  protected async runAddressAction({
+    action,
+    ids,
+  }: ListActionRequest<AddressAction>): Promise<void> {
     const [id] = ids;
-    if (id && this.canWrite()) {
-      this.open(id);
+    const params = this.customerRecord.params();
+    if (!id || !params || !this.canWrite() || this.removingAddress()) {
+      return;
     }
+    if (action === 'edit') {
+      this.open(id);
+      return;
+    }
+
+    this.removingAddress.set(true);
+    this.removalError.set(undefined);
+    try {
+      await this.api.removeAddress(params.scope, params.id, id);
+      if (this.isCurrent(params)) {
+        this.record.reload();
+        this.messages.add({ severity: 'success', summary: this.text().customerAddressRemoved });
+      }
+    } catch {
+      if (this.isCurrent(params)) {
+        this.removalError.set(params);
+      }
+    } finally {
+      this.removingAddress.set(false);
+    }
+  }
+
+  private isCurrent(params: CustomerParams): boolean {
+    return !this.destroyRef.destroyed && params === this.customerRecord.params();
   }
 
   private open(path: string): void {

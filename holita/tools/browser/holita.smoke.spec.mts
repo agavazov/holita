@@ -712,6 +712,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     const staff = await staffContext.newPage();
     await staff.goto(backoffice.origin);
     const staffSession = await signIn(staff, staffEmail, staffPassword);
+    const merchantDirectory = new URL('/en/merchants', backoffice.origin).href;
+    await staff.goto(`${merchantDirectory}/${randomUUID()}`);
+    await expect(staff.getByText('Merchant not found', { exact: true })).toBeVisible();
+    await expect(staff.getByRole('button', { name: 'Create shop', exact: true })).toHaveCount(0);
+    await staff.getByRole('link', { name: 'Back to merchants', exact: true }).click();
+    await expect(staff).toHaveURL(merchantDirectory);
     await staff.getByRole('button', { name: 'Create merchant', exact: true }).click();
     const merchantName = `Merchant ${randomUUID()}`;
     const merchantEmail = `merchant-${randomUUID()}@example.test`;
@@ -723,8 +729,9 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await staff.getByRole('button', { name: 'Save', exact: true }).click();
     await staff.getByRole('link', { name: merchantName }).click();
     await expect(staff.getByRole('heading', { name: merchantName, exact: true })).toBeVisible();
+    await expect(staff.getByText('No shops available.', { exact: true })).toBeVisible();
     const shopId = await createShop(staff, 'First shop');
-    const merchantContext = await browser.newContext();
+    const merchantContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     cleanup.push(() => merchantContext.close());
     const merchant = await merchantContext.newPage();
     await merchant.goto(admin.origin);
@@ -988,7 +995,8 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     expect(foreignContact.rows).toEqual([{ name: foreignContactName, isPrimary: false }]);
 
     const phone = '+12025550123';
-    const formattedPhone = '00 1 202 555 01 23';
+    const formattedPhone = '+1 202 555 012 3';
+    const nearbyPhone = '+12025550193';
     const email = 'smoke-inbox@example.test';
     const browseContacts = `query BrowseSmokeContacts($search: String!) {
       salesContacts(search: $search) { total items { contact { id phone } lead { id } } }
@@ -1012,6 +1020,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await sales.getByRole('button', { name: 'Save', exact: true }).click();
     await sales.waitForURL(detailUrl.href);
 
+    expect(
+      await salesGraphql(createContact, {
+        lead: referralId,
+        input: { name: 'Nearby phone contact', phone: nearbyPhone, isPrimary: false },
+      }),
+    ).toMatchObject({ data: { createLeadContact: { id: expect.any(String) } } });
     const listContacts = `query ReadSmokeContacts($lead: ID!) {
       leadContacts(leadId: $lead) { id name email isPrimary }
     }`;
@@ -1023,9 +1037,20 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         ],
       },
     });
-    const browse = await salesGraphql(browseContacts, { search: formattedPhone });
-    expect(browse).toMatchObject({
-      data: { salesContacts: { total: 1, items: [{ contact: { phone }, lead: { id: leadId } }] } },
+    for (const search of [formattedPhone, phone]) {
+      expect(await salesGraphql(browseContacts, { search })).toMatchObject({
+        data: {
+          salesContacts: { total: 1, items: [{ contact: { phone }, lead: { id: leadId } }] },
+        },
+      });
+    }
+    expect(await salesGraphql(browseContacts, { search: '0193' })).toMatchObject({
+      data: {
+        salesContacts: {
+          total: 1,
+          items: [{ contact: { phone: nearbyPhone }, lead: { id: referralId } }],
+        },
+      },
     });
     expect(
       await salesGraphql(browseContacts, { search: phone }, merchantSession.authorization),
@@ -1035,7 +1060,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       missingContact,
     );
     expect(await salesGraphql(deleteContact, wrongLead)).toMatchObject(missingContact);
-    for (const search of [input.name, email, formattedPhone]) {
+    for (const search of [input.name, email, formattedPhone, phone]) {
       expect(
         await salesGraphql(
           'query SearchSmokeContact($search: String!) { leads(search: $search) { total items { id } } }',
@@ -1055,11 +1080,13 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         waitForOperation(sales, salesEndpoint, operation),
         sales.goto(new URL('/en/' + path, leadUrl).href),
       ]);
-      const [response] = await Promise.all([
-        waitForOperation(sales, salesEndpoint, operation),
-        sales.getByRole('searchbox').fill(formattedPhone),
-      ]);
-      expect(await response.json()).toMatchObject({ data: expected });
+      for (const search of [formattedPhone, phone]) {
+        const [response] = await Promise.all([
+          waitForOperation(sales, salesEndpoint, operation),
+          sales.getByRole('searchbox').fill(search),
+        ]);
+        expect(await response.json()).toMatchObject({ data: expected });
+      }
     }
     await sales.goto(detailUrl.href);
     await sales
@@ -1107,7 +1134,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.locator('#page-body-bg').fill(pageBody);
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Page saved.');
-    const shopperContext = await browser.newContext();
+    const shopperContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     cleanup.push(() => shopperContext.close());
     const contentShopper = await shopperContext.newPage();
     const publicShopSettings = async (branchId: string): Promise<unknown> => {
@@ -1489,8 +1516,14 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     });
     await dismissSuccess(merchant, 'Product saved.');
     const shopper = await shopperContext.newPage();
-    await shopper.goto(`${shopApp.origin}/s/${shopId}`);
+    const shopUrl = `${shopApp.origin}/s/${shopId}`;
+    await shopper.goto(`${shopUrl}/product/missing/extra`);
     await shopper.getByRole('button', { name: 'EN', exact: true }).click();
+    await shopper
+      .getByRole('main')
+      .getByRole('link', { name: 'Back to shop', exact: true })
+      .click();
+    await expect(shopper).toHaveURL(shopUrl);
     await expectMenu(shopper, ['blog', 'categories/cookware']);
     await shopper.getByRole('link', { name: 'New arrivals', exact: true }).click();
     await expect(shopper).toHaveURL(`${shopApp.origin}/s/${shopId}/products?sort=newest`);
@@ -2363,7 +2396,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
        WHERE "tenantId" = $1 AND "branchId" = $2 AND "productId" = $3 AND "sku" = 'SMOKE-001'`,
       [shopScope.tenantId, shopId, productId],
     );
-    const guestOrderContext = await browser.newContext();
+    const guestOrderContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
     cleanup.push(() => guestOrderContext.close());
     const guestOrder = await guestOrderContext.newPage();
     await guestOrder.goto(productUrl);
@@ -2502,7 +2535,7 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     for (const [branchId, credential] of [
       [shopId, guestToken],
       [secondShopId, orderCartToken],
-    ]) {
+    ] as const) {
       const denied = await guestOrder.request.post(`${shopApp.origin}/graphql`, {
         headers: { 'x-branch-id': branchId, 'x-cart-token': credential },
         data: {
@@ -2847,9 +2880,9 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         },
       },
     });
-    const downloadInvoicePdf = async (name: string, number = invoiceNumber) => {
-      const download = merchant.waitForEvent('download');
-      await merchant.getByRole('button', { name: 'Download PDF', exact: true }).click();
+    const downloadInvoicePdf = async (name: string, number = invoiceNumber, page = merchant) => {
+      const download = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PDF', exact: true }).click();
       const file = await download;
       expect(file.suggestedFilename()).toBe(`invoice-${number}.pdf`);
       const contents = await readFile(await file.path());
@@ -3375,12 +3408,18 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await saveCustomer();
 
     const editedStreet = '30 Customer Street';
+    const addressPhone = '+359 2 555 0123';
     await merchant
       .getByRole('link', { name: `Edit address · ${addressRecipient}`, exact: true })
       .click();
     await customerDialog.getByRole('textbox', { name: /^Street\b/u }).fill(editedStreet);
+    await customerDialog.locator('#customer-address-type').click();
+    await merchant.getByRole('option', { name: 'Billing', exact: true }).click();
+    await customerDialog.getByRole('checkbox', { name: 'Default for this type' }).check();
+    await customerDialog.getByRole('textbox', { name: 'Phone', exact: true }).fill(addressPhone);
     await saveCustomer();
-    await expect(merchant.getByRole('cell', { name: editedStreet, exact: true })).toBeVisible();
+    const editedAddress = merchant.getByRole('cell', { name: editedStreet, exact: true });
+    await expect(editedAddress).toBeVisible();
 
     const [persistedCustomer, linkedOrders] = await Promise.all([
       waitForCart(merchant, 'OperatorCustomer').then<unknown>((response) => response.json()),
@@ -3398,6 +3437,9 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
               city: addressCity,
               postalCode: addressPostalCode,
               countryCode: 'BG',
+              type: 'BILLING',
+              isDefault: true,
+              phone: addressPhone,
             },
           ],
         },
@@ -3406,6 +3448,26 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     expect(linkedOrders).toMatchObject({
       data: { orders: { items: [{ id: manualId }, { id: accountOrderId }], total: 2 } },
     });
+    const addressLabel = `${addressRecipient} · Billing · ${editedStreet}`;
+    const addressConfirmation = merchant.getByRole('alertdialog', {
+      name: 'Remove this saved address?',
+    });
+    const openAddressRemoval = async () => {
+      await merchant
+        .getByRole('button', { name: `Actions for ${addressLabel}`, exact: true })
+        .click();
+      await merchant.getByRole('menuitem', { name: 'Remove address', exact: true }).click();
+      await expect(addressConfirmation.getByText(addressLabel, { exact: true })).toBeVisible();
+    };
+    await openAddressRemoval();
+    await addressConfirmation.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(addressConfirmation).toBeHidden();
+    await expect(editedAddress).toBeVisible();
+    await openAddressRemoval();
+    const removedAddress = waitForCart(merchant, 'OperatorRemoveCustomerAddress');
+    await addressConfirmation.getByRole('button', { name: 'Remove address', exact: true }).click();
+    expect(await (await removedAddress).json()).toEqual({ data: { removeCustomerAddress: true } });
+    await expect(editedAddress).toHaveCount(0);
     await merchant.getByRole('link', { name: orderNumber, exact: true }).click();
     await merchant.waitForURL((url) => url.pathname.endsWith(`/orders/${accountOrderId}`));
 
@@ -3678,8 +3740,115 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       },
     });
     await switchDashboardShop('First shop', shopId);
-    await merchant.getByRole('link', { name: 'Products', exact: true }).click();
 
+    const reviewOrderUrl = new URL(`/en/orders/${manualId}`, admin.origin).href;
+    await merchant.goto(reviewOrderUrl);
+    await merchant.getByRole('button', { name: 'Page actions', exact: true }).click();
+    await merchant.getByRole('menuitem', { name: 'Create invoice', exact: true }).click();
+    const reviewDialog = merchant.getByRole('dialog');
+    const reviewedInvoiceNumber = 'SMOKE-REVIEW';
+    const reviewedInvoiceNote = 'Preserved invoice draft';
+    await reviewDialog.locator('#invoice-number').fill(reviewedInvoiceNumber);
+    await reviewDialog.locator('#invoice-note').fill(reviewedInvoiceNote);
+    await reviewDialog.locator('[id="invoice-lineUnits.0"]').fill('pcs');
+    await expect(reviewDialog.getByText(/66\.50/u)).toBeVisible();
+
+    const editingMerchantContext = await browser.newContext({
+      viewport: { width: 1440, height: 900 },
+    });
+    cleanup.push(() => editingMerchantContext.close());
+    const editingMerchant = await editingMerchantContext.newPage();
+    await editingMerchant.goto(admin.origin);
+    const editingSession = await signIn(editingMerchant, merchantEmail, merchantPassword);
+    expect(editingSession.authorization !== merchantSession.authorization).toBe(true);
+    const editingShopPicker = editingMerchant.locator('.app-topbar__branch').getByRole('button');
+    await expect(editingShopPicker).toBeVisible();
+    if (!(await editingShopPicker.textContent())?.includes('First shop')) {
+      await editingShopPicker.click();
+      await editingMerchant.getByRole('menuitem', { name: 'First shop', exact: true }).click();
+      await expect(editingShopPicker).toContainText('First shop');
+    }
+    await editingMerchant.goto(reviewOrderUrl);
+    await editingMerchant.getByRole('button', { name: 'Edit manual order', exact: true }).click();
+    const editOrderDialog = editingMerchant.getByRole('dialog');
+    await editOrderDialog.locator('[id="manual-lines.0.quantity"]').fill('1');
+    const revisedTotal = waitForCart(editingMerchant, 'OperatorOrder');
+    const revisedOrder = waitForCart(editingMerchant, 'OperatorUpdateManualOrder');
+    await editOrderDialog.getByRole('button', { name: 'Save', exact: true }).click();
+    expect(await (await revisedOrder).json()).toMatchObject({
+      data: { updateManualOrder: { id: manualId } },
+    });
+    expect(await (await revisedTotal).json()).toMatchObject({
+      data: { order: { id: manualId, currency: 'EUR', total: '36.50' } },
+    });
+
+    const staleIssuance = waitForCart(merchant, 'OperatorIssueOrderInvoice');
+    const confirmIssuance = reviewDialog.getByRole('button', {
+      name: 'Create invoice',
+      exact: true,
+    });
+    await confirmIssuance.click();
+    expect(await (await staleIssuance).json()).toMatchObject({
+      data: null,
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'orderReviewRevision', code: 'INVOICE_ORDER_CHANGED' }],
+          },
+        },
+      ],
+    });
+    const invoiceRegister = `query($orderId:ID!,$number:String!){
+      orderInvoice(orderId:$orderId){number currency total}
+      invoices(search:$number){items{number currency total} total}
+    }`;
+    const reviewTarget = { orderId: manualId, number: reviewedInvoiceNumber };
+    expect(await operatorRouter(invoiceRegister, reviewTarget)).toEqual({
+      data: { orderInvoice: null, invoices: { items: [], total: 0 } },
+    });
+    await expect(reviewDialog.getByText('The order has changed.', { exact: false })).toBeVisible();
+    await expect(reviewDialog.getByText(/36\.50/u)).toBeVisible();
+    await expect(reviewDialog.locator('#invoice-number')).toHaveValue(reviewedInvoiceNumber);
+    await expect(reviewDialog.locator('#invoice-note')).toHaveValue(reviewedInvoiceNote);
+    await expect(reviewDialog.locator('[id="invoice-lineUnits.0"]')).toHaveValue('pcs');
+
+    const reviewedIssuance = waitForCart(merchant, 'OperatorIssueOrderInvoice');
+    await confirmIssuance.click();
+    expect(await (await reviewedIssuance).json()).toMatchObject({
+      data: { issueOrderInvoice: { orderId: manualId, number: reviewedInvoiceNumber } },
+    });
+    const approvedInvoice = { number: reviewedInvoiceNumber, currency: 'EUR', total: '36.50' };
+    expect(await operatorRouter(invoiceRegister, reviewTarget)).toEqual({
+      data: { orderInvoice: approvedInvoice, invoices: { items: [approvedInvoice], total: 1 } },
+    });
+    await merchant.getByRole('link', { name: reviewedInvoiceNumber, exact: true }).click();
+    await merchant.locator('#invoice-summary').waitFor();
+    await downloadInvoicePdf('invoice-after-renewed-review.pdf', reviewedInvoiceNumber);
+
+    await editingMerchant.setViewportSize({ width: 390, height: 844 });
+    await editingMerchant.goto(new URL(`/en/orders/${orderId}`, admin.origin).href);
+    await editingMerchant.getByRole('button', { name: 'Page actions', exact: true }).click();
+    await editingMerchant.getByRole('menuitem', { name: 'Create invoice', exact: true }).click();
+    const mobileInvoiceNumber = 'SMOKE-MOBILE';
+    const mobileInvoice = editingMerchant.getByRole('dialog');
+    await mobileInvoice.locator('#invoice-number').fill(mobileInvoiceNumber);
+    const mobileIssuance = waitForCart(editingMerchant, 'OperatorIssueOrderInvoice');
+    await mobileInvoice.getByRole('button', { name: 'Create invoice', exact: true }).click();
+    expect(await (await mobileIssuance).json()).toMatchObject({
+      data: { issueOrderInvoice: { orderId, number: mobileInvoiceNumber } },
+    });
+    const guestInvoice = { number: mobileInvoiceNumber, currency: 'EUR', total: '32.00' };
+    expect(await operatorRouter(invoiceRegister, { orderId, number: mobileInvoiceNumber })).toEqual(
+      {
+        data: { orderInvoice: guestInvoice, invoices: { items: [guestInvoice], total: 1 } },
+      },
+    );
+    await editingMerchant.getByRole('link', { name: mobileInvoiceNumber, exact: true }).click();
+    await editingMerchant.locator('#invoice-summary').waitFor();
+    await downloadInvoicePdf('invoice-mobile-guest.pdf', mobileInvoiceNumber, editingMerchant);
+
+    await merchant.getByRole('link', { name: 'Products', exact: true }).click();
     for (const status of ['CANCELLED', 'CANCELLED'] as const) {
       expect(await setOrderStatus(orderId, status)).toEqual({
         data: { updateOrderStatus: { id: orderId, status } },

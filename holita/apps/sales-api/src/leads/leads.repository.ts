@@ -34,9 +34,7 @@ export class LeadsRepository {
     const phone = normalizeContactPhone(term);
     const where: Prisma.LeadWhereInput = {
       tenantId,
-      ...(phone
-        ? { OR: [{ AND: perWord }, { contacts: { some: { tenantId, phone } } }] }
-        : { AND: perWord }),
+      ...(phone ? { contacts: { some: { tenantId, phone } } } : { AND: perWord }),
     };
     const direction = sort?.direction === 'ASC' ? 'asc' : 'desc';
     const order: Prisma.LeadOrderByWithRelationInput =

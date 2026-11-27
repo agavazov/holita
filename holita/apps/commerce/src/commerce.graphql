@@ -203,10 +203,20 @@ type CustomerDetail {
   customer: Customer!
   addresses: [CustomerAddress!]!
 }
+enum CustomerAddressType {
+  "An unclassified address usable for shipping or billing."
+  GENERAL
+  SHIPPING
+  BILLING
+}
 type CustomerAddress {
   id: ID!
+  type: CustomerAddressType!
+  isDefault: Boolean!
   recipient: String!
   line1: String!
+  line2: String
+  phone: String
   city: String!
   postalCode: String!
   countryCode: String!
@@ -217,8 +227,19 @@ input CustomerContactInput {
   phone: String
 }
 input CustomerAddressInput {
+  "Omit to keep the current type on update or use GENERAL on create."
+  type: CustomerAddressType
+  """
+  A shipping or billing default replaces the previous default for that type.
+  Omit on update to keep the default flag when the type stays the same.
+  """
+  isDefault: Boolean
   recipient: String!
   line1: String!
+  "Omit to keep the current second line on update. Pass null or blank to clear it."
+  line2: String
+  "Omit to keep the current phone on update. Pass null or blank to clear it."
+  phone: String
   city: String!
   postalCode: String!
   countryCode: String!
@@ -888,6 +909,8 @@ type DiscountPage {
 }
 type Order {
   id: ID!
+  "Pass this revision back when issuing an invoice for the reviewed order lines and amounts."
+  invoiceReviewRevision: String!
   number: String!
   status: OrderStatus!
   paymentStatus: OrderPaymentStatus!
@@ -1109,6 +1132,7 @@ input InvoiceLineUnitInput {
   unit: String!
 }
 input IssueOrderInvoiceInput {
+  orderReviewRevision: String!
   number: String!
   issueDate: String!
   taxEventDate: String
@@ -1392,6 +1416,7 @@ type Mutation {
     addressId: ID!
     input: CustomerAddressInput!
   ): CustomerAddress!
+  removeCustomerAddress(customerId: ID!, addressId: ID!): Boolean!
   createBrand(input: BrandInput!): Brand!
   updateBrand(id: ID!, input: BrandInput!): Brand!
   deleteBrand(id: ID!): Boolean!

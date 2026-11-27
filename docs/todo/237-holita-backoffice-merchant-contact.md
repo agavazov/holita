@@ -1,6 +1,6 @@
 # 237 Find merchants and maintain their account details
 
-**Status:** Ready after [155](155-holita-merchant-detail-states.md) and [268](268-holita-merchant-directory-pagination.md). **Product:** Holita.
+**Status:** Ready after [268](268-holita-merchant-directory-pagination.md). **Product:** Holita.
 
 ## Background
 

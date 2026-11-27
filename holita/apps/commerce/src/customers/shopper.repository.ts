@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database.service.js';
 import { Prisma } from '../generated/prisma/client.js';
-import type { Scope } from '../scope.js';
+import type { Scope, ShopperScope } from '../scope.js';
 
 const customerContactFields = {
   id: true,
@@ -26,16 +26,33 @@ function customerFields(scope: Scope) {
 
 const addressFields = {
   id: true,
+  type: true,
+  isDefault: true,
   recipient: true,
   line1: true,
+  line2: true,
+  phone: true,
   city: true,
   postalCode: true,
   countryCode: true,
 } satisfies Prisma.CustomerAddressSelect;
 
+const addressList = {
+  orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+  select: addressFields,
+} satisfies Prisma.CustomerAddressFindManyArgs;
+
 type AddressData = Pick<
   Prisma.CustomerAddressCreateInput,
-  'recipient' | 'line1' | 'city' | 'postalCode' | 'countryCode'
+  | 'type'
+  | 'isDefault'
+  | 'recipient'
+  | 'line1'
+  | 'line2'
+  | 'phone'
+  | 'city'
+  | 'postalCode'
+  | 'countryCode'
 >;
 
 @Injectable()
@@ -81,8 +98,7 @@ export class ShopperRepository {
         ...customerFields(scope),
         addresses: {
           where: scope,
-          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-          select: addressFields,
+          ...addressList,
         },
       },
     });
@@ -96,8 +112,48 @@ export class ShopperRepository {
     });
   }
 
-  createAddress(scope: Scope, customerId: string, data: AddressData) {
-    return this.database.client.customerAddress.create({
+  addresses(owner: ShopperScope) {
+    return this.database.client.customerAddress.findMany({ where: owner, ...addressList });
+  }
+
+  address(tx: Prisma.TransactionClient, owner: ShopperScope, id: string) {
+    return tx.customerAddress.findUniqueOrThrow({
+      where: { ...owner, id },
+      select: { type: true, isDefault: true },
+    });
+  }
+
+  async lockAddressBook(
+    tx: Prisma.TransactionClient,
+    { tenantId, branchId, customerId }: ShopperScope,
+  ) {
+    // Serialize default replacements within the customer's address book.
+    await tx.$queryRaw`
+      SELECT "id" FROM ${this.database.table('customer')}
+      WHERE "tenantId" = ${tenantId}::uuid AND "branchId" = ${branchId}::uuid
+        AND "id" = ${customerId}::uuid
+      FOR NO KEY UPDATE
+    `;
+  }
+
+  clearAddressDefault(
+    tx: Prisma.TransactionClient,
+    owner: ShopperScope,
+    type: NonNullable<AddressData['type']>,
+    exceptId: string | undefined,
+  ) {
+    return tx.customerAddress.updateMany({
+      where: { ...owner, type, isDefault: true, ...(exceptId && { id: { not: exceptId } }) },
+      data: { isDefault: false },
+    });
+  }
+
+  createAddress(
+    tx: Prisma.TransactionClient,
+    { customerId, ...scope }: ShopperScope,
+    data: AddressData,
+  ) {
+    return tx.customerAddress.create({
       data: {
         ...data,
         customer: { connect: { tenantId_branchId_id: { ...scope, id: customerId } } },
@@ -106,11 +162,18 @@ export class ShopperRepository {
     });
   }
 
-  updateAddress(scope: Scope, customerId: string, id: string, data: AddressData) {
-    return this.database.client.customerAddress.update({
-      where: { ...scope, customerId, id },
+  updateAddress(tx: Prisma.TransactionClient, owner: ShopperScope, id: string, data: AddressData) {
+    return tx.customerAddress.update({
+      where: { ...owner, id },
       data,
       select: addressFields,
+    });
+  }
+
+  removeAddress(owner: ShopperScope, id: string) {
+    return this.database.client.customerAddress.delete({
+      where: { ...owner, id },
+      select: { id: true },
     });
   }
 

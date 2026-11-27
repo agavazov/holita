@@ -1,13 +1,14 @@
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type {
   MutationCreateCustomerAddressArgs,
+  MutationRemoveCustomerAddressArgs,
   MutationUpdateCustomerAddressArgs,
   MutationUpdateCustomerContactArgs,
   QueryCustomerArgs,
   QueryCustomerContactArgs,
   QueryCustomersArgs,
 } from '../generated/graphql/types.js';
-import type { RequestContext } from '../scope.js';
+import { requireScope, type RequestContext } from '../scope.js';
 import { CustomersService } from './customers.service.js';
 
 @Resolver()
@@ -38,18 +39,29 @@ export class CustomersResolver {
   }
 
   @Mutation('createCustomerAddress')
-  createAddress(
+  async createAddress(
     @Args() { customerId, input }: MutationCreateCustomerAddressArgs,
     @Context() context: RequestContext,
   ) {
-    return this.service.createAddress(context, customerId, input);
+    const scope = await requireScope(context, true);
+    return this.service.saveAddress({ ...scope, customerId }, input);
   }
 
   @Mutation('updateCustomerAddress')
-  updateAddress(
+  async updateAddress(
     @Args() { customerId, addressId, input }: MutationUpdateCustomerAddressArgs,
     @Context() context: RequestContext,
   ) {
-    return this.service.updateAddress(context, customerId, addressId, input);
+    const scope = await requireScope(context, true);
+    return this.service.saveAddress({ ...scope, customerId }, input, addressId);
+  }
+
+  @Mutation('removeCustomerAddress')
+  async removeAddress(
+    @Args() { customerId, addressId }: MutationRemoveCustomerAddressArgs,
+    @Context() context: RequestContext,
+  ) {
+    const scope = await requireScope(context, true);
+    return this.service.removeAddress({ ...scope, customerId }, addressId);
   }
 }

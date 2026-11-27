@@ -25,6 +25,7 @@ export class DatabaseService implements OnModuleDestroy {
       | 'productTagAssignment'
       | 'productCollectionItem'
       | 'cartLine'
+      | 'customer'
       | 'discount'
       | 'order'
       | 'orderLine',

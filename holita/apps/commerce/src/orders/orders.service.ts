@@ -18,6 +18,7 @@ import {
   validateOrderContact,
 } from '../checkout/checkout.service.js';
 import { checkoutCurrency } from '../checkout/currency.js';
+import { invoiceOrderRevision } from '../invoices/invoice-order-revision.js';
 import { ShopperRepository } from '../customers/shopper.repository.js';
 import { DiscountsService } from '../discounts/discounts.service.js';
 import type {
@@ -214,6 +215,7 @@ function canMarkPaid(order: Order): boolean {
 function operatorDetail(order: OrderDetailRow): OperatorOrder {
   return {
     ...confirmation(order),
+    invoiceReviewRevision: invoiceOrderRevision(order),
     billingAddress: recordedBillingAddress(order),
     invoice: order.invoice,
     paidAt: order.paidAt?.toISOString() ?? null,

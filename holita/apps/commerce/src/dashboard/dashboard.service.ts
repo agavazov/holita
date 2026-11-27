@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { bgnPerEur, checkoutCurrency } from '../checkout/currency.js';
+import { checkoutCurrency } from '../checkout/currency.js';
 import type { DashboardPeriod, ShopDashboard } from '../generated/graphql/types.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { requireScope, type RequestContext } from '../scope.js';
 import { DashboardRepository } from './dashboard.repository.js';
 
-// Stored totals can have 30 whole digits. Keep enough precision to round converted cents.
+// Stored totals can have 30 whole digits, and the sum must retain cents.
 const Revenue = Prisma.Decimal.clone({ precision: 40 });
 const timeZone = 'Europe/Sofia';
 const shopDate = new Intl.DateTimeFormat('sv-SE', {
@@ -54,20 +54,11 @@ export class DashboardService {
         continue;
       }
       bucket.orderCount++;
-      if (order.status !== 'COMPLETED') {
+      if (order.status !== 'COMPLETED' || order.currency !== checkoutCurrency) {
         continue;
       }
-      const total = new Revenue(order.total);
-      const revenue =
-        order.currency === checkoutCurrency
-          ? total
-          : order.currency === 'BGN'
-            ? total.div(bgnPerEur).toDecimalPlaces(2)
-            : null;
-      if (revenue !== null) {
-        bucket.completedRevenue = bucket.completedRevenue.plus(revenue);
-        completedRevenue = completedRevenue.plus(revenue);
-      }
+      bucket.completedRevenue = bucket.completedRevenue.plus(order.total);
+      completedRevenue = completedRevenue.plus(order.total);
     }
     return {
       period,

@@ -21,6 +21,7 @@ const percentageDiscountId = randomUUID();
 const legacyDraftId = randomUUID();
 const legacyInvoicedId = randomUUID();
 const legacyInvoiceId = randomUUID();
+const legacyAddressId = randomUUID();
 const tenantA = randomUUID();
 const tenantB = randomUUID();
 const branchA = randomUUID();
@@ -256,6 +257,19 @@ beforeAll(async () => {
       'utf8',
     ),
   );
+  const legacyCustomerId = randomUUID();
+  await connection.query(
+    `INSERT INTO "customer" ("id", "tenantId", "branchId", "email", "name", "updatedAt")
+     VALUES ($1, $2, $3, 'legacy-address@example.test', 'Legacy shopper', CURRENT_TIMESTAMP)`,
+    [legacyCustomerId, tenantA, publicB],
+  );
+  await connection.query(
+    `INSERT INTO "customerAddress" (
+      "id", "tenantId", "branchId", "customerId", "recipient", "line1", "city", "postalCode",
+      "countryCode", "updatedAt"
+    ) VALUES ($1, $2, $3, $4, 'Legacy shopper', '1 Test St', 'Sofia', '1000', 'BG', CURRENT_TIMESTAMP)`,
+    [legacyAddressId, tenantA, publicB, legacyCustomerId],
+  );
   for (const migration of [
     '20261123020100_characteristic_choices',
     '20261123020200_variant_purchase_options',
@@ -265,6 +279,8 @@ beforeAll(async () => {
     '20261123221000_invoice_issuance',
     '20261123230000_order_shopper_note',
     '20261124000000_shop_branding',
+    '20261124010000_customer_address_book',
+    '20261127000000_order_money_eur',
   ]) {
     await connection.query(
       await readFile(
@@ -401,6 +417,30 @@ async function query(
     body: JSON.stringify({ query: source, variables }),
   });
   return response.json();
+}
+
+async function readInvoiceReviewRevision(branch: string, id: string): Promise<string> {
+  const result = await query(
+    tokens.viewer,
+    branch,
+    'query($id:ID!){order(id:$id){invoiceReviewRevision}}',
+    { id },
+  );
+  if (
+    !result ||
+    typeof result !== 'object' ||
+    !('data' in result) ||
+    !result.data ||
+    typeof result.data !== 'object' ||
+    !('order' in result.data) ||
+    !result.data.order ||
+    typeof result.data.order !== 'object' ||
+    !('invoiceReviewRevision' in result.data.order) ||
+    typeof result.data.order.invoiceReviewRevision !== 'string'
+  ) {
+    throw new Error('Missing order revision for invoice review');
+  }
+  return result.data.order.invoiceReviewRevision;
 }
 
 it('enforces tenant and Branch isolation and merchant roles through Core', async () => {
@@ -812,7 +852,7 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
   });
   const legacyScope = { tenantId: tenantA, branchId: branchA };
   const legacyAmounts = {
-    currency: 'BGN',
+    currency: 'EUR',
     subtotal: '39.90',
     discountAmount: '5.00',
     shippingFee: '6.00',
@@ -871,7 +911,7 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       orderInvoice: legacyAmounts,
       orderRefundSummary: {
         refundableAmount: '38.40',
-        refunds: [{ amount: '2.50', currency: 'BGN' }],
+        refunds: [{ amount: '2.50', currency: 'EUR' }],
       },
     },
   });
@@ -886,19 +926,6 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
     shippingAddress: { countryCode: 'BG', city: 'Sofia', postalCode: '1000', line1: '1 Test St' },
     merchantNote: 'Contact confirmed',
   };
-  for (const amountChange of [
-    { lines: [{ variantId: legacyProductId, quantity: 1 }] },
-    { shippingMethodId: randomUUID() },
-  ]) {
-    expect(
-      await query(tokens.operator, branchA, editLegacy, {
-        id: legacyDraftId,
-        input: { ...legacyContact, ...amountChange },
-      }),
-    ).toMatchObject({
-      errors: [{ extensions: { fieldErrors: [{ code: 'MANUAL_ORDER_LEGACY_AMOUNTS_LOCKED' }] } }],
-    });
-  }
   expect(
     await query(tokens.operator, branchA, editLegacy, {
       id: legacyDraftId,
@@ -917,6 +944,7 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       {
         id: legacyDraftId,
         input: {
+          orderReviewRevision: await readInvoiceReviewRevision(branchA, legacyDraftId),
           number: 'LEGACY-002',
           issueDate: '2026-11-23',
           issuerName: 'Issuer',
@@ -1033,10 +1061,10 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
           outOfStockVariantCount,
           ...(branch === branchA && {
             orderCount: 2,
-            completedRevenue: '20.91',
+            completedRevenue: '40.90',
             recentOrders: [legacyInvoicedId, legacyDraftId]
               .sort((a, b) => b.localeCompare(a))
-              .map((id) => ({ id, currency: 'BGN', total: '40.90' })),
+              .map((id) => ({ id, currency: 'EUR', total: '40.90' })),
           }),
         },
       },
@@ -1064,6 +1092,20 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
   const updateAddress = `mutation($customerId:ID!,$addressId:ID!,$input:CustomerAddressInput!){
     updateCustomerAddress(customerId:$customerId,addressId:$addressId,input:$input){id}
   }`;
+  const removeAddress = `mutation($customerId:ID!,$addressId:ID!){
+    removeCustomerAddress(customerId:$customerId,addressId:$addressId)
+  }`;
+  expect(
+    await database.customerAddress.findUniqueOrThrow({
+      where: { id: legacyAddressId, tenantId: tenantA, branchId: publicB },
+    }),
+  ).toMatchObject({
+    line1: '1 Test St',
+    type: 'GENERAL',
+    isDefault: false,
+    line2: null,
+    phone: null,
+  });
   const target = { customerId: customer.id, input: address };
   expect(
     await query(tokens.operator, branchA, updateContact, {
@@ -1084,6 +1126,7 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       updateAddress,
       { ...target, addressId: savedAddress.id, input: { ...address, city: 'Denied' } },
     ],
+    [removeAddress, { customerId: customer.id, addressId: savedAddress.id }],
   ] as const;
   for (const [bearer, branch] of [
     [tokens.operator, branchB],
@@ -1130,6 +1173,12 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       data: { ...address, tenantId: tenantA, branchId: branchB, customerId: customer.id },
     }),
   ).rejects.toMatchObject({ code: 'P2003' });
+  expect(
+    await query(tokens.operator, branchA, removeAddress, {
+      customerId: customer.id,
+      addressId: savedAddress.id,
+    }),
+  ).toEqual({ data: { removeCustomerAddress: true } });
   for (const [role, bearer, branch, expectedId, canWrite] of [
     ['viewer', tokens.viewer, branchA, rows[0].id, false],
     ['operator', tokens.operator, branchA, rows[0].id, true],
@@ -2400,6 +2449,86 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   const foreignOwner = registeredToken(
     await storefront(publicA, mutation, { email: 'other@example.test' }),
   );
+  const readAddresses = '{shopperAddresses{line1 line2 type isDefault}}';
+  const createAddress = `mutation($input:CustomerAddressInput!){
+    createShopperAddress(input:$input){id}
+  }`;
+  const updateAddress = `mutation($addressId:ID!,$input:CustomerAddressInput!){
+    updateShopperAddress(addressId:$addressId,input:$input){id}
+  }`;
+  const removeAddress = 'mutation($addressId:ID!){removeShopperAddress(addressId:$addressId)}';
+  const address = { recipient: 'Person', city: 'Sofia', postalCode: '1000', countryCode: 'BG' };
+  for (const [type, line1] of [
+    ['SHIPPING', '1 Shipping St'],
+    ['BILLING', '1 Billing St'],
+    ['SHIPPING', '2 Shipping St'],
+  ] as const) {
+    expect(
+      await storefront(
+        publicA,
+        createAddress,
+        { input: { ...address, type, line1, isDefault: true } },
+        token,
+      ),
+    ).toMatchObject({ data: { createShopperAddress: { id: expect.any(String) } } });
+  }
+  const savedShippingAddress = await database.customerAddress.findFirstOrThrow({
+    where: {
+      ...categoryScope,
+      customer: { email: 'same@example.test' },
+      line1: '2 Shipping St',
+    },
+  });
+  const shippingDetails = { ...address, line1: savedShippingAddress.line1, line2: 'Unit 2' };
+  expect(
+    await storefront(
+      publicA,
+      updateAddress,
+      { addressId: savedShippingAddress.id, input: shippingDetails },
+      token,
+    ),
+  ).toEqual({ data: { updateShopperAddress: { id: savedShippingAddress.id } } });
+  for (const [branch, bearer] of [
+    [publicA, foreignOwner],
+    [publicB, foreignShopBearer],
+  ] as const) {
+    expect(await storefront(branch, readAddresses, {}, bearer)).toEqual({
+      data: { shopperAddresses: [] },
+    });
+  }
+  expect(await storefront(publicA, readAddresses)).toHaveProperty('errors');
+  for (const [branch, bearer] of [
+    [publicA, undefined],
+    [publicA, foreignOwner],
+    [publicB, token],
+    [publicB, foreignShopBearer],
+  ] as const) {
+    expect(
+      await storefront(
+        branch,
+        updateAddress,
+        { addressId: savedShippingAddress.id, input: { ...address, line1: 'Denied' } },
+        bearer,
+      ),
+    ).toHaveProperty('errors');
+    expect(
+      await storefront(branch, removeAddress, { addressId: savedShippingAddress.id }, bearer),
+    ).toHaveProperty('errors');
+  }
+  expect(await storefront(publicA, readAddresses, {}, token)).toMatchObject({
+    data: {
+      shopperAddresses: expect.arrayContaining([
+        { line1: '1 Shipping St', line2: null, type: 'SHIPPING', isDefault: false },
+        { line1: '1 Billing St', line2: null, type: 'BILLING', isDefault: true },
+        { line1: '2 Shipping St', line2: 'Unit 2', type: 'SHIPPING', isDefault: true },
+      ]),
+    },
+  });
+  expect(
+    await storefront(publicA, removeAddress, { addressId: savedShippingAddress.id }, token),
+  ).toEqual({
+    data: { removeShopperAddress: true },
+  });
   const remove = 'mutation($id:ID!){removeCartLine(lineId:$id){itemCount}}';
   for (const [branch, bearer, operation] of [
     [publicB, token, readCart],
@@ -3720,7 +3849,11 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   const invoicePdf = new URL(`/documents/invoices/${order.id}/pdf`, endpoint);
   const issuance = {
     ...invoiceTarget,
-    input: { ...invoiceInput, lineUnits: [{ orderLineId: orderLine.id, unit: 'pcs' }] },
+    input: {
+      ...invoiceInput,
+      orderReviewRevision: await readInvoiceReviewRevision(publicA, order.id),
+      lineUnits: [{ orderLineId: orderLine.id, unit: 'pcs' }],
+    },
   };
   expect(await query(tokens.viewer, publicA, issueInvoice, issuance)).toHaveProperty('errors');
   const issued = await query(tokens.operator, publicA, issueInvoice, issuance);
@@ -3779,7 +3912,10 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(
     await query(tokens.operator, publicA, issueInvoice, {
       orderId: guestOrder.id,
-      input: invoiceInput,
+      input: {
+        ...invoiceInput,
+        orderReviewRevision: await readInvoiceReviewRevision(publicA, guestOrder.id),
+      },
     }),
   ).toMatchObject({
     errors: [
@@ -4103,14 +4239,42 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     }),
   ).toMatchObject({ data: { updateManualOrder: { shippingFee: '6.00', total: '24.00' } } });
   const manualInvoiceTarget = { orderId: manual.id };
+  const manualInvoiceInput = {
+    ...invoiceInput,
+    number: 'TEST-0002',
+    recipientName: billingAddress.name,
+    recipientAddress: billingAddress.line1,
+  };
+  const staleRevision = await readInvoiceReviewRevision(publicA, manual.id);
+  await database.orderLine.updateMany({
+    where: { ...categoryScope, orderId: manual.id },
+    data: { label: 'Revised manual order line' },
+  });
+  expect(
+    await query(tokens.operator, publicA, issueInvoice, {
+      ...manualInvoiceTarget,
+      input: { ...manualInvoiceInput, orderReviewRevision: staleRevision },
+    }),
+  ).toMatchObject({
+    data: null,
+    errors: [
+      {
+        extensions: {
+          code: 'BAD_USER_INPUT',
+          fieldErrors: [{ path: 'orderReviewRevision', code: 'INVOICE_ORDER_CHANGED' }],
+        },
+      },
+    ],
+  });
+  expect(await query(tokens.viewer, publicA, readInvoice, manualInvoiceTarget)).toEqual({
+    data: { orderInvoice: null },
+  });
   expect(
     await query(tokens.operator, publicA, issueInvoice, {
       ...manualInvoiceTarget,
       input: {
-        ...invoiceInput,
-        number: 'TEST-0002',
-        recipientName: billingAddress.name,
-        recipientAddress: billingAddress.line1,
+        ...manualInvoiceInput,
+        orderReviewRevision: await readInvoiceReviewRevision(publicA, manual.id),
       },
     }),
   ).toMatchObject({

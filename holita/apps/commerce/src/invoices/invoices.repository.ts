@@ -5,6 +5,7 @@ import { DatabaseService } from '../database.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { OrdersRepository } from '../orders/orders.repository.js';
 import type { Scope } from '../scope.js';
+import { invoiceOrderRevision } from './invoice-order-revision.js';
 
 type IssuerSettings = Omit<Prisma.InvoiceIssuerSettingsCreateManyInput, keyof Scope>;
 type InvoiceDetails = Omit<
@@ -110,6 +111,7 @@ export class InvoicesRepository {
   issue(
     scope: Scope,
     orderId: string,
+    reviewRevision: string,
     details: InvoiceDetails,
     units: ReadonlyMap<string, string>,
   ) {
@@ -120,6 +122,9 @@ export class InvoicesRepository {
       }
       if (order.invoice) {
         return { outcome: 'issued' } as const;
+      }
+      if (invoiceOrderRevision(order) !== reviewRevision) {
+        return { outcome: 'order-changed' } as const;
       }
       const lineIds = new Set(order.lines.map((line) => line.id));
       if ([...units.keys()].some((id) => !lineIds.has(id))) {

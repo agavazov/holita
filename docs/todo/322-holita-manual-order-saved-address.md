@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [197](197-holita-shopper-address-book.md).
-
 ## Background
 
 The red.bg coverage report marks OR06 as P2. Manual orders currently require typing an address already held in the customer address book.

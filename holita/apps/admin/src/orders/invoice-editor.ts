@@ -8,6 +8,7 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   resource,
   signal,
   untracked,
@@ -132,7 +133,7 @@ export class InvoiceEditor {
       return { issuer, order };
     },
   });
-  protected readonly order = computed(() =>
+  protected readonly order = linkedSignal(() =>
     this.record.hasValue() ? this.record.value().order : null,
   );
   protected readonly state = computed<RouteDrawerState>(() => {
@@ -164,6 +165,7 @@ export class InvoiceEditor {
   private readonly formElement = viewChild<ElementRef<HTMLFormElement>>('editorForm');
   protected readonly saving = signal(false);
   protected readonly saveError = signal(false);
+  protected readonly reviewChanged = signal(false);
   private readonly conflict = signal(false);
   protected readonly alreadyIssued = computed(() => !!this.order()?.invoice || this.conflict());
   protected readonly canIssue = computed(
@@ -265,6 +267,7 @@ export class InvoiceEditor {
         lines: this.standalone ? [{ quantity: 1 }] : [],
       });
       this.conflict.set(false);
+      this.reviewChanged.set(false);
       this.errors.set({});
       this.saveError.set(false);
     });
@@ -332,6 +335,7 @@ export class InvoiceEditor {
     if (!params || !this.canIssue() || this.saving()) {
       return;
     }
+    const isCurrent = () => !this.destroyRef.destroyed && this.params() === params;
     this.form.markAllAsTouched();
     this.errors.set({});
     this.saveError.set(false);
@@ -356,10 +360,12 @@ export class InvoiceEditor {
         taxEventDate: taxEventDate ? toDateOnly(taxEventDate) : null,
         dueDate: dueDate ? toDateOnly(dueDate) : null,
       };
-      const invoice = params.id
-        ? await this.api.issueInvoice(params.scope, params.id, {
+      const order = this.order();
+      const invoice = order
+        ? await this.api.issueInvoice(params.scope, order.id, {
             ...input,
-            lineUnits: (this.order()?.lines ?? []).flatMap((line, index) => {
+            orderReviewRevision: order.invoiceReviewRevision,
+            lineUnits: order.lines.flatMap((line, index) => {
               const unit = lineUnits[index]?.trim();
               return unit ? [{ orderLineId: line.id, unit }] : [];
             }),
@@ -372,7 +378,7 @@ export class InvoiceEditor {
               unitPrice: line.unitPrice.trim().replace(',', '.'),
             })),
           });
-      if (this.destroyRef.destroyed || this.params() !== params) {
+      if (!isCurrent()) {
         return;
       }
       this.form.markAsPristine();
@@ -380,10 +386,38 @@ export class InvoiceEditor {
       this.host.saved({ message: this.text().invoiceIssued, recordId: params.id ?? invoice.id });
       this.drawer().close();
     } catch (error: unknown) {
-      if (this.destroyRef.destroyed || this.params() !== params) {
+      if (!isCurrent()) {
         return;
       }
-      if (params.id && errorCode(error) === 'CONFLICT') {
+      const code = errorCode(error);
+      const order = this.order();
+      const { orderReviewRevision } = fieldErrors(
+        error,
+        ['orderReviewRevision'],
+        params.scope.language,
+        (reason) => reason,
+      );
+      if (order && orderReviewRevision === 'INVOICE_ORDER_CHANGED') {
+        const updated = await this.api.find(params.scope, order.id).catch(() => null);
+        if (!isCurrent()) {
+          return;
+        }
+        if (!updated) {
+          this.saveError.set(true);
+          return;
+        }
+        const units = new Map(
+          order.lines.map((line, index) => [line.id, this.lineUnits.at(index)]),
+        );
+        this.lineUnits.clear();
+        this.lineUnits.push(
+          updated.lines.map((line) => units.get(line.id) ?? invoiceTextControl(32)),
+        );
+        this.order.set(updated);
+        this.reviewChanged.set(true);
+        return;
+      }
+      if (params.id && code === 'CONFLICT') {
         this.conflict.set(true);
         this.form.markAsPristine();
         this.host.saved({ message: '', recordId: params.id });

@@ -1,7 +1,11 @@
 fragment OperatorCustomerAddress on CustomerAddress {
   id
+  type
+  isDefault
   recipient
   line1
+  line2
+  phone
   city
   postalCode
   countryCode
@@ -67,4 +71,8 @@ mutation OperatorUpdateCustomerAddress(
   updateCustomerAddress(customerId: $customerId, addressId: $addressId, input: $input) {
     id
   }
+}
+
+mutation OperatorRemoveCustomerAddress($customerId: ID!, $addressId: ID!) {
+  removeCustomerAddress(customerId: $customerId, addressId: $addressId)
 }

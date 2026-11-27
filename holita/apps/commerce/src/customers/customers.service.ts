@@ -11,7 +11,7 @@ import type {
   QueryCustomersArgs,
 } from '../generated/graphql/types.js';
 import { Prisma } from '../generated/prisma/client.js';
-import { requireScope, type RequestContext } from '../scope.js';
+import { requireScope, type RequestContext, type ShopperScope } from '../scope.js';
 import { ShopperRepository } from './shopper.repository.js';
 
 type CustomerRow = Awaited<ReturnType<ShopperRepository['updateContact']>>;
@@ -55,6 +55,12 @@ function addressFields(input: CustomerAddressInput) {
   return {
     recipient: textField('recipient', input.recipient, 200),
     line1: textField('line1', input.line1, 200),
+    ...(input.line2 !== undefined && {
+      line2: textField('line2', input.line2 ?? '', 200, false) || null,
+    }),
+    ...(input.phone !== undefined && {
+      phone: textField('phone', input.phone ?? '', 50, false) || null,
+    }),
     city: textField('city', input.city, 120),
     postalCode: textField('postalCode', input.postalCode, 20),
     countryCode: normalizedCountryCode('countryCode', input.countryCode),
@@ -125,29 +131,47 @@ export class CustomersService {
     return present(row);
   }
 
-  async createAddress(
-    context: RequestContext,
-    customerId: string,
-    input: CustomerAddressInput,
-  ): Promise<CustomerAddress> {
-    const scope = await requireScope(context, true);
-    const key = recordId('customerId', customerId);
-    return this.shoppers
-      .createAddress(scope, key, addressFields(input))
-      .catch((error: unknown) => missingRecord(error, 'Customer not found'));
+  addresses(owner: ShopperScope): Promise<CustomerAddress[]> {
+    return this.shoppers.addresses(owner);
   }
 
-  async updateAddress(
-    context: RequestContext,
-    customerId: string,
-    id: string,
+  async saveAddress(
+    scope: ShopperScope,
     input: CustomerAddressInput,
+    addressId?: string,
   ): Promise<CustomerAddress> {
-    const scope = await requireScope(context, true);
-    const customerKey = recordId('customerId', customerId);
-    const addressKey = recordId('addressId', id);
+    const owner = { ...scope, customerId: recordId('customerId', scope.customerId) };
+    const id = addressId === undefined ? undefined : recordId('addressId', addressId);
+    const fields = addressFields(input);
     return this.shoppers
-      .updateAddress(scope, customerKey, addressKey, addressFields(input))
+      .transaction(async (tx) => {
+        await this.shoppers.lockAddressBook(tx, owner);
+        const previous = id ? await this.shoppers.address(tx, owner, id) : null;
+        const type = input.type ?? previous?.type ?? 'GENERAL';
+        const isDefault =
+          input.isDefault ?? (previous?.isDefault === true && previous.type === type);
+        if (isDefault) {
+          if (type === 'GENERAL') {
+            throw invalidValue('isDefault');
+          }
+          await this.shoppers.clearAddressDefault(tx, owner, type, id);
+        }
+        const data = { ...fields, type, isDefault };
+        return id
+          ? this.shoppers.updateAddress(tx, owner, id, data)
+          : this.shoppers.createAddress(tx, owner, data);
+      })
+      .catch((error: unknown) =>
+        missingRecord(error, id ? 'Customer address not found' : 'Customer not found'),
+      );
+  }
+
+  async removeAddress(scope: ShopperScope, addressId: string): Promise<boolean> {
+    const owner = { ...scope, customerId: recordId('customerId', scope.customerId) };
+    const id = recordId('addressId', addressId);
+    await this.shoppers
+      .removeAddress(owner, id)
       .catch((error: unknown) => missingRecord(error, 'Customer address not found'));
+    return true;
   }
 }

@@ -586,11 +586,14 @@ export class StorefrontService implements OnModuleInit {
   async me(context: StorefrontContext) {
     return this.verifiedShopper(await this.publicScope(context), context);
   }
-  async requireShopper(context: StorefrontContext): Promise<ShopperScope> {
+  async requireShopper(
+    context: StorefrontContext,
+    purpose = 'view your orders',
+  ): Promise<ShopperScope> {
     const scope = await this.publicScope(context);
     const shopper = await this.verifiedShopper(scope, context);
     if (!shopper) {
-      throw new UnauthorizedException('Sign in to this shop to view your orders');
+      throw new UnauthorizedException(`Sign in to this shop to ${purpose}`);
     }
     return { ...scope, customerId: shopper.id };
   }
