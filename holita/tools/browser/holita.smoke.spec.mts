@@ -1196,10 +1196,18 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       type: 'Blog' | 'Page' | 'Category',
       target?: string,
     ) => {
-      await merchant.getByRole('button', { name: 'Add link', exact: true }).click();
+      const addLink = merchant.getByRole('button', { name: 'Add link', exact: true });
+      const bulgarianLabels = merchant.getByRole('textbox', {
+        name: 'Label (Bulgarian)',
+        exact: true,
+      });
+      await expect(addLink).toBeVisible();
+      const linkIndex = await bulgarianLabels.count();
+      await addLink.click();
+      await expect(bulgarianLabels.nth(linkIndex)).toBeFocused();
       await merchant
         .getByRole('textbox', { name: 'Label (English)', exact: true })
-        .last()
+        .nth(linkIndex)
         .fill(label);
       if (type !== 'Category') {
         await merchant
