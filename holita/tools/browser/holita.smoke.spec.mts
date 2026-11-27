@@ -3940,6 +3940,10 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         'OperatorSetBranchStatus',
       );
       await row.getByRole('button', { name: 'Suspend', exact: true }).click();
+      await staff
+        .getByRole('alertdialog', { name: 'Suspend shop?' })
+        .getByRole('button', { name: 'Suspend', exact: true })
+        .click();
       expect(await (await suspended).json()).toMatchObject({
         data: { setMerchantBranchStatus: { id, status: 'SUSPENDED' } },
       });

@@ -1,16 +1,21 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
   linkedSignal,
   resource,
   signal,
+  viewChild,
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { ConfirmationService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
+import { ConfirmDialog } from 'primeng/confirmdialog';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { TableModule } from 'primeng/table';
@@ -20,6 +25,8 @@ import {
   RouteDrawer,
   TablePanel,
   UrlListState,
+  confirmAction,
+  confirmDialogPt,
   tableView,
   type ListDefinition,
   type PageHeaderAction,
@@ -49,6 +56,7 @@ const definition: ListDefinition<Record<string, never>, 'NAME'> = {
     TablePanel,
     TableModule,
     ButtonDirective,
+    ConfirmDialog,
     RouterLink,
     RouteDrawer,
     ReactiveFormsModule,
@@ -56,6 +64,7 @@ const definition: ListDefinition<Record<string, never>, 'NAME'> = {
     FormField,
     Message,
   ],
+  providers: [ConfirmationService],
   host: { class: 'app-view' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -109,7 +118,14 @@ const definition: ListDefinition<Record<string, never>, 'NAME'> = {
             <td class="app-num app-table-merged-column">{{ row.branchCount }}</td>
             @if (canWrite()) {
               <td>
-                <button pButton type="button" severity="secondary" (click)="toggle(row)">
+                <button
+                  #statusButton
+                  pButton
+                  type="button"
+                  severity="secondary"
+                  [disabled]="statusDisabled()"
+                  (click)="toggle(row, statusButton)"
+                >
                   {{ row.status === 'ACTIVE' ? text().suspend : text().reactivate }}
                 </button>
               </td>
@@ -118,6 +134,18 @@ const definition: ListDefinition<Record<string, never>, 'NAME'> = {
         >
       </p-table>
     </osnova-table-panel>
+    <p-confirmdialog
+      appendTo="body"
+      [pt]="suspendDialogPt()"
+      [style]="{ width: 'min(28rem, calc(100vw - var(--p-app-space-8)))' }"
+    >
+      <ng-template #message>
+        <div id="suspend-merchant-message" class="app-stack">
+          <strong style="overflow-wrap: anywhere">{{ suspensionName() }}</strong>
+          <p>{{ text().suspendMerchantEffect }}</p>
+        </div>
+      </ng-template>
+    </p-confirmdialog>
     @if (drawer()) {
       <osnova-route-drawer
         [title]="text().createMerchant"
@@ -164,6 +192,10 @@ export class MerchantsPage {
     ['ADMINISTRATOR', 'OPERATOR'].includes(this.session.user()?.role ?? ''),
   );
   private readonly api = inject(OperatorApi);
+  private readonly confirmation = inject(ConfirmationService);
+  private readonly injector = inject(Injector);
+  private readonly table = viewChild(TablePanel);
+  private confirmationController: AbortController | null = null;
   readonly url = new UrlListState(definition, () => !!this.api.scope());
   readonly pageSizes = definition.pageSizes;
   private readonly revision = signal(0);
@@ -204,6 +236,12 @@ export class MerchantsPage {
     source: this.pageRequest,
     computation: (): string | null => null,
   });
+  private readonly statusPending = signal(false);
+  readonly statusDisabled = computed(() => this.statusPending() || this.list.isLoading());
+  readonly suspensionName = signal<string | null>(null);
+  readonly suspendDialogPt = computed(() =>
+    confirmDialogPt(this.language.value(), 'suspend-merchant-message'),
+  );
   readonly error = computed(() => {
     const error = this.list.error();
     return error ? requestError(error, this.text().unavailable) : null;
@@ -266,6 +304,10 @@ export class MerchantsPage {
     }),
   });
   constructor() {
+    effect((onCleanup) => {
+      this.pageRequest();
+      onCleanup(() => this.confirmationController?.abort());
+    });
     effect(() => {
       if (this.list.hasValue() && !this.list.isLoading()) {
         this.url.correctPage(Math.ceil(this.list.value().total / this.url.state().pageSize));
@@ -297,16 +339,57 @@ export class MerchantsPage {
       this.saving.set(false);
     }
   }
-  async toggle(row: Merchant): Promise<void> {
+  async toggle(row: Merchant, trigger: HTMLButtonElement): Promise<void> {
+    const request = this.pageRequest();
+    if (!request || !this.canWrite() || this.statusDisabled() || this.suspensionName() !== null) {
+      return;
+    }
+    const { id: tenantId, name, status } = row;
+    const language = request.scope.language;
     try {
+      if (status === 'ACTIVE') {
+        const sameName = this.page()?.items.some(
+          (item) => item.id !== tenantId && item.name === name,
+        );
+        this.suspensionName.set(sameName ? `${name} · ${tenantId}` : name);
+        const controller = new AbortController();
+        this.confirmationController = controller;
+        const accepted = await confirmAction(this.confirmation, language, {
+          header: this.text().suspendMerchantTitle,
+          acceptLabel: this.text().suspend,
+          danger: true,
+          signal: controller.signal,
+        });
+        this.confirmationController = null;
+        if (controller.signal.aborted || this.pageRequest() !== request) {
+          return;
+        }
+        afterNextRender(
+          () => {
+            if (!accepted && trigger.isConnected) {
+              trigger.focus();
+            } else {
+              this.table()?.focusHeading();
+            }
+          },
+          { injector: this.injector },
+        );
+        if (!accepted) {
+          return;
+        }
+      }
+      this.statusPending.set(true);
       await this.api.setMerchantStatus(
-        this.language.value(),
-        row.id,
-        row.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE',
+        language,
+        tenantId,
+        status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE',
       );
       this.load();
     } catch (error: unknown) {
       this.statusError.set(requestError(error, this.text().unavailable));
+    } finally {
+      this.statusPending.set(false);
+      this.suspensionName.set(null);
     }
   }
 }
