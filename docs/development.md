@@ -737,6 +737,12 @@ Add or edit an address with its type (General, Shipping or Billing), set one Shi
 Billing default, and remove an address after confirming. Each shop has its own address book, and
 editing an address never changes placed orders.
 
+At checkout, signed-in shoppers can choose a saved General or Shipping address for the current
+shop. Checkout fills untouched delivery fields from the available Shipping default or the first
+available saved address, and shoppers can edit those fields before reviewing the total.
+Choose **New address** and select **Save this address to my account** to add it after placing the
+order.
+
 In Admin, open Customers to page through the current shop's customers or search by name or email.
 Use Edit contact to change a customer's name or optional phone. The sign-in email is read-only.
 Add, edit or remove saved addresses from the same page. Choose Shipping or Billing and set one

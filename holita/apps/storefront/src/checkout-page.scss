@@ -75,6 +75,10 @@
   grid-column: 1 / -1;
 }
 
+.checkout-address-hint {
+  color: var(--basic-muted);
+}
+
 .checkout-warning,
 .checkout-note {
   margin: 0;

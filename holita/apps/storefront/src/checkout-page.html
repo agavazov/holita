@@ -87,6 +87,36 @@
           formGroupName="shippingAddress"
         >
           <h2 id="address-heading">{{ t().shippingAddress }}</h2>
+          @if (savedAddresses().length) {
+          <div class="basic-field">
+            <label for="saved-address">{{ t().accountAddresses }}</label>
+            <select
+              #addressPicker
+              id="saved-address"
+              class="basic-input"
+              [formControl]="savedAddressId"
+              (change)="chooseAddress(addressPicker.value)"
+              [attr.aria-describedby]="hasUnavailableAddresses() ? 'saved-address-hint' : null"
+            >
+              <option value="">{{ t().checkoutNewAddress }}</option>
+              @for (address of savedAddresses(); track address.id) {
+              <option
+                [value]="address.id"
+                [disabled]="!addressCountryAvailable(address.countryCode)"
+              >
+                {{ addressOptionLabel(address) }}
+              </option>
+              }
+            </select>
+            @if (hasUnavailableAddresses()) {
+            <span id="saved-address-hint" class="checkout-address-hint">
+              {{ t().checkoutAddressCountryHint }}
+            </span>
+            }
+          </div>
+          } @else if (addressListFailed()) {
+          <p class="checkout-warning" role="status">{{ t().addressesLoadFailed }}</p>
+          }
           <div class="checkout-fields">
             @let countryError = fieldError( 'shippingAddress.countryCode',
             form.controls.shippingAddress.controls.countryCode );
@@ -132,6 +162,12 @@
             </div>
             }
           </div>
+          @if (canSaveAddress()) {
+          <label>
+            <input id="save-address" type="checkbox" [formControl]="saveAddress" />
+            {{ t().checkoutSaveAddress }}
+          </label>
+          }
         </section>
         <section class="checkout-section" aria-labelledby="billing-address-heading">
           <h2 id="billing-address-heading">{{ t().billingAddress }}</h2>

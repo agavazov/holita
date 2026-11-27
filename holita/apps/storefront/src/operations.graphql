@@ -553,6 +553,17 @@ query GuestOrderConfirmation($cartId: ID!) {
 query ShopperOrderConfirmation($cartId: ID!) {
   shopperOrderConfirmation(cartId: $cartId) {
     id
+    contact {
+      name
+      phone
+    }
+    shippingAddress {
+      countryCode
+      city
+      postalCode
+      line1
+      line2
+    }
   }
 }
 query ShopperOrders($offset: Int!, $limit: Int!) {

@@ -32,6 +32,8 @@
       {{ t().signIn }}
     </a>
   </div>
+  } @if (addressSaveFailed()) {
+  <p class="basic-state" role="status">{{ t().checkoutAddressNotSaved }}</p>
   }
   <div class="confirmation-actions" [class.confirmation-actions--receipt]="receipt">
     <a class="basic-button basic-button--primary" [routerLink]="[...base(), 'products']">

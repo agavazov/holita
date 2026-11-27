@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -28,6 +29,7 @@ export class OrderConfirmationPage {
 
   private readonly api = inject(StorefrontApi);
   private readonly cartState = inject(CartState);
+  private readonly location = inject(Location);
   private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('heading');
   protected readonly base = computed(() => ['/s', this.cartState.shopId()]);
   protected readonly t = computed(() => messages[this.language()]);
@@ -60,6 +62,16 @@ export class OrderConfirmationPage {
   protected readonly loading = this.request.isLoading;
   protected readonly loadFailed = computed(() => this.request.status() === 'error');
   protected readonly sessionExpired = this.cartState.sessionExpired;
+  protected readonly addressSaveFailed = computed(() => {
+    const orderId = this.orderId();
+    const state = this.location.getState();
+    return (
+      !!state &&
+      typeof state === 'object' &&
+      'unsavedAddressOrderId' in state &&
+      state.unsavedAddressOrderId === orderId
+    );
+  });
   constructor() {
     afterNextRender(() => this.heading()?.nativeElement.focus());
   }

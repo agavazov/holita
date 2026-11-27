@@ -49,16 +49,30 @@ function pendingShopperCheckoutKey(shopId: string) {
   return `holita.shopper-checkout.${shopId}`;
 }
 
+const saveAddressPrefix = 'save:';
+
 export function pendingShopperCheckout(shopId: string) {
-  return sessionStorage.getItem(pendingShopperCheckoutKey(shopId));
+  const stored = sessionStorage.getItem(pendingShopperCheckoutKey(shopId));
+  if (!stored) {
+    return null;
+  }
+  const saveAddress = stored.startsWith(saveAddressPrefix);
+  return { cartId: saveAddress ? stored.slice(saveAddressPrefix.length) : stored, saveAddress };
 }
 
-export function rememberPendingShopperCheckout(shopId: string, cartId: string) {
-  sessionStorage.setItem(pendingShopperCheckoutKey(shopId), cartId);
+export function rememberPendingShopperCheckout(
+  shopId: string,
+  cartId: string,
+  saveAddress: boolean,
+) {
+  sessionStorage.setItem(
+    pendingShopperCheckoutKey(shopId),
+    saveAddress ? saveAddressPrefix + cartId : cartId,
+  );
 }
 
 export function forgetPendingShopperCheckout(shopId: string, cartId: string) {
-  if (pendingShopperCheckout(shopId) === cartId) {
+  if (pendingShopperCheckout(shopId)?.cartId === cartId) {
     sessionStorage.removeItem(pendingShopperCheckoutKey(shopId));
   }
 }

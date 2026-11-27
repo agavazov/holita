@@ -10,6 +10,7 @@ import {
   input,
   resource,
   signal,
+  untracked,
   viewChild,
   type ElementRef,
 } from '@angular/core';
@@ -46,7 +47,11 @@ import {
 } from './storefront-api';
 import { messages, type Language } from './storefront-messages';
 import { formatStorefrontMoney, shopCurrency } from './storefront-money';
-import type { QuoteCheckoutMutation } from './generated/operations';
+import type {
+  QuoteCheckoutMutation,
+  ShopperAddressFieldsFragment,
+  ShopperOrderConfirmationQuery,
+} from './generated/operations';
 
 const contactFields = [
   { name: 'email', label: 'email', type: 'email', autocomplete: 'email' },
@@ -74,6 +79,8 @@ interface ReviewedCheckout {
   readonly credentials: StorefrontCredentials;
   readonly quote: QuoteCheckoutMutation['quoteCheckout'];
 }
+
+type ConfirmedShopperOrder = NonNullable<ShopperOrderConfirmationQuery['shopperOrderConfirmation']>;
 
 function cartProblem(code: string): CheckoutProblem | null {
   switch (code) {
@@ -153,6 +160,43 @@ export class CheckoutPage {
     }),
     shopperNote: ['', Validators.maxLength(this.shopperNoteLimit)],
   });
+  protected readonly savedAddressId = this.fb.control('');
+  protected readonly saveAddress = this.fb.control(false);
+  private readonly selectedAddressId = toSignal(this.savedAddressId.valueChanges, {
+    initialValue: '',
+  });
+  private readonly owner = computed(() => ({
+    shopId: this.cartState.shopId(),
+    shopperToken: this.cartState.shopperToken(),
+  }));
+  private readonly addressRequest = resource({
+    params: () => {
+      const { shopId, shopperToken } = this.owner();
+      return shopperToken ? { shopId, shopperToken } : undefined;
+    },
+    loader: async ({ params: { shopId, shopperToken }, abortSignal }) => {
+      try {
+        const addresses = await this.api.shopperAddresses(shopId, shopperToken);
+        return addresses.filter(({ type }) => type === 'GENERAL' || type === 'SHIPPING');
+      } catch (error) {
+        abortSignal.throwIfAborted();
+        if (this.cartState.expireSession(shopId, { shopperToken }, error)) {
+          return undefined;
+        }
+        throw error;
+      }
+    },
+  });
+  protected readonly savedAddresses = computed(() =>
+    this.addressRequest.hasValue() ? this.addressRequest.value() : [],
+  );
+  protected readonly addressListFailed = computed(() => this.addressRequest.status() === 'error');
+  protected readonly hasUnavailableAddresses = computed(() =>
+    this.savedAddresses().some(({ countryCode }) => !this.addressCountryAvailable(countryCode)),
+  );
+  protected readonly canSaveAddress = computed(
+    () => !!this.owner().shopperToken && !this.selectedAddressId(),
+  );
   protected readonly reviewing = signal(false);
   protected readonly placing = signal(false);
   protected readonly busy = computed(() => this.reviewing() || this.placing());
@@ -162,12 +206,12 @@ export class CheckoutPage {
   private readonly rejectedPromo = signal<PromoProblem | null>(null);
   private readonly rejectedFields = signal<readonly StorefrontFieldError[]>([]);
   private readonly request = resource({
-    params: () => this.cartState.shopId(),
-    loader: async ({ params: shopId, abortSignal }) => {
-      const { credentials, pending } = this.checkoutOwner(shopId);
-      if (credentials.shopperToken) {
-        return this.readShopperCheckout(shopId, credentials.shopperToken, abortSignal);
+    params: () => (this.cartState.sessionExpired() ? undefined : this.owner()),
+    loader: async ({ params: { shopId, shopperToken }, abortSignal }) => {
+      if (shopperToken) {
+        return this.readShopperCheckout(shopId, shopperToken, abortSignal);
       }
+      const { credentials, pending } = this.checkoutOwner(shopId);
       if (!pending) {
         return this.readCheckout(shopId, credentials, abortSignal);
       }
@@ -250,6 +294,22 @@ export class CheckoutPage {
       this.rejectedFields.set([]);
     });
 
+    let previousOwner = this.owner();
+    effect(() => {
+      const owner = this.owner();
+      if (owner === previousOwner) {
+        return;
+      }
+      this.reviewed.set(null);
+      if (previousOwner.shopperToken) {
+        this.savedAddressId.reset();
+        this.saveAddress.reset();
+        this.form.controls.shippingAddress.reset();
+        this.form.controls.contact.reset();
+      }
+      previousOwner = owner;
+    });
+
     effect(() => {
       if (!this.request.hasValue()) {
         return;
@@ -280,6 +340,83 @@ export class CheckoutPage {
       }
       this.form.updateValueAndValidity({ emitEvent: false });
     });
+
+    effect(() => {
+      if (!this.checkout()) {
+        return;
+      }
+      const addresses = this.savedAddresses();
+      untracked(() => {
+        const delivery = this.form.controls.shippingAddress;
+        if (
+          !delivery.pristine ||
+          !delivery.untouched ||
+          this.savedAddressId.value ||
+          this.saveAddress.value
+        ) {
+          return;
+        }
+        const available = addresses.filter(({ countryCode }) =>
+          this.addressCountryAvailable(countryCode),
+        );
+        const preferred =
+          available.find(({ type, isDefault }) => type === 'SHIPPING' && isDefault) ?? available[0];
+        if (preferred) {
+          this.savedAddressId.setValue(preferred.id);
+          this.fillAddress(preferred, true);
+        }
+      });
+    });
+  }
+
+  protected addressCountryAvailable(countryCode: string): boolean {
+    return this.countries().some(({ code }) => code === countryCode);
+  }
+
+  protected addressOptionLabel(address: ShopperAddressFieldsFragment): string {
+    const country = this.countries().find(({ code }) => code === address.countryCode);
+    return [
+      address.recipient,
+      address.line1,
+      address.line2,
+      `${address.postalCode} ${address.city}`,
+      country?.label ?? address.countryCode,
+      address.isDefault ? this.t().addressDefault : '',
+      country ? '' : this.t().checkoutAddressUnavailable,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  }
+
+  protected chooseAddress(id: string) {
+    this.saveAddress.reset();
+    if (!id) {
+      this.form.controls.shippingAddress.reset();
+      this.form.controls.shippingAddress.markAsDirty();
+      return;
+    }
+    const address = this.savedAddresses().find((saved) => saved.id === id);
+    if (address && this.addressCountryAvailable(address.countryCode)) {
+      this.fillAddress(address, false);
+    }
+  }
+
+  private fillAddress(address: ShopperAddressFieldsFragment, preselect: boolean) {
+    const { countryCode, city, postalCode, line1, line2, recipient } = address;
+    this.form.controls.shippingAddress.setValue({
+      countryCode,
+      city,
+      postalCode,
+      line1,
+      line2: line2 ?? '',
+    });
+    const { name, phone } = this.form.controls.contact.controls;
+    if (!preselect || !name.value.trim()) {
+      name.setValue(recipient);
+    }
+    if (address.phone && (!preselect || !phone.value.trim())) {
+      phone.setValue(address.phone);
+    }
   }
 
   protected retry() {
@@ -320,7 +457,11 @@ export class CheckoutPage {
     this.reviewing.set(true);
     try {
       const quote = await this.api.quoteCheckout(shopId, credentials, this.checkoutInput());
-      if (!this.destroy.destroyed) {
+      if (
+        !this.destroy.destroyed &&
+        this.cartState.shopId() === shopId &&
+        this.cartState.shopperToken() === (credentials.shopperToken ?? null)
+      ) {
         this.reviewed.set({ shopId, credentials, quote });
         afterNextRender(() => this.placeButton()?.nativeElement.focus(), {
           injector: this.injector,
@@ -337,7 +478,12 @@ export class CheckoutPage {
 
   protected async placeOrder() {
     const reviewed = this.reviewed();
-    if (this.busy() || !reviewed || reviewed.shopId !== this.cartState.shopId()) {
+    if (
+      this.busy() ||
+      !reviewed ||
+      reviewed.shopId !== this.cartState.shopId() ||
+      (reviewed.credentials.shopperToken ?? null) !== this.cartState.shopperToken()
+    ) {
       return;
     }
     const {
@@ -349,9 +495,10 @@ export class CheckoutPage {
     this.placing.set(true);
     const { shopperToken, guestCartToken } = credentials;
     const guestAttempt = guestCartToken ? { cartId, token: guestCartToken } : null;
+    const shouldSave = this.canSaveAddress() && this.saveAddress.value;
     try {
       if (shopperToken) {
-        rememberPendingShopperCheckout(shopId, cartId);
+        rememberPendingShopperCheckout(shopId, cartId, shouldSave);
       } else if (guestAttempt) {
         rememberPendingGuestCheckout(shopId, guestAttempt);
       }
@@ -361,7 +508,13 @@ export class CheckoutPage {
         cartId,
         quoteRevision,
       });
-      await this.finishCheckout(shopId, order.id, cartId, credentials);
+      await this.finishCheckout(
+        shopId,
+        order.id,
+        cartId,
+        credentials,
+        shouldSave ? order : undefined,
+      );
     } catch (error) {
       if (guestAttempt && cartNotFound(error)) {
         forgetPendingGuestCheckout(shopId, guestAttempt);
@@ -372,6 +525,53 @@ export class CheckoutPage {
       }
     } finally {
       this.placing.set(false);
+    }
+  }
+
+  private async saveShippingAddress(
+    shopId: string,
+    shopperToken: string,
+    { contact, shippingAddress }: ConfirmedShopperOrder,
+  ): Promise<boolean> {
+    const { name: recipient, phone } = contact;
+    const { countryCode, city, postalCode, line1, line2 } = shippingAddress;
+    if (Array.from(recipient).length > 200 || Array.from(phone).length > 50) {
+      return false;
+    }
+    try {
+      const addresses = await this.api.shopperAddresses(shopId, shopperToken);
+      if (!this.isActiveCheckout(shopId, shopperToken)) {
+        return false;
+      }
+      const shipping = addresses.filter(({ type }) => type === 'SHIPPING');
+      if (
+        shipping.some(
+          (address) =>
+            address.recipient === recipient &&
+            address.phone === phone &&
+            address.countryCode === countryCode &&
+            address.city === city &&
+            address.postalCode === postalCode &&
+            address.line1 === line1 &&
+            address.line2 === line2,
+        )
+      ) {
+        return true;
+      }
+      await this.api.createShopperAddress(shopId, shopperToken, {
+        type: 'SHIPPING',
+        recipient,
+        phone,
+        countryCode,
+        city,
+        postalCode,
+        line1,
+        line2,
+        isDefault: !shipping.some(({ isDefault }) => isDefault),
+      });
+      return true;
+    } catch {
+      return false;
     }
   }
 
@@ -405,13 +605,20 @@ export class CheckoutPage {
     abortSignal: AbortSignal,
   ) {
     const credentials = { shopperToken };
-    const cartId = pendingShopperCheckout(shopId);
-    if (cartId) {
+    const attempt = pendingShopperCheckout(shopId);
+    if (attempt) {
+      const { cartId, saveAddress } = attempt;
       try {
         const order = await this.api.shopperOrderConfirmation(shopId, cartId, shopperToken);
         abortSignal.throwIfAborted();
         if (order) {
-          await this.finishCheckout(shopId, order.id, cartId, credentials);
+          await this.finishCheckout(
+            shopId,
+            order.id,
+            cartId,
+            credentials,
+            saveAddress ? order : undefined,
+          );
           return null;
         }
         forgetPendingShopperCheckout(shopId, cartId);
@@ -448,25 +655,38 @@ export class CheckoutPage {
     }
   }
 
+  private isActiveCheckout(shopId: string, shopperToken?: string | null) {
+    return (
+      !this.destroy.destroyed &&
+      this.cartState.shopId() === shopId &&
+      (!shopperToken || this.cartState.credentials(shopId).shopperToken === shopperToken)
+    );
+  }
+
   private async finishCheckout(
     shopId: string,
     orderId: string,
     cartId: string,
     { guestCartToken, shopperToken }: StorefrontCredentials,
+    orderToSave?: ConfirmedShopperOrder,
   ) {
     if (guestCartToken) {
       rememberGuestReceipt(shopId, orderId, guestCartToken);
       forgetPendingGuestCheckout(shopId, { cartId, token: guestCartToken });
     }
-    if (
-      !this.destroy.destroyed &&
-      this.cartState.shopId() === shopId &&
-      (!shopperToken || this.cartState.credentials(shopId).shopperToken === shopperToken)
-    ) {
+    if (!this.isActiveCheckout(shopId, shopperToken)) {
+      return;
+    }
+    const addressSaveFailed =
+      orderToSave && shopperToken
+        ? !(await this.saveShippingAddress(shopId, shopperToken, orderToSave))
+        : false;
+    if (this.isActiveCheckout(shopId, shopperToken)) {
       const opened = await this.router.navigate(
         ['/s', shopId, 'checkout', 'confirmation', orderId],
         {
           replaceUrl: true,
+          ...(addressSaveFailed ? { state: { unsavedAddressOrderId: orderId } } : {}),
         },
       );
       if (opened && shopperToken) {
