@@ -1,6 +1,6 @@
 # 198 Use saved addresses at checkout
 
-**Status:** Ready after [305](305-holita-shopper-address-book-ui.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

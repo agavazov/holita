@@ -1,6 +1,6 @@
-<section class="orders-view basic-surface" aria-labelledby="orders-title">
+<section class="orders-view basic-account basic-surface" aria-labelledby="orders-title">
   @let detail = orderId() !== null;
-  <header class="orders-header">
+  <header class="basic-account-header">
     <nav class="basic-breadcrumb" [attr.aria-label]="t().browsePath">
       <ol role="list">
         <li>
@@ -33,9 +33,9 @@
     </h1>
   </header>
 
-  <div class="orders-layout" [class.orders-layout--signed-in]="!signedOut()">
+  <div class="basic-account-layout" [class.basic-account-layout--signed-in]="!signedOut()">
     @if (!signedOut()) {
-    <nav class="orders-nav" [attr.aria-label]="t().account">
+    <nav class="basic-account-nav" [attr.aria-label]="t().account">
       <a [routerLink]="[...base(), 'account']">{{ t().account }}</a>
       <a
         [routerLink]="ordersLink()"
@@ -44,9 +44,10 @@
       >
         {{ t().accountOrders }}
       </a>
+      <a [routerLink]="[...base(), 'account', 'addresses']">{{ t().accountAddresses }}</a>
     </nav>
     }
-    <div class="orders-content">
+    <div class="basic-account-content">
       @if (signedOut()) {
       <div class="basic-state">
         @if (expired()) {
@@ -69,12 +70,10 @@
       <holita-order-receipt [order]="receipt" [language]="language()" />
       } @else if (detail) {
       <p class="basic-state" role="alert">{{ t().orderUnavailable }}</p>
-      } @else if (list(); as result) {
-      @if (result.items.length) {
+      } @else if (list(); as result) { @if (result.items.length) {
       <ul class="order-list" role="list">
-        @for (item of result.items; track item.id) {
-        @let status = orderStatuses[item.status];
-        @let payment = paymentStatuses[item.paymentStatus];
+        @for (item of result.items; track item.id) { @let status = orderStatuses[item.status]; @let
+        payment = paymentStatuses[item.paymentStatus];
         <li class="order-list-row">
           <div class="order-list-identity">
             <div class="order-list-header">
@@ -88,8 +87,12 @@
                 </a>
               </h2>
               <div class="order-list-status">
-                <span class="shop-chip" [attr.data-tone]="status.tone">{{ t()[status.label] }}</span>
-                <span class="shop-chip" [attr.data-tone]="payment.tone">{{ t()[payment.label] }}</span>
+                <span class="shop-chip" [attr.data-tone]="status.tone"
+                  >{{ t()[status.label] }}</span
+                >
+                <span class="shop-chip" [attr.data-tone]="payment.tone"
+                  >{{ t()[payment.label] }}</span
+                >
               </div>
             </div>
             <time [attr.datetime]="item.placedAt">{{ formatDate(item.placedAt) }}</time>
@@ -127,16 +130,20 @@
         </a>
         }
       </nav>
-      }
-      } @else if (result.total === 0) {
+      } } @else if (result.total === 0) {
       <div class="basic-state basic-empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
           <path d="M5 8h14l1 12H4L5 8Zm4 0V6a3 3 0 0 1 6 0v2" stroke-linejoin="round" />
         </svg>
         <p>{{ t().ordersEmpty }}</p>
       </div>
-      }
-      }
+      } }
     </div>
   </div>
 </section>

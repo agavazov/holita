@@ -578,3 +578,38 @@ query ShopperOrder($id: ID!) {
     ...OrderConfirmationFields
   }
 }
+
+fragment ShopperAddressFields on CustomerAddress {
+  id
+  type
+  isDefault
+  recipient
+  line1
+  line2
+  phone
+  city
+  postalCode
+  countryCode
+}
+
+query ShopperAddresses {
+  shopperAddresses {
+    ...ShopperAddressFields
+  }
+}
+
+mutation CreateShopperAddress($input: CustomerAddressInput!) {
+  createShopperAddress(input: $input) {
+    ...ShopperAddressFields
+  }
+}
+
+mutation UpdateShopperAddress($addressId: ID!, $input: CustomerAddressInput!) {
+  updateShopperAddress(addressId: $addressId, input: $input) {
+    ...ShopperAddressFields
+  }
+}
+
+mutation RemoveShopperAddress($addressId: ID!) {
+  removeShopperAddress(addressId: $addressId)
+}

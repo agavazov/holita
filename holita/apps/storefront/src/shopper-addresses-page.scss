@@ -1,0 +1,111 @@
+@use './basic-secondary';
+@use './basic-account';
+
+.address-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-end: var(--p-app-space-4);
+}
+
+.address-list {
+  margin: 0;
+  padding: 0;
+  border-block: 1px solid var(--basic-border);
+  list-style: none;
+}
+
+.address-row {
+  display: grid;
+  gap: var(--p-app-space-3);
+  padding-block: var(--p-app-space-5);
+}
+
+.address-row + .address-row {
+  border-block-start: 1px solid var(--basic-border);
+}
+
+.address-identity,
+.address-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-app-space-2);
+}
+
+.address-identity .shop-chip {
+  padding: 0.125rem var(--p-app-space-2);
+  border-radius: 999px;
+  font-size: var(--p-app-text-xs);
+}
+
+h2,
+h3 {
+  margin: 0;
+  font-size: var(--p-app-text-base);
+  line-height: 1.5;
+}
+
+.address-row address {
+  display: grid;
+  color: var(--basic-muted);
+  font-size: var(--p-app-text-sm);
+  font-style: normal;
+  line-height: 1.5;
+}
+
+.address-actions .address-remove {
+  color: var(--shop-chip-danger-ink);
+}
+
+.address-confirmation {
+  display: grid;
+  gap: var(--p-app-space-3);
+  padding: var(--p-app-space-4);
+  border: 1px solid var(--basic-border);
+  border-radius: var(--p-app-radius-tag);
+  background: var(--basic-subtle);
+}
+
+.address-error {
+  color: var(--shop-chip-danger-ink);
+  font-size: var(--p-app-text-sm);
+}
+
+.address-confirmation p {
+  margin: 0;
+}
+
+.address-empty {
+  margin-block-start: 0;
+  border-block: 1px solid var(--basic-border);
+}
+
+.address-form {
+  display: grid;
+  align-items: start;
+  gap: var(--p-app-space-4);
+  min-inline-size: 0;
+  margin: var(--p-app-space-4) 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.address-field-wide {
+  grid-column: 1 / -1;
+}
+
+.default-address {
+  display: flex;
+  align-items: center;
+  gap: var(--p-app-space-2);
+}
+
+.default-address input {
+  accent-color: var(--basic-action);
+}
+
+@media (min-width: 40rem) {
+  .address-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

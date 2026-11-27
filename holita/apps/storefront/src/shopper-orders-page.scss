@@ -1,54 +1,5 @@
 @use './basic-secondary';
-
-.orders-view {
-  max-inline-size: 76rem;
-  margin-inline: auto;
-}
-
-.orders-header {
-  padding-block-end: 1.5rem;
-  border-block-end: 1px solid var(--basic-border);
-}
-
-.orders-layout {
-  display: grid;
-  gap: 2rem;
-  padding-block-start: 2rem;
-}
-
-.orders-nav {
-  display: flex;
-  flex-wrap: wrap;
-  align-self: start;
-  gap: 0.25rem;
-  padding: 0.5rem;
-  border: 1px solid var(--basic-border);
-  border-radius: 0.5rem;
-  background: var(--basic-subtle);
-  font-size: 0.875rem;
-  font-weight: 600;
-  line-height: 1.5rem;
-}
-
-.orders-nav a {
-  padding: 0.5rem;
-  border-radius: 0.375rem;
-  color: var(--basic-text);
-  text-decoration: none;
-}
-
-.orders-nav a:is([aria-current], :hover) {
-  background: var(--basic-placeholder);
-  color: var(--basic-link);
-}
-
-.orders-content {
-  min-inline-size: 0;
-}
-
-.orders-content > .basic-state {
-  margin-block-start: 0;
-}
+@use './basic-account';
 
 .order-list {
   margin: 0;
@@ -151,29 +102,11 @@
 }
 
 @media (min-width: 40rem) {
-  .orders-layout {
-    padding-block: 2.5rem 2rem;
-  }
-
   .order-list-row {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .order-list-total {
     text-align: end;
-  }
-}
-
-@media (min-width: 64rem) {
-  .orders-layout--signed-in {
-    grid-template-columns: 18rem minmax(0, 1fr);
-    gap: 2.5rem;
-  }
-
-  .orders-nav {
-    position: sticky;
-    inset-block-start: 2rem;
-    flex-direction: column;
-    padding: 1.25rem 1rem;
   }
 }

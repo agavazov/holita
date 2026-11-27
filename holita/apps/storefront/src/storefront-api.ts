@@ -18,6 +18,7 @@ import {
   CatalogueTagProductsDocument,
   CatalogueTagsDocument,
   CheckoutDocument,
+  CreateShopperAddressDocument,
   GuestOrderConfirmationDocument,
   OrderConfirmationDocument,
   PlaceOrderDocument,
@@ -32,6 +33,8 @@ import {
   RegisterShopperDocument,
   RemoveCartDiscountDocument,
   RemoveCartLineDocument,
+  RemoveShopperAddressDocument,
+  ShopperAddressesDocument,
   ShopperMeDocument,
   ShopperOrderConfirmationDocument,
   ShopperOrderDocument,
@@ -39,10 +42,12 @@ import {
   SignInShopperDocument,
   SignOutShopperDocument,
   UpdateCartLineDocument,
+  UpdateShopperAddressDocument,
   type CatalogueBrowsePageFragment,
   type CatalogueCategoryFieldsFragment,
   type CatalogueQueryVariables,
   type CheckoutQuoteInput,
+  type CustomerAddressInput,
   type PlaceOrderInput,
   type PublicBlogArticlesQueryVariables,
 } from './generated/operations';
@@ -227,6 +232,28 @@ export class StorefrontApi {
 
   async shopperOrder(shopId: string, shopperToken: string, id: string) {
     return (await this.read(shopId, ShopperOrderDocument, { id }, { shopperToken })).shopperOrder;
+  }
+
+  async shopperAddresses(shopId: string, shopperToken: string) {
+    return (await this.read(shopId, ShopperAddressesDocument, {}, { shopperToken }))
+      .shopperAddresses;
+  }
+
+  createShopperAddress(shopId: string, shopperToken: string, input: CustomerAddressInput) {
+    return this.write(shopId, CreateShopperAddressDocument, { input }, { shopperToken });
+  }
+
+  updateShopperAddress(
+    shopId: string,
+    shopperToken: string,
+    addressId: string,
+    input: CustomerAddressInput,
+  ) {
+    return this.write(shopId, UpdateShopperAddressDocument, { addressId, input }, { shopperToken });
+  }
+
+  removeShopperAddress(shopId: string, shopperToken: string, addressId: string) {
+    return this.write(shopId, RemoveShopperAddressDocument, { addressId }, { shopperToken });
   }
 
   async register(

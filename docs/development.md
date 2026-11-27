@@ -732,6 +732,11 @@ to return to the same list page. The Sofia demo shopper has placed, confirmed, s
 completed orders. The shipped example is marked paid. The storefront graph exposes `shopperOrders`
 and `shopperOrder` for this history.
 
+Open Account → Saved addresses to keep the addresses saved to the shopper's account in that shop.
+Add or edit an address with its type (General, Shipping or Billing), set one Shipping and one
+Billing default, and remove an address after confirming. Each shop has its own address book, and
+editing an address never changes placed orders.
+
 In Admin, open Customers to page through the current shop's customers or search by name or email.
 Use Edit contact to change a customer's name or optional phone. The sign-in email is read-only.
 Add, edit or remove saved addresses from the same page. Choose Shipping or Billing and set one

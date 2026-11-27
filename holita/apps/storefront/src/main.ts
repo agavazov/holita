@@ -51,6 +51,7 @@ import { CartMergeNotice, CartPage } from './cart-page';
 import { CartPreview } from './cart-preview';
 import { CheckoutPage } from './checkout-page';
 import { OrderConfirmationPage } from './order-confirmation-page';
+import { ShopperAddressesPage } from './shopper-addresses-page';
 import { ShopperOrdersPage } from './shopper-orders-page';
 import { StorefrontBlog } from './storefront-blog';
 import { localizedContent, localizedText } from './storefront-content';
@@ -79,6 +80,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
     CartPreview,
     CheckoutPage,
     OrderConfirmationPage,
+    ShopperAddressesPage,
     ShopperOrdersPage,
     StorefrontBlog,
   ],
@@ -145,7 +147,13 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
             class="shop-icon-button"
             [routerLink]="[...base(), 'account']"
             [attr.aria-label]="t().account"
-            [attr.aria-current]="page === 'account' ? 'page' : page === 'orders' ? 'true' : null"
+            [attr.aria-current]="
+              page === 'account'
+                ? 'page'
+                : page === 'orders' || page === 'addresses'
+                  ? 'true'
+                  : null
+            "
           >
             <svg
               viewBox="0 0 24 24"
@@ -378,6 +386,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
           page !== 'cart' &&
           page !== 'checkout' &&
           page !== 'orders' &&
+          page !== 'addresses' &&
           page !== 'sign-in' &&
           page !== 'register'
         ) {
@@ -819,6 +828,7 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
               <a
                 class="shop-text-link"
                 [routerLink]="[...base(), registering ? 'sign-in' : 'register']"
+                [queryParams]="returnToAddresses() ? { returnTo: 'addresses' } : null"
               >
                 {{ registering ? t().signIn : t().register }}
               </a>
@@ -856,6 +866,9 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                   <a class="shop-primary" [routerLink]="[...base(), 'account', 'orders']">
                     {{ t().accountOrders }}
                   </a>
+                  <a class="shop-secondary" [routerLink]="[...base(), 'account', 'addresses']">
+                    {{ t().accountAddresses }}
+                  </a>
                   <button
                     class="shop-secondary"
                     type="button"
@@ -879,6 +892,17 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
         @if (page === 'orders') {
           @if (shop()) {
             <holita-shopper-orders [language]="language()" [orderId]="orderId()" />
+          } @else if (error()) {
+            <ng-container [ngTemplateOutlet]="requestError" />
+          } @else {
+            <p class="shop-state" role="status">{{ t().loading }}</p>
+          }
+        }
+        @if (page === 'addresses') {
+          @if (brandingShop(); as currentShop) {
+            @for (shop of [currentShop]; track shop.id) {
+              <holita-shopper-addresses [language]="language()" />
+            }
           } @else if (error()) {
             <ng-container [ngTemplateOutlet]="requestError" />
           } @else {
@@ -1016,6 +1040,9 @@ class StorefrontPage {
   private readonly document = inject(DOCUMENT);
   private readonly params = toSignal(this.route.paramMap, { requireSync: true });
   private readonly query = toSignal(this.route.queryParamMap, { requireSync: true });
+  protected readonly returnToAddresses = computed(
+    () => this.query().get('returnTo') === 'addresses',
+  );
   protected readonly searchTerm = linkedSignal(() => this.query().get('q') ?? '');
   protected readonly searchOpen = signal(false);
   private readonly suggestionLinks = viewChildren<ElementRef<HTMLAnchorElement>>('suggestionLink');
@@ -1046,7 +1073,9 @@ class StorefrontPage {
   );
   readonly page = this.route.routeConfig?.data?.['orderHistory']
     ? 'orders'
-    : (this.route.routeConfig?.path?.split('/').at(2) ?? 'catalogue');
+    : this.route.routeConfig?.data?.['addressBook']
+      ? 'addresses'
+      : (this.route.routeConfig?.path?.split('/').at(2) ?? 'catalogue');
   protected readonly notFound = this.route.routeConfig?.data?.['notFound'] === true;
   readonly section = browseSections.find((item) => item === this.page) ?? null;
   readonly browseSections = browseSections;
@@ -1350,8 +1379,11 @@ class StorefrontPage {
       setShopperSession(shopId, result.token);
       forgetGuestCart(shopId, guestToken);
       if (!this.destroy.destroyed && this.shopId() === shopId) {
-        const destination = guestToken ? 'cart' : 'account';
-        await this.router.navigate([...this.base(), destination], {
+        const returnToAddresses = this.returnToAddresses() && result.cartMergeIssues.length === 0;
+        const destination = returnToAddresses
+          ? ['account', 'addresses']
+          : [guestToken ? 'cart' : 'account'];
+        await this.router.navigate([...this.base(), ...destination], {
           info: guestToken ? new CartMergeNotice(shopId, result.cartMergeIssues) : undefined,
         });
       }
@@ -1416,6 +1448,7 @@ const pages: Routes = [
     data: { orderHistory: true },
   },
   { path: 's/:shopId/account/orders', component: StorefrontPage, data: { orderHistory: true } },
+  { path: 's/:shopId/account/addresses', component: StorefrontPage, data: { addressBook: true } },
   { path: 's/:shopId/account', component: StorefrontPage },
   { path: 's/:shopId/cart', component: StorefrontPage },
   { path: 's/:shopId/checkout/confirmation/:orderId', component: StorefrontPage },

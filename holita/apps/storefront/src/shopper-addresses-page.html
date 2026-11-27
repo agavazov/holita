@@ -1,0 +1,294 @@
+<section class="basic-account basic-surface" aria-labelledby="addresses-title">
+  <header class="basic-account-header">
+    <nav class="basic-breadcrumb" [attr.aria-label]="t().browsePath">
+      <ol role="list">
+        <li>
+          <a [routerLink]="base()" [attr.aria-label]="t().home">
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M10 2 2 10h2v7h4v-5h4v5h4v-7h2z" />
+            </svg>
+          </a>
+        </li>
+        <li>
+          <span aria-hidden="true">›</span>
+          <a [routerLink]="[...base(), 'account']">{{ t().account }}</a>
+        </li>
+        <li>
+          <span aria-hidden="true">›</span>
+          <span aria-current="page">{{ t().accountAddresses }}</span>
+        </li>
+      </ol>
+    </nav>
+    <h1 #heading id="addresses-title" class="basic-page-title" tabindex="-1">
+      {{ t().accountAddresses }}
+    </h1>
+  </header>
+
+  <div class="basic-account-layout" [class.basic-account-layout--signed-in]="signedIn()">
+    @if (signedIn()) {
+    <nav class="basic-account-nav" [attr.aria-label]="t().account">
+      <a [routerLink]="[...base(), 'account']">{{ t().account }}</a>
+      <a [routerLink]="[...base(), 'account', 'orders']">{{ t().accountOrders }}</a>
+      <a [routerLink]="[...base(), 'account', 'addresses']" aria-current="page">
+        {{ t().accountAddresses }}
+      </a>
+    </nav>
+    }
+    <div class="basic-account-content">
+      @if (!signedIn()) {
+      <div class="basic-state">
+        @if (expired()) {
+        <p role="alert">{{ t().addressesSessionExpired }}</p>
+        } @else {
+        <p>{{ t().addressesSignInRequired }}</p>
+        }
+        <a
+          class="basic-button basic-button--primary"
+          [routerLink]="[...base(), 'sign-in']"
+          [queryParams]="{ returnTo: 'addresses' }"
+        >
+          {{ t().signIn }}
+        </a>
+      </div>
+      } @else if (request.isLoading()) {
+      <p class="basic-state" role="status">{{ t().loading }}</p>
+      } @else if (request.status() === 'error') {
+      <div class="basic-state">
+        <p role="alert">{{ t().addressesLoadFailed }}</p>
+        <button class="basic-button" type="button" (click)="request.reload()">
+          {{ t().retry }}
+        </button>
+      </div>
+      } @else if (editor(); as edit) {
+      <form
+        #formElement
+        [formGroup]="form"
+        (ngSubmit)="save()"
+        aria-labelledby="address-form-title"
+      >
+        <h2 #editorHeading id="address-form-title" tabindex="-1">
+          {{ edit.addressId ? t().addressEdit : t().addressAdd }}
+        </h2>
+        <fieldset class="address-form" [disabled]="busy()">
+          @let typeError = fieldError('type');
+          <div class="basic-field">
+            <label for="address-type">{{ t().addressType }}</label>
+            <select
+              class="basic-input"
+              id="address-type"
+              formControlName="type"
+              required
+              [attr.aria-invalid]="typeError ? 'true' : null"
+              [attr.aria-describedby]="typeError ? 'address-type-error' : null"
+            >
+              @for (kind of kindOptions; track kind) {
+              <option [value]="kind">{{ t()[addressKinds[kind]] }}</option>
+              }
+            </select>
+            @if (typeError) {
+            <span class="address-error" id="address-type-error">{{ typeError }}</span>
+            }
+          </div>
+          @for (field of textFields; track field.name) { @let id = 'address-' + field.name; @let
+          error = fieldError(field.name);
+          <div
+            class="basic-field"
+            [class.address-field-wide]="field.name === 'line1' || field.name === 'line2'"
+          >
+            <label [for]="id">{{ t()[field.label] }}</label>
+            <input
+              class="basic-input"
+              [id]="id"
+              [formControlName]="field.name"
+              [type]="field.name === 'phone' ? 'tel' : 'text'"
+              [autocomplete]="field.autocomplete"
+              [required]="field.name !== 'line2' && field.name !== 'phone'"
+              [attr.aria-invalid]="error ? 'true' : null"
+              [attr.aria-describedby]="error ? id + '-error' : null"
+            />
+            @if (error) {
+            <span class="address-error" [id]="id + '-error'">{{ error }}</span>
+            }
+          </div>
+          } @let countryCode = form.controls.countryCode.value; @let countryError =
+          fieldError('countryCode');
+          <div class="basic-field">
+            <label for="address-country">{{ t().country }}</label>
+            <select
+              class="basic-input"
+              id="address-country"
+              formControlName="countryCode"
+              autocomplete="country"
+              required
+              [attr.aria-invalid]="countryError ? 'true' : null"
+              [attr.aria-describedby]="countryError ? 'address-country-error' : null"
+            >
+              @for (country of countries(); track country.code) {
+              <option [value]="country.code">{{ country.label }}</option>
+              } @if (unlistedCountry(countryCode)) {
+              <option [value]="countryCode">{{ countryName(countryCode) }}</option>
+              }
+            </select>
+            @if (countryError) {
+            <span class="address-error" id="address-country-error">{{ countryError }}</span>
+            }
+          </div>
+          @if (form.controls.type.value !== 'GENERAL') { @let defaultError =
+          fieldError('isDefault');
+          <div class="address-field-wide basic-field">
+            <label class="default-address">
+              <input
+                type="checkbox"
+                formControlName="isDefault"
+                [attr.aria-invalid]="defaultError ? 'true' : null"
+                [attr.aria-describedby]="defaultError ? 'address-default-error' : null"
+              />
+              {{ t().addressSetDefault }}
+            </label>
+            @if (defaultError) {
+            <span class="address-error" id="address-default-error">{{ defaultError }}</span>
+            }
+          </div>
+          }
+          <div class="address-field-wide">
+            @if (actionError(); as error) {
+            <p class="address-error" role="alert">{{ t()[error] }}</p>
+            }
+            <div class="address-actions">
+              <button class="basic-button basic-button--primary" type="submit">
+                {{ t().addressSave }}
+              </button>
+              <button class="basic-button" type="button" (click)="cancelAction()">
+                {{ t().addressCancel }}
+              </button>
+            </div>
+          </div>
+        </fieldset>
+      </form>
+      } @else if (request.hasValue()) { @let addresses = request.value();
+      <div class="address-toolbar">
+        <button
+          id="address-add"
+          class="basic-button basic-button--primary"
+          type="button"
+          [disabled]="busy()"
+          (click)="openEditor()"
+        >
+          {{ t().addressAdd }}
+        </button>
+      </div>
+      @if (actionError() === 'addressDefaultFailed') {
+      <p class="address-error" role="alert">{{ t().addressDefaultFailed }}</p>
+      } @if (addresses.length) {
+      <ul class="address-list" role="list">
+        @for (address of addresses; track address.id) { @let label = addressLabel(address);
+        <li class="address-row">
+          <div class="address-identity">
+            <h2>{{ address.recipient }}</h2>
+            <span class="shop-chip" data-tone="NEUTRAL">{{ t()[addressKinds[address.type]] }}</span>
+            @if (address.isDefault) {
+            <span class="shop-chip" data-tone="SUCCESS">{{ t().addressDefault }}</span>
+            }
+          </div>
+          <address>
+            <span>{{ address.line1 }}</span>
+            @if (address.line2) {
+            <span>{{ address.line2 }}</span>
+            }
+            <span
+              >{{ address.postalCode }} {{ address.city }}, {{ countryName(address.countryCode)
+              }}</span
+            >
+            @if (address.phone) {
+            <span>{{ address.phone }}</span>
+            }
+          </address>
+          <div class="address-actions">
+            <button
+              [id]="'address-edit-' + address.id"
+              class="basic-button"
+              type="button"
+              [attr.aria-label]="t().addressEdit + ' · ' + label"
+              [disabled]="busy()"
+              (click)="openEditor(address)"
+            >
+              {{ t().addressEdit }}
+            </button>
+            @if (address.type !== 'GENERAL' && !address.isDefault) {
+            <button
+              class="basic-button"
+              type="button"
+              [attr.aria-label]="t().addressSetDefault + ' · ' + label"
+              [disabled]="busy()"
+              (click)="setDefault(address)"
+            >
+              {{ t().addressSetDefault }}
+            </button>
+            } @if (removingId() !== address.id) {
+            <button
+              [id]="'address-remove-' + address.id"
+              class="basic-button address-remove"
+              type="button"
+              [attr.aria-label]="t().addressRemove + ' · ' + label"
+              [disabled]="busy()"
+              (click)="confirmRemoval(address.id)"
+            >
+              {{ t().addressRemove }}
+            </button>
+            }
+          </div>
+          @if (removingId() === address.id) {
+          <div
+            #confirmation
+            class="address-confirmation"
+            role="group"
+            aria-labelledby="address-remove-title"
+            aria-describedby="address-remove-description"
+            tabindex="-1"
+          >
+            <h3 id="address-remove-title">{{ t().addressRemoveConfirm }}</h3>
+            <p id="address-remove-description">{{ label }}</p>
+            @if (actionError() === 'addressRemoveFailed') {
+            <p class="address-error" role="alert">{{ t().addressRemoveFailed }}</p>
+            }
+            <div class="address-actions">
+              <button
+                class="basic-button"
+                type="button"
+                [disabled]="busy()"
+                (click)="cancelAction()"
+              >
+                {{ t().addressCancel }}
+              </button>
+              <button
+                class="basic-button address-remove"
+                type="button"
+                [disabled]="busy()"
+                (click)="remove(address.id)"
+              >
+                {{ t().addressRemove }}
+              </button>
+            </div>
+          </div>
+          }
+        </li>
+        }
+      </ul>
+      } @else {
+      <div class="basic-state basic-empty address-empty">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" stroke-linejoin="round" />
+          <circle cx="12" cy="10" r="2.5" />
+        </svg>
+        <p>{{ t().addressesEmpty }}</p>
+      </div>
+      } }
+    </div>
+  </div>
+</section>

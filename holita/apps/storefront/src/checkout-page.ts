@@ -36,6 +36,7 @@ import {
   rememberPendingShopperCheckout,
   type PromoProblem,
 } from './cart-state';
+import { checkoutAddressFields } from './checkout-address-fields';
 import { checkoutCountries, defaultCountryCode } from './checkout-countries';
 import {
   StorefrontApi,
@@ -53,17 +54,10 @@ const contactFields = [
   { name: 'phone', label: 'phone', type: 'tel', autocomplete: 'tel' },
 ] as const;
 
-const addressFields = [
-  { name: 'city', label: 'city', autocomplete: 'address-level2', maxLength: 120 },
-  { name: 'postalCode', label: 'postalCode', autocomplete: 'postal-code', maxLength: 20 },
-  { name: 'line1', label: 'addressLine1', autocomplete: 'address-line1', maxLength: 200 },
-  { name: 'line2', label: 'addressLine2', autocomplete: 'address-line2', maxLength: 200 },
-] as const;
-
 const billingFields = [
   { name: 'name', label: 'billingName', autocomplete: 'name', type: 'text', maxLength: 200 },
   { name: 'phone', label: 'billingPhone', autocomplete: 'tel', type: 'tel', maxLength: 100 },
-  ...addressFields.map((field) => ({ ...field, type: 'text' })),
+  ...checkoutAddressFields.map((field) => ({ ...field, type: 'text' })),
 ] as const;
 
 type CheckoutProblem =
@@ -128,7 +122,7 @@ export class CheckoutPage {
   protected readonly base = computed(() => ['/s', this.cartState.shopId()]);
   protected readonly t = computed(() => messages[this.language()]);
   protected readonly contactFields = contactFields;
-  protected readonly addressFields = addressFields;
+  protected readonly addressFields = checkoutAddressFields;
   protected readonly billingFields = billingFields;
   protected readonly countries = computed(() => checkoutCountries(this.language()));
   protected readonly shopperNoteLimit = 5_000;

@@ -6,10 +6,7 @@ export const subgraphs = [
     additionalPaths: [],
   },
 ];
-export const operationPaths = [
-  'holita/apps/storefront/src/operations.graphql',
-  'holita/tools/graphql/shopper-address-operations.graphql',
-];
+export const operationPaths = ['holita/apps/storefront/src/operations.graphql'];
 export const targets = {
   gateway: {
     supergraph: 'holita/apps/gateway/src/generated/storefront/supergraph.graphql',
