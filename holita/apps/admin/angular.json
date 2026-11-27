@@ -56,7 +56,8 @@
           "builder": "@angular/build:dev-server",
           "options": {
             "buildTarget": "admin:build:development",
-            "host": "127.0.0.1",
+            "host": "0.0.0.0",
+            "allowedHosts": ["dev.lab"],
             "port": 12000,
             "proxyConfig": "proxy.conf.mjs"
           }

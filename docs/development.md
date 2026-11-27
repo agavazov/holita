@@ -456,6 +456,8 @@ Holita runs its Admin, Backoffice and Sales applications on ports 12000, 12001 a
 operator Router uses 12010 (health 12016), Core uses 12011, Commerce uses 12013 and Sales API
 uses 12015. The storefront app uses 12020 and its public GraphQL listener uses 12030. Its private
 Router uses 12031 (health 12036). Open a shop at `/s/<branchId>`.
+The four Angular dev servers listen on all interfaces and accept `http://dev.lab:<port>`.
+The Routers, subgraphs and PostgreSQL listen on loopback.
 
 On a fresh checkout, run `npx tsx holita/tools/runtime-config.mts` to create private, ignored
 `core.env`, `commerce.env`, `sales.env` and `seed-accounts.env` under `holita/config/`.
