@@ -198,6 +198,12 @@ type CatalogueVariant {
   id: ID!
   sku: String!
   price: String!
+  """
+  Lowest known public EUR price in the rolling 30 × 24-hour window through now.
+  Includes a known price already in effect at the start of the window.
+  Null when no public price is known for that window.
+  """
+  referencePrice30Days: String
   "Weight in kilograms."
   weight: Float
   "Package width in centimetres."

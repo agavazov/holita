@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
-import { Prisma } from '../generated/prisma/client.js';
+import { Prisma, type ProductVariant } from '../generated/prisma/client.js';
 import type {
   ProductInput,
   ProductSort,
@@ -47,9 +47,13 @@ interface VariantWrite {
   optionValueIds: string[];
 }
 
+type VariantPrice = Pick<ProductVariant, 'id' | 'price' | 'active'>;
+
 function listRelations(scope: Scope) {
   return { ...productRelations(scope), brand: true } satisfies Prisma.ProductInclude;
 }
+
+const referencePriceWindowMs = 30 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class CommerceRepository {
@@ -170,8 +174,9 @@ export class CommerceRepository {
 
   publicProductVariantSelections(scope: Scope, ids: string[]) {
     return this.database.client.$transaction(
-      (tx) =>
-        tx.product.findMany({
+      async (tx) => {
+        const now = new Date();
+        const products = await tx.product.findMany({
           where: { ...catalogueProductWhere(scope), id: { in: ids } },
           select: {
             id: true,
@@ -194,7 +199,31 @@ export class CommerceRepository {
               },
             },
           },
-        }),
+        });
+        const history = await tx.productVariantPriceHistory.groupBy({
+          by: ['variantId'],
+          where: {
+            ...scope,
+            variantId: { in: products.flatMap(({ variants }) => variants.map(({ id }) => id)) },
+            recordedAt: { lte: now },
+            OR: [
+              { publicFrom: { lte: now }, publicUntil: null },
+              { publicUntil: { gt: new Date(now.getTime() - referencePriceWindowMs) } },
+            ],
+          },
+          _min: { price: true },
+        });
+        const referencePrices = new Map(
+          history.map(({ variantId, _min }) => [variantId, _min.price]),
+        );
+        return products.map(({ id, variants }) => ({
+          id,
+          variants: variants.map((variant) => ({
+            ...variant,
+            referencePrice30Days: referencePrices.get(variant.id) ?? null,
+          })),
+        }));
+      },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
   }
@@ -220,6 +249,7 @@ export class CommerceRepository {
     { badgeIds, tagIds }: ProductMarkerIds,
   ) {
     return this.database.client.$transaction(async (tx) => {
+      const wasPublished = id ? await this.lockProductPublication(tx, scope, id) : false;
       const product = id
         ? await tx.product.update({ where: { id, ...scope }, data: input })
         : await tx.product.create({ data: { ...scope, ...input } });
@@ -229,6 +259,8 @@ export class CommerceRepository {
             where: productScope,
             select: {
               id: true,
+              price: true,
+              active: true,
               barcode: true,
               weight: true,
               width: true,
@@ -375,8 +407,80 @@ export class CommerceRepository {
         where: { ...scope, id: product.id },
         include: productRelations(scope),
       });
+      await this.recordVariantPrices(
+        tx,
+        scope,
+        currentById,
+        row.variants,
+        wasPublished,
+        row.status === 'ACTIVE',
+      );
       return { row, retiredKeys };
     });
+  }
+
+  private async lockProductPublication(tx: Prisma.TransactionClient, scope: Scope, id: string) {
+    const [product] = await tx.$queryRaw<{ published: boolean }[]>`
+      SELECT "status" = 'active' AS "published" FROM ${this.database.table('product')}
+      WHERE "tenantId" = ${scope.tenantId}::uuid AND "branchId" = ${scope.branchId}::uuid
+        AND "id" = ${id}::uuid
+      FOR UPDATE
+    `;
+    return product?.published === true;
+  }
+
+  private async recordVariantPrices(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    previous: ReadonlyMap<string, VariantPrice>,
+    saved: VariantPrice[],
+    wasPublished: boolean,
+    published: boolean,
+  ) {
+    const recordedAt = new Date();
+    const observations: Prisma.ProductVariantPriceHistoryCreateManyInput[] = [];
+    const currentPublic = new Map<string, Prisma.Decimal>();
+    for (const { id: variantId, price, active } of saved) {
+      const isPublic = published && active;
+      if (isPublic) {
+        currentPublic.set(variantId, price);
+      }
+      const prior = previous.get(variantId);
+      if (!prior || !prior.price.eq(price) || (wasPublished && prior.active) !== isPublic) {
+        observations.push({
+          ...scope,
+          variantId,
+          price,
+          recordedAt,
+          publicFrom: isPublic ? recordedAt : null,
+        });
+      }
+    }
+    const ending = [...previous.values()].filter(
+      ({ id, price, active }) => wasPublished && active && !currentPublic.get(id)?.eq(price),
+    );
+    if (ending.length) {
+      const closed = await tx.productVariantPriceHistory.updateManyAndReturn({
+        where: {
+          ...scope,
+          variantId: { in: ending.map(({ id }) => id) },
+          publicFrom: { not: null },
+          publicUntil: null,
+        },
+        data: { publicUntil: recordedAt },
+        select: { variantId: true },
+      });
+      const closedIds = new Set(closed.map(({ variantId }) => variantId));
+      for (const { id: variantId, price } of ending) {
+        if (!closedIds.has(variantId)) {
+          // The previous public price is known at this transition. Its start is unknown.
+          observations.push({ ...scope, variantId, price, recordedAt, publicUntil: recordedAt });
+        }
+      }
+    }
+    if (observations.length) {
+      await tx.productVariantPriceHistory.createMany({ data: observations });
+    }
   }
 
   private async variantsWithOutstandingDeductions(

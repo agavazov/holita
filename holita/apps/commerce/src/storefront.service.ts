@@ -218,6 +218,7 @@ function catalogueProductChoices({ variants }: VariantSelectionRow): CataloguePr
           id: variant.id,
           sku: variant.sku,
           price: variant.price.toFixed(2),
+          referencePrice30Days: variant.referencePrice30Days?.toFixed(2) ?? null,
           weight: variant.weight?.toNumber() ?? null,
           width: variant.width?.toNumber() ?? null,
           height: variant.height?.toNumber() ?? null,

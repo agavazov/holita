@@ -1,6 +1,6 @@
 # 163 Show variant compare-at prices
 
-**Status:** Needs owner. When may Basic show a merchant-entered compare-at price, and when must it show the saved 30-day reference? Depends on [276](276-holita-variant-price-history.md). **Product:** Holita.
+**Status:** Needs owner. When may Basic show a merchant-entered compare-at price, and when must it show the saved 30-day reference? **Product:** Holita.
 
 ## Background
 
@@ -13,7 +13,7 @@ Let merchants show a valid reference price alongside the selected variant price.
 ## Steps
 
 1. Add an optional compare-at price and validation to the existing variant editor and contract.
-2. Apply the approved public display policy to the separate historical reference returned by 276. Localize amounts in the shop currency.
+2. Apply the approved public display policy to `CatalogueVariant.referencePrice30Days`. Localize amounts in the shop currency.
 
 ## Done when
 

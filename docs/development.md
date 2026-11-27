@@ -657,8 +657,13 @@ variant is available. On a product page, `CatalogueProduct.variantSelection` sup
 variants and their public option labels. The page starts with the first available variant in the
 merchant's saved order, or the first active variant when all are sold out. Choosing a combination
 updates its price, photo, availability and quantity. The public variant contract exposes
-availability and the minimum purchase quantity. Commerce checks stock when shoppers add or
-update cart lines. Catalogue cards show each flagged option's distinct values from active
+availability and the minimum purchase quantity. `CatalogueVariant.referencePrice30Days` returns
+the lowest known public EUR price as a two-decimal string during the rolling UTC window from
+30 × 24 hours ago through now, including a known price already in effect at the start of the
+window. A price is public while both the product and the variant are active. On the first observed
+change to a public price, Commerce can use the outgoing price even when its start is unknown.
+The field returns `null` when there is no known public price in the window. Commerce checks stock
+when shoppers add or update cart lines. Catalogue cards show each flagged option's distinct values from active
 variants. The Sofia demo shop includes a configurable product with two differently priced
 combinations, one in stock and one sold out.
 

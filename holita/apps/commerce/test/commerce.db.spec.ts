@@ -281,6 +281,8 @@ beforeAll(async () => {
     '20261124000000_shop_branding',
     '20261124010000_customer_address_book',
     '20261127000000_order_money_eur',
+    '20261128000000_variant_price_history',
+    '20261128010000_variant_price_public_periods',
   ]) {
     await connection.query(
       await readFile(
@@ -2074,6 +2076,141 @@ async function verifyCharacteristicFacets(db: PrismaClient, categoryId: string, 
       data: { catalogueCategoryProducts: { total: expected.length } },
     });
   }
+}
+
+async function verifyVariantPriceHistory(database: PrismaClient) {
+  const scope = { tenantId: tenantA, branchId: publicA };
+  const draft = {
+    sku: 'PRICE-HISTORY',
+    price: '1.00',
+    active: true,
+    inventoryTracked: false,
+    optionValueIds: [],
+  };
+  const input = { name: 'Price history', status: 'DRAFT', variants: [draft] };
+  const created = await query(
+    tokens.operator,
+    publicA,
+    'mutation($input:ProductInput!){createProduct(input:$input){id variants{id price}}}',
+    { input },
+  );
+  const { id: variantId, productId: id } = await database.productVariant.findFirstOrThrow({
+    where: { ...scope, sku: draft.sku },
+  });
+  expect(created).toEqual({
+    data: { createProduct: { id, variants: [{ id: variantId, price: '1.00' }] } },
+  });
+  const read =
+    'query($id:ID!){catalogueProduct(id:$id){variantSelection{variants{id price referencePrice30Days}}}}';
+  const expected = (variantId: string, price: string, referencePrice30Days: string | null) => ({
+    data: {
+      catalogueProduct: {
+        variantSelection: { variants: [{ id: variantId, price, referencePrice30Days }] },
+      },
+    },
+  });
+  const save =
+    'mutation($id:ID!,$input:ProductInput!){updateProduct(id:$id,input:$input){variants{id price}}}';
+  const update = (
+    price: string,
+    {
+      name = input.name,
+      imageId,
+      active = true,
+    }: { name?: string; imageId?: string; active?: boolean } = {},
+  ) =>
+    query(tokens.operator, publicA, save, {
+      id,
+      input: {
+        name,
+        status: 'ACTIVE',
+        variants: [{ ...draft, id: variantId, price, imageId, active }],
+      },
+    });
+  expect(await storefront(publicA, read, { id })).toEqual({ data: { catalogueProduct: null } });
+  expect(await update('20.00')).toEqual({
+    data: { updateProduct: { variants: [{ id: variantId, price: '20.00' }] } },
+  });
+  expect(await storefront(publicA, read, { id })).toEqual(expected(variantId, '20.00', '20.00'));
+  expect(await update('12.00')).toEqual({
+    data: { updateProduct: { variants: [{ id: variantId, price: '12.00' }] } },
+  });
+  const variantScope = { ...scope, variantId };
+  const day = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const stale = new Date(now - 31 * day);
+  const older = new Date(now - 32 * day);
+  const future = new Date(now + day);
+  await database.productVariantPriceHistory.updateMany({
+    where: { ...variantScope, price: '20.00' },
+    data: { recordedAt: older, publicFrom: older, publicUntil: stale },
+  });
+  await database.productVariantPriceHistory.updateMany({
+    where: { ...variantScope, price: '12.00' },
+    data: { recordedAt: stale, publicFrom: stale },
+  });
+  expect(await storefront(publicA, read, { id })).toEqual(expected(variantId, '12.00', '12.00'));
+  expect(await update('18.00')).toEqual({
+    data: { updateProduct: { variants: [{ id: variantId, price: '18.00' }] } },
+  });
+  expect(await update('18', { name: 'Renamed product' })).toEqual({
+    data: { updateProduct: { variants: [{ id: variantId, price: '18.00' }] } },
+  });
+  expect(await update('2.00', { imageId: randomUUID() })).toMatchObject({
+    errors: [{ extensions: { fieldErrors: [{ code: 'INVALID_IMAGE_ID' }] } }],
+  });
+  const history = await database.productVariantPriceHistory.findMany({
+    where: variantScope,
+    orderBy: { price: 'asc' },
+  });
+  expect(history.map(({ price }) => price.toFixed(2))).toEqual(['1.00', '12.00', '18.00', '20.00']);
+
+  await database.productVariantPriceHistory.createMany({
+    data: [
+      {
+        ...variantScope,
+        price: '2.00',
+        recordedAt: new Date(now - 33 * day),
+        publicFrom: new Date(now - 33 * day),
+        publicUntil: older,
+      },
+      { ...variantScope, price: '3.00', recordedAt: future, publicFrom: future },
+      { ...variantScope, price: '4.00', tenantId: tenantB, publicFrom: new Date(now) },
+      { ...variantScope, price: '5.00', branchId: publicB, publicFrom: new Date(now) },
+    ],
+  });
+  expect(await storefront(publicA, read, { id })).toEqual(expected(variantId, '18.00', '12.00'));
+  expect(await storefront(publicB, read, { id })).toEqual({ data: { catalogueProduct: null } });
+  expect(await update('7.00', { active: false })).toHaveProperty('data.updateProduct');
+  expect(await storefront(publicA, read, { id })).toEqual({ data: { catalogueProduct: null } });
+  expect(await update('7.00')).toHaveProperty('data.updateProduct');
+  expect(await storefront(publicA, read, { id })).toEqual(expected(variantId, '7.00', '7.00'));
+
+  const legacyVariantId = randomUUID();
+  const legacy = await database.product.create({
+    data: {
+      ...scope,
+      name: 'Legacy price',
+      status: 'ACTIVE',
+      variants: { create: { ...storedVariant('LEGACY-PRICE', '12.00'), id: legacyVariantId } },
+    },
+  });
+  expect(await storefront(publicA, read, { id: legacy.id })).toEqual(
+    expected(legacyVariantId, '12.00', null),
+  );
+  expect(
+    await query(tokens.operator, publicA, save, {
+      id: legacy.id,
+      input: {
+        name: legacy.name,
+        status: 'ACTIVE',
+        variants: [{ ...draft, id: legacyVariantId, sku: 'LEGACY-PRICE', price: '18.00' }],
+      },
+    }),
+  ).toEqual({ data: { updateProduct: { variants: [{ id: legacyVariantId, price: '18.00' }] } } });
+  expect(await storefront(publicA, read, { id: legacy.id })).toEqual(
+    expected(legacyVariantId, '18.00', '12.00'),
+  );
 }
 
 it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () => {
@@ -4498,4 +4635,5 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       });
     }
   }
+  await verifyVariantPriceHistory(database);
 }, 60_000);

@@ -558,6 +558,20 @@ model ProductVariantValue {
   @@map("productVariantValue")
 }
 
+// History survives replacement of variant rows during a product save.
+model ProductVariantPriceHistory {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  variantId String @db.Uuid
+  price Decimal @db.Decimal(12, 2)
+  recordedAt DateTime @default(now()) @db.Timestamptz(3)
+  publicFrom DateTime? @db.Timestamptz(3)
+  publicUntil DateTime? @db.Timestamptz(3)
+  @@index([tenantId, branchId, variantId, recordedAt], map: "productVariantPriceHistory_variant_recordedAt_idx")
+  @@map("productVariantPriceHistory")
+}
+
 enum CustomerAddressType {
   GENERAL @map("general")
   SHIPPING @map("shipping")
