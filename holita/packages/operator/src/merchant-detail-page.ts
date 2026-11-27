@@ -2,13 +2,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   inject,
+  resource,
   signal,
-  untracked,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { map } from 'rxjs';
 import { ButtonDirective } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
@@ -21,14 +22,15 @@ import {
   TablePanel,
   tableView,
   type PageHeaderAction,
+  type TableColumn,
 } from '@osnova/ui';
 import { DemoSession, requestError } from '@osnova/ui/app';
 import { OperatorLanguage } from './application';
 import { OperatorApi } from './operator-api';
 import { operatorStrings as strings } from './strings';
-import type { OperatorMerchantsQuery } from './generated/operations';
+import type { OperatorMerchantQuery } from './generated/operations';
 
-type Merchant = OperatorMerchantsQuery['merchants'][number];
+type Merchant = NonNullable<OperatorMerchantQuery['merchant']>;
 
 type MerchantDetailState =
   | { kind: 'loading' | 'missing' }
@@ -49,12 +51,15 @@ type MerchantDetailState =
     FormField,
     Message,
   ],
+  host: { class: 'app-view' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <osnova-page-header
       [title]="merchant()?.name ?? text().merchants"
       [backLink]="['/', language.value(), 'merchants']"
+      [backQueryParams]="backQueryParams()"
       [backLabel]="text().backToMerchants"
+      [moduleInfo]="text().merchantDetailsInfo"
       [actions]="actions()"
       (action)="openCreate()"
     />
@@ -65,19 +70,25 @@ type MerchantDetailState =
     } @else {
       <osnova-table-panel
         [heading]="text().shops"
+        [columns]="columns()"
         [view]="view()"
         [total]="merchant()?.branches.length ?? null"
         [emptyTitle]="text().shopsEmpty"
         [errorText]="tableError()"
         (retry)="load()"
       >
-        <p-table [value]="merchant()?.branches ?? []">
+        <p-table [value]="merchant()?.branches ?? []" dataKey="id">
+          <ng-template #colgroup>
+            <colgroup>
+              @for (column of columns(); track column.id) {
+                <col [style.width]="column.width" />
+              }
+            </colgroup>
+          </ng-template>
           <ng-template #header>
             <tr>
-              <th>{{ text().name }}</th>
-              <th>{{ text().status }}</th>
-              @if (writableMerchant()) {
-                <th></th>
+              @for (column of columns(); track column.id) {
+                <th scope="col">{{ column.label }}</th>
               }
             </tr>
           </ng-template>
@@ -123,21 +134,58 @@ export class MerchantDetailPage {
   private readonly session = inject(DemoSession);
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(OperatorApi);
-  readonly state = signal<MerchantDetailState>({ kind: 'loading' });
+  private readonly tenantId = toSignal(
+    this.route.paramMap.pipe(map((params) => params.get('id'))),
+    {
+      requireSync: true,
+    },
+  );
+  readonly backQueryParams = toSignal(this.route.queryParams, { requireSync: true });
+  private readonly revision = signal(0);
+  private readonly record = resource({
+    params: () => {
+      const scope = this.api.scope();
+      const tenantId = this.tenantId();
+      return scope && tenantId ? { scope, tenantId, revision: this.revision() } : undefined;
+    },
+    loader: ({ params, abortSignal }) =>
+      this.api.merchant(params.scope, params.tenantId, abortSignal),
+  });
+  readonly state = computed<MerchantDetailState>(() => {
+    const error = this.record.error();
+    if (error) {
+      return { kind: 'error', message: requestError(error, this.text().unavailable) };
+    }
+    if (this.record.isLoading() || !this.record.hasValue()) {
+      return { kind: 'loading' };
+    }
+    const merchant = this.record.value();
+    return merchant ? { kind: 'ready', merchant } : { kind: 'missing' };
+  });
   readonly merchant = computed(() => {
     const state = this.state();
     return state.kind === 'ready' ? state.merchant : null;
   });
-  readonly writableMerchant = computed(() =>
-    ['ADMINISTRATOR', 'OPERATOR'].includes(this.session.user()?.role ?? '')
-      ? this.merchant()
-      : null,
+  private readonly canWrite = computed(() =>
+    ['ADMINISTRATOR', 'OPERATOR'].includes(this.session.user()?.role ?? ''),
   );
+  readonly writableMerchant = computed(() => (this.canWrite() ? this.merchant() : null));
   private readonly shopStatusError = signal<string | null>(null);
   readonly createError = signal<string | null>(null);
   readonly drawer = signal(false);
   readonly saving = signal(false);
   readonly text = computed(() => strings[this.language.value()]);
+  readonly columns = computed<readonly TableColumn[]>(() => {
+    const text = this.text();
+    const columns: TableColumn[] = [
+      { id: 'name', label: text.name, width: 'auto', kind: 'identity' },
+      { id: 'status', label: text.status, width: '6rem', kind: 'status' },
+    ];
+    if (this.canWrite()) {
+      columns.push({ id: 'actions', label: '', width: '7rem', kind: 'actions' });
+    }
+    return columns;
+  });
   readonly tableError = computed(() => {
     const state = this.state();
     return state.kind === 'error' ? state.message : this.shopStatusError();
@@ -159,24 +207,9 @@ export class MerchantDetailPage {
       validators: [(control) => Validators.required(control), Validators.maxLength(200)],
     }),
   });
-  constructor() {
-    effect(() => {
-      this.language.value();
-      untracked(() => {
-        void this.load();
-      });
-    });
-  }
-  async load(): Promise<void> {
-    this.state.set({ kind: 'loading' });
+  load(): void {
     this.shopStatusError.set(null);
-    try {
-      const id = this.route.snapshot.paramMap.get('id');
-      const merchant = (await this.api.merchants(this.language.value())).find((row) => row.id === id);
-      this.state.set(merchant ? { kind: 'ready', merchant } : { kind: 'missing' });
-    } catch (error: unknown) {
-      this.state.set({ kind: 'error', message: requestError(error, this.text().unavailable) });
-    }
+    this.revision.update((value) => value + 1);
   }
   openCreate(): void {
     this.createError.set(null);
@@ -197,7 +230,7 @@ export class MerchantDetailPage {
       );
       this.drawer.set(false);
       this.form.reset();
-      await this.load();
+      this.load();
     } catch (error: unknown) {
       this.createError.set(requestError(error, this.text().unavailable));
     } finally {
@@ -216,7 +249,7 @@ export class MerchantDetailPage {
         row.id,
         row.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE',
       );
-      await this.load();
+      this.load();
     } catch (error: unknown) {
       this.shopStatusError.set(requestError(error, this.text().unavailable));
     }

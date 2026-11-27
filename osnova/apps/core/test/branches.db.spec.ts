@@ -436,28 +436,68 @@ describe('Branches GraphQL with PostgreSQL', () => {
       throw new Error('Missing platform sessions');
     }
     const customer = reactivatedToken;
-    for (const [role, bearer, canList, canWrite] of [
+    const directoryQuery =
+      'query($offset:Int!,$limit:Int!){merchants(offset:$offset,limit:$limit){total items{id name status branchCount}}}';
+    const detailQuery = 'query($id:ID!){merchant(tenantId:$id){id status branches{id status}}}';
+    const customerCount = await database.client.tenant.count({ where: { kind: 'CUSTOMER' } });
+    const firstPage = await accountQuery(directoryQuery, { offset: 0, limit: 1 }, platformAdmin);
+    const secondPage = await accountQuery(directoryQuery, { offset: 1, limit: 1 }, platformAdmin);
+    for (const page of [firstPage, secondPage]) {
+      expect(page).toMatchObject({
+        data: { merchants: { total: customerCount, items: [{ id: expect.any(String) }] } },
+      });
+    }
+    expect(firstPage).not.toEqual(secondPage);
+    for (const variables of [
+      { offset: -1, limit: 1 },
+      { offset: 0, limit: 0 },
+      { offset: 0, limit: 101 },
+    ]) {
+      expect(await accountQuery(directoryQuery, variables, platformAdmin)).toMatchObject({
+        data: null,
+        errors: [{ extensions: { code: 'BAD_USER_INPUT' } }],
+      });
+    }
+    for (const id of [platform.id, randomUUID(), 'invalid']) {
+      expect(await accountQuery(detailQuery, { id }, platformAdmin)).toEqual({
+        data: { merchant: null },
+      });
+    }
+    for (const [role, bearer, canRead, canWrite] of [
       ['platform administrator', platformAdmin, true, true],
       ['platform operator', platformOperator, true, true],
       ['platform sales', sales, true, false],
       ['customer administrator', customer, false, false],
     ] satisfies [string, string, boolean, boolean][]) {
-      const list = await accountQuery(
-        '{merchants{id name status branchCount branches{id status}}}',
-        {},
-        bearer,
-      );
+      const list = await accountQuery(directoryQuery, { offset: 0, limit: 100 }, bearer);
       expect({ role, list }).toMatchObject({
         role,
-        list: canList
+        list: canRead
           ? {
               data: {
-                merchants: expect.arrayContaining([
-                  expect.objectContaining({ id: tenantId, status: 'ACTIVE' }),
-                ]),
+                merchants: {
+                  items: expect.arrayContaining([
+                    expect.objectContaining({ id: tenantId, status: 'ACTIVE' }),
+                  ]),
+                },
               },
             }
           : { data: null, errors: [{ extensions: { code: 'FORBIDDEN' } }] },
+      });
+      const detail = await accountQuery(detailQuery, { id: tenantId }, bearer);
+      expect({ role, detail }).toMatchObject({
+        role,
+        detail: canRead
+          ? {
+              data: {
+                merchant: {
+                  id: tenantId,
+                  status: 'ACTIVE',
+                  branches: [{ id: managedBranch.id, status: 'ACTIVE' }],
+                },
+              },
+            }
+          : { data: { merchant: null }, errors: [{ extensions: { code: 'FORBIDDEN' } }] },
       });
       const attempts: [string, Record<string, unknown>][] = [
         [

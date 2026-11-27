@@ -2,6 +2,8 @@
   "leads": "Leads",
   "contacts": "Contacts",
   "merchants": "Merchants",
+  "merchantsInfo": "Browse merchants by name and open a merchant to view its shops.",
+  "merchantDetailsInfo": "Review the shops and their statuses for this merchant.",
   "backToMerchants": "Back to merchants",
   "merchantNotFound": "Merchant not found",
   "createMerchant": "Create merchant",

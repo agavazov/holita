@@ -5,6 +5,7 @@ void startOperator({
   name: 'backoffice',
   defaultPage: 'merchants',
   selectBranch: false,
+  retainRouteContext: true,
   routes: [
     { path: 'merchants', component: MerchantsPage },
     { path: 'merchants/:id', component: MerchantDetailPage },

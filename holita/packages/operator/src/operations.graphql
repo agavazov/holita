@@ -1,5 +1,16 @@
-query OperatorMerchants {
-  merchants {
+query OperatorMerchants($offset: Int!, $limit: Int!) {
+  merchants(offset: $offset, limit: $limit) {
+    total
+    items {
+      id
+      name
+      status
+      branchCount
+    }
+  }
+}
+query OperatorMerchant($tenantId: ID!) {
+  merchant(tenantId: $tenantId) {
     id
     name
     status

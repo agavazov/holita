@@ -82,8 +82,21 @@ type Merchant {
   branches: [MerchantBranch!]!
 }
 
+type MerchantRow {
+  id: ID!
+  name: String!
+  status: AccountStatus!
+  branchCount: Int!
+}
+
+type MerchantPage {
+  items: [MerchantRow!]!
+  total: Int!
+}
+
 extend type Query {
-  merchants: [Merchant!]!
+  merchants(offset: Int! = 0, limit: Int! = 20): MerchantPage!
+  merchant(tenantId: ID!): Merchant
 }
 
 extend type Mutation {

@@ -12,11 +12,25 @@ const merchantDetails = {
 export class PlatformRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  list() {
-    return this.prisma.client.tenant.findMany({
-      where: { kind: 'CUSTOMER' },
+  list(offset: number, limit: number) {
+    const { client } = this.prisma;
+    const where = { kind: 'CUSTOMER' } satisfies Prisma.TenantWhereInput;
+    return client.$transaction([
+      client.tenant.findMany({
+        where,
+        select: { id: true, name: true, status: true, _count: merchantDetails._count },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        skip: offset,
+        take: limit,
+      }),
+      client.tenant.count({ where }),
+    ]);
+  }
+
+  find(tenantId: string) {
+    return this.prisma.client.tenant.findUnique({
+      where: { id: tenantId, kind: 'CUSTOMER' },
       include: merchantDetails,
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
     });
   }
 

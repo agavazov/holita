@@ -800,6 +800,29 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       const result: unknown = await response.json();
       return result;
     };
+    await sales.getByRole('link', { name: merchantName, exact: true }).click();
+    await expect(sales.getByRole('heading', { name: merchantName, exact: true })).toBeVisible();
+    await expect(sales.getByText('First shop', { exact: true })).toBeVisible();
+    const merchantVariables = { tenantId: merchantSession.tenantId };
+    for (const [authorization, query, variables, field] of [
+      [merchantSession.authorization, '{merchants(limit:1){total items{id}}}', {}, 'merchants'],
+      [
+        merchantSession.authorization,
+        'query($tenantId:ID!){merchant(tenantId:$tenantId){id branches{id}}}',
+        merchantVariables,
+        'merchant',
+      ],
+      [
+        salesSession.authorization,
+        'mutation($tenantId:ID!){setMerchantStatus(tenantId:$tenantId,status:ACTIVE){id}}',
+        merchantVariables,
+        'setMerchantStatus',
+      ],
+    ] as const) {
+      expect(await salesGraphql(query, variables, authorization)).toMatchObject({
+        errors: [{ path: [field], extensions: { code: 'FORBIDDEN' } }],
+      });
+    }
     const foreignLeadId = randomUUID();
     const foreignName = 'Foreign tenant smoke prospect';
     await salesDb.client.query(

@@ -4,8 +4,9 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
+  resource,
   signal,
-  untracked,
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -18,8 +19,11 @@ import {
   PageHeader,
   RouteDrawer,
   TablePanel,
+  UrlListState,
   tableView,
+  type ListDefinition,
   type PageHeaderAction,
+  type TableColumn,
 } from '@osnova/ui';
 import { DemoSession, requestError } from '@osnova/ui/app';
 import { OperatorLanguage } from './application';
@@ -27,7 +31,16 @@ import { OperatorApi } from './operator-api';
 import { operatorStrings as strings } from './strings';
 import type { OperatorMerchantsQuery } from './generated/operations';
 
-type Merchant = OperatorMerchantsQuery['merchants'][number];
+type MerchantPage = OperatorMerchantsQuery['merchants'];
+type Merchant = MerchantPage['items'][number];
+
+const definition: ListDefinition<Record<string, never>, 'NAME'> = {
+  pageSizes: [10, 20, 50, 100],
+  defaultPageSize: 20,
+  sorts: [],
+  defaultSort: { field: 'NAME', direction: 'ASC' },
+  filters: {},
+};
 
 @Component({
   selector: 'holita-merchants-page',
@@ -43,33 +56,57 @@ type Merchant = OperatorMerchantsQuery['merchants'][number];
     FormField,
     Message,
   ],
+  host: { class: 'app-view' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <osnova-page-header [title]="text().merchants" [actions]="actions()" (action)="open()" />
+    <osnova-page-header
+      [title]="text().merchants"
+      [moduleInfo]="text().merchantsInfo"
+      [actions]="actions()"
+      (action)="open()"
+    />
     <osnova-table-panel
       [heading]="text().merchants"
+      [columns]="columns()"
       [view]="view()"
-      [total]="rows()?.length ?? null"
+      [total]="page()?.total ?? null"
       [errorText]="error()"
+      [actionFeedback]="statusError()"
+      [busy]="list.isLoading()"
+      [page]="pagination()"
+      [pageSizes]="pageSizes"
+      (pageChange)="url.setPage($event)"
       (retry)="load()"
     >
-      <p-table [value]="rows() ?? []">
-        <ng-template #header
-          ><tr>
-            <th>{{ text().name }}</th>
-            <th>{{ text().status }}</th>
-            <th>{{ text().shops }}</th>
-            @if (canWrite()) {
-              <th></th>
-            }</tr
-        ></ng-template>
+      <p-table class="app-responsive-table" [value]="page()?.items ?? []" dataKey="id">
+        <ng-template #colgroup>
+          <colgroup>
+            @for (column of columns(); track column.id) {
+              <col [class]="column.className ?? ''" [style.width]="column.width" />
+            }
+          </colgroup>
+        </ng-template>
+        <ng-template #header>
+          <tr>
+            @for (column of columns(); track column.id) {
+              <th scope="col" [class]="column.className ?? ''">{{ column.label }}</th>
+            }
+          </tr>
+        </ng-template>
         <ng-template #body let-row
           ><tr>
             <td>
-              <a [routerLink]="['/', language.value(), 'merchants', row.id]">{{ row.name }}</a>
+              <a
+                class="app-link app-cell-truncate"
+                [routerLink]="['/', language.value(), 'merchants', row.id]"
+                queryParamsHandling="preserve"
+                [title]="row.name"
+                >{{ row.name }}</a
+              >
+              <span class="app-table-mobile-meta">{{ text().shops }} · {{ row.branchCount }}</span>
             </td>
             <td>{{ row.status === 'ACTIVE' ? text().active : text().suspended }}</td>
-            <td>{{ row.branchCount }}</td>
+            <td class="app-num app-table-merged-column">{{ row.branchCount }}</td>
             @if (canWrite()) {
               <td>
                 <button pButton type="button" severity="secondary" (click)="toggle(row)">
@@ -111,7 +148,7 @@ type Merchant = OperatorMerchantsQuery['merchants'][number];
             [required]="true"
             ><input pInputText id="merchant-password" type="password" formControlName="password"
           /></osnova-form-field>
-          @if (error(); as message) {
+          @if (createError(); as message) {
             <p-message severity="error">{{ message }}</p-message>
           }
           <button pButton type="submit" [disabled]="saving()">{{ text().save }}</button>
@@ -127,20 +164,79 @@ export class MerchantsPage {
     ['ADMINISTRATOR', 'OPERATOR'].includes(this.session.user()?.role ?? ''),
   );
   private readonly api = inject(OperatorApi);
-  readonly rows = signal<Merchant[] | null>(null);
-  readonly loading = signal(true);
-  readonly error = signal<string | null>(null);
+  readonly url = new UrlListState(definition, () => !!this.api.scope());
+  readonly pageSizes = definition.pageSizes;
+  private readonly revision = signal(0);
+  private readonly pageRequest = computed(() => {
+    const scope = this.api.scope();
+    const { page, pageSize } = this.url.state();
+    return scope
+      ? { scope, variables: { offset: (page - 1) * pageSize, limit: pageSize } }
+      : undefined;
+  });
+  readonly list = resource({
+    params: () => {
+      const request = this.pageRequest();
+      return request ? { ...request, revision: this.revision() } : undefined;
+    },
+    loader: ({ params, abortSignal }) =>
+      this.api.merchants(params.scope, params.variables, abortSignal),
+  });
+  readonly page = linkedSignal<
+    { request: ReturnType<MerchantsPage['pageRequest']>; data: MerchantPage | undefined },
+    MerchantPage | null
+  >({
+    source: () => ({
+      request: this.pageRequest(),
+      data: this.list.hasValue() ? this.list.value() : undefined,
+    }),
+    computation: (current, previous) =>
+      current.data ??
+      (previous && previous.source.request === current.request ? previous.value : null),
+  });
+  readonly pagination = computed(() => ({
+    page: this.url.state().page,
+    pageSize: this.url.state().pageSize,
+    total: this.page()?.total ?? 0,
+  }));
+  readonly createError = signal<string | null>(null);
+  readonly statusError = linkedSignal({
+    source: this.pageRequest,
+    computation: (): string | null => null,
+  });
+  readonly error = computed(() => {
+    const error = this.list.error();
+    return error ? requestError(error, this.text().unavailable) : null;
+  });
   readonly saving = signal(false);
   readonly drawer = signal(false);
   readonly text = computed(() => strings[this.language.value()]);
+  readonly columns = computed<readonly TableColumn[]>(() => {
+    const text = this.text();
+    const columns: TableColumn[] = [
+      { id: 'name', label: text.name, width: 'auto', kind: 'identity' },
+      { id: 'status', label: text.status, width: '6rem', kind: 'status' },
+      {
+        id: 'shops',
+        label: text.shops,
+        width: '6rem',
+        kind: 'number',
+        className: 'app-table-merged-column',
+      },
+    ];
+    if (this.canWrite()) {
+      columns.push({ id: 'actions', label: '', width: '7rem', kind: 'actions' });
+    }
+    return columns;
+  });
   readonly actions = computed<readonly PageHeaderAction[]>(() =>
     this.canWrite() ? [{ id: 'create', label: this.text().createMerchant, primary: true }] : [],
   );
   readonly view = computed(() =>
     tableView({
-      loading: this.loading(),
+      loading: this.list.isLoading(),
       error: this.error(),
-      rows: this.rows()?.length ?? null,
+      rows: this.page()?.items.length ?? null,
       filtered: false,
     }),
   );
@@ -171,26 +267,18 @@ export class MerchantsPage {
   });
   constructor() {
     effect(() => {
-      this.language.value();
-      untracked(() => {
-        void this.load();
-      });
+      if (this.list.hasValue() && !this.list.isLoading()) {
+        this.url.correctPage(Math.ceil(this.list.value().total / this.url.state().pageSize));
+      }
     });
   }
-  async load(): Promise<void> {
-    this.loading.set(true);
-    try {
-      this.rows.set(await this.api.merchants(this.language.value()));
-      this.error.set(null);
-    } catch (error: unknown) {
-      this.error.set(requestError(error, this.text().unavailable));
-    } finally {
-      this.loading.set(false);
-    }
+  load(): void {
+    this.statusError.set(null);
+    this.revision.update((value) => value + 1);
   }
   open(): void {
     this.form.reset();
-    this.error.set(null);
+    this.createError.set(null);
     this.drawer.set(true);
   }
   async create(): Promise<void> {
@@ -202,9 +290,9 @@ export class MerchantsPage {
     try {
       await this.api.createMerchant(this.language.value(), this.form.getRawValue());
       this.drawer.set(false);
-      await this.load();
+      this.load();
     } catch (error: unknown) {
-      this.error.set(requestError(error, this.text().unavailable));
+      this.createError.set(requestError(error, this.text().unavailable));
     } finally {
       this.saving.set(false);
     }
@@ -216,9 +304,9 @@ export class MerchantsPage {
         row.id,
         row.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE',
       );
-      await this.load();
+      this.load();
     } catch (error: unknown) {
-      this.error.set(requestError(error, this.text().unavailable));
+      this.statusError.set(requestError(error, this.text().unavailable));
     }
   }
 }

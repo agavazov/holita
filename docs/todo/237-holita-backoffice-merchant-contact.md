@@ -1,6 +1,6 @@
 # 237 Find merchants and maintain their account details
 
-**Status:** Ready after [268](268-holita-merchant-directory-pagination.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
@@ -12,7 +12,7 @@ Let authorized Backoffice staff find a merchant and maintain a selected merchant
 
 ## Steps
 
-1. Extend the paged merchant search and scoped detail from 268 with merchant identity filters and supported contact fields. Reuse the loading, not-found and error states from 155. Show associated merchant accounts and allow explicit selection when there is more than one.
+1. Extend the existing paged merchant directory and scoped detail with merchant identity filters and supported contact fields. Reuse the loading, not-found and error states from 155. Show associated merchant accounts and allow explicit selection when there is more than one.
 2. Add supported name and email edits with existing Core validation and localized field feedback.
 
 ## Done when

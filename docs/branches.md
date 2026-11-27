@@ -52,11 +52,16 @@ by default and can be SUSPENDED. Suspended Tenants cannot sign in and their sess
 verification; suspended Branches are excluded from discovery and lookup. Demo Tenant discovery
 also excludes suspended and platform Tenants.
 
-Verified platform ADMINISTRATOR and OPERATOR sessions can query `merchants` and call
-`createMerchant`, `createMerchantBranch`, `setMerchantStatus`, and `setMerchantBranchStatus`.
-`createMerchant` creates its first administrator in the same transaction. Platform SALES sessions
-can query merchants; CUSTOMER sessions cannot use these operations. A merchant includes its Branch
-count and Branch statuses. `createUser` and user setup permit SALES only within the platform Tenant.
+Verified platform ADMINISTRATOR, OPERATOR, and SALES sessions can query `merchants` and `merchant`.
+`merchants(offset, limit)` returns a page of identities, statuses and Branch counts, ordered by
+name and ID, with a total. The default offset is 0 and the default limit is 20. Limits range from
+1 to 100. `merchant(tenantId)` returns the selected CUSTOMER Tenant and its Branches, including
+their statuses, or null when the merchant is missing.
+
+Platform ADMINISTRATOR and OPERATOR sessions can call `createMerchant`, `createMerchantBranch`,
+`setMerchantStatus`, and `setMerchantBranchStatus`. `createMerchant` creates its first administrator
+in the same transaction. CUSTOMER sessions cannot use the platform reads or writes. `createUser`
+and user setup permit SALES only within the platform Tenant.
 
 ## Implementation references
 

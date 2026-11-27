@@ -4,6 +4,8 @@ import type {
   MutationCreateMerchantBranchArgs,
   MutationSetMerchantStatusArgs,
   MutationSetMerchantBranchStatusArgs,
+  QueryMerchantArgs,
+  QueryMerchantsArgs,
 } from '../../generated/graphql/types.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { PlatformService } from './platform.service.js';
@@ -13,8 +15,13 @@ export class PlatformResolver {
   constructor(private readonly platform: PlatformService) {}
 
   @Query('merchants')
-  list(@Context() context: RequestContext) {
-    return this.platform.list(context);
+  list(@Args() args: QueryMerchantsArgs, @Context() context: RequestContext) {
+    return this.platform.list(context, args.offset, args.limit);
+  }
+
+  @Query('merchant')
+  find(@Args() args: QueryMerchantArgs, @Context() context: RequestContext) {
+    return this.platform.find(context, args.tenantId);
   }
 
   @Mutation('createMerchant')

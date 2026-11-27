@@ -7,7 +7,12 @@ import {
 import { isUUID } from 'class-validator';
 import { hashPassword, normalizedEmail, userName, validatePassword } from '@osnova/auth';
 import { requireSession } from '../../auth/session.js';
-import type { AccountStatus, Merchant, MerchantBranch } from '../../generated/graphql/types.js';
+import type {
+  AccountStatus,
+  Merchant,
+  MerchantBranch,
+  MerchantPage,
+} from '../../generated/graphql/types.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { RequestContext } from '../../graphql/request-context.js';
 import { PlatformRepository } from './platform.repository.js';
@@ -48,9 +53,22 @@ function writeError(error: unknown): never {
 export class PlatformService {
   constructor(private readonly repository: PlatformRepository) {}
 
-  async list(context: RequestContext): Promise<Merchant[]> {
+  async list(context: RequestContext, offset = 0, limit = 20): Promise<MerchantPage> {
     requirePlatform(context, false);
-    return (await this.repository.list()).map(merchant);
+    if (offset < 0 || limit < 1 || limit > 100) {
+      throw new BadRequestException('Invalid page');
+    }
+    const [rows, total] = await this.repository.list(offset, limit);
+    return { items: rows.map(merchant), total };
+  }
+
+  async find(context: RequestContext, tenantId: string): Promise<Merchant | null> {
+    requirePlatform(context, false);
+    if (!isUUID(tenantId)) {
+      return null;
+    }
+    const row = await this.repository.find(tenantId.toLowerCase());
+    return row && merchant(row);
   }
 
   async create(
