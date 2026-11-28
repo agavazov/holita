@@ -4033,7 +4033,12 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(await requestReturn(publicA, token)).toMatchObject({
     errors: [{ extensions: { fieldErrors: [{ code: 'ORDER_NOT_RETURNABLE' }] } }],
   });
-  await database.order.update({ where: returnOrderScope, data: { placedAt: order.placedAt } });
+  const returnNotice = { template: 'return.requested' };
+  expect(await database.localEmail.count({ where: returnNotice })).toBe(0);
+  await database.order.update({
+    where: returnOrderScope,
+    data: { placedAt: order.placedAt, contactEmail: 'order-contact@example.test' },
+  });
   const submissions = await Promise.all([
     requestReturn(publicA, token),
     requestReturn(publicA, token),
@@ -4047,6 +4052,13 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     { errors: [{ extensions: { fieldErrors: [{ code: 'DUPLICATE_RETURN_REQUEST' }] } }] },
   ]);
   expect(await database.orderReturnCase.count({ where: expectedCase })).toBe(1);
+  expect(await database.localEmail.findMany({ where: returnNotice })).toEqual([
+    expect.objectContaining({
+      ...categoryScope,
+      sourceEventId: returnId,
+      recipient: quoteInput.contact.email,
+    }),
+  ]);
   expect(
     await query(
       tokens.viewer,

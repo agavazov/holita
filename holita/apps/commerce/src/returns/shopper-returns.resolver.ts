@@ -15,7 +15,7 @@ export class ShopperReturnsResolver {
     @Context() context: StorefrontContext,
     @Args() { input }: MutationRequestShopperReturnArgs,
   ) {
-    const shopper = await this.storefront.requireShopper(context, 'request a return');
-    return this.returns.request(shopper, input);
+    const shopper = await this.storefront.requireShopperAccount(context, 'request a return');
+    return this.returns.request(shopper, input, context.emailLanguage ?? 'bg');
   }
 }

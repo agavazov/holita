@@ -16,10 +16,12 @@ import type {
   OrderReturnSummary,
   QueryOrderReturnsArgs,
 } from '../generated/graphql/types.js';
+import { LocalMailbox, type EmailLanguage } from '../local-mailbox/local-mailbox.repository.js';
 import { OrdersRepository } from '../orders/orders.repository.js';
 import { OrdersService } from '../orders/orders.service.js';
 import { RefundsService, presentRefund, refundBalance } from '../refunds/refunds.service.js';
 import { requireMerchant, requireScope, type RequestContext, type ShopperScope } from '../scope.js';
+import { returnRequestEmail } from './return-email.js';
 import { coversWholeOrder } from './return-lines.js';
 import { ReturnsRepository, type ReturnCaseRow } from './returns.repository.js';
 
@@ -82,18 +84,22 @@ export class ReturnsService {
     private readonly orders: OrdersRepository,
     private readonly orderService: OrdersService,
     private readonly refunds: RefundsService,
+    private readonly mailbox: LocalMailbox,
   ) {}
 
-  async request(shopper: ShopperScope, input: ShopperReturnInput): Promise<ShopperReturnReceipt> {
+  async request(
+    { tenantId, branchId, customerId, email }: ShopperScope & { email: string },
+    input: ShopperReturnInput,
+    language: EmailLanguage,
+  ): Promise<ShopperReturnReceipt> {
     if (!isUUID(input.orderId)) {
       throw new NotFoundException('Order not found');
     }
     const orderId = input.orderId.toLowerCase();
-    const { tenantId, branchId } = shopper;
     const scope = { tenantId, branchId };
     return this.orders.transaction(async (tx) => {
       // All submissions for this order check and reserve quantities under the same lock.
-      const order = await this.orders.lockOrder(tx, shopper, orderId);
+      const order = await this.orders.lockOrder(tx, { ...scope, customerId }, orderId);
       if (!order) {
         throw new NotFoundException('Order not found');
       }
@@ -151,7 +157,17 @@ export class ReturnsService {
         }
       }
       const lines = Array.from(requested, ([orderLineId, quantity]) => ({ orderLineId, quantity }));
-      const { id, requestedAt } = await this.returns.request(tx, scope, orderId, reason, lines);
+      const receipt = await this.returns.request(tx, scope, orderId, reason, lines);
+      const requestedLines = order.lines.flatMap(({ id, label, sku }) => {
+        const quantity = requested.get(id);
+        return quantity === undefined ? [] : [{ label, sku, quantity }];
+      });
+      await this.mailbox.capture(
+        tx,
+        scope,
+        returnRequestEmail(receipt, email, language, requestedLines),
+      );
+      const { id, requestedAt } = receipt;
       return { id, requestedAt: requestedAt.toISOString() };
     });
   }

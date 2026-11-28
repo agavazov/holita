@@ -609,12 +609,16 @@ export class StorefrontService implements OnModuleInit {
     context: StorefrontContext,
     purpose = 'view your orders',
   ): Promise<ShopperScope> {
+    const { tenantId, branchId, customerId } = await this.requireShopperAccount(context, purpose);
+    return { tenantId, branchId, customerId };
+  }
+  async requireShopperAccount(context: StorefrontContext, purpose: string) {
     const scope = await this.publicScope(context);
     const shopper = await this.verifiedShopper(scope, context);
     if (!shopper) {
       throw new UnauthorizedException(`Sign in to this shop to ${purpose}`);
     }
-    return { ...scope, customerId: shopper.id };
+    return { ...scope, customerId: shopper.id, email: shopper.email };
   }
   async cartContext(context: StorefrontContext): Promise<CartContext> {
     const scope = await this.publicScope(context);
