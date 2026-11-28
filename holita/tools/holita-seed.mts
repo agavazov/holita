@@ -282,6 +282,7 @@ async function seedLeads(core: URL): Promise<void> {
        ON CONFLICT ("id") DO NOTHING`,
       [fixtureId('b7', 1), fixtureId('b7', 2), creator.tenantId],
     );
+    const bookings = await seedAppointmentBookings(client, creator.tenantId, creator.id);
     await client.query('COMMIT');
     console.log(
       `Holita Sales prospects inserted: ${String((rowCount ?? 0) + assignmentsInserted)}`,
@@ -293,12 +294,76 @@ async function seedLeads(core: URL): Promise<void> {
     );
     console.log(`Holita Sales offers inserted: ${String(offers.rowCount)}`);
     console.log(`Holita appointment services inserted: ${String(services.rowCount)}`);
+    console.log(`Holita appointment bookings inserted: ${String(bookings.rowCount)}`);
   } catch (error: unknown) {
     await client.query('ROLLBACK');
     throw error;
   } finally {
     await client.end();
   }
+}
+
+async function seedAppointmentBookings(client: pg.Client, tenantId: string, userId: string) {
+  const serviceId = fixtureId('b7', 1);
+  await client.query(
+    `SELECT "id" FROM "appointmentService"
+     WHERE "tenantId" = $1 AND "id" = $2 FOR NO KEY UPDATE`,
+    [tenantId, serviceId],
+  );
+  return client.query(
+    `INSERT INTO "appointmentBooking" ("id", "tenantId", "serviceId", "leadId", "status", "notes",
+                                       "startsAt", "endsAt", "blockedUntil", "durationMinutes",
+                                       "bufferMinutes", "createdByUserId", "updatedByUserId", "updatedAt")
+     SELECT demo.id::uuid, service."tenantId", service."id", lead."id", demo.status::"appointmentBookingStatus",
+            demo.notes, slot.start, slot.start + service."durationMinutes" * INTERVAL '1 minute',
+            slot.start + (service."durationMinutes" + service."bufferMinutes") * INTERVAL '1 minute',
+            service."durationMinutes", service."bufferMinutes", $3, $3, CURRENT_TIMESTAMP
+     FROM "appointmentService" AS service
+     CROSS JOIN (VALUES ($4, 1, 'confirmed', 'TEST Потвърдено демо'),
+                        ($5, -7, 'completed', 'TEST Завършено демо'),
+                        ($6, 8, 'cancelled', 'TEST Отменено демо')) AS demo(id, first_day, status, notes)
+     LEFT JOIN "lead" ON lead."tenantId" = service."tenantId" AND lead."id" = $7
+     CROSS JOIN LATERAL (
+       SELECT slot.start
+       FROM generate_series(demo.first_day, demo.first_day + 6) AS days(offset_days)
+       CROSS JOIN LATERAL (
+         SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Sofia')::date + days.offset_days AS day
+       ) AS schedule
+       CROSS JOIN LATERAL (
+         SELECT service."durationMinutes" + service."bufferMinutes" AS step
+       ) AS length
+       CROSS JOIN LATERAL generate_series(service."startMinute", service."endMinute" - length.step, length.step)
+         AS grid(local_minute)
+       CROSS JOIN LATERAL (
+         SELECT schedule.day + grid.local_minute * INTERVAL '1 minute' AS start,
+                schedule.day + service."endMinute" * INTERVAL '1 minute' AS finish
+       ) AS wall
+       CROSS JOIN LATERAL (
+         SELECT wall.start AT TIME ZONE 'Europe/Sofia' AS start
+       ) AS slot
+       WHERE EXTRACT(ISODOW FROM schedule.day)::int = ANY(service."weekdays")
+         AND slot.start AT TIME ZONE 'Europe/Sofia' = wall.start
+         AND (slot.start + length.step * INTERVAL '1 minute') AT TIME ZONE 'Europe/Sofia' <= wall.finish
+         AND NOT EXISTS (
+           SELECT 1 FROM "appointmentBooking" AS booking
+           WHERE booking."tenantId" = service."tenantId" AND booking."serviceId" = service."id"
+             AND booking."status" <> 'cancelled' AND booking."blockedUntil" > slot.start
+             AND booking."startsAt" < slot.start + length.step * INTERVAL '1 minute'
+         )
+       ORDER BY slot.start LIMIT 1
+     ) AS slot
+     WHERE service."tenantId" = $1 AND service."id" = $2 AND service."active"
+     ON CONFLICT ("id") DO NOTHING`,
+    [
+      tenantId,
+      serviceId,
+      userId,
+      fixtureId('b8', 1),
+      fixtureId('b8', 2),
+      fixtureId('b8', 3),
+      fixtureId('b2', 10),
+    ],
+  );
 }
 
 async function seedCatalogue(): Promise<void> {

@@ -991,6 +991,96 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     );
     expect(foreignLead.rows).toEqual([{ displayName: foreignName, stage: 'new', wonAt: null }]);
 
+    const bookingDate = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
+    const serviceId = randomUUID();
+    const foreignServiceId = randomUUID();
+    const foreignBookingId = randomUUID();
+    await salesDb.client.query(
+      `INSERT INTO "appointmentService" ("id", "tenantId", "name", "color", "durationMinutes",
+                                         "bufferMinutes", "weekdays", "startMinute", "endMinute", "updatedAt")
+       VALUES ($1, $2, 'TEST Booking scope', 'c1', 45, 15, ARRAY[1,2,3,4,5,6,7], 540, 660, CURRENT_TIMESTAMP),
+              ($3, $4, 'TEST Foreign booking scope', 'c1', 45, 15, ARRAY[1,2,3,4,5,6,7], 540, 660, CURRENT_TIMESTAMP)`,
+      [serviceId, salesSession.tenantId, foreignServiceId, merchantSession.tenantId],
+    );
+    const slots = `query BookingSlots($serviceId: ID!, $date: String!) {
+      appointmentSlots(serviceId: $serviceId, date: $date) { startsAt isAvailable }
+    }`;
+    const foreignBooking = await salesDb.client.query<{ startsAt: Date }>(
+      `INSERT INTO "appointmentBooking" ("id", "tenantId", "serviceId", "startsAt", "endsAt",
+                                         "blockedUntil", "durationMinutes", "bufferMinutes",
+                                         "createdByUserId", "updatedByUserId", "updatedAt")
+       SELECT $1, $2, $3, slot.start, slot.start + INTERVAL '45 minutes', slot.start + INTERVAL '1 hour',
+              45, 15, $5, $5, CURRENT_TIMESTAMP
+       FROM (SELECT ($4::date + TIME '09:00') AT TIME ZONE 'Europe/Sofia' AS start) AS slot
+       RETURNING "startsAt"`,
+      [
+        foreignBookingId,
+        merchantSession.tenantId,
+        foreignServiceId,
+        bookingDate,
+        merchantSession.userId,
+      ],
+    );
+    const startsAt = foreignBooking.rows[0]?.startsAt.toISOString();
+    if (!startsAt) {
+      throw new Error('Booking scope fixture did not return a start time');
+    }
+    const booking = 'query Booking($id: ID!) { appointmentBooking(id: $id) { id } }';
+    const createBooking = `mutation Book($input: AppointmentBookingInput!) {
+      createAppointmentBooking(input: $input) { id }
+    }`;
+    const rescheduleBooking = `mutation MoveBooking($id: ID!, $input: AppointmentRescheduleInput!) {
+      rescheduleAppointmentBooking(id: $id, input: $input) { id }
+    }`;
+    const cancelBooking = `mutation CancelBooking($id: ID!) {
+      updateAppointmentBookingStatus(id: $id, status: CANCELLED) { id }
+    }`;
+    const notFound = { errors: [{ extensions: { code: 'NOT_FOUND' } }] };
+    expect(await salesGraphql(booking, { id: foreignBookingId })).toEqual({
+      data: { appointmentBooking: null },
+    });
+    expect(
+      await salesGraphql(slots, { serviceId: foreignServiceId, date: bookingDate }),
+    ).toMatchObject(notFound);
+    expect(
+      await salesGraphql(rescheduleBooking, { id: foreignBookingId, input: { startsAt } }),
+    ).toMatchObject(notFound);
+    expect(await salesGraphql(cancelBooking, { id: foreignBookingId })).toMatchObject(notFound);
+    expect(
+      await salesGraphql(createBooking, {
+        input: { startsAt, serviceId: foreignServiceId, notes: 'TEST Foreign service' },
+      }),
+    ).toMatchObject(notFound);
+    expect(
+      await salesGraphql(createBooking, {
+        input: { startsAt, serviceId, leadId: foreignLeadId, notes: 'TEST Foreign lead' },
+      }),
+    ).toMatchObject(notFound);
+
+    expect(await salesGraphql(slots, { serviceId, date: bookingDate })).toMatchObject({
+      data: { appointmentSlots: [{ startsAt, isAvailable: true }, { isAvailable: true }] },
+    });
+    const results = await Promise.all(
+      ['TEST First booking', 'TEST Competing booking'].map((notes) =>
+        salesGraphql(createBooking, { input: { serviceId, startsAt, notes } }),
+      ),
+    );
+    expect(results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ data: { createAppointmentBooking: { id: expect.any(String) } } }),
+        expect.objectContaining({
+          errors: [
+            expect.objectContaining({
+              extensions: expect.objectContaining({
+                code: 'BAD_USER_INPUT',
+                fieldErrors: [expect.objectContaining({ code: 'SLOT_UNAVAILABLE' })],
+              }),
+            }),
+          ],
+        }),
+      ]),
+    );
+
     expect(
       await salesGraphql(
         'mutation InvalidLead($input: LeadInput!) { createLead(input: $input) { id } }',

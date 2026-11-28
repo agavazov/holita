@@ -2,6 +2,12 @@ type Query {
   salesWorkspaceAccess: SalesWorkspaceViewer!
   appointmentServices(offset: Int! = 0, limit: Int! = 20, search: String): AppointmentServicePage!
   appointmentService(id: ID!): AppointmentService
+  """
+  Future slots on the Europe/Sofia date (YYYY-MM-DD). Pass the booking ID when rescheduling
+  to ignore its current hold on the service.
+  """
+  appointmentSlots(serviceId: ID!, date: String!, excludeBookingId: ID): [AppointmentSlot!]!
+  appointmentBooking(id: ID!): AppointmentBooking
   salesOffers(
     offset: Int! = 0
     limit: Int! = 20
@@ -48,6 +54,9 @@ type Mutation {
   createAppointmentService(input: AppointmentServiceInput!): AppointmentService!
   updateAppointmentService(id: ID!, input: AppointmentServiceInput!): AppointmentService!
   deactivateAppointmentService(id: ID!): AppointmentService!
+  createAppointmentBooking(input: AppointmentBookingInput!): AppointmentBooking!
+  rescheduleAppointmentBooking(id: ID!, input: AppointmentRescheduleInput!): AppointmentBooking!
+  updateAppointmentBookingStatus(id: ID!, status: AppointmentBookingStatus!): AppointmentBooking!
   createSalesOffer(leadId: ID, input: SalesOfferInput!): SalesOffer!
   updateSalesOffer(id: ID!, input: SalesOfferInput!): SalesOffer!
   transitionSalesOffer(id: ID!, action: SalesOfferAction!): SalesOffer!
@@ -130,6 +139,58 @@ input AppointmentServiceInput {
   Local HH:mm in Europe/Sofia.
   """
   endTime: String!
+}
+
+type AppointmentSlot {
+  startsAt: String!
+  endsAt: String!
+  blockedUntil: String!
+  isAvailable: Boolean!
+}
+
+type AppointmentBooking {
+  id: ID!
+  serviceId: ID!
+  leadId: ID
+  status: AppointmentBookingStatus!
+  notes: String
+  startsAt: String!
+  endsAt: String!
+  blockedUntil: String!
+  durationMinutes: Int!
+  bufferMinutes: Int!
+  createdByUserId: ID!
+  updatedByUserId: ID!
+  createdAt: String!
+  updatedAt: String!
+}
+
+enum AppointmentBookingStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+input AppointmentBookingInput {
+  serviceId: ID!
+  leadId: ID
+  notes: String
+  """
+  ISO 8601 instant with an explicit offset.
+  """
+  startsAt: String!
+}
+
+input AppointmentRescheduleInput {
+  """
+  Omit to keep the current service.
+  """
+  serviceId: ID
+  """
+  ISO 8601 instant with an explicit offset.
+  """
+  startsAt: String!
 }
 
 type SalesWorkspaceViewer {

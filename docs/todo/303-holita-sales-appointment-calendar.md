@@ -1,10 +1,10 @@
 # 303 Show the appointment calendar and booking editor
 
-**Status:** Ready after [140](140-holita-sales-bookings.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-Ticket 140 provides the Sales appointment write contract and slot availability. red.bg
+The Sales API provides the appointment write contract and slot availability. red.bg
 has a calendar, an appointment listing and booking from a lead.
 
 ## Goal
@@ -35,7 +35,7 @@ Next 7 days in the isolated fixture.
 
 ## Limits
 
-Reuse the slot and status rules from 140. Use local Sales booking only.
+Reuse the Sales API slot and status rules. Use local Sales booking only.
 
 ## References
 
