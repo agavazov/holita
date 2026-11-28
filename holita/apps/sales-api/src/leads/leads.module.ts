@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database.module.js';
+import { CoreMerchantProvisioning } from './core-merchant-provisioning.js';
 import { CoreSalesAgents } from './core-sales-agents.js';
 import { LeadNotesRepository } from './lead-notes.repository.js';
 import { LeadNotesResolver } from './lead-notes.resolver.js';
@@ -14,6 +15,7 @@ import { LeadsService } from './leads.service.js';
 @Module({
   imports: [DatabaseModule],
   providers: [
+    CoreMerchantProvisioning,
     CoreSalesAgents,
     LeadsRepository,
     LeadsResolver,

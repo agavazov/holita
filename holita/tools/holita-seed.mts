@@ -175,8 +175,9 @@ async function seedLeads(core: URL): Promise<void> {
                  SELECT 1 FROM "leadContact" WHERE "tenantId" = $2 AND "leadId" = $3 AND "isPrimary"
                ), CURRENT_TIMESTAMP),
               ($7, $2, $3, $8, NULL, $9, 'technical', false, CURRENT_TIMESTAMP),
-              ($10, $2, $11, NULL, NULL, $12, 'unknown', false, CURRENT_TIMESTAMP)
-       ON CONFLICT ("id") DO NOTHING`,
+              ($10, $2, $11, NULL, NULL, $12, 'unknown', false, CURRENT_TIMESTAMP),
+              ($13, $2, $14, $15, NULL, $16, 'owner', true, CURRENT_TIMESTAMP)
+       ON CONFLICT DO NOTHING`,
       [
         'b3000000-0000-4000-8000-000000000001',
         creator.tenantId,
@@ -190,6 +191,10 @@ async function seedLeads(core: URL): Promise<void> {
         'b3000000-0000-4000-8000-000000000003',
         secondLead,
         'hello@byala-glina.example',
+        fixtureId('b3', 4),
+        fixtureId('b2', 6),
+        'Мила Димитрова',
+        'mila@severno-darvo.example',
       ],
     );
     const notes = await client.query(

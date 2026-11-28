@@ -48,6 +48,27 @@ query SalesLeads(
 query SalesLead($id: ID!) {
   lead(id: $id) {
     ...SalesLeadFields
+    handoff {
+      ...SalesLeadHandoffFields
+    }
+  }
+}
+
+fragment SalesLeadHandoffFields on LeadHandoff {
+  id
+  state
+  merchantName
+  adminName
+  adminEmail
+  branchName
+  merchantTenantId
+  branchId
+  storefrontUrl
+}
+
+mutation SalesConvertWonLead($id: ID!, $input: LeadHandoffInput, $initialPassword: String) {
+  convertWonLead(id: $id, input: $input, initialPassword: $initialPassword) {
+    ...SalesLeadHandoffFields
   }
 }
 
@@ -84,6 +105,9 @@ mutation SalesUpdateLead($id: ID!, $input: LeadInput!) {
 mutation SalesUpdateLeadStage($id: ID!, $stage: LeadStage!) {
   updateLeadStage(id: $id, stage: $stage) {
     ...SalesLeadFields
+    handoff {
+      ...SalesLeadHandoffFields
+    }
   }
 }
 

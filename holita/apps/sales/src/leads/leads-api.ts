@@ -4,6 +4,7 @@ import { OperatorConfig, graphqlOptions } from '@osnova/ui/app';
 import { HttpLink } from 'apollo-angular/http';
 import {
   SalesAgentsDocument,
+  SalesConvertWonLeadDocument,
   SalesCreateLeadDocument,
   SalesLeadAssignmentAgentsDocument,
   SalesLeadDocument,
@@ -13,6 +14,7 @@ import {
   SalesUpdateLeadStageDocument,
   type LeadInput,
   type LeadStage,
+  type SalesConvertWonLeadMutationVariables,
   type SalesLeadsQueryVariables,
 } from '../generated/leads-operations';
 import { SalesWorkspaceApi, type SalesWorkspaceScope } from '../workspace/sales-workspace-api';
@@ -136,6 +138,26 @@ export class LeadsApi {
         throw new Error('Missing saved lead stage');
       }
       return data.updateLeadStage;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async convertWonLead(
+    scope: SalesWorkspaceScope,
+    variables: SalesConvertWonLeadMutationVariables,
+  ) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: SalesConvertWonLeadDocument,
+        variables,
+        context: { language: scope.language },
+      });
+      if (!data) {
+        throw new Error('Missing saved lead handoff');
+      }
+      return data.convertWonLead;
     } finally {
       client.stop();
     }

@@ -506,8 +506,17 @@ language changes. The operator graph provides `leads`, `lead`, `createLead`, `up
 `updateLeadStage`, `updateLeadAssignment`, `salesAgents`, `leadAssignmentAgents`, `salesContacts`
 and per-lead contact reads and mutations to authorized Sales accounts. `leadAssignmentAgents`
 includes current assignees across all stages and pages. The Holita demo seed includes prospects
-in New, Interested, Try later, Lost and Won, three contacts, and an unassigned example. It adds
+in New, Interested, Try later, Lost and Won, four contacts, and an unassigned example. It adds
 an assigned example for each active demo agent.
+
+On a Won lead, select **Convert to new merchant**. Review the merchant and primary-contact
+details, enter an initial password and a shop name, and submit. Correct any field errors in
+the drawer. If provisioning is pending, use **Resume conversion** to check the original request.
+Enter a password again only if prompted. The lead stays Won while the conversion is pending or
+complete. Open the merchant record or its public storefront from **Merchant and shop**.
+The operator graph exposes the result through `Lead.handoff` and `convertWonLead`. Set
+`STOREFRONT_ORIGIN` for Sales API if the storefront uses a different host. Local development
+defaults to the Sales host on port 12020.
 
 Use **Follow-up tasks** on lead detail to schedule a task in Sofia time, then edit the
 schedule, type, or note as needed. When Sofia time repeats an hour, select the UTC offset.

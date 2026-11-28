@@ -4,29 +4,52 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { normalizedEmail, userName } from '@osnova/auth';
 import { isUUID } from 'class-validator';
 import { GraphQLError } from 'graphql';
 import { contactSearchWords } from '../contacts/contact-search.js';
 import type {
   Lead,
+  LeadHandoff,
   LeadInput,
   LeadStage,
+  MutationConvertWonLeadArgs,
   QueryLeadsArgs,
   QuerySalesAgentsArgs,
 } from '../generated/graphql/types.js';
 import {
   Prisma,
   type Lead as StoredLead,
+  type LeadHandoff as StoredHandoff,
   type LeadTask as StoredTask,
 } from '../generated/prisma/client.js';
 import type { SalesScope } from '../scope.js';
+import { CoreMerchantProvisioning, provisioningInputError } from './core-merchant-provisioning.js';
 import { CoreSalesAgents } from './core-sales-agents.js';
 import { presentTask } from './lead-task.js';
 import { LeadsRepository } from './leads.repository.js';
 
 const agentLookupLimit = 101;
 
-function present(row: StoredLead & { tasks: StoredTask[] }): Lead {
+function presentHandoff(handoff: StoredHandoff): LeadHandoff {
+  const { id, state, merchantName, adminName, adminEmail, branchName, merchantTenantId, branchId } =
+    handoff;
+  const origin = process.env.STOREFRONT_ORIGIN;
+  const storefrontUrl = branchId && origin ? new URL(`/s/${branchId}`, origin).href : null;
+  return {
+    id,
+    state,
+    merchantName,
+    adminName,
+    adminEmail,
+    branchName,
+    merchantTenantId,
+    branchId,
+    storefrontUrl,
+  };
+}
+
+function present(row: StoredLead & { tasks: StoredTask[]; handoff: StoredHandoff | null }): Lead {
   const {
     id,
     displayName,
@@ -52,6 +75,7 @@ function present(row: StoredLead & { tasks: StoredTask[] }): Lead {
     createdByUserId,
     assignedAgentUserId,
     nextTask: nextTask ? presentTask(nextTask, assignedAgentUserId) : null,
+    handoff: row.handoff ? presentHandoff(row.handoff) : null,
     createdAt: createdAt.toISOString(),
     updatedAt: updatedAt.toISOString(),
   };
@@ -102,6 +126,7 @@ export class LeadsService {
   constructor(
     private readonly repository: LeadsRepository,
     private readonly agents: CoreSalesAgents,
+    private readonly provisioning: CoreMerchantProvisioning,
   ) {}
 
   async list(scope: SalesScope, args: QueryLeadsArgs) {
@@ -131,10 +156,7 @@ export class LeadsService {
 
   async create(scope: SalesScope, input: LeadInput): Promise<Lead> {
     const details = fields(input);
-    const [agent] = await this.agents.lookup(scope.authorization, { ids: [scope.userId] });
-    if (!agent?.eligible) {
-      throw new ForbiddenException('A platform Sales account is required');
-    }
+    await this.requireEligibleAgent(scope);
     return present(await this.repository.create(scope, details));
   }
 
@@ -155,6 +177,53 @@ export class LeadsService {
       throw new NotFoundException('Lead not found');
     }
     return present(row);
+  }
+
+  async convertWonLead(
+    scope: SalesScope,
+    { id, input, initialPassword }: MutationConvertWonLeadArgs,
+  ): Promise<LeadHandoff> {
+    await this.requireEligibleAgent(scope);
+    let draft = null;
+    if (input) {
+      try {
+        // Store only Core-compatible values and never include the password in the draft.
+        draft = {
+          merchantName: userName(input.merchantName, 'merchantName'),
+          adminName: userName(input.adminName, 'adminName'),
+          adminEmail: normalizedEmail(input.adminEmail, 'adminEmail'),
+          branchName: userName(input.branchName, 'branchName'),
+        };
+      } catch (error: unknown) {
+        if (error instanceof BadRequestException) {
+          throw provisioningInputError(error.getResponse()).error;
+        }
+        throw error;
+      }
+    }
+    const { handoff, fresh } = await this.repository.reserveHandoff(scope, recordId(id), draft);
+    if (handoff.state === 'COMPLETED') {
+      return presentHandoff(handoff);
+    }
+    const result = await this.repository.provisionHandoff(scope, handoff, fresh, (saved) =>
+      this.provisioning.provision(
+        scope.authorization,
+        handoff.id,
+        saved,
+        initialPassword ?? undefined,
+      ),
+    );
+    if (result.error) {
+      throw result.error;
+    }
+    return presentHandoff(result.handoff);
+  }
+
+  private async requireEligibleAgent(scope: SalesScope): Promise<void> {
+    const [agent] = await this.agents.lookup(scope.authorization, { ids: [scope.userId] });
+    if (!agent?.eligible) {
+      throw new ForbiddenException('A platform Sales account is required');
+    }
   }
 
   async salesAgents(scope: SalesScope, { search, ids }: QuerySalesAgentsArgs) {

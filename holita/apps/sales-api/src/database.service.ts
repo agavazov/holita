@@ -19,7 +19,7 @@ export class DatabaseService implements OnModuleDestroy {
     });
   }
 
-  table(name: 'appointmentBooking' | 'appointmentService'): Prisma.Sql {
+  table(name: 'appointmentBooking' | 'appointmentService' | 'lead'): Prisma.Sql {
     return Prisma.raw(`"${this.schema.replaceAll('"', '""')}"."${name}"`);
   }
 

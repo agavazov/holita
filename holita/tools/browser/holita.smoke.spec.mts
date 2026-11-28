@@ -620,6 +620,57 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     });
     cleanup.push(() => stopChild(core));
     await waitReady(`http://127.0.0.1:${String(corePort)}/health`, core, 'health');
+    const coreOrigin = `http://127.0.0.1:${String(corePort)}`;
+    let loseProvisioning: 'before' | 'after' | null = null;
+    let lostDestination: unknown;
+    const coreProxyPort = await port();
+    const coreProxy = createServer((request, response) => {
+      void (async () => {
+        const provisioning = request.url === '/internal/platform/provision-merchant';
+        const lose = provisioning ? loseProvisioning : null;
+        if (provisioning) {
+          loseProvisioning = null;
+        }
+        const chunks: Buffer[] = [];
+        for await (const chunk of request) {
+          if (Buffer.isBuffer(chunk)) {
+            chunks.push(chunk);
+          }
+        }
+        if (lose === 'before') {
+          response.destroy();
+          return;
+        }
+        const headers = new Headers();
+        for (const name of ['authorization', 'content-type', 'x-core-internal-token']) {
+          const value = request.headers[name];
+          if (typeof value === 'string') {
+            headers.set(name, value);
+          }
+        }
+        const upstream = await fetch(new URL(request.url ?? '/', coreOrigin), {
+          method: 'POST',
+          headers,
+          body: Buffer.concat(chunks),
+        });
+        if (lose === 'after' && upstream.ok) {
+          lostDestination = await upstream.json();
+          response.destroy();
+          return;
+        }
+        response.writeHead(upstream.status, { 'content-type': 'application/json' });
+        response.end(Buffer.from(await upstream.arrayBuffer()));
+      })().catch(() => response.destroy());
+    });
+    await new Promise<void>((ready) => coreProxy.listen(coreProxyPort, '127.0.0.1', ready));
+    cleanup.push(
+      () =>
+        new Promise<void>((done) => {
+          coreProxy.close(() => {
+            done();
+          });
+        }),
+    );
     const commerce = spawn(process.execPath, ['dist/main.js'], {
       cwd: join(root, 'holita/apps/commerce'),
       env: {
@@ -645,7 +696,8 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         ...process.env,
         SALES_DATABASE_URL: salesDb.url,
         CORE_INTERNAL_AUTH_TOKEN: internal,
-        CORE_AUTH_VERIFY_URL: `http://127.0.0.1:${String(corePort)}/internal/auth/verify`,
+        CORE_AUTH_VERIFY_URL: `http://127.0.0.1:${String(coreProxyPort)}/internal/auth/verify`,
+        STOREFRONT_ORIGIN: shopApp.origin,
         PORT: String(salesPort),
       },
       stdio: 'ignore',
@@ -760,7 +812,6 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       },
     });
 
-    const coreOrigin = `http://127.0.0.1:${String(corePort)}`;
     const onboardingId = randomUUID();
     const onboarding = {
       operationId: onboardingId,
@@ -924,6 +975,122 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       const result: unknown = await response.json();
       return result;
     };
+
+    const handoffLead = randomUUID();
+    const handoffInput = {
+      merchantName: `TEST Handoff merchant ${handoffLead}`,
+      adminName: 'TEST Handoff administrator',
+      adminEmail: `test-handoff-${handoffLead}@example.test`,
+      branchName: `TEST Handoff shop ${handoffLead}`,
+    };
+    await salesDb.client.query(
+      `INSERT INTO "lead" ("id", "tenantId", "displayName", "createdByUserId", "updatedAt")
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`,
+      [handoffLead, salesSession.tenantId, 'TEST Won lead handoff', salesSession.userId],
+    );
+    const handoffPassword = randomUUID();
+    const convert = (
+      input?: typeof handoffInput,
+      initialPassword?: string,
+      authorization?: string,
+    ) =>
+      salesGraphql(
+        `mutation Convert($id: ID!, $input: LeadHandoffInput, $initialPassword: String) {
+        convertWonLead(id: $id, input: $input, initialPassword: $initialPassword) {
+          id state merchantTenantId branchId
+        }
+      }`,
+        { id: handoffLead, input, initialPassword },
+        authorization,
+      );
+    const changeStage = (stage: 'WON' | 'LOST') =>
+      salesGraphql(
+        'mutation Stage($id: ID!, $stage: LeadStage!) { updateLeadStage(id: $id, stage: $stage) { stage } }',
+        { id: handoffLead, stage },
+      );
+    expect(await convert(handoffInput, handoffPassword, staffSession.authorization)).toMatchObject({
+      errors: [{ extensions: { code: 'FORBIDDEN' } }],
+    });
+    expect(await convert(handoffInput, handoffPassword)).toMatchObject({
+      errors: [{ extensions: { code: 'CONFLICT' } }],
+    });
+    expect(await changeStage('WON')).toEqual({ data: { updateLeadStage: { stage: 'WON' } } });
+    expect(
+      await convert({ ...handoffInput, branchName: 'TEST Rejected shop' }, 'short'),
+    ).toMatchObject({
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'initialPassword', code: 'INVALID_FORMAT' }],
+          },
+        },
+      ],
+    });
+    loseProvisioning = 'before';
+    expect(await convert(handoffInput, handoffPassword)).toMatchObject({
+      errors: [{ extensions: { code: 'SERVICE_UNAVAILABLE' } }],
+    });
+    expect(await changeStage('LOST')).toMatchObject({
+      errors: [{ extensions: { code: 'CONFLICT' } }],
+    });
+    expect(await convert()).toMatchObject({
+      errors: [
+        {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [{ path: 'initialPassword', code: 'REQUIRED' }],
+          },
+        },
+      ],
+    });
+    loseProvisioning = 'after';
+    expect(await convert(undefined, handoffPassword)).toMatchObject({
+      errors: [{ extensions: { code: 'SERVICE_UNAVAILABLE' } }],
+    });
+    expect(lostDestination).toEqual({
+      merchantTenantId: expect.any(String),
+      branchId: expect.any(String),
+    });
+    const storedHandoff = await salesDb.client.query<{
+      id: string;
+      state: string;
+      initiatedByUserId: string;
+    }>(
+      'SELECT "id", "state", "initiatedByUserId" FROM "leadHandoff" WHERE "tenantId" = $1 AND "leadId" = $2',
+      [salesSession.tenantId, handoffLead],
+    );
+    expect(storedHandoff.rows).toEqual([
+      { id: expect.any(String), state: 'pending', initiatedByUserId: salesSession.userId },
+    ]);
+    const operationId = storedHandoff.rows[0]?.id;
+    const salesHandoff = await convert();
+    expect(salesHandoff).toEqual({
+      data: {
+        convertWonLead: {
+          id: operationId,
+          state: 'COMPLETED',
+          ...(typeof lostDestination === 'object' ? lostDestination : {}),
+        },
+      },
+    });
+    expect(await convert()).toEqual(salesHandoff);
+    expect(await changeStage('LOST')).toMatchObject({
+      errors: [{ extensions: { code: 'CONFLICT' } }],
+    });
+    const provisioned = await coreDb.client.query<{ branchId: string; merchantTenantId: string }>(
+      'SELECT "branchId", "merchantTenantId" FROM "merchantProvisioning" WHERE "platformTenantId" = $1 AND "operationId" = $2',
+      [salesSession.tenantId, operationId],
+    );
+    expect(provisioned.rows).toEqual([lostDestination]);
+    const shopLookup = await salesContext.request.post(`${shopApp.origin}/graphql`, {
+      headers: { 'x-branch-id': provisioned.rows[0]?.branchId ?? '' },
+      data: { query: '{shop{id name}}' },
+    });
+    expect(await shopLookup.json()).toEqual({
+      data: { shop: { id: provisioned.rows[0]?.branchId, name: handoffInput.branchName } },
+    });
+
     await sales.getByRole('link', { name: merchantName, exact: true }).click();
     await expect(sales.getByRole('heading', { name: merchantName, exact: true })).toBeVisible();
     await expect(sales.getByText('First shop', { exact: true })).toBeVisible();
@@ -1965,7 +2132,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await merchant.locator('#brand-name').fill('Inline Smoke Brand');
     await merchant.getByRole('button', { name: 'Save', exact: true }).click();
     await dismissSuccess(merchant, 'Brand saved.');
-    await merchant.locator('#product-variant-generation-values').click();
+    const variantValues = merchant.locator('#product-variant-generation-values');
+    // Leave room for both options so selecting one does not scroll the drawer and close the list.
+    await variantValues.evaluate((element) => {
+      element.scrollIntoView({ block: 'center' });
+    });
+    await variantValues.click();
     for (const finish of ['Gloss', 'Satin']) {
       await merchant
         .getByRole('option', { name: `Surface finish: ${finish}`, exact: true })

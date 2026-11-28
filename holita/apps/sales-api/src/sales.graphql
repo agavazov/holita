@@ -63,6 +63,11 @@ type Mutation {
   createLead(input: LeadInput!): Lead!
   updateLead(id: ID!, input: LeadInput!): Lead!
   updateLeadStage(id: ID!, stage: LeadStage!): Lead!
+  """
+  Pass input for a new or rejected handoff. Omit input to replay a pending handoff.
+  A pending replay only needs initialPassword when Core has yet to provision the merchant.
+  """
+  convertWonLead(id: ID!, input: LeadHandoffInput, initialPassword: String): LeadHandoff!
   updateLeadAssignment(id: ID!, assignedAgentUserId: ID): Lead!
   createLeadNote(leadId: ID!, input: LeadNoteInput!): LeadNote!
   updateLeadNote(leadId: ID!, id: ID!, input: LeadNoteInput!): LeadNote!
@@ -209,8 +214,34 @@ type Lead {
   createdByUserId: ID!
   assignedAgentUserId: ID
   nextTask: LeadTask
+  handoff: LeadHandoff
   createdAt: String!
   updatedAt: String!
+}
+
+type LeadHandoff {
+  id: ID!
+  state: LeadHandoffState!
+  merchantName: String
+  adminName: String
+  adminEmail: String
+  branchName: String
+  merchantTenantId: ID
+  branchId: ID
+  storefrontUrl: String
+}
+
+enum LeadHandoffState {
+  PENDING
+  REJECTED
+  COMPLETED
+}
+
+input LeadHandoffInput {
+  merchantName: String!
+  adminName: String!
+  adminEmail: String!
+  branchName: String!
 }
 
 type SalesAgent {

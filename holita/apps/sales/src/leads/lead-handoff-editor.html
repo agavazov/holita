@@ -1,0 +1,86 @@
+<osnova-route-drawer
+  [title]="pending() ? text().resume : text().convert"
+  [subtitle]="subtitle()"
+  [state]="state()"
+  [errorText]="text().loadFailed"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  <form
+    id="lead-handoff-form"
+    #editorForm
+    class="app-form-section"
+    [formGroup]="form"
+    (ngSubmit)="save()"
+  >
+    @if (pending()) {
+    <p>{{ text().pending }}</p>
+    <dl class="app-facts">
+      @for (field of onboardingFields; track field) {
+      <div>
+        <dt>{{ text()[field] }}</dt>
+        <dd>{{ form.controls[field].value }}</dd>
+      </div>
+      }
+    </dl>
+    } @else { @for (field of onboardingFields; track field) {
+    <osnova-form-field
+      [controlId]="'handoff-' + field"
+      [label]="text()[field]"
+      [required]="true"
+      [error]="errors()[field] ?? null"
+    >
+      <input
+        pInputText
+        [id]="'handoff-' + field"
+        [type]="field === 'adminEmail' ? 'email' : 'text'"
+        [formControlName]="field"
+        aria-required="true"
+        [attr.aria-describedby]="'handoff-' + field + '-error'"
+        [attr.aria-invalid]="!!errors()[field]"
+        [invalid]="!!errors()[field]"
+        (input)="clearError(field)"
+      />
+    </osnova-form-field>
+    } } @if (showPassword()) {
+    <osnova-form-field
+      controlId="handoff-initialPassword"
+      [label]="text().initialPassword"
+      [hint]="errors().initialPassword ? null : text().passwordHint"
+      [required]="true"
+      [error]="errors().initialPassword ?? null"
+    >
+      <input
+        pInputText
+        id="handoff-initialPassword"
+        formControlName="initialPassword"
+        type="password"
+        autocomplete="new-password"
+        aria-required="true"
+        aria-describedby="handoff-initialPassword-hint handoff-initialPassword-error"
+        [attr.aria-invalid]="!!errors().initialPassword"
+        [invalid]="!!errors().initialPassword"
+        (input)="clearError('initialPassword')"
+      />
+    </osnova-form-field>
+    } @if (saveError(); as error) {
+    <p-message severity="error">{{ error }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="lead-handoff-form" [disabled]="saving()">
+      {{ pending() ? text().retry : text().submit }}
+    </button>
+  </div>
+</osnova-route-drawer>

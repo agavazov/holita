@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { operatorStrings } from '@holita/operator';
 import {
   EmptyState,
@@ -53,6 +53,7 @@ import { LeadsApi } from './leads-api';
     ReactiveFormsModule,
     Select,
     Skeleton,
+    RouterLink,
     RouterOutlet,
     LeadContacts,
     LeadActivity,
@@ -71,12 +72,28 @@ export class LeadDetailPage {
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly language = inject(UI_LANGUAGE);
+  protected readonly language = inject(UI_LANGUAGE);
   private readonly params = toSignal(this.route.paramMap, { requireSync: true });
   protected readonly queryParams = toSignal(this.route.queryParams, { requireSync: true });
   protected readonly fragment = toSignal(this.route.fragment, { requireSync: true });
   private readonly id = computed(() => this.params().get('recordId'));
   readonly entry = injectLeadRecord(this.id);
+  protected readonly stageLocked = computed(() => {
+    const state = this.entry.lead()?.handoff?.state;
+    return state === 'PENDING' || state === 'COMPLETED';
+  });
+  protected readonly storefrontUrl = computed(() => {
+    const handoff = this.entry.lead()?.handoff;
+    if (handoff?.storefrontUrl) {
+      return handoff.storefrontUrl;
+    }
+    if (handoff?.branchId) {
+      const url = new URL(`/s/${handoff.branchId}`, window.location.origin);
+      url.port = '12020';
+      return url.href;
+    }
+    return null;
+  });
   private readonly loadedId = computed(() => this.entry.lead()?.id);
   protected readonly tasks = resource({
     params: () => {
@@ -160,6 +177,8 @@ export class LeadDetailPage {
         this.listHost.saved({ message: event.message, recordId: null });
       } else if (this.route.firstChild?.snapshot.data['taskEditor'] === true) {
         this.taskSaved(event.message);
+      } else if (this.route.firstChild?.snapshot.data['handoffEditor'] === true) {
+        this.listHost.saved(event);
       } else {
         this.entry.record.reload();
         this.listHost.saved(event);
@@ -203,6 +222,7 @@ export class LeadDetailPage {
     if (
       !lead ||
       !scope ||
+      this.stageLocked() ||
       !stage ||
       stage === lead.stage ||
       this.savingStage() ||
@@ -279,6 +299,10 @@ export class LeadDetailPage {
 
   protected openAction(action: string): void {
     this.open(action === 'edit' ? ['edit'] : ['contacts', 'new']);
+  }
+
+  protected openHandoff(): void {
+    this.open(['convert']);
   }
 
   protected editContact(id: string): void {

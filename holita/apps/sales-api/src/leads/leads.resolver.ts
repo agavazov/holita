@@ -1,5 +1,6 @@
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type {
+  MutationConvertWonLeadArgs,
   MutationCreateLeadArgs,
   MutationUpdateLeadArgs,
   MutationUpdateLeadAssignmentArgs,
@@ -54,6 +55,14 @@ export class LeadsResolver {
     @Args() { id, stage }: MutationUpdateLeadStageArgs,
   ) {
     return this.leadsService.updateStage(await requireSalesScope(context), id, stage);
+  }
+
+  @Mutation()
+  async convertWonLead(
+    @Context() context: RequestContext,
+    @Args() args: MutationConvertWonLeadArgs,
+  ) {
+    return this.leadsService.convertWonLead(await requireSalesScope(context), args);
   }
 
   @Mutation()

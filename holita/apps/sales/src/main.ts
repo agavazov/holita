@@ -5,6 +5,7 @@ import { AppointmentServicesPage } from './appointment-services/appointment-serv
 import { ContactEditor } from './contacts/contact-editor';
 import { ContactsPage } from './contacts/contacts-page';
 import { LeadDetailPage } from './leads/lead-detail-page';
+import { LeadHandoffEditor } from './leads/lead-handoff-editor';
 import { LeadEditor } from './leads/lead-editor';
 import { LeadNoteEditor } from './leads/lead-note-editor';
 import { LeadTaskEditor } from './leads/lead-task-editor';
@@ -48,6 +49,12 @@ void startOperator({
               path: ':recordId',
               component: LeadDetailPage,
               children: [
+                {
+                  path: 'convert',
+                  component: LeadHandoffEditor,
+                  data: { drawer: true, handoffEditor: true },
+                  canDeactivate: [leaveDrawer],
+                },
                 {
                   path: 'edit',
                   component: LeadEditor,

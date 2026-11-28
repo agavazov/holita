@@ -28,11 +28,48 @@ model Lead {
   tasks               LeadTask[]
   offers              SalesOffer[]
   appointmentBookings AppointmentBooking[]
+  handoff             LeadHandoff?
 
   @@unique([tenantId, id])
   @@index([tenantId, createdAt, id])
   @@index([tenantId, assignedAgentUserId])
   @@map("lead")
+}
+
+enum LeadHandoffMode {
+  NEW_MERCHANT @map("newMerchant")
+
+  @@map("leadHandoffMode")
+}
+
+enum LeadHandoffState {
+  PENDING   @map("pending")
+  REJECTED  @map("rejected")
+  COMPLETED @map("completed")
+
+  @@map("leadHandoffState")
+}
+
+model LeadHandoff {
+  id               String           @id @default(uuid()) @db.Uuid
+  tenantId         String           @db.Uuid
+  leadId           String           @db.Uuid
+  mode             LeadHandoffMode  @default(NEW_MERCHANT)
+  state            LeadHandoffState @default(PENDING)
+  initiatedByUserId String          @db.Uuid
+  merchantName     String?          @db.VarChar(200)
+  adminName        String?          @db.VarChar(200)
+  adminEmail       String?          @db.VarChar(254)
+  branchName       String?          @db.VarChar(200)
+  merchantTenantId String?          @db.Uuid
+  branchId         String?          @db.Uuid
+  createdAt        DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime         @updatedAt @db.Timestamptz(3)
+  completedAt      DateTime?        @db.Timestamptz(3)
+  lead             Lead             @relation(fields: [tenantId, leadId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, leadId])
+  @@map("leadHandoff")
 }
 
 enum LeadStage {

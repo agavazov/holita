@@ -1,6 +1,6 @@
 # 144 Hand off a won lead to an existing merchant
 
-**Status:** Ready after [141](141-holita-sales-won-lead-conversion.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
@@ -17,7 +17,7 @@ Let an agent hand off a Won lead to an explicitly selected current merchant and 
 1. Add Use existing merchant to the Won Lead Detail handoff editor. Use the Core merchant
    directory and show eligible Branches for the selected merchant with explicit selection.
 2. Verify in Core that the selected merchant is an active customer Tenant and that the active
-   Branch belongs to it before saving. Extend the one-per-lead handoff record from 141 with
+   Branch belongs to it before saving. Extend the existing one-per-lead handoff record with
    an `existingBranch` mode and reuse its verified tenant scope, initiator, state and timestamps.
    Show the linked merchant and storefront through the existing handoff presentation.
 3. Add URL-backed Leads filters for handoff state, initiator including Mine, and completed-date

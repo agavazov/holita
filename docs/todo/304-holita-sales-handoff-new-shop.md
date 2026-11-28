@@ -20,7 +20,7 @@ merchant.
    replay pattern with a separate operation kind. Verify an active customer Tenant and create a
    Branch for it in one replayable operation.
 2. Add a Create shop choice and shop-name field to the existing handoff drawer. Reuse the
-   141 and 144 state and validation model for the `newBranch` mode. Persist the operation ID
+   existing handoff state and validation model for the `newBranch` mode. Persist the operation ID
    and retry an uncertain response with it. Complete the handoff only after Core confirms.
 3. Use the existing handoff result links and filters. Add one eligible insert-only demo Won
    lead and use isolated synthetic shop creation to verify the command.

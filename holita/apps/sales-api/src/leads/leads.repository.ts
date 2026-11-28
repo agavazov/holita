@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { normalizeContactPhone } from '../contacts/contact-phone.js';
 import { contactWordMatches, searchText } from '../contacts/contact-search.js';
 import { DatabaseService } from '../database.service.js';
-import type { QueryLeadsArgs } from '../generated/graphql/types.js';
-import { Prisma, type Lead, type LeadStage } from '../generated/prisma/client.js';
+import type { LeadHandoffInput, QueryLeadsArgs } from '../generated/graphql/types.js';
+import { Prisma, type Lead, type LeadHandoff, type LeadStage } from '../generated/prisma/client.js';
 import type { SalesScope } from '../scope.js';
+import type { CoreMerchantProvisioning } from './core-merchant-provisioning.js';
 import { openTaskWhere } from './lead-follow-up.js';
 import { closedLeadStages } from './lead-stage.js';
 import { taskScheduleOrder } from './lead-task.js';
@@ -13,6 +14,7 @@ type LeadFields = Pick<Lead, 'displayName' | 'websiteUrl' | 'sourceName'>;
 
 function withNextTask(tenantId: string) {
   return {
+    handoff: true,
     tasks: {
       where: openTaskWhere(tenantId),
       orderBy: taskScheduleOrder,
@@ -145,11 +147,114 @@ export class LeadsRepository {
     }
     const { tenantId } = scope;
     return this.database.client.$transaction(async (client) => {
+      await this.lockLead(client, tenantId, id);
+      if (stage !== 'WON') {
+        const handoff = await client.leadHandoff.findUnique({
+          where: { tenantId_leadId: { tenantId, leadId: id } },
+        });
+        if (handoff && handoff.state !== 'REJECTED') {
+          throw new ConflictException('A pending or completed handoff keeps the lead Won');
+        }
+      }
       await client.lead.updateMany({ where: { tenantId, id, stage: { not: stage } }, data });
       return client.lead.findUnique({
         where: { tenantId_id: { tenantId, id } },
         include: withNextTask(tenantId),
       });
+    });
+  }
+
+  private lockLead(client: Prisma.TransactionClient, tenantId: string, id: string) {
+    return client.$queryRaw`
+      SELECT "id" FROM ${this.database.table('lead')}
+      WHERE "tenantId" = ${tenantId}::uuid AND "id" = ${id}::uuid FOR UPDATE
+    `;
+  }
+
+  reserveHandoff({ tenantId, userId }: SalesScope, id: string, input: LeadHandoffInput | null) {
+    return this.database.client.$transaction(async (client) => {
+      await this.lockLead(client, tenantId, id);
+      const lead = await client.lead.findUnique({
+        where: { tenantId_id: { tenantId, id } },
+        select: { stage: true, handoff: true },
+      });
+      if (!lead) {
+        throw new NotFoundException('Lead not found');
+      }
+      if (lead.stage !== 'WON') {
+        throw new ConflictException('Only Won leads can be converted');
+      }
+      if (lead.handoff?.state === 'COMPLETED') {
+        return { handoff: lead.handoff, fresh: false };
+      }
+      if (lead.handoff?.state === 'PENDING') {
+        if (input) {
+          throw new ConflictException('Resume the pending handoff with its original details');
+        }
+        return { handoff: lead.handoff, fresh: false };
+      }
+      if (!input) {
+        throw new ConflictException('Enter the onboarding details');
+      }
+      const handoff = await client.leadHandoff.upsert({
+        where: { tenantId_leadId: { tenantId, leadId: id } },
+        create: { tenantId, leadId: id, initiatedByUserId: userId, ...input },
+        update: { ...input, state: 'PENDING' },
+      });
+      return { handoff, fresh: true };
+    });
+  }
+
+  provisionHandoff(
+    { tenantId }: SalesScope,
+    reservation: LeadHandoff,
+    fresh: boolean,
+    provision: (input: LeadHandoffInput) => ReturnType<CoreMerchantProvisioning['provision']>,
+  ) {
+    const { leadId } = reservation;
+    const where = { tenantId_leadId: { tenantId, leadId } };
+    return this.database.client.$transaction(async (client) => {
+      // Settle Core attempts in order while keeping the reservation durable across a lost reply.
+      await this.lockLead(client, tenantId, leadId);
+      const current = await client.leadHandoff.findUniqueOrThrow({ where });
+      if (current.state === 'COMPLETED') {
+        return { handoff: current };
+      }
+      const { merchantName, adminName, adminEmail, branchName } = current;
+      if (
+        current.state !== 'PENDING' ||
+        !merchantName ||
+        !adminName ||
+        !adminEmail ||
+        !branchName ||
+        merchantName !== reservation.merchantName ||
+        adminName !== reservation.adminName ||
+        adminEmail !== reservation.adminEmail ||
+        branchName !== reservation.branchName ||
+        current.updatedAt.getTime() !== reservation.updatedAt.getTime()
+      ) {
+        throw new ConflictException('The handoff changed. Reload the lead and try again');
+      }
+      const result = await provision({ merchantName, adminName, adminEmail, branchName });
+      if ('error' in result) {
+        if (fresh || ('passwordError' in result && !result.passwordError)) {
+          await client.leadHandoff.update({ where, data: { state: 'REJECTED' } });
+        }
+        return { error: result.error };
+      }
+      const handoff = await client.leadHandoff.update({
+        where,
+        data: {
+          ...result.destination,
+          state: 'COMPLETED',
+          completedAt: new Date(),
+          merchantName: null,
+          adminName: null,
+          adminEmail: null,
+          branchName: null,
+        },
+      });
+      return { handoff };
     });
   }
 }
