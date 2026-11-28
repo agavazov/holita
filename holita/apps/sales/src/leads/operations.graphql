@@ -34,6 +34,10 @@ query SalesLeads(
   ) {
     items {
       ...SalesLeadFields
+      nextTask {
+        scheduledAt
+        type
+      }
     }
     total
     offset
@@ -125,4 +129,43 @@ mutation SalesUpdateLeadNote($leadId: ID!, $id: ID!, $input: LeadNoteInput!) {
 
 mutation SalesDeleteLeadNote($leadId: ID!, $id: ID!) {
   deleteLeadNote(leadId: $leadId, id: $id)
+}
+
+fragment SalesLeadTaskFields on LeadTask {
+  id
+  scheduledAt
+  type
+  status
+  note
+  updatedAt
+}
+
+query SalesLeadTasks($leadId: ID!) {
+  leadTasks(leadId: $leadId) {
+    ...SalesLeadTaskFields
+  }
+}
+
+query SalesLeadTask($leadId: ID!, $id: ID!) {
+  leadTask(leadId: $leadId, id: $id) {
+    ...SalesLeadTaskFields
+  }
+}
+
+mutation SalesCreateLeadTask($leadId: ID!, $input: LeadTaskInput!) {
+  createLeadTask(leadId: $leadId, input: $input) {
+    id
+  }
+}
+
+mutation SalesUpdateLeadTask($leadId: ID!, $id: ID!, $input: LeadTaskInput!) {
+  updateLeadTask(leadId: $leadId, id: $id, input: $input) {
+    id
+  }
+}
+
+mutation SalesUpdateLeadTaskStatus($leadId: ID!, $id: ID!, $status: LeadTaskStatus!) {
+  updateLeadTaskStatus(leadId: $leadId, id: $id, status: $status) {
+    id
+  }
 }

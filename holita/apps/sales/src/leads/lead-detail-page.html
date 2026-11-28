@@ -26,6 +26,13 @@
   </osnova-empty-state>
 </section>
 } @else if (entry.lead(); as lead) {
+<holita-lead-tasks
+  [leadId]="lead.id"
+  [list]="tasks"
+  (add)="addTask()"
+  (edit)="editTask($event)"
+  (saved)="taskSaved($event)"
+/>
 <section class="app-card" aria-labelledby="lead-assignment">
   <h2 id="lead-assignment" class="app-card__title">{{ text().leadAssignment }}</h2>
   <dl class="app-facts">
@@ -165,7 +172,12 @@
   (add)="openAction('add-contact')"
   (edit)="editContact($event)"
 />
-<holita-lead-activity [leadId]="lead.id" (add)="addNote()" (edit)="editNote($event)" />
+<holita-lead-activity
+  [leadId]="lead.id"
+  [tasks]="tasks"
+  (add)="addNote()"
+  (edit)="editNote($event)"
+/>
 } @else if (entry.record.isLoading()) {
 <section class="app-card" role="status" [attr.aria-label]="shared().loading">
   <p-skeleton width="8rem" />

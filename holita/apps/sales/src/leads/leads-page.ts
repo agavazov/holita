@@ -112,6 +112,8 @@ export class LeadsPage {
   protected readonly leadLabel = leadLabel;
   protected readonly stageSeverity = leadStageSeverity;
   protected readonly stageLabel = (stage: LeadStage) => this.text().stages[stage];
+  protected readonly nextTaskFor = (lead: SalesLeadsQuery['leads']['items'][number]) =>
+    lead.nextTask;
   protected readonly stageOptions = computed(() => [
     { value: 'ALL', label: this.text().allStages },
     ...leadStageOptions(this.language()),
@@ -134,29 +136,35 @@ export class LeadsPage {
       kind: 'identity',
       className: 'app-col-identity',
     },
-    { id: 'stage', label: this.text().leadStage, width: '10rem', kind: 'status' },
+    { id: 'stage', label: this.text().leadStage, width: '9rem', kind: 'status' },
+    {
+      id: 'nextTask',
+      label: this.text().nextTask,
+      width: '17%',
+      className: 'app-table-merged-column',
+    },
     {
       id: 'agent',
       label: this.text().assignedAgent,
-      width: '11rem',
+      width: '13%',
       className: 'app-table-merged-column',
     },
     {
       id: 'website',
       label: this.text().leadWebsiteUrl,
-      width: '25%',
+      width: '14%',
       className: 'app-table-merged-column',
     },
     {
       id: 'source',
       label: this.text().leadSourceName,
-      width: '10rem',
+      width: '10%',
       className: 'app-table-merged-column',
     },
     {
       id: 'created',
       label: this.text().leadCreatedAt,
-      width: '10rem',
+      width: '13%',
       kind: 'date',
       className: 'app-table-merged-column',
     },

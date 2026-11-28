@@ -509,6 +509,15 @@ includes current assignees across all stages and pages. The Holita demo seed inc
 in New, Interested, Try later, Lost and Won, three contacts, and an unassigned example. It adds
 an assigned example for each active demo agent.
 
+Use **Follow-up tasks** on lead detail to schedule a task in Sofia time, then edit the
+schedule, type, or note as needed. When Sofia time repeats an hour, select the UTC offset.
+A new task starts as **Pending** and follows the current lead assignment. The **Next task**
+column in Leads shows the earliest pending or in-progress task. Use **Complete task** or
+**Cancel task** to move it to **Activity** alongside notes.
+The operator graph exposes this through `Lead.nextTask`, `leadTasks`, `leadTask`,
+`createLeadTask`, `updateLeadTask`, and `updateLeadTaskStatus`. The demo seed includes
+pending, in-progress, and completed task examples.
+
 **Local Sales import**
 
 Use an approved export in private loopback staging with a read-only role. Run the Sales migrations

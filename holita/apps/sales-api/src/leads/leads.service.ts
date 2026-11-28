@@ -14,14 +14,19 @@ import type {
   QueryLeadsArgs,
   QuerySalesAgentsArgs,
 } from '../generated/graphql/types.js';
-import { Prisma, type Lead as StoredLead } from '../generated/prisma/client.js';
+import {
+  Prisma,
+  type Lead as StoredLead,
+  type LeadTask as StoredTask,
+} from '../generated/prisma/client.js';
 import type { SalesScope } from '../scope.js';
 import { CoreSalesAgents } from './core-sales-agents.js';
+import { presentTask } from './lead-task.js';
 import { LeadsRepository } from './leads.repository.js';
 
 const agentLookupLimit = 101;
 
-function present(row: StoredLead): Lead {
+function present(row: StoredLead & { tasks: StoredTask[] }): Lead {
   const {
     id,
     displayName,
@@ -32,6 +37,7 @@ function present(row: StoredLead): Lead {
     wonAt,
     createdByUserId,
     assignedAgentUserId,
+    tasks: [nextTask],
     createdAt,
     updatedAt,
   } = row;
@@ -45,6 +51,7 @@ function present(row: StoredLead): Lead {
     wonAt: wonAt?.toISOString() ?? null,
     createdByUserId,
     assignedAgentUserId,
+    nextTask: nextTask ? presentTask(nextTask, assignedAgentUserId) : null,
     createdAt: createdAt.toISOString(),
     updatedAt: updatedAt.toISOString(),
   };

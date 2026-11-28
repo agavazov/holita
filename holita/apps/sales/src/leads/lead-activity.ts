@@ -10,6 +10,7 @@ import {
   signal,
   viewChild,
   type ElementRef,
+  type ResourceRef,
 } from '@angular/core';
 import {
   EmptyState,
@@ -29,15 +30,24 @@ import { ButtonDirective } from 'primeng/button';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Message } from 'primeng/message';
 import { Skeleton } from 'primeng/skeleton';
-import type { SalesLeadNoteFieldsFragment } from '../generated/leads-operations';
+import { Tag } from 'primeng/tag';
+import type {
+  SalesLeadNoteFieldsFragment,
+  SalesLeadTaskFieldsFragment,
+  SalesLeadNotesQuery,
+} from '../generated/leads-operations';
 import { LeadNotesApi } from './lead-notes-api';
 import { leadStrings } from './lead-strings';
+import { isOpenTask, leadTaskSeverity } from './lead-task';
 
 type NoteAction = 'edit' | 'remove';
+type ActivityEntry =
+  | { kind: 'note'; at: string; row: SalesLeadNotesQuery['leadNotes'][number] }
+  | { kind: 'task'; at: string; task: SalesLeadTaskFieldsFragment };
 
 @Component({
   selector: 'holita-lead-activity',
-  imports: [ButtonDirective, ConfirmDialog, EmptyState, Message, RowActions, Skeleton],
+  imports: [ButtonDirective, ConfirmDialog, EmptyState, Message, RowActions, Skeleton, Tag],
   providers: [ConfirmationService],
   templateUrl: './lead-activity.html',
   styles: `
@@ -61,6 +71,7 @@ type NoteAction = 'edit' | 'remove';
 })
 export class LeadActivity {
   readonly leadId = input.required<string>();
+  readonly tasks = input.required<ResourceRef<SalesLeadTaskFieldsFragment[] | undefined>>();
   readonly add = output();
   readonly edit = output<string>();
 
@@ -79,6 +90,7 @@ export class LeadActivity {
   protected readonly removeFailed = computed(() => this.failedContext() === this.context());
   protected readonly text = computed(() => leadStrings[this.language()]);
   protected readonly shared = computed(() => uiMessages[this.language()]);
+  protected readonly taskSeverity = leadTaskSeverity;
   protected readonly confirmPt = computed(() =>
     confirmDialogPt(this.language(), 'remove-note-detail'),
   );
@@ -88,6 +100,21 @@ export class LeadActivity {
       return scope ? { scope, leadId, revision: this.revision() } : undefined;
     },
     loader: ({ params, abortSignal }) => this.api.list(params.scope, params.leadId, abortSignal),
+  });
+  protected readonly entries = computed(() => {
+    const tasks = this.tasks();
+    const notes = this.list.hasValue() ? this.list.value() : [];
+    const entries: ActivityEntry[] = notes.map((row) => ({
+      kind: 'note',
+      at: row.note.occurredAt,
+      row,
+    }));
+    for (const task of tasks.hasValue() ? tasks.value() : []) {
+      if (!isOpenTask(task.status)) {
+        entries.push({ kind: 'task', at: task.updatedAt, task });
+      }
+    }
+    return entries.sort((left, right) => Date.parse(right.at) - Date.parse(left.at));
   });
   protected readonly actions = computed<
     readonly ListAction<NoteAction, SalesLeadNoteFieldsFragment>[]
@@ -109,6 +136,15 @@ export class LeadActivity {
 
   refresh(): void {
     this.revision.update((revision) => revision + 1);
+  }
+
+  protected retry(): void {
+    if (this.list.error()) {
+      this.refresh();
+    }
+    if (this.tasks().error()) {
+      this.tasks().reload();
+    }
   }
 
   protected occurrence(iso: string): string {

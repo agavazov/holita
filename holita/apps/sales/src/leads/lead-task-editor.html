@@ -1,0 +1,94 @@
+<osnova-route-drawer
+  [title]="editing ? text().editTask : text().addTask"
+  [subtitle]="subtitle()"
+  [closeLink]="closeLink()"
+  [state]="state()"
+  [errorText]="text().tasksUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  <form
+    id="lead-task-editor-form"
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="app-form-section"
+  >
+    @let timeError = fieldError('scheduledAt'); @let noteError = fieldError('note');
+    <osnova-form-field
+      controlId="task-scheduledAt"
+      [label]="text().taskScheduledAt"
+      [hint]="text().noteTimeZone"
+      [error]="timeError"
+      [required]="true"
+    >
+      <input
+        pInputText
+        id="task-scheduledAt"
+        autocomplete="off"
+        spellcheck="false"
+        formControlName="scheduledAt"
+        aria-required="true"
+        aria-describedby="task-scheduledAt-hint task-scheduledAt-error"
+        [invalid]="!!timeError"
+        [attr.aria-invalid]="!!timeError"
+        (input)="clearError('scheduledAt')"
+      />
+    </osnova-form-field>
+    @if (offsets().length) {
+    <osnova-form-field controlId="task-offset" [label]="text().noteUtcOffset">
+      <p-select
+        inputId="task-offset"
+        ariaLabelledBy="task-offset-label"
+        formControlName="offset"
+        [options]="offsets()"
+        optionLabel="label"
+        optionValue="label"
+        appendTo="body"
+      />
+    </osnova-form-field>
+    }
+    <osnova-form-field controlId="task-type" [label]="text().taskType" [required]="true">
+      <p-select
+        inputId="task-type"
+        ariaLabelledBy="task-type-label"
+        formControlName="type"
+        [options]="typeOptions()"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+      />
+    </osnova-form-field>
+    <osnova-form-field controlId="task-note" [label]="text().noteText" [error]="noteError">
+      <textarea
+        pTextarea
+        id="task-note"
+        formControlName="note"
+        rows="5"
+        aria-describedby="task-note-error"
+        [invalid]="!!noteError"
+        [attr.aria-invalid]="!!noteError"
+        (input)="clearError('note')"
+      ></textarea>
+    </osnova-form-field>
+    @if (saveError(); as error) {
+    <p-message severity="error">{{ error }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="lead-task-editor-form" [disabled]="saving()">
+      {{ saveLabel() }}
+    </button>
+  </div>
+</osnova-route-drawer>

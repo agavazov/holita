@@ -7,36 +7,62 @@
   </div>
   @if (removeFailed()) {
   <p-message severity="error">{{ text().noteRemoveFailed }}</p-message>
-  } @if (list.error()) {
-  <osnova-empty-state kind="error" [title]="text().activityUnavailable">
-    <button emptyActions pButton type="button" severity="secondary" (click)="refresh()">
+  } @if (list.error() || tasks().error()) {
+  <osnova-empty-state
+    kind="error"
+    [title]="entries().length ? text().activityIncomplete : text().activityUnavailable"
+    [compact]="entries().length > 0"
+  >
+    <button emptyActions pButton type="button" severity="secondary" (click)="retry()">
       {{ shared().retry }}
     </button>
   </osnova-empty-state>
-  } @else if (list.hasValue()) { @if (list.value().length) {
+  } @if (entries().length) {
   <ol class="app-card__body" role="list">
-    @for (entry of list.value(); track entry.note.id) {
+    @for (entry of entries(); track entry.kind === 'note' ? 'note-' + entry.row.note.id : 'task-' +
+    entry.task.id) {
     <li class="app-card__body">
+      @if (entry.kind === 'note') {
       <div class="app-card__header">
         <div>
-          <time [attr.datetime]="entry.note.occurredAt" [title]="entry.note.occurredAt">
-            {{ occurrence(entry.note.occurredAt) }}
-          </time>
-          <p>{{ entry.authorName ?? text().unknownAgent }}</p>
+          <time [attr.datetime]="entry.at" [title]="entry.at"> {{ occurrence(entry.at) }} </time>
+          <p>{{ entry.row.authorName ?? text().unknownAgent }}</p>
         </div>
         <osnova-row-actions
           [actions]="actions()"
-          [record]="record(entry.note)"
-          (choose)="run($event.action, entry.note)"
+          [record]="record(entry.row.note)"
+          (choose)="run($event.action, entry.row.note)"
         />
       </div>
-      <p class="note-text">{{ entry.note.text }}</p>
+      <p class="note-text">{{ entry.row.note.text }}</p>
+      } @else {
+      <div class="app-card__header">
+        <div>
+          <strong>{{ text().taskTypes[entry.task.type] }}</strong>
+          <p>
+            <time [attr.datetime]="entry.at" [title]="entry.at">{{ occurrence(entry.at) }}</time>
+          </p>
+        </div>
+        <p-tag
+          [severity]="taskSeverity(entry.task.status)"
+          [value]="text().taskStatuses[entry.task.status]"
+        />
+      </div>
+      <p>
+        {{ text().taskScheduledAt }}
+        <time [attr.datetime]="entry.task.scheduledAt" [title]="entry.task.scheduledAt">
+          {{ occurrence(entry.task.scheduledAt) }}
+        </time>
+      </p>
+      @if (entry.task.note) {
+      <p class="note-text">{{ entry.task.note }}</p>
+      } }
     </li>
     }
   </ol>
-  } @else {
+  } @else if (list.hasValue() && tasks().hasValue()) {
   <osnova-empty-state kind="empty" [title]="text().emptyActivity" />
-  } } @else {
+  } @else if (list.isLoading() || tasks().isLoading()) {
   <div class="app-card__body" role="status" [attr.aria-label]="shared().loading">
     <p-skeleton width="10rem" />
     <p-skeleton />

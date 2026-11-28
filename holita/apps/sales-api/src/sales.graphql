@@ -13,6 +13,8 @@ type Query {
   lead(id: ID!): Lead
   leadNotes(leadId: ID!): [LeadNoteActivity!]!
   leadNote(leadId: ID!, id: ID!): LeadNote
+  leadTasks(leadId: ID!): [LeadTask!]!
+  leadTask(leadId: ID!, id: ID!): LeadTask
   salesAgents(search: String, ids: [ID!]): [SalesAgent!]!
   leadAssignmentAgents: [SalesAgent!]!
   leadContacts(leadId: ID!): [LeadContact!]!
@@ -33,6 +35,9 @@ type Mutation {
   createLeadNote(leadId: ID!, input: LeadNoteInput!): LeadNote!
   updateLeadNote(leadId: ID!, id: ID!, input: LeadNoteInput!): LeadNote!
   deleteLeadNote(leadId: ID!, id: ID!): Boolean!
+  createLeadTask(leadId: ID!, input: LeadTaskInput!): LeadTask!
+  updateLeadTask(leadId: ID!, id: ID!, input: LeadTaskInput!): LeadTask!
+  updateLeadTaskStatus(leadId: ID!, id: ID!, status: LeadTaskStatus!): LeadTask!
   createLeadContact(leadId: ID!, input: LeadContactInput!): LeadContact!
   updateLeadContact(leadId: ID!, id: ID!, input: LeadContactInput!): LeadContact!
   deleteLeadContact(leadId: ID!, id: ID!): Boolean!
@@ -53,6 +58,7 @@ type Lead {
   wonAt: String
   createdByUserId: ID!
   assignedAgentUserId: ID
+  nextTask: LeadTask
   createdAt: String!
   updatedAt: String!
 }
@@ -85,6 +91,42 @@ input LeadNoteInput {
   """
   occurredAt: String!
   text: String!
+}
+
+type LeadTask {
+  id: ID!
+  leadId: ID!
+  scheduledAt: String!
+  type: LeadTaskType!
+  status: LeadTaskStatus!
+  note: String
+  assignedAgentUserId: ID
+  createdAt: String!
+  updatedAt: String!
+}
+
+input LeadTaskInput {
+  """
+  Schedule as an ISO-8601 instant with a time zone offset.
+  """
+  scheduledAt: String!
+  type: LeadTaskType!
+  note: String
+}
+
+enum LeadTaskType {
+  OUTREACH
+  PREPARE_DEMO_SITE
+  PREPARE_SEND_OFFER
+  DEMO
+  RESEARCH
+}
+
+enum LeadTaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
 
 type LeadPage {

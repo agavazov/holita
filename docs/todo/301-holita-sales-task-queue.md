@@ -1,11 +1,11 @@
 # 301 Show the Sales follow-up task queue
 
-**Status:** Ready after [137](137-holita-sales-tasks.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-Ticket 137 records follow-up tasks on each Sales lead. red.bg exposes an agent and team work
-queue and identifies active leads with no open task.
+Sales records [follow-up tasks](../development.md#holita) on each lead. red.bg exposes an agent
+and team work queue and identifies active leads with no open task.
 
 ## Goal
 

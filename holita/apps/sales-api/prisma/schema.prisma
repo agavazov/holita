@@ -25,6 +25,7 @@ model Lead {
   updatedAt           DateTime      @updatedAt @db.Timestamptz(3)
   contacts            LeadContact[]
   notes               LeadNote[]
+  tasks               LeadTask[]
 
   @@unique([tenantId, id])
   @@index([tenantId, createdAt, id])
@@ -87,6 +88,41 @@ model LeadNote {
 
   @@index([tenantId, leadId, occurredAt(sort: Desc), createdAt(sort: Desc), id], map: "leadNote_activity_idx")
   @@map("leadNote")
+}
+
+model LeadTask {
+  id          String         @id @default(uuid()) @db.Uuid
+  tenantId    String         @db.Uuid
+  leadId      String         @db.Uuid
+  scheduledAt DateTime       @db.Timestamptz(3)
+  type        LeadTaskType
+  status      LeadTaskStatus @default(PENDING)
+  note        String?        @db.Text
+  createdAt   DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime       @updatedAt @db.Timestamptz(3)
+  lead        Lead           @relation(fields: [tenantId, leadId], references: [tenantId, id], onDelete: Restrict)
+
+  @@index([tenantId, leadId, scheduledAt, id], map: "leadTask_schedule_idx")
+  @@map("leadTask")
+}
+
+enum LeadTaskType {
+  OUTREACH          @map("outreach")
+  PREPARE_DEMO_SITE @map("prepareDemoSite")
+  PREPARE_SEND_OFFER @map("prepareSendOffer")
+  DEMO              @map("demo")
+  RESEARCH          @map("research")
+
+  @@map("leadTaskType")
+}
+
+enum LeadTaskStatus {
+  PENDING     @map("pending")
+  IN_PROGRESS @map("inProgress")
+  COMPLETED   @map("completed")
+  CANCELLED   @map("cancelled")
+
+  @@map("leadTaskStatus")
 }
 
 model SalesImportRecord {

@@ -10,7 +10,7 @@
       [heading]="text().prospects"
       [mobileFullWidthActions]="true"
       [columns]="columns()"
-      tableMinWidth="50rem"
+      tableMinWidth="60rem"
       [view]="view()"
       [total]="page()?.total ?? null"
       [busy]="list.isLoading()"
@@ -111,6 +111,7 @@
               {{ text().leadDisplayName }} <p-sort-icon field="DISPLAY_NAME" />
             </th>
             <th scope="col">{{ text().leadStage }}</th>
+            <th scope="col" class="app-table-merged-column">{{ text().nextTask }}</th>
             <th scope="col" class="app-table-merged-column">{{ text().assignedAgent }}</th>
             <th scope="col" class="app-table-merged-column">{{ text().leadWebsiteUrl }}</th>
             <th scope="col" class="app-table-merged-column">{{ text().leadSourceName }}</th>
@@ -121,7 +122,8 @@
         </ng-template>
         <ng-template #body let-lead>
           @let label = leadLabel(lead); @let secondary = lead.sourceName ?? (lead.displayName ?
-          lead.websiteUrl : null); @let agent = assigneeLabel(lead.assignedAgentUserId);
+          lead.websiteUrl : null); @let agent = assigneeLabel(lead.assignedAgentUserId); @let
+          nextTask = nextTaskFor(lead);
           <tr>
             <td class="app-col-identity">
               <div class="app-cell-identity">
@@ -143,12 +145,38 @@
                   [title]="format.utc(lead.createdAt)"
                   >{{ format.dateTime(lead.createdAt) }}</time
                 >
+                @if (nextTask) {
+                <span class="app-table-mobile-meta" [title]="text().taskTypes[nextTask.type]">
+                  {{ text().taskTypes[nextTask.type] }}
+                </span>
+                <time
+                  class="app-table-mobile-meta"
+                  [attr.datetime]="nextTask.scheduledAt"
+                  [title]="format.utc(nextTask.scheduledAt)"
+                  >{{ format.dateTime(nextTask.scheduledAt) }}</time
+                >
+                }
               </div>
             </td>
             <td>
               <div class="app-cell-status app-table-tag-wrap">
                 <p-tag [severity]="stageSeverity(lead.stage)" [value]="stageLabel(lead.stage)" />
               </div>
+            </td>
+            <td class="app-table-merged-column">
+              @if (nextTask) {
+              <div class="app-cell-identity">
+                <span class="app-cell-truncate" [title]="text().taskTypes[nextTask.type]">
+                  {{ text().taskTypes[nextTask.type] }}
+                </span>
+                <time
+                  [attr.datetime]="nextTask.scheduledAt"
+                  [title]="format.utc(nextTask.scheduledAt)"
+                >
+                  {{ format.dateTime(nextTask.scheduledAt) }}
+                </time>
+              </div>
+              } @else { — }
             </td>
             <td class="app-table-merged-column">
               <span class="app-cell-truncate" [title]="agent">{{ agent }}</span>

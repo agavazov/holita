@@ -5,6 +5,7 @@ import {
   computed,
   effect,
   inject,
+  resource,
   signal,
   viewChild,
 } from '@angular/core';
@@ -37,6 +38,8 @@ import { agentLabel, injectLeadAgents } from './lead-agent';
 import { injectLeadRecord, leadLabel } from './lead-record';
 import { leadStageOptions, leadStageSeverity } from './lead-stage';
 import { leadStrings } from './lead-strings';
+import { LeadTasks } from './lead-tasks';
+import { LeadTasksApi } from './lead-tasks-api';
 import { LeadsApi } from './leads-api';
 
 @Component({
@@ -52,6 +55,7 @@ import { LeadsApi } from './leads-api';
     RouterOutlet,
     LeadContacts,
     LeadActivity,
+    LeadTasks,
     Tag,
   ],
   templateUrl: './lead-detail-page.html',
@@ -60,6 +64,7 @@ import { LeadsApi } from './leads-api';
 })
 export class LeadDetailPage {
   private readonly api = inject(LeadsApi);
+  private readonly tasksApi = inject(LeadTasksApi);
   private readonly listHost = injectDrawerHost();
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
@@ -70,6 +75,16 @@ export class LeadDetailPage {
   protected readonly fragment = toSignal(this.route.fragment, { requireSync: true });
   private readonly id = computed(() => this.params().get('recordId'));
   readonly entry = injectLeadRecord(this.id);
+  private readonly loadedId = computed(() => this.entry.lead()?.id);
+  protected readonly tasks = resource({
+    params: () => {
+      const scope = this.tasksApi.scope();
+      const leadId = this.loadedId();
+      return scope && leadId ? { scope, leadId } : undefined;
+    },
+    loader: ({ params, abortSignal }) =>
+      this.tasksApi.list(params.scope, params.leadId, abortSignal),
+  });
   private readonly contacts = viewChild(LeadContacts);
   private readonly activity = viewChild(LeadActivity);
   private readonly stageSelect = viewChild<Select>('stagePicker');
@@ -137,6 +152,8 @@ export class LeadDetailPage {
       } else if (this.route.firstChild?.snapshot.data['noteEditor'] === true) {
         this.activity()?.refresh();
         this.listHost.saved(event);
+      } else if (this.route.firstChild?.snapshot.data['taskEditor'] === true) {
+        this.taskSaved(event.message);
       } else {
         this.entry.record.reload();
         this.listHost.saved(event);
@@ -268,6 +285,19 @@ export class LeadDetailPage {
 
   protected editNote(id: string): void {
     this.open(['notes', id, 'edit']);
+  }
+
+  protected addTask(): void {
+    this.open(['tasks', 'new']);
+  }
+
+  protected editTask(id: string): void {
+    this.open(['tasks', id, 'edit']);
+  }
+
+  protected taskSaved(message: string): void {
+    this.tasks.reload();
+    this.listHost.saved({ message, recordId: null });
   }
 
   private open(path: string[]): void {

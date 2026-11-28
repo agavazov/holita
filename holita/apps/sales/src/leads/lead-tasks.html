@@ -1,0 +1,50 @@
+<section class="app-card" aria-labelledby="lead-tasks">
+  <div class="app-card__header">
+    <h2 #heading id="lead-tasks" class="app-card__title" tabindex="-1">{{ text().tasks }}</h2>
+    <button pButton type="button" [outlined]="true" [disabled]="saving()" (click)="add.emit()">
+      {{ text().addTask }}
+    </button>
+  </div>
+  @if (saveFailed()) {
+  <p-message severity="error">{{ text().taskSaveFailed }}</p-message>
+  } @if (list().error()) {
+  <osnova-empty-state kind="error" [title]="text().tasksUnavailable">
+    <button emptyActions pButton type="button" severity="secondary" (click)="list().reload()">
+      {{ shared().retry }}
+    </button>
+  </osnova-empty-state>
+  } @else if (list().hasValue()) { @if (openTasks().length) {
+  <ol class="app-card__body" role="list">
+    @for (task of openTasks(); track task.id) {
+    <li class="app-card__body">
+      <div class="app-card__header">
+        <div>
+          <strong>{{ text().taskTypes[task.type] }}</strong>
+          <p>
+            <time [attr.datetime]="task.scheduledAt" [title]="format.utc(task.scheduledAt)">
+              {{ format.dateTime(task.scheduledAt) }}
+            </time>
+          </p>
+        </div>
+        <p-tag [severity]="severity(task.status)" [value]="text().taskStatuses[task.status]" />
+        <osnova-row-actions
+          [actions]="actions()"
+          [record]="record(task)"
+          (choose)="run($event.action, task)"
+        />
+      </div>
+      @if (task.note) {
+      <p class="task-note">{{ task.note }}</p>
+      }
+    </li>
+    }
+  </ol>
+  } @else {
+  <osnova-empty-state kind="empty" [title]="text().emptyTasks" />
+  } } @else {
+  <div class="app-card__body" role="status" [attr.aria-label]="shared().loading">
+    <p-skeleton width="10rem" />
+    <p-skeleton />
+  </div>
+  }
+</section>

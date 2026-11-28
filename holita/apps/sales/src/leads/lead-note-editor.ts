@@ -42,19 +42,11 @@ import { LeadDetailPage } from './lead-detail-page';
 import { LeadNotesApi } from './lead-notes-api';
 import { leadLabel } from './lead-record';
 import { leadStrings } from './lead-strings';
+import { leadTimeOffsets, leadUtcOffset } from './lead-time';
 
 const fields = ['occurredAt', 'text'] as const;
 type NoteField = (typeof fields)[number];
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
-const offsetFormat = new Intl.DateTimeFormat('en-GB', {
-  timeZone: displayTimeZone,
-  timeZoneName: 'longOffset',
-});
-
-function utcOffset(instant: number): string {
-  const zone = offsetFormat.formatToParts(instant).find(({ type }) => type === 'timeZoneName');
-  return `UTC${zone?.value.slice(3) ?? ''}`;
-}
 
 @Component({
   selector: 'holita-lead-note-editor',
@@ -152,19 +144,14 @@ export class LeadNoteEditor {
   private readonly instants = computed(() =>
     dateTimeInputInstants(this.occurredAt().trim(), displayTimeZone),
   );
-  protected readonly offsets = computed(() => {
-    const instants = this.instants();
-    return instants.length > 1
-      ? instants.map((instant) => ({ instant, label: utcOffset(instant) }))
-      : [];
-  });
+  protected readonly offsets = computed(() => leadTimeOffsets(this.instants()));
 
   constructor() {
     effect(() => {
       const iso = this.initialInstant();
       this.form.reset({
         occurredAt: formatDateTimeInput(iso, displayTimeZone).replace(/\.000$/u, ''),
-        offset: iso ? utcOffset(Date.parse(iso)) : '',
+        offset: iso ? leadUtcOffset(Date.parse(iso)) : '',
         text: this.record.hasValue() ? (this.record.value()?.text ?? '') : '',
       });
       this.errors.set({});

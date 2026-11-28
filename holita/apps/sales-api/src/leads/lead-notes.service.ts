@@ -1,10 +1,14 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { isISO8601 } from 'class-validator';
-import { GraphQLError } from 'graphql';
+import { Injectable } from '@nestjs/common';
 import type { LeadNote, LeadNoteActivity, LeadNoteInput } from '../generated/graphql/types.js';
-import { Prisma, type LeadNote as StoredNote } from '../generated/prisma/client.js';
+import type { LeadNote as StoredNote } from '../generated/prisma/client.js';
 import type { SalesScope } from '../scope.js';
 import { CoreSalesAgents } from './core-sales-agents.js';
+import {
+  activityId,
+  activityInstant,
+  activityWriteError,
+  salesFieldError,
+} from './lead-activity-input.js';
 import { LeadNotesRepository } from './lead-notes.repository.js';
 
 function present({
@@ -27,44 +31,27 @@ function present({
   };
 }
 
-function recordId(id: string): string {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(id)) {
-    throw new BadRequestException('Lead and note IDs must be UUIDs');
-  }
-  return id.toLowerCase();
-}
-
-function fieldError(path: keyof LeadNoteInput, code: string, message: string) {
-  return new GraphQLError(message, {
-    extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path, code, message }] },
-  });
-}
-
 function fields(input: LeadNoteInput) {
   const text = input.text.trim();
   if (!text) {
-    throw fieldError('text', 'REQUIRED', 'Enter a note');
+    throw salesFieldError('text', 'REQUIRED', 'Enter a note');
   }
   if (text.includes('\u0000')) {
-    throw fieldError('text', 'INVALID_VALUE', 'Text must not contain a null character');
+    throw salesFieldError('text', 'INVALID_VALUE', 'Text must not contain a null character');
   }
-  const value = input.occurredAt.trim();
-  const occurredAt = new Date(value);
-  if (
-    !/T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/u.test(value) ||
-    !isISO8601(value, { strict: true, strictSeparator: true }) ||
-    Number.isNaN(occurredAt.getTime())
-  ) {
-    throw fieldError('occurredAt', 'INVALID_VALUE', 'Enter an ISO date and time with a time zone');
+  const occurredAt = activityInstant(input.occurredAt);
+  if (!occurredAt) {
+    throw salesFieldError(
+      'occurredAt',
+      'INVALID_VALUE',
+      'Enter an ISO date and time with a time zone',
+    );
   }
   return { text, occurredAt };
 }
 
-function writeError(error: unknown, message: string): never {
-  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-    throw new NotFoundException(message);
-  }
-  throw error;
+function recordId(id: string): string {
+  return activityId(id, 'note');
 }
 
 const authorLookupLimit = 101;
@@ -104,7 +91,7 @@ export class LeadNotesService {
     try {
       return present(await this.repository.create(scope, recordId(leadId), fields(input)));
     } catch (error: unknown) {
-      return writeError(error, 'Lead not found');
+      return activityWriteError(error, 'Lead not found');
     }
   }
 
@@ -119,7 +106,7 @@ export class LeadNotesService {
         await this.repository.update(scope, recordId(leadId), recordId(id), fields(input)),
       );
     } catch (error: unknown) {
-      return writeError(error, 'Lead note not found');
+      return activityWriteError(error, 'Lead note not found');
     }
   }
 
@@ -128,7 +115,7 @@ export class LeadNotesService {
       await this.repository.delete(scope, recordId(leadId), recordId(id));
       return true;
     } catch (error: unknown) {
-      return writeError(error, 'Lead note not found');
+      return activityWriteError(error, 'Lead note not found');
     }
   }
 }

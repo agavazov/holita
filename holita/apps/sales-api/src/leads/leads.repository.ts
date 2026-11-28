@@ -6,8 +6,19 @@ import type { QueryLeadsArgs } from '../generated/graphql/types.js';
 import { Prisma, type Lead, type LeadStage } from '../generated/prisma/client.js';
 import type { SalesScope } from '../scope.js';
 import { closedLeadStages } from './lead-stage.js';
+import { activeTaskStatuses, taskScheduleOrder } from './lead-task.js';
 
 type LeadFields = Pick<Lead, 'displayName' | 'websiteUrl' | 'sourceName'>;
+
+function withNextTask(tenantId: string) {
+  return {
+    tasks: {
+      where: { tenantId, status: { in: activeTaskStatuses } },
+      orderBy: taskScheduleOrder,
+      take: 1,
+    },
+  } satisfies Prisma.LeadInclude;
+}
 
 @Injectable()
 export class LeadsRepository {
@@ -63,7 +74,13 @@ export class LeadsRepository {
     const client = this.database.client;
     const [items, total] = await client.$transaction(
       [
-        client.lead.findMany({ where, skip: offset, take: limit, orderBy: [order, { id: 'asc' }] }),
+        client.lead.findMany({
+          where,
+          skip: offset,
+          take: limit,
+          orderBy: [order, { id: 'asc' }],
+          include: withNextTask(tenantId),
+        }),
         client.lead.count({ where }),
       ],
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
@@ -72,7 +89,10 @@ export class LeadsRepository {
   }
 
   find({ tenantId }: SalesScope, id: string) {
-    return this.database.client.lead.findUnique({ where: { tenantId_id: { tenantId, id } } });
+    return this.database.client.lead.findUnique({
+      where: { tenantId_id: { tenantId, id } },
+      include: withNextTask(tenantId),
+    });
   }
 
   async assignedAgentIds({ tenantId }: SalesScope, ids?: string[]): Promise<string[]> {
@@ -99,6 +119,7 @@ export class LeadsRepository {
   create({ tenantId, userId }: SalesScope, fields: LeadFields) {
     return this.database.client.lead.create({
       data: { tenantId, ...fields, createdByUserId: userId, assignedAgentUserId: userId },
+      include: withNextTask(tenantId),
     });
   }
 
@@ -110,6 +131,7 @@ export class LeadsRepository {
     return this.database.client.lead.update({
       where: { tenantId_id: { tenantId, id } },
       data: fields,
+      include: withNextTask(tenantId),
     });
   }
 
@@ -120,10 +142,13 @@ export class LeadsRepository {
     } else if (!closedLeadStages.includes(stage)) {
       data.wonAt = null;
     }
-    const [updated] = await this.database.client.lead.updateManyAndReturn({
-      where: { tenantId: scope.tenantId, id, stage: { not: stage } },
-      data,
+    const { tenantId } = scope;
+    return this.database.client.$transaction(async (client) => {
+      await client.lead.updateMany({ where: { tenantId, id, stage: { not: stage } }, data });
+      return client.lead.findUnique({
+        where: { tenantId_id: { tenantId, id } },
+        include: withNextTask(tenantId),
+      });
     });
-    return updated ?? this.find(scope, id);
   }
 }

@@ -1094,6 +1094,62 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     });
 
     const referralId = new URL(sales.url()).pathname.split('/').at(-1);
+    const foreignTaskId = randomUUID();
+    const taskInput = {
+      scheduledAt: '2026-12-01T09:00:00Z',
+      type: 'RESEARCH',
+      note: 'TEST Sales task scope',
+    };
+    await salesDb.client.query(
+      `INSERT INTO "leadTask" ("id", "tenantId", "leadId", "scheduledAt", "type", "updatedAt")
+       VALUES ($1, $2, $3, $4, 'research', CURRENT_TIMESTAMP)`,
+      [foreignTaskId, merchantSession.tenantId, foreignLeadId, taskInput.scheduledAt],
+    );
+    const createTask = `mutation CreateScopedTask($lead: ID!, $input: LeadTaskInput!) {
+      createLeadTask(leadId: $lead, input: $input) { id status assignedAgentUserId }
+    }`;
+    const findTasks = `query ScopedTasks($lead: ID!, $id: ID!) {
+      leadTasks(leadId: $lead) { id }
+      leadTask(leadId: $lead, id: $id) { id }
+    }`;
+    const updateTask = `mutation UpdateScopedTask($lead: ID!, $id: ID!, $input: LeadTaskInput!) {
+      updateLeadTask(leadId: $lead, id: $id, input: $input) { id }
+    }`;
+    const cancelTask = `mutation CancelScopedTask($lead: ID!, $id: ID!) {
+      updateLeadTaskStatus(leadId: $lead, id: $id, status: CANCELLED) { id }
+    }`;
+    const taskId = randomUUID();
+    await salesDb.client.query(
+      `INSERT INTO "leadTask" ("id", "tenantId", "leadId", "scheduledAt", "type", "updatedAt")
+       VALUES ($1, $2, $3, $4, 'research', CURRENT_TIMESTAMP)`,
+      [taskId, salesSession.tenantId, leadId, taskInput.scheduledAt],
+    );
+    const missingTask = { errors: [{ extensions: { code: 'NOT_FOUND' } }] };
+    expect(await salesGraphql(createTask, { lead: foreignLeadId, input: taskInput })).toMatchObject(
+      missingTask,
+    );
+    for (const target of [
+      { lead: foreignLeadId, id: foreignTaskId },
+      { lead: referralId, id: taskId },
+    ]) {
+      expect(await salesGraphql(findTasks, target)).toEqual({
+        data: { leadTasks: [], leadTask: null },
+      });
+      expect(await salesGraphql(updateTask, { ...target, input: taskInput })).toMatchObject(
+        missingTask,
+      );
+      expect(await salesGraphql(cancelTask, target)).toMatchObject(missingTask);
+    }
+    expect(await salesGraphql(createTask, { lead: referralId, input: taskInput })).toEqual({
+      data: {
+        createLeadTask: {
+          id: expect.any(String),
+          status: 'PENDING',
+          assignedAgentUserId: salesSession.userId,
+        },
+      },
+    });
+
     const foreignNoteId = randomUUID();
     const noteInput = { occurredAt: '2026-11-24T13:30:00Z', text: 'Sales smoke note' };
     await salesDb.client.query(

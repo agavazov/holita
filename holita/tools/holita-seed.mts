@@ -206,12 +206,31 @@ async function seedLeads(core: URL): Promise<void> {
         second.id,
       ],
     );
+    const tasks = await client.query(
+      `INSERT INTO "leadTask" ("id", "tenantId", "leadId", "scheduledAt", "type", "status", "note", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, '2026-12-01T09:00:00Z', 'outreach', 'pending', $4, '2026-11-25T09:00:00Z', '2026-11-25T09:00:00Z'),
+              ($5, $2, $6, '2026-12-02T13:00:00Z', 'prepareDemoSite', 'inProgress', $7, '2026-11-25T10:00:00Z', '2026-11-26T08:00:00Z'),
+              ($8, $2, $6, '2026-11-24T13:00:00Z', 'research', 'completed', $9, '2026-11-23T10:00:00Z', '2026-11-24T13:30:00Z')
+       ON CONFLICT ("id") DO NOTHING`,
+      [
+        fixtureId('b5', 1),
+        creator.tenantId,
+        firstLead,
+        'TEST Уточнете кога е удобно да се свържем.',
+        fixtureId('b5', 2),
+        secondLead,
+        'TEST Подгответе демо каталог с чаши и купи.',
+        fixtureId('b5', 3),
+        'TEST Прегледахме продуктовия каталог на ателието.',
+      ],
+    );
     await client.query('COMMIT');
     console.log(
       `Holita Sales prospects inserted: ${String((rowCount ?? 0) + assignmentsInserted)}`,
     );
     console.log(`Holita Sales contacts inserted: ${String(contacts.rowCount)}`);
     console.log(`Holita Sales notes inserted: ${String(notes.rowCount)}`);
+    console.log(`Holita Sales tasks inserted: ${String(tasks.rowCount)}`);
   } catch (error: unknown) {
     await client.query('ROLLBACK');
     throw error;
