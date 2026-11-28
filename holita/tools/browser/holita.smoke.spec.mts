@@ -604,6 +604,8 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     cleanup.push(shopApp.close);
     const coreEnv = {
       ...process.env,
+      HOLITA_SALES_SECOND_EMAIL: 'second-sales@smoke.holita.test',
+      HOLITA_SALES_SECOND_PASSWORD: randomUUID(),
       CORE_DATABASE_URL: coreDb.url,
       CORE_TOKEN_PREFIX: 'holita',
       CORE_SEED_FILE: join(root, 'holita/config/core-seed.json'),
@@ -840,6 +842,9 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
       'mutation ScopedLeadUpdate($id: ID!, $input: LeadInput!) { updateLead(id: $id, input: $input) { id } }';
     const updateStage =
       'mutation ScopedLeadStage($id: ID!) { updateLeadStage(id: $id, stage: WON) { id } }';
+    const updateAssignment = `mutation ScopedLeadAssignment($id: ID!, $agent: ID) {
+      updateLeadAssignment(id: $id, assignedAgentUserId: $agent) { createdByUserId assignedAgentUserId }
+    }`;
     for (const id of [foreignLeadId, randomUUID()]) {
       expect(
         await salesGraphql(updateLead, { id, input: { displayName: 'Attempted change' } }),
@@ -848,6 +853,12 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         errors: [{ message: 'Lead not found', extensions: { code: 'NOT_FOUND' } }],
       });
       expect(await salesGraphql(updateStage, { id })).toMatchObject({
+        data: null,
+        errors: [{ message: 'Lead not found', extensions: { code: 'NOT_FOUND' } }],
+      });
+      expect(
+        await salesGraphql(updateAssignment, { id, agent: salesSession.userId }),
+      ).toMatchObject({
         data: null,
         errors: [{ message: 'Lead not found', extensions: { code: 'NOT_FOUND' } }],
       });
@@ -938,9 +949,126 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
           displayName: updatedName,
           websiteUrl: website,
           createdByUserId: salesSession.userId,
+          assignedAgentUserId: salesSession.userId,
         },
       },
     });
+    const {
+      rows: [secondAgent],
+    } = await coreDb.client.query<{ id: string; name: string }>(
+      'SELECT "id", "name" FROM "user" WHERE "email" = $1',
+      [coreEnv.HOLITA_SALES_SECOND_EMAIL],
+    );
+    if (!secondAgent) {
+      throw new Error('The second Sales seed account is missing');
+    }
+    const foreignAgent = randomUUID();
+    await coreDb.client.query(
+      `INSERT INTO "user" ("id", "tenantId", "name", "email", "role", "passwordHash", "updatedAt")
+       SELECT $1, $2, "name", 'foreign-sales@smoke.holita.test', 'sales', "passwordHash", CURRENT_TIMESTAMP
+       FROM "user" WHERE "id" = $3`,
+      [foreignAgent, merchantSession.tenantId, secondAgent.id],
+    );
+    const agents = `query AgentNames($search: String, $ids: [ID!]) {
+      salesAgents(search: $search, ids: $ids) { id name active eligible }
+    }`;
+    expect(await salesGraphql(agents, { search: secondAgent.name })).toEqual({
+      data: { salesAgents: [{ ...secondAgent, active: true, eligible: true }] },
+    });
+    await salesDb.client.query(
+      'UPDATE "lead" SET "assignedAgentUserId" = $1 WHERE "tenantId" = $2 AND "id" = $3',
+      [staffSession.userId, merchantSession.tenantId, foreignLeadId],
+    );
+    expect(
+      await salesGraphql(agents, {
+        ids: [staffSession.userId, merchantSession.userId, foreignAgent, secondAgent.id],
+      }),
+    ).toEqual({
+      data: { salesAgents: [{ ...secondAgent, active: true, eligible: true }] },
+    });
+    expect(await salesGraphql('{ users { id } }')).toMatchObject({
+      errors: [{ extensions: { code: 'FORBIDDEN' } }],
+    });
+    const checkAssignment = async (agent: string | null) => {
+      expect(await salesGraphql(updateAssignment, { id: leadId, agent })).toEqual({
+        data: {
+          updateLeadAssignment: {
+            createdByUserId: salesSession.userId,
+            assignedAgentUserId: agent,
+          },
+        },
+      });
+    };
+    const assignedLeads = `query AssignedLeads($search: String!, $mode: LeadAssignmentFilter, $agent: ID) {
+      leads(search: $search, stage: NEW, assignment: $mode, assignedAgentUserId: $agent) { items { id } }
+    }`;
+    await checkAssignment(secondAgent.id);
+    for (const [filters, items] of [
+      [{ mode: 'MINE' }, []],
+      [{ agent: secondAgent.id }, [{ id: leadId }]],
+    ] as const) {
+      expect(await salesGraphql(assignedLeads, { ...filters, search: website })).toEqual({
+        data: { leads: { items } },
+      });
+    }
+    const filterAgents = '{ leadAssignmentAgents { id name active eligible } }';
+    await coreDb.client.query('UPDATE "user" SET "role" = \'operator\' WHERE "id" = $1', [
+      secondAgent.id,
+    ]);
+    expect(await salesGraphql(agents, { ids: [secondAgent.id] })).toEqual({
+      data: { salesAgents: [{ ...secondAgent, active: true, eligible: false }] },
+    });
+    await coreDb.client.query(
+      'UPDATE "user" SET "active" = false, "role" = \'sales\' WHERE "id" = $1',
+      [secondAgent.id],
+    );
+    expect(await salesGraphql(agents, { search: secondAgent.name })).toEqual({
+      data: { salesAgents: [] },
+    });
+    expect(await salesGraphql(agents, { ids: [secondAgent.id] })).toEqual({
+      data: { salesAgents: [{ ...secondAgent, active: false, eligible: false }] },
+    });
+    expect(await salesGraphql(filterAgents)).toMatchObject({
+      data: {
+        leadAssignmentAgents: expect.arrayContaining([
+          { ...secondAgent, active: false, eligible: false },
+        ]),
+      },
+    });
+    expect(await salesGraphql(assignedLeads, { agent: secondAgent.id, search: website })).toEqual({
+      data: { leads: { items: [{ id: leadId }] } },
+    });
+    await checkAssignment(null);
+    expect(await salesGraphql(agents, { ids: [secondAgent.id] })).toEqual({
+      data: { salesAgents: [] },
+    });
+    expect(await salesGraphql(filterAgents)).toMatchObject({
+      data: {
+        leadAssignmentAgents: expect.not.arrayContaining([
+          expect.objectContaining({ id: secondAgent.id }),
+        ]),
+      },
+    });
+    expect(await salesGraphql(assignedLeads, { mode: 'UNASSIGNED', search: website })).toEqual({
+      data: { leads: { items: [{ id: leadId }] } },
+    });
+    for (const agent of [
+      secondAgent.id,
+      staffSession.userId,
+      merchantSession.userId,
+      foreignAgent,
+    ]) {
+      expect(await salesGraphql(updateAssignment, { id: leadId, agent })).toMatchObject({
+        errors: [
+          {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              fieldErrors: [{ path: 'assignedAgentUserId', code: 'INELIGIBLE_AGENT' }],
+            },
+          },
+        ],
+      });
+    }
     await resumedSales.getByRole('button', { name: /^Language:/u }).click();
     await resumedSales.getByText('Български', { exact: true }).click();
     await resumedSales.waitForURL(bulgarianUrl.href);

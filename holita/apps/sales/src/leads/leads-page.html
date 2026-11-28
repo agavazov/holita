@@ -53,6 +53,23 @@
           [ngModel]="url.state().filter.stage ?? 'ALL'"
           (ngModelChange)="url.patchFilter({ stage: $event })"
         />
+        <p-select
+          filterQuickActions
+          inputId="lead-agent-filter"
+          [style.max-inline-size.%]="100"
+          [ariaLabel]="text().assignedAgent"
+          [options]="agentOptions()"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          [filter]="true"
+          [ariaFilterLabel]="text().searchAgents"
+          [emptyFilterMessage]="shared().table.noResultsTitle"
+          [loading]="team.isLoading()"
+          [ngModel]="agentFilter()"
+          (ngModelChange)="url.patchFilter({ agent: $event })"
+          (onShow)="team.reload()"
+        />
         <osnova-list-sort-menu
           filterActions
           [fields]="sortFields()"
@@ -60,6 +77,9 @@
           (sortChange)="changeSort($event)"
         />
       </osnova-filter-builder>
+      @if (team.error()) {
+      <p>{{ text().agentsUnavailable }}</p>
+      }
       <p-table
         class="app-responsive-table app-table-fixed"
         [value]="page()?.items ?? []"
@@ -91,6 +111,7 @@
               {{ text().leadDisplayName }} <p-sort-icon field="DISPLAY_NAME" />
             </th>
             <th scope="col">{{ text().leadStage }}</th>
+            <th scope="col" class="app-table-merged-column">{{ text().assignedAgent }}</th>
             <th scope="col" class="app-table-merged-column">{{ text().leadWebsiteUrl }}</th>
             <th scope="col" class="app-table-merged-column">{{ text().leadSourceName }}</th>
             <th scope="col" class="app-table-merged-column" pSortableColumn="CREATED_AT">
@@ -100,7 +121,7 @@
         </ng-template>
         <ng-template #body let-lead>
           @let label = leadLabel(lead); @let secondary = lead.sourceName ?? (lead.displayName ?
-          lead.websiteUrl : null);
+          lead.websiteUrl : null); @let agent = assigneeLabel(lead.assignedAgentUserId);
           <tr>
             <td class="app-col-identity">
               <div class="app-cell-identity">
@@ -115,6 +136,7 @@
                 @if (secondary) {
                 <span class="app-table-mobile-meta" [title]="secondary">{{ secondary }}</span>
                 }
+                <span class="app-table-mobile-meta" [title]="agent">{{ agent }}</span>
                 <time
                   class="app-table-mobile-meta"
                   [attr.datetime]="lead.createdAt"
@@ -127,6 +149,9 @@
               <div class="app-cell-status app-table-tag-wrap">
                 <p-tag [severity]="stageSeverity(lead.stage)" [value]="stageLabel(lead.stage)" />
               </div>
+            </td>
+            <td class="app-table-merged-column">
+              <span class="app-cell-truncate" [title]="agent">{{ agent }}</span>
             </td>
             <td class="app-table-merged-column">
               <span class="app-cell-truncate" [title]="lead.websiteUrl ?? ''"

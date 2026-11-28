@@ -7,8 +7,12 @@ type Query {
     sort: LeadSort
     stage: LeadStage
     status: LeadStatusFilter = OPEN
+    assignment: LeadAssignmentFilter
+    assignedAgentUserId: ID
   ): LeadPage!
   lead(id: ID!): Lead
+  salesAgents(search: String, ids: [ID!]): [SalesAgent!]!
+  leadAssignmentAgents: [SalesAgent!]!
   leadContacts(leadId: ID!): [LeadContact!]!
   leadContact(leadId: ID!, id: ID!): LeadContact
   salesContacts(
@@ -23,6 +27,7 @@ type Mutation {
   createLead(input: LeadInput!): Lead!
   updateLead(id: ID!, input: LeadInput!): Lead!
   updateLeadStage(id: ID!, stage: LeadStage!): Lead!
+  updateLeadAssignment(id: ID!, assignedAgentUserId: ID): Lead!
   createLeadContact(leadId: ID!, input: LeadContactInput!): LeadContact!
   updateLeadContact(leadId: ID!, id: ID!, input: LeadContactInput!): LeadContact!
   deleteLeadContact(leadId: ID!, id: ID!): Boolean!
@@ -42,8 +47,16 @@ type Lead {
   stageChangedAt: String!
   wonAt: String
   createdByUserId: ID!
+  assignedAgentUserId: ID
   createdAt: String!
   updatedAt: String!
+}
+
+type SalesAgent {
+  id: ID!
+  name: String!
+  active: Boolean!
+  eligible: Boolean!
 }
 
 type LeadPage {
@@ -68,6 +81,11 @@ enum LeadStatusFilter {
   OPEN
   CLOSED
   ALL
+}
+
+enum LeadAssignmentFilter {
+  MINE
+  UNASSIGNED
 }
 
 input LeadInput {

@@ -3,10 +3,13 @@ import { ApolloClient } from '@apollo/client/core';
 import { OperatorConfig, graphqlOptions } from '@osnova/ui/app';
 import { HttpLink } from 'apollo-angular/http';
 import {
+  SalesAgentsDocument,
   SalesCreateLeadDocument,
+  SalesLeadAssignmentAgentsDocument,
   SalesLeadDocument,
   SalesLeadsDocument,
   SalesUpdateLeadDocument,
+  SalesUpdateLeadAssignmentDocument,
   SalesUpdateLeadStageDocument,
   type LeadInput,
   type LeadStage,
@@ -60,6 +63,38 @@ export class LeadsApi {
     }
   }
 
+  async agents(
+    scope: SalesWorkspaceScope,
+    selection: string[] | 'eligible' | 'assigned',
+    signal: AbortSignal,
+  ) {
+    const client = this.client(scope);
+    const stop = () => {
+      client.stop();
+    };
+    signal.addEventListener('abort', stop, { once: true });
+    try {
+      const options = {
+        fetchPolicy: 'no-cache',
+        context: { language: scope.language },
+      } as const;
+      const { data } = await (selection === 'assigned'
+        ? client.query({ ...options, query: SalesLeadAssignmentAgentsDocument })
+        : client.query({
+            ...options,
+            query: SalesAgentsDocument,
+            variables: { ids: Array.isArray(selection) ? selection : undefined },
+          }));
+      if (!data) {
+        throw new Error('Missing Sales agents result');
+      }
+      return data.salesAgents;
+    } finally {
+      signal.removeEventListener('abort', stop);
+      client.stop();
+    }
+  }
+
   async save(scope: SalesWorkspaceScope, input: LeadInput, id: string | null): Promise<string> {
     const client = this.client(scope);
     const context = { language: scope.language };
@@ -101,6 +136,27 @@ export class LeadsApi {
         throw new Error('Missing saved lead stage');
       }
       return data.updateLeadStage;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async updateAssignment(
+    scope: SalesWorkspaceScope,
+    id: string,
+    assignedAgentUserId: string | null,
+  ) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: SalesUpdateLeadAssignmentDocument,
+        variables: { id, assignedAgentUserId },
+        context: { language: scope.language },
+      });
+      if (!data) {
+        throw new Error('Missing saved lead assignment');
+      }
+      return data.updateLeadAssignment;
     } finally {
       client.stop();
     }

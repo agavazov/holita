@@ -2,9 +2,11 @@ import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type {
   MutationCreateLeadArgs,
   MutationUpdateLeadArgs,
+  MutationUpdateLeadAssignmentArgs,
   MutationUpdateLeadStageArgs,
   QueryLeadArgs,
   QueryLeadsArgs,
+  QuerySalesAgentsArgs,
 } from '../generated/graphql/types.js';
 import { requireSalesScope, type RequestContext } from '../scope.js';
 import { LeadsService } from './leads.service.js';
@@ -21,6 +23,16 @@ export class LeadsResolver {
   @Query()
   async lead(@Context() context: RequestContext, @Args() { id }: QueryLeadArgs) {
     return this.leadsService.find(await requireSalesScope(context), id);
+  }
+
+  @Query()
+  async salesAgents(@Context() context: RequestContext, @Args() args: QuerySalesAgentsArgs) {
+    return this.leadsService.salesAgents(await requireSalesScope(context), args);
+  }
+
+  @Query()
+  async leadAssignmentAgents(@Context() context: RequestContext) {
+    return this.leadsService.leadAssignmentAgents(await requireSalesScope(context));
   }
 
   @Mutation()
@@ -42,5 +54,17 @@ export class LeadsResolver {
     @Args() { id, stage }: MutationUpdateLeadStageArgs,
   ) {
     return this.leadsService.updateStage(await requireSalesScope(context), id, stage);
+  }
+
+  @Mutation()
+  async updateLeadAssignment(
+    @Context() context: RequestContext,
+    @Args() { id, assignedAgentUserId }: MutationUpdateLeadAssignmentArgs,
+  ) {
+    return this.leadsService.updateAssignment(
+      await requireSalesScope(context),
+      id,
+      assignedAgentUserId ?? null,
+    );
   }
 }

@@ -1,6 +1,6 @@
 # 137 Schedule and complete lead tasks
 
-**Status:** Ready after [135](135-holita-sales-agent-assignment.md), [136](136-holita-sales-notes.md). **Product:** Holita.
+**Status:** Ready after [136](136-holita-sales-notes.md). **Product:** Holita.
 
 ## Background
 

@@ -63,7 +63,7 @@ if (
   url.hostname !== '127.0.0.1' ||
   url.pathname !== '/holita_core' ||
   url.username !== 'holita_core' ||
-  url.search ||
+  (url.search && url.search !== '?schema=public') ||
   url.hash
 ) {
   throw new Error('Seed only the dedicated local Holita Core database');
@@ -86,31 +86,34 @@ async function seedLeads(core: URL): Promise<void> {
     sales.hostname !== '127.0.0.1' ||
     sales.pathname !== '/holita_sales' ||
     sales.username !== 'holita_sales' ||
-    sales.search ||
+    (sales.search && sales.search !== '?schema=public') ||
     sales.hash
   ) {
     throw new Error('Seed only the dedicated local Holita Sales database');
   }
   const email = process.env.HOLITA_SALES_EMAIL?.trim().toLowerCase();
-  if (!email) {
-    throw new Error('Configure the Holita Sales seed account');
+  const secondEmail = process.env.HOLITA_SALES_SECOND_EMAIL?.trim().toLowerCase();
+  if (!email || !secondEmail || email === secondEmail) {
+    throw new Error('Configure two distinct Holita Sales seed accounts');
   }
   const coreClient = new pg.Client({ connectionString: core.toString() });
   await coreClient.connect();
-  let creator: { id: string; tenantId: string } | undefined;
+  let accounts: { id: string; tenantId: string; email: string; active: boolean }[];
   try {
-    const account = await coreClient.query<{ id: string; tenantId: string }>(
-      `SELECT u."id", u."tenantId"
+    const { rows } = await coreClient.query<(typeof accounts)[number]>(
+      `SELECT u."id", u."tenantId", u."email", u."active"
        FROM "user" u JOIN "tenant" t ON t."id" = u."tenantId"
-       WHERE u."email" = $1 AND u."role" = 'sales' AND t."kind" = 'platform'`,
-      [email],
+       WHERE u."email" = ANY($1::text[]) AND u."role" = 'sales' AND t."kind" = 'platform'`,
+      [[email, secondEmail]],
     );
-    creator = account.rows[0];
+    accounts = rows;
   } finally {
     await coreClient.end();
   }
-  if (!creator) {
-    throw new Error('The Core platform Sales seed account is missing');
+  const creator = accounts.find((account) => account.email === email);
+  const second = accounts.find((account) => account.email === secondEmail);
+  if (!creator || !second || creator.tenantId !== second.tenantId) {
+    throw new Error('Both Core Sales seed accounts must belong to the same platform tenant');
   }
 
   const client = new pg.Client({ connectionString: sales.toString() });
@@ -147,6 +150,22 @@ async function seedLeads(core: URL): Promise<void> {
         'Студио „Северно дърво“',
       ],
     );
+    let assignmentsInserted = 0;
+    for (const [id, name, assignee] of [
+      [7, 'Ателие „Речен камък“', creator],
+      [8, 'Студио „Тиха форма“', second],
+      [9, 'Работилница „Кехлибар“', null],
+    ] as const) {
+      if (assignee && !assignee.active) {
+        continue;
+      }
+      const assignment = await client.query(
+        `INSERT INTO "lead" ("id", "tenantId", "displayName", "createdByUserId", "assignedAgentUserId", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP) ON CONFLICT ("id") DO NOTHING`,
+        [fixtureId('b2', id), creator.tenantId, name, creator.id, assignee?.id ?? null],
+      );
+      assignmentsInserted += assignment.rowCount ?? 0;
+    }
     const contacts = await client.query(
       `INSERT INTO "leadContact" ("id", "tenantId", "leadId", "name", "phone", "email",
                                   "role", "isPrimary", "updatedAt")
@@ -172,7 +191,9 @@ async function seedLeads(core: URL): Promise<void> {
       ],
     );
     await client.query('COMMIT');
-    console.log(`Holita Sales prospects inserted: ${String(rowCount)}`);
+    console.log(
+      `Holita Sales prospects inserted: ${String((rowCount ?? 0) + assignmentsInserted)}`,
+    );
     console.log(`Holita Sales contacts inserted: ${String(contacts.rowCount)}`);
   } catch (error: unknown) {
     await client.query('ROLLBACK');
@@ -193,7 +214,7 @@ async function seedCatalogue(): Promise<void> {
     commerce.hostname !== '127.0.0.1' ||
     commerce.pathname !== '/holita_commerce' ||
     commerce.username !== 'holita_commerce' ||
-    commerce.search ||
+    (commerce.search && commerce.search !== '?schema=public') ||
     commerce.hash
   ) {
     throw new Error('Seed only the dedicated local Holita Commerce database');

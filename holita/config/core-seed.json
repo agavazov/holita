@@ -39,6 +39,14 @@
       "emailEnv": "HOLITA_MERCHANT_EMAIL",
       "passwordEnv": "HOLITA_MERCHANT_PASSWORD",
       "role": "ADMINISTRATOR"
+    },
+    {
+      "id": "22000000-0000-4000-8000-000000000004",
+      "tenantId": "02000000-0000-4000-8000-000000000001",
+      "name": "Елена Маринова",
+      "emailEnv": "HOLITA_SALES_SECOND_EMAIL",
+      "passwordEnv": "HOLITA_SALES_SECOND_PASSWORD",
+      "role": "SALES"
     }
   ]
 }

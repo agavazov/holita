@@ -95,6 +95,8 @@ function initialize(): void {
       `HOLITA_STAFF_PASSWORD=${secret()}`,
       'HOLITA_SALES_EMAIL=sales@holita.test',
       `HOLITA_SALES_PASSWORD=${secret()}`,
+      'HOLITA_SALES_SECOND_EMAIL=sales.second@holita.test',
+      `HOLITA_SALES_SECOND_PASSWORD=${secret()}`,
       'HOLITA_MERCHANT_EMAIL=admin@demo.holita.test',
       `HOLITA_MERCHANT_PASSWORD=${secret()}`,
       `HOLITA_DEMO_SHOPPER_PASSWORD=${secret()}`,

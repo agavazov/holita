@@ -36,18 +36,22 @@ import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { compactPhoneSearch } from '../contacts/contact-search';
 import type {
+  LeadAssignmentFilter,
   LeadSortField,
   LeadStage,
   LeadStatusFilter,
   SalesLeadsQuery,
 } from '../generated/leads-operations';
+import { agentLabel, injectLeadAgents } from './lead-agent';
 import { leadLabel } from './lead-record';
 import { leadStageOptions, leadStages, leadStageSeverity } from './lead-stage';
 import { leadStrings } from './lead-strings';
 import { LeadsApi } from './leads-api';
 
-type LeadFilters = { stage: LeadStage | 'ALL'; status: LeadStatusFilter };
+type LeadFilters = { stage: LeadStage | 'ALL'; status: LeadStatusFilter; agent: string };
 const statuses = ['OPEN', 'CLOSED', 'ALL'] as const satisfies readonly LeadStatusFilter[];
+const assignments = ['mine', 'all', 'unassigned'] as const;
+const assignmentIds = codecs.idList(1);
 const definition: ListDefinition<LeadFilters, LeadSortField> = {
   pageSizes: [10, 20, 50, 100],
   defaultPageSize: 20,
@@ -59,6 +63,14 @@ const definition: ListDefinition<LeadFilters, LeadSortField> = {
   filters: {
     stage: codecs.choice([...leadStages, 'ALL'], 'ALL'),
     status: codecs.choice(statuses, 'OPEN'),
+    agent: {
+      read: (values) =>
+        assignments.find((value) => value === values[0]) ??
+        assignmentIds.read(values)?.[0] ??
+        'all',
+      write: (value) => (value === 'all' ? null : (value ?? null)),
+      same: (a, b) => (a ?? 'all') === (b ?? 'all'),
+    },
   },
 };
 
@@ -107,6 +119,9 @@ export class LeadsPage {
   protected readonly statusOptions = computed(() =>
     statuses.map((status) => ({ value: status, label: this.text().statuses[status] })),
   );
+  protected readonly team = injectLeadAgents('assigned');
+  protected readonly agentFilter = computed(() => this.url.state().filter.agent ?? 'all');
+  private readonly specificAgent = computed(() => assignmentIds.read([this.agentFilter()])?.[0]);
   protected readonly format = injectDisplayFormat();
   protected readonly headerActions = computed<readonly PageHeaderAction[]>(() => [
     { id: 'new', label: this.text().newLead, primary: true },
@@ -120,6 +135,12 @@ export class LeadsPage {
       className: 'app-col-identity',
     },
     { id: 'stage', label: this.text().leadStage, width: '10rem', kind: 'status' },
+    {
+      id: 'agent',
+      label: this.text().assignedAgent,
+      width: '11rem',
+      className: 'app-table-merged-column',
+    },
     {
       id: 'website',
       label: this.text().leadWebsiteUrl,
@@ -152,6 +173,8 @@ export class LeadsPage {
     params: () => {
       const scope = this.api.scope();
       const { page, pageSize, search, sort, filter } = this.url.state();
+      const assignment: LeadAssignmentFilter | undefined =
+        filter.agent === 'mine' ? 'MINE' : filter.agent === 'unassigned' ? 'UNASSIGNED' : undefined;
       return scope
         ? {
             scope,
@@ -162,6 +185,8 @@ export class LeadsPage {
               sort,
               stage: filter.stage === 'ALL' ? undefined : filter.stage,
               status: filter.status,
+              assignment,
+              assignedAgentUserId: this.specificAgent(),
             },
           }
         : undefined;
@@ -179,6 +204,31 @@ export class LeadsPage {
     computation: (current, previous) =>
       current.data ?? (previous?.source.scope === current.scope ? (previous?.value ?? null) : null),
   });
+  private readonly namesById = computed(
+    () =>
+      new Map((this.team.hasValue() ? this.team.value() : []).map((agent) => [agent.id, agent])),
+  );
+  protected readonly assigneeLabel = (id: string | null | undefined) =>
+    id
+      ? !this.team.hasValue() && this.team.isLoading()
+        ? '—'
+        : agentLabel(this.namesById().get(id), this.text())
+      : this.text().assignments.unassigned;
+  protected readonly agentOptions = computed(() => {
+    const options = assignments.map((value): { value: string; label: string } => ({
+      value,
+      label: this.text().assignments[value],
+    }));
+    const team = this.team.hasValue() ? this.team.value() : [];
+    options.push(
+      ...team.map((agent) => ({ value: agent.id, label: agentLabel(agent, this.text()) })),
+    );
+    const selected = this.specificAgent();
+    if (selected && !options.some(({ value }) => value === selected)) {
+      options.push({ value: selected, label: this.assigneeLabel(selected) });
+    }
+    return options;
+  });
   protected readonly view = computed(() => {
     const { search, filter } = this.url.state();
     return tableView({
@@ -186,7 +236,10 @@ export class LeadsPage {
       error: this.list.error(),
       rows: this.page()?.items.length ?? null,
       filtered:
-        !!search || (filter.stage ?? 'ALL') !== 'ALL' || (filter.status ?? 'OPEN') !== 'OPEN',
+        !!search ||
+        (filter.stage ?? 'ALL') !== 'ALL' ||
+        (filter.status ?? 'OPEN') !== 'OPEN' ||
+        this.agentFilter() !== 'all',
     });
   });
   protected readonly pagination = computed(() => ({
@@ -198,6 +251,7 @@ export class LeadsPage {
     saved: ({ message, recordId }) => {
       this.messages.add({ severity: 'success', summary: message });
       this.list.reload();
+      this.team.reload();
       if (recordId && !this.detailOpen()) {
         this.open(recordId);
       }

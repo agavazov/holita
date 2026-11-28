@@ -478,6 +478,12 @@ current Core internal token without displaying it. Run both Holita database setu
 the Holita migration command above before restarting Holita. The operator Router reads
 `SALES_GRAPHQL_URL` from its launch environment for a non-default Sales endpoint.
 
+For an existing checkout, open the ignored `holita/config/seed-accounts.env` in a private editor.
+Add whichever of `HOLITA_SALES_SECOND_EMAIL` and `HOLITA_SALES_SECOND_PASSWORD` is missing.
+Use a distinct local demo address such as `sales.second@holita.test` and a locally generated
+password. Preserve existing values and keep them out of terminal output. Run the Holita migration
+and seed commands above to insert the second account and the assignment examples.
+
 Merchant Admin loads available shops before opening the current page. If the list fails to
 load, select **Retry**. When the list is empty, Admin clears the saved shop and shows
 **No shops available**.
@@ -486,18 +492,22 @@ The operator graph exposes `salesWorkspaceAccess { tenantId userId }` to Core pl
 accounts with the `SALES` role. The IDs identify the verified platform tenant and signed-in
 Core user. CRM scope comes from that platform tenant, independent of Branch selection. In Sales,
 open **Leads** to find prospects by name, website, source or contact details. The list opens
-with active leads, including **Try later**. Use the status and stage filters to find leads in
-**Not interested**, **Won** or **Lost**. **New lead**
-requires a name or an HTTP(S) website and opens the saved prospect at its own address. Use
+with active leads, including **Try later**. Combine **Mine**, **All agents**, **Unassigned** or an
+agent's name with status and stage, including **Not interested**, **Won** or **Lost**. **New lead**
+requires a name or an HTTP(S) website and assigns the prospect to its creator. Use the searchable
+**Assigned agent** picker on the lead detail page to change or clear responsibility. The creator
+stays the same, and existing assignments to inactive agents remain visible until changed. Use
 the stage editor on the detail page to record an outcome or reopen a lead. Use **Edit lead**
 to update the prospect, and use its **Contacts** section to manage contacts and
 the primary contact. **Contacts** in the workspace navigation searches contacts across leads
 and links to each prospect. Full phone numbers match regardless of spaces or punctuation in
 Leads and Contacts. Sales preserves the current list or record URL through sign-in and
 language changes. The operator graph provides `leads`, `lead`, `createLead`, `updateLead`,
-`updateLeadStage`, `salesContacts` and per-lead contact reads and mutations to authorized
-Sales accounts. The Holita demo seed includes prospects in New, Interested, Try later, Lost
-and Won, plus three contacts.
+`updateLeadStage`, `updateLeadAssignment`, `salesAgents`, `leadAssignmentAgents`, `salesContacts`
+and per-lead contact reads and mutations to authorized Sales accounts. `leadAssignmentAgents`
+includes current assignees across all stages and pages. The Holita demo seed includes prospects
+in New, Interested, Try later, Lost and Won, three contacts, and an unassigned example. It adds
+an assigned example for each active demo agent.
 
 **Local Sales import**
 

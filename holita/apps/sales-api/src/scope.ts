@@ -8,15 +8,17 @@ export interface RequestContext {
 export interface SalesScope {
   tenantId: string;
   userId: string;
+  authorization: string;
 }
 
 export async function requireSalesScope(context: RequestContext): Promise<SalesScope> {
-  const identity = await readSession(context.authorization);
-  if (!identity) {
+  const { authorization } = context;
+  const identity = await readSession(authorization);
+  if (!authorization || !identity) {
     throw new UnauthorizedException('Sign in first');
   }
   if (!identity.platform || identity.role !== 'SALES') {
     throw new ForbiddenException('A platform Sales account is required');
   }
-  return { tenantId: identity.tenantId, userId: identity.userId };
+  return { tenantId: identity.tenantId, userId: identity.userId, authorization };
 }

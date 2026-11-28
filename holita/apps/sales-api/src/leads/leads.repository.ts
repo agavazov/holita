@@ -14,10 +14,18 @@ export class LeadsRepository {
   constructor(private readonly database: DatabaseService) {}
 
   async list(
-    { tenantId }: SalesScope,
+    { tenantId, userId }: SalesScope,
     term: string,
     words: string[],
-    { offset = 0, limit = 20, sort, stage, status }: QueryLeadsArgs,
+    {
+      offset = 0,
+      limit = 20,
+      sort,
+      stage,
+      status,
+      assignment,
+      assignedAgentUserId,
+    }: QueryLeadsArgs,
   ) {
     const perWord = words.map((word) => {
       const match = searchText(word);
@@ -31,8 +39,15 @@ export class LeadsRepository {
       };
     });
     const phone = normalizeContactPhone(term);
+    const assignee =
+      assignment === 'MINE'
+        ? userId
+        : assignment === 'UNASSIGNED'
+          ? null
+          : (assignedAgentUserId ?? undefined);
     const where: Prisma.LeadWhereInput = {
       tenantId,
+      ...(assignee === undefined ? {} : { assignedAgentUserId: assignee }),
       ...(phone ? { contacts: { some: { tenantId, phone } } } : { AND: perWord }),
       stage: {
         ...(stage ? { equals: stage } : {}),
@@ -60,13 +75,38 @@ export class LeadsRepository {
     return this.database.client.lead.findUnique({ where: { tenantId_id: { tenantId, id } } });
   }
 
+  async assignedAgentIds({ tenantId }: SalesScope, ids?: string[]): Promise<string[]> {
+    const assigned = await this.database.client.lead.groupBy({
+      by: ['assignedAgentUserId'],
+      where: { tenantId, assignedAgentUserId: ids ? { in: ids } : { not: null } },
+    });
+    return assigned.flatMap(({ assignedAgentUserId }) =>
+      assignedAgentUserId ? [assignedAgentUserId] : [],
+    );
+  }
+
+  async referencedAgentIds(scope: SalesScope, ids: string[]): Promise<string[]> {
+    const [authors, assignees] = await Promise.all([
+      this.database.client.lead.groupBy({
+        by: ['createdByUserId'],
+        where: { tenantId: scope.tenantId, createdByUserId: { in: ids } },
+      }),
+      this.assignedAgentIds(scope, ids),
+    ]);
+    return [...new Set([...authors.map(({ createdByUserId }) => createdByUserId), ...assignees])];
+  }
+
   create({ tenantId, userId }: SalesScope, fields: LeadFields) {
     return this.database.client.lead.create({
-      data: { tenantId, ...fields, createdByUserId: userId },
+      data: { tenantId, ...fields, createdByUserId: userId, assignedAgentUserId: userId },
     });
   }
 
-  update({ tenantId }: SalesScope, id: string, fields: LeadFields) {
+  update(
+    { tenantId }: SalesScope,
+    id: string,
+    fields: LeadFields | Pick<Lead, 'assignedAgentUserId'>,
+  ) {
     return this.database.client.lead.update({
       where: { tenantId_id: { tenantId, id } },
       data: fields,

@@ -26,6 +26,53 @@
   </osnova-empty-state>
 </section>
 } @else if (entry.lead(); as lead) {
+<section class="app-card" aria-labelledby="lead-assignment">
+  <h2 id="lead-assignment" class="app-card__title">{{ text().leadAssignment }}</h2>
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().createdByAgent }}</dt>
+      <dd>{{ creatorName() }}</dd>
+    </div>
+  </dl>
+  <form class="app-stack" [formGroup]="assignmentForm" (ngSubmit)="saveAssignment()">
+    <osnova-form-field
+      controlId="lead-assignee"
+      [label]="text().assignedAgent"
+      [error]="assignmentError()"
+      [style.max-inline-size.%]="100"
+    >
+      <p-select
+        #assignmentPicker
+        inputId="lead-assignee"
+        ariaLabelledBy="lead-assignee-label"
+        [invalid]="!!assignmentError()"
+        [pt]="{ label: { 'aria-describedby': 'lead-assignee-error', 'aria-invalid': assignmentError() ? 'true' : undefined } }"
+        formControlName="agent"
+        [options]="assignmentOptions()"
+        optionLabel="label"
+        optionValue="value"
+        optionDisabled="disabled"
+        [filter]="true"
+        [ariaFilterLabel]="text().searchAgents"
+        [emptyFilterMessage]="shared().table.noResultsTitle"
+        [loading]="team.isLoading()"
+        appendTo="body"
+        (onShow)="team.reload(); namedAgents.reload()"
+        (onChange)="assignmentError.set(null)"
+      />
+    </osnova-form-field>
+    @if (team.error() || namedAgents.error()) {
+    <p>{{ text().agentsUnavailable }}</p>
+    }
+    <button
+      type="submit"
+      pButton
+      [disabled]="savingAssignment() || savingStage() || selectedAgent() === assigneeId()"
+    >
+      {{ text().saveAssignment }}
+    </button>
+  </form>
+</section>
 <section class="app-card" aria-labelledby="lead-pipeline">
   <div class="app-card__header">
     <h2 id="lead-pipeline" class="app-card__title">{{ text().pipeline }}</h2>
@@ -54,6 +101,7 @@
   <form class="app-stack" [formGroup]="stageForm" (ngSubmit)="saveStage()">
     <osnova-form-field controlId="lead-stage" [label]="text().leadStage" [error]="stageError()">
       <p-select
+        #stagePicker
         inputId="lead-stage"
         ariaLabelledBy="lead-stage-label"
         [pt]="{ label: { 'aria-describedby': 'lead-stage-error' } }"
@@ -67,7 +115,7 @@
     <button
       type="submit"
       pButton
-      [disabled]="savingStage() || !selectedStage() || selectedStage() === lead.stage"
+      [disabled]="savingStage() || savingAssignment() || !selectedStage() || selectedStage() === lead.stage"
     >
       {{ text().saveStage }}
     </button>

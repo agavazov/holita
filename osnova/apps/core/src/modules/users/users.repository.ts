@@ -21,6 +21,31 @@ export class UsersRepository {
     });
   }
 
+  salesAgents(
+    tenantId: string,
+    lookup: { ids: string[]; historicalIds: string[] } | { search: string },
+  ) {
+    return this.prisma.client.user.findMany({
+      where: {
+        tenantId,
+        ...('ids' in lookup
+          ? {
+              OR: [
+                { id: { in: lookup.ids }, role: 'SALES', active: true },
+                { id: { in: lookup.historicalIds } },
+              ],
+            }
+          : {
+              role: 'SALES',
+              active: true,
+              name: { contains: lookup.search.replace(/[\\%_]/g, '\\$&'), mode: 'insensitive' },
+            }),
+      },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      select: { id: true, name: true, active: true, role: true },
+    });
+  }
+
   create(tenantId: string, name: string, email: string, passwordHash: string, role: UserRole) {
     return this.prisma.client.user.create({
       data: { tenantId, name, email, passwordHash, role },

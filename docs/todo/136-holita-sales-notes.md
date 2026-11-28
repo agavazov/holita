@@ -1,6 +1,6 @@
 # 136 Record lead notes and activity
 
-**Status:** Ready after [135](135-holita-sales-agent-assignment.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

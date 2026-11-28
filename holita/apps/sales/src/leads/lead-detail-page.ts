@@ -32,6 +32,7 @@ import { Tag } from 'primeng/tag';
 import { contactStrings } from '../contacts/contact-labels';
 import { LeadContacts } from '../contacts/lead-contacts';
 import type { LeadStage } from '../generated/leads-operations';
+import { agentLabel, injectLeadAgents } from './lead-agent';
 import { injectLeadRecord, leadLabel } from './lead-record';
 import { leadStageOptions, leadStageSeverity } from './lead-stage';
 import { leadStrings } from './lead-strings';
@@ -68,7 +69,8 @@ export class LeadDetailPage {
   private readonly id = computed(() => this.params().get('recordId'));
   readonly entry = injectLeadRecord(this.id);
   private readonly contacts = viewChild(LeadContacts);
-  private readonly stageSelect = viewChild(Select);
+  private readonly stageSelect = viewChild<Select>('stagePicker');
+  private readonly assignmentSelect = viewChild<Select>('assignmentPicker');
   protected readonly name = computed(() => {
     const lead = this.entry.lead();
     return lead ? leadLabel(lead) : null;
@@ -80,12 +82,38 @@ export class LeadDetailPage {
   protected readonly format = injectDisplayFormat();
   protected readonly stageSeverity = leadStageSeverity;
   protected readonly stageOptions = computed(() => leadStageOptions(this.language()));
+  private readonly stage = computed(() => this.entry.lead()?.stage ?? null);
   protected readonly stageForm = new FormGroup({ stage: new FormControl<LeadStage | null>(null) });
   protected readonly selectedStage = toSignal(this.stageForm.controls.stage.valueChanges, {
     initialValue: null,
   });
   protected readonly savingStage = signal(false);
   protected readonly stageError = signal<string | null>(null);
+  protected readonly team = injectLeadAgents();
+  private readonly creatorId = computed(() => this.entry.lead()?.createdByUserId);
+  protected readonly assigneeId = computed(() => this.entry.lead()?.assignedAgentUserId ?? '');
+  protected readonly namedAgents = injectLeadAgents(() => [this.creatorId(), this.assigneeId()]);
+  protected readonly creatorName = computed(() => this.nameFor(this.creatorId()));
+  protected readonly assignmentOptions = computed(() => {
+    const team = this.team.hasValue() ? this.team.value() : [];
+    const options = [
+      { value: '', label: this.text().assignments.unassigned, disabled: false },
+      ...team.map((agent) => ({ value: agent.id, label: agent.name, disabled: false })),
+    ];
+    const id = this.assigneeId();
+    if (id && !team.some((agent) => agent.id === id)) {
+      options.push({ value: id, label: this.nameFor(id), disabled: true });
+    }
+    return options;
+  });
+  protected readonly assignmentForm = new FormGroup({
+    agent: new FormControl('', { nonNullable: true }),
+  });
+  protected readonly selectedAgent = toSignal(this.assignmentForm.controls.agent.valueChanges, {
+    initialValue: '',
+  });
+  protected readonly savingAssignment = signal(false);
+  protected readonly assignmentError = signal<string | null>(null);
   protected readonly actions = computed<readonly PageHeaderAction[]>(() =>
     this.entry.lead()
       ? [
@@ -112,12 +140,21 @@ export class LeadDetailPage {
 
   constructor() {
     effect(() => {
-      this.stageForm.reset({ stage: this.entry.lead()?.stage ?? null });
+      this.stageForm.reset({ stage: this.stage() });
       this.stageError.set(null);
+    });
+    effect(() => {
+      this.assignmentForm.reset({ agent: this.assigneeId() });
+      this.assignmentError.set(null);
     });
     lockWhileSaving(this.stageForm, this.savingStage, () => {
       if (this.stageError()) {
         this.stageSelect()?.focus();
+      }
+    });
+    lockWhileSaving(this.assignmentForm, this.savingAssignment, () => {
+      if (this.assignmentError()) {
+        this.assignmentSelect()?.focus();
       }
     });
     injectPageRecord(this.name, () => {
@@ -134,7 +171,14 @@ export class LeadDetailPage {
     const routeId = this.id();
     const scope = this.api.scope();
     const stage = this.selectedStage();
-    if (!lead || !scope || !stage || stage === lead.stage || this.savingStage()) {
+    if (
+      !lead ||
+      !scope ||
+      !stage ||
+      stage === lead.stage ||
+      this.savingStage() ||
+      this.savingAssignment()
+    ) {
       return;
     }
     const isCurrent = () =>
@@ -156,6 +200,52 @@ export class LeadDetailPage {
     } finally {
       this.savingStage.set(false);
     }
+  }
+
+  protected async saveAssignment(): Promise<void> {
+    const lead = this.entry.lead();
+    const routeId = this.id();
+    const scope = this.api.scope();
+    const assignee = this.selectedAgent();
+    if (
+      !lead ||
+      !scope ||
+      assignee === this.assigneeId() ||
+      this.savingAssignment() ||
+      this.savingStage()
+    ) {
+      return;
+    }
+    const isCurrent = () =>
+      !this.destroyRef.destroyed && this.api.scope() === scope && this.id() === routeId;
+    this.savingAssignment.set(true);
+    this.assignmentError.set(null);
+    try {
+      const updated = await this.api.updateAssignment(scope, lead.id, assignee || null);
+      if (isCurrent()) {
+        this.entry.record.set({ ...lead, ...updated });
+      }
+      if (this.api.scope() === scope) {
+        this.listHost.saved({ message: this.text().assignmentSaved, recordId: null });
+      }
+    } catch {
+      if (isCurrent()) {
+        this.assignmentError.set(this.text().assignmentSaveFailed);
+        this.team.reload();
+      }
+    } finally {
+      this.savingAssignment.set(false);
+    }
+  }
+
+  private nameFor(id: string | undefined): string {
+    if (this.namedAgents.isLoading()) {
+      return '—';
+    }
+    const agent = this.namedAgents.hasValue()
+      ? this.namedAgents.value().find((agent) => agent.id === id)
+      : undefined;
+    return agentLabel(agent, this.text());
   }
 
   protected openAction(action: string): void {
