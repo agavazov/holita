@@ -89,3 +89,40 @@ mutation SalesUpdateLeadAssignment($id: ID!, $assignedAgentUserId: ID) {
     updatedAt
   }
 }
+
+fragment SalesLeadNoteFields on LeadNote {
+  id
+  occurredAt
+  text
+}
+
+query SalesLeadNotes($leadId: ID!) {
+  leadNotes(leadId: $leadId) {
+    note {
+      ...SalesLeadNoteFields
+    }
+    authorName
+  }
+}
+
+query SalesLeadNote($leadId: ID!, $id: ID!) {
+  leadNote(leadId: $leadId, id: $id) {
+    ...SalesLeadNoteFields
+  }
+}
+
+mutation SalesCreateLeadNote($leadId: ID!, $input: LeadNoteInput!) {
+  createLeadNote(leadId: $leadId, input: $input) {
+    id
+  }
+}
+
+mutation SalesUpdateLeadNote($leadId: ID!, $id: ID!, $input: LeadNoteInput!) {
+  updateLeadNote(leadId: $leadId, id: $id, input: $input) {
+    id
+  }
+}
+
+mutation SalesDeleteLeadNote($leadId: ID!, $id: ID!) {
+  deleteLeadNote(leadId: $leadId, id: $id)
+}

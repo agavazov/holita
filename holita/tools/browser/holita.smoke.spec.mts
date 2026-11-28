@@ -1094,6 +1094,72 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     });
 
     const referralId = new URL(sales.url()).pathname.split('/').at(-1);
+    const foreignNoteId = randomUUID();
+    const noteInput = { occurredAt: '2026-11-24T13:30:00Z', text: 'Sales smoke note' };
+    await salesDb.client.query(
+      `INSERT INTO "leadNote" ("id", "tenantId", "leadId", "occurredAt", "text", "authorUserId", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
+      [
+        foreignNoteId,
+        merchantSession.tenantId,
+        foreignLeadId,
+        noteInput.occurredAt,
+        noteInput.text,
+        merchantSession.userId,
+      ],
+    );
+    const findNotes = `query ScopedNotes($lead: ID!, $id: ID!) {
+      leadNotes(leadId: $lead) { note { id } authorName }
+      leadNote(leadId: $lead, id: $id) { id }
+    }`;
+    const createNote = `mutation CreateScopedNote($lead: ID!, $input: LeadNoteInput!) {
+      createLeadNote(leadId: $lead, input: $input) { id authorUserId }
+    }`;
+    const updateNote = `mutation UpdateScopedNote($lead: ID!, $id: ID!, $input: LeadNoteInput!) {
+      updateLeadNote(leadId: $lead, id: $id, input: $input) { id }
+    }`;
+    const deleteNote = `mutation DeleteScopedNote($lead: ID!, $id: ID!) {
+      deleteLeadNote(leadId: $lead, id: $id)
+    }`;
+    const foreignNote = { lead: foreignLeadId, id: foreignNoteId };
+    const missingNote = { errors: [{ extensions: { code: 'NOT_FOUND' } }] };
+    expect(await salesGraphql(findNotes, foreignNote)).toEqual({
+      data: { leadNotes: [], leadNote: null },
+    });
+    expect(await salesGraphql(createNote, { lead: foreignLeadId, input: noteInput })).toMatchObject(
+      missingNote,
+    );
+    expect(await salesGraphql(updateNote, { ...foreignNote, input: noteInput })).toMatchObject(
+      missingNote,
+    );
+    expect(await salesGraphql(deleteNote, foreignNote)).toMatchObject(missingNote);
+    const noteId = randomUUID();
+    await salesDb.client.query(
+      `INSERT INTO "leadNote" ("id", "tenantId", "leadId", "occurredAt", "text", "authorUserId", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
+      [
+        noteId,
+        salesSession.tenantId,
+        leadId,
+        noteInput.occurredAt,
+        noteInput.text,
+        salesSession.userId,
+      ],
+    );
+    const otherLeadNote = { lead: referralId, id: noteId };
+    expect(await salesGraphql(findNotes, otherLeadNote)).toEqual({
+      data: { leadNotes: [], leadNote: null },
+    });
+    expect(await salesGraphql(updateNote, { ...otherLeadNote, input: noteInput })).toMatchObject(
+      missingNote,
+    );
+    expect(await salesGraphql(deleteNote, otherLeadNote)).toMatchObject(missingNote);
+    expect(await salesGraphql(findNotes, { lead: leadId, id: noteId })).toEqual({
+      data: {
+        leadNotes: [{ note: { id: noteId }, authorName: expect.any(String) }],
+        leadNote: { id: noteId },
+      },
+    });
     const foreignContactId = randomUUID();
     const foreignContactName = 'Foreign tenant smoke contact';
     await salesDb.client.query(

@@ -32,6 +32,7 @@ import { Tag } from 'primeng/tag';
 import { contactStrings } from '../contacts/contact-labels';
 import { LeadContacts } from '../contacts/lead-contacts';
 import type { LeadStage } from '../generated/leads-operations';
+import { LeadActivity } from './lead-activity';
 import { agentLabel, injectLeadAgents } from './lead-agent';
 import { injectLeadRecord, leadLabel } from './lead-record';
 import { leadStageOptions, leadStageSeverity } from './lead-stage';
@@ -50,6 +51,7 @@ import { LeadsApi } from './leads-api';
     Skeleton,
     RouterOutlet,
     LeadContacts,
+    LeadActivity,
     Tag,
   ],
   templateUrl: './lead-detail-page.html',
@@ -69,6 +71,7 @@ export class LeadDetailPage {
   private readonly id = computed(() => this.params().get('recordId'));
   readonly entry = injectLeadRecord(this.id);
   private readonly contacts = viewChild(LeadContacts);
+  private readonly activity = viewChild(LeadActivity);
   private readonly stageSelect = viewChild<Select>('stagePicker');
   private readonly assignmentSelect = viewChild<Select>('assignmentPicker');
   protected readonly name = computed(() => {
@@ -131,6 +134,9 @@ export class LeadDetailPage {
       if (this.route.firstChild?.snapshot.data['contactEditor'] === true) {
         this.contacts()?.refresh();
         this.listHost.saved({ message: event.message, recordId: null });
+      } else if (this.route.firstChild?.snapshot.data['noteEditor'] === true) {
+        this.activity()?.refresh();
+        this.listHost.saved(event);
       } else {
         this.entry.record.reload();
         this.listHost.saved(event);
@@ -254,6 +260,14 @@ export class LeadDetailPage {
 
   protected editContact(id: string): void {
     this.open(['contacts', id, 'edit']);
+  }
+
+  protected addNote(): void {
+    this.open(['notes', 'new']);
+  }
+
+  protected editNote(id: string): void {
+    this.open(['notes', id, 'edit']);
   }
 
   private open(path: string[]): void {

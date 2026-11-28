@@ -165,6 +165,7 @@
   (add)="openAction('add-contact')"
   (edit)="editContact($event)"
 />
+<holita-lead-activity [leadId]="lead.id" (add)="addNote()" (edit)="editNote($event)" />
 } @else if (entry.record.isLoading()) {
 <section class="app-card" role="status" [attr.aria-label]="shared().loading">
   <p-skeleton width="8rem" />

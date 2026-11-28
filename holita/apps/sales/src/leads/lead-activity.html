@@ -1,0 +1,53 @@
+<section class="app-card" aria-labelledby="lead-activity">
+  <div class="app-card__header">
+    <h2 #heading id="lead-activity" class="app-card__title" tabindex="-1">{{ text().activity }}</h2>
+    <button pButton type="button" [outlined]="true" [disabled]="removing()" (click)="add.emit()">
+      {{ text().addNote }}
+    </button>
+  </div>
+  @if (removeFailed()) {
+  <p-message severity="error">{{ text().noteRemoveFailed }}</p-message>
+  } @if (list.error()) {
+  <osnova-empty-state kind="error" [title]="text().activityUnavailable">
+    <button emptyActions pButton type="button" severity="secondary" (click)="refresh()">
+      {{ shared().retry }}
+    </button>
+  </osnova-empty-state>
+  } @else if (list.hasValue()) { @if (list.value().length) {
+  <ol class="app-card__body" role="list">
+    @for (entry of list.value(); track entry.note.id) {
+    <li class="app-card__body">
+      <div class="app-card__header">
+        <div>
+          <time [attr.datetime]="entry.note.occurredAt" [title]="entry.note.occurredAt">
+            {{ occurrence(entry.note.occurredAt) }}
+          </time>
+          <p>{{ entry.authorName ?? text().unknownAgent }}</p>
+        </div>
+        <osnova-row-actions
+          [actions]="actions()"
+          [record]="record(entry.note)"
+          (choose)="run($event.action, entry.note)"
+        />
+      </div>
+      <p class="note-text">{{ entry.note.text }}</p>
+    </li>
+    }
+  </ol>
+  } @else {
+  <osnova-empty-state kind="empty" [title]="text().emptyActivity" />
+  } } @else {
+  <div class="app-card__body" role="status" [attr.aria-label]="shared().loading">
+    <p-skeleton width="10rem" />
+    <p-skeleton />
+  </div>
+  }
+</section>
+<p-confirmdialog appendTo="body" [pt]="confirmPt()">
+  <ng-template #message>
+    <div id="remove-note-detail" class="app-stack">
+      <p>{{ removalLabel() }}</p>
+      <p>{{ text().removeNoteDetail }}</p>
+    </div>
+  </ng-template>
+</p-confirmdialog>

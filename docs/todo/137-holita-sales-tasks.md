@@ -1,6 +1,6 @@
 # 137 Schedule and complete lead tasks
 
-**Status:** Ready after [136](136-holita-sales-notes.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

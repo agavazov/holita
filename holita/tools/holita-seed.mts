@@ -190,11 +190,28 @@ async function seedLeads(core: URL): Promise<void> {
         'hello@byala-glina.example',
       ],
     );
+    const notes = await client.query(
+      `INSERT INTO "leadNote" ("id", "tenantId", "leadId", "occurredAt", "text", "authorUserId", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, '2026-11-24T13:30:00Z', $4, $5, '2026-11-24T13:35:00Z', '2026-11-24T13:35:00Z'),
+              ($6, $2, $3, '2026-11-23T08:15:00Z', $7, $8, '2026-11-25T09:00:00Z', '2026-11-25T09:00:00Z')
+       ON CONFLICT ("id") DO NOTHING`,
+      [
+        fixtureId('b4', 1),
+        creator.tenantId,
+        secondLead,
+        'Уточнихме, че ателието иска да започне с малък каталог от чаши и купи.',
+        creator.id,
+        fixtureId('b4', 2),
+        'При първия разговор клиентът поиска пример за представяне на керамични изделия.',
+        second.id,
+      ],
+    );
     await client.query('COMMIT');
     console.log(
       `Holita Sales prospects inserted: ${String((rowCount ?? 0) + assignmentsInserted)}`,
     );
     console.log(`Holita Sales contacts inserted: ${String(contacts.rowCount)}`);
+    console.log(`Holita Sales notes inserted: ${String(notes.rowCount)}`);
   } catch (error: unknown) {
     await client.query('ROLLBACK');
     throw error;

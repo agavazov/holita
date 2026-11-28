@@ -4,6 +4,7 @@ import { ContactEditor } from './contacts/contact-editor';
 import { ContactsPage } from './contacts/contacts-page';
 import { LeadDetailPage } from './leads/lead-detail-page';
 import { LeadEditor } from './leads/lead-editor';
+import { LeadNoteEditor } from './leads/lead-note-editor';
 import { LeadsPage } from './leads/leads-page';
 import { SalesWorkspaceStatus } from './workspace/sales-workspace-status';
 
@@ -61,6 +62,18 @@ void startOperator({
                     recordParam: 'recordId',
                     contactEditor: true,
                   },
+                  canDeactivate: [leaveDrawer],
+                },
+                {
+                  path: 'notes/new',
+                  component: LeadNoteEditor,
+                  data: { drawer: true, mode: 'create', noteEditor: true },
+                  canDeactivate: [leaveDrawer],
+                },
+                {
+                  path: 'notes/:recordId/edit',
+                  component: LeadNoteEditor,
+                  data: { drawer: true, mode: 'edit', recordParam: 'recordId', noteEditor: true },
                   canDeactivate: [leaveDrawer],
                 },
               ],

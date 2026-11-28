@@ -24,6 +24,7 @@ model Lead {
   createdAt           DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime      @updatedAt @db.Timestamptz(3)
   contacts            LeadContact[]
+  notes               LeadNote[]
 
   @@unique([tenantId, id])
   @@index([tenantId, createdAt, id])
@@ -71,6 +72,21 @@ model LeadContact {
   @@unique([tenantId, leadId], map: "leadContact_primary_key", where: raw("\"isPrimary\""))
   @@index([tenantId, leadId])
   @@map("leadContact")
+}
+
+model LeadNote {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @db.Uuid
+  leadId       String   @db.Uuid
+  occurredAt   DateTime @db.Timestamptz(3)
+  text         String   @db.Text
+  authorUserId String   @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+  lead         Lead     @relation(fields: [tenantId, leadId], references: [tenantId, id], onDelete: Restrict)
+
+  @@index([tenantId, leadId, occurredAt(sort: Desc), createdAt(sort: Desc), id], map: "leadNote_activity_idx")
+  @@map("leadNote")
 }
 
 model SalesImportRecord {

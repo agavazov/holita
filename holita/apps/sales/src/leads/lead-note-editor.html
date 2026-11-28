@@ -1,0 +1,89 @@
+<osnova-route-drawer
+  [title]="editing ? text().editNote : text().addNote"
+  [subtitle]="subtitle()"
+  [closeLink]="closeLink()"
+  [state]="state()"
+  [errorText]="text().activityUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="retry()"
+>
+  <form
+    id="lead-note-editor-form"
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="app-form-section"
+  >
+    @let timeError = fieldError('occurredAt'); @let textError = fieldError('text');
+    <osnova-form-field
+      controlId="note-occurredAt"
+      [label]="text().noteOccurredAt"
+      [hint]="text().noteTimeZone"
+      [error]="timeError"
+      [required]="true"
+    >
+      <input
+        pInputText
+        id="note-occurredAt"
+        autocomplete="off"
+        spellcheck="false"
+        formControlName="occurredAt"
+        aria-required="true"
+        aria-describedby="note-occurredAt-hint note-occurredAt-error"
+        [invalid]="!!timeError"
+        [attr.aria-invalid]="!!timeError"
+        (input)="clearError('occurredAt')"
+      />
+    </osnova-form-field>
+    @if (offsets().length) {
+    <osnova-form-field controlId="note-offset" [label]="text().noteUtcOffset">
+      <p-select
+        inputId="note-offset"
+        ariaLabelledBy="note-offset-label"
+        formControlName="offset"
+        [options]="offsets()"
+        optionLabel="label"
+        optionValue="label"
+        appendTo="body"
+      />
+    </osnova-form-field>
+    }
+    <osnova-form-field
+      controlId="note-text"
+      [label]="text().noteText"
+      [error]="textError"
+      [required]="true"
+    >
+      <textarea
+        pTextarea
+        id="note-text"
+        formControlName="text"
+        rows="5"
+        aria-required="true"
+        aria-describedby="note-text-error"
+        [invalid]="!!textError"
+        [attr.aria-invalid]="!!textError"
+        (input)="clearError('text')"
+      ></textarea>
+    </osnova-form-field>
+    @if (saveError(); as error) {
+    <p-message severity="error">{{ error }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="lead-note-editor-form" [disabled]="saving()">
+      {{ saveLabel() }}
+    </button>
+  </div>
+</osnova-route-drawer>
