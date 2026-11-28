@@ -2,10 +2,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  Injector,
+  afterNextRender,
   computed,
+  effect,
   inject,
   resource,
   signal,
+  viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
@@ -84,6 +88,8 @@ export class OrderDetail {
   private readonly confirmation = inject(ConfirmationService);
   private readonly messages = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private readonly pageHeader = viewChild.required(PageHeader);
   private readonly confirmAbort = new AbortController();
   private readonly routeParams = toSignal(this.route.paramMap, { requireSync: true });
   private readonly id = computed(() => this.routeParams().get('recordId') ?? '');
@@ -253,6 +259,19 @@ export class OrderDetail {
   };
 
   constructor() {
+    let previousId = this.id();
+    effect(() => {
+      const id = this.id();
+      if (id !== previousId) {
+        previousId = id;
+        afterNextRender(
+          () => {
+            this.pageHeader().focusTitle();
+          },
+          { injector: this.injector },
+        );
+      }
+    });
     injectPageRecord(
       () => this.order()?.number ?? null,
       () => {

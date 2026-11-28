@@ -57,6 +57,7 @@ import {
   orderStatusText,
 } from './order-format';
 import { OrdersApi } from './orders-api';
+import { OrderNotifications } from './order-notifications';
 
 type OrdersAction = 'open';
 type OrdersListPage = OperatorOrdersQuery['orders'];
@@ -235,6 +236,7 @@ function orderDateBounds(dates: readonly PlacedDate[], timeZone: string) {
 })
 export class OrdersPage {
   private readonly api = inject(OrdersApi);
+  private readonly notifications = inject(OrderNotifications);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messages = inject(MessageService);
@@ -261,6 +263,7 @@ export class OrdersPage {
       }
       this.list.reload();
       this.filterMethods.reload();
+      this.notifications.reload();
     },
   };
   protected readonly actions = computed<

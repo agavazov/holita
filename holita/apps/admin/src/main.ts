@@ -36,6 +36,8 @@ import { InvoiceIssuerSettings } from './orders/invoice-issuer-settings';
 import { InvoicesPage } from './orders/invoices-page';
 import { ManualOrderEditor } from './orders/manual-order-editor';
 import { OrderDetail } from './orders/order-detail';
+import { OrderNotifications } from './orders/order-notifications';
+import { OrderNotificationsPage } from './orders/order-notifications-page';
 import { OrderRefundEditor } from './orders/order-refund-editor';
 import { OrderStatusEditor } from './orders/order-status-editor';
 import { OrdersPage } from './orders/orders-page';
@@ -60,9 +62,11 @@ void startOperator({
   name: 'admin',
   defaultPage: 'products',
   selectBranch: true,
+  notifications: OrderNotifications,
   canSwitchBranch: (page) => (page instanceof ShopSettingsPage ? page.canLeave() : true),
   routes: [
     { path: 'dashboard', component: DashboardPage },
+    { path: 'order-notifications', component: OrderNotificationsPage },
     {
       path: 'products',
       component: ProductsPage,
@@ -457,6 +461,12 @@ void startOperator({
     { id: 'blog-tags', label: 'blogTags', icon: 'tags', path: 'blog-tags' },
     { id: 'navigation', label: 'navigation', icon: 'directions', path: 'navigation' },
     { id: 'orders', label: 'orders', icon: 'truck', path: 'orders' },
+    {
+      id: 'order-notifications',
+      label: 'orderNotifications',
+      icon: 'bell',
+      path: 'order-notifications',
+    },
     { id: 'invoices', label: 'invoices', icon: 'list-check', path: 'invoices' },
     { id: 'discounts', label: 'discounts', icon: 'tags', path: 'discounts' },
     { id: 'customers', label: 'customers', icon: 'users', path: 'customers' },

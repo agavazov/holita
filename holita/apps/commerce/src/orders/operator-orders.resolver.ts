@@ -1,11 +1,13 @@
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type {
   MutationCreateManualOrderArgs,
+  MutationMarkOrderNotificationReadArgs,
   MutationMarkOrderPaidArgs,
   MutationUpdateManualOrderArgs,
   MutationUpdateOrderStatusArgs,
   QueryManualOrderVariantsArgs,
   QueryOrderArgs,
+  QueryOrderNotificationsArgs,
   QueryOrdersArgs,
 } from '../generated/graphql/types.js';
 import type { RequestContext } from '../scope.js';
@@ -28,6 +30,24 @@ export class OperatorOrdersResolver {
   @Query('order')
   order(@Args() { id }: QueryOrderArgs, @Context() context: RequestContext) {
     return this.orders.operatorOrder(context, id);
+  }
+
+  @Query('orderNotifications')
+  notifications(@Args() args: QueryOrderNotificationsArgs, @Context() context: RequestContext) {
+    return this.orders.operatorNotifications(context, args);
+  }
+
+  @Mutation('markOrderNotificationRead')
+  markNotificationRead(
+    @Args() { orderId }: MutationMarkOrderNotificationReadArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.orders.markNotificationsRead(context, orderId);
+  }
+
+  @Mutation('markAllOrderNotificationsRead')
+  markAllNotificationsRead(@Context() context: RequestContext) {
+    return this.orders.markNotificationsRead(context);
   }
 
   @Query('manualOrderMethods')

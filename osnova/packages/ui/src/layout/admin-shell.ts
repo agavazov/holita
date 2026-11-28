@@ -89,6 +89,7 @@ export class AdminShell {
   readonly notificationsLoading = input(false);
   readonly notificationsError = input<string | null>(null);
   readonly notificationsReadAllowed = input(true);
+  readonly notificationReadOnlyText = input<string | null>(null);
   readonly notificationsBusy = input(false);
   readonly notificationSeeAllLink = input<readonly string[] | null>(null);
   readonly navigation = input<readonly NavGroup[]>([]);

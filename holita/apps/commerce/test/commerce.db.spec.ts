@@ -283,6 +283,7 @@ beforeAll(async () => {
     '20261127000000_order_money_eur',
     '20261128000000_variant_price_history',
     '20261128010000_variant_price_public_periods',
+    '20261128020000_order_notifications',
   ]) {
     await connection.query(
       await readFile(
@@ -4242,6 +4243,63 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     where: { ...categoryScope, cartId: null, merchantNote: 'Private note' },
     include: { lines: true },
   });
+  const readNotifications = '{orderNotifications {total unreadCount items {orderId readAt}}}';
+  const markNotification = 'mutation($id:ID!){markOrderNotificationRead(orderId:$id)}';
+  const markAllNotifications = 'mutation{markAllOrderNotificationsRead}';
+  const placedOrders = [order, guestOrder, manual];
+  for (const [credential, branch] of [
+    [tokens.operator, branchB],
+    [tokens.foreign, branchForeign],
+  ] as const) {
+    expect(await query(credential, branch, readNotifications)).toHaveProperty(
+      'data.orderNotifications',
+      { total: 0, unreadCount: 0, items: [] },
+    );
+    expect(await query(credential, branch, markNotification, { id: manual.id })).toHaveProperty(
+      'data.markOrderNotificationRead',
+      true,
+    );
+    expect(await query(credential, branch, markAllNotifications)).toHaveProperty(
+      'data.markAllOrderNotificationsRead',
+      true,
+    );
+  }
+  expect(await query(tokens.viewer, publicA, markAllNotifications)).toHaveProperty('errors');
+  expect(await query(tokens.viewer, publicA, readNotifications)).toHaveProperty(
+    'data.orderNotifications',
+    {
+      total: placedOrders.length,
+      unreadCount: placedOrders.length,
+      items: expect.arrayContaining(
+        placedOrders.map(({ id: orderId }) => ({ orderId, readAt: null })),
+      ),
+    },
+  );
+  expect(await query(tokens.operator, publicA, markNotification, { id: manual.id })).toHaveProperty(
+    'data.markOrderNotificationRead',
+    true,
+  );
+  expect(await query(tokens.administrator, publicA, readNotifications)).toHaveProperty(
+    'data.orderNotifications',
+    expect.objectContaining({
+      unreadCount: placedOrders.length - 1,
+      items: expect.arrayContaining([{ orderId: manual.id, readAt: expect.any(String) }]),
+    }),
+  );
+  expect(await query(tokens.administrator, publicA, markAllNotifications)).toHaveProperty(
+    'data.markAllOrderNotificationsRead',
+    true,
+  );
+  expect(await query(tokens.operator, publicA, readNotifications)).toHaveProperty(
+    'data.orderNotifications',
+    {
+      total: placedOrders.length,
+      unreadCount: 0,
+      items: expect.arrayContaining(
+        placedOrders.map(({ id: orderId }) => ({ orderId, readAt: expect.any(String) })),
+      ),
+    },
+  );
   const [manualLine] = manual.lines;
   const manualEdit = (
     quantity: number,

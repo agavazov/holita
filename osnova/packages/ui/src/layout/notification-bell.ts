@@ -58,6 +58,7 @@ export class NotificationBell {
   readonly loading = input(false);
   readonly error = input<string | null>(null);
   readonly readAllowed = input(true);
+  readonly readOnlyText = input<string | null>(null);
   readonly busy = input(false);
   readonly seeAllLink = input<readonly string[] | null>(null);
   readonly notificationOpen = output<string>();

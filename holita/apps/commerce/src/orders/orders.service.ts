@@ -32,8 +32,10 @@ import type {
   ManualOrderUpdateInput,
   MutationUpdateOrderStatusArgs,
   Order as OperatorOrder,
+  OrderNotificationPage,
   OrderPage,
   QueryManualOrderVariantsArgs,
+  QueryOrderNotificationsArgs,
   QueryOrdersArgs,
 } from '../generated/graphql/types.js';
 import type { Order, OrderLine, OrderStatus, Prisma } from '../generated/prisma/client.js';
@@ -274,6 +276,35 @@ export class OrdersService {
     private readonly customers: ShopperRepository,
     private readonly discounts: DiscountsService,
   ) {}
+
+  async operatorNotifications(
+    context: RequestContext,
+    { offset = 0, limit = 20 }: QueryOrderNotificationsArgs,
+  ): Promise<OrderNotificationPage> {
+    const scope = await requireScope(context, false);
+    if (offset < 0 || limit < 1 || limit > 100) {
+      throw new BadRequestException('Invalid page');
+    }
+    const page = await this.orders.notifications(scope, offset, limit);
+    return {
+      ...page,
+      items: page.items.map(({ orderId, placedAt, readAt, order }) => ({
+        orderId,
+        orderNumber: order.orderNumber,
+        placedAt: placedAt.toISOString(),
+        readAt: readAt?.toISOString() ?? null,
+      })),
+    };
+  }
+
+  async markNotificationsRead(context: RequestContext, orderId?: string): Promise<boolean> {
+    const scope = await requireScope(context, true);
+    await this.orders.markNotificationsRead(
+      scope,
+      orderId === undefined ? undefined : manualOrderId(orderId, 'orderId'),
+    );
+    return true;
+  }
 
   async operatorOrders(
     context: RequestContext,

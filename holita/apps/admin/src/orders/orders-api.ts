@@ -22,16 +22,20 @@ import {
   type ManualOrderUpdateInput,
   OperatorIssueOrderInvoiceDocument,
   OperatorMarkOrderPaidDocument,
+  OperatorMarkAllOrderNotificationsReadDocument,
+  OperatorMarkOrderNotificationReadDocument,
   OperatorOrderInvoiceDocument,
   type IssueOrderInvoiceInput,
   OperatorOrderDocument,
   OperatorOrderFilterCustomerDocument,
   OperatorOrderFilterMethodsDocument,
+  OperatorOrderNotificationsDocument,
   OperatorOrdersDocument,
   OperatorRecordOrderRefundDocument,
   type RecordOrderRefundInput,
   OperatorUpdateOrderStatusDocument,
   type OperatorInvoicesQueryVariables,
+  type OperatorOrderNotificationsQueryVariables,
   type OperatorOrdersQueryVariables,
   type OrderStatus,
 } from '../generated/orders-operations';
@@ -68,6 +72,48 @@ export class OrdersApi {
 
   private client(scope: OrdersScope): ApolloClient {
     return new ApolloClient(graphqlOptions(this.link, this.config.graphqlUrl, scope, scope));
+  }
+
+  async notifications(
+    scope: OrdersScope,
+    variables: OperatorOrderNotificationsQueryVariables,
+    signal: AbortSignal,
+  ) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorOrderNotificationsDocument,
+        variables,
+        context: { fetchOptions: { signal } },
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing order notifications');
+      }
+      return data.orderNotifications;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async markNotificationsRead(scope: OrdersScope, orderId?: string): Promise<void> {
+    const client = this.client(scope);
+    try {
+      const marked = orderId
+        ? (
+            await client.mutate({
+              mutation: OperatorMarkOrderNotificationReadDocument,
+              variables: { orderId },
+            })
+          ).data?.markOrderNotificationRead
+        : (await client.mutate({ mutation: OperatorMarkAllOrderNotificationsReadDocument })).data
+            ?.markAllOrderNotificationsRead;
+      if (!marked) {
+        throw new Error('Missing order notification read result');
+      }
+    } finally {
+      client.stop();
+    }
   }
 
   async list(scope: OrdersScope, variables: OperatorOrdersQueryVariables) {

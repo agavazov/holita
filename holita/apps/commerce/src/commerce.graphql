@@ -812,6 +812,19 @@ type OrderPage {
   offset: Int!
   limit: Int!
 }
+type OrderNotification {
+  orderId: ID!
+  orderNumber: String!
+  placedAt: String!
+  readAt: String
+}
+type OrderNotificationPage {
+  items: [OrderNotification!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+  unreadCount: Int!
+}
 enum OrderCustomerType {
   PROFILE
   GUEST
@@ -1394,6 +1407,7 @@ type Query {
     filter: OrderListFilter
   ): OrderPage!
   order(id: ID!): Order
+  orderNotifications(offset: Int! = 0, limit: Int! = 20): OrderNotificationPage!
   manualOrderMethods: ManualOrderMethods!
   invoices(offset: Int! = 0, limit: Int! = 20, search: String, filter: InvoiceFilter): InvoicePage!
   orderInvoice(orderId: ID!): Invoice
@@ -1445,6 +1459,8 @@ type Mutation {
   createDiscount(input: DiscountInput!): Discount!
   updateDiscount(id: ID!, input: DiscountInput!): Discount!
   createManualOrder(input: ManualOrderInput!): Order!
+  markOrderNotificationRead(orderId: ID!): Boolean!
+  markAllOrderNotificationsRead: Boolean!
   "Correct an eligible order in the merchant order editor."
   updateManualOrder(id: ID!, input: ManualOrderUpdateInput!): Order!
   updateOrderStatus(id: ID!, status: OrderStatus!): Order!

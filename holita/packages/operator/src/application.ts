@@ -12,6 +12,8 @@ import {
   effect,
   inject,
   signal,
+  type Signal,
+  type Type,
   untracked,
   viewChild,
 } from '@angular/core';
@@ -38,6 +40,7 @@ import {
   navigationContext,
   uiMessages,
   type NavGroup,
+  type ShellNotification,
 } from '@osnova/ui';
 import { MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
@@ -61,6 +64,21 @@ import { appTheme, provideOsnovaTheme, THEME_STORAGE_KEY } from '@osnova/ui/them
 import { SHELL_STORAGE_KEY } from '@osnova/ui/layout';
 import { operatorStrings as strings } from './strings';
 
+interface OperatorNotifications {
+  readonly items: Signal<readonly ShellNotification[] | null>;
+  readonly unreadCount: Signal<number>;
+  readonly loading: Signal<boolean>;
+  readonly error: Signal<string | null>;
+  readonly writeError: Signal<string | null>;
+  readonly canWrite: Signal<boolean>;
+  readonly busy: Signal<boolean>;
+  readonly seeAllLink: Signal<readonly string[]>;
+  connect(activeBranch: Signal<string | null>): void;
+  open(id: string): Promise<void>;
+  markAllRead(): Promise<void>;
+  reload(): void;
+}
+
 interface OperatorOptions {
   name: string;
   defaultPage: string;
@@ -72,6 +90,7 @@ interface OperatorOptions {
     path: string;
   }[];
   selectBranch: boolean;
+  notifications?: Type<OperatorNotifications>;
   canSwitchBranch?: (page: unknown) => boolean | Promise<boolean>;
   retainRouteContext?: boolean;
 }
@@ -139,9 +158,21 @@ export class OperatorLanguage {
         [loading]="selectsShop && discovery.kind === 'loading'"
         [tenantName]="session.current()?.tenant?.name ?? null"
         [account]="account()"
+        [notifications]="activeBranch() ? (notifications?.items() ?? null) : null"
+        [notificationUnreadCount]="notifications?.unreadCount() ?? 0"
+        [notificationsLoading]="notifications?.loading() ?? false"
+        [notificationsError]="notifications?.error() ?? null"
+        [notificationsReadAllowed]="notifications?.canWrite() ?? true"
+        [notificationReadOnlyText]="text().orderNotificationsReadOnly"
+        [notificationsBusy]="notifications?.busy() ?? false"
+        [notificationEmpty]="text().orderNotificationsEmpty"
+        [notificationSeeAllLink]="notifications?.seeAllLink() ?? null"
         (branchSelected)="selectBranch($event)"
         (languageChange)="changeLanguageValue($event)"
         (signOut)="signOut()"
+        (notificationOpen)="notifications?.open($event)"
+        (notificationsRead)="notifications?.markAllRead()"
+        (notificationsRetry)="notifications?.reload()"
       >
         @if (!selectsShop || activeBranch()) {
           <router-outlet />
@@ -176,6 +207,9 @@ export class OperatorApplication {
   readonly session = inject(DemoSession);
   readonly language = inject(OperatorLanguage);
   private readonly options = inject(OPERATOR_OPTIONS);
+  protected readonly notifications = this.options.notifications
+    ? inject(this.options.notifications)
+    : null;
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   protected readonly selectsShop = this.options.selectBranch;
@@ -256,6 +290,13 @@ export class OperatorApplication {
   private readonly messages = inject(MessageService);
 
   constructor() {
+    this.notifications?.connect(this.activeBranch);
+    effect(() => {
+      const error = this.notifications?.writeError();
+      if (error) {
+        this.messages.add({ severity: 'error', summary: error });
+      }
+    });
     effect(() => {
       this.session.branchId();
       this.language.value();

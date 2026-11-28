@@ -781,6 +781,7 @@ model Order {
   invoice Invoice?
   refunds OrderRefund[]
   statusChanges OrderStatusChange[]
+  notification OrderNotification?
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, cartId])
   @@unique([tenantId, branchId, orderNumber])
@@ -788,6 +789,19 @@ model Order {
   @@index([tenantId, branchId, customerId, placedAt(sort: Desc), id(sort: Desc)])
   @@index([tenantId, branchId, placedAt(sort: Desc), id(sort: Desc)])
   @@map("order")
+}
+
+model OrderNotification {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  orderId String @db.Uuid
+  order Order @relation(fields: [tenantId, branchId, orderId], references: [tenantId, branchId, id], onDelete: Cascade)
+  placedAt DateTime @db.Timestamptz(3)
+  readAt DateTime? @db.Timestamptz(3)
+  @@id([tenantId, branchId, orderId])
+  @@index([tenantId, branchId, placedAt(sort: Desc), orderId(sort: Desc)])
+  @@index([tenantId, branchId, readAt])
+  @@map("orderNotification")
 }
 
 model OrderLine {

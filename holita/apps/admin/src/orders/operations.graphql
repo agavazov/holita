@@ -9,6 +9,27 @@ fragment OperatorOrderSummary on OrderSummary {
   currency
 }
 
+query OperatorOrderNotifications($offset: Int!, $limit: Int!) {
+  orderNotifications(offset: $offset, limit: $limit) {
+    items {
+      orderId
+      orderNumber
+      placedAt
+      readAt
+    }
+    total
+    unreadCount
+  }
+}
+
+mutation OperatorMarkOrderNotificationRead($orderId: ID!) {
+  markOrderNotificationRead(orderId: $orderId)
+}
+
+mutation OperatorMarkAllOrderNotificationsRead {
+  markAllOrderNotificationsRead
+}
+
 fragment OperatorOrderDetail on Order {
   id
   invoiceReviewRevision

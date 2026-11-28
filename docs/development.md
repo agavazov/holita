@@ -775,6 +775,12 @@ shipment returns the original deductions to surviving variants once. Use Mark as
 manual payment. Cancellation preserves a recorded payment. The operator graph exposes `orders`,
 `order`, `updateOrderStatus` and `markOrderPaid`.
 
+The Admin notification bell shows unread order alerts for the selected shop and links to its inbox.
+New storefront and manual orders each add one alert. Viewers can open alerts and see the shop's
+unread count. For operators and administrators, an alert is marked read when Order Detail opens.
+Use Mark all as read to clear the selected shop's shared unread count. The operator graph exposes
+`orderNotifications`, `markOrderNotificationRead` and `markAllOrderNotificationsRead`.
+
 Choose Create manual order to record a phone order. Search by customer name or email to link it to
 their shop order history, or leave the customer field empty for a guest order. Customer selection
 fills untouched contact fields using the account's current name, email and phone. Enter delivery

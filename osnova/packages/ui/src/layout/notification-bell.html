@@ -38,7 +38,7 @@
       </button>
     </div>
     @if (!readAllowed()) {
-    <p class="notification-bell__notice">{{ text().demo }}</p>
+    <p class="notification-bell__notice">{{ readOnlyText() ?? text().demo }}</p>
     } @if (error(); as error) {
     <div class="notification-bell__error" role="alert">
       <p>{{ error }}</p>

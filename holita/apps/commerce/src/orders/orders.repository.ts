@@ -45,6 +45,37 @@ export class OrdersRepository {
     });
   }
 
+  async notifications(scope: Scope, offset: number, limit: number) {
+    const notification = this.database.client.orderNotification;
+    const [items, total, unreadCount] = await this.database.client.$transaction(
+      [
+        notification.findMany({
+          where: scope,
+          skip: offset,
+          take: limit,
+          orderBy: [{ placedAt: 'desc' }, { orderId: 'desc' }],
+          select: {
+            orderId: true,
+            placedAt: true,
+            readAt: true,
+            order: { select: { orderNumber: true } },
+          },
+        }),
+        notification.count({ where: scope }),
+        notification.count({ where: { ...scope, readAt: null } }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return { items, total, offset, limit, unreadCount };
+  }
+
+  markNotificationsRead(scope: Scope, orderId?: string) {
+    return this.database.client.orderNotification.updateMany({
+      where: { ...scope, readAt: null, ...(orderId && { orderId }) },
+      data: { readAt: new Date() },
+    });
+  }
+
   async operatorOrders(
     scope: Scope,
     offset: number,
@@ -409,11 +440,16 @@ export class OrdersRepository {
   create(
     tx: Prisma.TransactionClient,
     scope: Scope,
-    order: Omit<Prisma.OrderUncheckedCreateInput, keyof Scope | 'lines'>,
+    order: Omit<Prisma.OrderUncheckedCreateInput, keyof Scope | 'lines' | 'notification'>,
     lines: Prisma.OrderLineCreateManyOrderInput[],
   ) {
     return tx.order.create({
-      data: { ...scope, ...order, lines: { createMany: { data: lines } } },
+      data: {
+        ...scope,
+        ...order,
+        lines: { createMany: { data: lines } },
+        notification: { create: { placedAt: order.placedAt } },
+      },
       include: orderDetail(scope),
     });
   }
