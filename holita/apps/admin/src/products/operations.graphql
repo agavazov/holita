@@ -139,3 +139,15 @@ query OperatorProductCharacteristics($productId: ID) {
     }
   }
 }
+
+mutation OperatorImportCatalogue($input: ImportCatalogueInput!) {
+  importCatalogue(input: $input) {
+    id
+    rows {
+      rowNumber
+      status
+      error
+      errorCode
+    }
+  }
+}

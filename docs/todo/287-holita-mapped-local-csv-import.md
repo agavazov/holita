@@ -2,11 +2,11 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [175](175-holita-catalogue-file-import.md), [176](176-holita-catalogue-import-history.md).
+**Depends on** [176](176-holita-catalogue-import-history.md).
 
 ## Background
 
-The red.bg coverage report marks IMP-03 as P2. Tickets 175 and 176 establish fixed-column CSV input and import history. The source also allows a merchant to map supplied local columns.
+The red.bg coverage report marks IMP-03 as P2. Holita accepts fixed-column CSV imports, and ticket 176 covers import history. The source also allows a merchant to map supplied local columns.
 
 ## Goal
 

@@ -248,8 +248,9 @@ export class CommerceRepository {
     images: ProductImageWrite[] | undefined,
     characteristicValues: ProductCharacteristicValueInput[],
     { badgeIds, tagIds }: ProductMarkerIds,
+    transaction?: Prisma.TransactionClient,
   ) {
-    return this.database.client.$transaction(async (tx) => {
+    const save = async (tx: Prisma.TransactionClient) => {
       const wasPublished = id ? await this.lockProductPublication(tx, scope, id) : false;
       const product = id
         ? await tx.product.update({ where: { id, ...scope }, data: input })
@@ -417,7 +418,8 @@ export class CommerceRepository {
         row.status === 'ACTIVE',
       );
       return { row, retiredKeys };
-    });
+    };
+    return transaction ? save(transaction) : this.database.client.$transaction(save);
   }
 
   private async lockProductPublication(tx: Prisma.TransactionClient, scope: Scope, id: string) {

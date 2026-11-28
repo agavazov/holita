@@ -291,6 +291,7 @@ beforeAll(async () => {
     '20261128060000_order_return_refunds',
     '20261128070000_order_return_completion',
     '20261128080000_customer_data_export_audit',
+    '20261128090000_catalogue_csv_import',
   ]) {
     await connection.query(
       await readFile(
@@ -1835,6 +1836,82 @@ it('enforces tenant and Branch isolation and merchant roles through Core', async
       input: { ...productDraft, tagIds: [] },
     }),
   ).toEqual({ data: { updateProduct: { ...expectedMarkers, tags: [] } } });
+
+  const importFields = 'id fileName rows{rowNumber status errorCode error}';
+  const submitImport = `mutation($input:ImportCatalogueInput!){importCatalogue(input:$input){${importFields}}}`;
+  const readImport = `query($id:ID!){catalogueImport(id:$id){${importFields}}}`;
+  const importScope = { tenantId: tenantA, branchId: branchA };
+  const importSku = 'TEST-175-IMPORT';
+  const importName = 'TEST Imported, "local"';
+  const importFile = 'TEST-175-catalogue.csv';
+  const importInput = {
+    fileName: importFile,
+    csv: [
+      '\uFEFFname,sku,price',
+      `"TEST Imported, ""local""", ${importSku} ,3.50`,
+      `TEST Duplicate,${importSku},8.00`,
+      '',
+    ].join('\r\n'),
+  };
+  expect(await query(tokens.viewer, branchA, submitImport, { input: importInput })).toMatchObject({
+    data: null,
+    errors: [{ message: 'Your role does not permit this action' }],
+  });
+  expect(
+    await client.catalogueImportJob.count({ where: { ...importScope, fileName: importFile } }),
+  ).toBe(0);
+  const imported = await query(tokens.operator, branchA, submitImport, { input: importInput });
+  const { id: importId } = await client.catalogueImportJob.findFirstOrThrow({
+    where: { ...importScope, fileName: importFile, requestedByUserId: operatorUserId },
+    select: { id: true },
+  });
+  const expectedImport = {
+    id: importId,
+    fileName: importFile,
+    rows: [
+      { rowNumber: 2, status: 'APPLIED', errorCode: null, error: null },
+      {
+        rowNumber: 3,
+        status: 'REJECTED',
+        errorCode: 'DUPLICATE_SKU',
+        error: 'This shop already uses the SKU',
+      },
+    ],
+  };
+  expect(imported).toEqual({ data: { importCatalogue: expectedImport } });
+  expect(await query(tokens.viewer, branchA, readImport, { id: importId })).toEqual({
+    data: { catalogueImport: expectedImport },
+  });
+  for (const [token, branch] of [
+    [tokens.operator, branchB],
+    [tokens.foreign, branchForeign],
+  ] as const) {
+    expect(await query(token, branch, readImport, { id: importId })).toEqual({
+      data: { catalogueImport: null },
+    });
+  }
+  expect(
+    await client.catalogueImportRow.findMany({
+      where: { ...importScope, jobId: importId, status: 'REJECTED' },
+      select: { rowNumber: true, normalizedInput: true },
+    }),
+  ).toEqual([{ rowNumber: 3, normalizedInput: ['TEST Duplicate', importSku, '8.00'] }]);
+  const importedVariant = await client.productVariant.findFirstOrThrow({
+    where: { ...importScope, sku: importSku },
+    select: {
+      price: true,
+      active: true,
+      inventoryTracked: true,
+      product: { select: { name: true, status: true } },
+    },
+  });
+  expect(importedVariant).toMatchObject({
+    active: true,
+    inventoryTracked: false,
+    product: { name: importName, status: 'DRAFT' },
+  });
+  expect(importedVariant.price.toFixed(2)).toBe('3.50');
+  expect(await client.product.count({ where: { ...importScope, name: 'TEST Duplicate' } })).toBe(0);
 }, 60_000);
 
 function storedVariant(sku: string, price: string, active = true) {

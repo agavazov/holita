@@ -2,7 +2,8 @@ import { inject } from '@angular/core';
 import { createUrlTreeFromSnapshot, type CanActivateFn } from '@angular/router';
 import { startOperator } from '@holita/operator';
 import { leaveDrawer } from '@osnova/ui';
-import { DemoSession } from '@osnova/ui/app';
+import { AuthApi, DemoSession } from '@osnova/ui/app';
+import { catchError, filter, finalize, map, of } from 'rxjs';
 import { BadgeEditor } from './badges/badge-editor';
 import { BadgesPage } from './badges/badges-page';
 import { BlogArticleEditor } from './blog/blog-article-editor';
@@ -50,7 +51,9 @@ import { PaymentMethodsPage } from './payment-methods/payment-methods-page';
 import { ShippingMethodEditor } from './shipping-methods/shipping-method-editor';
 import { ShippingMethodsPage } from './shipping-methods/shipping-methods-page';
 import { ShopSettingsPage } from './shop-settings/shop-settings-page';
+import { CatalogueImport } from './products/catalogue-import';
 import { ProductEditor } from './products/product-editor';
+import { canImportCatalogue } from './products/products-api';
 import { ProductsPage } from './products/products-page';
 
 const canEditShopContent: CanActivateFn = (route) => {
@@ -58,6 +61,31 @@ const canEditShopContent: CanActivateFn = (route) => {
   return !session.current() || session.hasRole('OPERATOR')
     ? true
     : createUrlTreeFromSnapshot(route, ['..'], route.queryParams, route.fragment);
+};
+
+const canOpenCatalogueImport: CanActivateFn = (route) => {
+  const current = inject(DemoSession).current();
+  if (!current) {
+    return true;
+  }
+  const back = createUrlTreeFromSnapshot(route, ['..'], route.queryParams, route.fragment);
+  if (current.user) {
+    return canImportCatalogue(current.user.role) || back;
+  }
+  // A restored session needs its verified role before the drawer can open.
+  const { query, close } = inject(AuthApi).watch({
+    tenantId: current.tenant.id,
+    token: current.token,
+  });
+  return query.valueChanges.pipe(
+    filter((result) => !result.loading),
+    map(
+      (result) =>
+        (result.dataState === 'complete' && canImportCatalogue(result.data.me.role)) || back,
+    ),
+    catchError(() => of(back)),
+    finalize(close),
+  );
 };
 
 void startOperator({
@@ -90,6 +118,13 @@ void startOperator({
           path: 'new',
           component: ProductEditor,
           data: { drawer: true, mode: 'create' },
+          canDeactivate: [leaveDrawer],
+        },
+        {
+          path: 'import',
+          component: CatalogueImport,
+          data: { drawer: true },
+          canActivate: [canOpenCatalogueImport],
           canDeactivate: [leaveDrawer],
         },
         {

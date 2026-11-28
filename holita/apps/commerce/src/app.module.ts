@@ -8,6 +8,8 @@ import { BlogModule } from './blog/blog.module.js';
 import { BlogResolver } from './blog/blog.resolver.js';
 import { CartModule } from './cart/cart.module.js';
 import { CartResolver } from './cart/cart.resolver.js';
+import { CatalogueImportsModule } from './catalogue-imports/catalogue-imports.module.js';
+import { CatalogueImportsResolver } from './catalogue-imports/catalogue-imports.resolver.js';
 import { CheckoutModule } from './checkout/checkout.module.js';
 import { CheckoutResolver } from './checkout/checkout.resolver.js';
 import { DashboardModule } from './dashboard/dashboard.module.js';
@@ -65,6 +67,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
 @Module({
   imports: [
     ProductsModule,
+    CatalogueImportsModule,
     InventoryModule,
     BrandsModule,
     CategoriesModule,
@@ -88,6 +91,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
   ],
   providers: [
     CommerceResolver,
+    CatalogueImportsResolver,
     InventoryResolver,
     BrandsResolver,
     CategoriesResolver,

@@ -128,6 +128,27 @@ type ProductPage {
   offset: Int!
   limit: Int!
 }
+input ImportCatalogueInput {
+  fileName: String!
+  "UTF-8 CSV text with header name,sku,price. Accepts up to 100 data rows and 256 KiB."
+  csv: String!
+}
+enum CatalogueImportRowStatus {
+  APPLIED
+  REJECTED
+}
+type CatalogueImportRow {
+  "Starting line of this CSV record, with the header on line 1."
+  rowNumber: Int!
+  status: CatalogueImportRowStatus!
+  errorCode: String
+  error: String
+}
+type CatalogueImportJob {
+  id: ID!
+  fileName: String!
+  rows: [CatalogueImportRow!]!
+}
 enum InventorySortField {
   PRODUCT_NAME
   SKU
@@ -1380,6 +1401,8 @@ type Query {
     sort: ProductSort
   ): ProductPage!
   product(id: ID!): Product
+  "Read recorded row outcomes for an import in the selected shop."
+  catalogueImport(id: ID!): CatalogueImportJob
   inventory(
     offset: Int! = 0
     limit: Int! = 20
@@ -1485,6 +1508,8 @@ type Mutation {
   updateShippingMethod(id: ID!, input: ShippingMethodInput!): ShippingMethod!
   createProduct(input: ProductInput!): Product!
   updateProduct(id: ID!, input: ProductInput!): Product!
+  "Create draft products from a local CSV in the selected shop."
+  importCatalogue(input: ImportCatalogueInput!): CatalogueImportJob!
   updateInventoryQuantity(id: ID!, quantity: Int!): InventoryVariant!
   updateCustomerContact(id: ID!, input: CustomerContactInput!): Customer!
   """

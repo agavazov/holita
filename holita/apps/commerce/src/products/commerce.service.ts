@@ -21,7 +21,7 @@ import {
   InvalidVariantImageIdError,
   VariantOutstandingDeductionsError,
 } from './commerce.repository.js';
-import { requireScope, type RequestContext } from '../scope.js';
+import { requireScope, type RequestContext, type Scope } from '../scope.js';
 import {
   ProductImages,
   productImageUrl,
@@ -266,15 +266,23 @@ export class CommerceService {
   }
 
   async create(context: RequestContext, input: ProductInput) {
-    return this.save(context, input);
+    return this.save(await requireScope(context, true), input);
   }
 
   async update(context: RequestContext, id: string, input: ProductInput) {
-    return this.save(context, input, id);
+    return this.save(await requireScope(context, true), input, id);
   }
 
-  private async save(context: RequestContext, input: ProductInput, rawId?: string) {
-    const scope = await requireScope(context, true);
+  createImported(scope: Scope, input: ProductInput, transaction: Prisma.TransactionClient) {
+    return this.save(scope, input, undefined, transaction);
+  }
+
+  private async save(
+    scope: Scope,
+    input: ProductInput,
+    rawId?: string,
+    transaction?: Prisma.TransactionClient,
+  ) {
     const id = rawId === undefined ? undefined : recordId(rawId);
     const {
       variants: requested,
@@ -314,6 +322,7 @@ export class CommerceService {
         drafts ? images : undefined,
         values,
         markers,
+        transaction,
       );
     } catch (error: unknown) {
       await this.imageFiles.remove(scope, newKeys);

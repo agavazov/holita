@@ -41,7 +41,7 @@ import { DemoSession, requestError } from '@osnova/ui/app';
 import { OperatorLanguage, operatorStrings as strings } from '@holita/operator';
 import { type OperatorProductsQuery, type ProductStatus } from '../generated/products-operations';
 import { shopCurrency } from '../shop-currency';
-import { ProductsApi } from './products-api';
+import { ProductsApi, canImportCatalogue } from './products-api';
 
 type ProductPage = OperatorProductsQuery['products'];
 type Product = ProductPage['items'][number];
@@ -137,7 +137,14 @@ export class ProductsPage {
   }));
   readonly canWrite = computed(() => this.session.hasRole('OPERATOR') && !!this.scope());
   readonly actions = computed<readonly PageHeaderAction[]>(() =>
-    this.canWrite() ? [{ id: 'create', label: this.text().createProduct, primary: true }] : [],
+    this.canWrite()
+      ? [
+          { id: 'new', label: this.text().createProduct, primary: true },
+          ...(canImportCatalogue(this.session.user()?.role)
+            ? [{ id: 'import', label: this.text().catalogueImportAction }]
+            : []),
+        ]
+      : [],
   );
   readonly rowActions = computed<readonly ListAction<'edit', Product>[]>(() =>
     this.canWrite() ? [{ id: 'edit', label: this.text().edit }] : [],

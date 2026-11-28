@@ -1,0 +1,138 @@
+<osnova-route-drawer
+  size="lg"
+  [title]="text().catalogueImportAction"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+>
+  @if (!canWrite()) {
+  <p-message severity="info">{{ text().noShop }}</p-message>
+  } @else if (job(); as result) {
+  <div class="app-form-section">
+    <dl class="app-facts">
+      <div class="app-facts--wide">
+        <dt>{{ text().catalogueImportJobId }}</dt>
+        <dd #jobId id="catalogue-import-job-id" class="app-mono" tabindex="-1">{{ result.id }}</dd>
+      </div>
+    </dl>
+    <osnova-table-panel
+      mode="local"
+      [heading]="text().catalogueImportResults"
+      [headingLevel]="3"
+      [total]="result.rows.length"
+      [columns]="columns()"
+      [view]="tableView()"
+      tableMinWidth="18rem"
+    >
+      <p-table
+        class="app-responsive-table app-table-fixed"
+        [value]="result.rows"
+        [scrollable]="true"
+        [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+        dataKey="rowNumber"
+      >
+        <ng-template #colgroup>
+          <colgroup>
+            @for (column of columns(); track column.id) {
+            <col [style.width]="column.width" />
+            }
+          </colgroup>
+        </ng-template>
+        <ng-template #header>
+          <tr>
+            @for (column of columns(); track column.id) {
+            <th scope="col">{{ column.label }}</th>
+            }
+          </tr>
+        </ng-template>
+        <ng-template #body let-row>
+          @let applied = row.status === 'APPLIED';
+          <tr>
+            <td>{{ row.rowNumber }}</td>
+            <td>
+              <p-tag
+                [severity]="toneSeverity(applied ? 'success' : 'danger')"
+                [value]="applied ? text().catalogueImportApplied : text().catalogueImportRejected"
+              />
+            </td>
+            <td class="import-wrap">{{ applied ? '—' : rowError(row.errorCode) }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </osnova-table-panel>
+  </div>
+  } @else {
+  <form
+    id="catalogue-import-form"
+    class="app-form-section"
+    [formGroup]="form"
+    (ngSubmit)="submit()"
+  >
+    @let selected = form.controls.file.value;
+    <p>{{ text().catalogueImportHelp }}</p>
+    <code class="app-mono">name,sku,price</code>
+    <osnova-form-field
+      controlId="catalogue-import-picker"
+      [label]="text().catalogueImportFile"
+      [hint]="text().catalogueImportLimits"
+      [error]="error()"
+      [required]="true"
+    >
+      <input
+        #file
+        id="catalogue-import-file"
+        type="file"
+        accept=".csv,text/csv"
+        [disabled]="saving()"
+        hidden
+        (change)="chooseFile(file)"
+      />
+      <div class="app-inline">
+        <button
+          #picker
+          pButton
+          id="catalogue-import-picker"
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="saving()"
+          [attr.aria-label]="text().catalogueImportChooseFile"
+          [attr.aria-invalid]="!!error()"
+          [attr.aria-describedby]="
+            'catalogue-import-picker-hint catalogue-import-picker-error' +
+            (selected ? ' catalogue-import-picker-filename' : '')
+          "
+          (click)="file.click()"
+        >
+          {{ text().catalogueImportChooseFile }}
+        </button>
+        @if (selected) {
+        <span id="catalogue-import-picker-filename" class="import-wrap">{{ selected.name }}</span>
+        }
+      </div>
+    </osnova-form-field>
+  </form>
+  }
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer()?.close()"
+    >
+      {{ job() || !canWrite() ? shared().close : shared().cancel }}
+    </button>
+    @if (canWrite() && !job()) {
+    <button
+      pButton
+      type="submit"
+      form="catalogue-import-form"
+      [disabled]="form.invalid || saving()"
+      [loading]="saving()"
+    >
+      {{ text().catalogueImportSubmit }}
+    </button>
+    }
+  </div>
+</osnova-route-drawer>

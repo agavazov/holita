@@ -1,10 +1,10 @@
 # 176 Inspect catalogue imports and retry failed work
 
-**Status:** Ready after [175](175-holita-catalogue-file-import.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-red.bg Admin has import history, row outcomes and retry. Ticket 175 provides durable local import results to display and retry.
+red.bg Admin has import history, row outcomes and retry. Holita's fixed-format CSV import stores row results for display and retry.
 
 ## Goal
 
@@ -12,7 +12,7 @@ Let merchants inspect local imports and retry eligible failed work safely.
 
 ## Steps
 
-1. Read the scoped jobs and stored row results from 175 in an Admin list and detail. Show state, counts and validation feedback.
+1. Read the scoped jobs and stored row results in an Admin list and detail. Show state, counts and validation feedback.
 2. Add a retry action for eligible failed work using the existing saved input. Preserve successful row results and writes.
 
 ## Done when
@@ -21,7 +21,7 @@ A merchant can inspect a failed import and retry eligible failures. Previously s
 
 ## Limits
 
-Use 175's fixed local CSV format and durable results. No upload wizard or connector.
+Use the existing fixed local CSV format and durable results. No upload wizard or connector.
 
 ## References
 

@@ -8,6 +8,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   OperatorCreateProductDocument,
   OperatorCreateProductTagDocument,
+  OperatorImportCatalogueDocument,
   OperatorProductBadgeChoicesDocument,
   OperatorProductDocument,
   OperatorProductCharacteristicsDocument,
@@ -24,6 +25,10 @@ interface ProductScope {
   readonly branchId: string;
   readonly language: Language;
   readonly token: string;
+}
+
+export function canImportCatalogue(role: string | undefined): boolean {
+  return role === 'OPERATOR' || role === 'ADMINISTRATOR';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -170,6 +175,22 @@ export class ProductsApi {
         responseType: 'blob',
       }),
     );
+  }
+
+  async importCatalogue(scope: ProductScope, fileName: string, csv: string) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: OperatorImportCatalogueDocument,
+        variables: { input: { fileName, csv } },
+      });
+      if (!data) {
+        throw new Error('Missing catalogue import result');
+      }
+      return data.importCatalogue;
+    } finally {
+      client.stop();
+    }
   }
 
   async save(scope: ProductScope, input: ProductInput, id: string | null): Promise<string> {

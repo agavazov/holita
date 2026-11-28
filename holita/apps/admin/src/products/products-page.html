@@ -2,7 +2,7 @@
   [title]="text().products"
   [moduleInfo]="text().productsInfo"
   [actions]="actions()"
-  (action)="open('new')"
+  (action)="open($event.id)"
 />
 @if (scope()) {
 <osnova-table-panel

@@ -673,6 +673,26 @@ centimetres. Barcodes are case-insensitively unique within the shop. Blank clear
 measurement. In the operator API, omit a field to keep the saved value or pass null to clear it.
 The catalogue API returns the measurements on active variants of public products.
 
+**Local catalogue import**
+
+In Merchant Admin, select a shop and choose **Products → Actions → Import CSV**. Select a local
+UTF-8 CSV with the header `name,sku,price` in that order. Use commas between columns and a dot
+for EUR decimals, with up to two decimal places. Wrap fields that contain commas, quotes, or
+line breaks in double quotes, and double any quotes within those fields. Import skips blank lines
+and accepts up to 100 data rows and 256 KiB.
+
+```csv
+name,sku,price
+"Ceramic cup, blue",CUP-BLUE,12.50
+```
+
+Each applied row creates a draft product with one active variant and inventory tracking off.
+Each SKU must be unique within the selected shop. Rows with invalid values or duplicate SKUs are
+rejected, while valid rows are applied. Admin shows the import job ID and the result for each
+row. Row numbers refer to the first line of each record, with the header on line 1. The operator
+graph stores the job and its results for that shop, and `catalogueImport(id)` returns them to
+authorized users in the same shop.
+
 Search Inventory by product name, SKU or barcode, then open a variant to view its details or set
 its tracked stock count. Use the **Barcode** filter for an exact match. Combine tracking,
 availability, brand, category, product activity and variant activity filters. A category includes

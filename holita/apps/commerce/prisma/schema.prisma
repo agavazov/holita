@@ -17,6 +17,38 @@ enum ProductStatus {
   @@map("productStatus")
 }
 
+enum CatalogueImportRowStatus {
+  APPLIED @map("applied")
+  REJECTED @map("rejected")
+  @@map("catalogueImportRowStatus")
+}
+
+model CatalogueImportJob {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  requestedByUserId String @db.Uuid
+  fileName String @db.VarChar(255)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  rows CatalogueImportRow[]
+  @@unique([tenantId, branchId, id])
+  @@map("catalogueImportJob")
+}
+
+model CatalogueImportRow {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  jobId String @db.Uuid
+  job CatalogueImportJob @relation(fields: [tenantId, branchId, jobId], references: [tenantId, branchId, id], onDelete: Cascade)
+  rowNumber Int
+  normalizedInput String[]
+  status CatalogueImportRowStatus?
+  errorCode String? @db.Text
+  error String? @db.Text
+  @@id([tenantId, branchId, jobId, rowNumber])
+  @@map("catalogueImportRow")
+}
+
 enum BrandStatus {
   ACTIVE @map("active")
   HIDDEN @map("hidden")
