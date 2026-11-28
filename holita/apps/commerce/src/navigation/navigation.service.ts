@@ -16,6 +16,7 @@ import type {
   QueryNavigationDestinationChoicesArgs,
 } from '../generated/graphql/types.js';
 import { Prisma } from '../generated/prisma/client.js';
+import { PagesService } from '../pages/pages.service.js';
 import { requireScope, type RequestContext, type Scope } from '../scope.js';
 import {
   NavigationRepository,
@@ -104,6 +105,10 @@ function itemFields(item: NavigationMenuItemInput, sortOrder: number): Navigatio
   };
 }
 
+function pageHref(shopPath: string, slug: string): string {
+  return shopPath + '/pages/' + encodeURIComponent(slug);
+}
+
 function publicLink(
   item: MenuItemRow,
   shopPath: string,
@@ -122,7 +127,7 @@ function publicLink(
         : null;
     case 'PAGE':
       return item.page?.status === 'PUBLISHED'
-        ? { ...link, href: shopPath + '/pages/' + encodeURIComponent(item.page.slug) }
+        ? { ...link, href: pageHref(shopPath, item.page.slug) }
         : null;
     case 'BLOG':
       return { ...link, href: shopPath + '/blog' };
@@ -136,6 +141,7 @@ export class NavigationService {
   constructor(
     private readonly repository: NavigationRepository,
     private readonly categories: CategoriesService,
+    private readonly pages: PagesService,
   ) {}
 
   async list(context: RequestContext) {
@@ -235,8 +241,11 @@ export class NavigationService {
     }
   }
 
-  async publicLinks(scope: Scope): Promise<ShopNavigation> {
-    const menus = await this.repository.menusWithItems(scope);
+  async publicLinks(scope: Scope, origin?: string | null): Promise<ShopNavigation> {
+    const [menus, policies] = await Promise.all([
+      this.repository.menusWithItems(scope),
+      this.pages.publishedPolicyLinks(scope),
+    ]);
     const categories = await this.categorySlugs(
       scope,
       menus.flatMap(({ items }) => items),
@@ -250,6 +259,16 @@ export class NavigationService {
         if (link) {
           slot.push(link);
         }
+      }
+    }
+    const storefrontOrigin = origin ? URL.parse(origin)?.origin : undefined;
+    const linkUrl = (href: string) =>
+      storefrontOrigin ? (URL.parse(href, storefrontOrigin)?.href ?? href) : href;
+    const footerUrls = new Set(result.footer.map(({ href }) => linkUrl(href)));
+    for (const { slug, ...link } of policies) {
+      const href = pageHref(shopPath, slug);
+      if (!footerUrls.has(linkUrl(href))) {
+        result.footer.push({ ...link, href, external: false });
       }
     }
     return result;

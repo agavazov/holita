@@ -49,8 +49,8 @@ fragment ShopNavigationLinkFields on ShopNavigationLink {
   href
   external
 }
-query PublicShopNavigation {
-  shopNavigation {
+query PublicShopNavigation($origin: String!) {
+  shopNavigation(origin: $origin) {
     header {
       ...ShopNavigationLinkFields
     }

@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [285](285-holita-shop-system-policy-pages.md).
-
 ## Background
 
 The red.bg coverage report marks NV02 as P2. Holita has one menu per position. The source also lets merchants create additional menus and include them from existing navigation.
@@ -22,7 +20,7 @@ Admin can add a secondary menu and show it from current Basic navigation. System
 
 ## Limits
 
-Use the current Basic navigation rendering and preserve the protected policy links from 285.
+Use the current Basic navigation rendering and preserve the protected policy links in the footer.
 
 ## References
 

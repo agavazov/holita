@@ -215,8 +215,8 @@ export class StorefrontApi {
   async shopHome(shopId: string) {
     return (await this.read(shopId, PublicShopHomeDocument, {})).shopHome;
   }
-  async shopNavigation(shopId: string) {
-    return (await this.read(shopId, PublicShopNavigationDocument, {})).shopNavigation;
+  async shopNavigation(shopId: string, origin: string) {
+    return (await this.read(shopId, PublicShopNavigationDocument, { origin })).shopNavigation;
   }
   async shopPage(shopId: string, slug: string) {
     return (await this.read(shopId, PublicShopPageDocument, { slug })).shopPage;

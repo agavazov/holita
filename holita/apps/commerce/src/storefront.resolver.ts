@@ -18,6 +18,7 @@ import type {
   QueryCatalogueCollectionsArgs,
   QueryCatalogueProductArgs,
   QueryCatalogueProductSpecificationsArgs,
+  QueryShopNavigationArgs,
   QueryShopPageArgs,
 } from './generated/graphql/storefront-types.js';
 import { StorefrontService, type StorefrontContext } from './storefront.service.js';
@@ -52,8 +53,11 @@ export class StorefrontResolver {
   @Query('shopHome') shopHome(@Context() context: StorefrontContext) {
     return this.service.shopHome(context);
   }
-  @Query('shopNavigation') shopNavigation(@Context() context: StorefrontContext) {
-    return this.service.shopNavigation(context);
+  @Query('shopNavigation') shopNavigation(
+    @Context() context: StorefrontContext,
+    @Args() { origin }: QueryShopNavigationArgs,
+  ) {
+    return this.service.shopNavigation(context, origin);
   }
   @Query('shopPage') shopPage(
     @Context() context: StorefrontContext,

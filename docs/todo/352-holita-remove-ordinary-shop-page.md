@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [285](285-holita-shop-system-policy-pages.md).
-
 ## Background
 
 The red.bg coverage report marks CN05 as P3. Admin can create and edit ordinary pages. Removing an outdated page also needs an explicit behavior when a shop menu points to it.
@@ -15,7 +13,7 @@ Remove an ordinary shop page safely from Admin.
 ## Steps
 
 1. Add a scoped removal action for ordinary pages and reject it with a useful reason while a current menu references the page.
-2. Protect the system pages introduced in 285 and keep current public page lookup behavior for removed slugs.
+2. Protect the system policy pages and keep current public page lookup behavior for removed slugs.
 
 ## Done when
 

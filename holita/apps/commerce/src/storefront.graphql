@@ -537,8 +537,11 @@ type CatalogueSpecification {
 }
 type Query {
   shop: Shop
-  "Saved shop navigation links whose destinations are publicly available."
-  shopNavigation: ShopNavigation!
+  """
+  Shop navigation links with publicly available destinations. Supply the storefront
+  origin to match absolute footer URLs to policy links.
+  """
+  shopNavigation(origin: String): ShopNavigation!
   shopHome: PublicShopHome
   "The published page with this slug in the current shop."
   shopPage(slug: String!): PublishedShopPage

@@ -88,6 +88,7 @@
   "pagePublished": "Published",
   "pageUpdatedAt": "Updated (UTC)",
   "pagePublicPath": "Storefront path",
+  "pageSystemSlug": "Policy page slugs are reserved and stay fixed.",
   "pagePlainTextHint": "Use plain text. Line breaks are preserved.",
   "pagePublishNeedsTranslation": "To publish, enter a title and body in at least one language.",
   "pageSaved": "Page saved.",

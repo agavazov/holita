@@ -310,6 +310,10 @@ input ShopPageInput {
 type ShopPage {
   id: ID!
   slug: String!
+  """
+  Whether this page has a protected shop policy slug.
+  """
+  isSystem: Boolean!
   status: ShopPageStatus!
   titleBg: String
   titleEn: String
@@ -1501,6 +1505,8 @@ type Mutation {
   createBrand(input: BrandInput!): Brand!
   updateBrand(id: ID!, input: BrandInput!): Brand!
   deleteBrand(id: ID!): Boolean!
+  "Add missing policy drafts for the selected shop."
+  provisionShopPolicyPages: Boolean!
   createShopPage(input: ShopPageInput!): ShopPage!
   updateShopPage(id: ID!, input: ShopPageInput!): ShopPage!
   updateShopSettings(input: ShopSettingsInput!): ShopSettings!

@@ -2,8 +2,6 @@
 
 **Status:** Needs owner. Does Basic currently need any optional cookie categories, and which choices and policy version should it show? **Product:** Holita.
 
-**Depends on** [285](285-holita-shop-system-policy-pages.md).
-
 ## Background
 
 The red.bg coverage report marks ST10 as P2. Basic currently has no optional-cookie preference flow. The source provides choices and a footer entry to revisit them.

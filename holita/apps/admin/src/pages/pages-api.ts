@@ -5,6 +5,7 @@ import { DemoSession, OperatorConfig, graphqlOptions, type Language } from '@osn
 import { HttpLink } from 'apollo-angular/http';
 import {
   OperatorCreateShopPageDocument,
+  OperatorProvisionShopPolicyPagesDocument,
   OperatorShopPageDocument,
   OperatorShopPagesDocument,
   OperatorUpdateShopPageDocument,
@@ -39,9 +40,21 @@ export class PagesApi {
     return new ApolloClient(graphqlOptions(this.link, this.config.graphqlUrl, scope, scope));
   }
 
-  async list(scope: PageScope, variables: OperatorShopPagesQueryVariables) {
+  async list(
+    scope: PageScope,
+    variables: OperatorShopPagesQueryVariables,
+    provisionPolicies: boolean,
+  ) {
     const client = this.client(scope);
     try {
+      if (provisionPolicies) {
+        const { data } = await client.mutate({
+          mutation: OperatorProvisionShopPolicyPagesDocument,
+        });
+        if (!data?.provisionShopPolicyPages) {
+          throw new Error('Could not provision shop policy pages');
+        }
+      }
       const { data } = await client.query({
         query: OperatorShopPagesDocument,
         variables,

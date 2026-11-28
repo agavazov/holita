@@ -374,8 +374,8 @@ export class StorefrontService implements OnModuleInit {
   async shopPage(context: StorefrontContext, slug: string) {
     return this.pages.published(await this.publicScope(context), slug);
   }
-  async shopNavigation(context: StorefrontContext) {
-    return this.navigation.publicLinks(await this.publicScope(context));
+  async shopNavigation(context: StorefrontContext, origin?: string | null) {
+    return this.navigation.publicLinks(await this.publicScope(context), origin);
   }
   async blogArticles(context: StorefrontContext, args: QueryBlogArticlesArgs) {
     const scope = await this.publicScope(context);

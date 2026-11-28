@@ -104,6 +104,7 @@ export class PageEditor {
   private readonly savedPage = computed(() =>
     this.record.hasValue() ? this.record.value() : null,
   );
+  protected readonly isSystem = computed(() => this.savedPage()?.isSystem ?? false);
   protected readonly subtitle = computed(() => {
     const page = this.savedPage();
     return page ? pageTitle(page, this.language.value()) : null;
@@ -231,9 +232,12 @@ export class PageEditor {
       if (this.destroyRef.destroyed || this.api.scope() !== scope) {
         return;
       }
-      const errors = fieldErrors(error, fields, scope.language, (_code, field) =>
-        field === 'status' ? this.text().pagePublishNeedsTranslation : undefined,
-      );
+      const errors = fieldErrors(error, fields, scope.language, (code, field) => {
+        if (code === 'SYSTEM_PAGE_SLUG') {
+          return this.text().pageSystemSlug;
+        }
+        return field === 'status' ? this.text().pagePublishNeedsTranslation : undefined;
+      });
       this.errors.set(errors);
       this.saveError.set(!Object.keys(errors).length);
     } finally {

@@ -19,7 +19,7 @@
       <osnova-form-field
         controlId="page-slug"
         [label]="text().slug"
-        [hint]="text().slugHint"
+        [hint]="isSystem() ? text().pageSystemSlug : text().slugHint"
         [error]="slugError"
         [required]="true"
       >
@@ -28,6 +28,7 @@
           id="page-slug"
           formControlName="slug"
           autocomplete="off"
+          [readOnly]="isSystem()"
           aria-required="true"
           aria-describedby="page-slug-hint page-slug-error"
           [invalid]="!!slugError"

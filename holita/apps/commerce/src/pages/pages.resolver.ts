@@ -22,6 +22,11 @@ export class PagesResolver {
     return this.pages.find(context, args.id);
   }
 
+  @Mutation('provisionShopPolicyPages')
+  provisionPolicyPages(@Context() context: RequestContext) {
+    return this.pages.provisionPolicyPages(context);
+  }
+
   @Mutation('createShopPage')
   create(@Args() args: MutationCreateShopPageArgs, @Context() context: RequestContext) {
     return this.pages.save(context, args.input);

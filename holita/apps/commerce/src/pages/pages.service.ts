@@ -12,6 +12,7 @@ import type { QueryShopPagesArgs, ShopPage, ShopPageInput } from '../generated/g
 import { Prisma, type ShopPage as StoredPage } from '../generated/prisma/client.js';
 import { requireScope, type RequestContext, type Scope } from '../scope.js';
 import { PagesRepository } from './pages.repository.js';
+import { policyPages, policySlugs } from './policy-pages.js';
 
 function recordId(id: string): string {
   if (!isUUID(id)) {
@@ -25,6 +26,7 @@ function present(row: StoredPage): ShopPage {
   return {
     id,
     slug,
+    isSystem: policySlugs.includes(slug),
     status,
     titleBg,
     titleEn,
@@ -55,18 +57,40 @@ export class PagesService {
     return validContentSlug(slug) ? this.repository.published(scope, slug) : null;
   }
 
+  async provisionPolicyPages(context: RequestContext): Promise<boolean> {
+    const scope = await requireScope(context, true);
+    await this.repository.ensurePolicyPages(scope);
+    return true;
+  }
+
+  async publishedPolicyLinks(scope: Scope) {
+    const pages = await this.repository.publishedPolicies(scope);
+    const ids = new Map(pages.map(({ slug, id }) => [slug, id]));
+    return policyPages.flatMap(({ slug, titleBg, titleEn }) => {
+      const id = ids.get(slug);
+      return id ? [{ id, slug, labelBg: titleBg, labelEn: titleEn }] : [];
+    });
+  }
+
   async save(context: RequestContext, input: ShopPageInput, id?: string) {
     const scope = await requireScope(context, true);
-    const data = {
-      slug: contentSlug(input.slug),
-      status: input.status,
-      ...plainTextTranslations(input),
-    };
+    const slug = contentSlug(input.slug);
+    const pageId = id === undefined ? undefined : recordId(id);
+    const existing = pageId === undefined ? null : await this.repository.find(scope, pageId);
+    if (pageId !== undefined && !existing) {
+      throw new NotFoundException('Page not found');
+    }
+    if (
+      slug !== existing?.slug &&
+      (policySlugs.includes(slug) || policySlugs.includes(existing?.slug ?? ''))
+    ) {
+      throw contentInputError('slug', 'SYSTEM_PAGE_SLUG', 'Policy page slugs are fixed');
+    }
+    const data = { slug, status: input.status, ...plainTextTranslations(input) };
     try {
-      const row =
-        id === undefined
-          ? await this.repository.create(scope, data)
-          : await this.repository.update(scope, recordId(id), data);
+      const row = existing
+        ? await this.repository.update(scope, existing.id, data)
+        : await this.repository.create(scope, data);
       return present(row);
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {

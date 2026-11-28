@@ -1265,7 +1265,7 @@ class StorefrontPage {
   });
   protected readonly shopNavigation = resource({
     params: () => this.shop()?.id,
-    loader: ({ params: shopId }) => this.api.shopNavigation(shopId),
+    loader: ({ params: shopId }) => this.api.shopNavigation(shopId, this.document.location.origin),
   });
   private readonly navigation = computed(() =>
     this.shopNavigation.hasValue() ? this.shopNavigation.value() : undefined,

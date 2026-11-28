@@ -2543,6 +2543,145 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(await storefront(publicA, readPublicPage, { slug: 'foreign-page' })).toEqual({
     data: { shopPage: null },
   });
+  const shopScope = { tenantId: tenantA, branchId: publicA };
+  const existingTerms = await database.shopPage.create({
+    data: { ...shopScope, slug: 'terms', titleBg: 'Моите условия', bodyBg: 'Текст на магазина.' },
+  });
+  await database.shopPage.create({
+    data: {
+      tenantId: tenantB,
+      branchId: publicA,
+      ...publishedPage,
+      slug: 'privacy',
+      status: 'PUBLISHED',
+    },
+  });
+  const policySlugs = ['terms', 'privacy', 'cookie-policy'];
+  const listPolicies = '{shopPages{items{id slug isSystem status}}}';
+  const provisionPolicies = 'mutation { provisionShopPolicyPages }';
+  const policyScope = { ...shopScope, slug: { in: policySlugs } };
+  expect(await query(tokens.viewer, publicA, '{shopPages(search:"cookie-policy"){total}}')).toEqual(
+    { data: { shopPages: { total: 0 } } },
+  );
+  expect(
+    await query(
+      tokens.viewer,
+      publicA,
+      '{navigationDestinationChoices(type:PAGE,search:"cookie-policy"){total}}',
+    ),
+  ).toEqual({ data: { navigationDestinationChoices: { total: 0 } } });
+  expect(await query(tokens.viewer, publicA, provisionPolicies)).toMatchObject({
+    errors: [{ extensions: { code: 'FORBIDDEN' } }],
+  });
+  expect(await database.shopPage.findMany({ where: policyScope })).toEqual([existingTerms]);
+  for (const token of [tokens.operator, tokens.administrator]) {
+    expect(await query(token, publicA, provisionPolicies)).toEqual({
+      data: { provisionShopPolicyPages: true },
+    });
+  }
+  for (const token of [tokens.viewer, tokens.operator]) {
+    expect(await query(token, publicA, listPolicies)).toMatchObject({
+      data: {
+        shopPages: {
+          items: expect.arrayContaining(
+            policySlugs.map((slug) => ({
+              id: expect.any(String),
+              slug,
+              isSystem: true,
+              status: 'DRAFT',
+            })),
+          ),
+        },
+      },
+    });
+  }
+  expect(await database.shopPage.findUnique({ where: { id: existingTerms.id } })).toEqual(
+    existingTerms,
+  );
+  const policies = await database.shopPage.findMany({ where: policyScope });
+  const createPage = 'mutation($input:ShopPageInput!){createShopPage(input:$input){id}}';
+  const updatePage =
+    'mutation($id:ID!,$input:ShopPageInput!){updateShopPage(id:$id,input:$input){id}}';
+  const fixedSlugError = {
+    data: null,
+    errors: [
+      {
+        extensions: {
+          code: 'BAD_USER_INPUT',
+          fieldErrors: [{ path: 'slug', code: 'SYSTEM_PAGE_SLUG' }],
+        },
+      },
+    ],
+  };
+  expect(
+    await query(tokens.operator, publicA, createPage, {
+      input: { slug: 'terms', status: 'DRAFT' },
+    }),
+  ).toMatchObject(fixedSlugError);
+  expect(
+    await query(tokens.operator, publicA, updatePage, {
+      id: existingTerms.id,
+      input: { slug: 'other-terms', status: 'DRAFT' },
+    }),
+  ).toMatchObject(fixedSlugError);
+  expect(await storefront(publicA, '{shopNavigation{footer{href}}}')).toEqual({
+    data: { shopNavigation: { footer: [] } },
+  });
+  const createMenu =
+    'mutation($input:CreateNavigationMenuInput!){createNavigationMenu(input:$input){id}}';
+  const origin = 'https://store.example.test';
+  const cookiesUrl = `${origin}/s/${publicA}/pages/cookie-policy`;
+  const otherPrivacy = `https://other.example.test/s/${publicA}/pages/privacy`;
+  expect(
+    await query(tokens.operator, publicA, createMenu, {
+      input: {
+        placement: 'FOOTER',
+        items: [
+          { labelEn: 'Our terms', destinationType: 'PAGE', destinationId: existingTerms.id },
+          { labelEn: 'Our cookies', destinationType: 'URL', url: cookiesUrl },
+          { labelEn: 'Other privacy policy', destinationType: 'URL', url: otherPrivacy },
+        ],
+      },
+    }),
+  ).toMatchObject({ data: { createNavigationMenu: { id: expect.any(String) } } });
+  for (const { id, slug } of policies) {
+    const input = { slug, titleBg: `Политика ${slug}`, bodyBg: 'Текст на магазина.' };
+    expect(
+      await query(tokens.operator, publicA, updatePage, {
+        id,
+        input: { ...input, status: 'PUBLISHED' },
+      }),
+    ).toEqual({ data: { updateShopPage: { id } } });
+    expect(await storefront(publicA, readPublicPage, { slug })).toEqual({
+      data: { shopPage: input },
+    });
+    expect(await storefront(publicB, readPublicPage, { slug })).toEqual({
+      data: { shopPage: null },
+    });
+  }
+  const footerLinks =
+    'query($origin:String!){shopNavigation(origin:$origin){footer{href labelEn}}}';
+  expect(await storefront(publicA, footerLinks, { origin })).toEqual({
+    data: {
+      shopNavigation: {
+        footer: [
+          { href: `/s/${publicA}/pages/terms`, labelEn: 'Our terms' },
+          { href: cookiesUrl, labelEn: 'Our cookies' },
+          { href: otherPrivacy, labelEn: 'Other privacy policy' },
+          { href: `/s/${publicA}/pages/privacy`, labelEn: 'Privacy policy' },
+        ],
+      },
+    },
+  });
+  expect(await storefront(publicB, footerLinks, { origin })).toEqual({
+    data: { shopNavigation: { footer: [] } },
+  });
+  for (const { id, slug } of policies) {
+    expect(
+      await query(tokens.operator, publicA, updatePage, { id, input: { slug, status: 'DRAFT' } }),
+    ).toEqual({ data: { updateShopPage: { id } } });
+  }
+  await database.navigationMenuItem.deleteMany({ where: { ...shopScope, destinationType: 'URL' } });
   const blogScope = { tenantId: tenantA, branchId: publicA };
   const tag = await database.blogTag.create({
     data: { ...blogScope, name: 'Грижа', normalizedName: 'грижа', slug: 'care' },
@@ -2648,8 +2787,6 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   const category = await database.category.create({
     data: { ...categoryScope, name: 'Child', slug: 'child', parentId: parent.id },
   });
-  const createMenu =
-    'mutation($input:CreateNavigationMenuInput!){createNavigationMenu(input:$input){id}}';
   expect(
     await query(tokens.operator, publicA, createMenu, {
       input: {

@@ -3,10 +3,29 @@ import { DatabaseService } from '../database.service.js';
 import type { ShopPageFilter, ShopPageInput, ShopPageSort } from '../generated/graphql/types.js';
 import { Prisma } from '../generated/prisma/client.js';
 import type { Scope } from '../scope.js';
+import { policyPages, policySlugs } from './policy-pages.js';
 
 @Injectable()
 export class PagesRepository {
   constructor(private readonly database: DatabaseService) {}
+
+  async ensurePolicyPages(scope: Scope): Promise<void> {
+    const pages = this.database.client.shopPage;
+    const existing = await pages.count({ where: { ...scope, slug: { in: policySlugs } } });
+    if (existing < policyPages.length) {
+      await pages.createMany({
+        data: policyPages.map((page) => ({ ...scope, ...page })),
+        skipDuplicates: true,
+      });
+    }
+  }
+
+  publishedPolicies(scope: Scope) {
+    return this.database.client.shopPage.findMany({
+      where: { ...scope, slug: { in: policySlugs }, status: 'PUBLISHED' },
+      select: { id: true, slug: true },
+    });
+  }
 
   async list(
     scope: Scope,

@@ -25,6 +25,7 @@ query OperatorShopPages(
 query OperatorShopPage($id: ID!) {
   shopPage(id: $id) {
     ...OperatorShopPageListFields
+    isSystem
     bodyBg
     bodyEn
   }
@@ -34,6 +35,10 @@ mutation OperatorCreateShopPage($input: ShopPageInput!) {
   createShopPage(input: $input) {
     id
   }
+}
+
+mutation OperatorProvisionShopPolicyPages {
+  provisionShopPolicyPages
 }
 
 mutation OperatorUpdateShopPage($id: ID!, $input: ShopPageInput!) {

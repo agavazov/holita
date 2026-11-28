@@ -165,6 +165,7 @@ export class PagesPage {
     return scope
       ? {
           scope,
+          provisionPolicies: this.canWrite(),
           variables: {
             offset: (page - 1) * pageSize,
             limit: pageSize,
@@ -177,7 +178,7 @@ export class PagesPage {
   });
   protected readonly list = resource({
     params: this.params,
-    loader: ({ params }) => this.api.list(params.scope, params.variables),
+    loader: ({ params }) => this.api.list(params.scope, params.variables, params.provisionPolicies),
   });
   protected readonly page = linkedSignal<
     { scope: ReturnType<PagesApi['scope']>; data: PageList | undefined },

@@ -890,6 +890,12 @@ back to the other language as a pair. Returning the page to Draft removes it fro
 The operator graph exposes `shopPages`, `shopPage`, `createShopPage` and `updateShopPage`.
 The storefront graph exposes `shopPage(slug: ...)` for published pages in the current shop.
 
+When a merchant with edit access opens Pages, Admin uses `provisionShopPolicyPages` to add any
+missing Terms and conditions, Privacy policy and Cookie policy drafts for the selected shop.
+Their slugs are fixed at `terms`, `privacy` and `cookie-policy`. Add your policy text and publish
+each page to show its link in the Basic storefront footer. A saved footer link to the same page
+keeps its label and position, including when it uses an absolute URL on the storefront origin.
+
 In Admin, open Blog Tags to create reusable names and shop-unique slugs. In Blog Articles,
 write Bulgarian and English plain-text content and choose tags for the article. Publishing
 requires a title and body in at least one language. The publication time is set when an article
@@ -903,8 +909,9 @@ article assignments.
 In Admin, open Navigation for the selected shop to create a Header or Footer menu. Add links
 with a Bulgarian or English label, choose a shop destination or enter an HTTP(S) URL, and move
 links into the order shoppers should see them. The storefront graph exposes `shopNavigation`
-with both placements in saved order. A hidden or unpublished destination is omitted while it
-is unavailable. Save a menu with no links to clear its placement.
+with both placements in saved order. Basic supplies its origin to match absolute footer URLs to
+policy links. A hidden or unpublished destination is omitted while it
+is unavailable. Save a menu with no links to clear its manual links.
 
 In Admin, open General Settings to update the selected shop's public display name, email,
 phone and address. Save publishes those values to the storefront. Discard changes restores
