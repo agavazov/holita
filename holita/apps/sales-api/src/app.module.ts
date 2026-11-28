@@ -13,6 +13,7 @@ import { ContactsModule } from './contacts/contacts.module.js';
 import { DatabaseModule } from './database.module.js';
 import { HealthController } from './health.controller.js';
 import { LeadsModule } from './leads/leads.module.js';
+import { OffersModule } from './offers/offers.module.js';
 import { WorkspaceModule } from './workspace/workspace.module.js';
 
 @Module({
@@ -22,6 +23,7 @@ import { WorkspaceModule } from './workspace/workspace.module.js';
     WorkspaceModule,
     LeadsModule,
     ContactsModule,
+    OffersModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       typeDefs: readFileSync(new URL('./sales.graphql', import.meta.url), 'utf8'),

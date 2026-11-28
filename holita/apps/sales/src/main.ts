@@ -7,6 +7,9 @@ import { LeadEditor } from './leads/lead-editor';
 import { LeadNoteEditor } from './leads/lead-note-editor';
 import { LeadTaskEditor } from './leads/lead-task-editor';
 import { LeadsPage } from './leads/leads-page';
+import { OfferDetailPage } from './offers/offer-detail-page';
+import { OfferEditor } from './offers/offer-editor';
+import { OffersPage } from './offers/offers-page';
 import { SalesWorkspaceStatus } from './workspace/sales-workspace-status';
 
 void startOperator({
@@ -78,6 +81,12 @@ void startOperator({
                   canDeactivate: [leaveDrawer],
                 },
                 {
+                  path: 'offers/new',
+                  component: OfferEditor,
+                  data: { drawer: true, mode: 'create', offerEditor: true },
+                  canDeactivate: [leaveDrawer],
+                },
+                {
                   path: 'tasks/new',
                   component: LeadTaskEditor,
                   data: { drawer: true, mode: 'create', taskEditor: true },
@@ -87,6 +96,37 @@ void startOperator({
                   path: 'tasks/:recordId/edit',
                   component: LeadTaskEditor,
                   data: { drawer: true, mode: 'edit', recordParam: 'recordId', taskEditor: true },
+                  canDeactivate: [leaveDrawer],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      path: 'offers',
+      component: SalesWorkspaceStatus,
+      data: { requireSalesAccess: true },
+      children: [
+        {
+          path: '',
+          component: OffersPage,
+          children: [
+            {
+              path: 'new',
+              component: OfferEditor,
+              data: { drawer: true, mode: 'create' },
+              canDeactivate: [leaveDrawer],
+            },
+            {
+              path: ':recordId',
+              component: OfferDetailPage,
+              children: [
+                {
+                  path: 'edit',
+                  component: OfferEditor,
+                  data: { drawer: true, mode: 'edit' },
                   canDeactivate: [leaveDrawer],
                 },
               ],
@@ -106,6 +146,7 @@ void startOperator({
     { id: 'merchants', label: 'merchants', icon: 'users', path: 'merchants' },
     { id: 'leads', label: 'leads', icon: 'id-card', path: 'leads' },
     { id: 'contacts', label: 'contacts', icon: 'envelope', path: 'contacts' },
+    { id: 'offers', label: 'offers', icon: 'tag', path: 'offers' },
   ],
 }).catch((error: unknown) => {
   console.error(error);

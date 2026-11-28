@@ -1,5 +1,7 @@
 type Query {
   salesWorkspaceAccess: SalesWorkspaceViewer!
+  salesOffers(offset: Int! = 0, limit: Int! = 20, search: String, leadId: ID): SalesOfferPage!
+  salesOffer(id: ID!): SalesOffer
   leads(
     offset: Int! = 0
     limit: Int! = 20
@@ -28,6 +30,8 @@ type Query {
 }
 
 type Mutation {
+  createSalesOffer(leadId: ID, input: SalesOfferInput!): SalesOffer!
+  updateSalesOffer(id: ID!, input: SalesOfferInput!): SalesOffer!
   createLead(input: LeadInput!): Lead!
   updateLead(id: ID!, input: LeadInput!): Lead!
   updateLeadStage(id: ID!, stage: LeadStage!): Lead!
@@ -240,4 +244,79 @@ enum LeadContactSortDirection {
 input LeadContactSort {
   field: LeadContactSortField! = NAME
   direction: LeadContactSortDirection! = ASC
+}
+
+type SalesOfferPage {
+  items: [SalesOffer!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+
+type SalesOffer {
+  id: ID!
+  tenantId: ID!
+  leadId: ID
+  authorUserId: ID!
+  status: SalesOfferStatus!
+  recipientName: String
+  recipientEmail: String
+  replyEmail: String
+  replyPhone: String
+  currentSiteUrl: String
+  proposedSiteUrl: String
+  exampleDomain: String
+  """
+  Calendar date in YYYY-MM-DD format.
+  """
+  validUntil: String
+  productCount: Int
+  categoryCount: Int
+  languages: String
+  currentPlatform: String
+  message: String
+  includedScope: String
+  recommended: SalesQuoteLine
+  alternative: SalesQuoteLine
+  createdAt: String!
+  updatedAt: String!
+}
+
+enum SalesOfferStatus {
+  DRAFT
+}
+
+type SalesQuoteLine {
+  planName: String!
+  """
+  Exact decimal amount in EUR per month before VAT.
+  """
+  monthlyPrice: String!
+}
+
+input SalesQuoteLineInput {
+  planName: String!
+  """
+  Nonnegative EUR amount with up to two decimal places.
+  """
+  monthlyPrice: String!
+}
+
+input SalesOfferInput {
+  recipientName: String
+  recipientEmail: String
+  replyEmail: String
+  replyPhone: String
+  currentSiteUrl: String
+  proposedSiteUrl: String
+  exampleDomain: String
+  validUntil: String
+  productCount: Int
+  categoryCount: Int
+  languages: String
+  currentPlatform: String
+  message: String
+  includedScope: String
+  recommended: SalesQuoteLineInput
+  alternative: SalesQuoteLineInput
 }

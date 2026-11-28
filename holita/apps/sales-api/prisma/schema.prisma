@@ -26,6 +26,7 @@ model Lead {
   contacts            LeadContact[]
   notes               LeadNote[]
   tasks               LeadTask[]
+  offers              SalesOffer[]
 
   @@unique([tenantId, id])
   @@index([tenantId, createdAt, id])
@@ -140,4 +141,43 @@ model SalesImportRecord {
 
   @@id([tenantId, sourceSystem, entity, sourceId])
   @@map("salesImportRecord")
+}
+
+model SalesOffer {
+  id                      String           @id @default(uuid()) @db.Uuid
+  tenantId                String           @db.Uuid
+  leadId                  String?          @db.Uuid
+  authorUserId            String           @db.Uuid
+  status                  SalesOfferStatus @default(DRAFT)
+  recipientName           String?          @db.VarChar(255)
+  recipientEmail          String?          @db.VarChar(254)
+  replyEmail              String?          @db.VarChar(254)
+  replyPhone              String?          @db.VarChar(255)
+  currentSiteUrl          String?          @db.VarChar(2048)
+  proposedSiteUrl         String?          @db.VarChar(2048)
+  exampleDomain           String?          @db.VarChar(253)
+  validUntil              DateTime?        @db.Date
+  productCount            Int?
+  categoryCount           Int?
+  languages               String?          @db.VarChar(120)
+  currentPlatform         String?          @db.VarChar(120)
+  message                 String?          @db.Text
+  includedScope           String?          @db.Text
+  recommendedPlanName     String?          @db.VarChar(80)
+  recommendedMonthlyPrice Decimal?        @db.Decimal(8, 2)
+  alternativePlanName     String?          @db.VarChar(80)
+  alternativeMonthlyPrice Decimal?        @db.Decimal(8, 2)
+  createdAt               DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime         @updatedAt @db.Timestamptz(3)
+  lead                    Lead?            @relation(fields: [tenantId, leadId], references: [tenantId, id], onDelete: Restrict)
+
+  @@index([tenantId, authorUserId, updatedAt(sort: Desc), id])
+  @@index([tenantId, leadId, authorUserId])
+  @@map("salesOffer")
+}
+
+enum SalesOfferStatus {
+  DRAFT @map("draft")
+
+  @@map("salesOfferStatus")
 }

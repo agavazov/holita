@@ -1,0 +1,121 @@
+<div [hidden]="detailOpen()">
+  <div class="app-view">
+    @if (!detailOpen()) {
+    <osnova-page-header
+      [title]="title()"
+      [moduleInfo]="text().listInfo"
+      [actions]="actions()"
+      (action)="open('new')"
+    />
+    }
+    <osnova-table-panel
+      [heading]="text().draftOffers"
+      [mobileFullWidthActions]="true"
+      [columns]="columns()"
+      tableMinWidth="48rem"
+      [view]="view()"
+      [total]="page()?.total ?? null"
+      [busy]="list.isLoading()"
+      [emptyTitle]="text().emptyOffers"
+      [errorText]="text().offersUnavailable"
+      [page]="pagination()"
+      (pageChange)="url.setPage($event)"
+      (retry)="list.reload()"
+      (clearFilters)="url.clearFilters()"
+    >
+      <osnova-filter-builder
+        panelActions
+        [mobileFullWidth]="true"
+        [searchLabel]="text().searchOffers"
+        [search]="url.searchDraft()"
+        [searchError]="url.searchError() ? shared().searchTooManyWords : null"
+        (searchChange)="url.editSearch($event)"
+      />
+      <p-table
+        class="app-responsive-table app-table-fixed"
+        [value]="page()?.items ?? []"
+        [rowTrackBy]="trackByOffer"
+        [lazy]="true"
+        [lazyLoadOnInit]="false"
+        [scrollable]="true"
+        [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+        dataKey="id"
+      >
+        <ng-template #colgroup>
+          <colgroup>
+            @for (column of columns(); track column.id) {
+            <col [class]="column.className ?? ''" [style.width]="column.width" />
+            }
+          </colgroup>
+        </ng-template>
+        <ng-template #header>
+          <tr>
+            @for (column of columns(); track column.id) {
+            <th scope="col" [class]="column.className ?? ''">
+              {{ column.label }} @if (column.id === 'recommended' || column.id === 'alternative') {
+              <br /><small class="app-muted">{{ text().monthlyPrice }}</small>
+              }
+            </th>
+            }
+          </tr>
+        </ng-template>
+        <ng-template #body let-offer>
+          @let name = label(offer, text().untitledOffer);
+          <tr>
+            <td class="app-col-identity">
+              <div class="app-cell-identity">
+                <a
+                  class="app-link app-table-identity-wrap"
+                  [routerLink]="[offer.id]"
+                  queryParamsHandling="preserve"
+                  [title]="name"
+                >
+                  {{ name }}
+                </a>
+                @if (offer.recipientEmail && offer.recipientEmail !== name) {
+                <span class="app-cell-truncate" [title]="offer.recipientEmail"
+                  >{{ offer.recipientEmail }}</span
+                >
+                } @for (kind of quoteKinds; track kind) { @if (offer[kind]; as quote) {
+                <span class="app-table-mobile-meta app-table-identity-wrap">
+                  {{ text()[kind] }} · {{ quote.planName }} · {{ price(quote.monthlyPrice,
+                  language()) }}
+                </span>
+                } } @if (offer.recommended || offer.alternative) {
+                <span class="app-table-mobile-meta app-table-identity-wrap"
+                  >{{ text().monthlyPrice }}</span
+                >
+                }
+                <time
+                  class="app-table-mobile-meta app-table-identity-wrap"
+                  [attr.datetime]="offer.updatedAt"
+                >
+                  {{ offer.updatedAt | osnovaDateTime }}
+                </time>
+              </div>
+            </td>
+            <td>
+              <div class="app-cell-status app-table-tag-wrap">
+                <p-tag [value]="text().draft" severity="secondary" />
+              </div>
+            </td>
+            @for (quote of [offer.recommended, offer.alternative]; track $index) {
+            <td class="app-table-merged-column">
+              @if (quote) {
+              <div class="app-cell-identity">
+                <span class="app-cell-truncate" [title]="quote.planName">{{ quote.planName }}</span>
+                <span>{{ price(quote.monthlyPrice, language()) }}</span>
+              </div>
+              } @else { — }
+            </td>
+            }
+            <td class="app-cell-date app-table-merged-column">
+              <time [attr.datetime]="offer.updatedAt">{{ offer.updatedAt | osnovaDateTime }}</time>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </osnova-table-panel>
+  </div>
+</div>
+<router-outlet hidden [routerOutletData]="drawerHost" />

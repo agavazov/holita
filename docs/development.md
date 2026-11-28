@@ -518,6 +518,14 @@ The operator graph exposes this through `Lead.nextTask`, `leadTasks`, `leadTask`
 `createLeadTask`, `updateLeadTask`, and `updateLeadTaskStatus`. The demo seed includes
 pending, in-progress, and completed task examples.
 
+Open **My Offers** in Sales to search your drafts and create a standalone offer. Use
+**New offer** under **Linked offers** on a lead to prefill the recipient and current website from
+the lead and its primary contact. Review either draft on its detail page and use **Edit offer**
+to revise the quote. Recommended and alternative plans are optional, and each entered plan
+needs a name and a monthly EUR price before VAT. The operator graph exposes `salesOffers`,
+`salesOffer`, `createSalesOffer` and `updateSalesOffer` in the verified platform tenant and author
+scope. The Holita demo seed includes one linked draft with both prices.
+
 **Local Sales import**
 
 Use an approved export in private loopback staging with a read-only role. Run the Sales migrations

@@ -33,6 +33,7 @@ import { Tag } from 'primeng/tag';
 import { contactStrings } from '../contacts/contact-labels';
 import { LeadContacts } from '../contacts/lead-contacts';
 import type { LeadStage } from '../generated/leads-operations';
+import { LeadOffers } from '../offers/lead-offers';
 import { LeadActivity } from './lead-activity';
 import { agentLabel, injectLeadAgents } from './lead-agent';
 import { injectLeadRecord, leadLabel } from './lead-record';
@@ -56,6 +57,7 @@ import { LeadsApi } from './leads-api';
     LeadContacts,
     LeadActivity,
     LeadTasks,
+    LeadOffers,
     Tag,
   ],
   templateUrl: './lead-detail-page.html',
@@ -87,6 +89,7 @@ export class LeadDetailPage {
   });
   private readonly contacts = viewChild(LeadContacts);
   private readonly activity = viewChild(LeadActivity);
+  private readonly offers = viewChild(LeadOffers);
   private readonly stageSelect = viewChild<Select>('stagePicker');
   private readonly assignmentSelect = viewChild<Select>('assignmentPicker');
   protected readonly name = computed(() => {
@@ -152,6 +155,9 @@ export class LeadDetailPage {
       } else if (this.route.firstChild?.snapshot.data['noteEditor'] === true) {
         this.activity()?.refresh();
         this.listHost.saved(event);
+      } else if (this.route.firstChild?.snapshot.data['offerEditor'] === true) {
+        this.offers()?.refresh();
+        this.listHost.saved({ message: event.message, recordId: null });
       } else if (this.route.firstChild?.snapshot.data['taskEditor'] === true) {
         this.taskSaved(event.message);
       } else {
@@ -285,6 +291,10 @@ export class LeadDetailPage {
 
   protected editNote(id: string): void {
     this.open(['notes', id, 'edit']);
+  }
+
+  protected addOffer(): void {
+    this.open(['offers', 'new']);
   }
 
   protected addTask(): void {

@@ -1,10 +1,10 @@
 # 302 Preview, print and track Sales offers
 
-**Status:** Ready after [138](138-holita-sales-offers.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-Ticket 138 saves priced Sales offer drafts. red.bg has an internal quote document, print
+Sales agents can save priced offer drafts. red.bg has an internal quote document, print
 entry and lifecycle actions for preparation and manually sent offers.
 
 ## Goal

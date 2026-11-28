@@ -172,6 +172,7 @@
   (add)="openAction('add-contact')"
   (edit)="editContact($event)"
 />
+<holita-lead-offers [leadId]="lead.id" (add)="addOffer()" />
 <holita-lead-activity
   [leadId]="lead.id"
   [tasks]="tasks"

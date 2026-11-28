@@ -3,7 +3,7 @@ import { isISO8601 } from 'class-validator';
 import { GraphQLError } from 'graphql';
 import { Prisma } from '../generated/prisma/client.js';
 
-export function activityId(id: string, kind: 'note' | 'task'): string {
+export function activityId(id: string, kind: 'note' | 'task' | 'offer'): string {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(id)) {
     throw new BadRequestException(`Lead and ${kind} IDs must be UUIDs`);
   }

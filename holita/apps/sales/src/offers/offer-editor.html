@@ -1,0 +1,120 @@
+<osnova-route-drawer
+  [title]="editing ? text().editOffer : text().newOffer"
+  [subtitle]="subtitle()"
+  [closeLink]="closeLink()"
+  [state]="state()"
+  [errorText]="loadError()"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  size="lg"
+  (retry)="retry()"
+>
+  <form id="offer-editor-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
+    @for (kind of quoteKinds; track kind) { @let headingId = 'offer-editor-' + kind;
+    <section class="app-form-section">
+      <h3 [id]="headingId">{{ text()[kind] }}</h3>
+      <div class="app-form-grid" [formGroupName]="kind">
+        @let planId = 'offer-' + kind + '.planName'; @let priceId = 'offer-' + kind +
+        '.monthlyPrice'; @let planError = quoteError(kind, 'planName'); @let priceError =
+        quoteError(kind, 'monthlyPrice');
+        <osnova-form-field [controlId]="planId" [label]="text().planName" [error]="planError">
+          <input
+            pInputText
+            [id]="planId"
+            formControlName="planName"
+            [invalid]="!!planError"
+            [attr.aria-invalid]="!!planError"
+            [attr.aria-labelledby]="headingId + ' ' + planId + '-label'"
+            [attr.aria-describedby]="planId + '-error'"
+            (input)="clearQuoteError(kind, 'planName')"
+          />
+        </osnova-form-field>
+        <osnova-form-field [controlId]="priceId" [label]="text().monthlyPrice" [error]="priceError">
+          <input
+            pInputText
+            [id]="priceId"
+            inputmode="decimal"
+            formControlName="monthlyPrice"
+            [invalid]="!!priceError"
+            [attr.aria-invalid]="!!priceError"
+            [attr.aria-labelledby]="headingId + ' ' + priceId + '-label'"
+            [attr.aria-describedby]="priceId + '-error'"
+            (input)="clearQuoteError(kind, 'monthlyPrice')"
+          />
+        </osnova-form-field>
+      </div>
+    </section>
+    } @for (group of contextGroups; track group.title) {
+    <section class="app-form-section">
+      <h3>{{ text()[group.title] }}</h3>
+      <div class="app-form-grid">
+        @for (field of group.fields; track field.key) { @let id = 'offer-' + field.key; @let error =
+        fieldError(field.key);
+        <osnova-form-field [controlId]="id" [label]="text()[field.key]" [error]="error">
+          @if (field.type === 'number') {
+          <input
+            pInputText
+            type="number"
+            min="0"
+            step="1"
+            [id]="id"
+            [formControlName]="field.key"
+            [invalid]="!!error"
+            [attr.aria-invalid]="!!error"
+            [attr.aria-describedby]="id + '-error'"
+            (input)="clearError(field.key)"
+          />
+          } @else {
+          <input
+            pInputText
+            [type]="field.type"
+            [id]="id"
+            [formControlName]="field.key"
+            [invalid]="!!error"
+            [attr.aria-invalid]="!!error"
+            [attr.aria-describedby]="id + '-error'"
+            (input)="clearError(field.key)"
+          />
+          }
+        </osnova-form-field>
+        }
+      </div>
+    </section>
+    }
+    <section class="app-form-section">
+      @for (field of noteFields; track field) { @let id = 'offer-' + field; @let error =
+      fieldError(field);
+      <osnova-form-field [controlId]="id" [label]="text()[field]" [error]="error">
+        <textarea
+          pTextarea
+          [id]="id"
+          [formControlName]="field"
+          rows="3"
+          [invalid]="!!error"
+          [attr.aria-invalid]="!!error"
+          [attr.aria-describedby]="id + '-error'"
+          (input)="clearError(field)"
+        ></textarea>
+      </osnova-form-field>
+      }
+    </section>
+    @if (saveError(); as error) {
+    <p-message severity="error">{{ error }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="offer-editor-form" [disabled]="saving()">
+      {{ saveLabel() }}
+    </button>
+  </div>
+</osnova-route-drawer>

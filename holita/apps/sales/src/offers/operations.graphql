@@ -1,0 +1,62 @@
+fragment SalesOfferSummary on SalesOffer {
+  id
+  recipientName
+  recipientEmail
+  currentSiteUrl
+  status
+  recommended {
+    planName
+    monthlyPrice
+  }
+  alternative {
+    planName
+    monthlyPrice
+  }
+  updatedAt
+}
+
+fragment SalesOfferDetails on SalesOffer {
+  ...SalesOfferSummary
+  leadId
+  replyEmail
+  replyPhone
+  proposedSiteUrl
+  exampleDomain
+  validUntil
+  productCount
+  categoryCount
+  languages
+  currentPlatform
+  message
+  includedScope
+  createdAt
+}
+
+query SalesOffers($offset: Int!, $limit: Int!, $search: String, $leadId: ID) {
+  salesOffers(offset: $offset, limit: $limit, search: $search, leadId: $leadId) {
+    total
+    offset
+    limit
+    items {
+      ...SalesOfferSummary
+    }
+  }
+}
+
+query SalesOffer($id: ID!) {
+  salesOffer(id: $id) {
+    ...SalesOfferDetails
+  }
+}
+
+mutation SalesCreateOffer($leadId: ID, $input: SalesOfferInput!) {
+  createSalesOffer(leadId: $leadId, input: $input) {
+    id
+  }
+}
+
+mutation SalesUpdateOffer($id: ID!, $input: SalesOfferInput!) {
+  updateSalesOffer(id: $id, input: $input) {
+    id
+  }
+}
