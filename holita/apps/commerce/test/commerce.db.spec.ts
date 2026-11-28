@@ -285,6 +285,7 @@ beforeAll(async () => {
     '20261128010000_variant_price_public_periods',
     '20261128020000_order_notifications',
     '20261128030000_local_email',
+    '20261128040000_shopper_password_reset',
   ]) {
     await connection.query(
       await readFile(
@@ -2215,11 +2216,86 @@ async function verifyVariantPriceHistory(database: PrismaClient) {
   );
 }
 
+async function verifyShopperPasswordReset(database: PrismaClient) {
+  const scope = { tenantId: tenantA, branchId: publicA };
+  const email = 'reset-shopper@example.test';
+  const shopperToken = registeredToken(
+    await storefront(
+      publicA,
+      'mutation($email:String!){registerShopper(name:"Reset shopper",email:$email,password:"temporary-password"){token}}',
+      { email },
+    ),
+  );
+  const request = 'mutation($email:String!){requestShopperPasswordReset(email:$email)}';
+  const accepted = { data: { requestShopperPasswordReset: true } };
+  for (const [branch, address] of [
+    [publicA, email.toUpperCase()],
+    [publicA, 'unknown-reset@example.test'],
+    [publicA, 'reset_shopper@example.test'],
+    [publicB, email],
+  ] as const) {
+    expect(await storefront(branch, request, { email: address })).toEqual(accepted);
+  }
+  const messages = await database.localEmail.findMany({
+    where: { template: 'SHOPPER_PASSWORD_RESET' },
+  });
+  expect(messages).toHaveLength(1);
+  const firstMessage = messages[0];
+  if (!firstMessage) {
+    throw new Error('Missing local reset message');
+  }
+  expect(firstMessage).toMatchObject({ ...scope, recipient: email, language: 'bg' });
+
+  const readToken = (body: string) => {
+    const link = new URL(body.trim().split('\n').at(-1) ?? '');
+    expect(link.pathname).toBe(`/s/${publicA}/reset-password`);
+    const token = new URLSearchParams(link.hash.slice(1)).get('token');
+    if (!token) {
+      throw new Error('Missing reset token in the local message');
+    }
+    return token;
+  };
+  const token = readToken(firstMessage.body);
+  const password = 'replacement-password';
+  const reset =
+    'mutation($token:String!,$password:String!){resetShopperPassword(token:$token,password:$password)}';
+  const denied = { data: { resetShopperPassword: false } };
+  expect(await storefront(publicB, reset, { token, password })).toEqual(denied);
+  await database.shopperPasswordReset.update({
+    where: { ...scope, tokenHash: createHash('sha256').update(token).digest('hex') },
+    data: { expiresAt: new Date(0) },
+  });
+  expect(await storefront(publicA, reset, { token, password })).toEqual(denied);
+  expect(await storefront(publicA, request, { email })).toEqual(accepted);
+  const nextMessage = await database.localEmail.findFirstOrThrow({
+    where: {
+      ...scope,
+      template: 'SHOPPER_PASSWORD_RESET',
+      recipient: email,
+      sourceEventId: { not: firstMessage.sourceEventId },
+    },
+  });
+  const nextToken = readToken(nextMessage.body);
+  expect(await storefront(publicA, reset, { token: nextToken, password })).toEqual({
+    data: { resetShopperPassword: true },
+  });
+  expect(await storefront(publicA, reset, { token: nextToken, password })).toEqual(denied);
+  expect(await storefront(publicA, '{shopperMe{id}}', {}, shopperToken)).toEqual({
+    data: { shopperMe: null },
+  });
+  const signIn =
+    'mutation($email:String!,$password:String!){signInShopper(email:$email,password:$password){shopper{email}}}';
+  expect(await storefront(publicA, signIn, { email, password })).toEqual({
+    data: { signInShopper: { shopper: { email } } },
+  });
+}
+
 it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () => {
   if (!database || !app) {
     throw new Error('Missing database');
   }
   await verifyPublicShopCache(app.get(StorefrontService));
+  await verifyShopperPasswordReset(database);
   const publishedPage = { slug: 'published-page', titleBg: 'За нас', bodyBg: 'Нашият магазин.' };
   const readPublicPage = 'query($slug:String!){shopPage(slug:$slug){slug titleBg bodyBg}}';
   await database.shopPage.createMany({

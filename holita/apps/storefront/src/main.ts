@@ -5,12 +5,14 @@ import {
   Component,
   DestroyRef,
   type ElementRef,
+  afterRenderEffect,
   computed,
   effect,
   inject,
   linkedSignal,
   resource,
   signal,
+  viewChild,
   viewChildren,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -34,7 +36,7 @@ import { loadLocalConfig, readPrimeUiLicense } from '@osnova/ui/app';
 import { Appearance, appTheme, provideOsnovaTheme } from '@osnova/ui/theme';
 import { messages, type Language } from './storefront-messages';
 import { shopCurrency } from './storefront-money';
-import { StorefrontApi } from './storefront-api';
+import { StorefrontApi, storefrontFieldErrors } from './storefront-api';
 import { CatalogueBrowse } from './catalogue-browse';
 import { browseSections } from './catalogue-url';
 import {
@@ -62,6 +64,14 @@ import type {
 
 type VariantSelection = NonNullable<CatalogueProductQuery['catalogueProduct']>['variantSelection'];
 type ProductVariant = VariantSelection['variants'][number];
+type PasswordRecoveryStatus =
+  | 'passwordResetEmailInvalid'
+  | 'passwordResetRequested'
+  | 'passwordResetLength'
+  | 'passwordResetMismatch'
+  | 'passwordResetInvalid'
+  | 'error'
+  | null;
 const defaultFavicon = '/storefront-basic/images/favicon.svg';
 
 function preferredVariant(variants: readonly ProductVariant[]): ProductVariant | null {
@@ -388,7 +398,9 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
           page !== 'orders' &&
           page !== 'addresses' &&
           page !== 'sign-in' &&
-          page !== 'register'
+          page !== 'register' &&
+          page !== 'forgot-password' &&
+          page !== 'reset-password'
         ) {
           <div class="shop-state">
             <p role="alert">{{ t().cartSessionExpired }}</p>
@@ -792,11 +804,20 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
           @let registering = page === 'register';
           <section class="account-view" aria-labelledby="account-title">
             <header class="shop-page-heading">
-              <h1 id="account-title">{{ registering ? t().register : t().signIn }}</h1>
+              <h1
+                #accountHeading
+                id="account-title"
+                [attr.tabindex]="passwordResetComplete ? -1 : null"
+              >
+                {{ registering ? t().register : t().signIn }}
+              </h1>
             </header>
             <div class="account-panel">
               @if (cartState.sessionExpired()) {
                 <p class="account-error" role="alert">{{ t().cartSessionExpired }}</p>
+              }
+              @if (!registering && passwordResetComplete) {
+                <p role="status">{{ t().passwordResetComplete }}</p>
               }
               <form [formGroup]="form" (ngSubmit)="submit()">
                 @if (registering) {
@@ -818,6 +839,14 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
                     [attr.autocomplete]="registering ? 'new-password' : 'current-password'"
                   />
                 </label>
+                @if (!registering) {
+                  <a
+                    class="shop-text-link"
+                    [routerLink]="[...base(), 'forgot-password']"
+                    [queryParams]="returnToAddresses() ? { returnTo: 'addresses' } : null"
+                    >{{ t().forgotPassword }}</a
+                  >
+                }
                 @if (error()) {
                   <p class="account-error" role="alert">{{ t()[actionError() ?? 'error'] }}</p>
                 }
@@ -832,6 +861,94 @@ function preferredVariant(variants: readonly ProductVariant[]): ProductVariant |
               >
                 {{ registering ? t().signIn : t().register }}
               </a>
+            </div>
+          </section>
+        }
+        @if (page === 'forgot-password' || page === 'reset-password') {
+          @let resetting = page === 'reset-password';
+          <section class="account-view" aria-labelledby="account-title">
+            <header class="shop-page-heading">
+              <h1 id="account-title">{{ resetting ? t().resetPassword : t().forgotPassword }}</h1>
+            </header>
+            <div class="account-panel">
+              @if (!shop()) {
+                @if (error()) {
+                  <ng-container [ngTemplateOutlet]="requestError" />
+                } @else {
+                  <p role="status">{{ t().loading }}</p>
+                }
+              } @else if (resetting) {
+                @if (passwordRecoveryStatus() === 'passwordResetInvalid' || !passwordResetToken()) {
+                  <p #passwordRecoveryResult class="account-error" role="alert" tabindex="-1">
+                    {{ t().passwordResetInvalid }}
+                  </p>
+                  <a class="shop-text-link" [routerLink]="[...base(), 'forgot-password']">
+                    {{ t().requestPasswordReset }}
+                  </a>
+                } @else {
+                  <form [formGroup]="resetForm" (ngSubmit)="resetPassword()">
+                    <label class="shop-form-field" for="new-password">
+                      {{ t().newPassword }}
+                      <input
+                        id="new-password"
+                        type="password"
+                        formControlName="password"
+                        autocomplete="new-password"
+                        aria-describedby="password-length"
+                        required
+                      />
+                    </label>
+                    <p id="password-length">{{ t().passwordResetLength }}</p>
+                    <label class="shop-form-field" for="confirm-password">
+                      {{ t().confirmPassword }}
+                      <input
+                        id="confirm-password"
+                        type="password"
+                        formControlName="confirmation"
+                        autocomplete="new-password"
+                        required
+                      />
+                    </label>
+                    @if (passwordRecoveryStatus(); as status) {
+                      <p class="account-error" role="alert">{{ t()[status] }}</p>
+                    }
+                    <button class="shop-primary" type="submit" [disabled]="busy()">
+                      {{ t().resetPassword }}
+                    </button>
+                  </form>
+                }
+              } @else if (passwordRecoveryStatus() === 'passwordResetRequested') {
+                <p #passwordRecoveryResult role="status" tabindex="-1">
+                  {{ t().passwordResetRequested }}
+                </p>
+              } @else {
+                <form [formGroup]="form" (ngSubmit)="requestPasswordReset()">
+                  <label class="shop-form-field" for="email">
+                    {{ t().email }}
+                    <input
+                      id="email"
+                      type="email"
+                      formControlName="email"
+                      autocomplete="email"
+                      maxlength="254"
+                      required
+                    />
+                  </label>
+                  @if (passwordRecoveryStatus(); as status) {
+                    <p class="account-error" role="alert">{{ t()[status] }}</p>
+                  }
+                  <button class="shop-primary" type="submit" [disabled]="busy()">
+                    {{ t().requestPasswordReset }}
+                  </button>
+                </form>
+              }
+              <a
+                class="shop-text-link"
+                [routerLink]="[...base(), 'sign-in']"
+                [queryParams]="returnToAddresses() ? { returnTo: 'addresses' } : null"
+                [replaceUrl]="resetting"
+                >{{ t().backToSignIn }}</a
+              >
             </div>
           </section>
         }
@@ -1043,6 +1160,15 @@ class StorefrontPage {
   protected readonly returnToAddresses = computed(
     () => this.query().get('returnTo') === 'addresses',
   );
+  private readonly fragment = toSignal(this.route.fragment, { requireSync: true });
+  protected readonly passwordResetToken = computed(() =>
+    new URLSearchParams(this.fragment() ?? '').get('token'),
+  );
+  protected readonly passwordResetComplete =
+    this.router.currentNavigation()?.extras.info === 'passwordResetComplete';
+  private readonly accountHeading = viewChild<ElementRef<HTMLHeadingElement>>('accountHeading');
+  private readonly passwordRecoveryResult =
+    viewChild<ElementRef<HTMLParagraphElement>>('passwordRecoveryResult');
   protected readonly searchTerm = linkedSignal(() => this.query().get('q') ?? '');
   protected readonly searchOpen = signal(false);
   private readonly suggestionLinks = viewChildren<ElementRef<HTMLAnchorElement>>('suggestionLink');
@@ -1157,6 +1283,14 @@ class StorefrontPage {
   readonly error = computed(() => this.actionError() !== null || this.request.status() === 'error');
   readonly loading = this.request.isLoading;
   readonly busy = signal(false);
+  protected readonly passwordRecoveryStatus = linkedSignal({
+    source: () => ({ shopId: this.shopId(), token: this.passwordResetToken() }),
+    computation: (): PasswordRecoveryStatus => null,
+  });
+  protected readonly resetForm = new FormGroup({
+    password: new FormControl('', { nonNullable: true }),
+    confirmation: new FormControl('', { nonNullable: true }),
+  });
   protected readonly content = computed(() => localizedContent(this.view()?.page, this.language()));
   private readonly productDetail = computed(() => this.view()?.detail ?? null);
   readonly product = computed(() => this.productDetail()?.catalogueProduct ?? null);
@@ -1243,6 +1377,14 @@ class StorefrontPage {
   constructor() {
     inject(Appearance);
     this.document.documentElement.lang = this.language();
+    afterRenderEffect({
+      write: () => {
+        const target = this.passwordResetComplete
+          ? this.accountHeading()
+          : this.passwordRecoveryResult();
+        target?.nativeElement.focus();
+      },
+    });
     effect((onCleanup) => {
       const favicon = this.document.querySelector<HTMLLinkElement>('link[rel="icon"]');
       const url = this.brandingShop()?.faviconUrl;
@@ -1397,6 +1539,64 @@ class StorefrontPage {
       this.busy.set(false);
     }
   }
+  protected async requestPasswordReset() {
+    if (this.busy()) {
+      return;
+    }
+    const email = this.form.controls.email;
+    email.setValue(email.value.trim());
+    if (email.invalid) {
+      this.passwordRecoveryStatus.set('passwordResetEmailInvalid');
+      return;
+    }
+    this.busy.set(true);
+    this.passwordRecoveryStatus.set(null);
+    try {
+      await this.api.requestPasswordReset(this.shopId(), email.value, this.language());
+      this.passwordRecoveryStatus.set('passwordResetRequested');
+    } catch (error: unknown) {
+      const invalidEmail = storefrontFieldErrors(error).some(({ path }) => path === 'email');
+      this.passwordRecoveryStatus.set(invalidEmail ? 'passwordResetEmailInvalid' : 'error');
+    } finally {
+      this.busy.set(false);
+    }
+  }
+  protected async resetPassword() {
+    const token = this.passwordResetToken();
+    if (!token || this.busy()) {
+      return;
+    }
+    const { password, confirmation } = this.resetForm.getRawValue();
+    const length = Array.from(password).length;
+    if (length < 12 || length > 128) {
+      this.passwordRecoveryStatus.set('passwordResetLength');
+      return;
+    }
+    if (password !== confirmation) {
+      this.passwordRecoveryStatus.set('passwordResetMismatch');
+      return;
+    }
+    const shopId = this.shopId();
+    this.busy.set(true);
+    this.passwordRecoveryStatus.set(null);
+    try {
+      if (await this.api.resetPassword(shopId, token, password)) {
+        if (!this.destroy.destroyed && this.shopId() === shopId) {
+          await this.router.navigate([...this.base(), 'sign-in'], {
+            replaceUrl: true,
+            info: 'passwordResetComplete',
+          });
+        }
+      } else {
+        this.resetForm.reset();
+        this.passwordRecoveryStatus.set('passwordResetInvalid');
+      }
+    } catch {
+      this.passwordRecoveryStatus.set('error');
+    } finally {
+      this.busy.set(false);
+    }
+  }
   async signOut() {
     if (this.busy()) {
       return;
@@ -1442,6 +1642,8 @@ const pages: Routes = [
   ]),
   { path: 's/:shopId/register', component: StorefrontPage },
   { path: 's/:shopId/sign-in', component: StorefrontPage },
+  { path: 's/:shopId/forgot-password', component: StorefrontPage },
+  { path: 's/:shopId/reset-password', component: StorefrontPage },
   {
     path: 's/:shopId/account/orders/:orderId',
     component: StorefrontPage,

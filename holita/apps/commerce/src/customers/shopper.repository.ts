@@ -194,9 +194,46 @@ export class ShopperRepository {
   }
 
   findByEmail(scope: Scope, email: string) {
+    const literalEmail = email.replace(/[\\%_]/gu, '\\$&');
     return this.database.client.customer.findFirst({
-      where: { ...scope, email: { equals: email, mode: 'insensitive' } },
+      where: { ...scope, email: { equals: literalEmail, mode: 'insensitive' } },
     });
+  }
+
+  savePasswordReset(
+    tx: Prisma.TransactionClient,
+    owner: ShopperScope,
+    tokenHash: string,
+    expiresAt: Date,
+  ) {
+    return tx.shopperPasswordReset.upsert({
+      where: { tenantId_branchId_customerId: owner },
+      create: { ...owner, tokenHash, expiresAt },
+      update: { tokenHash, expiresAt },
+    });
+  }
+
+  async consumePasswordReset(tx: Prisma.TransactionClient, scope: Scope, tokenHash: string) {
+    try {
+      return await tx.shopperPasswordReset.delete({
+        where: { ...scope, tokenHash, expiresAt: { gt: new Date() } },
+        select: { customerId: true },
+      });
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async replacePassword(
+    tx: Prisma.TransactionClient,
+    { customerId, ...scope }: ShopperScope,
+    passwordHash: string,
+  ): Promise<void> {
+    await tx.customer.update({ where: { ...scope, id: customerId }, data: { passwordHash } });
+    await tx.shopperSession.deleteMany({ where: { ...scope, customerId } });
   }
 
   createSession(

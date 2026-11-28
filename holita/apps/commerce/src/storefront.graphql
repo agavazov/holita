@@ -586,6 +586,8 @@ type Mutation {
   registerShopper(name: String!, email: String!, password: String!): ShopperSession!
   signInShopper(email: String!, password: String!): ShopperSession!
   signOutShopper: Boolean!
+  requestShopperPasswordReset(email: String!): Boolean!
+  resetShopperPassword(token: String!, password: String!): Boolean!
   createShopperAddress(input: CustomerAddressInput!): CustomerAddress!
   updateShopperAddress(addressId: ID!, input: CustomerAddressInput!): CustomerAddress!
   removeShopperAddress(addressId: ID!): Boolean!

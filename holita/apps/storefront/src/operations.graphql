@@ -393,6 +393,12 @@ mutation SignInShopper($email: String!, $password: String!) {
 mutation SignOutShopper {
   signOutShopper
 }
+mutation RequestShopperPasswordReset($email: String!) {
+  requestShopperPasswordReset(email: $email)
+}
+mutation ResetShopperPassword($token: String!, $password: String!) {
+  resetShopperPassword(token: $token, password: $password)
+}
 fragment PublicCartLineFields on CartLine {
   id
   variantId

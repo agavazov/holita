@@ -34,6 +34,8 @@ import {
   RemoveCartDiscountDocument,
   RemoveCartLineDocument,
   RemoveShopperAddressDocument,
+  RequestShopperPasswordResetDocument,
+  ResetShopperPasswordDocument,
   ShopperAddressesDocument,
   ShopperMeDocument,
   ShopperOrderConfirmationDocument,
@@ -281,6 +283,13 @@ export class StorefrontApi {
   }
   signOut(shopId: string, shopperToken: string | null) {
     return this.write(shopId, SignOutShopperDocument, {}, { shopperToken });
+  }
+  requestPasswordReset(shopId: string, email: string, language: Language) {
+    return this.write(shopId, RequestShopperPasswordResetDocument, { email }, {}, language);
+  }
+  async resetPassword(shopId: string, token: string, password: string) {
+    return (await this.write(shopId, ResetShopperPasswordDocument, { token, password }, {}))
+      .resetShopperPassword;
   }
 
   async cart(shopId: string, credentials: StorefrontCredentials) {

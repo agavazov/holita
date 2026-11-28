@@ -587,6 +587,7 @@ model Customer {
   name String @db.VarChar(200)
   phone String? @db.VarChar(50)
   passwordHash String? @db.VarChar(255)
+  passwordReset ShopperPasswordReset?
   sessions ShopperSession[]
   carts Cart[]
   orders Order[]
@@ -619,6 +620,17 @@ model CustomerAddress {
   @@index([tenantId, branchId, customerId, createdAt, id])
   @@unique([tenantId, branchId, customerId, type], map: "customerAddress_default_type_key", where: raw("\"isDefault\""))
   @@map("customerAddress")
+}
+
+model ShopperPasswordReset {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  customerId String @db.Uuid
+  customer Customer @relation(fields: [tenantId, branchId, customerId], references: [tenantId, branchId, id], onDelete: Cascade)
+  tokenHash String @unique @db.Char(64)
+  expiresAt DateTime @db.Timestamptz(3)
+  @@id([tenantId, branchId, customerId])
+  @@map("shopperPasswordReset")
 }
 
 model ShopperSession {

@@ -544,11 +544,21 @@ if the quota is reached. Publish the listener on 12030 so excess sign-in request
 the private Router's 100 requests per second limit. Storefront clients send the full GraphQL query
 with each request.
 
-**Local order email**
+**Local storefront email**
 
 Commerce captures plain-text placement, confirmation, shipping, completion and cancellation emails
 in the development database. Storefront checkout sends `Accept-Language: bg` or `en` when placing
 an order. Later notices use the language saved at placement. Manual and historical orders use Bulgarian.
+
+On the storefront sign-in page, choose **Forgot password?** and enter the shop account's email
+address. The same confirmation appears for every valid email address. For a registered shopper,
+Commerce captures a `SHOPPER_PASSWORD_RESET` message in the local mailbox in the request language.
+Set `STOREFRONT_ORIGIN` in `holita/config/commerce.env` to the storefront origin shoppers use,
+such as `http://dev.lab:12020` for the preview. Commerce uses this origin in the link and defaults
+to `http://127.0.0.1:12020` for local browsing.
+Open the link within 30 minutes to set a new password and return to sign-in. A new request replaces
+the previous link for that account, and a successful reset ends its existing shopper sessions.
+The storefront graph uses `requestShopperPasswordReset` and `resetShopperPassword`.
 
 To read a captured message, connect to the Holita Commerce development database with the local
 database role and query the mailbox for the verified Tenant and Branch. Set `commerce_schema` to

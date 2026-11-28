@@ -2,6 +2,8 @@ import { Args, Context, Mutation, Parent, Query, ResolveField, Resolver } from '
 import type {
   CatalogueProduct,
   MutationRegisterShopperArgs,
+  MutationRequestShopperPasswordResetArgs,
+  MutationResetShopperPasswordArgs,
   MutationSignInShopperArgs,
   QueryBlogArticleArgs,
   QueryBlogArticlesArgs,
@@ -160,5 +162,17 @@ export class StorefrontResolver {
   }
   @Mutation('signOutShopper') signOut(@Context() context: StorefrontContext) {
     return this.service.signOut(context);
+  }
+  @Mutation('requestShopperPasswordReset') requestPasswordReset(
+    @Context() context: StorefrontContext,
+    @Args() args: MutationRequestShopperPasswordResetArgs,
+  ) {
+    return this.service.requestPasswordReset(context, args.email);
+  }
+  @Mutation('resetShopperPassword') resetPassword(
+    @Context() context: StorefrontContext,
+    @Args() args: MutationResetShopperPasswordArgs,
+  ) {
+    return this.service.resetPassword(context, args.token, args.password);
   }
 }

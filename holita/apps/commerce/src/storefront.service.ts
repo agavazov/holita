@@ -51,6 +51,7 @@ import { CatalogueRepository, type BrowseCriteria } from './products/catalogue.r
 import { CommerceRepository } from './products/commerce.repository.js';
 import { productImageUrl } from './products/product-images.js';
 import { compareCatalogueOptionValues } from './products/product-relations.js';
+import { ShopperPasswordResetService } from './customers/shopper-password-reset.service.js';
 import { ShopperRepository } from './customers/shopper.repository.js';
 
 export interface StorefrontContext {
@@ -276,6 +277,7 @@ export class StorefrontService implements OnModuleInit {
     private readonly products: CommerceRepository,
     private readonly browsing: CatalogueRepository,
     private readonly shoppers: ShopperRepository,
+    private readonly passwordResets: ShopperPasswordResetService,
     private readonly carts: CartService,
     private readonly brands: BrandsRepository,
     private readonly categories: CategoriesService,
@@ -577,6 +579,20 @@ export class StorefrontService implements OnModuleInit {
     return this.shoppers.transaction((tx) =>
       this.createSession(tx, scope, shopper, context.cartToken),
     );
+  }
+  async requestPasswordReset(context: StorefrontContext, email: string): Promise<boolean> {
+    return this.passwordResets.request(
+      await this.publicScope(context),
+      email,
+      context.emailLanguage ?? 'bg',
+    );
+  }
+  async resetPassword(
+    context: StorefrontContext,
+    token: string,
+    password: string,
+  ): Promise<boolean> {
+    return this.passwordResets.reset(await this.publicScope(context), token, password);
   }
   private async verifiedShopper(scope: Scope, context: StorefrontContext) {
     const token = bearer(context);
