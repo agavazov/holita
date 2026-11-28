@@ -465,6 +465,7 @@ type OrderShippingAddress {
   line2: String
 }
 type OrderConfirmationLine {
+  id: ID!
   sku: String!
   label: String!
   quantity: Int!
@@ -507,6 +508,24 @@ type ShopperOrderPage {
   total: Int!
   offset: Int!
   limit: Int!
+}
+input ShopperReturnLineInput {
+  "The line ID from the shopper's order."
+  orderLineId: ID!
+  quantity: Int!
+}
+input ShopperReturnInput {
+  orderId: ID!
+  reason: String!
+  """
+  Quantities are combined per line and may use only units not already requested or approved.
+  A pending or approved request with the same reason and combined lines cannot be repeated.
+  """
+  lines: [ShopperReturnLineInput!]!
+}
+type ShopperReturnReceipt {
+  id: ID!
+  requestedAt: String!
 }
 type CatalogueSpecificationGroup {
   name: String!
@@ -598,4 +617,6 @@ type Mutation {
   removeCartDiscount: Cart!
   quoteCheckout(input: CheckoutQuoteInput!): CheckoutQuote!
   placeOrder(input: PlaceOrderInput!): OrderConfirmation!
+  "Submit a pending return for your own non-cancelled order within 14 days of placement."
+  requestShopperReturn(input: ShopperReturnInput!): ShopperReturnReceipt!
 }

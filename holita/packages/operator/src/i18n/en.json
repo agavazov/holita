@@ -282,6 +282,8 @@
   "orderMinimumNotMet": "The quantity is below the minimum for this variant.",
   "orderVariantDuplicate": "This variant is already on the order.",
   "orderStockShort": "There is not enough stock for this quantity.",
+  "orderReturnLineRequired": "Keep items referenced by a return request.",
+  "orderReturnQuantityReserved": "Quantity cannot be lower than the total in pending and approved returns.",
   "orderMethodUnavailable": "Choose an available method.",
   "orderCustomerUnavailable": "Choose a customer from this shop.",
   "orderChooseMethod": "Choose a method",

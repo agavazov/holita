@@ -1,6 +1,6 @@
 # 202 Record the manual refund for an approved return
 
-**Status:** Ready after [215](215-holita-shopper-return-request.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 

@@ -181,8 +181,9 @@ function shopperSummary(order: ShopperOrderRow) {
   };
 }
 
-function presentLine({ sku, label, quantity, unitPrice }: OrderLine) {
+function presentLine({ id, sku, label, quantity, unitPrice }: OrderLine) {
   return {
+    id,
     sku,
     label,
     quantity,
@@ -231,7 +232,6 @@ function operatorDetail(order: OrderDetailRow): OperatorOrder {
     shippingMethodId: order.shippingMethodId,
     lines: order.lines.map((line) => ({
       ...presentLine(line),
-      id: line.id,
       variantId: line.variantId,
     })),
     statusChanges: order.statusChanges.map(({ fromStatus, toStatus, occurredAt }) => ({
@@ -605,6 +605,27 @@ export class OrdersService {
       saved,
       sellable,
     );
+    if (orderId) {
+      const { quantities } = await this.orders.returnReservations(tx, scope, orderId);
+      const retained = new Map(revised.lines.map((line) => [line.id, line]));
+      for (const [lineId, quantity] of quantities) {
+        const line = retained.get(lineId);
+        if (!line) {
+          throw checkoutError(
+            'lines',
+            'ORDER_RETURN_LINE_REQUIRED',
+            'Keep items referenced by a return request',
+          );
+        }
+        if (line.quantity < quantity) {
+          throw checkoutError(
+            `lines.${String(line.sortOrder)}.quantity`,
+            'ORDER_RETURN_QUANTITY_RESERVED',
+            'Quantity is below the units reserved by returns',
+          );
+        }
+      }
+    }
     for (const [id, { quantity, path }] of revised.stockDeltas) {
       if (quantity > 0 && !(await this.orders.decrementStock(tx, scope, id, quantity))) {
         throw checkoutError(path, 'ORDER_STOCK_SHORT', 'Requested stock is no longer available');

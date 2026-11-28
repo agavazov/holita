@@ -247,14 +247,23 @@ export class OrdersRepository {
     };
   }
 
-  async lockOrder(tx: Prisma.TransactionClient, scope: Scope, id: string) {
-    await tx.$queryRaw`
+  async lockOrder(
+    tx: Prisma.TransactionClient,
+    { customerId, ...scope }: Scope & { customerId?: string },
+    id: string,
+  ) {
+    const owner = customerId === undefined ? {} : { customerId };
+    const locked = await tx.$queryRaw<{ id: string }[]>`
       SELECT "id" FROM ${this.database.table('order')}
       WHERE "tenantId" = ${scope.tenantId}::uuid AND "branchId" = ${scope.branchId}::uuid
         AND "id" = ${id}::uuid
+        ${customerId === undefined ? Prisma.empty : Prisma.sql`AND "customerId" = ${customerId}::uuid`}
       FOR UPDATE
     `;
-    return tx.order.findUnique({ where: { ...scope, id }, include: orderDetail(scope) });
+    if (locked.length === 0) {
+      return null;
+    }
+    return tx.order.findUnique({ where: { ...scope, ...owner, id }, include: orderDetail(scope) });
   }
 
   async updateStatus(
@@ -407,6 +416,31 @@ export class OrdersRepository {
 
   lines(tx: Prisma.TransactionClient, scope: Scope, orderId: string) {
     return tx.orderLine.findMany({ ...orderLines(scope), where: { ...scope, orderId } });
+  }
+
+  async returnReservations(tx: Prisma.TransactionClient, scope: Scope, orderId: string) {
+    const cases = await tx.orderReturnCase.findMany({
+      where: { ...scope, orderId },
+      select: {
+        reason: true,
+        status: true,
+        lines: {
+          where: { ...scope, orderId },
+          select: { orderLineId: true, quantity: true },
+        },
+      },
+    });
+    const quantities = new Map<string, number>();
+    for (const { status, lines } of cases) {
+      for (const { orderLineId, quantity } of lines) {
+        // Rejected cases still reference their lines, but release the reserved units.
+        quantities.set(
+          orderLineId,
+          (quantities.get(orderLineId) ?? 0) + (status === 'REJECTED' ? 0 : quantity),
+        );
+      }
+    }
+    return { cases, quantities };
   }
 
   incrementStock(tx: Prisma.TransactionClient, scope: Scope, id: string, quantity: number) {

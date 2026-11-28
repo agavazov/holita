@@ -29,6 +29,7 @@ import { RefundsModule } from './refunds/refunds.module.js';
 import { RefundsResolver } from './refunds/refunds.resolver.js';
 import { ReturnsModule } from './returns/returns.module.js';
 import { ReturnsResolver } from './returns/returns.resolver.js';
+import { ShopperReturnsResolver } from './returns/shopper-returns.resolver.js';
 import { ShopBrandingImagesController } from './shop-settings/shop-branding-images.controller.js';
 import { ShopHomeImagesController } from './shop-settings/shop-home-images.controller.js';
 import { ShopSettingsModule } from './shop-settings/shop-settings.module.js';
@@ -121,6 +122,7 @@ class OperatorModule {}
     CartModule,
     CheckoutModule,
     OrdersModule,
+    ReturnsModule,
     PagesModule,
     BlogModule,
     NavigationModule,
@@ -139,6 +141,7 @@ class OperatorModule {}
     ShopperAddressesResolver,
     CheckoutResolver,
     OrdersResolver,
+    ShopperReturnsResolver,
     StorefrontService,
     StorefrontIngress,
   ],

@@ -721,6 +721,8 @@ export class ManualOrderEditor {
         STOREFRONT_ORDER_PROMO_LINES_LOCKED: text.storefrontOrderPromoLinesLocked,
         ORDER_CUSTOMER_LOCKED: text.orderCustomerLocked,
         ORDER_CUSTOMER_UNAVAILABLE: text.orderCustomerUnavailable,
+        ORDER_RETURN_LINE_REQUIRED: text.orderReturnLineRequired,
+        ORDER_RETURN_QUANTITY_RESERVED: text.orderReturnQuantityReserved,
         ORDER_STOCK_SHORT: text.orderStockShort,
         ORDER_VARIANT_DUPLICATE: text.orderVariantDuplicate,
         ORDER_VARIANT_UNAVAILABLE: text.orderVariantUnavailable,

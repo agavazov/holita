@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [215](215-holita-shopper-return-request.md).
-
 ## Background
 
 The red.bg coverage report marks RT07 as P1. The local order notice flow does not confirm a new shopper return request.

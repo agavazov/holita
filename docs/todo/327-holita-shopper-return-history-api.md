@@ -2,11 +2,9 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [215](215-holita-shopper-return-request.md).
-
 ## Background
 
-The red.bg coverage report marks RT04 as P2. Ticket 215 accepts requests but does not list them.
+The red.bg coverage report marks RT04 as P2. The storefront API accepts return requests.
 
 ## Goal
 

@@ -1,6 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { GraphQLError } from 'graphql';
+import { contentInputError } from '../content-validation.js';
+import type {
+  ShopperReturnInput,
+  ShopperReturnReceipt,
+} from '../generated/graphql/storefront-types.js';
 import type {
   MutationDecideOrderReturnArgs,
   OrderReturnCase,
@@ -8,8 +13,11 @@ import type {
   OrderReturnSummary,
   QueryOrderReturnsArgs,
 } from '../generated/graphql/types.js';
-import { requireMerchant, requireScope, type RequestContext } from '../scope.js';
+import { OrdersRepository } from '../orders/orders.repository.js';
+import { requireMerchant, requireScope, type RequestContext, type ShopperScope } from '../scope.js';
 import { ReturnsRepository, type ReturnCaseRow } from './returns.repository.js';
+
+const returnWindowMs = 14 * 24 * 60 * 60 * 1000;
 
 function summary(
   row: Pick<ReturnCaseRow, 'id' | 'order' | 'reason' | 'status' | 'requestedAt'>,
@@ -47,7 +55,82 @@ function detail(row: ReturnCaseRow): OrderReturnCase {
 
 @Injectable()
 export class ReturnsService {
-  constructor(private readonly returns: ReturnsRepository) {}
+  constructor(
+    private readonly returns: ReturnsRepository,
+    private readonly orders: OrdersRepository,
+  ) {}
+
+  async request(shopper: ShopperScope, input: ShopperReturnInput): Promise<ShopperReturnReceipt> {
+    if (!isUUID(input.orderId)) {
+      throw new NotFoundException('Order not found');
+    }
+    const orderId = input.orderId.toLowerCase();
+    const { tenantId, branchId } = shopper;
+    const scope = { tenantId, branchId };
+    return this.orders.transaction(async (tx) => {
+      // All submissions for this order check and reserve quantities under the same lock.
+      const order = await this.orders.lockOrder(tx, shopper, orderId);
+      if (!order) {
+        throw new NotFoundException('Order not found');
+      }
+      if (order.status === 'CANCELLED' || Date.now() > order.placedAt.getTime() + returnWindowMs) {
+        throw contentInputError(
+          'orderId',
+          'ORDER_NOT_RETURNABLE',
+          'This order is not eligible for return',
+        );
+      }
+      const reason = input.reason.trim();
+      if (!reason || reason.includes('\u0000')) {
+        throw contentInputError('reason', 'INVALID_VALUE', 'Enter a valid return reason');
+      }
+      if (input.lines.length === 0) {
+        throw contentInputError('lines', 'INVALID_VALUE', 'Select at least one order line');
+      }
+      const ordered = new Map(order.lines.map(({ id, quantity }) => [id, quantity]));
+      const requested = new Map<string, number>();
+      for (const line of input.lines) {
+        const orderLineId = line.orderLineId.toLowerCase();
+        if (!ordered.has(orderLineId)) {
+          throw contentInputError('lines', 'INVALID_ORDER_LINE', 'Select a line from this order');
+        }
+        if (line.quantity < 1) {
+          throw contentInputError('lines', 'INVALID_QUANTITY', 'Enter a positive quantity');
+        }
+        requested.set(orderLineId, (requested.get(orderLineId) ?? 0) + line.quantity);
+      }
+      const { cases, quantities } = await this.orders.returnReservations(tx, scope, orderId);
+      if (
+        cases.some(
+          (existing) =>
+            existing.status !== 'REJECTED' &&
+            existing.reason === reason &&
+            existing.lines.length === requested.size &&
+            existing.lines.every(
+              ({ orderLineId, quantity }) => requested.get(orderLineId) === quantity,
+            ),
+        )
+      ) {
+        throw contentInputError(
+          'lines',
+          'DUPLICATE_RETURN_REQUEST',
+          'This return has already been requested',
+        );
+      }
+      for (const [orderLineId, quantity] of requested) {
+        if (quantity > (ordered.get(orderLineId) ?? 0) - (quantities.get(orderLineId) ?? 0)) {
+          throw contentInputError(
+            'lines',
+            'INVALID_QUANTITY',
+            'Quantity exceeds the returnable units',
+          );
+        }
+      }
+      const lines = Array.from(requested, ([orderLineId, quantity]) => ({ orderLineId, quantity }));
+      const { id, requestedAt } = await this.returns.request(tx, scope, orderId, reason, lines);
+      return { id, requestedAt: requestedAt.toISOString() };
+    });
+  }
 
   async list(
     context: RequestContext,

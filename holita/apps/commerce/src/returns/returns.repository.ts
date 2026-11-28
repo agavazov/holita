@@ -51,6 +51,19 @@ export class ReturnsRepository {
     );
   }
 
+  request(
+    tx: Prisma.TransactionClient,
+    scope: Scope,
+    orderId: string,
+    reason: string,
+    lines: { orderLineId: string; quantity: number }[],
+  ) {
+    return tx.orderReturnCase.create({
+      data: { ...scope, orderId, reason, lines: { create: lines } },
+      select: { id: true, requestedAt: true },
+    });
+  }
+
   decide(scope: Scope, id: string, outcome: OrderReturnOutcome, decidedByUserId: string) {
     return this.database.client.$transaction(async (tx) => {
       const where = { ...scope, id };

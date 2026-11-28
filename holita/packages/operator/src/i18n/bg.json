@@ -282,6 +282,8 @@
   "orderMinimumNotMet": "Количеството е под минималното за този вариант.",
   "orderVariantDuplicate": "Този вариант вече е добавен към поръчката.",
   "orderStockShort": "Няма достатъчна наличност за това количество.",
+  "orderReturnLineRequired": "Запазете артикулите, за които има заявка за връщане.",
+  "orderReturnQuantityReserved": "Количеството не може да е по-малко от общото в чакащите и одобрените заявки за връщане.",
   "orderMethodUnavailable": "Изберете достъпен начин.",
   "orderCustomerUnavailable": "Изберете клиент от този магазин.",
   "orderChooseMethod": "Изберете начин",

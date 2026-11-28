@@ -3853,6 +3853,78 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       data: { shopperOrder: null },
     });
   }
+  const returnLine = await database.orderLine.findFirstOrThrow({
+    where: { ...categoryScope, orderId: order.id },
+  });
+  expect(
+    await storefront(
+      publicA,
+      'query($id:ID!){shopperOrder(id:$id){lines{id}}}',
+      operatorTarget,
+      token,
+    ),
+  ).toHaveProperty('data.shopperOrder.lines', expect.arrayContaining([{ id: returnLine.id }]));
+  const requestReturnMutation =
+    'mutation($input:ShopperReturnInput!){requestShopperReturn(input:$input){id}}';
+  const requestReturn = (branch: string, bearer?: string) =>
+    storefront(
+      branch,
+      requestReturnMutation,
+      {
+        input: {
+          orderId: order.id,
+          reason: 'Wrong size',
+          lines: [{ orderLineId: returnLine.id, quantity: 1 }],
+        },
+      },
+      bearer,
+    );
+  for (const [branch, credential, code] of [
+    [publicA, foreignOwner, 'NOT_FOUND'],
+    [publicB, foreignShopBearer, 'NOT_FOUND'],
+  ] as const) {
+    expect(await requestReturn(branch, credential)).toMatchObject({
+      errors: [{ extensions: { code } }],
+    });
+  }
+  expect(await requestReturn(publicA)).toHaveProperty(
+    'errors.0.message',
+    'Sign in to this shop to request a return',
+  );
+  const returnOrderScope = { ...categoryScope, id: order.id };
+  await database.order.update({ where: returnOrderScope, data: { placedAt: new Date(0) } });
+  expect(await requestReturn(publicA, token)).toMatchObject({
+    errors: [{ extensions: { fieldErrors: [{ code: 'ORDER_NOT_RETURNABLE' }] } }],
+  });
+  await database.order.update({ where: returnOrderScope, data: { placedAt: order.placedAt } });
+  const submissions = await Promise.all([
+    requestReturn(publicA, token),
+    requestReturn(publicA, token),
+  ]);
+  const expectedCase = { ...categoryScope, orderId: order.id, status: 'PENDING' } as const;
+  const { id: returnId } = await database.orderReturnCase.findFirstOrThrow({ where: expectedCase });
+  expect(submissions).toContainEqual({ data: { requestShopperReturn: { id: returnId } } });
+  expect(
+    submissions.filter((value) => value && typeof value === 'object' && 'errors' in value),
+  ).toMatchObject([
+    { errors: [{ extensions: { fieldErrors: [{ code: 'DUPLICATE_RETURN_REQUEST' }] } }] },
+  ]);
+  expect(await database.orderReturnCase.count({ where: expectedCase })).toBe(1);
+  expect(
+    await query(
+      tokens.viewer,
+      publicA,
+      'query($id:ID!){orderReturn(id:$id){status lines{orderLineId quantity}}}',
+      { id: returnId },
+    ),
+  ).toMatchObject({
+    data: {
+      orderReturn: {
+        status: 'PENDING',
+        lines: [{ orderLineId: returnLine.id, quantity: 1 }],
+      },
+    },
+  });
   const paidOrder = await query(tokens.operator, publicA, markPaid, operatorTarget);
   expect(paidOrder).toMatchObject({
     data: {
@@ -3863,6 +3935,9 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(
     await query(tokens.operator, publicA, updateOrder, { ...operatorTarget, status: 'CANCELLED' }),
   ).toMatchObject({ data: { updateOrderStatus: { status: 'CANCELLED', paymentStatus: 'PAID' } } });
+  expect(await requestReturn(publicA, token)).toMatchObject({
+    errors: [{ extensions: { fieldErrors: [{ code: 'ORDER_NOT_RETURNABLE' }] } }],
+  });
   expect(
     await database.productVariant.findUniqueOrThrow({
       where: variantKey,
@@ -4578,6 +4653,30 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
   expect(await query(tokens.operator, publicA, updateManual, untrackedIncrease)).toMatchObject({
     data: { updateManualOrder: { total: '117.00' } },
   });
+  expect(await readManualStock()).toEqual({ quantity: 6 });
+
+  expect(
+    await storefront(
+      publicA,
+      requestReturnMutation,
+      {
+        input: {
+          orderId: manual.id,
+          reason: 'Wrong size',
+          lines: [{ orderLineId: readdedLine.id, quantity: 2 }],
+        },
+      },
+      token,
+    ),
+  ).toMatchObject({ data: { requestShopperReturn: { id: expect.any(String) } } });
+  for (const [input, path, code] of [
+    [reduction, 'lines0Quantity', 'ORDER_RETURN_QUANTITY_RESERVED'],
+    [manualEdit(2, { variantId: replacement.id }), 'lines', 'ORDER_RETURN_LINE_REQUIRED'],
+  ] as const) {
+    expect(await query(tokens.operator, publicA, updateManual, input)).toMatchObject({
+      errors: [{ extensions: { code: 'BAD_USER_INPUT', fieldErrors: [{ path, code }] } }],
+    });
+  }
   expect(await readManualStock()).toEqual({ quantity: 6 });
 
   const manualShipping = await database.shippingMethod.create({
