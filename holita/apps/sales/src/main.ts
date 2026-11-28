@@ -36,29 +36,34 @@ void startOperator({
               data: { drawer: true, mode: 'create' },
               canDeactivate: [leaveDrawer],
             },
-          ],
-        },
-        {
-          path: ':recordId',
-          component: LeadDetailPage,
-          children: [
             {
-              path: 'edit',
-              component: LeadEditor,
-              data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
-              canDeactivate: [leaveDrawer],
-            },
-            {
-              path: 'contacts/new',
-              component: ContactEditor,
-              data: { drawer: true, mode: 'create', contactEditor: true },
-              canDeactivate: [leaveDrawer],
-            },
-            {
-              path: 'contacts/:recordId/edit',
-              component: ContactEditor,
-              data: { drawer: true, mode: 'edit', recordParam: 'recordId', contactEditor: true },
-              canDeactivate: [leaveDrawer],
+              path: ':recordId',
+              component: LeadDetailPage,
+              children: [
+                {
+                  path: 'edit',
+                  component: LeadEditor,
+                  data: { drawer: true, mode: 'edit', recordParam: 'recordId' },
+                  canDeactivate: [leaveDrawer],
+                },
+                {
+                  path: 'contacts/new',
+                  component: ContactEditor,
+                  data: { drawer: true, mode: 'create', contactEditor: true },
+                  canDeactivate: [leaveDrawer],
+                },
+                {
+                  path: 'contacts/:recordId/edit',
+                  component: ContactEditor,
+                  data: {
+                    drawer: true,
+                    mode: 'edit',
+                    recordParam: 'recordId',
+                    contactEditor: true,
+                  },
+                  canDeactivate: [leaveDrawer],
+                },
+              ],
             },
           ],
         },

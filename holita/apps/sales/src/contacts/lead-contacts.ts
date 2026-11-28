@@ -15,6 +15,7 @@ import {
   RowActions,
   TablePanel,
   UI_LANGUAGE,
+  injectDrawerHost,
   listRecord,
   tableView,
   trackById,
@@ -23,7 +24,6 @@ import {
   type ListActionRequest,
   type TableColumn,
 } from '@osnova/ui';
-import { MessageService } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
@@ -47,7 +47,7 @@ export class LeadContacts {
 
   private readonly api = inject(ContactsApi);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly messages = inject(MessageService);
+  private readonly listHost = injectDrawerHost();
   private readonly language = inject(UI_LANGUAGE);
   readonly removing = signal(false);
 
@@ -165,8 +165,10 @@ export class LeadContacts {
     this.removing.set(true);
     try {
       await this.api.remove(scope, leadId, id);
+      if (this.api.scope() === scope) {
+        this.listHost.saved({ message: this.text().contactRemoved, recordId: null });
+      }
       if (!this.destroyRef.destroyed && this.actionContext() === context) {
-        this.messages.add({ severity: 'success', summary: this.text().contactRemoved });
         this.refresh();
       }
     } catch {

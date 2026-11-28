@@ -1,6 +1,6 @@
 # 141 Convert a won lead to a new merchant and shop
 
-**Status:** Ready after [134](134-holita-sales-pipeline.md), [143](143-holita-sales-core-provisioning.md). **Product:** Holita.
+**Status:** Ready after [143](143-holita-sales-core-provisioning.md). **Product:** Holita.
 
 ## Background
 

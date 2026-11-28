@@ -1,114 +1,152 @@
-<osnova-page-header
-  [title]="title()"
-  [moduleInfo]="text().leadsInfo"
-  [actions]="headerActions()"
-  (action)="open('new')"
-/>
-<osnova-table-panel
-  [heading]="text().prospects"
-  [mobileFullWidthActions]="true"
-  [columns]="columns()"
-  tableMinWidth="40rem"
-  [view]="view()"
-  [total]="page()?.total ?? null"
-  [busy]="list.isLoading()"
-  [errorText]="text().leadsUnavailable"
-  [emptyTitle]="text().emptyLeads"
-  [page]="pagination()"
-  (pageChange)="url.setPage($event)"
-  (retry)="list.reload()"
-  (clearFilters)="url.clearFilters()"
->
-  <osnova-filter-builder
-    panelActions
-    [mobileFullWidth]="true"
-    [searchLabel]="text().searchLeads"
-    [search]="url.searchDraft()"
-    [searchError]="url.searchError() && compactPhoneSearch(url.searchDraft()) === url.searchDraft()
+<div [hidden]="detailOpen()">
+  <div class="app-view">
+    <osnova-page-header
+      [title]="title()"
+      [moduleInfo]="text().leadsInfo"
+      [actions]="headerActions()"
+      (action)="open('new')"
+    />
+    <osnova-table-panel
+      [heading]="text().prospects"
+      [mobileFullWidthActions]="true"
+      [columns]="columns()"
+      tableMinWidth="50rem"
+      [view]="view()"
+      [total]="page()?.total ?? null"
+      [busy]="list.isLoading()"
+      [errorText]="text().leadsUnavailable"
+      [emptyTitle]="text().emptyOpenLeads"
+      [page]="pagination()"
+      (pageChange)="url.setPage($event)"
+      (retry)="list.reload()"
+      (clearFilters)="url.clearFilters()"
+    >
+      <osnova-filter-builder
+        panelActions
+        [mobileFullWidth]="true"
+        [searchLabel]="text().searchLeads"
+        [search]="url.searchDraft()"
+        [searchError]="url.searchError() && compactPhoneSearch(url.searchDraft()) === url.searchDraft()
       ? shared().searchTooManyWords
       : null"
-    (searchChange)="url.editSearch(compactPhoneSearch($event))"
-  >
-    <osnova-list-sort-menu
-      filterActions
-      [fields]="sortFields()"
-      [sort]="sort()"
-      (sortChange)="changeSort($event)"
-    />
-  </osnova-filter-builder>
-  <p-table
-    class="app-responsive-table app-table-fixed"
-    [value]="page()?.items ?? []"
-    [rowTrackBy]="trackById"
-    [lazy]="true"
-    [lazyLoadOnInit]="false"
-    [scrollable]="true"
-    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
-    [sortField]="sort().field"
-    [sortOrder]="sort().direction === 'asc' ? 1 : -1"
-    (onLazyLoad)="tableSort($event)"
-    dataKey="id"
-  >
-    <ng-template #colgroup>
-      <colgroup>
-        @for (column of columns(); track column.id) {
-        <col
-          [class]="column.className ?? ''"
-          [style.width]="column.kind === 'identity'
+        (searchChange)="url.editSearch(compactPhoneSearch($event))"
+      >
+        <p-select
+          filterQuickActions
+          inputId="lead-status-filter"
+          [ariaLabel]="text().leadStatus"
+          [options]="statusOptions()"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          [ngModel]="url.state().filter.status ?? 'OPEN'"
+          (ngModelChange)="url.patchFilter({ status: $event })"
+        />
+        <p-select
+          filterQuickActions
+          inputId="lead-stage-filter"
+          [ariaLabel]="text().leadStage"
+          [options]="stageOptions()"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          [ngModel]="url.state().filter.stage ?? 'ALL'"
+          (ngModelChange)="url.patchFilter({ stage: $event })"
+        />
+        <osnova-list-sort-menu
+          filterActions
+          [fields]="sortFields()"
+          [sort]="sort()"
+          (sortChange)="changeSort($event)"
+        />
+      </osnova-filter-builder>
+      <p-table
+        class="app-responsive-table app-table-fixed"
+        [value]="page()?.items ?? []"
+        [rowTrackBy]="trackById"
+        [lazy]="true"
+        [lazyLoadOnInit]="false"
+        [scrollable]="true"
+        [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+        [sortField]="sort().field"
+        [sortOrder]="sort().direction === 'asc' ? 1 : -1"
+        (onLazyLoad)="tableSort($event)"
+        dataKey="id"
+      >
+        <ng-template #colgroup>
+          <colgroup>
+            @for (column of columns(); track column.id) {
+            <col
+              [class]="column.className ?? ''"
+              [style.width]="column.kind === 'identity'
               ? 'var(--app-table-identity-width, ' + column.width + ')'
               : column.width"
-        />
-        }
-      </colgroup>
-    </ng-template>
-    <ng-template #header>
-      <tr>
-        <th scope="col" class="app-col-identity" pSortableColumn="DISPLAY_NAME">
-          {{ text().leadDisplayName }} <p-sort-icon field="DISPLAY_NAME" />
-        </th>
-        <th scope="col" class="app-table-merged-column">{{ text().leadWebsiteUrl }}</th>
-        <th scope="col" class="app-table-merged-column">{{ text().leadSourceName }}</th>
-        <th scope="col" pSortableColumn="CREATED_AT">
-          {{ text().leadCreatedAt }} <p-sort-icon field="CREATED_AT" />
-        </th>
-      </tr>
-    </ng-template>
-    <ng-template #body let-lead>
-      @let label = leadLabel(lead); @let secondary = lead.sourceName ?? (lead.displayName ?
-      lead.websiteUrl : null);
-      <tr>
-        <td class="app-col-identity">
-          <div class="app-cell-identity">
-            <a
-              class="app-link app-cell-truncate"
-              [routerLink]="[lead.id]"
-              queryParamsHandling="preserve"
-              [preserveFragment]="true"
-              [title]="label"
-              >{{ label }}</a
-            >
-            @if (secondary) {
-            <span class="app-table-mobile-meta" [title]="secondary">{{ secondary }}</span>
+            />
             }
-          </div>
-        </td>
-        <td class="app-table-merged-column">
-          <span class="app-cell-truncate" [title]="lead.websiteUrl ?? ''"
-            >{{ lead.websiteUrl ?? '—' }}</span
-          >
-        </td>
-        <td class="app-table-merged-column">
-          <span class="app-cell-truncate" [title]="lead.sourceName ?? ''"
-            >{{ lead.sourceName ?? '—' }}</span
-          >
-        </td>
-        <td class="app-cell-date">
-          <time [attr.datetime]="lead.createdAt" [title]="format.utc(lead.createdAt)"
-            >{{ format.dateTime(lead.createdAt) }}</time
-          >
-        </td>
-      </tr>
-    </ng-template>
-  </p-table>
-</osnova-table-panel>
-<router-outlet [routerOutletData]="drawerHost" />
+          </colgroup>
+        </ng-template>
+        <ng-template #header>
+          <tr>
+            <th scope="col" class="app-col-identity" pSortableColumn="DISPLAY_NAME">
+              {{ text().leadDisplayName }} <p-sort-icon field="DISPLAY_NAME" />
+            </th>
+            <th scope="col">{{ text().leadStage }}</th>
+            <th scope="col" class="app-table-merged-column">{{ text().leadWebsiteUrl }}</th>
+            <th scope="col" class="app-table-merged-column">{{ text().leadSourceName }}</th>
+            <th scope="col" class="app-table-merged-column" pSortableColumn="CREATED_AT">
+              {{ text().leadCreatedAt }} <p-sort-icon field="CREATED_AT" />
+            </th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-lead>
+          @let label = leadLabel(lead); @let secondary = lead.sourceName ?? (lead.displayName ?
+          lead.websiteUrl : null);
+          <tr>
+            <td class="app-col-identity">
+              <div class="app-cell-identity">
+                <a
+                  class="app-link app-cell-truncate app-table-identity-wrap"
+                  [routerLink]="[lead.id]"
+                  queryParamsHandling="preserve"
+                  [preserveFragment]="true"
+                  [title]="label"
+                  >{{ label }}</a
+                >
+                @if (secondary) {
+                <span class="app-table-mobile-meta" [title]="secondary">{{ secondary }}</span>
+                }
+                <time
+                  class="app-table-mobile-meta"
+                  [attr.datetime]="lead.createdAt"
+                  [title]="format.utc(lead.createdAt)"
+                  >{{ format.dateTime(lead.createdAt) }}</time
+                >
+              </div>
+            </td>
+            <td>
+              <div class="app-cell-status app-table-tag-wrap">
+                <p-tag [severity]="stageSeverity(lead.stage)" [value]="stageLabel(lead.stage)" />
+              </div>
+            </td>
+            <td class="app-table-merged-column">
+              <span class="app-cell-truncate" [title]="lead.websiteUrl ?? ''"
+                >{{ lead.websiteUrl ?? '—' }}</span
+              >
+            </td>
+            <td class="app-table-merged-column">
+              <span class="app-cell-truncate" [title]="lead.sourceName ?? ''"
+                >{{ lead.sourceName ?? '—' }}</span
+              >
+            </td>
+            <td class="app-cell-date app-table-merged-column">
+              <time [attr.datetime]="lead.createdAt" [title]="format.utc(lead.createdAt)"
+                >{{ format.dateTime(lead.createdAt) }}</time
+              >
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </osnova-table-panel>
+  </div>
+</div>
+<router-outlet hidden [routerOutletData]="drawerHost" />

@@ -2,9 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { normalizeContactPhone } from '../contacts/contact-phone.js';
 import { contactWordMatches, searchText } from '../contacts/contact-search.js';
 import { DatabaseService } from '../database.service.js';
-import type { LeadSort } from '../generated/graphql/types.js';
-import { Prisma, type Lead } from '../generated/prisma/client.js';
+import type { QueryLeadsArgs } from '../generated/graphql/types.js';
+import { Prisma, type Lead, type LeadStage } from '../generated/prisma/client.js';
 import type { SalesScope } from '../scope.js';
+import { closedLeadStages } from './lead-stage.js';
 
 type LeadFields = Pick<Lead, 'displayName' | 'websiteUrl' | 'sourceName'>;
 
@@ -14,11 +15,9 @@ export class LeadsRepository {
 
   async list(
     { tenantId }: SalesScope,
-    offset: number,
-    limit: number,
     term: string,
     words: string[],
-    sort?: LeadSort | null,
+    { offset = 0, limit = 20, sort, stage, status }: QueryLeadsArgs,
   ) {
     const perWord = words.map((word) => {
       const match = searchText(word);
@@ -35,6 +34,11 @@ export class LeadsRepository {
     const where: Prisma.LeadWhereInput = {
       tenantId,
       ...(phone ? { contacts: { some: { tenantId, phone } } } : { AND: perWord }),
+      stage: {
+        ...(stage ? { equals: stage } : {}),
+        ...(status === 'CLOSED' ? { in: [...closedLeadStages] } : {}),
+        ...((status ?? 'OPEN') === 'OPEN' ? { notIn: [...closedLeadStages] } : {}),
+      },
     };
     const direction = sort?.direction === 'ASC' ? 'asc' : 'desc';
     const order: Prisma.LeadOrderByWithRelationInput =
@@ -67,5 +71,19 @@ export class LeadsRepository {
       where: { tenantId_id: { tenantId, id } },
       data: fields,
     });
+  }
+
+  async updateStage(scope: SalesScope, id: string, stage: LeadStage, changedAt: Date) {
+    const data: Prisma.LeadUpdateManyMutationInput = { stage, stageChangedAt: changedAt };
+    if (stage === 'WON') {
+      data.wonAt = changedAt;
+    } else if (!closedLeadStages.includes(stage)) {
+      data.wonAt = null;
+    }
+    const [updated] = await this.database.client.lead.updateManyAndReturn({
+      where: { tenantId: scope.tenantId, id, stage: { not: stage } },
+      data,
+    });
+    return updated ?? this.find(scope, id);
   }
 }

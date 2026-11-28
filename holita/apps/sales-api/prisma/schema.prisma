@@ -16,6 +16,9 @@ model Lead {
   displayName     String?       @db.VarChar(255)
   websiteUrl      String?       @db.VarChar(2048)
   sourceName      String?       @db.VarChar(255)
+  stage           LeadStage     @default(NEW)
+  stageChangedAt  DateTime      @default(now()) @db.Timestamptz(3)
+  wonAt           DateTime?     @db.Timestamptz(3)
   createdByUserId String        @db.Uuid
   createdAt       DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
@@ -24,6 +27,19 @@ model Lead {
   @@unique([tenantId, id])
   @@index([tenantId, createdAt, id])
   @@map("lead")
+}
+
+enum LeadStage {
+  NEW               @map("new")
+  APPROVED_FOR_CALL @map("approvedForCall")
+  CALLED            @map("called")
+  INTERESTED        @map("interested")
+  TRY_LATER         @map("tryLater")
+  NOT_INTERESTED    @map("notInterested")
+  WON               @map("won")
+  LOST              @map("lost")
+
+  @@map("leadStage")
 }
 
 enum LeadContactRole {

@@ -3,13 +3,30 @@ fragment SalesLeadFields on Lead {
   displayName
   websiteUrl
   sourceName
+  stage
+  stageChangedAt
+  wonAt
   createdByUserId
   createdAt
   updatedAt
 }
 
-query SalesLeads($offset: Int!, $limit: Int!, $search: String, $sort: LeadSort) {
-  leads(offset: $offset, limit: $limit, search: $search, sort: $sort) {
+query SalesLeads(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $sort: LeadSort
+  $stage: LeadStage
+  $status: LeadStatusFilter
+) {
+  leads(
+    offset: $offset
+    limit: $limit
+    search: $search
+    sort: $sort
+    stage: $stage
+    status: $status
+  ) {
     items {
       ...SalesLeadFields
     }
@@ -34,5 +51,11 @@ mutation SalesCreateLead($input: LeadInput!) {
 mutation SalesUpdateLead($id: ID!, $input: LeadInput!) {
   updateLead(id: $id, input: $input) {
     id
+  }
+}
+
+mutation SalesUpdateLeadStage($id: ID!, $stage: LeadStage!) {
+  updateLeadStage(id: $id, stage: $stage) {
+    ...SalesLeadFields
   }
 }

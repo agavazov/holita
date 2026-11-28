@@ -838,6 +838,8 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     ).toEqual({ data: { lead: null, leads: { items: [], total: 0 } } });
     const updateLead =
       'mutation ScopedLeadUpdate($id: ID!, $input: LeadInput!) { updateLead(id: $id, input: $input) { id } }';
+    const updateStage =
+      'mutation ScopedLeadStage($id: ID!) { updateLeadStage(id: $id, stage: WON) { id } }';
     for (const id of [foreignLeadId, randomUUID()]) {
       expect(
         await salesGraphql(updateLead, { id, input: { displayName: 'Attempted change' } }),
@@ -845,12 +847,16 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         data: null,
         errors: [{ message: 'Lead not found', extensions: { code: 'NOT_FOUND' } }],
       });
+      expect(await salesGraphql(updateStage, { id })).toMatchObject({
+        data: null,
+        errors: [{ message: 'Lead not found', extensions: { code: 'NOT_FOUND' } }],
+      });
     }
     const foreignLead = await salesDb.client.query(
-      'SELECT "displayName" FROM "lead" WHERE "id" = $1 AND "tenantId" = $2',
+      'SELECT "displayName", "stage", "wonAt" FROM "lead" WHERE "id" = $1 AND "tenantId" = $2',
       [foreignLeadId, merchantSession.tenantId],
     );
-    expect(foreignLead.rows).toEqual([{ displayName: foreignName }]);
+    expect(foreignLead.rows).toEqual([{ displayName: foreignName, stage: 'new', wonAt: null }]);
 
     expect(
       await salesGraphql(

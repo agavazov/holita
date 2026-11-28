@@ -2,6 +2,7 @@ import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type {
   MutationCreateLeadArgs,
   MutationUpdateLeadArgs,
+  MutationUpdateLeadStageArgs,
   QueryLeadArgs,
   QueryLeadsArgs,
 } from '../generated/graphql/types.js';
@@ -33,5 +34,13 @@ export class LeadsResolver {
     @Args() { id, input }: MutationUpdateLeadArgs,
   ) {
     return this.leadsService.update(await requireSalesScope(context), id, input);
+  }
+
+  @Mutation()
+  async updateLeadStage(
+    @Context() context: RequestContext,
+    @Args() { id, stage }: MutationUpdateLeadStageArgs,
+  ) {
+    return this.leadsService.updateStage(await requireSalesScope(context), id, stage);
   }
 }

@@ -7,7 +7,9 @@ import {
   SalesLeadDocument,
   SalesLeadsDocument,
   SalesUpdateLeadDocument,
+  SalesUpdateLeadStageDocument,
   type LeadInput,
+  type LeadStage,
   type SalesLeadsQueryVariables,
 } from '../generated/leads-operations';
 import { SalesWorkspaceApi, type SalesWorkspaceScope } from '../workspace/sales-workspace-api';
@@ -82,6 +84,23 @@ export class LeadsApi {
         }
       }
       throw new Error('Missing saved lead');
+    } finally {
+      client.stop();
+    }
+  }
+
+  async updateStage(scope: SalesWorkspaceScope, id: string, stage: LeadStage) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: SalesUpdateLeadStageDocument,
+        variables: { id, stage },
+        context: { language: scope.language },
+      });
+      if (!data) {
+        throw new Error('Missing saved lead stage');
+      }
+      return data.updateLeadStage;
     } finally {
       client.stop();
     }

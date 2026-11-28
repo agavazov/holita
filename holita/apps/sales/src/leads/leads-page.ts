@@ -7,6 +7,7 @@ import {
   linkedSignal,
   resource,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { operatorStrings } from '@holita/operator';
 import {
@@ -16,6 +17,7 @@ import {
   TablePanel,
   UI_LANGUAGE,
   UrlListState,
+  codecs,
   injectDisplayFormat,
   injectSortReady,
   listQuery,
@@ -29,14 +31,24 @@ import {
   type TableColumn,
 } from '@osnova/ui';
 import { MessageService } from 'primeng/api';
+import { Select } from 'primeng/select';
 import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
-import type { LeadSortField, SalesLeadsQuery } from '../generated/leads-operations';
+import { Tag } from 'primeng/tag';
 import { compactPhoneSearch } from '../contacts/contact-search';
+import type {
+  LeadSortField,
+  LeadStage,
+  LeadStatusFilter,
+  SalesLeadsQuery,
+} from '../generated/leads-operations';
 import { leadLabel } from './lead-record';
+import { leadStageOptions, leadStages, leadStageSeverity } from './lead-stage';
 import { leadStrings } from './lead-strings';
 import { LeadsApi } from './leads-api';
 
-const definition: ListDefinition<Record<string, never>, LeadSortField> = {
+type LeadFilters = { stage: LeadStage | 'ALL'; status: LeadStatusFilter };
+const statuses = ['OPEN', 'CLOSED', 'ALL'] as const satisfies readonly LeadStatusFilter[];
+const definition: ListDefinition<LeadFilters, LeadSortField> = {
   pageSizes: [10, 20, 50, 100],
   defaultPageSize: 20,
   sorts: [
@@ -44,7 +56,10 @@ const definition: ListDefinition<Record<string, never>, LeadSortField> = {
     { param: 'createdAt', field: 'CREATED_AT' },
   ],
   defaultSort: { field: 'CREATED_AT', direction: 'DESC' },
-  filters: {},
+  filters: {
+    stage: codecs.choice([...leadStages, 'ALL'], 'ALL'),
+    status: codecs.choice(statuses, 'OPEN'),
+  },
 };
 
 @Component({
@@ -53,8 +68,11 @@ const definition: ListDefinition<Record<string, never>, LeadSortField> = {
     PageHeader,
     TablePanel,
     FilterBuilder,
+    FormsModule,
     ListSortMenu,
+    Select,
     TableModule,
+    Tag,
     RouterLink,
     RouterOutlet,
   ],
@@ -69,6 +87,10 @@ export class LeadsPage {
   private readonly messages = inject(MessageService);
   private readonly language = inject(UI_LANGUAGE);
   private readonly sortReady = injectSortReady();
+  protected readonly detailOpen = computed(() => {
+    this.router.lastSuccessfulNavigation();
+    return this.route.firstChild?.snapshot.paramMap.has('recordId') ?? false;
+  });
   protected readonly url = new UrlListState(definition, () => !!this.api.scope());
   protected readonly compactPhoneSearch = compactPhoneSearch;
   protected readonly text = computed(() => leadStrings[this.language()]);
@@ -76,6 +98,15 @@ export class LeadsPage {
   protected readonly shared = computed(() => uiMessages[this.language()]);
   protected readonly trackById = trackById;
   protected readonly leadLabel = leadLabel;
+  protected readonly stageSeverity = leadStageSeverity;
+  protected readonly stageLabel = (stage: LeadStage) => this.text().stages[stage];
+  protected readonly stageOptions = computed(() => [
+    { value: 'ALL', label: this.text().allStages },
+    ...leadStageOptions(this.language()),
+  ]);
+  protected readonly statusOptions = computed(() =>
+    statuses.map((status) => ({ value: status, label: this.text().statuses[status] })),
+  );
   protected readonly format = injectDisplayFormat();
   protected readonly headerActions = computed<readonly PageHeaderAction[]>(() => [
     { id: 'new', label: this.text().newLead, primary: true },
@@ -88,10 +119,11 @@ export class LeadsPage {
       kind: 'identity',
       className: 'app-col-identity',
     },
+    { id: 'stage', label: this.text().leadStage, width: '10rem', kind: 'status' },
     {
       id: 'website',
       label: this.text().leadWebsiteUrl,
-      width: '30%',
+      width: '25%',
       className: 'app-table-merged-column',
     },
     {
@@ -100,7 +132,13 @@ export class LeadsPage {
       width: '10rem',
       className: 'app-table-merged-column',
     },
-    { id: 'created', label: this.text().leadCreatedAt, width: '10rem', kind: 'date' },
+    {
+      id: 'created',
+      label: this.text().leadCreatedAt,
+      width: '10rem',
+      kind: 'date',
+      className: 'app-table-merged-column',
+    },
   ]);
   protected readonly sortFields = computed(() => [
     { field: 'DISPLAY_NAME', label: this.text().leadDisplayName },
@@ -113,9 +151,19 @@ export class LeadsPage {
   protected readonly list = resource({
     params: () => {
       const scope = this.api.scope();
-      const { page, pageSize, search, sort } = this.url.state();
+      const { page, pageSize, search, sort, filter } = this.url.state();
       return scope
-        ? { scope, variables: { offset: (page - 1) * pageSize, limit: pageSize, search, sort } }
+        ? {
+            scope,
+            variables: {
+              offset: (page - 1) * pageSize,
+              limit: pageSize,
+              search,
+              sort,
+              stage: filter.stage === 'ALL' ? undefined : filter.stage,
+              status: filter.status,
+            },
+          }
         : undefined;
     },
     loader: ({ params }) => this.api.list(params.scope, params.variables),
@@ -131,14 +179,16 @@ export class LeadsPage {
     computation: (current, previous) =>
       current.data ?? (previous?.source.scope === current.scope ? (previous?.value ?? null) : null),
   });
-  protected readonly view = computed(() =>
-    tableView({
+  protected readonly view = computed(() => {
+    const { search, filter } = this.url.state();
+    return tableView({
       loading: this.list.isLoading(),
       error: this.list.error(),
       rows: this.page()?.items.length ?? null,
-      filtered: !!this.url.state().search,
-    }),
-  );
+      filtered:
+        !!search || (filter.stage ?? 'ALL') !== 'ALL' || (filter.status ?? 'OPEN') !== 'OPEN',
+    });
+  });
   protected readonly pagination = computed(() => ({
     page: this.url.state().page,
     pageSize: this.url.state().pageSize,
@@ -146,8 +196,9 @@ export class LeadsPage {
   }));
   protected readonly drawerHost: DrawerHost = {
     saved: ({ message, recordId }) => {
-      if (recordId) {
-        this.messages.add({ severity: 'success', summary: message });
+      this.messages.add({ severity: 'success', summary: message });
+      this.list.reload();
+      if (recordId && !this.detailOpen()) {
         this.open(recordId);
       }
     },

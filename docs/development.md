@@ -485,15 +485,19 @@ load, select **Retry**. When the list is empty, Admin clears the saved shop and 
 The operator graph exposes `salesWorkspaceAccess { tenantId userId }` to Core platform
 accounts with the `SALES` role. The IDs identify the verified platform tenant and signed-in
 Core user. CRM scope comes from that platform tenant, independent of Branch selection. In Sales,
-open **Leads** to find prospects by name, website, source or contact details. **New lead**
+open **Leads** to find prospects by name, website, source or contact details. The list opens
+with active leads, including **Try later**. Use the status and stage filters to find leads in
+**Not interested**, **Won** or **Lost**. **New lead**
 requires a name or an HTTP(S) website and opens the saved prospect at its own address. Use
-**Edit lead** to update the prospect, and use its **Contacts** section to manage contacts and
+the stage editor on the detail page to record an outcome or reopen a lead. Use **Edit lead**
+to update the prospect, and use its **Contacts** section to manage contacts and
 the primary contact. **Contacts** in the workspace navigation searches contacts across leads
 and links to each prospect. Full phone numbers match regardless of spaces or punctuation in
 Leads and Contacts. Sales preserves the current list or record URL through sign-in and
 language changes. The operator graph provides `leads`, `lead`, `createLead`, `updateLead`,
-`salesContacts` and per-lead contact reads and mutations to authorized Sales accounts.
-The Holita demo seed inserts two fictional prospects and three contacts.
+`updateLeadStage`, `salesContacts` and per-lead contact reads and mutations to authorized
+Sales accounts. The Holita demo seed includes prospects in New, Interested, Try later, Lost
+and Won, plus three contacts.
 
 **Local Sales import**
 

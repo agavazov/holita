@@ -121,9 +121,17 @@ async function seedLeads(core: URL): Promise<void> {
     await client.query('BEGIN');
     const { rowCount } = await client.query(
       `INSERT INTO "lead" ("id", "tenantId", "displayName", "websiteUrl", "sourceName",
-                           "createdByUserId", "updatedAt")
-       VALUES ($1, $2, NULL, $3, NULL, $4, CURRENT_TIMESTAMP),
-              ($5, $2, $6, NULL, $7, $4, CURRENT_TIMESTAMP)
+                           "createdByUserId", "stage", "stageChangedAt", "wonAt", "createdAt", "updatedAt")
+       VALUES ($1, $2, NULL, $3, NULL, $4, DEFAULT, DEFAULT, NULL, DEFAULT, CURRENT_TIMESTAMP),
+              ($5, $2, $6, NULL, $7, $4, DEFAULT, DEFAULT, NULL, DEFAULT, CURRENT_TIMESTAMP),
+              ('b2000000-0000-4000-8000-000000000003', $2, $8, NULL, NULL, $4,
+               'interested', '2026-11-19T09:00:00Z', NULL, '2026-11-18T09:00:00Z', '2026-11-19T09:00:00Z'),
+              ('b2000000-0000-4000-8000-000000000004', $2, $9, NULL, NULL, $4,
+               'tryLater', '2026-11-20T09:00:00Z', NULL, '2026-11-18T09:00:00Z', '2026-11-20T09:00:00Z'),
+              ('b2000000-0000-4000-8000-000000000005', $2, $10, NULL, NULL, $4,
+               'lost', '2026-11-21T09:00:00Z', NULL, '2026-11-18T09:00:00Z', '2026-11-21T09:00:00Z'),
+              ('b2000000-0000-4000-8000-000000000006', $2, $11, NULL, NULL, $4,
+               'won', '2026-11-22T09:00:00Z', '2026-11-22T09:00:00Z', '2026-11-18T09:00:00Z', '2026-11-22T09:00:00Z')
        ON CONFLICT ("id") DO NOTHING`,
       [
         firstLead,
@@ -133,6 +141,10 @@ async function seedLeads(core: URL): Promise<void> {
         secondLead,
         'Ателие „Бяла глина“',
         'Препоръка',
+        'Ателие „Дива нишка“',
+        'Книжарница „Лист“',
+        'Работилница „Медна форма“',
+        'Студио „Северно дърво“',
       ],
     );
     const contacts = await client.query(

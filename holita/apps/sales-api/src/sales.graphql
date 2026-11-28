@@ -1,6 +1,13 @@
 type Query {
   salesWorkspaceAccess: SalesWorkspaceViewer!
-  leads(offset: Int! = 0, limit: Int! = 20, search: String, sort: LeadSort): LeadPage!
+  leads(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    sort: LeadSort
+    stage: LeadStage
+    status: LeadStatusFilter = OPEN
+  ): LeadPage!
   lead(id: ID!): Lead
   leadContacts(leadId: ID!): [LeadContact!]!
   leadContact(leadId: ID!, id: ID!): LeadContact
@@ -15,6 +22,7 @@ type Query {
 type Mutation {
   createLead(input: LeadInput!): Lead!
   updateLead(id: ID!, input: LeadInput!): Lead!
+  updateLeadStage(id: ID!, stage: LeadStage!): Lead!
   createLeadContact(leadId: ID!, input: LeadContactInput!): LeadContact!
   updateLeadContact(leadId: ID!, id: ID!, input: LeadContactInput!): LeadContact!
   deleteLeadContact(leadId: ID!, id: ID!): Boolean!
@@ -30,6 +38,9 @@ type Lead {
   displayName: String
   websiteUrl: String
   sourceName: String
+  stage: LeadStage!
+  stageChangedAt: String!
+  wonAt: String
   createdByUserId: ID!
   createdAt: String!
   updatedAt: String!
@@ -40,6 +51,23 @@ type LeadPage {
   total: Int!
   offset: Int!
   limit: Int!
+}
+
+enum LeadStage {
+  NEW
+  APPROVED_FOR_CALL
+  CALLED
+  INTERESTED
+  TRY_LATER
+  NOT_INTERESTED
+  WON
+  LOST
+}
+
+enum LeadStatusFilter {
+  OPEN
+  CLOSED
+  ALL
 }
 
 input LeadInput {

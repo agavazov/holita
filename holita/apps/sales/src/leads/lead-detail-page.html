@@ -26,6 +26,53 @@
   </osnova-empty-state>
 </section>
 } @else if (entry.lead(); as lead) {
+<section class="app-card" aria-labelledby="lead-pipeline">
+  <div class="app-card__header">
+    <h2 id="lead-pipeline" class="app-card__title">{{ text().pipeline }}</h2>
+    <p-tag [severity]="stageSeverity(lead.stage)" [value]="text().stages[lead.stage]" />
+  </div>
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().stageChangedAt }}</dt>
+      <dd>
+        <time [attr.datetime]="lead.stageChangedAt" [title]="format.utc(lead.stageChangedAt)"
+          >{{ format.dateTime(lead.stageChangedAt) }}</time
+        >
+      </dd>
+    </div>
+    @if (lead.wonAt; as wonAt) {
+    <div>
+      <dt>{{ text().wonAt }}</dt>
+      <dd>
+        <time [attr.datetime]="wonAt" [title]="format.utc(wonAt)"
+          >{{ format.dateTime(wonAt) }}</time
+        >
+      </dd>
+    </div>
+    }
+  </dl>
+  <form class="app-stack" [formGroup]="stageForm" (ngSubmit)="saveStage()">
+    <osnova-form-field controlId="lead-stage" [label]="text().leadStage" [error]="stageError()">
+      <p-select
+        inputId="lead-stage"
+        ariaLabelledBy="lead-stage-label"
+        [pt]="{ label: { 'aria-describedby': 'lead-stage-error' } }"
+        formControlName="stage"
+        [options]="stageOptions()"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+      />
+    </osnova-form-field>
+    <button
+      type="submit"
+      pButton
+      [disabled]="savingStage() || !selectedStage() || selectedStage() === lead.stage"
+    >
+      {{ text().saveStage }}
+    </button>
+  </form>
+</section>
 <section class="app-card" aria-labelledby="lead-details">
   <h2 id="lead-details" class="app-card__title">{{ text().leadDetails }}</h2>
   <dl class="app-facts">

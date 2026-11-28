@@ -1,18 +1,32 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
 import { contactSearchWords } from '../contacts/contact-search.js';
-import type { Lead, LeadInput, QueryLeadsArgs } from '../generated/graphql/types.js';
+import type { Lead, LeadInput, LeadStage, QueryLeadsArgs } from '../generated/graphql/types.js';
 import { Prisma, type Lead as StoredLead } from '../generated/prisma/client.js';
 import type { SalesScope } from '../scope.js';
 import { LeadsRepository } from './leads.repository.js';
 
 function present(row: StoredLead): Lead {
-  const { id, displayName, websiteUrl, sourceName, createdByUserId, createdAt, updatedAt } = row;
+  const {
+    id,
+    displayName,
+    websiteUrl,
+    sourceName,
+    stage,
+    stageChangedAt,
+    wonAt,
+    createdByUserId,
+    createdAt,
+    updatedAt,
+  } = row;
   return {
     id,
     displayName,
     websiteUrl,
     sourceName,
+    stage,
+    stageChangedAt: stageChangedAt.toISOString(),
+    wonAt: wonAt?.toISOString() ?? null,
     createdByUserId,
     createdAt: createdAt.toISOString(),
     updatedAt: updatedAt.toISOString(),
@@ -63,7 +77,8 @@ function fields(input: LeadInput) {
 export class LeadsService {
   constructor(private readonly repository: LeadsRepository) {}
 
-  async list(scope: SalesScope, { offset = 0, limit = 20, search, sort }: QueryLeadsArgs) {
+  async list(scope: SalesScope, args: QueryLeadsArgs) {
+    const { offset = 0, limit = 20, search } = args;
     const term = (search ?? '').trim();
     const words = contactSearchWords(term);
     if (offset < 0 || limit < 1 || limit > 100) {
@@ -72,7 +87,7 @@ export class LeadsService {
     if (term.includes('\u0000') || Array.from(term).length > 200 || words.length > 5) {
       throw new BadRequestException('Invalid search');
     }
-    const page = await this.repository.list(scope, offset, limit, term, words, sort);
+    const page = await this.repository.list(scope, term, words, args);
     return { ...page, items: page.items.map(present) };
   }
 
@@ -94,5 +109,13 @@ export class LeadsService {
       }
       throw error;
     }
+  }
+
+  async updateStage(scope: SalesScope, id: string, stage: LeadStage): Promise<Lead> {
+    const row = await this.repository.updateStage(scope, recordId(id), stage, new Date());
+    if (!row) {
+      throw new NotFoundException('Lead not found');
+    }
+    return present(row);
   }
 }
