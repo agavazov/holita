@@ -3746,7 +3746,9 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
     await expect(shopName).toHaveValue(contactSettings.displayName);
     await expect(discardChanges).toHaveCount(0);
 
+    const firstShopDashboard = waitForCart(merchant, 'OperatorShopDashboard');
     await merchant.getByRole('link', { name: 'Dashboard', exact: true }).click();
+    expect((await firstShopDashboard).request().headers()['x-branch-id']).toBe(shopId);
     const switchDashboardShop = async (name: string, id: string): Promise<unknown> => {
       await shopPicker.click();
       const read = merchant.waitForResponse((response) => {
@@ -3888,6 +3890,23 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         data: { inventoryVariant: { ...simpleVariantId, quantity: 1 } },
       });
     }
+    const { rows: guestEmails } = await commerceDb.client.query(
+      `SELECT "template", "recipient", "language" FROM "localEmail"
+       WHERE "tenantId" = $1 AND "branchId" = $2
+         AND ("sourceEventId" = $3 OR "sourceEventId" IN (
+           SELECT "id"::text FROM "orderStatusChange"
+           WHERE "tenantId" = $1 AND "branchId" = $2 AND "orderId" = $3::uuid
+         ))
+       ORDER BY "template"`,
+      [shopScope.tenantId, shopId, orderId],
+    );
+    expect(guestEmails).toEqual(
+      ['order.cancelled', 'order.placed'].map((template) => ({
+        template,
+        recipient: shopperEmail,
+        language: 'en',
+      })),
+    );
     await merchant.getByRole('button', { name: productName, exact: true }).click();
     await merchant.locator('#product-variant-active-0').click();
     await merchant.getByRole('option', { name: 'Active', exact: true }).click();

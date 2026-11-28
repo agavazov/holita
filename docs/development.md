@@ -544,6 +544,25 @@ if the quota is reached. Publish the listener on 12030 so excess sign-in request
 the private Router's 100 requests per second limit. Storefront clients send the full GraphQL query
 with each request.
 
+**Local order email**
+
+Commerce captures plain-text placement, confirmation, shipping, completion and cancellation emails
+in the development database. Storefront checkout sends `Accept-Language: bg` or `en` when placing
+an order. Later notices use the language saved at placement. Manual and historical orders use Bulgarian.
+
+To read a captured message, connect to the Holita Commerce development database with the local
+database role and query the mailbox for the verified Tenant and Branch. Set `commerce_schema` to
+the `schema` parameter in `COMMERCE_DATABASE_URL`, or `public` if the parameter is omitted. Pass
+`commerce_schema`, `tenant_id`, `branch_id` and `recipient` as `psql` variables with `-v`.
+
+```sql
+SELECT "capturedAt", "recipient", "template", "language", "subject", "body"
+FROM :"commerce_schema"."localEmail"
+WHERE "tenantId" = :'tenant_id'::uuid AND "branchId" = :'branch_id'::uuid
+  AND "recipient" = :'recipient'
+ORDER BY "capturedAt", "template";
+```
+
 Use Gallery in the Product drawer to add JPEG, PNG or WebP photos, enter alt text, reorder or
 remove photos, then save the product. The first photo is the storefront cover. Add up to 5 MiB
 of new photos per save. If the picker rejects files, choose new photos or discard that selection

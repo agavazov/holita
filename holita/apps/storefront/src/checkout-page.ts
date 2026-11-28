@@ -502,12 +502,17 @@ export class CheckoutPage {
       } else if (guestAttempt) {
         rememberPendingGuestCheckout(shopId, guestAttempt);
       }
-      const order = await this.api.placeOrder(shopId, credentials, {
-        ...this.checkoutInput(),
-        shopperNote: this.form.controls.shopperNote.value,
-        cartId,
-        quoteRevision,
-      });
+      const order = await this.api.placeOrder(
+        shopId,
+        credentials,
+        {
+          ...this.checkoutInput(),
+          shopperNote: this.form.controls.shopperNote.value,
+          cartId,
+          quoteRevision,
+        },
+        this.language(),
+      );
       await this.finishCheckout(
         shopId,
         order.id,

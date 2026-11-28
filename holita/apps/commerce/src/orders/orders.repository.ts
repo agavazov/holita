@@ -257,17 +257,22 @@ export class OrdersRepository {
     return tx.order.findUnique({ where: { ...scope, id }, include: orderDetail(scope) });
   }
 
-  updateStatus(
+  async updateStatus(
     tx: Prisma.TransactionClient,
     scope: Scope,
     id: string,
-    change: Prisma.OrderStatusChangeCreateWithoutOrderInput,
+    change: Pick<
+      Prisma.OrderStatusChangeCreateWithoutOrderInput,
+      'fromStatus' | 'toStatus' | 'occurredAt'
+    >,
   ) {
-    return tx.order.update({
+    const event = await tx.orderStatusChange.create({ data: { ...scope, orderId: id, ...change } });
+    const order = await tx.order.update({
       where: { ...scope, id },
-      data: { status: change.toStatus, statusChanges: { create: change } },
+      data: { status: change.toStatus },
       include: orderDetail(scope),
     });
+    return { event, order };
   }
 
   markPaid(tx: Prisma.TransactionClient, scope: Scope, id: string, paidAt: Date) {

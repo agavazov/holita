@@ -2,8 +2,6 @@
 
 **Status:** Needs owner. Can an unverified shopper sign in and place orders, and which actions require verified email? **Product:** Holita.
 
-**Depends on** [210](210-holita-transactional-email-outbox.md).
-
 ## Background
 
 The red.bg coverage report marks AC08 as P1. Storefront registration does not verify the initial email address. Ticket 211 handles requests to change an authenticated shopper's email.
@@ -15,7 +13,7 @@ Confirm the email address of a new shopper.
 ## Steps
 
 1. Confirm which account and checkout actions stay available before verification.
-2. Persist verification state and send an expiring, single-use confirmation through ticket 210 with a scoped resend action.
+2. Persist verification state and send an expiring, single-use confirmation through the local mailbox with a scoped resend action.
 
 ## Done when
 
@@ -23,7 +21,7 @@ A newly registered shopper can confirm their email through the local mailbox, an
 
 ## Limits
 
-Use the same delivery path as ticket 210. Reuse verification primitives for ticket 211 where applicable.
+Reuse verification primitives for ticket 211 where applicable.
 
 ## References
 

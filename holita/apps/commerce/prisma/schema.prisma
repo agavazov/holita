@@ -747,6 +747,7 @@ model Order {
   paymentStatus OrderPaymentStatus @default(UNPAID)
   paidAt DateTime? @db.Timestamptz(3)
   placedAt DateTime @db.Timestamptz(3)
+  emailLanguage String @default("bg") @db.VarChar(2)
   contactName String @db.VarChar(200)
   contactEmail String @db.VarChar(254)
   contactPhone String @db.Text
@@ -802,6 +803,20 @@ model OrderNotification {
   @@index([tenantId, branchId, placedAt(sort: Desc), orderId(sort: Desc)])
   @@index([tenantId, branchId, readAt])
   @@map("orderNotification")
+}
+
+model LocalEmail {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  template String @db.Text
+  sourceEventId String @db.Text
+  recipient String @db.VarChar(254)
+  language String @db.VarChar(2)
+  subject String @db.Text
+  body String @db.Text
+  capturedAt DateTime @default(now()) @db.Timestamptz(3)
+  @@id([tenantId, branchId, template, sourceEventId])
+  @@map("localEmail")
 }
 
 model OrderLine {

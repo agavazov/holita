@@ -43,6 +43,7 @@ import type {
   ShopperSession,
 } from './generated/graphql/storefront-types.js';
 import type { Scope, ShopperScope } from './scope.js';
+import type { EmailLanguage } from './local-mailbox/local-mailbox.repository.js';
 import { NavigationService } from './navigation/navigation.service.js';
 import { PagesService } from './pages/pages.service.js';
 import { ShopSettingsService } from './shop-settings/shop-settings.service.js';
@@ -56,6 +57,7 @@ export interface StorefrontContext {
   branchId: string | undefined;
   authorization: string | undefined;
   cartToken?: string | string[];
+  emailLanguage?: EmailLanguage;
 }
 export interface ShopScope {
   id: string;

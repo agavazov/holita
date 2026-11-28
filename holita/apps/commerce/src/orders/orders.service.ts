@@ -39,6 +39,7 @@ import type {
   QueryOrdersArgs,
 } from '../generated/graphql/types.js';
 import type { Order, OrderLine, OrderStatus, Prisma } from '../generated/prisma/client.js';
+import { LocalMailbox, type EmailLanguage } from '../local-mailbox/local-mailbox.repository.js';
 import { requireScope, type RequestContext, type Scope, type ShopperScope } from '../scope.js';
 import {
   manualLineInputs,
@@ -46,6 +47,7 @@ import {
   orderLineSnapshot,
   reviseOrderLines,
 } from './manual-order-lines.js';
+import { orderEmail } from './order-email.js';
 import { OrdersRepository } from './orders.repository.js';
 
 type ShopperOrderRow = Awaited<ReturnType<OrdersRepository['shopperOrders']>>['items'][number];
@@ -275,6 +277,7 @@ export class OrdersService {
     private readonly checkout: CheckoutService,
     private readonly customers: ShopperRepository,
     private readonly discounts: DiscountsService,
+    private readonly mailbox: LocalMailbox,
   ) {}
 
   async operatorNotifications(
@@ -422,6 +425,7 @@ export class OrdersService {
         },
         revised.lines,
       );
+      await this.mailbox.capture(tx, scope, orderEmail(order, 'PLACED', order.id));
       return operatorDetail(order);
     });
   }
@@ -646,11 +650,15 @@ export class OrdersService {
     if (status === 'CANCELLED') {
       await this.orders.restoreStock(tx, scope, order.id);
     }
-    return this.orders.updateStatus(tx, scope, order.id, {
+    const { event, order: updated } = await this.orders.updateStatus(tx, scope, order.id, {
       fromStatus: order.status,
       toStatus: status,
       occurredAt: new Date(),
     });
+    if (status !== 'PROCESSING' && status !== 'PLACED') {
+      await this.mailbox.capture(tx, scope, orderEmail(updated, status, String(event.id)));
+    }
+    return updated;
   }
 
   async markPaid(context: RequestContext, id: string): Promise<OperatorOrder> {
@@ -731,7 +739,11 @@ export class OrdersService {
     return order ? confirmation(order) : null;
   }
 
-  place(context: CartContext, input: PlaceOrderInput): Promise<OrderConfirmation> {
+  place(
+    context: CartContext,
+    input: PlaceOrderInput,
+    emailLanguage: EmailLanguage,
+  ): Promise<OrderConfirmation> {
     const { scope, customerId } = context;
     const owner = cartOwner(context);
     if (!owner || !isUUID(input.cartId)) {
@@ -809,6 +821,7 @@ export class OrdersService {
           ...identity,
           cartId,
           customerId: customerId ?? null,
+          emailLanguage,
           ...orderContactFields({ contact, shippingAddress }),
           ...billing,
           shopperNote,
@@ -830,6 +843,7 @@ export class OrdersService {
         await this.discounts.redeem(tx, scope, discountId);
       }
       await this.cartRepository.consume(tx, scope, cartId, identity.placedAt);
+      await this.mailbox.capture(tx, scope, orderEmail(order, 'PLACED', order.id));
       return confirmation(order);
     });
   }

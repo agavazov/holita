@@ -52,6 +52,7 @@ import {
   type PublicBlogArticlesQueryVariables,
 } from './generated/operations';
 import type { BrowseSection } from './catalogue-url';
+import type { Language } from './storefront-messages';
 
 export interface IndexEntry {
   id: string;
@@ -134,13 +135,19 @@ export class StorefrontApi {
     mutation: TypedDocumentNode<Data, Variables>,
     variables: Variables,
     credentials: StorefrontCredentials,
+    language?: Language,
   ) {
     const { data } = await firstValueFrom(
       this.apollo.mutate({
         mutation,
         variables,
         fetchPolicy: 'no-cache',
-        context: { headers: requestHeaders(shopId, credentials) },
+        context: {
+          headers: {
+            ...requestHeaders(shopId, credentials),
+            ...(language && { 'accept-language': language }),
+          },
+        },
       }),
     );
     if (!data) {
@@ -324,8 +331,14 @@ export class StorefrontApi {
     return (await this.write(shopId, QuoteCheckoutDocument, { input }, credentials)).quoteCheckout;
   }
 
-  async placeOrder(shopId: string, credentials: StorefrontCredentials, input: PlaceOrderInput) {
-    return (await this.write(shopId, PlaceOrderDocument, { input }, credentials)).placeOrder;
+  async placeOrder(
+    shopId: string,
+    credentials: StorefrontCredentials,
+    input: PlaceOrderInput,
+    language: Language,
+  ) {
+    return (await this.write(shopId, PlaceOrderDocument, { input }, credentials, language))
+      .placeOrder;
   }
 
   async orderConfirmation(shopId: string, credentials: StorefrontCredentials, orderId: string) {

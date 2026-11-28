@@ -53,6 +53,10 @@ export class OrdersResolver {
 
   @Mutation('placeOrder')
   async place(@Context() context: StorefrontContext, @Args() { input }: MutationPlaceOrderArgs) {
-    return this.orders.place(await this.storefront.cartContext(context), input);
+    return this.orders.place(
+      await this.storefront.cartContext(context),
+      input,
+      context.emailLanguage ?? 'bg',
+    );
   }
 }

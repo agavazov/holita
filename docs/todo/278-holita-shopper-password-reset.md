@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [210](210-holita-transactional-email-outbox.md).
-
 ## Background
 
 The red.bg coverage report marks AC07 as P1. Shopper sign-in has no forgotten-password recovery flow.
@@ -14,7 +12,7 @@ Recover a forgotten shopper password through local delivery.
 
 ## Steps
 
-1. Add a shop-scoped request with the same visible response for known and unknown email addresses, and issue an expiring, single-use reset through ticket 210.
+1. Add a shop-scoped request with the same visible response for known and unknown email addresses, and issue an expiring, single-use reset through the local mailbox.
 
 ## Done when
 

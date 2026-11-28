@@ -284,6 +284,7 @@ beforeAll(async () => {
     '20261128000000_variant_price_history',
     '20261128010000_variant_price_public_periods',
     '20261128020000_order_notifications',
+    '20261128030000_local_email',
   ]) {
     await connection.query(
       await readFile(

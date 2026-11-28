@@ -2,7 +2,7 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [210](210-holita-transactional-email-outbox.md), [215](215-holita-shopper-return-request.md).
+**Depends on** [215](215-holita-shopper-return-request.md).
 
 ## Background
 
@@ -14,7 +14,7 @@ Send a local confirmation for an accepted return request.
 
 ## Steps
 
-1. Emit one localized transactional notice per accepted request through the delivery path from 210, using the request reference, date and requested lines.
+1. Emit one localized transactional notice per accepted request through the local mailbox, using the request reference, date and requested lines.
 
 ## Done when
 

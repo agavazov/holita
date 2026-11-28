@@ -1,10 +1,10 @@
 # 249 Inspect transactional notices and exercise local delivery
 
-**Status:** Ready after [210](210-holita-transactional-email-outbox.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-red.bg Backoffice lists queued email and can send a restricted sample to exercise delivery. Ticket 210 supplies local recipient capture, and Holita Backoffice has no email screen. Inspection uses the same resolved delivery state as local capture.
+red.bg Backoffice lists queued email and can send a restricted sample to exercise delivery. Holita captures transactional email in Commerce, and Holita Backoffice has no email screen. Inspection uses the same resolved delivery state as local capture.
 
 ## Goal
 

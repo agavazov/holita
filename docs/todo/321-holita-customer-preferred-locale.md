@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [210](210-holita-transactional-email-outbox.md).
-
 ## Background
 
 The red.bg coverage report marks CU03 as P2. The customer record does not carry a preferred language for merchant communications.
@@ -14,7 +12,7 @@ Record a customer communication language.
 
 ## Steps
 
-1. Let Admin persist a supported preferred language in the scoped customer contact editor and consume it for localized transactional templates in ticket 210.
+1. Let Admin persist a supported preferred language in the scoped customer contact editor and use it for localized transactional templates.
 
 ## Done when
 

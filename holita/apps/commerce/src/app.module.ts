@@ -220,6 +220,7 @@ const formatOperatorError: NonNullable<ApolloFederationDriverConfig['formatError
       context: (http: Parameters<typeof context>[0]) => ({
         ...context(http),
         cartToken: http.req.headers['x-cart-token'],
+        emailLanguage: http.req.headers['accept-language'] === 'en' ? 'en' : 'bg',
       }),
       formatError: formatFieldErrors,
     }),

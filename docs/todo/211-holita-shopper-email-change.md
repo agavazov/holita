@@ -1,10 +1,10 @@
 # 211 Verify a shopper email change using local delivery
 
-**Status:** Ready after [210](210-holita-transactional-email-outbox.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-red.bg Basic lets a shopper request, resend and cancel an email change and verify it from the new mailbox. Ticket 210 provides local recipient capture.
+red.bg Basic lets a shopper request, resend and cancel an email change and verify it from the new mailbox. Holita captures transactional email in its local mailbox.
 
 ## Goal
 

@@ -34,8 +34,10 @@ headers:
             named: x-branch-id
         - propagate:
             named: x-cart-token
+        - propagate:
+            named: accept-language
 cors:
   policies:
     - origins: ['${env.STOREFRONT_ORIGIN:-http://127.0.0.1:12020}']
       methods: [GET, POST, OPTIONS]
-      allow_headers: [authorization, content-type, x-branch-id, x-cart-token]
+      allow_headers: [authorization, content-type, x-branch-id, x-cart-token, accept-language]
