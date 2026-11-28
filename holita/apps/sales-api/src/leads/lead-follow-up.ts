@@ -1,16 +1,13 @@
 import type { SalesTaskBucket } from '../generated/graphql/types.js';
 import type { Prisma } from '../generated/prisma/client.js';
+import { salesDate, salesTimeZone } from '../sales-date.js';
 import { closedLeadStages } from './lead-stage.js';
 import { activeTaskStatuses } from './lead-task.js';
 
-const timeZone = 'Europe/Sofia';
-const sofiaDate = new Intl.DateTimeFormat('sv-SE', {
-  timeZone,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
+const sofiaOffset = new Intl.DateTimeFormat('en-GB', {
+  timeZone: salesTimeZone,
+  timeZoneName: 'longOffset',
 });
-const sofiaOffset = new Intl.DateTimeFormat('en-GB', { timeZone, timeZoneName: 'longOffset' });
 
 export const salesTaskBuckets = [
   'OVERDUE',
@@ -27,7 +24,7 @@ function sofiaMidnight(date: string): Date {
 }
 
 export function taskDateFilters(reference: Date) {
-  const date = sofiaDate.format(reference);
+  const date = salesDate(reference);
   const next = new Date(`${date}T00:00:00Z`);
   next.setUTCDate(next.getUTCDate() + 1);
   const today = sofiaMidnight(date);

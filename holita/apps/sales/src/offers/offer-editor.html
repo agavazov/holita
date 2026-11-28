@@ -9,6 +9,9 @@
   size="lg"
   (retry)="retry()"
 >
+  @if (sent()) {
+  <p-message severity="info">{{ text().sentEditBlocked }}</p-message>
+  } @else {
   <form id="offer-editor-form" #editorForm [formGroup]="form" (ngSubmit)="save()">
     @for (kind of quoteKinds; track kind) { @let headingId = 'offer-editor-' + kind;
     <section class="app-form-section">
@@ -102,6 +105,7 @@
     <p-message severity="error">{{ error }}</p-message>
     }
   </form>
+  }
   <div drawerFooter class="app-drawer-actions">
     <button
       pButton
@@ -113,8 +117,10 @@
     >
       {{ shared().cancel }}
     </button>
+    @if (!sent()) {
     <button pButton type="submit" form="offer-editor-form" [disabled]="saving()">
       {{ saveLabel() }}
     </button>
+    }
   </div>
 </osnova-route-drawer>

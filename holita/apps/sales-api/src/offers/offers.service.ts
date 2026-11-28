@@ -1,11 +1,17 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type {
   QuerySalesOffersArgs,
   SalesOffer,
+  SalesOfferAction,
   SalesOfferInput,
 } from '../generated/graphql/types.js';
 import { Prisma, type SalesOffer as StoredOffer } from '../generated/prisma/client.js';
-import { activityId, activityWriteError } from '../leads/lead-activity-input.js';
+import { activityId } from '../leads/lead-activity-input.js';
 import type { SalesScope } from '../scope.js';
 import { offerFields } from './offer-input.js';
 import { OffersRepository } from './offers.repository.js';
@@ -16,6 +22,8 @@ function present({
   alternativePlanName,
   alternativeMonthlyPrice,
   validUntil,
+  preparedAt,
+  manuallySentAt,
   createdAt,
   updatedAt,
   ...fields
@@ -23,6 +31,8 @@ function present({
   return {
     ...fields,
     validUntil: validUntil?.toISOString().slice(0, 10) ?? null,
+    preparedAt: preparedAt?.toISOString() ?? null,
+    manuallySentAt: manuallySentAt?.toISOString() ?? null,
     recommended:
       recommendedPlanName && recommendedMonthlyPrice
         ? { planName: recommendedPlanName, monthlyPrice: recommendedMonthlyPrice.toFixed(2) }
@@ -40,7 +50,10 @@ function present({
 export class OffersService {
   constructor(private readonly repository: OffersRepository) {}
 
-  async list(scope: SalesScope, { offset = 0, limit = 20, search, leadId }: QuerySalesOffersArgs) {
+  async list(
+    scope: SalesScope,
+    { offset = 0, limit = 20, search, leadId, status, expires }: QuerySalesOffersArgs,
+  ) {
     const term = (search ?? '').trim();
     const words = term.split(/\s+/u).filter(Boolean);
     if (offset < 0 || limit < 1 || limit > 100) {
@@ -49,13 +62,14 @@ export class OffersService {
     if (term.includes('\u0000') || Array.from(term).length > 200 || words.length > 5) {
       throw new BadRequestException('Invalid search');
     }
-    const page = await this.repository.list(
-      scope,
+    const page = await this.repository.list(scope, {
       offset,
       limit,
       words,
-      leadId == null ? undefined : activityId(leadId, 'offer'),
-    );
+      leadId: leadId == null ? undefined : activityId(leadId, 'offer'),
+      status: status ?? undefined,
+      expiresFrom: expires === 'WITHIN_7_DAYS' ? new Date() : undefined,
+    });
     return { ...page, items: page.items.map(present) };
   }
 
@@ -82,12 +96,58 @@ export class OffersService {
   }
 
   async update(scope: SalesScope, id: string, input: SalesOfferInput) {
+    const offerId = activityId(id, 'offer');
     try {
-      return present(
-        await this.repository.update(scope, activityId(id, 'offer'), offerFields(input)),
-      );
+      return present(await this.repository.update(scope, offerId, offerFields(input)));
     } catch (error: unknown) {
-      return activityWriteError(error, 'Draft offer not found');
+      return this.writeError(error, scope, offerId, 'Clear manually sent status before editing');
     }
+  }
+
+  async transition(scope: SalesScope, id: string, action: SalesOfferAction) {
+    const offerId = activityId(id, 'offer');
+    const now = new Date();
+    try {
+      switch (action) {
+        case 'PREPARE':
+          return present(
+            await this.repository.transition(scope, offerId, 'DRAFT', {
+              status: 'PREPARED',
+              preparedAt: now,
+            }),
+          );
+        case 'MARK_MANUALLY_SENT':
+          return present(
+            await this.repository.transition(scope, offerId, 'PREPARED', {
+              status: 'MANUALLY_SENT',
+              manuallySentAt: now,
+            }),
+          );
+        case 'CLEAR_MANUALLY_SENT':
+          return present(
+            await this.repository.transition(scope, offerId, 'MANUALLY_SENT', {
+              status: 'PREPARED',
+              manuallySentAt: null,
+            }),
+          );
+      }
+    } catch (error: unknown) {
+      return this.writeError(error, scope, offerId, 'Offer is not in the required state');
+    }
+  }
+
+  private async writeError(
+    error: unknown,
+    scope: SalesScope,
+    id: string,
+    message: string,
+  ): Promise<never> {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (await this.repository.find(scope, id)) {
+        throw new ConflictException(message);
+      }
+      throw new NotFoundException('Offer not found');
+    }
+    throw error;
   }
 }

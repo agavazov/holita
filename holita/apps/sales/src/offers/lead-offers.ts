@@ -13,7 +13,14 @@ import { TablePanel, UI_LANGUAGE, tableView, type TableColumn, type TablePage } 
 import { ButtonDirective } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
-import { offerLabel, offerPrice, offerStrings, quoteKinds } from './offer';
+import {
+  offerLabel,
+  offerPrice,
+  offerStatusLabel,
+  offerStatusSeverity,
+  offerStrings,
+  quoteKinds,
+} from './offer';
 import { OffersApi } from './offers-api';
 
 @Component({
@@ -30,6 +37,8 @@ export class LeadOffers {
   protected readonly text = computed(() => offerStrings[this.language()]);
   protected readonly label = offerLabel;
   protected readonly price = offerPrice;
+  protected readonly statusLabel = offerStatusLabel;
+  protected readonly statusSeverity = offerStatusSeverity;
   protected readonly quoteKinds = quoteKinds;
   protected readonly columns = computed<readonly TableColumn[]>(() => [
     { id: 'recipient', label: this.text().recipientName, width: 'auto', kind: 'identity' },

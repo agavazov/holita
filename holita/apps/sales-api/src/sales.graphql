@@ -2,7 +2,14 @@ type Query {
   salesWorkspaceAccess: SalesWorkspaceViewer!
   appointmentServices(offset: Int! = 0, limit: Int! = 20, search: String): AppointmentServicePage!
   appointmentService(id: ID!): AppointmentService
-  salesOffers(offset: Int! = 0, limit: Int! = 20, search: String, leadId: ID): SalesOfferPage!
+  salesOffers(
+    offset: Int! = 0
+    limit: Int! = 20
+    search: String
+    leadId: ID
+    status: SalesOfferStatus
+    expires: SalesOfferExpiry
+  ): SalesOfferPage!
   salesOffer(id: ID!): SalesOffer
   leads(
     offset: Int! = 0
@@ -43,6 +50,7 @@ type Mutation {
   deactivateAppointmentService(id: ID!): AppointmentService!
   createSalesOffer(leadId: ID, input: SalesOfferInput!): SalesOffer!
   updateSalesOffer(id: ID!, input: SalesOfferInput!): SalesOffer!
+  transitionSalesOffer(id: ID!, action: SalesOfferAction!): SalesOffer!
   createLead(input: LeadInput!): Lead!
   updateLead(id: ID!, input: LeadInput!): Lead!
   updateLeadStage(id: ID!, stage: LeadStage!): Lead!
@@ -366,6 +374,8 @@ type SalesOffer {
   leadId: ID
   authorUserId: ID!
   status: SalesOfferStatus!
+  preparedAt: String
+  manuallySentAt: String
   recipientName: String
   recipientEmail: String
   replyEmail: String
@@ -391,6 +401,21 @@ type SalesOffer {
 
 enum SalesOfferStatus {
   DRAFT
+  PREPARED
+  MANUALLY_SENT
+}
+
+enum SalesOfferAction {
+  PREPARE
+  MARK_MANUALLY_SENT
+  CLEAR_MANUALLY_SENT
+}
+
+enum SalesOfferExpiry {
+  """
+  Manually sent offers valid from today through seven days ahead, inclusive, in Europe/Sofia.
+  """
+  WITHIN_7_DAYS
 }
 
 type SalesQuoteLine {

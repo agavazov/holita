@@ -249,8 +249,16 @@ async function seedLeads(core: URL): Promise<void> {
     const offers = await client.query(
       `INSERT INTO "salesOffer" ("id", "tenantId", "leadId", "authorUserId", "recipientName",
                                  "includedScope", "recommendedPlanName", "recommendedMonthlyPrice",
-                                 "alternativePlanName", "alternativeMonthlyPrice", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, $6, 'Start', 19.99, 'Growth', 35.00, CURRENT_TIMESTAMP)
+                                 "alternativePlanName", "alternativeMonthlyPrice", "updatedAt",
+                                 "status", "validUntil", "preparedAt", "manuallySentAt")
+       VALUES ($1, $2, $3, $4, $5, $6, 'Start', 19.99, 'Growth', 35.00, CURRENT_TIMESTAMP,
+               DEFAULT, NULL, NULL, NULL),
+              ($7, $2, NULL, $4, 'TEST Подготвена оферта', $6, 'Start', 24.50, 'Growth', 42.00,
+               CURRENT_TIMESTAMP, 'prepared', (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Sofia')::date + 14,
+               CURRENT_TIMESTAMP, NULL),
+              ($8, $2, $3, $4, 'TEST Изпратена оферта за „Бяла глина“', $6, 'Start', 29.99, 'Growth', 49.00,
+               CURRENT_TIMESTAMP, 'manuallySent', (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Sofia')::date + 4,
+               CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
        ON CONFLICT ("id") DO NOTHING`,
       [
         fixtureId('b6', 1),
@@ -259,6 +267,8 @@ async function seedLeads(core: URL): Promise<void> {
         creator.id,
         'TEST Ателие „Бяла глина“',
         'Настройка на онлайн магазина и подготовка на началния каталог.',
+        fixtureId('b6', 2),
+        fixtureId('b6', 3),
       ],
     );
     const services = await client.query(

@@ -526,13 +526,19 @@ bucket are in the URL, for example `/en/tasks?scope=mine&bucket=noFollowUp`. Row
 Detail. The operator graph exposes `salesTaskQueue` with per-group totals and pages. Its
 insert-only demo examples use yesterday, today and tomorrow in Sofia at first seed.
 
-Open **My Offers** in Sales to search your drafts and create a standalone offer. Use
+Open **My Offers** in Sales to search your offers and create a standalone offer. Use
 **New offer** under **Linked offers** on a lead to prefill the recipient and current website from
-the lead and its primary contact. Review either draft on its detail page and use **Edit offer**
-to revise the quote. Recommended and alternative plans are optional, and each entered plan
-needs a name and a monthly EUR price before VAT. The operator graph exposes `salesOffers`,
-`salesOffer`, `createSalesOffer` and `updateSalesOffer` in the verified platform tenant and author
-scope. The Holita demo seed includes one linked draft with both prices.
+the lead and its primary contact. Open **Print preview** from the offer detail and use **Print
+offer** to print the stored quote, including each entered plan's monthly EUR price before VAT.
+Mark an offer **Prepared** before recording it as **Manually sent**. Clearing the sent status
+returns it to **Prepared**. Editing a prepared offer returns it to **Draft**. Clear sent status or
+create a new offer before revising a sent quote.
+
+Filter My Offers by `status=draft|prepared|manuallySent` or `expires=within7Days`. The latter
+matches manually sent offers valid from today through seven days ahead, inclusive, in Sofia.
+The operator graph exposes `salesOffers`, `salesOffer`, `createSalesOffer`, `updateSalesOffer`
+and `transitionSalesOffer` in the verified platform tenant and author scope. The insert-only demo
+seed includes a linked draft, a prepared offer and a linked manually sent offer with both prices.
 
 Open **Appointment Services** in Sales to define each service's duration, buffer, calendar color,
 and weekly availability. One Europe/Sofia time window applies to the selected days and must fit

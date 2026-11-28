@@ -1,6 +1,7 @@
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type {
   MutationCreateSalesOfferArgs,
+  MutationTransitionSalesOfferArgs,
   MutationUpdateSalesOfferArgs,
   QuerySalesOfferArgs,
   QuerySalesOffersArgs,
@@ -36,5 +37,13 @@ export class OffersResolver {
     @Args() { id, input }: MutationUpdateSalesOfferArgs,
   ) {
     return this.offers.update(await requireSalesScope(context), id, input);
+  }
+
+  @Mutation()
+  async transitionSalesOffer(
+    @Context() context: RequestContext,
+    @Args() { id, action }: MutationTransitionSalesOfferArgs,
+  ) {
+    return this.offers.transition(await requireSalesScope(context), id, action);
   }
 }

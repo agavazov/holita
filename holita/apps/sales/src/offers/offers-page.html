@@ -9,10 +9,10 @@
     />
     }
     <osnova-table-panel
-      [heading]="text().draftOffers"
+      [heading]="text().offers"
       [mobileFullWidthActions]="true"
       [columns]="columns()"
-      tableMinWidth="48rem"
+      tableMinWidth="56rem"
       [view]="view()"
       [total]="page()?.total ?? null"
       [busy]="list.isLoading()"
@@ -30,7 +30,28 @@
         [search]="url.searchDraft()"
         [searchError]="url.searchError() ? shared().searchTooManyWords : null"
         (searchChange)="url.editSearch($event)"
-      />
+      >
+        <p-select
+          filterQuickActions
+          [ariaLabel]="text().status"
+          [options]="statusOptions()"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          [ngModel]="url.state().filter.status ?? 'all'"
+          (ngModelChange)="url.patchFilter({ status: $event })"
+        />
+        <p-select
+          filterQuickActions
+          [ariaLabel]="text().expiry"
+          [options]="expiryOptions()"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          [ngModel]="url.state().filter.expires ?? 'any'"
+          (ngModelChange)="url.patchFilter({ expires: $event })"
+        />
+      </osnova-filter-builder>
       <p-table
         class="app-responsive-table app-table-fixed"
         [value]="page()?.items ?? []"
@@ -85,6 +106,10 @@
                 <span class="app-table-mobile-meta app-table-identity-wrap"
                   >{{ text().monthlyPrice }}</span
                 >
+                } @if (offer.validUntil) {
+                <time class="app-table-mobile-meta" [attr.datetime]="offer.validUntil">
+                  {{ text().validUntil }} · {{ offer.validUntil | osnovaDate }}
+                </time>
                 }
                 <time
                   class="app-table-mobile-meta app-table-identity-wrap"
@@ -96,7 +121,10 @@
             </td>
             <td>
               <div class="app-cell-status app-table-tag-wrap">
-                <p-tag [value]="text().draft" severity="secondary" />
+                <p-tag
+                  [value]="statusLabel(offer.status, language())"
+                  [severity]="statusSeverity(offer.status)"
+                />
               </div>
             </td>
             @for (quote of [offer.recommended, offer.alternative]; track $index) {
@@ -109,6 +137,9 @@
               } @else { — }
             </td>
             }
+            <td class="app-cell-date app-table-merged-column">
+              <time [attr.datetime]="offer.validUntil">{{ offer.validUntil | osnovaDate }}</time>
+            </td>
             <td class="app-cell-date app-table-merged-column">
               <time [attr.datetime]="offer.updatedAt">{{ offer.updatedAt | osnovaDateTime }}</time>
             </td>

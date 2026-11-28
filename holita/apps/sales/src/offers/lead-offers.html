@@ -45,7 +45,12 @@
             }
           </div>
         </td>
-        <td><p-tag [value]="text().draft" severity="secondary" /></td>
+        <td>
+          <p-tag
+            [value]="statusLabel(offer.status, language())"
+            [severity]="statusSeverity(offer.status)"
+          />
+        </td>
       </tr>
     </ng-template>
   </p-table>

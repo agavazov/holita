@@ -4,6 +4,7 @@ fragment SalesOfferSummary on SalesOffer {
   recipientEmail
   currentSiteUrl
   status
+  validUntil
   recommended {
     planName
     monthlyPrice
@@ -22,7 +23,8 @@ fragment SalesOfferDetails on SalesOffer {
   replyPhone
   proposedSiteUrl
   exampleDomain
-  validUntil
+  preparedAt
+  manuallySentAt
   productCount
   categoryCount
   languages
@@ -32,8 +34,22 @@ fragment SalesOfferDetails on SalesOffer {
   createdAt
 }
 
-query SalesOffers($offset: Int!, $limit: Int!, $search: String, $leadId: ID) {
-  salesOffers(offset: $offset, limit: $limit, search: $search, leadId: $leadId) {
+query SalesOffers(
+  $offset: Int!
+  $limit: Int!
+  $search: String
+  $leadId: ID
+  $status: SalesOfferStatus
+  $expires: SalesOfferExpiry
+) {
+  salesOffers(
+    offset: $offset
+    limit: $limit
+    search: $search
+    leadId: $leadId
+    status: $status
+    expires: $expires
+  ) {
     total
     offset
     limit
@@ -58,5 +74,11 @@ mutation SalesCreateOffer($leadId: ID, $input: SalesOfferInput!) {
 mutation SalesUpdateOffer($id: ID!, $input: SalesOfferInput!) {
   updateSalesOffer(id: $id, input: $input) {
     id
+  }
+}
+
+mutation SalesTransitionOffer($id: ID!, $action: SalesOfferAction!) {
+  transitionSalesOffer(id: $id, action: $action) {
+    ...SalesOfferDetails
   }
 }

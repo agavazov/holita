@@ -7,15 +7,18 @@ import {
   linkedSignal,
   resource,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { operatorStrings } from '@holita/operator';
 import {
   FilterBuilder,
+  FormatDateOnlyPipe,
   FormatDateTimePipe,
   PageHeader,
   TablePanel,
   UI_LANGUAGE,
   UrlListState,
+  codecs,
   tableView,
   uiMessages,
   type DrawerHost,
@@ -24,18 +27,33 @@ import {
   type TableColumn,
 } from '@osnova/ui';
 import { MessageService } from 'primeng/api';
+import { Select } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { SalesOfferSummaryFragment, SalesOffersQuery } from '../generated/offers-operations';
-import { offerLabel, offerPrice, offerStrings, quoteKinds } from './offer';
+import {
+  offerLabel,
+  offerPrice,
+  offerStatusKeys,
+  offerStatusLabel,
+  offerStatusSeverity,
+  offerStatuses,
+  offerStrings,
+  quoteKinds,
+} from './offer';
 import { OffersApi } from './offers-api';
 
-const definition: ListDefinition<Record<string, never>, 'UPDATED_AT'> = {
+const statusKeys = Object.values(offerStatusKeys);
+type OfferFilters = { status: (typeof statusKeys)[number] | 'all'; expires: 'any' | 'within7Days' };
+const definition: ListDefinition<OfferFilters, 'UPDATED_AT'> = {
   pageSizes: [10, 20, 50, 100],
   defaultPageSize: 20,
   sorts: [],
   defaultSort: { field: 'UPDATED_AT', direction: 'DESC' },
-  filters: {},
+  filters: {
+    status: codecs.choice(['all', ...statusKeys], 'all'),
+    expires: codecs.choice(['any', 'within7Days'], 'any'),
+  },
 };
 
 @Component({
@@ -44,9 +62,12 @@ const definition: ListDefinition<Record<string, never>, 'UPDATED_AT'> = {
     PageHeader,
     TablePanel,
     FilterBuilder,
+    FormatDateOnlyPipe,
     FormatDateTimePipe,
+    FormsModule,
     RouterLink,
     RouterOutlet,
+    Select,
     TableModule,
     Tag,
   ],
@@ -65,6 +86,8 @@ export class OffersPage {
   protected readonly shared = computed(() => uiMessages[this.language()]);
   protected readonly label = offerLabel;
   protected readonly price = offerPrice;
+  protected readonly statusLabel = offerStatusLabel;
+  protected readonly statusSeverity = offerStatusSeverity;
   protected readonly quoteKinds = quoteKinds;
   protected readonly trackByOffer = (_index: number, row: SalesOfferSummaryFragment) => row.id;
   protected readonly detailOpen = computed(() => {
@@ -72,6 +95,14 @@ export class OffersPage {
     return this.route.firstChild?.snapshot.paramMap.has('recordId') ?? false;
   });
   protected readonly url = new UrlListState(definition, () => !!this.api.scope());
+  protected readonly statusOptions = computed(() => [
+    { label: this.text().allStatuses, value: 'all' },
+    ...statusKeys.map((value) => ({ label: this.text()[value], value })),
+  ]);
+  protected readonly expiryOptions = computed(() => [
+    { label: this.text().anyExpiry, value: 'any' },
+    { label: this.text().within7Days, value: 'within7Days' },
+  ]);
   protected readonly actions = computed<readonly PageHeaderAction[]>(() => [
     { id: 'new', label: this.text().newOffer, primary: true },
   ]);
@@ -83,7 +114,7 @@ export class OffersPage {
       kind: 'identity',
       className: 'app-col-identity',
     },
-    { id: 'status', label: this.text().status, width: '8rem', kind: 'status' },
+    { id: 'status', label: this.text().status, width: '10rem', kind: 'status' },
     {
       id: 'recommended',
       label: this.text().recommended,
@@ -97,6 +128,13 @@ export class OffersPage {
       className: 'app-table-merged-column',
     },
     {
+      id: 'validUntil',
+      label: this.text().validUntil,
+      width: '8rem',
+      kind: 'date',
+      className: 'app-table-merged-column',
+    },
+    {
       id: 'updatedAt',
       label: this.text().updatedAt,
       width: '11rem',
@@ -104,35 +142,43 @@ export class OffersPage {
       className: 'app-table-merged-column',
     },
   ]);
+  private readonly listParams = computed(() => {
+    const scope = this.api.scope();
+    const { page, pageSize, search, filter } = this.url.state();
+    return scope
+      ? {
+          scope,
+          variables: {
+            offset: (page - 1) * pageSize,
+            limit: pageSize,
+            search,
+            status: offerStatuses.find((status) => offerStatusKeys[status] === filter.status),
+            expires: filter.expires === 'within7Days' ? ('WITHIN_7_DAYS' as const) : null,
+          },
+        }
+      : undefined;
+  });
   protected readonly list = resource({
-    params: () => {
-      const scope = this.api.scope();
-      const { page, pageSize, search } = this.url.state();
-      return scope
-        ? { scope, variables: { offset: (page - 1) * pageSize, limit: pageSize, search } }
-        : undefined;
-    },
+    params: this.listParams,
     loader: ({ params, abortSignal }) => this.api.list(params.scope, params.variables, abortSignal),
   });
-  protected readonly page = linkedSignal<
-    { scope: ReturnType<OffersApi['scope']>; data: SalesOffersQuery['salesOffers'] | undefined },
-    SalesOffersQuery['salesOffers'] | null
-  >({
+  protected readonly page = linkedSignal({
     source: () => ({
-      scope: this.api.scope(),
+      params: this.listParams(),
       data: this.list.hasValue() ? this.list.value() : undefined,
     }),
-    computation: (current, previous) =>
-      current.data ?? (previous?.source.scope === current.scope ? (previous?.value ?? null) : null),
+    computation: ({ params, data }, previous): SalesOffersQuery['salesOffers'] | null =>
+      data ?? (previous?.source.params === params ? (previous?.value ?? null) : null),
   });
-  protected readonly view = computed(() =>
-    tableView({
+  protected readonly view = computed(() => {
+    const { search, filter } = this.url.state();
+    return tableView({
       loading: this.list.isLoading(),
       error: this.list.error(),
       rows: this.page()?.items.length ?? null,
-      filtered: !!this.url.state().search,
-    }),
-  );
+      filtered: !!search || (filter.status ?? 'all') !== 'all' || filter.expires === 'within7Days',
+    });
+  });
   protected readonly pagination = computed(() => ({
     page: this.url.state().page,
     pageSize: this.url.state().pageSize,

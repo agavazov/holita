@@ -123,6 +123,11 @@ void startOperator({
               canDeactivate: [leaveDrawer],
             },
             {
+              path: ':recordId/preview',
+              component: OfferDetailPage,
+              data: { printPreview: true },
+            },
+            {
               path: ':recordId',
               component: OfferDetailPage,
               children: [

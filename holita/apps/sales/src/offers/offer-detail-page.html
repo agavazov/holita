@@ -1,12 +1,12 @@
 <osnova-page-header
-  [title]="name() ?? text().offer"
+  [title]="preview ? text().previewOffer : (name() ?? text().offer)"
   [moduleInfo]="text().detailInfo"
   [backLink]="backLink()"
   [backLabel]="backLabel()"
   [backQueryParams]="queryParams()"
   [backFragment]="fragment()"
   [actions]="actions()"
-  (action)="openEdit()"
+  (action)="runAction($event)"
 />
 @if (!validId()) {
 <section class="app-card">
@@ -20,14 +20,29 @@
     </button>
   </osnova-empty-state>
 </section>
-} @else if (offer(); as item) {
+} @else if (offer(); as item) { @if (!preview) {
 <section class="app-card" [attr.aria-label]="text().offer">
   <dl class="app-facts">
     <div>
       <dt>{{ text().status }}</dt>
-      <dd><p-tag [value]="text().draft" severity="secondary" /></dd>
+      <dd>
+        <p-tag
+          [value]="statusLabel(item.status, language())"
+          [severity]="statusSeverity(item.status)"
+        />
+      </dd>
     </div>
-    @if (item.leadId) {
+    @if (item.preparedAt; as preparedAt) {
+    <div>
+      <dt>{{ text().preparedAt }}</dt>
+      <dd><time [attr.datetime]="preparedAt">{{ preparedAt | osnovaDateTime }}</time></dd>
+    </div>
+    } @if (item.manuallySentAt; as manuallySentAt) {
+    <div>
+      <dt>{{ text().manuallySentAt }}</dt>
+      <dd><time [attr.datetime]="manuallySentAt">{{ manuallySentAt | osnovaDateTime }}</time></dd>
+    </div>
+    } @if (item.leadId) {
     <div>
       <dt>{{ text().linkedLead }}</dt>
       <dd>
@@ -46,66 +61,102 @@
       <dd><time [attr.datetime]="item.updatedAt">{{ item.updatedAt | osnovaDateTime }}</time></dd>
     </div>
   </dl>
-</section>
-<div class="app-card-grid">
-  @for (kind of quoteKinds; track kind) {
-  <section class="app-card" [attr.aria-labelledby]="'offer-' + kind">
-    <h2 class="app-card__title" [id]="'offer-' + kind">{{ text()[kind] }}</h2>
-    <dl class="app-facts">
-      <div>
-        <dt>{{ text().planName }}</dt>
-        <dd>{{ item[kind]?.planName ?? '—' }}</dd>
-      </div>
-      <div>
-        <dt>{{ text().monthlyPrice }}</dt>
-        <dd>
-          @if (item[kind]; as quote) { {{ price(quote.monthlyPrice, language()) }} } @else { — }
-        </dd>
-      </div>
-    </dl>
-  </section>
-  }
-</div>
-@if (item.includedScope; as scope) {
-<section class="app-card" aria-labelledby="offer-detail-scope">
-  <h2 class="app-card__title" id="offer-detail-scope">{{ text().includedScope }}</h2>
-  <p class="offer-text">{{ scope }}</p>
+  @let next = nextActions[item.status];
+  <div class="app-stack">
+    @if (item.status === 'MANUALLY_SENT') {
+    <p class="app-muted">{{ text().sentEditBlocked }}</p>
+    }
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [attr.aria-disabled]="changingStatus() || null"
+      (click)="changeStatus(next.action)"
+    >
+      {{ text()[next.label] }}
+    </button>
+  </div>
 </section>
 }
-<div class="app-card-grid">
-  <section class="app-card" aria-labelledby="offer-contact">
-    <h2 class="app-card__title" id="offer-contact">{{ text().contact }}</h2>
-    <dl class="app-facts">
-      @for (field of contactFields; track field.key) {
-      <div>
-        <dt>{{ text()[field.key] }}</dt>
-        <dd>{{ item[field.key] ?? '—' }}</dd>
-      </div>
-      }
-    </dl>
+<article class="app-view" [class.offer-document]="preview" [attr.aria-label]="text().offer">
+  @if (preview) {
+  <header>
+    <h2>{{ text().offer }} · {{ name() }}</h2>
+    @if (item.validUntil) {
+    <p>
+      {{ text().validUntil }} ·
+      <time [attr.datetime]="item.validUntil">{{ item.validUntil | osnovaDate }}</time>
+    </p>
+    }
+  </header>
+  } @if (!preview || item.recommended || item.alternative) {
+  <div class="app-card-grid">
+    @for (kind of quoteKinds; track kind) { @if (!preview || item[kind]) {
+    <section class="app-card" [attr.aria-labelledby]="'offer-' + kind">
+      <h2 class="app-card__title" [id]="'offer-' + kind">{{ text()[kind] }}</h2>
+      <dl class="app-facts">
+        <div>
+          <dt>{{ text().planName }}</dt>
+          <dd>{{ item[kind]?.planName ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ text().monthlyPrice }}</dt>
+          <dd>
+            @if (item[kind]; as quote) { {{ price(quote.monthlyPrice, language()) }} } @else { — }
+          </dd>
+        </div>
+      </dl>
+    </section>
+    } }
+  </div>
+  } @if (item.includedScope; as scope) {
+  <section class="app-card" aria-labelledby="offer-detail-scope">
+    <h2 class="app-card__title" id="offer-detail-scope">{{ text().includedScope }}</h2>
+    <p class="offer-text">{{ scope }}</p>
   </section>
-  <section class="app-card" aria-labelledby="offer-context">
-    <h2 class="app-card__title" id="offer-context">{{ text().context }}</h2>
-    <dl class="app-facts">
-      @for (field of siteFields; track field.key) {
-      <div>
-        <dt>{{ text()[field.key] }}</dt>
-        <dd>
-          @switch (field.key) { @case ('validUntil') { {{ item.validUntil | osnovaDate }} } @case
-          ('productCount') { {{ item.productCount | osnovaNumber }} } @case ('categoryCount') { {{
-          item.categoryCount | osnovaNumber }} } @default { {{ item[field.key] ?? '—' }} } }
-        </dd>
-      </div>
-      }
-    </dl>
+  } @if (!preview || hasContact() || hasSite()) {
+  <div class="app-card-grid">
+    @if (!preview || hasContact()) {
+    <section class="app-card" aria-labelledby="offer-contact">
+      <h2 class="app-card__title" id="offer-contact">{{ text().contact }}</h2>
+      <dl class="app-facts">
+        @for (field of contactFields; track field.key) { @if (!preview || item[field.key] !== null)
+        {
+        <div>
+          <dt>{{ text()[field.key] }}</dt>
+          <dd>{{ item[field.key] ?? '—' }}</dd>
+        </div>
+        } }
+      </dl>
+    </section>
+    } @if (!preview || hasSite()) {
+    <section class="app-card" aria-labelledby="offer-context">
+      <h2 class="app-card__title" id="offer-context">{{ text().context }}</h2>
+      <dl class="app-facts">
+        @for (field of siteFields; track field.key) { @if (!preview || (field.key !== 'validUntil'
+        && item[field.key] !== null)) {
+        <div>
+          <dt>{{ text()[field.key] }}</dt>
+          <dd>
+            @switch (field.key) { @case ('validUntil') { {{ item.validUntil | osnovaDate }} } @case
+            ('productCount') { {{ item.productCount | osnovaNumber }} } @case ('categoryCount') { {{
+            item.categoryCount | osnovaNumber }} } @default { {{ item[field.key] ?? '—' }} } }
+          </dd>
+        </div>
+        } }
+      </dl>
+    </section>
+    }
+  </div>
+  } @if (item.message; as message) {
+  <section class="app-card" aria-labelledby="offer-detail-message">
+    <h2 class="app-card__title" id="offer-detail-message">{{ text().message }}</h2>
+    <p class="offer-text">{{ message }}</p>
   </section>
-</div>
-@if (item.message; as message) {
-<section class="app-card" aria-labelledby="offer-detail-message">
-  <h2 class="app-card__title" id="offer-detail-message">{{ text().message }}</h2>
-  <p class="offer-text">{{ message }}</p>
-</section>
-} } @else if (record.isLoading()) {
+  }
+</article>
+} @else if (record.isLoading()) {
 <section class="app-card" role="status" [attr.aria-label]="shared().loading">
   <p-skeleton width="45%" />
   <p-skeleton />

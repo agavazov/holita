@@ -6,7 +6,9 @@ import {
   SalesCreateOfferDocument,
   SalesOfferDocument,
   SalesOffersDocument,
+  SalesTransitionOfferDocument,
   SalesUpdateOfferDocument,
+  type SalesOfferAction,
   type SalesOfferInput,
   type SalesOffersQueryVariables,
 } from '../generated/offers-operations';
@@ -63,6 +65,13 @@ export class OffersApi {
       client.mutate({ mutation: SalesCreateOfferDocument, variables: { leadId, input }, context }),
     );
     return createSalesOffer.id;
+  }
+
+  async transition(scope: SalesWorkspaceScope, id: string, action: SalesOfferAction) {
+    const { transitionSalesOffer } = await this.request(scope, (client, context) =>
+      client.mutate({ mutation: SalesTransitionOfferDocument, variables: { id, action }, context }),
+    );
+    return transitionSalesOffer;
   }
 
   private async request<TData>(

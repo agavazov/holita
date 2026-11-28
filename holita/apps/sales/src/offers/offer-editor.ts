@@ -90,6 +90,7 @@ export class OfferEditor {
   private readonly linkedLead = computed(() => this.leadPage?.entry.lead() ?? null);
   protected readonly editing = !!this.offerPage;
   private readonly existing = computed(() => this.offerPage?.offer() ?? null);
+  protected readonly sent = computed(() => this.existing()?.status === 'MANUALLY_SENT');
   private readonly primary = resource({
     params: () => {
       const scope = this.api.scope();
@@ -265,7 +266,7 @@ export class OfferEditor {
 
   protected async save(): Promise<void> {
     const scope = this.api.scope();
-    if (!scope || this.saving() || this.state() !== 'ready') {
+    if (!scope || this.saving() || this.sent() || this.state() !== 'ready') {
       return;
     }
     this.form.markAllAsTouched();

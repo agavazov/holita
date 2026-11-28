@@ -149,6 +149,8 @@ model SalesOffer {
   leadId                  String?          @db.Uuid
   authorUserId            String           @db.Uuid
   status                  SalesOfferStatus @default(DRAFT)
+  preparedAt              DateTime?        @db.Timestamptz(3)
+  manuallySentAt          DateTime?        @db.Timestamptz(3)
   recipientName           String?          @db.VarChar(255)
   recipientEmail          String?          @db.VarChar(254)
   replyEmail              String?          @db.VarChar(254)
@@ -177,7 +179,9 @@ model SalesOffer {
 }
 
 enum SalesOfferStatus {
-  DRAFT @map("draft")
+  DRAFT         @map("draft")
+  PREPARED      @map("prepared")
+  MANUALLY_SENT @map("manuallySent")
 
   @@map("salesOfferStatus")
 }

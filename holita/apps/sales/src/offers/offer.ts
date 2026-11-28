@@ -1,11 +1,28 @@
-import { formatMoneyCents, type Language } from '@osnova/ui';
-import type { SalesOfferSummaryFragment } from '../generated/offers-operations';
+import { formatMoneyCents, toneSeverity, type Language } from '@osnova/ui';
+import type { SalesOfferStatus, SalesOfferSummaryFragment } from '../generated/offers-operations';
 import bg from './bg.json';
 import en from './en.json';
 
 export const offerStrings = { bg, en };
 export const quoteKinds = ['recommended', 'alternative'] as const;
 export type QuoteKind = (typeof quoteKinds)[number];
+
+export const offerStatuses = ['DRAFT', 'PREPARED', 'MANUALLY_SENT'] as const;
+export const offerStatusKeys = {
+  DRAFT: 'draft',
+  PREPARED: 'prepared',
+  MANUALLY_SENT: 'manuallySent',
+} as const satisfies Record<SalesOfferStatus, string>;
+
+export function offerStatusLabel(status: SalesOfferStatus, language: Language): string {
+  return offerStrings[language][offerStatusKeys[status]];
+}
+
+export function offerStatusSeverity(status: SalesOfferStatus) {
+  return toneSeverity(
+    ({ DRAFT: 'neutral', PREPARED: 'info', MANUALLY_SENT: 'success' } as const)[status],
+  );
+}
 
 export function offerLabel(offer: SalesOfferSummaryFragment, fallback: string): string {
   return offer.recipientName ?? offer.recipientEmail ?? offer.currentSiteUrl ?? fallback;

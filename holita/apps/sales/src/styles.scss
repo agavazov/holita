@@ -1,1 +1,42 @@
 @use '@osnova/ui/styles';
+
+@media print {
+  body:has(.offer-document) {
+    color-scheme: light;
+    color: var(--p-surface-950);
+    background: var(--p-surface-0);
+
+    // Keep the quote and its ancestors in normal flow so long quotes can span pages.
+    :not(:has(.offer-document), .offer-document, .offer-document *) {
+      display: none !important;
+    }
+
+    .app-shell,
+    .app-page,
+    .app-view,
+    .offer-document .app-card-grid {
+      display: block;
+      min-height: 0;
+      padding: 0;
+    }
+
+    .app-main,
+    .offer-document * {
+      color: inherit;
+      background: transparent;
+    }
+
+    .app-main {
+      border: 0;
+    }
+
+    .offer-document .app-card {
+      margin-block-start: var(--p-app-stack-gap);
+      border-color: currentColor;
+    }
+
+    .offer-document .app-card-grid .app-card {
+      break-inside: avoid;
+    }
+  }
+}
