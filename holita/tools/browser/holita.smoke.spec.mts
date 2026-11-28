@@ -759,6 +759,128 @@ test('staff provisions a shop, its merchant publishes a product and shoppers che
         salesWorkspaceAccess: { tenantId: salesSession.tenantId, userId: salesSession.userId },
       },
     });
+
+    const coreOrigin = `http://127.0.0.1:${String(corePort)}`;
+    const onboardingId = randomUUID();
+    const onboarding = {
+      operationId: onboardingId,
+      merchantName: `TEST Merchant ${onboardingId}`,
+      adminName: 'TEST Administrator',
+      adminEmail: `test-${onboardingId}@example.test`,
+      branchName: `TEST Shop ${onboardingId}`,
+    };
+    const initialPassword = randomUUID();
+    const provision = (
+      input: Record<string, unknown>,
+      authorization = salesSession.authorization,
+      internalToken = internal,
+    ) =>
+      fetch(`${coreOrigin}/internal/platform/provision-merchant`, {
+        method: 'POST',
+        headers: {
+          authorization,
+          'content-type': 'application/json',
+          'x-core-internal-token': internalToken,
+          'x-tenant-id': merchantSession.tenantId,
+        },
+        body: JSON.stringify(input),
+        signal: AbortSignal.timeout(5000),
+      });
+    const creation = { ...onboarding, initialPassword };
+    expect((await provision(creation, salesSession.authorization, 'invalid')).status).toBe(401);
+    expect((await provision(creation, '')).status).toBe(401);
+    for (const caller of [staffSession, merchantSession]) {
+      expect((await provision(creation, caller.authorization)).status).toBe(403);
+    }
+    const missingPassword = await provision(onboarding);
+    expect(missingPassword.status).toBe(400);
+    expect(await missingPassword.json()).toMatchObject({
+      fieldErrors: [{ path: 'initialPassword', code: 'REQUIRED' }],
+    });
+    const duplicateEmail = await provision({ ...creation, adminEmail: staffEmail });
+    expect(duplicateEmail.status).toBe(400);
+    // Reject the last insert, after Core has written the merchant, administrator and Branch.
+    await coreDb.client.query(
+      `ALTER TABLE "merchantProvisioning" ADD CONSTRAINT "testRejectProvisioning"
+       CHECK ("operationId" <> ${pg.escapeLiteral(onboardingId)})`,
+    );
+    expect((await provision(creation)).status).toBe(500);
+    await coreDb.client.query(
+      'ALTER TABLE "merchantProvisioning" DROP CONSTRAINT "testRejectProvisioning"',
+    );
+    const failedCreation = await coreDb.client.query(
+      `SELECT (SELECT count(*)::int FROM "tenant" WHERE "name" = $1) AS "merchants",
+              (SELECT count(*)::int FROM "branch" WHERE "name" = $2) AS "branches",
+              (SELECT count(*)::int FROM "merchantProvisioning" WHERE "operationId" = $3) AS "operations",
+              (SELECT count(*)::int FROM "user" WHERE "email" = $4) AS "administrators"`,
+      [onboarding.merchantName, onboarding.branchName, onboardingId, onboarding.adminEmail],
+    );
+    expect(failedCreation.rows).toEqual([
+      { merchants: 0, branches: 0, operations: 0, administrators: 0 },
+    ]);
+
+    const [created, concurrent] = await Promise.all([
+      provision(creation),
+      provision({
+        ...creation,
+        operationId: onboardingId.toUpperCase(),
+        merchantName: ` ${onboarding.merchantName} `,
+        adminName: ` ${onboarding.adminName} `,
+        adminEmail: ` ${onboarding.adminEmail.toUpperCase()} `,
+        branchName: ` ${onboarding.branchName} `,
+      }),
+    ]);
+    expect([created.status, concurrent.status]).toEqual([200, 200]);
+    const destination: unknown = await created.json();
+    expect(destination).toEqual({
+      merchantTenantId: expect.any(String),
+      branchId: expect.any(String),
+    });
+    expect(await concurrent.json()).toEqual(destination);
+    for (const replay of [onboarding, { ...onboarding, initialPassword: randomUUID() }]) {
+      const response = await provision(replay);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual(destination);
+    }
+    expect((await provision({ ...onboarding, branchName: 'TEST Conflicting Shop' })).status).toBe(
+      409,
+    );
+    const stored = await coreDb.client.query<{ merchantTenantId: string; branchId: string }>(
+      `SELECT p.*
+       FROM "merchantProvisioning" p
+       JOIN "tenant" t ON t."id" = p."merchantTenantId" AND t."kind" = 'customer' AND t."name" = p."merchantName"
+       JOIN "branch" b ON b."tenantId" = t."id" AND b."id" = p."branchId" AND b."name" = p."branchName"
+       WHERE p."operationId" = $1`,
+      [onboardingId],
+    );
+    expect(stored.rows).toEqual([
+      {
+        ...onboarding,
+        platformTenantId: salesSession.tenantId,
+        merchantTenantId: expect.any(String),
+        branchId: expect.any(String),
+      },
+    ]);
+    const record = stored.rows[0];
+    expect(destination).toEqual({
+      merchantTenantId: record?.merchantTenantId,
+      branchId: record?.branchId,
+    });
+    const onboardingContext = await browser.newContext();
+    cleanup.push(() => onboardingContext.close());
+    const onboardedAdmin = await onboardingContext.newPage();
+    await onboardedAdmin.goto(admin.origin);
+    const onboardedSession = await signIn(onboardedAdmin, onboarding.adminEmail, initialPassword);
+    expect(onboardedSession.role).toBe('ADMINISTRATOR');
+    expect(onboardedSession.tenantId).toBe(record?.merchantTenantId);
+    const onboardedBranches = await onboardingContext.request.post(`${coreOrigin}/graphql`, {
+      headers: { authorization: onboardedSession.authorization },
+      data: { query: '{branches{id name}}' },
+    });
+    expect(await onboardedBranches.json()).toEqual({
+      data: { branches: [{ id: record?.branchId, name: onboarding.branchName }] },
+    });
+
     await expect(sales).toHaveURL(`${salesApp.origin}/en/merchants`);
     await expect(
       sales.getByText('You have access to the Sales workspace.', { exact: true }),

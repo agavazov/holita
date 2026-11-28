@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -13,9 +14,9 @@ import type {
   MerchantBranch,
   MerchantPage,
 } from '../../generated/graphql/types.js';
-import { Prisma } from '../../generated/prisma/client.js';
+import { Prisma, type MerchantProvisioning } from '../../generated/prisma/client.js';
 import type { RequestContext } from '../../graphql/request-context.js';
-import { PlatformRepository } from './platform.repository.js';
+import { PlatformRepository, type MerchantProvisioningInput } from './platform.repository.js';
 
 function requirePlatform(context: RequestContext, write: boolean): void {
   const identity = requireSession(context);
@@ -47,6 +48,18 @@ function writeError(error: unknown): never {
     }
   }
   throw error;
+}
+
+function replayProvisioning(input: MerchantProvisioningInput, record: MerchantProvisioning) {
+  if (
+    input.merchantName !== record.merchantName ||
+    input.adminName !== record.adminName ||
+    input.adminEmail !== record.adminEmail ||
+    input.branchName !== record.branchName
+  ) {
+    throw new ConflictException('Operation already completed with different onboarding details');
+  }
+  return { merchantTenantId: record.merchantTenantId, branchId: record.branchId };
 }
 
 @Injectable()
@@ -88,6 +101,57 @@ export class PlatformService {
         await this.repository.create(tenantName, normalizedName, email, passwordHash),
       );
     } catch (error: unknown) {
+      return writeError(error);
+    }
+  }
+
+  async provisionMerchant(platformTenantId: string, body: unknown) {
+    if (
+      typeof body !== 'object' ||
+      body === null ||
+      !('operationId' in body) ||
+      typeof body.operationId !== 'string' ||
+      !('merchantName' in body) ||
+      typeof body.merchantName !== 'string' ||
+      !('adminName' in body) ||
+      typeof body.adminName !== 'string' ||
+      !('adminEmail' in body) ||
+      typeof body.adminEmail !== 'string' ||
+      !('branchName' in body) ||
+      typeof body.branchName !== 'string'
+    ) {
+      throw new BadRequestException('Invalid merchant onboarding request');
+    }
+    const initialPassword = 'initialPassword' in body ? body.initialPassword : '';
+    if (typeof initialPassword !== 'string') {
+      throw new BadRequestException('Invalid merchant onboarding request');
+    }
+    const input = {
+      operationId: id(body.operationId),
+      merchantName: userName(body.merchantName, 'merchantName'),
+      adminName: userName(body.adminName, 'adminName'),
+      adminEmail: normalizedEmail(body.adminEmail, 'adminEmail'),
+      branchName: userName(body.branchName, 'branchName'),
+    };
+    const existing = await this.repository.findProvisioning(platformTenantId, input.operationId);
+    if (existing) {
+      return replayProvisioning(input, existing);
+    }
+
+    const passwordHash = await hashPassword(validatePassword(initialPassword, 'initialPassword'));
+    try {
+      return await this.repository.provisionMerchant(platformTenantId, input, passwordHash);
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        // A concurrent commit can win the replay key or the merchant name/email constraint.
+        const committed = await this.repository.findProvisioning(
+          platformTenantId,
+          input.operationId,
+        );
+        if (committed) {
+          return replayProvisioning(input, committed);
+        }
+      }
       return writeError(error);
     }
   }

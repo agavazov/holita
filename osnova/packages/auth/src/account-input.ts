@@ -5,11 +5,11 @@ function invalid(path: string, message: string, code: string): never {
   throw new BadRequestException({ message, fieldErrors: [{ path, message, code }] });
 }
 
-export function normalizedEmail(value: string): string {
+export function normalizedEmail(value: string, path = 'email'): string {
   const email = value.trim().toLowerCase();
   if (email.length > 254 || !isEmail(email)) {
     invalid(
-      'email',
+      path,
       'Enter a valid email address of at most 254 characters.',
       !email ? 'REQUIRED' : email.length > 254 ? 'TOO_LONG' : 'INVALID_FORMAT',
     );
@@ -17,11 +17,11 @@ export function normalizedEmail(value: string): string {
   return email;
 }
 
-export function userName(value: string): string {
+export function userName(value: string, path = 'name'): string {
   const name = value.trim();
   if (!name || Array.from(name).length > 200 || name.includes('\u0000')) {
     invalid(
-      'name',
+      path,
       'Use 1 to 200 supported characters.',
       !name ? 'REQUIRED' : Array.from(name).length > 200 ? 'TOO_LONG' : 'INVALID_FORMAT',
     );

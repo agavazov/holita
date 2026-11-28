@@ -1,12 +1,12 @@
 # 141 Convert a won lead to a new merchant and shop
 
-**Status:** Ready after [143](143-holita-sales-core-provisioning.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-red.bg lets Sales create Core merchants and attach stores. Ticket 143 provides atomic,
-replayable Core provisioning for a merchant, its administrator and first Branch. Commerce
-already resolves a storefront shop using its Core Branch.
+red.bg lets Sales create merchants and attach stores. Core provides atomic, replayable provisioning
+for a merchant, its administrator and first Branch. Commerce already resolves a storefront shop
+using its Core Branch.
 
 ## Goal
 
@@ -24,8 +24,8 @@ then open both records from Lead Detail.
    and the merchant Tenant and Branch IDs returned by Core. While pending, retain the
    submitted non-password onboarding fields so a retry can replay the same input. Reserve
    the handoff operation ID in a Sales transaction that checks the lead is Won.
-3. Call 143 with that ID and the originating Sales session. Complete the handoff after
-   Core confirms. On a confirmed pre-commit rejection, allow correction and retry. After
+3. Call Core's `POST /internal/platform/provision-merchant` with that ID and the originating Sales
+   session. Complete the handoff after Core confirms. On a confirmed pre-commit rejection, allow correction and retry. After
    a lost response, retry the same operation and inputs. Let the agent re-enter a password
    only if Core still needs one for first creation. Never persist or log the password in
    Sales. Keep the lead Won while its handoff is pending or completed and enforce that
@@ -52,7 +52,7 @@ delivery.
 
 ## References
 
-- [Atomic Core provisioning](143-holita-sales-core-provisioning.md)
+- [Atomic Core provisioning](../../osnova/apps/core/src/modules/platform/internal-platform.controller.ts)
 - [Core merchant and shop contracts](../../osnova/apps/core/src/modules/tenants/tenants.graphql)
 - [Commerce public shop resolution](../../holita/apps/commerce/src/storefront.service.ts)
 - [red.bg merchant creation](../../../red.bg/workspace-sales/services/sales/app/Http/Controllers/Sales/MerchantsController.php)

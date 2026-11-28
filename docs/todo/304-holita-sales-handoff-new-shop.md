@@ -16,8 +16,8 @@ merchant.
 ## Steps
 
 1. Add a narrow internal Core command using existing internal transport and the originating
-   platform SALES session. Reuse the ownership validation and tenant-scoped replay pattern
-   from 143 with a separate operation kind. Verify an active customer Tenant and create a
+   platform SALES session. Reuse Core merchant provisioning's ownership validation and tenant-scoped
+   replay pattern with a separate operation kind. Verify an active customer Tenant and create a
    Branch for it in one replayable operation.
 2. Add a Create shop choice and shop-name field to the existing handoff drawer. Reuse the
    141 and 144 state and validation model for the `newBranch` mode. Persist the operation ID

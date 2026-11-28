@@ -8,6 +8,28 @@ const merchantDetails = {
   _count: { select: { branches: true } },
 } satisfies Prisma.TenantInclude;
 
+export interface MerchantProvisioningInput {
+  operationId: string;
+  merchantName: string;
+  adminName: string;
+  adminEmail: string;
+  branchName: string;
+}
+
+function merchantAccount(
+  name: string,
+  adminName: string,
+  adminEmail: string,
+  passwordHash: string,
+) {
+  return {
+    name,
+    users: {
+      create: { name: adminName, email: adminEmail, passwordHash, role: 'ADMINISTRATOR' },
+    },
+  } satisfies Prisma.TenantCreateInput;
+}
+
 @Injectable()
 export class PlatformRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -36,13 +58,35 @@ export class PlatformRepository {
 
   create(name: string, adminName: string, adminEmail: string, passwordHash: string) {
     return this.prisma.client.tenant.create({
-      data: {
-        name,
-        users: {
-          create: { name: adminName, email: adminEmail, passwordHash, role: 'ADMINISTRATOR' },
-        },
-      },
+      data: merchantAccount(name, adminName, adminEmail, passwordHash),
       include: merchantDetails,
+    });
+  }
+
+  findProvisioning(platformTenantId: string, operationId: string) {
+    return this.prisma.client.merchantProvisioning.findUnique({
+      where: { platformTenantId_operationId: { platformTenantId, operationId } },
+    });
+  }
+
+  provisionMerchant(
+    platformTenantId: string,
+    input: MerchantProvisioningInput,
+    passwordHash: string,
+  ) {
+    return this.prisma.client.$transaction(async (transaction) => {
+      const { id: merchantTenantId } = await transaction.tenant.create({
+        data: merchantAccount(input.merchantName, input.adminName, input.adminEmail, passwordHash),
+        select: { id: true },
+      });
+      const { id: branchId } = await transaction.branch.create({
+        data: { tenantId: merchantTenantId, name: input.branchName },
+        select: { id: true },
+      });
+      return transaction.merchantProvisioning.create({
+        data: { platformTenantId, merchantTenantId, branchId, ...input },
+        select: { merchantTenantId: true, branchId: true },
+      });
     });
   }
 

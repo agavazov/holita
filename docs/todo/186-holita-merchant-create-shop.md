@@ -21,7 +21,7 @@ An authorized merchant can create and open a shop in their own account. Another 
 
 ## Limits
 
-Keep Sales provisioning 143 and Backoffice creation separate. No theme selection or provider configuration.
+Keep Sales provisioning and Backoffice creation separate. No theme selection or provider configuration.
 
 ## References
 

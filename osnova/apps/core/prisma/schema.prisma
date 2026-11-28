@@ -17,6 +17,7 @@ model Tenant {
   branches Branch[]
   users User[]
   sessions Session[]
+  merchantProvisionings MerchantProvisioning[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
   @@map("tenant")
@@ -28,11 +29,27 @@ model Branch {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   name String @db.VarChar(200)
   status AccountStatus @default(ACTIVE)
+  merchantProvisionings MerchantProvisioning[]
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
   @@unique([tenantId, id])
   @@index([tenantId, name, id])
   @@map("branch")
+}
+
+model MerchantProvisioning {
+  platformTenantId String @db.Uuid
+  operationId String @db.Uuid
+  merchantTenantId String @db.Uuid
+  branchId String @db.Uuid
+  merchantName String @db.VarChar(200)
+  adminName String @db.VarChar(200)
+  adminEmail String @db.VarChar(254)
+  branchName String @db.VarChar(200)
+  platformTenant Tenant @relation(fields: [platformTenantId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  branch Branch @relation(fields: [merchantTenantId, branchId], references: [tenantId, id], onDelete: Restrict, onUpdate: Restrict)
+  @@id([platformTenantId, operationId])
+  @@map("merchantProvisioning")
 }
 
 model User {
