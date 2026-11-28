@@ -12,7 +12,7 @@ function caseDetail(scope: Scope) {
         ...orderNumber.select,
         paymentStatus: true,
         total: true,
-        refunds: { where: scope, select: { amount: true } },
+        refunds: { where: scope, select: { amount: true, restock: true } },
         lines: { where: scope, select: { id: true, quantity: true } },
       },
     },
@@ -52,12 +52,15 @@ export class ReturnsRepository {
     return { items, total };
   }
 
-  find(scope: Scope, id: string) {
-    return this.database.client.$transaction(
-      (tx) =>
-        tx.orderReturnCase.findUnique({ where: { ...scope, id }, include: caseDetail(scope) }),
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
-    );
+  find(scope: Scope, id: string, tx?: Prisma.TransactionClient) {
+    const read = (client: Prisma.TransactionClient) =>
+      client.orderReturnCase.findUnique({ where: { ...scope, id }, include: caseDetail(scope) });
+    if (tx) {
+      return read(tx);
+    }
+    return this.database.client.$transaction(read, {
+      isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+    });
   }
 
   orderId(tx: Prisma.TransactionClient, scope: Scope, id: string) {
@@ -69,9 +72,18 @@ export class ReturnsRepository {
       where: { ...scope, orderId, id },
       select: {
         status: true,
+        completedAt: true,
         refund: { select: { id: true } },
         lines: { where: scope, select: { orderLineId: true, quantity: true } },
       },
+    });
+  }
+
+  complete(tx: Prisma.TransactionClient, scope: Scope, id: string, stockRestored: boolean) {
+    return tx.orderReturnCase.update({
+      where: { ...scope, id },
+      data: { completedAt: new Date(), completionStockRestored: stockRestored },
+      include: caseDetail(scope),
     });
   }
 

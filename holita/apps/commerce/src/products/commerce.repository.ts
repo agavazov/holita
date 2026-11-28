@@ -11,6 +11,7 @@ import type { Scope } from '../scope.js';
 import { CartPrice } from '../cart/cart.service.js';
 import { CharacteristicsRepository } from '../characteristics/characteristics.repository.js';
 import { DatabaseService } from '../database.service.js';
+import { coversWholeOrder } from '../returns/return-lines.js';
 import type { ProductImageWrite } from './product-images.js';
 import {
   catalogueProductRelations,
@@ -488,27 +489,42 @@ export class CommerceRepository {
     scope: Scope,
     variantIds: string[],
   ) {
+    const candidates = new Set(variantIds);
     const deduction = { ...scope, variantId: { in: variantIds }, stockDeductedQuantity: { gt: 0 } };
     const orders = await tx.order.findMany({
       where: { ...scope, status: { not: 'CANCELLED' }, lines: { some: deduction } },
       select: {
         status: true,
         total: true,
-        lines: { where: deduction, select: { variantId: true } },
-        refunds: { where: scope, select: { amount: true } },
+        lines: {
+          where: scope,
+          select: { id: true, quantity: true, variantId: true, stockDeductedQuantity: true },
+        },
+        refunds: { where: scope, select: { amount: true, restock: true } },
+        returnCases: {
+          where: { ...scope, status: 'APPROVED' },
+          select: {
+            completedAt: true,
+            lines: { where: scope, select: { orderLineId: true, quantity: true } },
+          },
+        },
       },
     });
     const protectedIds = new Set<string>();
-    for (const { status, total, lines, refunds } of orders) {
-      // After shipping, only a completing refund can restore stock.
+    for (const { status, total, lines, refunds, returnCases } of orders) {
       if (status === 'SHIPPED' || status === 'COMPLETED') {
+        const fullReturn = returnCases.find((item) => coversWholeOrder(lines, item.lines));
+        if (fullReturn?.completedAt || refunds.some(({ restock }) => restock)) {
+          continue;
+        }
         const refunded = refunds.reduce((sum, { amount }) => sum.plus(amount), new CartPrice(0));
-        if (total.lte(refunded)) {
+        // A full approved return can still restore stock after the last refund.
+        if (!fullReturn && total.lte(refunded)) {
           continue;
         }
       }
-      for (const { variantId } of lines) {
-        if (variantId !== null) {
+      for (const { variantId, stockDeductedQuantity } of lines) {
+        if (variantId !== null && stockDeductedQuantity > 0 && candidates.has(variantId)) {
           protectedIds.add(variantId);
         }
       }

@@ -982,6 +982,8 @@ model OrderReturnCase {
   reason String @db.Text
   status OrderReturnStatus @default(PENDING)
   requestedAt DateTime @default(now()) @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+  completionStockRestored Boolean @default(false)
   lines OrderReturnLine[]
   decision OrderReturnDecision?
   refund OrderRefund?

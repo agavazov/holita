@@ -6,6 +6,7 @@ import {
   Injector,
   afterNextRender,
   computed,
+  effect,
   inject,
   resource,
   signal,
@@ -42,6 +43,7 @@ import { OrdersApi, orderIdPattern } from './orders-api';
 import { returnStatusSeverity, returnStatusText } from './return-format';
 
 type ReturnParams = { scope: NonNullable<ReturnType<OrdersApi['scope']>>; id: string };
+type ReturnAction = OrderReturnOutcome | 'COMPLETE';
 
 @Component({
   selector: 'holita-return-detail',
@@ -133,7 +135,8 @@ export class ReturnDetail {
       filtered: false,
     }),
   );
-  protected readonly pending = signal<OrderReturnOutcome | null>(null);
+  protected readonly pending = signal<ReturnAction | null>(null);
+  private readonly focusHistoryAfterReload = signal<ReturnParams | null>(null);
   private readonly actionError = signal<{ params: ReturnParams; message: string } | null>(null);
   protected readonly error = computed(() => {
     const error = this.actionError();
@@ -142,11 +145,17 @@ export class ReturnDetail {
   protected readonly confirmPt = computed(() =>
     confirmDialogPt(this.language(), 'return-decision-question'),
   );
-  protected readonly confirmQuestion = computed(() =>
-    this.pending() === 'APPROVED'
-      ? this.text().approveReturnConfirm
-      : this.text().rejectReturnConfirm,
-  );
+  protected readonly confirmQuestion = computed(() => {
+    const text = this.text();
+    const action = this.pending();
+    return action
+      ? {
+          APPROVED: text.approveReturnConfirm,
+          REJECTED: text.rejectReturnConfirm,
+          COMPLETE: text.completeReturnWithoutRefundConfirm,
+        }[action]
+      : '';
+  });
 
   constructor() {
     injectPageRecord(
@@ -162,6 +171,15 @@ export class ReturnDetail {
     inject(DestroyRef).onDestroy(() => {
       this.abort.abort();
     });
+    effect(() => {
+      const params = this.focusHistoryAfterReload();
+      if (params && !this.record.isLoading()) {
+        this.focusHistoryAfterReload.set(null);
+        if (this.params() === params) {
+          this.focusHistory();
+        }
+      }
+    });
   }
 
   protected refundDrawerClosed(): void {
@@ -173,21 +191,29 @@ export class ReturnDetail {
     }
   }
 
-  protected async decide(outcome: OrderReturnOutcome, opener: HTMLButtonElement): Promise<void> {
+  protected async runAction(action: ReturnAction, opener: HTMLButtonElement): Promise<void> {
     const params = this.params();
-    if (!params || !this.canDecide() || this.item()?.status !== 'PENDING' || this.pending()) {
+    const item = this.item();
+    const completing = action === 'COMPLETE';
+    const allowed = completing ? item?.canCompleteWithoutRefund : item?.status === 'PENDING';
+    if (!params || !this.canDecide() || !allowed || this.pending()) {
       return;
     }
-    this.pending.set(outcome);
+    this.pending.set(action);
     this.actionError.set(null);
     const { scope, id } = params;
-    const label = outcome === 'APPROVED' ? this.text().approveReturn : this.text().rejectReturn;
+    const text = this.text();
+    const label = {
+      APPROVED: text.approveReturn,
+      REJECTED: text.rejectReturn,
+      COMPLETE: text.completeReturnWithoutRefund,
+    }[action];
     const isCurrent = () => this.params() === params && !this.abort.signal.aborted;
     try {
       const accepted = await confirmAction(this.confirm, scope.language, {
         header: label,
         acceptLabel: label,
-        danger: outcome === 'REJECTED',
+        danger: action === 'REJECTED',
         signal: this.abort.signal,
       });
       if (!isCurrent()) {
@@ -202,30 +228,43 @@ export class ReturnDetail {
         );
         return;
       }
-      const result = await this.api.decideReturn(scope, id, outcome);
+      const result = completing
+        ? await this.api.completeReturnWithoutRefund(scope, id)
+        : await this.api.decideReturn(scope, id, action);
       if (isCurrent()) {
         this.record.set(result);
-        afterNextRender(
-          () => {
-            this.historyHeading()?.nativeElement.focus();
-          },
-          { injector: this.injector },
-        );
-        this.messages.add({ severity: 'success', summary: this.text().returnDecisionSaved });
+        this.focusHistory();
+        this.messages.add({
+          severity: 'success',
+          summary: completing ? text.returnCompletedWithoutRefund : text.returnDecisionSaved,
+        });
       }
     } catch (error: unknown) {
       if (isCurrent()) {
         const conflict = errorCode(error) === 'CONFLICT';
         this.actionError.set({
           params,
-          message: conflict ? this.text().returnDecisionConflict : this.text().returnDecisionFailed,
+          message: completing
+            ? text.returnCompletionFailed
+            : conflict
+              ? text.returnDecisionConflict
+              : text.returnDecisionFailed,
         });
         if (conflict) {
           this.record.reload();
+          if (completing) {
+            this.focusHistoryAfterReload.set(params);
+          }
         }
       }
     } finally {
       this.pending.set(null);
     }
+  }
+
+  private focusHistory(): void {
+    afterNextRender(() => this.historyHeading()?.nativeElement.focus(), {
+      injector: this.injector,
+    });
   }
 }

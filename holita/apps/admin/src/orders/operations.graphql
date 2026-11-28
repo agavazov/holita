@@ -52,6 +52,11 @@ fragment OperatorReturnCase on OrderReturnCase {
   requestedAt
   fullOrder
   canRecordRefund
+  canCompleteWithoutRefund
+  completion {
+    completedAt
+    stockRestored
+  }
   refund {
     id
     amount
@@ -87,6 +92,12 @@ mutation OperatorDecideOrderReturn($id: ID!, $outcome: OrderReturnOutcome!) {
 mutation OperatorRecordOrderReturnRefund($id: ID!, $input: RecordOrderRefundInput!) {
   recordOrderReturnRefund(id: $id, input: $input) {
     id
+  }
+}
+
+mutation OperatorCompleteOrderReturnWithoutRefund($id: ID!) {
+  completeOrderReturnWithoutRefund(id: $id) {
+    ...OperatorReturnCase
   }
 }
 
@@ -148,6 +159,11 @@ fragment OperatorOrderDetail on Order {
     fromStatus
     toStatus
     occurredAt
+  }
+  returnCompletions {
+    returnCaseId
+    completedAt
+    stockRestored
   }
   nextStatuses
   canMarkPaid

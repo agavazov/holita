@@ -1,5 +1,6 @@
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type {
+  MutationCompleteOrderReturnWithoutRefundArgs,
   MutationDecideOrderReturnArgs,
   MutationRecordOrderReturnRefundArgs,
   QueryOrderReturnArgs,
@@ -33,5 +34,13 @@ export class ReturnsResolver {
     @Context() context: RequestContext,
   ) {
     return this.returns.recordRefund(context, args);
+  }
+
+  @Mutation('completeOrderReturnWithoutRefund')
+  completeWithoutRefund(
+    @Args() args: MutationCompleteOrderReturnWithoutRefundArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.returns.completeWithoutRefund(context, args);
   }
 }

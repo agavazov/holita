@@ -944,6 +944,8 @@ type Order {
   shippingFee: String!
   total: String!
   statusChanges: [OrderStatusChange!]!
+  "Full returns completed without a monetary refund."
+  returnCompletions: [OrderReturnCompletion!]!
   nextStatuses: [OrderStatus!]!
   canMarkPaid: Boolean!
   canEditManualOrder: Boolean!
@@ -1236,6 +1238,7 @@ enum OrderReturnStatus {
   PENDING
   APPROVED
   REJECTED
+  COMPLETED
 }
 enum OrderReturnOutcome {
   APPROVED
@@ -1263,6 +1266,11 @@ type OrderReturnDecision {
   decidedAt: String!
   decidedByUserId: ID!
 }
+type OrderReturnCompletion {
+  returnCaseId: ID!
+  completedAt: String!
+  stockRestored: Boolean!
+}
 type OrderReturnCase {
   id: ID!
   orderId: ID!
@@ -1274,6 +1282,8 @@ type OrderReturnCase {
   decisions: [OrderReturnDecision!]!
   fullOrder: Boolean!
   canRecordRefund: Boolean!
+  canCompleteWithoutRefund: Boolean!
+  completion: OrderReturnCompletion
   refund: OrderRefund
 }
 type PaymentMethod {
@@ -1520,4 +1530,6 @@ type Mutation {
   recordOrderRefund(orderId: ID!, input: RecordOrderRefundInput!): OrderRefund!
   decideOrderReturn(id: ID!, outcome: OrderReturnOutcome!): OrderReturnCase!
   recordOrderReturnRefund(id: ID!, input: RecordOrderRefundInput!): OrderRefund!
+  "Complete an approved full return with a zero refundable balance and restore remaining stock."
+  completeOrderReturnWithoutRefund(id: ID!): OrderReturnCase!
 }

@@ -213,8 +213,10 @@ function confirmation(order: Order & { lines: OrderLine[] }) {
   };
 }
 
-function canMarkPaid(order: Order): boolean {
-  return order.status !== 'CANCELLED' && order.paymentStatus === 'UNPAID';
+function canMarkPaid(order: OrderDetailRow): boolean {
+  return (
+    order.status !== 'CANCELLED' && order.paymentStatus === 'UNPAID' && !order.returnCases.length
+  );
 }
 
 function operatorDetail(order: OrderDetailRow): OperatorOrder {
@@ -239,6 +241,17 @@ function operatorDetail(order: OrderDetailRow): OperatorOrder {
       toStatus,
       occurredAt: occurredAt.toISOString(),
     })),
+    returnCompletions: order.returnCases.flatMap(({ id, completedAt, completionStockRestored }) =>
+      completedAt
+        ? [
+            {
+              returnCaseId: id,
+              completedAt: completedAt.toISOString(),
+              stockRestored: completionStockRestored,
+            },
+          ]
+        : [],
+    ),
     nextStatuses: nextStatuses[order.status],
     canMarkPaid: canMarkPaid(order),
   };
@@ -637,7 +650,7 @@ export class OrdersService {
     return revised;
   }
 
-  async restockLockedRefund(tx: Prisma.TransactionClient, scope: Scope, order: OrderDetailRow) {
+  async restockLockedOrder(tx: Prisma.TransactionClient, scope: Scope, order: OrderDetailRow) {
     if (order.status === 'SHIPPED' || order.status === 'COMPLETED') {
       return this.orders.restoreStock(tx, scope, order.id);
     }

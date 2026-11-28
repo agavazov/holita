@@ -6,6 +6,7 @@ import { DemoSession, OperatorConfig, graphqlOptions, type Language } from '@osn
 import { HttpLink } from 'apollo-angular/http';
 import { firstValueFrom } from 'rxjs';
 import {
+  OperatorCompleteOrderReturnWithoutRefundDocument,
   OperatorCreateManualOrderDocument,
   OperatorDecideOrderReturnDocument,
   OperatorInvoiceByIdDocument,
@@ -177,6 +178,22 @@ export class OrdersApi {
         throw new Error('Missing order return decision');
       }
       return data.decideOrderReturn;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async completeReturnWithoutRefund(scope: OrdersScope, id: string) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: OperatorCompleteOrderReturnWithoutRefundDocument,
+        variables: { id },
+      });
+      if (!data) {
+        throw new Error('Missing order return completion');
+      }
+      return data.completeOrderReturnWithoutRefund;
     } finally {
       client.stop();
     }

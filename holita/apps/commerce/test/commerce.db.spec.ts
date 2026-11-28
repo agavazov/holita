@@ -289,6 +289,7 @@ beforeAll(async () => {
     '20261128040000_shopper_password_reset',
     '20261128050000_order_return_cases',
     '20261128060000_order_return_refunds',
+    '20261128070000_order_return_completion',
   ]) {
     await connection.query(
       await readFile(
@@ -2331,6 +2332,11 @@ it('scopes return cases and records a single authorized decision and refund', as
   const settle = `mutation($id:ID!,$input:RecordOrderRefundInput!){
     recordOrderReturnRefund(id:$id,input:$input){id amount restock stockRestored returnCaseId}
   }`;
+  const complete = `mutation($id:ID!){
+    completeOrderReturnWithoutRefund(id:$id){
+      status canCompleteWithoutRefund refund{id} completion{returnCaseId completedAt stockRestored}
+    }
+  }`;
   const settlement = { id, input: { amount: '38.40', restock: true } };
   expect(await query(tokens.viewer, branchA, read, { id })).toEqual({
     data: {
@@ -2358,7 +2364,17 @@ it('scopes return cases and records a single authorized decision and refund', as
     expect(await query(token, branch, settle, settlement)).toMatchObject({
       errors: [{ extensions: { code: 'NOT_FOUND' } }],
     });
+    expect(await query(token, branch, complete, { id })).toMatchObject({
+      errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    });
   }
+  expect(await query(tokens.viewer, branchA, complete, { id })).toHaveProperty(
+    'errors.0.message',
+    'Your role does not permit this action',
+  );
+  expect(await query(tokens.operator, branchA, complete, { id })).toMatchObject({
+    errors: [{ extensions: { code: 'CONFLICT' } }],
+  });
   expect(await query(tokens.viewer, branchA, settle, settlement)).toHaveProperty(
     'errors.0.message',
     'Your role does not permit this action',
@@ -2432,6 +2448,66 @@ it('scopes return cases and records a single authorized decision and refund', as
           { returnCaseId: null, stockRestored: null },
         ],
       },
+    },
+  });
+
+  const { id: fullReturnId } = await database.orderReturnCase.create({
+    data: {
+      ...scope,
+      orderId: legacyDraftId,
+      reason: 'Return all items',
+      lines: { create: { orderLineId: otherLine.id, quantity: otherLine.quantity } },
+    },
+  });
+  expect(
+    await query(tokens.operator, branchA, decide, { id: fullReturnId, outcome: 'APPROVED' }),
+  ).toHaveProperty('data.decideOrderReturn.status', 'APPROVED');
+  const attempts = await Promise.all([
+    query(tokens.operator, branchA, complete, { id: fullReturnId }),
+    query(tokens.operator, branchA, complete, { id: fullReturnId }),
+  ]);
+  expect(attempts).toEqual(
+    expect.arrayContaining([
+      {
+        data: {
+          completeOrderReturnWithoutRefund: {
+            status: 'COMPLETED',
+            canCompleteWithoutRefund: false,
+            refund: null,
+            completion: {
+              returnCaseId: fullReturnId,
+              completedAt: expect.any(String),
+              stockRestored: false,
+            },
+          },
+        },
+      },
+      expect.objectContaining({
+        errors: [
+          expect.objectContaining({ extensions: expect.objectContaining({ code: 'CONFLICT' }) }),
+        ],
+      }),
+    ]),
+  );
+  expect(
+    await query(
+      tokens.viewer,
+      branchA,
+      `query($id:ID!){
+    order(id:$id){status paymentStatus statusChanges{toStatus} returnCompletions{returnCaseId}}
+    orderRefundSummary(orderId:$id){refundableAmount refunds{id}}
+  }`,
+      { id: legacyDraftId },
+    ),
+  ).toEqual({
+    data: {
+      order: {
+        status: 'CANCELLED',
+        paymentStatus: 'UNPAID',
+        statusChanges: [{ toStatus: 'CANCELLED' }],
+        returnCompletions: [{ returnCaseId: fullReturnId }],
+      },
+      orderRefundSummary: { refundableAmount: '0.00', refunds: [] },
     },
   });
 });

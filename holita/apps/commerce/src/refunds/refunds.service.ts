@@ -124,7 +124,7 @@ export class RefundsService {
         'Restock is unavailable for this refund',
       );
     }
-    const stockRestored = restock && (await this.orders.restockLockedRefund(tx, scope, order));
+    const stockRestored = restock && (await this.orders.restockLockedOrder(tx, scope, order));
     return presentRefund(
       await this.refunds.create(tx, scope, order.id, {
         amount,

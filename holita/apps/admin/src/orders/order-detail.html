@@ -345,10 +345,14 @@
     <ng-template #content let-event>
       <div class="app-timeline-event">
         <span class="app-timeline-event__title">
-          @if (event.fromStatus) { {{ statusText(event.fromStatus, language()) }}
+          @if (event.returnCaseId) {
+          <a class="app-link" [routerLink]="['/', language(), 'returns', event.returnCaseId]">
+            {{ text().returnCompletedWithoutRefund }}
+          </a>
+          } @else { @if (event.fromStatus) { {{ statusText(event.fromStatus, language()) }}
           <span aria-hidden="true">→</span>
           <span class="app-visually-hidden">{{ text().orderStatusChangedTo }}</span>
-          } {{ statusText(event.toStatus, language()) }}
+          } {{ statusText(event.toStatus, language()) }} }
         </span>
         <time
           class="app-timeline-event__meta"

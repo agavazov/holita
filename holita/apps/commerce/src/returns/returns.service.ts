@@ -7,6 +7,7 @@ import type {
   ShopperReturnReceipt,
 } from '../generated/graphql/storefront-types.js';
 import type {
+  MutationCompleteOrderReturnWithoutRefundArgs,
   MutationDecideOrderReturnArgs,
   MutationRecordOrderReturnRefundArgs,
   OrderRefund,
@@ -16,14 +17,16 @@ import type {
   QueryOrderReturnsArgs,
 } from '../generated/graphql/types.js';
 import { OrdersRepository } from '../orders/orders.repository.js';
+import { OrdersService } from '../orders/orders.service.js';
 import { RefundsService, presentRefund, refundBalance } from '../refunds/refunds.service.js';
 import { requireMerchant, requireScope, type RequestContext, type ShopperScope } from '../scope.js';
+import { coversWholeOrder } from './return-lines.js';
 import { ReturnsRepository, type ReturnCaseRow } from './returns.repository.js';
 
 const returnWindowMs = 14 * 24 * 60 * 60 * 1000;
 
 function summary(
-  row: Pick<ReturnCaseRow, 'id' | 'reason' | 'status' | 'requestedAt'> & {
+  row: Pick<ReturnCaseRow, 'id' | 'reason' | 'status' | 'requestedAt' | 'completedAt'> & {
     order: { orderNumber: string };
   },
 ): Omit<OrderReturnSummary, '__typename'> {
@@ -31,30 +34,29 @@ function summary(
     id: row.id,
     orderNumber: row.order.orderNumber,
     reason: row.reason,
-    status: row.status,
+    status: row.completedAt ? 'COMPLETED' : row.status,
     requestedAt: row.requestedAt.toISOString(),
   };
 }
 
-function coversWholeOrder(
-  orderLines: readonly { id: string; quantity: number }[],
-  returnLines: readonly { orderLineId: string; quantity: number }[],
-) {
-  if (!returnLines.length || returnLines.length !== orderLines.length) {
-    return false;
-  }
-  const quantities = new Map(orderLines.map(({ id, quantity }) => [id, quantity]));
-  return returnLines.every(({ orderLineId, quantity }) => quantities.get(orderLineId) === quantity);
-}
-
 function detail(row: ReturnCaseRow): OrderReturnCase {
   const decision = row.decision;
+  const fullOrder = coversWholeOrder(row.order.lines, row.lines);
+  const openApproval = row.status === 'APPROVED' && !row.completedAt;
+  const { remaining } = refundBalance(row.order);
   return {
     ...summary(row),
     orderId: row.orderId,
-    fullOrder: coversWholeOrder(row.order.lines, row.lines),
-    canRecordRefund:
-      row.status === 'APPROVED' && !row.refund && refundBalance(row.order).remaining.gt(0),
+    fullOrder,
+    canRecordRefund: openApproval && !row.refund && remaining.gt(0),
+    canCompleteWithoutRefund: openApproval && fullOrder && remaining.isZero(),
+    completion: row.completedAt
+      ? {
+          returnCaseId: row.id,
+          completedAt: row.completedAt.toISOString(),
+          stockRestored: row.completionStockRestored,
+        }
+      : null,
     refund: row.refund ? presentRefund(row.refund) : null,
     lines: row.lines.map(({ orderLineId, quantity, orderLine }) => ({
       orderLineId,
@@ -78,6 +80,7 @@ export class ReturnsService {
   constructor(
     private readonly returns: ReturnsRepository,
     private readonly orders: OrdersRepository,
+    private readonly orderService: OrdersService,
     private readonly refunds: RefundsService,
   ) {}
 
@@ -208,7 +211,7 @@ export class ReturnsService {
       }
       // Check settlement and balance under the same order lock used by direct refunds.
       const row = await this.returns.settlement(tx, scope, order.id, returnId);
-      if (row.status !== 'APPROVED' || row.refund) {
+      if (row.status !== 'APPROVED' || row.refund || row.completedAt) {
         throw new GraphQLError('Return case must be approved and unsettled', {
           extensions: { code: 'CONFLICT' },
         });
@@ -220,6 +223,34 @@ export class ReturnsService {
         { ...input, restock: input.restock === true && coversWholeOrder(order.lines, row.lines) },
         returnId,
       );
+    });
+  }
+
+  async completeWithoutRefund(
+    context: RequestContext,
+    { id }: MutationCompleteOrderReturnWithoutRefundArgs,
+  ): Promise<OrderReturnCase> {
+    const scope = await requireScope(context, true);
+    if (!isUUID(id)) {
+      throw new NotFoundException('Return case is unavailable');
+    }
+    const returnId = id.toLowerCase();
+    return this.orders.transaction(async (tx) => {
+      const target = await this.returns.orderId(tx, scope, returnId);
+      const order = target && (await this.orders.lockOrder(tx, scope, target.orderId));
+      const row = order && (await this.returns.find(scope, returnId, tx));
+      if (!order || !row) {
+        throw new NotFoundException('Return case is unavailable');
+      }
+      if (!detail(row).canCompleteWithoutRefund) {
+        throw new GraphQLError('Return case must be approved, full and have no refund remaining', {
+          extensions: { code: 'CONFLICT' },
+        });
+      }
+      const stockRestored =
+        !row.order.refunds.some(({ restock }) => restock) &&
+        (await this.orderService.restockLockedOrder(tx, scope, order));
+      return detail(await this.returns.complete(tx, scope, returnId, stockRestored));
     });
   }
 }

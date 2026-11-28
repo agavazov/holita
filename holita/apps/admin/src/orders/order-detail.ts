@@ -244,7 +244,11 @@ export class OrderDetail {
       ? [
           { fromStatus: null, toStatus: 'PLACED', occurredAt: order.placedAt },
           ...order.statusChanges,
-        ]
+          ...order.returnCompletions.map(({ completedAt, ...completion }) => ({
+            ...completion,
+            occurredAt: completedAt,
+          })),
+        ].sort((first, second) => first.occurredAt.localeCompare(second.occurredAt))
       : [];
   });
   protected readonly drawerHost: DrawerHost = {
