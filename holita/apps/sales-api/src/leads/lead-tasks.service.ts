@@ -1,5 +1,10 @@
-import { Injectable } from '@nestjs/common';
-import type { LeadTaskInput, LeadTaskStatus } from '../generated/graphql/types.js';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import type {
+  LeadTaskInput,
+  LeadTaskStatus,
+  QuerySalesTaskQueueArgs,
+  SalesTaskQueueGroup,
+} from '../generated/graphql/types.js';
 import type { SalesScope } from '../scope.js';
 import {
   activityId,
@@ -29,6 +34,21 @@ function fields(input: LeadTaskInput) {
 @Injectable()
 export class LeadTasksService {
   constructor(private readonly repository: LeadTasksRepository) {}
+
+  async queue(scope: SalesScope, args: QuerySalesTaskQueueArgs): Promise<SalesTaskQueueGroup[]> {
+    const { offset = 0, limit = 20 } = args;
+    if (offset < 0 || limit < 1 || limit > 100) {
+      throw new BadRequestException('Invalid page');
+    }
+    const groups = await this.repository.queue(scope, args, new Date());
+    return groups.map(({ items, ...group }) => ({
+      ...group,
+      items: items.map(({ lead, task }) => ({
+        lead,
+        task: task ? presentTask(task, lead.assignedAgentUserId) : null,
+      })),
+    }));
+  }
 
   async list(scope: SalesScope, leadId: string) {
     const rows = await this.repository.list(scope, activityId(leadId, 'task'));

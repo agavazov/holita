@@ -1,0 +1,137 @@
+<osnova-page-header [title]="title()" [moduleInfo]="labels().info" />
+
+<nav [attr.aria-label]="labels().scope">
+  <ul class="app-route-nav">
+    @for (option of scopes; track option) {
+    <li>
+      <a
+        class="app-route-nav__link"
+        [class.app-route-nav__link--active]="scope() === option"
+        [attr.aria-current]="scope() === option ? 'page' : null"
+        [routerLink]="[]"
+        [queryParams]="{ scope: option, page: null }"
+        queryParamsHandling="merge"
+      >
+        {{ labels()[option] }}
+      </a>
+    </li>
+    }
+  </ul>
+</nav>
+
+<nav [attr.aria-label]="labels().bucket">
+  <ul class="app-route-nav">
+    @for (option of bucketOptions; track option) {
+    <li>
+      <a
+        class="app-route-nav__link"
+        [class.app-route-nav__link--active]="bucket() === option"
+        [attr.aria-current]="bucket() === option ? 'page' : null"
+        [routerLink]="[]"
+        [queryParams]="{ bucket: option === 'all' ? null : option, page: null }"
+        queryParamsHandling="merge"
+      >
+        {{ labels()[option] }}
+      </a>
+    </li>
+    }
+  </ul>
+</nav>
+
+@for (group of groups(); track group.key) { @let showTasks = group.key !== 'noFollowUp'; @let
+columns = showTasks ? taskColumns() : leadColumns(); @let state = url.state();
+<osnova-table-panel
+  [heading]="group.key === 'all' ? text().tasks : labels()[group.key]"
+  [columns]="columns"
+  [skeletonRows]="3"
+  [tableMinWidth]="showTasks ? '52rem' : '28rem'"
+  [view]="view(group.items.length)"
+  [total]="group.total"
+  [busy]="queue.isLoading()"
+  [emptyTitle]="bucket() === 'all' ? text().emptyTasks : labels().empty"
+  [errorText]="text().tasksUnavailable"
+  [page]="bucket() === 'all' ? null : { page: state.page, pageSize: state.pageSize, total: group.total ?? 0 }"
+  (pageChange)="url.setPage($event)"
+  (retry)="queue.reload()"
+>
+  @if (bucket() === 'all' && (group.total ?? 0) > group.items.length) {
+  <a
+    panelActions
+    pButton
+    severity="secondary"
+    size="small"
+    [routerLink]="[]"
+    [queryParams]="{ bucket: group.key, page: null }"
+    [info]="viewAllNavigation"
+    queryParamsHandling="merge"
+    [attr.aria-label]="labels().viewAll + ' · ' + labels()[group.key]"
+  >
+    {{ labels().viewAll }}
+  </a>
+  }
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="group.items"
+    [rowTrackBy]="trackRow"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns; track column.id) {
+        <col [style.width]="column.width" [class]="column.className ?? ''" />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        @for (column of columns; track column.id) {
+        <th scope="col" [class]="column.className ?? ''">{{ column.label }}</th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      @let label = leadLabel(row.lead); @let agent = assignee(row.lead.assignedAgentUserId); @let
+      task = taskFor(row);
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-cell-identity">
+            <a
+              class="app-link app-cell-truncate app-table-identity-wrap"
+              [routerLink]="['/', language(), 'leads', row.lead.id]"
+              [title]="label"
+              >{{ label }}</a
+            >
+            @if (task) {
+            <span class="app-table-mobile-meta">{{ text().taskTypes[task.type] }}</span>
+            <time class="app-table-mobile-meta" [attr.datetime]="task.scheduledAt">
+              {{ format.dateTime(task.scheduledAt) }}
+            </time>
+            }
+            <span class="app-table-mobile-meta">{{ agent }}</span>
+          </div>
+        </td>
+        @if (task) {
+        <td>
+          <div class="app-cell-status app-table-tag-wrap">
+            <p-tag
+              [severity]="taskSeverity(task.status)"
+              [value]="text().taskStatuses[task.status]"
+            />
+          </div>
+        </td>
+        <td class="app-table-merged-column">{{ text().taskTypes[task.type] }}</td>
+        <td class="app-table-merged-column">
+          <time [attr.datetime]="task.scheduledAt" [title]="format.utc(task.scheduledAt)">
+            {{ format.dateTime(task.scheduledAt) }}
+          </time>
+        </td>
+        }
+        <td class="app-table-merged-column">
+          <span class="app-cell-truncate" [title]="agent">{{ agent }}</span>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+}

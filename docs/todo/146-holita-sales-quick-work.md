@@ -1,6 +1,6 @@
 # 146 Save lead follow-up in Quick Work
 
-**Status:** Ready after [301](301-holita-sales-task-queue.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
@@ -16,9 +16,9 @@ from the Leads list in one save.
 ## Steps
 
 1. Add a Quick Work row action and follow-up prompt to Leads. Use the Sofia
-   day buckets from 301. Prompt for an active lead with no open work scheduled today or
-   later, including an active lead whose only open tasks are overdue. Closed leads do
-   not show the prompt.
+   date boundaries from the [Sales task queue](../development.md#holita). Prompt for an active
+   lead with no open work scheduled today or later, including a lead whose only open tasks are
+   overdue. Closed leads do not show the prompt.
 2. Open a shared drawer with the lead's current stage and selectable open tasks. The
    editable fields are task to complete, new stage, optional note text and occurrence
    time, and next task type, scheduled time and optional note. Allow saving any subset.

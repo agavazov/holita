@@ -5,6 +5,7 @@ import type {
   MutationUpdateLeadTaskStatusArgs,
   QueryLeadTaskArgs,
   QueryLeadTasksArgs,
+  QuerySalesTaskQueueArgs,
 } from '../generated/graphql/types.js';
 import { requireSalesScope, type RequestContext } from '../scope.js';
 import { LeadTasksService } from './lead-tasks.service.js';
@@ -12,6 +13,11 @@ import { LeadTasksService } from './lead-tasks.service.js';
 @Resolver()
 export class LeadTasksResolver {
   constructor(private readonly tasks: LeadTasksService) {}
+
+  @Query()
+  async salesTaskQueue(@Context() context: RequestContext, @Args() args: QuerySalesTaskQueueArgs) {
+    return this.tasks.queue(await requireSalesScope(context), args);
+  }
 
   @Query()
   async leadTasks(@Context() context: RequestContext, @Args() { leadId }: QueryLeadTasksArgs) {

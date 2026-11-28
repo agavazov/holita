@@ -1,6 +1,6 @@
 # 142 Show the daily sales dashboard
 
-**Status:** Ready after [301](301-holita-sales-task-queue.md), [302](302-holita-sales-offer-preview-lifecycle.md), [303](303-holita-sales-appointment-calendar.md), [304](304-holita-sales-handoff-new-shop.md). **Product:** Holita.
+**Status:** Ready after [302](302-holita-sales-offer-preview-lifecycle.md), [303](303-holita-sales-appointment-calendar.md), [304](304-holita-sales-handoff-new-shop.md). **Product:** Holita.
 
 ## Background
 
@@ -26,8 +26,8 @@ that open the same records counted on the dashboard.
    independent of who initiated the handoff.
 3. Make Dashboard the Sales landing page using shared KPI cards and lists with BG/EN
    labels and loading, error and zero states. Link lead stages to Leads with Mine and
-   that stage, task counts to the Mine and bucket URL from 301, offer counts to the
-   lifecycle or expiry URL from 302, and appointment counts to the Mine + Confirmed +
+   that stage, task counts to **Tasks** with **Mine** and the corresponding bucket, offer counts
+   to the lifecycle or expiry URL from 302, and appointment counts to the Mine + Confirmed +
    period URL from 303. Link previews to their records.
 4. Reuse insert-only demo records for ordinary exploration. Verify date counts in a
    separate guarded schema with the server and browser fixed at Monday 2026-11-23 at
@@ -57,7 +57,7 @@ provider delivery status or visit analytics.
 
 ## References
 
-- [Task queue filters](301-holita-sales-task-queue.md)
+- [Task queue filters](../development.md#holita)
 - [Offer lifecycle and expiry filters](302-holita-sales-offer-preview-lifecycle.md)
 - [Appointment filters and fixture](303-holita-sales-appointment-calendar.md)
 - [Existing-merchant handoff](144-holita-sales-existing-merchant-handoff.md)

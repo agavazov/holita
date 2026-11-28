@@ -155,6 +155,8 @@ async function seedLeads(core: URL): Promise<void> {
       [7, 'Ателие „Речен камък“', creator],
       [8, 'Студио „Тиха форма“', second],
       [9, 'Работилница „Кехлибар“', null],
+      [10, 'TEST Ателие „Слънчев печат“', creator],
+      [11, 'TEST Студио „Синя линия“', creator],
     ] as const) {
       if (assignee && !assignee.active) {
         continue;
@@ -224,6 +226,26 @@ async function seedLeads(core: URL): Promise<void> {
         'TEST Прегледахме продуктовия каталог на ателието.',
       ],
     );
+    const queueTasks = await client.query(
+      `INSERT INTO "leadTask" ("id", "tenantId", "leadId", "scheduledAt", "type", "status", "note", "updatedAt")
+       SELECT draft.id::uuid, lead."tenantId", lead."id",
+              (((CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Sofia')::date + draft.days) + TIME '12:00')
+                AT TIME ZONE 'Europe/Sofia',
+              draft.type::"leadTaskType", draft.status::"leadTaskStatus", draft.note, CURRENT_TIMESTAMP
+       FROM (VALUES ($1, -1, 'outreach', 'pending', 'TEST Просрочено обаждане'),
+                    ($2, 0, 'research', 'inProgress', 'TEST Проучване за днес'),
+                    ($3, 1, 'demo', 'pending', 'TEST Предстоящо демо'))
+         AS draft(id, days, type, status, note)
+       JOIN "lead" AS lead ON lead."tenantId" = $4 AND lead."id" = $5
+       ON CONFLICT ("id") DO NOTHING`,
+      [
+        fixtureId('b5', 4),
+        fixtureId('b5', 5),
+        fixtureId('b5', 6),
+        creator.tenantId,
+        fixtureId('b2', 10),
+      ],
+    );
     const offers = await client.query(
       `INSERT INTO "salesOffer" ("id", "tenantId", "leadId", "authorUserId", "recipientName",
                                  "includedScope", "recommendedPlanName", "recommendedMonthlyPrice",
@@ -256,7 +278,9 @@ async function seedLeads(core: URL): Promise<void> {
     );
     console.log(`Holita Sales contacts inserted: ${String(contacts.rowCount)}`);
     console.log(`Holita Sales notes inserted: ${String(notes.rowCount)}`);
-    console.log(`Holita Sales tasks inserted: ${String(tasks.rowCount)}`);
+    console.log(
+      `Holita Sales tasks inserted: ${String((tasks.rowCount ?? 0) + (queueTasks.rowCount ?? 0))}`,
+    );
     console.log(`Holita Sales offers inserted: ${String(offers.rowCount)}`);
     console.log(`Holita appointment services inserted: ${String(services.rowCount)}`);
   } catch (error: unknown) {

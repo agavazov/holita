@@ -9,6 +9,7 @@ import { LeadEditor } from './leads/lead-editor';
 import { LeadNoteEditor } from './leads/lead-note-editor';
 import { LeadTaskEditor } from './leads/lead-task-editor';
 import { LeadsPage } from './leads/leads-page';
+import { TasksPage } from './leads/tasks-page';
 import { OfferDetailPage } from './offers/offer-detail-page';
 import { OfferEditor } from './offers/offer-editor';
 import { OffersPage } from './offers/offers-page';
@@ -138,6 +139,12 @@ void startOperator({
       ],
     },
     {
+      path: 'tasks',
+      component: SalesWorkspaceStatus,
+      data: { requireSalesAccess: true },
+      children: [{ path: '', component: TasksPage }],
+    },
+    {
       path: 'contacts',
       component: SalesWorkspaceStatus,
       data: { requireSalesAccess: true },
@@ -172,6 +179,7 @@ void startOperator({
   navigation: [
     { id: 'merchants', label: 'merchants', icon: 'users', path: 'merchants' },
     { id: 'leads', label: 'leads', icon: 'id-card', path: 'leads' },
+    { id: 'tasks', label: 'tasks', icon: 'list-check', path: 'tasks' },
     { id: 'contacts', label: 'contacts', icon: 'envelope', path: 'contacts' },
     { id: 'offers', label: 'offers', icon: 'tag', path: 'offers' },
     {

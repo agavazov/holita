@@ -518,6 +518,14 @@ The operator graph exposes this through `Lead.nextTask`, `leadTasks`, `leadTask`
 `createLeadTask`, `updateLeadTask`, and `updateLeadTaskStatus`. The demo seed includes
 pending, in-progress, and completed task examples.
 
+Open **Tasks** for a grouped queue. **Mine** is the default and follows the current lead
+assignment. **Team** includes the entire Sales tenant, including unassigned leads. **Overdue**,
+**Today**, and **Upcoming** group open tasks on active leads by their scheduled Sofia date.
+**No follow-up** lists each active lead without an open task once. The scope and optional
+bucket are in the URL, for example `/en/tasks?scope=mine&bucket=noFollowUp`. Rows open Lead
+Detail. The operator graph exposes `salesTaskQueue` with per-group totals and pages. Its
+insert-only demo examples use yesterday, today and tomorrow in Sofia at first seed.
+
 Open **My Offers** in Sales to search your drafts and create a standalone offer. Use
 **New offer** under **Linked offers** on a lead to prefill the recipient and current website from
 the lead and its primary contact. Review either draft on its detail page and use **Edit offer**

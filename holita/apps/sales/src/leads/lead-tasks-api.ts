@@ -6,10 +6,12 @@ import {
   SalesCreateLeadTaskDocument,
   SalesLeadTaskDocument,
   SalesLeadTasksDocument,
+  SalesTaskQueueDocument,
   SalesUpdateLeadTaskDocument,
   SalesUpdateLeadTaskStatusDocument,
   type LeadTaskInput,
   type LeadTaskStatus,
+  type SalesTaskQueueQueryVariables,
 } from '../generated/leads-operations';
 import { SalesWorkspaceApi, type SalesWorkspaceScope } from '../workspace/sales-workspace-api';
 
@@ -18,6 +20,25 @@ export class LeadTasksApi {
   private readonly link = inject(HttpLink);
   private readonly config = inject(OperatorConfig);
   readonly scope = inject(SalesWorkspaceApi).scope;
+
+  async queue(
+    scope: SalesWorkspaceScope,
+    variables: SalesTaskQueueQueryVariables,
+    signal: AbortSignal,
+  ) {
+    const data = await this.request(
+      scope,
+      (client, context) =>
+        client.query({
+          query: SalesTaskQueueDocument,
+          variables,
+          fetchPolicy: 'no-cache',
+          context,
+        }),
+      signal,
+    );
+    return data.salesTaskQueue;
+  }
 
   async list(scope: SalesWorkspaceScope, leadId: string, signal: AbortSignal) {
     const data = await this.request(

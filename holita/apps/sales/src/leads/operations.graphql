@@ -152,6 +152,32 @@ query SalesLeadTask($leadId: ID!, $id: ID!) {
   }
 }
 
+query SalesTaskQueue(
+  $scope: SalesTaskQueueScope!
+  $bucket: SalesTaskBucket
+  $offset: Int!
+  $limit: Int!
+) {
+  salesTaskQueue(scope: $scope, bucket: $bucket, offset: $offset, limit: $limit) {
+    bucket
+    total
+    items {
+      lead {
+        id
+        displayName
+        websiteUrl
+        assignedAgentUserId
+      }
+      task {
+        id
+        type
+        status
+        scheduledAt
+      }
+    }
+  }
+}
+
 mutation SalesCreateLeadTask($leadId: ID!, $input: LeadTaskInput!) {
   createLeadTask(leadId: $leadId, input: $input) {
     id

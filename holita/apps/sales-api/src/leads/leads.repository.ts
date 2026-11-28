@@ -5,15 +5,16 @@ import { DatabaseService } from '../database.service.js';
 import type { QueryLeadsArgs } from '../generated/graphql/types.js';
 import { Prisma, type Lead, type LeadStage } from '../generated/prisma/client.js';
 import type { SalesScope } from '../scope.js';
+import { openTaskWhere } from './lead-follow-up.js';
 import { closedLeadStages } from './lead-stage.js';
-import { activeTaskStatuses, taskScheduleOrder } from './lead-task.js';
+import { taskScheduleOrder } from './lead-task.js';
 
 type LeadFields = Pick<Lead, 'displayName' | 'websiteUrl' | 'sourceName'>;
 
 function withNextTask(tenantId: string) {
   return {
     tasks: {
-      where: { tenantId, status: { in: activeTaskStatuses } },
+      where: openTaskWhere(tenantId),
       orderBy: taskScheduleOrder,
       take: 1,
     },

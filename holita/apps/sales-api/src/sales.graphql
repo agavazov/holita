@@ -19,6 +19,12 @@ type Query {
   leadNote(leadId: ID!, id: ID!): LeadNote
   leadTasks(leadId: ID!): [LeadTask!]!
   leadTask(leadId: ID!, id: ID!): LeadTask
+  salesTaskQueue(
+    scope: SalesTaskQueueScope! = MINE
+    bucket: SalesTaskBucket
+    offset: Int! = 0
+    limit: Int! = 20
+  ): [SalesTaskQueueGroup!]!
   salesAgents(search: String, ids: [ID!]): [SalesAgent!]!
   leadAssignmentAgents: [SalesAgent!]!
   leadContacts(leadId: ID!): [LeadContact!]!
@@ -178,6 +184,36 @@ type LeadTask {
   assignedAgentUserId: ID
   createdAt: String!
   updatedAt: String!
+}
+
+enum SalesTaskQueueScope {
+  MINE
+  TEAM
+}
+
+enum SalesTaskBucket {
+  OVERDUE
+  TODAY
+  UPCOMING
+  NO_FOLLOW_UP
+}
+
+type SalesTaskQueueGroup {
+  bucket: SalesTaskBucket!
+  total: Int!
+  items: [SalesTaskQueueItem!]!
+}
+
+type SalesTaskQueueItem {
+  lead: SalesTaskQueueLead!
+  task: LeadTask
+}
+
+type SalesTaskQueueLead {
+  id: ID!
+  displayName: String
+  websiteUrl: String
+  assignedAgentUserId: ID
 }
 
 input LeadTaskInput {
