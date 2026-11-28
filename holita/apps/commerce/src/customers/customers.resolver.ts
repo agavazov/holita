@@ -1,6 +1,7 @@
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type {
   MutationCreateCustomerAddressArgs,
+  MutationExportCustomerDataArgs,
   MutationRemoveCustomerAddressArgs,
   MutationUpdateCustomerAddressArgs,
   MutationUpdateCustomerContactArgs,
@@ -36,6 +37,14 @@ export class CustomersResolver {
     @Context() context: RequestContext,
   ) {
     return this.service.updateContact(context, id, input);
+  }
+
+  @Mutation('exportCustomerData')
+  exportData(
+    @Args() { customerId }: MutationExportCustomerDataArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.service.exportData(context, customerId);
   }
 
   @Mutation('createCustomerAddress')

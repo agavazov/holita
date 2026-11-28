@@ -1483,6 +1483,14 @@ type Mutation {
   updateProduct(id: ID!, input: ProductInput!): Product!
   updateInventoryQuantity(id: ID!, quantity: Int!): InventoryVariant!
   updateCustomerContact(id: ID!, input: CustomerContactInput!): Customer!
+  """
+  Export a customer in the selected shop as a JSON document. Includes exportedAt, the customer's
+  profile, saved addresses, linked orders and their shipping and billing address snapshots.
+  Each order address includes its orderNumber. Contact fields and address snapshots are omitted
+  for orders whose contact email matches another customer in the selected shop.
+  Requires a merchant operator or administrator and records an audit entry.
+  """
+  exportCustomerData(customerId: ID!): String!
   createCustomerAddress(customerId: ID!, input: CustomerAddressInput!): CustomerAddress!
   updateCustomerAddress(
     customerId: ID!

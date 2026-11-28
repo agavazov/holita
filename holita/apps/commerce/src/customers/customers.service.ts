@@ -11,7 +11,7 @@ import type {
   QueryCustomersArgs,
 } from '../generated/graphql/types.js';
 import { Prisma } from '../generated/prisma/client.js';
-import { requireScope, type RequestContext, type ShopperScope } from '../scope.js';
+import { requireMerchant, requireScope, type RequestContext, type ShopperScope } from '../scope.js';
 import { ShopperRepository } from './shopper.repository.js';
 
 type CustomerRow = Awaited<ReturnType<ShopperRepository['updateContact']>>;
@@ -109,6 +109,78 @@ export class CustomersService {
     }
     const row = await this.shoppers.customer(scope, id.toLowerCase());
     return row ? { customer: present(row), addresses: row.addresses } : null;
+  }
+
+  async exportData(context: RequestContext, customerId: string): Promise<string> {
+    const { scope, userId } = await requireMerchant(context, true);
+    const key = recordId('customerId', customerId);
+    const result = await this.shoppers.exportCustomerData(scope, key, userId);
+    if (!result) {
+      throw new NotFoundException('Customer not found');
+    }
+    const {
+      exportedAt,
+      customer: { id, email, name, phone, createdAt, addresses, orders },
+      otherCustomerEmails,
+    } = result;
+    const canExportContact = ({ contactEmail }: { contactEmail: string }) =>
+      !otherCustomerEmails.has(contactEmail.toLowerCase());
+    return JSON.stringify({
+      exportedAt,
+      customer: { id, email, fullName: name, phone, createdAt },
+      addresses: addresses.map((address) => ({
+        addressType: address.type,
+        fullName: address.recipient,
+        phone: address.phone,
+        countryCode: address.countryCode,
+        city: address.city,
+        postcode: address.postalCode,
+        addressLine1: address.line1,
+        addressLine2: address.line2,
+      })),
+      orders: orders.map((order) => ({
+        orderNumber: order.orderNumber,
+        status: order.status,
+        ...(canExportContact(order) && {
+          customerEmail: order.contactEmail,
+          customerFullName: order.contactName,
+          customerPhone: order.contactPhone,
+        }),
+        currencyCode: order.currency,
+        totalAmount: order.total.toFixed(2),
+        placedAt: order.placedAt,
+      })),
+      orderAddresses: orders.filter(canExportContact).flatMap((order) => {
+        const shipping = {
+          orderNumber: order.orderNumber,
+          addressType: 'SHIPPING',
+          fullName: order.contactName,
+          phone: order.contactPhone,
+          countryCode: order.shippingCountryCode,
+          city: order.shippingCity,
+          postcode: order.shippingPostalCode,
+          addressLine1: order.shippingLine1,
+          addressLine2: order.shippingLine2,
+        };
+        if (order.billingName === null) {
+          return [shipping];
+        }
+        return [
+          shipping,
+          {
+            orderNumber: order.orderNumber,
+            addressType: 'BILLING',
+            fullName: order.billingName,
+            phone: order.billingPhone,
+            countryCode: order.billingCountryCode,
+            city: order.billingCity,
+            postcode: order.billingPostalCode,
+            addressLine1: order.billingLine1,
+            addressLine2: order.billingLine2,
+          },
+        ];
+      }),
+    });
   }
 
   async updateContact(

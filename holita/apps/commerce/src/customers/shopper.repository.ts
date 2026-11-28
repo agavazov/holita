@@ -104,6 +104,68 @@ export class ShopperRepository {
     });
   }
 
+  exportCustomerData(scope: Scope, customerId: string, requestedByUserId: string) {
+    return this.transaction(async (tx) => {
+      const customer = await tx.customer.findUnique({
+        where: { ...scope, id: customerId },
+        select: {
+          ...customerContactFields,
+          createdAt: true,
+          addresses: { where: scope, ...addressList },
+          orders: {
+            where: scope,
+            orderBy: [{ placedAt: 'asc' }, { id: 'asc' }],
+            select: {
+              orderNumber: true,
+              status: true,
+              contactEmail: true,
+              contactName: true,
+              contactPhone: true,
+              currency: true,
+              total: true,
+              placedAt: true,
+              shippingCountryCode: true,
+              shippingCity: true,
+              shippingPostalCode: true,
+              shippingLine1: true,
+              shippingLine2: true,
+              billingName: true,
+              billingPhone: true,
+              billingCountryCode: true,
+              billingCity: true,
+              billingPostalCode: true,
+              billingLine1: true,
+              billingLine2: true,
+            },
+          },
+        },
+      });
+      const { createdAt } = await tx.customerDataExportAudit.create({
+        data: {
+          ...scope,
+          customerId,
+          requestedByUserId,
+          outcome: customer ? 'EXPORTED' : 'NOT_FOUND',
+        },
+        select: { createdAt: true },
+      });
+      if (!customer) {
+        return null;
+      }
+      const contactEmails = [...new Set(customer.orders.map(({ contactEmail }) => contactEmail))];
+      const otherCustomers = await tx.customer.findMany({
+        where: {
+          ...scope,
+          id: { not: customerId },
+          email: { in: contactEmails, mode: 'insensitive' },
+        },
+        select: { email: true },
+      });
+      const otherCustomerEmails = new Set(otherCustomers.map(({ email }) => email.toLowerCase()));
+      return { exportedAt: createdAt, customer, otherCustomerEmails };
+    });
+  }
+
   updateContact(scope: Scope, id: string, data: { name: string; phone?: string | null }) {
     return this.database.client.customer.update({
       where: { ...scope, id },

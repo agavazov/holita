@@ -290,6 +290,7 @@ beforeAll(async () => {
     '20261128050000_order_return_cases',
     '20261128060000_order_return_refunds',
     '20261128070000_order_return_completion',
+    '20261128080000_customer_data_export_audit',
   ]) {
     await connection.query(
       await readFile(
@@ -3512,6 +3513,122 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
     where: { ...categoryScope, cartId: guestReview.cartId, customerId: null },
   });
 
+  const exportCustomer = 'mutation($customerId:ID!){exportCustomerData(customerId:$customerId)}';
+  const exportTarget = { customerId: savedShippingAddress.customerId };
+  async function readExport(customerId: string): Promise<unknown> {
+    const response = await query(tokens.operator, publicA, exportCustomer, { customerId });
+    if (
+      !response ||
+      typeof response !== 'object' ||
+      !('data' in response) ||
+      !response.data ||
+      typeof response.data !== 'object' ||
+      !('exportCustomerData' in response.data) ||
+      typeof response.data.exportCustomerData !== 'string'
+    ) {
+      throw new Error('Missing customer export document');
+    }
+    return JSON.parse(response.data.exportCustomerData);
+  }
+  expect(
+    await storefront(
+      publicA,
+      createAddress,
+      { input: { ...address, recipient: 'Other customer', line1: 'Other customer address' } },
+      foreignOwner,
+    ),
+  ).toHaveProperty('data.createShopperAddress.id');
+  for (const [bearer, branch, message] of [
+    [tokens.viewer, publicA, 'Your role does not permit this action'],
+    [tokens.platform, publicA, 'A merchant account is required'],
+    [tokens.foreign, publicA, 'Branch is unavailable'],
+    [tokens.operator, branchB, 'Customer not found'],
+  ]) {
+    expect(await query(bearer, branch, exportCustomer, exportTarget)).toMatchObject({
+      data: null,
+      errors: [{ message }],
+    });
+  }
+  expect(await storefront(publicA, exportCustomer, exportTarget, token)).toMatchObject({
+    errors: [
+      {
+        message: 'Cannot query field "exportCustomerData" on type "Mutation".',
+        extensions: { code: 'GRAPHQL_VALIDATION_FAILED' },
+      },
+    ],
+  });
+  const document = await readExport(exportTarget.customerId);
+  const expectedAudits = [
+    { tenantId: tenantA, branchId: publicA, outcome: 'EXPORTED' },
+    { tenantId: tenantA, branchId: branchB, outcome: 'NOT_FOUND' },
+  ];
+  const audits = await database.customerDataExportAudit.findMany({ where: exportTarget });
+  expect(audits).toHaveLength(expectedAudits.length);
+  expect(audits).toEqual(
+    expect.arrayContaining(
+      expectedAudits.map((audit) => ({
+        ...exportTarget,
+        ...audit,
+        requestedByUserId: operatorUserId,
+        id: expect.any(String),
+        createdAt: expect.any(Date),
+      })),
+    ),
+  );
+  const exportedAt = audits.find(({ outcome }) => outcome === 'EXPORTED')?.createdAt.toISOString();
+  const shopper = await database.customer.findUniqueOrThrow({
+    where: { ...categoryScope, id: exportTarget.customerId },
+  });
+  expect(document).toHaveProperty('addresses', [
+    {
+      addressType: 'SHIPPING',
+      fullName: address.recipient,
+      phone: null,
+      countryCode: 'BG',
+      city: 'Sofia',
+      postcode: '1000',
+      addressLine1: '1 Shipping St',
+      addressLine2: null,
+    },
+    {
+      addressType: 'BILLING',
+      fullName: address.recipient,
+      phone: null,
+      countryCode: 'BG',
+      city: 'Sofia',
+      postcode: '1000',
+      addressLine1: '1 Billing St',
+      addressLine2: null,
+    },
+  ]);
+  expect(document).toMatchObject({
+    exportedAt,
+    customer: {
+      id: shopper.id,
+      email: shopper.email,
+      fullName: shopper.name,
+      phone: shopper.phone,
+      createdAt: shopper.createdAt.toISOString(),
+    },
+    orders: [
+      {
+        orderNumber: receipt.number,
+        status: receipt.status,
+        customerEmail: order.contactEmail,
+        customerFullName: order.contactName,
+        customerPhone: order.contactPhone,
+        currencyCode: receipt.currency,
+        totalAmount: receipt.total,
+        placedAt: receipt.placedAt,
+      },
+    ],
+    orderAddresses: [
+      { orderNumber: receipt.number, addressType: 'SHIPPING', addressLine1: order.shippingLine1 },
+      { orderNumber: receipt.number, addressType: 'BILLING', addressLine1: billingAddress.line1 },
+    ],
+  });
+  expect(document).not.toHaveProperty('customer.passwordHash');
+
   const adminOrders = `query($search:String,$status:OrderStatus,$customerId:ID,$filter:OrderListFilter,$offset:Int=0){
     orders(search:$search,status:$status,customerId:$customerId,filter:$filter,offset:$offset,limit:1){
       items{id number status} total offset limit
@@ -4962,6 +5079,27 @@ it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () 
       orderInvoice: { recipientName: billingAddress.name, recipientAddress: billingAddress.line1 },
     },
   });
+
+  const otherCustomer = await database.customer.findFirstOrThrow({
+    where: { ...categoryScope, email: 'other@example.test' },
+  });
+  expect(
+    await query(tokens.operator, publicA, updateManual, {
+      ...manualTarget,
+      input: { contact, shippingAddress, customerId: otherCustomer.id },
+    }),
+  ).toHaveProperty('data.updateManualOrder.id', manual.id);
+  const relinkedExport = await readExport(otherCustomer.id);
+  expect(relinkedExport).toHaveProperty('orders', [
+    {
+      orderNumber: manual.orderNumber,
+      placedAt: manual.placedAt.toISOString(),
+      status: 'PLACED',
+      currencyCode: 'EUR',
+      totalAmount: manualAmounts.total,
+    },
+  ]);
+  expect(relinkedExport).toHaveProperty('orderAddresses', []);
 
   await query(tokens.operator, publicA, markPaid, { id: manual.id });
   expect(await query(tokens.operator, publicA, updateManual, untrackedIncrease)).toHaveProperty(

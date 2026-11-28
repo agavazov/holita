@@ -1,8 +1,8 @@
 # 284 Apply an approved customer data erasure request
 
-**Status:** Blocked. Waits for customer removal, data export and approved retention policy. **Product:** Holita.
+**Status:** Blocked. Waits for customer removal and approved retention policy. **Product:** Holita.
 
-**Depends on** [214](214-holita-customer-removal.md), [282](282-holita-customer-data-export.md), [283](283-holita-customer-data-retention-policy.md).
+**Depends on** [214](214-holita-customer-removal.md), [283](283-holita-customer-data-retention-policy.md).
 
 ## Background
 
