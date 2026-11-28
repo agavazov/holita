@@ -793,6 +793,7 @@ model Order {
   lines OrderLine[]
   invoice Invoice?
   refunds OrderRefund[]
+  returnCases OrderReturnCase[]
   statusChanges OrderStatusChange[]
   notification OrderNotification?
   @@unique([tenantId, branchId, id])
@@ -846,6 +847,8 @@ model OrderLine {
   unitPrice Decimal @db.Decimal(12, 2)
   stockDeductedQuantity Int @default(0)
   stockDecremented Boolean @default(false) @ignore
+  returnLines OrderReturnLine[]
+  @@unique([tenantId, branchId, orderId, id])
   @@unique([tenantId, branchId, orderId, sortOrder])
   @@index([tenantId, branchId, variantId])
   @@map("orderLine")
@@ -951,4 +954,60 @@ model OrderRefund {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   @@index([tenantId, branchId, orderId, createdAt(sort: Desc), id(sort: Desc)])
   @@map("orderRefund")
+}
+
+enum OrderReturnStatus {
+  PENDING @map("pending")
+  APPROVED @map("approved")
+  REJECTED @map("rejected")
+  @@map("orderReturnStatus")
+}
+
+enum OrderReturnOutcome {
+  APPROVED @map("approved")
+  REJECTED @map("rejected")
+  @@map("orderReturnOutcome")
+}
+
+model OrderReturnCase {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  orderId String @db.Uuid
+  order Order @relation(fields: [tenantId, branchId, orderId], references: [tenantId, branchId, id], onDelete: Restrict)
+  reason String @db.Text
+  status OrderReturnStatus @default(PENDING)
+  requestedAt DateTime @default(now()) @db.Timestamptz(3)
+  lines OrderReturnLine[]
+  decision OrderReturnDecision?
+  @@unique([tenantId, branchId, id])
+  @@unique([tenantId, branchId, orderId, id])
+  @@index([tenantId, branchId, requestedAt(sort: Desc), id(sort: Desc)])
+  @@map("orderReturnCase")
+}
+
+model OrderReturnLine {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  orderId String @db.Uuid
+  returnCaseId String @db.Uuid
+  orderReturnCase OrderReturnCase @relation(fields: [tenantId, branchId, orderId, returnCaseId], references: [tenantId, branchId, orderId, id], onDelete: Cascade)
+  orderLineId String @db.Uuid
+  orderLine OrderLine @relation(fields: [tenantId, branchId, orderId, orderLineId], references: [tenantId, branchId, orderId, id], onDelete: NoAction)
+  quantity Int
+  @@id([tenantId, branchId, orderId, returnCaseId, orderLineId])
+  @@index([tenantId, branchId, orderId, orderLineId])
+  @@map("orderReturnLine")
+}
+
+model OrderReturnDecision {
+  tenantId String @db.Uuid
+  branchId String @db.Uuid
+  returnCaseId String @db.Uuid
+  orderReturnCase OrderReturnCase @relation(fields: [tenantId, branchId, returnCaseId], references: [tenantId, branchId, id], onDelete: Cascade)
+  outcome OrderReturnOutcome
+  decidedAt DateTime @default(now()) @db.Timestamptz(3)
+  decidedByUserId String @db.Uuid
+  @@id([tenantId, branchId, returnCaseId])
+  @@map("orderReturnDecision")
 }

@@ -24,6 +24,7 @@ const legacyInvoiceId = randomUUID();
 const legacyAddressId = randomUUID();
 const tenantA = randomUUID();
 const tenantB = randomUUID();
+const operatorUserId = randomUUID();
 const branchA = randomUUID();
 const branchB = randomUUID();
 const branchForeign = randomUUID();
@@ -286,6 +287,7 @@ beforeAll(async () => {
     '20261128020000_order_notifications',
     '20261128030000_local_email',
     '20261128040000_shopper_password_reset',
+    '20261128050000_order_return_cases',
   ]) {
     await connection.query(
       await readFile(
@@ -304,7 +306,11 @@ beforeAll(async () => {
       response.end(
         JSON.stringify(
           identity
-            ? { ...identity, userId: tenantA, sessionId: branchA }
+            ? {
+                ...identity,
+                userId: token === tokens.operator ? operatorUserId : tenantA,
+                sessionId: branchA,
+              }
             : { authenticated: false },
         ),
       );
@@ -2289,6 +2295,85 @@ async function verifyShopperPasswordReset(database: PrismaClient) {
     data: { signInShopper: { shopper: { email } } },
   });
 }
+
+it('scopes return cases and records a single authorized decision', async () => {
+  if (!database || !connection) {
+    throw new Error('Missing test database');
+  }
+  const sql = connection;
+  const scope = { tenantId: tenantA, branchId: branchA };
+  const orderLine = await database.orderLine.findFirstOrThrow({
+    where: { ...scope, orderId: legacyInvoicedId },
+  });
+  const otherLine = await database.orderLine.findFirstOrThrow({
+    where: { ...scope, orderId: legacyDraftId },
+  });
+  const { id } = await database.orderReturnCase.create({
+    data: { ...scope, orderId: legacyInvoicedId, reason: 'Wrong size' },
+  });
+  const insertLine = (lineId: string) =>
+    sql.query(
+      `INSERT INTO "orderReturnLine" ("tenantId", "branchId", "orderId", "returnCaseId", "orderLineId", "quantity")
+       VALUES ($1, $2, $3, $4, $5, 1)`,
+      [tenantA, branchA, legacyInvoicedId, id, lineId],
+    );
+  await expect(insertLine(otherLine.id)).rejects.toMatchObject({ code: '23503' });
+  await insertLine(orderLine.id);
+
+  const read = `query($id:ID!){
+    orderReturns{items{id status} total}
+    orderReturn(id:$id){id orderId status lines{orderLineId quantity} decisions{outcome decidedByUserId}}
+  }`;
+  const decide = `mutation($id:ID!,$outcome:OrderReturnOutcome!){
+    decideOrderReturn(id:$id,outcome:$outcome){status decisions{outcome decidedAt decidedByUserId}}
+  }`;
+  expect(await query(tokens.viewer, branchA, read, { id })).toEqual({
+    data: {
+      orderReturns: { items: [{ id, status: 'PENDING' }], total: 1 },
+      orderReturn: {
+        id,
+        orderId: legacyInvoicedId,
+        status: 'PENDING',
+        lines: [{ orderLineId: orderLine.id, quantity: 1 }],
+        decisions: [],
+      },
+    },
+  });
+  for (const [token, branch] of [
+    [tokens.operator, branchB],
+    [tokens.foreign, branchForeign],
+  ]) {
+    expect(await query(token, branch, read, { id })).toEqual({
+      data: { orderReturns: { items: [], total: 0 }, orderReturn: null },
+    });
+    expect(await query(token, branch, decide, { id, outcome: 'APPROVED' })).toMatchObject({
+      errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    });
+  }
+  expect(await query(tokens.viewer, branchA, decide, { id, outcome: 'REJECTED' })).toHaveProperty(
+    'errors.0.message',
+    'Your role does not permit this action',
+  );
+  expect(await query(tokens.operator, branchA, decide, { id, outcome: 'APPROVED' })).toEqual({
+    data: {
+      decideOrderReturn: {
+        status: 'APPROVED',
+        decisions: [
+          { outcome: 'APPROVED', decidedAt: expect.any(String), decidedByUserId: operatorUserId },
+        ],
+      },
+    },
+  });
+  expect(
+    await query(tokens.administrator, branchA, decide, { id, outcome: 'REJECTED' }),
+  ).toMatchObject({
+    errors: [{ extensions: { code: 'CONFLICT' } }],
+  });
+  expect(await query(tokens.viewer, branchA, read, { id })).toHaveProperty(
+    'data.orderReturn.decisions',
+    [{ outcome: 'APPROVED', decidedByUserId: operatorUserId }],
+  );
+});
 
 it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () => {
   if (!database || !app) {

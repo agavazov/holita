@@ -1,0 +1,169 @@
+<osnova-page-header
+  [title]="text().returnCase"
+  [moduleInfo]="text().returnsInfo"
+  [backLink]="backLink()"
+  [backLabel]="text().backToReturns"
+  [backQueryParams]="queryParams()"
+  [backFragment]="fragment()"
+/>
+@if (!scope()) {
+<p-message severity="info">{{ text().noShop }}</p-message>
+} @else if (item(); as item) {
+<section class="app-card" aria-labelledby="return-summary">
+  <h2 id="return-summary" class="app-card__title">{{ text().orderSummary }}</h2>
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().order }}</dt>
+      <dd>
+        <a
+          class="app-link app-table-identity-wrap"
+          [routerLink]="['/', language(), 'orders', item.orderId]"
+        >
+          {{ item.orderNumber }}
+        </a>
+      </dd>
+    </div>
+    <div>
+      <dt>{{ text().status }}</dt>
+      <dd>
+        <p-tag
+          [value]="statusText(item.status, language())"
+          [severity]="statusSeverity(item.status)"
+        />
+      </dd>
+    </div>
+    <div>
+      <dt>{{ text().returnRequestedAt }}</dt>
+      <dd>
+        <time [dateTime]="item.requestedAt" [title]="format.utc(item.requestedAt)"
+          >{{ format.dateTime(item.requestedAt) }}</time
+        >
+      </dd>
+    </div>
+    <div class="app-facts--wide">
+      <dt>{{ text().returnReason }}</dt>
+      <dd class="return-reason">{{ item.reason }}</dd>
+    </div>
+  </dl>
+</section>
+<osnova-table-panel
+  mode="local"
+  [heading]="text().returnRequestedItems"
+  [columns]="columns()"
+  tableMinWidth="18rem"
+  [view]="linesView()"
+  [total]="item.lines.length"
+>
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="item.lines"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    dataKey="orderLineId"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+        <col [class]="column.className ?? ''" [style.width]="column.width" />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        @for (column of columns(); track column.id) {
+        <th
+          scope="col"
+          [class]="column.className ?? ''"
+          [class.app-cell-number]="column.kind === 'number'"
+        >
+          {{ column.label }}
+        </th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-line>
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-cell-identity">
+            <span class="app-table-identity-wrap" [title]="line.label">{{ line.label }}</span>
+            <span [title]="line.sku">{{ line.sku }}</span>
+          </div>
+        </td>
+        <td class="app-cell-number">{{ formatNumber(line.quantity, language()) }}</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+@if (error(); as error) {
+<p-message severity="error">{{ error }}</p-message>
+} @if (item.decisions.length) {
+<section class="app-card" aria-labelledby="return-history">
+  <h2 #historyHeading id="return-history" class="app-card__title" tabindex="-1">
+    {{ text().returnDecisionHistory }}
+  </h2>
+  <dl class="app-facts">
+    @for (decision of item.decisions; track decision.decidedAt) {
+    <div>
+      <dt>{{ statusText(decision.outcome, language()) }}</dt>
+      <dd>
+        <time [dateTime]="decision.decidedAt" [title]="format.utc(decision.decidedAt)"
+          >{{ format.dateTime(decision.decidedAt) }}</time
+        >
+      </dd>
+    </div>
+    }
+  </dl>
+</section>
+} @else if (item.status === 'PENDING' && canDecide()) {
+<section class="app-card" aria-labelledby="return-decision">
+  <h2 id="return-decision" class="app-card__title">{{ text().returnDecision }}</h2>
+  <div class="app-inline">
+    <button
+      #approveButton
+      pButton
+      type="button"
+      [disabled]="pending() !== null || record.isLoading()"
+      (click)="decide('APPROVED', approveButton)"
+    >
+      {{ text().approveReturn }}
+    </button>
+    <button
+      #rejectButton
+      pButton
+      type="button"
+      severity="danger"
+      [outlined]="true"
+      [disabled]="pending() !== null || record.isLoading()"
+      (click)="decide('REJECTED', rejectButton)"
+    >
+      {{ text().rejectReturn }}
+    </button>
+  </div>
+</section>
+} } @else if (record.isLoading()) {
+<div class="app-card" role="status" [attr.aria-label]="shared().loading">
+  <p-skeleton width="40%" />
+  <p-skeleton height="var(--p-app-control-height)" />
+</div>
+} @else if (record.error()) {
+<section class="app-card">
+  <osnova-empty-state kind="error" [title]="text().returnCaseLoadFailed">
+    <button pButton emptyActions type="button" (click)="record.reload()">
+      {{ shared().retry }}
+    </button>
+  </osnova-empty-state>
+</section>
+} @else {
+<section class="app-card">
+  <osnova-empty-state kind="not-found" [title]="text().returnCaseUnavailable" />
+</section>
+}
+<p-confirmdialog
+  appendTo="body"
+  [pt]="confirmPt()"
+  [style]="{ width: 'min(28rem, calc(100vw - 2 * var(--p-app-space-4)))' }"
+>
+  <ng-template #message>
+    <p id="return-decision-question">{{ confirmQuestion() }}</p>
+  </ng-template>
+</p-confirmdialog>

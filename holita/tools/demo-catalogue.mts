@@ -562,6 +562,15 @@ export const demoRefund = {
   createdAt: '2026-11-22T11:30:00Z',
 } as const;
 
+export const demoReturnCase = {
+  id: 1,
+  order: 2,
+  orderLine: 3,
+  quantity: 1,
+  reason: 'Клиентът иска да върне едната касерола, тъй като размерът не е подходящ.',
+  requestedAt: '2026-11-24T10:00:00Z',
+} as const;
+
 interface DemoBrand {
   readonly id: number;
   readonly name: string;

@@ -2,7 +2,7 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [201](201-holita-admin-return-cases.md), [215](215-holita-shopper-return-request.md).
+**Depends on** [215](215-holita-shopper-return-request.md).
 
 ## Background
 

@@ -30,6 +30,50 @@ mutation OperatorMarkAllOrderNotificationsRead {
   markAllOrderNotificationsRead
 }
 
+query OperatorOrderReturns($offset: Int!, $limit: Int!) {
+  orderReturns(offset: $offset, limit: $limit) {
+    items {
+      id
+      orderNumber
+      reason
+      status
+      requestedAt
+    }
+    total
+  }
+}
+
+fragment OperatorReturnCase on OrderReturnCase {
+  id
+  orderId
+  orderNumber
+  reason
+  status
+  requestedAt
+  lines {
+    orderLineId
+    sku
+    label
+    quantity
+  }
+  decisions {
+    outcome
+    decidedAt
+  }
+}
+
+query OperatorOrderReturn($id: ID!) {
+  orderReturn(id: $id) {
+    ...OperatorReturnCase
+  }
+}
+
+mutation OperatorDecideOrderReturn($id: ID!, $outcome: OrderReturnOutcome!) {
+  decideOrderReturn(id: $id, outcome: $outcome) {
+    ...OperatorReturnCase
+  }
+}
+
 fragment OperatorOrderDetail on Order {
   id
   invoiceReviewRevision

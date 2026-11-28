@@ -27,6 +27,8 @@ import { PagesModule } from './pages/pages.module.js';
 import { PagesResolver } from './pages/pages.resolver.js';
 import { RefundsModule } from './refunds/refunds.module.js';
 import { RefundsResolver } from './refunds/refunds.resolver.js';
+import { ReturnsModule } from './returns/returns.module.js';
+import { ReturnsResolver } from './returns/returns.resolver.js';
 import { ShopBrandingImagesController } from './shop-settings/shop-branding-images.controller.js';
 import { ShopHomeImagesController } from './shop-settings/shop-home-images.controller.js';
 import { ShopSettingsModule } from './shop-settings/shop-settings.module.js';
@@ -77,6 +79,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     OrdersModule,
     InvoicesModule,
     RefundsModule,
+    ReturnsModule,
     PagesModule,
     BlogModule,
     NavigationModule,
@@ -99,6 +102,7 @@ import { InventoryResolver } from './inventory/inventory.resolver.js';
     OperatorOrdersResolver,
     InvoicesResolver,
     RefundsResolver,
+    ReturnsResolver,
     PagesResolver,
     BlogResolver,
     NavigationResolver,

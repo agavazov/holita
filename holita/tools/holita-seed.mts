@@ -31,6 +31,7 @@ import {
   demoProductCovers,
   demoProductImages,
   demoRefund,
+  demoReturnCase,
   demoSaturdayShipping,
   demoSeparateBillingOrder,
   demoShippingMethod,
@@ -678,6 +679,27 @@ async function seedCatalogue(): Promise<void> {
         demoHistoricalOrderMoney,
       );
     }
+    await client.query(
+      `WITH "newCase" AS (
+         INSERT INTO "orderReturnCase" ("id", "tenantId", "branchId", "orderId", "reason", "requestedAt")
+         SELECT $1, "tenantId", "branchId", "orderId", $6, $7 FROM "orderLine"
+         WHERE "tenantId" = $2 AND "branchId" = $3 AND "orderId" = $4 AND "id" = $5 AND "quantity" >= $8
+         ON CONFLICT ("id") DO NOTHING
+         RETURNING "id", "tenantId", "branchId", "orderId"
+       )
+       INSERT INTO "orderReturnLine" ("tenantId", "branchId", "orderId", "returnCaseId", "orderLineId", "quantity")
+       SELECT "tenantId", "branchId", "orderId", "id", $5, $8 FROM "newCase"`,
+      [
+        fixtureId('df', demoReturnCase.id),
+        tenantId,
+        branchId,
+        fixtureId('d5', demoReturnCase.order),
+        fixtureId('d6', demoReturnCase.orderLine),
+        demoReturnCase.reason,
+        demoReturnCase.requestedAt,
+        demoReturnCase.quantity,
+      ],
+    );
     await seedShopperOrder(client, tenantId, branchId, demoShopper, demoSeparateBillingOrder, {
       currency: 'EUR',
       shippingFee: demoShippingMethod.fixedFee,

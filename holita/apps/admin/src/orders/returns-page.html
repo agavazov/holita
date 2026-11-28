@@ -1,0 +1,84 @@
+<osnova-page-header [title]="text().returns" [moduleInfo]="text().returnsInfo" />
+@if (scope()) {
+<osnova-table-panel
+  [heading]="text().shopReturns"
+  [columns]="columns()"
+  tableMinWidth="33rem"
+  [view]="view()"
+  [busy]="list.isLoading()"
+  [total]="data()?.total ?? null"
+  [page]="pagination()"
+  [emptyTitle]="text().returnsEmpty"
+  [errorText]="text().returnsLoadFailed"
+  (pageChange)="url.setPage($event)"
+  (retry)="list.reload()"
+>
+  <p-table
+    class="app-responsive-table app-table-fixed"
+    [value]="data()?.items ?? []"
+    [rowTrackBy]="trackById"
+    [lazy]="true"
+    [lazyLoadOnInit]="false"
+    [scrollable]="true"
+    [tableStyle]="{ 'min-width': 'var(--app-table-responsive-min-width)' }"
+    dataKey="id"
+  >
+    <ng-template #colgroup>
+      <colgroup>
+        @for (column of columns(); track column.id) {
+        <col
+          [class]="column.className ?? ''"
+          [style.width]="column.kind === 'identity' ? 'var(--app-table-identity-width, ' + column.width + ')' : column.width"
+        />
+        }
+      </colgroup>
+    </ng-template>
+    <ng-template #header>
+      <tr>
+        @for (column of columns(); track column.id) {
+        <th scope="col" [class]="column.className ?? ''">{{ column.label }}</th>
+        }
+      </tr>
+    </ng-template>
+    <ng-template #body let-item>
+      <tr>
+        <td class="app-col-identity">
+          <div class="app-cell-identity">
+            <a
+              class="app-link app-table-identity-wrap"
+              [routerLink]="[item.id]"
+              queryParamsHandling="preserve"
+              [preserveFragment]="true"
+            >
+              {{ item.orderNumber }}
+            </a>
+            <span [title]="item.reason">{{ item.reason }}</span>
+            <time class="app-table-mobile-meta" [dateTime]="item.requestedAt">
+              {{ format.dateTime(item.requestedAt) }}
+            </time>
+          </div>
+        </td>
+        <td class="app-table-merged-column">
+          <time
+            class="app-cell-date"
+            [dateTime]="item.requestedAt"
+            [title]="format.utc(item.requestedAt)"
+          >
+            {{ format.dateTime(item.requestedAt) }}
+          </time>
+        </td>
+        <td>
+          <span class="app-cell-status">
+            <p-tag
+              [value]="statusText(item.status, language())"
+              [severity]="statusSeverity(item.status)"
+            />
+          </span>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</osnova-table-panel>
+} @else {
+<p-message severity="info">{{ text().noShop }}</p-message>
+}

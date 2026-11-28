@@ -7,6 +7,7 @@ import { HttpLink } from 'apollo-angular/http';
 import { firstValueFrom } from 'rxjs';
 import {
   OperatorCreateManualOrderDocument,
+  OperatorDecideOrderReturnDocument,
   OperatorInvoiceByIdDocument,
   OperatorInvoiceIssuerSettingsDocument,
   OperatorInvoicesDocument,
@@ -30,13 +31,17 @@ import {
   OperatorOrderFilterCustomerDocument,
   OperatorOrderFilterMethodsDocument,
   OperatorOrderNotificationsDocument,
+  OperatorOrderReturnDocument,
+  OperatorOrderReturnsDocument,
   OperatorOrdersDocument,
   OperatorRecordOrderRefundDocument,
   type RecordOrderRefundInput,
   OperatorUpdateOrderStatusDocument,
   type OperatorInvoicesQueryVariables,
   type OperatorOrderNotificationsQueryVariables,
+  type OperatorOrderReturnsQueryVariables,
   type OperatorOrdersQueryVariables,
+  type OrderReturnOutcome,
   type OrderStatus,
 } from '../generated/orders-operations';
 
@@ -67,6 +72,10 @@ export class OrdersApi {
   });
   readonly canWrite = computed(() => {
     const role = this.session.role();
+    return !!this.scope() && (role === 'OPERATOR' || role === 'ADMINISTRATOR');
+  });
+  readonly canDecideReturn = computed(() => {
+    const role = this.session.user()?.role;
     return !!this.scope() && (role === 'OPERATOR' || role === 'ADMINISTRATOR');
   });
 
@@ -111,6 +120,62 @@ export class OrdersApi {
       if (!marked) {
         throw new Error('Missing order notification read result');
       }
+    } finally {
+      client.stop();
+    }
+  }
+
+  async returns(
+    scope: OrdersScope,
+    variables: OperatorOrderReturnsQueryVariables,
+    signal: AbortSignal,
+  ) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorOrderReturnsDocument,
+        variables,
+        context: { fetchOptions: { signal } },
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing order returns');
+      }
+      return data.orderReturns;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async returnCase(scope: OrdersScope, id: string, signal: AbortSignal) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.query({
+        query: OperatorOrderReturnDocument,
+        variables: { id },
+        context: { fetchOptions: { signal } },
+        fetchPolicy: 'no-cache',
+      });
+      if (!data) {
+        throw new Error('Missing order return result');
+      }
+      return data.orderReturn;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async decideReturn(scope: OrdersScope, id: string, outcome: OrderReturnOutcome) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: OperatorDecideOrderReturnDocument,
+        variables: { id, outcome },
+      });
+      if (!data) {
+        throw new Error('Missing order return decision');
+      }
+      return data.decideOrderReturn;
     } finally {
       client.stop();
     }

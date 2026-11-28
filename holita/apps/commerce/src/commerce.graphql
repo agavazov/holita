@@ -1229,6 +1229,48 @@ input RecordOrderRefundInput {
   reason: String
   restock: Boolean! = false
 }
+
+enum OrderReturnStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+enum OrderReturnOutcome {
+  APPROVED
+  REJECTED
+}
+type OrderReturnSummary {
+  id: ID!
+  orderNumber: String!
+  reason: String!
+  status: OrderReturnStatus!
+  requestedAt: String!
+}
+type OrderReturnPage {
+  items: [OrderReturnSummary!]!
+  total: Int!
+}
+type OrderReturnLine {
+  orderLineId: ID!
+  sku: String!
+  label: String!
+  quantity: Int!
+}
+type OrderReturnDecision {
+  outcome: OrderReturnOutcome!
+  decidedAt: String!
+  decidedByUserId: ID!
+}
+type OrderReturnCase {
+  id: ID!
+  orderId: ID!
+  orderNumber: String!
+  reason: String!
+  status: OrderReturnStatus!
+  requestedAt: String!
+  lines: [OrderReturnLine!]!
+  decisions: [OrderReturnDecision!]!
+}
 type PaymentMethod {
   id: ID!
   label: String!
@@ -1414,6 +1456,8 @@ type Query {
   invoice(id: ID!): Invoice
   invoiceIssuerSettings: InvoiceIssuerSettings!
   orderRefundSummary(orderId: ID!): OrderRefundSummary
+  orderReturns(offset: Int! = 0, limit: Int! = 20): OrderReturnPage!
+  orderReturn(id: ID!): OrderReturnCase
 }
 type Mutation {
   createPaymentMethod(input: PaymentMethodInput!): PaymentMethod!
@@ -1469,4 +1513,5 @@ type Mutation {
   issueStandaloneInvoice(input: IssueStandaloneInvoiceInput!): Invoice!
   updateInvoiceIssuerSettings(input: InvoiceIssuerSettingsInput!): InvoiceIssuerSettings!
   recordOrderRefund(orderId: ID!, input: RecordOrderRefundInput!): OrderRefund!
+  decideOrderReturn(id: ID!, outcome: OrderReturnOutcome!): OrderReturnCase!
 }

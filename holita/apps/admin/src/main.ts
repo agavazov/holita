@@ -39,6 +39,8 @@ import { OrderDetail } from './orders/order-detail';
 import { OrderNotifications } from './orders/order-notifications';
 import { OrderNotificationsPage } from './orders/order-notifications-page';
 import { OrderRefundEditor } from './orders/order-refund-editor';
+import { ReturnDetail } from './orders/return-detail';
+import { ReturnsPage } from './orders/returns-page';
 import { OrderStatusEditor } from './orders/order-status-editor';
 import { OrdersPage } from './orders/orders-page';
 import { PageEditor } from './pages/page-editor';
@@ -67,6 +69,8 @@ void startOperator({
   routes: [
     { path: 'dashboard', component: DashboardPage },
     { path: 'order-notifications', component: OrderNotificationsPage },
+    { path: 'returns', component: ReturnsPage },
+    { path: 'returns/:recordId', component: ReturnDetail },
     {
       path: 'products',
       component: ProductsPage,
@@ -461,6 +465,7 @@ void startOperator({
     { id: 'blog-tags', label: 'blogTags', icon: 'tags', path: 'blog-tags' },
     { id: 'navigation', label: 'navigation', icon: 'directions', path: 'navigation' },
     { id: 'orders', label: 'orders', icon: 'truck', path: 'orders' },
+    { id: 'returns', label: 'returns', icon: 'list-check', path: 'returns' },
     {
       id: 'order-notifications',
       label: 'orderNotifications',

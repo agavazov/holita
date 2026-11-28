@@ -1,10 +1,10 @@
 # 215 Accept authenticated shopper return requests through the API
 
-**Status:** Ready after [201](201-holita-admin-return-cases.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
-red.bg accepts return requests against owned orders through its storefront API. Ticket 201 provides Admin cases and decisions.
+red.bg accepts return requests against owned orders through its storefront API. Holita Admin lists return cases and records merchant decisions.
 
 ## Goal
 
@@ -13,7 +13,7 @@ Let an authenticated shopper API client submit eligible order lines and quantiti
 ## Steps
 
 1. Add a public-graph mutation that derives customer and shop from the verified session. Validate order ownership, eligible state, quantities and duplicate or overlapping requests under the existing return rules.
-2. Create a pending case visible in Admin using the 201 contract. Keep merchant actions and refund settlement on the operator side.
+2. Create a pending Commerce return case visible in Admin. Keep merchant actions and refund settlement on the operator side.
 
 ## Done when
 

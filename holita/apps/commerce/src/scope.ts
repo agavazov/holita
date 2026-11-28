@@ -21,6 +21,10 @@ export interface ShopperScope extends Scope {
 }
 
 export async function requireScope(context: RequestContext, write: boolean): Promise<Scope> {
+  return (await requireMerchant(context, write)).scope;
+}
+
+export async function requireMerchant(context: RequestContext, write: boolean) {
   const identity: SessionIdentity | undefined = await readSession(context.authorization);
   if (!identity) {
     throw new UnauthorizedException('Sign in first');
@@ -53,5 +57,5 @@ export async function requireScope(context: RequestContext, write: boolean): Pro
   if (!found) {
     throw new ForbiddenException('Branch is unavailable');
   }
-  return { tenantId: identity.tenantId, branchId };
+  return { scope: { tenantId: identity.tenantId, branchId }, userId: identity.userId };
 }
