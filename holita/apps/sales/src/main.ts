@@ -1,5 +1,7 @@
 import { MerchantDetailPage, MerchantsPage, startOperator } from '@holita/operator';
 import { leaveDrawer } from '@osnova/ui';
+import { AppointmentServiceEditor } from './appointment-services/appointment-service-editor';
+import { AppointmentServicesPage } from './appointment-services/appointment-services-page';
 import { ContactEditor } from './contacts/contact-editor';
 import { ContactsPage } from './contacts/contacts-page';
 import { LeadDetailPage } from './leads/lead-detail-page';
@@ -141,12 +143,43 @@ void startOperator({
       data: { requireSalesAccess: true },
       children: [{ path: '', component: ContactsPage }],
     },
+    {
+      path: 'appointment-services',
+      component: SalesWorkspaceStatus,
+      data: { requireSalesAccess: true },
+      children: [
+        {
+          path: '',
+          component: AppointmentServicesPage,
+          children: [
+            {
+              path: 'new',
+              component: AppointmentServiceEditor,
+              data: { drawer: true },
+              canDeactivate: [leaveDrawer],
+            },
+            {
+              path: ':recordId/edit',
+              component: AppointmentServiceEditor,
+              data: { drawer: true },
+              canDeactivate: [leaveDrawer],
+            },
+          ],
+        },
+      ],
+    },
   ],
   navigation: [
     { id: 'merchants', label: 'merchants', icon: 'users', path: 'merchants' },
     { id: 'leads', label: 'leads', icon: 'id-card', path: 'leads' },
     { id: 'contacts', label: 'contacts', icon: 'envelope', path: 'contacts' },
     { id: 'offers', label: 'offers', icon: 'tag', path: 'offers' },
+    {
+      id: 'appointment-services',
+      label: 'appointmentServices',
+      icon: 'clock',
+      path: 'appointment-services',
+    },
   ],
 }).catch((error: unknown) => {
   console.error(error);

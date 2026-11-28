@@ -1,5 +1,7 @@
 type Query {
   salesWorkspaceAccess: SalesWorkspaceViewer!
+  appointmentServices(offset: Int! = 0, limit: Int! = 20, search: String): AppointmentServicePage!
+  appointmentService(id: ID!): AppointmentService
   salesOffers(offset: Int! = 0, limit: Int! = 20, search: String, leadId: ID): SalesOfferPage!
   salesOffer(id: ID!): SalesOffer
   leads(
@@ -30,6 +32,9 @@ type Query {
 }
 
 type Mutation {
+  createAppointmentService(input: AppointmentServiceInput!): AppointmentService!
+  updateAppointmentService(id: ID!, input: AppointmentServiceInput!): AppointmentService!
+  deactivateAppointmentService(id: ID!): AppointmentService!
   createSalesOffer(leadId: ID, input: SalesOfferInput!): SalesOffer!
   updateSalesOffer(id: ID!, input: SalesOfferInput!): SalesOffer!
   createLead(input: LeadInput!): Lead!
@@ -45,6 +50,72 @@ type Mutation {
   createLeadContact(leadId: ID!, input: LeadContactInput!): LeadContact!
   updateLeadContact(leadId: ID!, id: ID!, input: LeadContactInput!): LeadContact!
   deleteLeadContact(leadId: ID!, id: ID!): Boolean!
+}
+
+enum AppointmentServiceColor {
+  C1
+  C2
+  C3
+  C4
+  C5
+  C6
+  C7
+  C8
+}
+
+type AppointmentService {
+  id: ID!
+  name: String!
+  description: String
+  active: Boolean!
+  color: AppointmentServiceColor!
+  durationMinutes: Int!
+  bufferMinutes: Int!
+  """
+  ISO weekdays, where Monday is 1 and Sunday is 7.
+  """
+  weekdays: [Int!]!
+  """
+  Local HH:mm in Europe/Sofia.
+  """
+  startTime: String!
+  """
+  Local HH:mm in Europe/Sofia.
+  """
+  endTime: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type AppointmentServicePage {
+  items: [AppointmentService!]!
+  total: Int!
+  offset: Int!
+  limit: Int!
+}
+
+input AppointmentServiceInput {
+  name: String!
+  description: String
+  """
+  Defaults to true on creation. Omit or pass null to preserve the current status on update.
+  """
+  active: Boolean
+  color: AppointmentServiceColor!
+  durationMinutes: Int!
+  bufferMinutes: Int!
+  """
+  ISO weekdays, where Monday is 1 and Sunday is 7.
+  """
+  weekdays: [Int!]!
+  """
+  Local HH:mm in Europe/Sofia.
+  """
+  startTime: String!
+  """
+  Local HH:mm in Europe/Sofia.
+  """
+  endTime: String!
 }
 
 type SalesWorkspaceViewer {

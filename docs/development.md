@@ -526,6 +526,16 @@ needs a name and a monthly EUR price before VAT. The operator graph exposes `sal
 `salesOffer`, `createSalesOffer` and `updateSalesOffer` in the verified platform tenant and author
 scope. The Holita demo seed includes one linked draft with both prices.
 
+Open **Appointment Services** in Sales to define each service's duration, buffer, calendar color,
+and weekly availability. One Europe/Sofia time window applies to the selected days and must fit
+the duration plus the buffer. New services default to weekdays from 09:00 to 17:00 with a
+45-minute duration and a 15-minute buffer. Change **Active** in the service editor to deactivate
+or reactivate it. Inactive services stay in the list. The operator graph exposes
+`appointmentServices`, `appointmentService`, `createAppointmentService`,
+`updateAppointmentService` and `deactivateAppointmentService` to Sales accounts in the verified
+platform tenant. An update that omits `active` preserves the service's current status. The demo
+seed includes an active Store demo and an inactive legacy Consultation.
+
 **Local Sales import**
 
 Use an approved export in private loopback staging with a read-only role. Run the Sales migrations

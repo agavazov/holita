@@ -181,3 +181,35 @@ enum SalesOfferStatus {
 
   @@map("salesOfferStatus")
 }
+
+model AppointmentService {
+  id              String                  @id @default(uuid()) @db.Uuid
+  tenantId        String                  @db.Uuid
+  name            String                  @db.VarChar(255)
+  description     String?                 @db.Text
+  active          Boolean                 @default(true)
+  color           AppointmentServiceColor
+  durationMinutes Int
+  bufferMinutes   Int
+  weekdays        Int[]
+  startMinute     Int
+  endMinute       Int
+  createdAt       DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                @updatedAt @db.Timestamptz(3)
+
+  @@index([tenantId, name, id])
+  @@map("appointmentService")
+}
+
+enum AppointmentServiceColor {
+  C1 @map("c1")
+  C2 @map("c2")
+  C3 @map("c3")
+  C4 @map("c4")
+  C5 @map("c5")
+  C6 @map("c6")
+  C7 @map("c7")
+  C8 @map("c8")
+
+  @@map("appointmentServiceColor")
+}

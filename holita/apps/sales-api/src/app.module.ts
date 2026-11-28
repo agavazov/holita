@@ -9,6 +9,7 @@ import { ApolloFederationDriver, type ApolloFederationDriverConfig } from '@nest
 import { GraphQLModule } from '@nestjs/graphql';
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage } from 'node:http';
+import { AppointmentServicesModule } from './appointment-services/appointment-services.module.js';
 import { ContactsModule } from './contacts/contacts.module.js';
 import { DatabaseModule } from './database.module.js';
 import { HealthController } from './health.controller.js';
@@ -24,6 +25,7 @@ import { WorkspaceModule } from './workspace/workspace.module.js';
     LeadsModule,
     ContactsModule,
     OffersModule,
+    AppointmentServicesModule,
     GraphQLModule.forRoot<ApolloFederationDriverConfig>({
       driver: ApolloFederationDriver,
       typeDefs: readFileSync(new URL('./sales.graphql', import.meta.url), 'utf8'),

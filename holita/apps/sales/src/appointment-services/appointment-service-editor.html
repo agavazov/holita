@@ -1,0 +1,174 @@
+<osnova-route-drawer
+  [title]="editing() ? text().editService : text().newService"
+  [subtitle]="subtitle()"
+  [closeLink]="closeLink()"
+  [state]="state()"
+  [errorText]="text().serviceUnavailable"
+  [saving]="saving()"
+  [dirty]="form.dirty"
+  (retry)="record.reload()"
+>
+  <form
+    id="appointment-service-form"
+    #editorForm
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="app-form-section"
+  >
+    @let nameError = fieldError('name');
+    <osnova-form-field
+      controlId="service-name"
+      [label]="text().name"
+      [required]="true"
+      [error]="nameError"
+    >
+      <input
+        pInputText
+        id="service-name"
+        formControlName="name"
+        aria-required="true"
+        aria-describedby="service-name-error"
+        [invalid]="!!nameError"
+        [attr.aria-invalid]="!!nameError"
+        (input)="clearError('name')"
+      />
+    </osnova-form-field>
+    @let descriptionError = fieldError('description');
+    <osnova-form-field
+      controlId="service-description"
+      [label]="text().description"
+      [error]="descriptionError"
+    >
+      <textarea
+        pTextarea
+        id="service-description"
+        formControlName="description"
+        rows="2"
+        aria-describedby="service-description-error"
+        [invalid]="!!descriptionError"
+        [attr.aria-invalid]="!!descriptionError"
+        (input)="clearError('description')"
+      ></textarea>
+    </osnova-form-field>
+    <div class="app-form-grid">
+      <osnova-form-field controlId="service-color" [label]="text().color" [required]="true">
+        <p-select
+          inputId="service-color"
+          ariaLabelledBy="service-color-label"
+          formControlName="color"
+          [options]="colors()"
+          optionLabel="label"
+          optionValue="value"
+        >
+          <ng-template #item let-color>
+            <span class="app-inline">
+              <span class="app-dot" [class]="'app-dot--' + color.slot" aria-hidden="true"></span>
+              {{ color.label }}
+            </span>
+          </ng-template>
+          <ng-template #selectedItem let-color>
+            <span class="app-inline">
+              <span class="app-dot" [class]="'app-dot--' + color.slot" aria-hidden="true"></span>
+              {{ color.label }}
+            </span>
+          </ng-template>
+        </p-select>
+      </osnova-form-field>
+      <osnova-form-field controlId="service-active" [label]="text().active">
+        <p-toggleswitch inputId="service-active" formControlName="active" />
+      </osnova-form-field>
+      @for (field of slotFields; track field) { @let error = fieldError(field);
+      <osnova-form-field
+        [controlId]="'service-' + field"
+        [label]="text()[field]"
+        [required]="true"
+        [error]="error"
+      >
+        <input
+          pInputText
+          [id]="'service-' + field"
+          type="number"
+          inputmode="numeric"
+          [attr.min]="field === 'durationMinutes' ? 1 : 0"
+          step="1"
+          [formControlName]="field"
+          aria-required="true"
+          [attr.aria-describedby]="'service-' + field + '-error'"
+          [invalid]="!!error"
+          [attr.aria-invalid]="!!error"
+          (input)="clearWindowError(field)"
+        />
+      </osnova-form-field>
+      }
+    </div>
+    @let daysError = fieldError('weekdays');
+    <osnova-form-field
+      controlId="service-weekdays"
+      [label]="text().weekdays"
+      [required]="true"
+      [error]="daysError"
+    >
+      <p-select
+        inputId="service-weekdays"
+        ariaLabelledBy="service-weekdays-label"
+        formControlName="weekdays"
+        [multiple]="true"
+        [options]="days()"
+        optionLabel="label"
+        optionValue="value"
+        [placeholder]="text().chooseDays"
+        [invalid]="!!daysError"
+        [pt]="{
+          label: {
+            ...selectMultiplePt.label,
+            'aria-required': 'true',
+            'aria-describedby': 'service-weekdays-error',
+            'aria-invalid': daysError ? 'true' : undefined,
+          },
+        }"
+        (onChange)="clearError('weekdays')"
+      />
+    </osnova-form-field>
+    <div class="app-form-grid">
+      @for (field of timeFields; track field) { @let error = fieldError(field);
+      <osnova-form-field
+        [controlId]="'service-' + field"
+        [label]="text()[field]"
+        [hint]="field === 'startTime' ? text().timeZone : null"
+        [required]="true"
+        [error]="error"
+      >
+        <input
+          pInputText
+          [id]="'service-' + field"
+          type="time"
+          [formControlName]="field"
+          aria-required="true"
+          [attr.aria-describedby]="field === 'startTime' ? 'service-startTime-hint service-startTime-error' : 'service-endTime-error'"
+          [invalid]="!!error"
+          [attr.aria-invalid]="!!error"
+          (input)="clearWindowError(field)"
+        />
+      </osnova-form-field>
+      }
+    </div>
+    @if (saveError()) {
+    <p-message severity="error">{{ text().saveFailed }}</p-message>
+    }
+  </form>
+  <div drawerFooter class="app-drawer-actions">
+    <button
+      pButton
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="saving()"
+      (click)="drawer().close()"
+    >
+      {{ shared().cancel }}
+    </button>
+    <button pButton type="submit" form="appointment-service-form" [disabled]="saving()">
+      {{ saveLabel() }}
+    </button>
+  </div>
+</osnova-route-drawer>

@@ -1,0 +1,45 @@
+fragment AppointmentServiceRow on AppointmentService {
+  id
+  name
+  active
+  color
+  durationMinutes
+  bufferMinutes
+  weekdays
+  startTime
+  endTime
+}
+
+query SalesAppointmentServices($offset: Int! = 0, $limit: Int! = 20, $search: String) {
+  appointmentServices(offset: $offset, limit: $limit, search: $search) {
+    items {
+      ...AppointmentServiceRow
+    }
+    total
+  }
+}
+
+query SalesAppointmentService($id: ID!) {
+  appointmentService(id: $id) {
+    ...AppointmentServiceRow
+    description
+  }
+}
+
+mutation SalesCreateAppointmentService($input: AppointmentServiceInput!) {
+  createAppointmentService(input: $input) {
+    id
+  }
+}
+
+mutation SalesUpdateAppointmentService($id: ID!, $input: AppointmentServiceInput!) {
+  updateAppointmentService(id: $id, input: $input) {
+    id
+  }
+}
+
+mutation SalesDeactivateAppointmentService($id: ID!) {
+  deactivateAppointmentService(id: $id) {
+    id
+  }
+}

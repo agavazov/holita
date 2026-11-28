@@ -1,6 +1,6 @@
 # 140 Book and manage sales appointments
 
-**Status:** Ready after [139](139-holita-sales-appointment-services.md). **Product:** Holita.
+**Status:** Ready. **Product:** Holita.
 
 ## Background
 
