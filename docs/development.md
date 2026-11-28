@@ -865,6 +865,13 @@ cancelled, the option records the restock choice and leaves stock as it is. The 
 a partially refunded paid order. The operator graph exposes `orderRefundSummary` and
 `recordOrderRefund`.
 
+For an approved return with a refundable balance, open the case in **Returns** and choose
+**Record refund** there to link the refund to the case. A partial-item return records the amount
+without restoring stock. When the case covers every ordered unit and the refund uses the full
+remaining balance, the existing restock option is available. The case and Order Detail show the
+saved refund and whether it restored stock. The operator graph exposes `recordOrderReturnRefund`
+and the case's linked `refund`.
+
 The Product drawer's Descriptions section accepts optional Bulgarian and English plain text.
 The storefront product page shows the selected language when available and falls back to the
 other description. The Sofia demo shop includes a bilingual ceramic casserole under Cookware.

@@ -225,7 +225,7 @@ export class OrderDetail {
     },
     {
       id: 'restock',
-      label: this.text().refundRestockRequested,
+      label: this.text().inventory,
       width: '11rem',
       className: 'app-table-merged-column',
     },

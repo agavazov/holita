@@ -50,6 +50,16 @@ fragment OperatorReturnCase on OrderReturnCase {
   reason
   status
   requestedAt
+  fullOrder
+  canRecordRefund
+  refund {
+    id
+    amount
+    currency
+    reason
+    stockRestored
+    createdAt
+  }
   lines {
     orderLineId
     sku
@@ -71,6 +81,12 @@ query OperatorOrderReturn($id: ID!) {
 mutation OperatorDecideOrderReturn($id: ID!, $outcome: OrderReturnOutcome!) {
   decideOrderReturn(id: $id, outcome: $outcome) {
     ...OperatorReturnCase
+  }
+}
+
+mutation OperatorRecordOrderReturnRefund($id: ID!, $input: RecordOrderRefundInput!) {
+  recordOrderReturnRefund(id: $id, input: $input) {
+    id
   }
 }
 
@@ -199,6 +215,8 @@ query OperatorOrder($id: ID!) {
       currency
       reason
       restock
+      returnCaseId
+      stockRestored
       createdAt
     }
   }

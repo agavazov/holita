@@ -2,8 +2,6 @@
 
 **Status:** Ready. **Product:** Holita.
 
-**Depends on** [202](202-holita-admin-return-refund.md).
-
 ## Background
 
 The red.bg coverage report marks RT06 as P1. When an approved full return concerns an unpaid order or an order whose refundable balance is already zero, the money-only path cannot complete the return.

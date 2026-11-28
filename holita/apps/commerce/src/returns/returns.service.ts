@@ -8,19 +8,24 @@ import type {
 } from '../generated/graphql/storefront-types.js';
 import type {
   MutationDecideOrderReturnArgs,
+  MutationRecordOrderReturnRefundArgs,
+  OrderRefund,
   OrderReturnCase,
   OrderReturnPage,
   OrderReturnSummary,
   QueryOrderReturnsArgs,
 } from '../generated/graphql/types.js';
 import { OrdersRepository } from '../orders/orders.repository.js';
+import { RefundsService, presentRefund, refundBalance } from '../refunds/refunds.service.js';
 import { requireMerchant, requireScope, type RequestContext, type ShopperScope } from '../scope.js';
 import { ReturnsRepository, type ReturnCaseRow } from './returns.repository.js';
 
 const returnWindowMs = 14 * 24 * 60 * 60 * 1000;
 
 function summary(
-  row: Pick<ReturnCaseRow, 'id' | 'order' | 'reason' | 'status' | 'requestedAt'>,
+  row: Pick<ReturnCaseRow, 'id' | 'reason' | 'status' | 'requestedAt'> & {
+    order: { orderNumber: string };
+  },
 ): Omit<OrderReturnSummary, '__typename'> {
   return {
     id: row.id,
@@ -31,11 +36,26 @@ function summary(
   };
 }
 
+function coversWholeOrder(
+  orderLines: readonly { id: string; quantity: number }[],
+  returnLines: readonly { orderLineId: string; quantity: number }[],
+) {
+  if (!returnLines.length || returnLines.length !== orderLines.length) {
+    return false;
+  }
+  const quantities = new Map(orderLines.map(({ id, quantity }) => [id, quantity]));
+  return returnLines.every(({ orderLineId, quantity }) => quantities.get(orderLineId) === quantity);
+}
+
 function detail(row: ReturnCaseRow): OrderReturnCase {
   const decision = row.decision;
   return {
     ...summary(row),
     orderId: row.orderId,
+    fullOrder: coversWholeOrder(row.order.lines, row.lines),
+    canRecordRefund:
+      row.status === 'APPROVED' && !row.refund && refundBalance(row.order).remaining.gt(0),
+    refund: row.refund ? presentRefund(row.refund) : null,
     lines: row.lines.map(({ orderLineId, quantity, orderLine }) => ({
       orderLineId,
       quantity,
@@ -58,6 +78,7 @@ export class ReturnsService {
   constructor(
     private readonly returns: ReturnsRepository,
     private readonly orders: OrdersRepository,
+    private readonly refunds: RefundsService,
   ) {}
 
   async request(shopper: ShopperScope, input: ShopperReturnInput): Promise<ShopperReturnReceipt> {
@@ -168,5 +189,37 @@ export class ReturnsService {
       });
     }
     return detail(record);
+  }
+
+  async recordRefund(
+    context: RequestContext,
+    { id, input }: MutationRecordOrderReturnRefundArgs,
+  ): Promise<OrderRefund> {
+    const scope = await requireScope(context, true);
+    if (!isUUID(id)) {
+      throw new NotFoundException('Return case is unavailable');
+    }
+    const returnId = id.toLowerCase();
+    return this.orders.transaction(async (tx) => {
+      const target = await this.returns.orderId(tx, scope, returnId);
+      const order = target && (await this.orders.lockOrder(tx, scope, target.orderId));
+      if (!order) {
+        throw new NotFoundException('Return case is unavailable');
+      }
+      // Check settlement and balance under the same order lock used by direct refunds.
+      const row = await this.returns.settlement(tx, scope, order.id, returnId);
+      if (row.status !== 'APPROVED' || row.refund) {
+        throw new GraphQLError('Return case must be approved and unsettled', {
+          extensions: { code: 'CONFLICT' },
+        });
+      }
+      return this.refunds.recordLocked(
+        tx,
+        scope,
+        order,
+        { ...input, restock: input.restock === true && coversWholeOrder(order.lines, row.lines) },
+        returnId,
+      );
+    });
   }
 }

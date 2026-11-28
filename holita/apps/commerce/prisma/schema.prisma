@@ -947,11 +947,15 @@ model OrderRefund {
   branchId String @db.Uuid
   orderId String @db.Uuid
   order Order @relation(fields: [tenantId, branchId, orderId], references: [tenantId, branchId, id], onDelete: Restrict)
+  returnCaseId String? @db.Uuid
+  returnCase OrderReturnCase? @relation(fields: [tenantId, branchId, orderId, returnCaseId], references: [tenantId, branchId, orderId, id], onDelete: Restrict)
   amount Decimal @db.Decimal(32, 2)
   currency String @db.Char(3)
   reason String? @db.Text
   restock Boolean @default(false)
+  stockRestored Boolean?
   createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@unique([tenantId, branchId, orderId, returnCaseId])
   @@index([tenantId, branchId, orderId, createdAt(sort: Desc), id(sort: Desc)])
   @@map("orderRefund")
 }
@@ -980,6 +984,7 @@ model OrderReturnCase {
   requestedAt DateTime @default(now()) @db.Timestamptz(3)
   lines OrderReturnLine[]
   decision OrderReturnDecision?
+  refund OrderRefund?
   @@unique([tenantId, branchId, id])
   @@unique([tenantId, branchId, orderId, id])
   @@index([tenantId, branchId, requestedAt(sort: Desc), id(sort: Desc)])

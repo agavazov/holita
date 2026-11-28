@@ -1,6 +1,7 @@
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type {
   MutationDecideOrderReturnArgs,
+  MutationRecordOrderReturnRefundArgs,
   QueryOrderReturnArgs,
   QueryOrderReturnsArgs,
 } from '../generated/graphql/types.js';
@@ -24,5 +25,13 @@ export class ReturnsResolver {
   @Mutation('decideOrderReturn')
   decide(@Args() args: MutationDecideOrderReturnArgs, @Context() context: RequestContext) {
     return this.returns.decide(context, args);
+  }
+
+  @Mutation('recordOrderReturnRefund')
+  recordRefund(
+    @Args() args: MutationRecordOrderReturnRefundArgs,
+    @Context() context: RequestContext,
+  ) {
+    return this.returns.recordRefund(context, args);
   }
 }

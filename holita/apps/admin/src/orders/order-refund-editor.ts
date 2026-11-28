@@ -20,6 +20,7 @@ import {
   FormField,
   RouteDrawer,
   drawerParam,
+  errorCode,
   fieldErrors,
   focusFirstInvalid,
   injectDrawerHost,
@@ -65,6 +66,7 @@ function parseAmount(value: string) {
 export class OrderRefundEditor {
   private readonly api = inject(OrdersApi);
   private readonly route = inject(ActivatedRoute);
+  protected readonly returnRefund = this.route.snapshot.data['returnRefund'] === true;
   private readonly parentParams = toSignal((this.route.parent ?? this.route).paramMap, {
     requireSync: true,
   });
@@ -81,9 +83,21 @@ export class OrderRefundEditor {
   });
   protected readonly record = resource({
     params: this.params,
-    loader: ({ params }) => this.api.find(params.scope, params.id),
+    loader: async ({ params: { scope, id }, abortSignal }) => {
+      const returnCase = this.returnRefund
+        ? await this.api.returnCase(scope, id, abortSignal)
+        : null;
+      const orderId = this.returnRefund ? returnCase?.orderId : id;
+      const order = orderId ? await this.api.find(scope, orderId) : null;
+      return { order, returnCase };
+    },
   });
-  protected readonly order = computed(() => (this.record.hasValue() ? this.record.value() : null));
+  protected readonly order = computed(() =>
+    this.record.hasValue() ? this.record.value().order : null,
+  );
+  protected readonly returnCase = computed(() =>
+    this.record.hasValue() ? this.record.value().returnCase : null,
+  );
   protected readonly refund = computed(() => this.order()?.refundSummary ?? null);
   protected readonly state = computed<RouteDrawerState>(() => {
     if (!this.api.scope() || this.record.error()) {
@@ -107,7 +121,11 @@ export class OrderRefundEditor {
   protected readonly saveError = signal(false);
   private readonly errors = signal<Partial<Record<RefundField, string | undefined>>>({});
   protected readonly canRecord = computed(
-    () => this.api.canWrite() && !!this.refund()?.canRecordRefund,
+    () =>
+      !!this.refund()?.canRecordRefund &&
+      (this.returnRefund
+        ? this.api.canDecideReturn() && !!this.returnCase()?.canRecordRefund
+        : this.api.canWrite()),
   );
   private readonly balance = computed(
     () => parseAmount(this.refund()?.refundableAmount ?? '')?.cents ?? 0n,
@@ -138,6 +156,7 @@ export class OrderRefundEditor {
   protected readonly canRestock = computed(
     () =>
       !!this.refund()?.canRestockOnCompletion &&
+      (!this.returnRefund || !!this.returnCase()?.fullOrder) &&
       parseAmount(this.amountText())?.cents === this.balance(),
   );
 
@@ -217,11 +236,16 @@ export class OrderRefundEditor {
 
     this.saving.set(true);
     try {
-      await this.api.recordRefund(params.scope, params.id, {
+      const input = {
         amount: value.wire,
         reason: draft.reason,
         restock: this.canRestock() && draft.restock,
-      });
+      };
+      if (this.returnRefund) {
+        await this.api.recordReturnRefund(params.scope, params.id, input);
+      } else {
+        await this.api.recordRefund(params.scope, params.id, input);
+      }
       if (this.destroyRef.destroyed || this.params() !== params) {
         return;
       }
@@ -231,6 +255,12 @@ export class OrderRefundEditor {
       this.drawer().close();
     } catch (error: unknown) {
       if (this.destroyRef.destroyed || this.params() !== params) {
+        return;
+      }
+      if (this.returnRefund && errorCode(error) === 'CONFLICT') {
+        this.form.markAsPristine();
+        this.host.saved({ message: '', recordId: params.id });
+        this.record.reload();
         return;
       }
       const text = this.text();

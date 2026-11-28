@@ -6,7 +6,7 @@ import type { Scope } from '../scope.js';
 
 type RefundData = Pick<
   Prisma.OrderRefundUncheckedCreateInput,
-  'amount' | 'currency' | 'reason' | 'restock'
+  'amount' | 'currency' | 'reason' | 'restock' | 'returnCaseId' | 'stockRestored'
 >;
 
 @Injectable()

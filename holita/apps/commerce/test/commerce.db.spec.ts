@@ -288,6 +288,7 @@ beforeAll(async () => {
     '20261128030000_local_email',
     '20261128040000_shopper_password_reset',
     '20261128050000_order_return_cases',
+    '20261128060000_order_return_refunds',
   ]) {
     await connection.query(
       await readFile(
@@ -2296,7 +2297,7 @@ async function verifyShopperPasswordReset(database: PrismaClient) {
   });
 }
 
-it('scopes return cases and records a single authorized decision', async () => {
+it('scopes return cases and records a single authorized decision and refund', async () => {
   if (!database || !connection) {
     throw new Error('Missing test database');
   }
@@ -2322,11 +2323,15 @@ it('scopes return cases and records a single authorized decision', async () => {
 
   const read = `query($id:ID!){
     orderReturns{items{id status} total}
-    orderReturn(id:$id){id orderId status lines{orderLineId quantity} decisions{outcome decidedByUserId}}
+    orderReturn(id:$id){id orderId status canRecordRefund lines{orderLineId quantity} decisions{outcome decidedByUserId}}
   }`;
   const decide = `mutation($id:ID!,$outcome:OrderReturnOutcome!){
-    decideOrderReturn(id:$id,outcome:$outcome){status decisions{outcome decidedAt decidedByUserId}}
+    decideOrderReturn(id:$id,outcome:$outcome){status canRecordRefund decisions{outcome decidedAt decidedByUserId}}
   }`;
+  const settle = `mutation($id:ID!,$input:RecordOrderRefundInput!){
+    recordOrderReturnRefund(id:$id,input:$input){id amount restock stockRestored returnCaseId}
+  }`;
+  const settlement = { id, input: { amount: '38.40', restock: true } };
   expect(await query(tokens.viewer, branchA, read, { id })).toEqual({
     data: {
       orderReturns: { items: [{ id, status: 'PENDING' }], total: 1 },
@@ -2334,6 +2339,7 @@ it('scopes return cases and records a single authorized decision', async () => {
         id,
         orderId: legacyInvoicedId,
         status: 'PENDING',
+        canRecordRefund: false,
         lines: [{ orderLineId: orderLine.id, quantity: 1 }],
         decisions: [],
       },
@@ -2349,7 +2355,17 @@ it('scopes return cases and records a single authorized decision', async () => {
     expect(await query(token, branch, decide, { id, outcome: 'APPROVED' })).toMatchObject({
       errors: [{ extensions: { code: 'NOT_FOUND' } }],
     });
+    expect(await query(token, branch, settle, settlement)).toMatchObject({
+      errors: [{ extensions: { code: 'NOT_FOUND' } }],
+    });
   }
+  expect(await query(tokens.viewer, branchA, settle, settlement)).toHaveProperty(
+    'errors.0.message',
+    'Your role does not permit this action',
+  );
+  expect(await query(tokens.operator, branchA, settle, settlement)).toMatchObject({
+    errors: [{ extensions: { code: 'CONFLICT' } }],
+  });
   expect(await query(tokens.viewer, branchA, decide, { id, outcome: 'REJECTED' })).toHaveProperty(
     'errors.0.message',
     'Your role does not permit this action',
@@ -2358,6 +2374,7 @@ it('scopes return cases and records a single authorized decision', async () => {
     data: {
       decideOrderReturn: {
         status: 'APPROVED',
+        canRecordRefund: true,
         decisions: [
           { outcome: 'APPROVED', decidedAt: expect.any(String), decidedByUserId: operatorUserId },
         ],
@@ -2373,6 +2390,50 @@ it('scopes return cases and records a single authorized decision', async () => {
     'data.orderReturn.decisions',
     [{ outcome: 'APPROVED', decidedByUserId: operatorUserId }],
   );
+  const settled = await query(tokens.operator, branchA, settle, settlement);
+  expect(settled).toMatchObject({
+    data: {
+      recordOrderReturnRefund: {
+        id: expect.any(String),
+        amount: '38.40',
+        restock: false,
+        stockRestored: false,
+        returnCaseId: id,
+      },
+    },
+  });
+  expect(await query(tokens.administrator, branchA, settle, settlement)).toMatchObject({
+    errors: [{ extensions: { code: 'CONFLICT' } }],
+  });
+  const settledRefund = await database.orderRefund.findFirstOrThrow({
+    where: { ...scope, orderId: legacyInvoicedId, returnCaseId: id },
+  });
+  expect(
+    await query(
+      tokens.viewer,
+      branchA,
+      `query($id:ID!,$orderId:ID!){
+        orderReturn(id:$id){fullOrder canRecordRefund refund{id stockRestored}}
+        orderRefundSummary(orderId:$orderId){refundableAmount refunds{id returnCaseId stockRestored}}
+      }`,
+      { id, orderId: legacyInvoicedId },
+    ),
+  ).toMatchObject({
+    data: {
+      orderReturn: {
+        fullOrder: false,
+        canRecordRefund: false,
+        refund: { id: settledRefund.id, stockRestored: false },
+      },
+      orderRefundSummary: {
+        refundableAmount: '0.00',
+        refunds: [
+          { id: settledRefund.id, returnCaseId: id, stockRestored: false },
+          { returnCaseId: null, stockRestored: null },
+        ],
+      },
+    },
+  });
 });
 
 it('isolates shoppers, catalogue, carts, checkout and orders by shop', async () => {

@@ -7,13 +7,22 @@ const orderNumber = { select: { orderNumber: true } };
 
 function caseDetail(scope: Scope) {
   return {
-    order: orderNumber,
+    order: {
+      select: {
+        ...orderNumber.select,
+        paymentStatus: true,
+        total: true,
+        refunds: { where: scope, select: { amount: true } },
+        lines: { where: scope, select: { id: true, quantity: true } },
+      },
+    },
     lines: {
       where: scope,
       orderBy: { orderLine: { sortOrder: 'asc' } },
       include: { orderLine: { select: { sku: true, label: true } } },
     },
     decision: true,
+    refund: true,
   } satisfies Prisma.OrderReturnCaseInclude;
 }
 
@@ -49,6 +58,21 @@ export class ReturnsRepository {
         tx.orderReturnCase.findUnique({ where: { ...scope, id }, include: caseDetail(scope) }),
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
+  }
+
+  orderId(tx: Prisma.TransactionClient, scope: Scope, id: string) {
+    return tx.orderReturnCase.findUnique({ where: { ...scope, id }, select: { orderId: true } });
+  }
+
+  settlement(tx: Prisma.TransactionClient, scope: Scope, orderId: string, id: string) {
+    return tx.orderReturnCase.findUniqueOrThrow({
+      where: { ...scope, orderId, id },
+      select: {
+        status: true,
+        refund: { select: { id: true } },
+        lines: { where: scope, select: { orderLineId: true, quantity: true } },
+      },
+    });
   }
 
   request(

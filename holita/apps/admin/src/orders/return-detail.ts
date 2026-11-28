@@ -12,7 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { OperatorLanguage, operatorStrings } from '@holita/operator';
 import {
   EmptyState,
@@ -26,6 +26,7 @@ import {
   injectPageRecord,
   tableView,
   uiMessages,
+  type DrawerHost,
   type TableColumn,
 } from '@osnova/ui';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -36,6 +37,7 @@ import { Skeleton } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import type { OrderReturnOutcome } from '../generated/orders-operations';
+import { orderAmount } from './order-format';
 import { OrdersApi, orderIdPattern } from './orders-api';
 import { returnStatusSeverity, returnStatusText } from './return-format';
 
@@ -50,6 +52,7 @@ type ReturnParams = { scope: NonNullable<ReturnType<OrdersApi['scope']>>; id: st
     Message,
     PageHeader,
     RouterLink,
+    RouterOutlet,
     Skeleton,
     TableModule,
     TablePanel,
@@ -74,6 +77,8 @@ export class ReturnDetail {
   private readonly messages = inject(MessageService);
   private readonly injector = inject(Injector);
   private readonly historyHeading = viewChild<ElementRef<HTMLHeadingElement>>('historyHeading');
+  private readonly refundHeading = viewChild<ElementRef<HTMLHeadingElement>>('refundHeading');
+  private focusRefundOnClose = false;
   private readonly abort = new AbortController();
   private readonly routeParams = toSignal(this.route.paramMap, { requireSync: true });
   protected readonly queryParams = toSignal(this.route.queryParams, { requireSync: true });
@@ -84,6 +89,7 @@ export class ReturnDetail {
   protected readonly text = computed(() => operatorStrings[this.language()]);
   protected readonly shared = computed(() => uiMessages[this.language()]);
   protected readonly format = injectDisplayFormat();
+  protected readonly amount = orderAmount;
   protected readonly statusText = returnStatusText;
   protected readonly statusSeverity = returnStatusSeverity;
   protected readonly formatNumber = formatNumber;
@@ -98,6 +104,17 @@ export class ReturnDetail {
     loader: ({ params, abortSignal }) => this.api.returnCase(params.scope, params.id, abortSignal),
   });
   protected readonly item = computed(() => (this.record.hasValue() ? this.record.value() : null));
+  protected readonly drawerHost: DrawerHost = {
+    saved: ({ recordId, message }) => {
+      if (recordId === this.params()?.id) {
+        this.focusRefundOnClose = true;
+        this.record.reload();
+        if (message) {
+          this.messages.add({ severity: 'success', summary: message });
+        }
+      }
+    },
+  };
   protected readonly columns = computed<readonly TableColumn[]>(() => [
     {
       id: 'item',
@@ -145,6 +162,15 @@ export class ReturnDetail {
     inject(DestroyRef).onDestroy(() => {
       this.abort.abort();
     });
+  }
+
+  protected refundDrawerClosed(): void {
+    if (this.focusRefundOnClose) {
+      this.focusRefundOnClose = false;
+      afterNextRender(() => this.refundHeading()?.nativeElement.focus(), {
+        injector: this.injector,
+      });
+    }
   }
 
   protected async decide(outcome: OrderReturnOutcome, opener: HTMLButtonElement): Promise<void> {

@@ -35,6 +35,7 @@ import {
   OperatorOrderReturnsDocument,
   OperatorOrdersDocument,
   OperatorRecordOrderRefundDocument,
+  OperatorRecordOrderReturnRefundDocument,
   type RecordOrderRefundInput,
   OperatorUpdateOrderStatusDocument,
   type OperatorInvoicesQueryVariables,
@@ -474,6 +475,22 @@ export class OrdersApi {
         throw new Error('Missing recorded refund result');
       }
       return data.recordOrderRefund;
+    } finally {
+      client.stop();
+    }
+  }
+
+  async recordReturnRefund(scope: OrdersScope, id: string, input: RecordOrderRefundInput) {
+    const client = this.client(scope);
+    try {
+      const { data } = await client.mutate({
+        mutation: OperatorRecordOrderReturnRefundDocument,
+        variables: { id, input },
+      });
+      if (!data) {
+        throw new Error('Missing recorded return refund result');
+      }
+      return data.recordOrderReturnRefund;
     } finally {
       client.stop();
     }

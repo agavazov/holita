@@ -639,10 +639,10 @@ export class OrdersService {
 
   async restockLockedRefund(tx: Prisma.TransactionClient, scope: Scope, order: OrderDetailRow) {
     if (order.status === 'SHIPPED' || order.status === 'COMPLETED') {
-      await this.orders.restoreStock(tx, scope, order.id);
-    } else if (order.status !== 'CANCELLED') {
-      await this.changeLockedStatus(tx, scope, order, 'CANCELLED');
+      return this.orders.restoreStock(tx, scope, order.id);
     }
+    const { stockRestored } = await this.changeLockedStatus(tx, scope, order, 'CANCELLED');
+    return stockRestored;
   }
 
   async updateStatus(
@@ -652,25 +652,25 @@ export class OrdersService {
     const scope = await requireScope(context, true);
     return this.orders.transaction(async (tx) => {
       const order = await this.requireLockedOrder(tx, scope, id);
-      return operatorDetail(await this.changeLockedStatus(tx, scope, order, status));
+      const result = await this.changeLockedStatus(tx, scope, order, status);
+      return operatorDetail(result.order);
     });
   }
 
-  async changeLockedStatus(
+  private async changeLockedStatus(
     tx: Prisma.TransactionClient,
     scope: Scope,
     order: OrderDetailRow,
     status: OrderStatus,
   ) {
     if (order.status === status) {
-      return order;
+      return { order, stockRestored: false };
     }
     if (!nextStatuses[order.status].includes(status)) {
       throw statusRejected();
     }
-    if (status === 'CANCELLED') {
-      await this.orders.restoreStock(tx, scope, order.id);
-    }
+    const stockRestored =
+      status === 'CANCELLED' && (await this.orders.restoreStock(tx, scope, order.id));
     const { event, order: updated } = await this.orders.updateStatus(tx, scope, order.id, {
       fromStatus: order.status,
       toStatus: status,
@@ -679,7 +679,7 @@ export class OrdersService {
     if (status !== 'PROCESSING' && status !== 'PLACED') {
       await this.mailbox.capture(tx, scope, orderEmail(updated, status, String(event.id)));
     }
-    return updated;
+    return { order: updated, stockRestored };
   }
 
   async markPaid(context: RequestContext, id: string): Promise<OperatorOrder> {

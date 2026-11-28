@@ -1214,6 +1214,8 @@ type OrderRefund {
   currency: String!
   reason: String
   restock: Boolean!
+  returnCaseId: ID
+  stockRestored: Boolean
   createdAt: String!
 }
 type OrderRefundSummary {
@@ -1270,6 +1272,9 @@ type OrderReturnCase {
   requestedAt: String!
   lines: [OrderReturnLine!]!
   decisions: [OrderReturnDecision!]!
+  fullOrder: Boolean!
+  canRecordRefund: Boolean!
+  refund: OrderRefund
 }
 type PaymentMethod {
   id: ID!
@@ -1514,4 +1519,5 @@ type Mutation {
   updateInvoiceIssuerSettings(input: InvoiceIssuerSettingsInput!): InvoiceIssuerSettings!
   recordOrderRefund(orderId: ID!, input: RecordOrderRefundInput!): OrderRefund!
   decideOrderReturn(id: ID!, outcome: OrderReturnOutcome!): OrderReturnCase!
+  recordOrderReturnRefund(id: ID!, input: RecordOrderRefundInput!): OrderRefund!
 }

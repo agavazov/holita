@@ -241,8 +241,10 @@
       </tr>
     </ng-template>
     <ng-template #body let-entry>
-      @let shown = amount(entry.amount, entry.currency, language()); @let restock = entry.restock ?
-      text().yes : text().no;
+      @let shown = amount(entry.amount, entry.currency, language()); @let restock =
+      entry.returnCaseId ? (entry.stockRestored ? text().refundStockRestored :
+      text().refundStockNotRestored) : text().refundRestockRequested + ' · ' + (entry.restock ?
+      text().yes : text().no);
       <tr>
         <td class="app-col-identity">
           <div class="app-cell-identity">
@@ -252,14 +254,19 @@
               [title]="format.utc(entry.createdAt)"
               >{{ format.dateTime(entry.createdAt) }}</time
             >
-            @if (entry.reason) {
+            @if (entry.returnCaseId) {
+            <a
+              class="app-link app-table-identity-wrap"
+              [routerLink]="['/', language(), 'returns', entry.returnCaseId]"
+              [attr.aria-label]="text().returnCase + ' ' + entry.returnCaseId"
+              >{{ text().returnCase }}</a
+            >
+            } @if (entry.reason) {
             <span class="app-table-mobile-meta app-table-tag-wrap order-refund-reason"
               >{{ entry.reason }}</span
             >
             }
-            <span class="app-table-mobile-meta app-table-tag-wrap"
-              >{{ text().refundRestockRequested }} · {{ restock }}</span
-            >
+            <span class="app-table-mobile-meta app-table-tag-wrap">{{ restock }}</span>
           </div>
         </td>
         <td class="app-cell-number" [title]="shown">{{ shown }}</td>

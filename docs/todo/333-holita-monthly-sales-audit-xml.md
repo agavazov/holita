@@ -2,7 +2,7 @@
 
 **Status:** Needs owner. Should Holita generate local NRA audit XML, and which format and records should it include? **Product:** Holita.
 
-**Depends on** [202](202-holita-admin-return-refund.md), [209](209-holita-invoice-vat-snapshots.md).
+**Depends on** [209](209-holita-invoice-vat-snapshots.md).
 
 ## Background
 

@@ -70,7 +70,18 @@ void startOperator({
     { path: 'dashboard', component: DashboardPage },
     { path: 'order-notifications', component: OrderNotificationsPage },
     { path: 'returns', component: ReturnsPage },
-    { path: 'returns/:recordId', component: ReturnDetail },
+    {
+      path: 'returns/:recordId',
+      component: ReturnDetail,
+      children: [
+        {
+          path: 'record-refund',
+          component: OrderRefundEditor,
+          data: { drawer: true, mode: 'create', returnRefund: true },
+          canDeactivate: [leaveDrawer],
+        },
+      ],
+    },
     {
       path: 'products',
       component: ProductsPage,

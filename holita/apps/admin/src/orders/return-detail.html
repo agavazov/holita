@@ -46,6 +46,49 @@
     </div>
   </dl>
 </section>
+@if (item.refund || (item.status === 'APPROVED' && canDecide())) {
+<section class="app-card" aria-labelledby="return-refund">
+  <h2 #refundHeading id="return-refund" class="app-card__title" tabindex="-1">
+    {{ text().returnRefund }}
+  </h2>
+  @if (item.refund; as refund) {
+  <dl class="app-facts">
+    <div>
+      <dt>{{ text().refundAmount }}</dt>
+      <dd class="app-num">{{ amount(refund.amount, refund.currency, language()) }}</dd>
+    </div>
+    <div>
+      <dt>{{ text().refundDate }}</dt>
+      <dd>
+        <time [dateTime]="refund.createdAt" [title]="format.utc(refund.createdAt)"
+          >{{ format.dateTime(refund.createdAt) }}</time
+        >
+      </dd>
+    </div>
+    <div>
+      <dt>{{ text().inventory }}</dt>
+      <dd>
+        {{ refund.stockRestored ? text().refundStockRestored : text().refundStockNotRestored }}
+      </dd>
+    </div>
+    @if (refund.reason) {
+    <div class="app-facts--wide">
+      <dt>{{ text().refundReason }}</dt>
+      <dd class="return-reason">{{ refund.reason }}</dd>
+    </div>
+    }
+  </dl>
+  } @else if (item.canRecordRefund) {
+  <div class="app-inline">
+    <a pButton routerLink="record-refund" queryParamsHandling="preserve" [preserveFragment]="true"
+      >{{ text().recordRefund }}</a
+    >
+  </div>
+  } @else {
+  <p-message severity="info">{{ text().refundIneligible }}</p-message>
+  }
+</section>
+}
 <osnova-table-panel
   mode="local"
   [heading]="text().returnRequestedItems"
@@ -167,3 +210,4 @@
     <p id="return-decision-question">{{ confirmQuestion() }}</p>
   </ng-template>
 </p-confirmdialog>
+<router-outlet [routerOutletData]="drawerHost" (deactivate)="refundDrawerClosed()" />

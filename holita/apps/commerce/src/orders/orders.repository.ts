@@ -327,11 +327,19 @@ export class OrdersRepository {
       where: { ...scope, orderId, stockDeductedQuantity: { gt: 0 }, variantId: { not: null } },
       _sum: { stockDeductedQuantity: true },
     });
+    let restored = false;
     for (const { variantId, _sum } of deductions) {
       if (variantId !== null && _sum.stockDeductedQuantity !== null) {
-        await this.incrementStock(tx, scope, variantId, _sum.stockDeductedQuantity);
+        const { count } = await this.incrementStock(
+          tx,
+          scope,
+          variantId,
+          _sum.stockDeductedQuantity,
+        );
+        restored = restored || count > 0;
       }
     }
+    return restored;
   }
 
   async shopperOrders(scope: ShopperScope, offset: number, limit: number) {

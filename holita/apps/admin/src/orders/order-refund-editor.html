@@ -2,7 +2,7 @@
   [title]="text().recordRefund"
   [subtitle]="order()?.number ?? null"
   [state]="state()"
-  [errorText]="text().orderUnavailable"
+  [errorText]="returnRefund ? text().returnCaseUnavailable : text().orderUnavailable"
   [saving]="saving()"
   [dirty]="form.dirty"
   (retry)="record.reload()"
@@ -25,6 +25,9 @@
         </div>
       </dl>
       <p-message severity="info">{{ text().refundRecordOnlyHint }}</p-message>
+      @if (returnRefund && !returnCase()?.fullOrder) {
+      <p-message severity="info">{{ text().returnRefundAmountOnly }}</p-message>
+      }
     </section>
     <section class="app-form-section">
       @let amountMessage = amountError(); @let reasonMessage = fieldError('reason');
@@ -86,7 +89,10 @@
     </section>
   </form>
   } @else if (order()) {
-  <p-message severity="info">{{ text().refundIneligible }}</p-message>
+  <p-message severity="info"
+    >{{ returnRefund && (returnCase()?.status !== 'APPROVED' || returnCase()?.refund) ?
+    text().returnRefundUnavailable : text().refundIneligible }}</p-message
+  >
   }
 
   <div drawerFooter class="app-drawer-actions">
